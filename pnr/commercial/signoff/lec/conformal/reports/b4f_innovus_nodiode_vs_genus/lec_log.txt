@@ -1,0 +1,372 @@
+                          CONFORMAL (R)
+                   Version 24.10-p100 (30-May-2024) (64 bit executable)
+   Copyright (c) Cadence Design Systems, Inc., 1997-2024. All Rights Reserved
+
+
+This program is proprietary and confidential information belonging to
+Cadence Design Systems, Inc., and may be used and disclosed only as authorized
+in a license agreement controlling such use and disclosure.
+
+// Warning: This version is 880 days old. You can download the latest version from http://downloads.cadence.com.
+
+0
+// Command: usage -auto -elapse
+CPU time     : 0.14    seconds
+Elapse time  : 0       seconds
+Memory usage : 88.57   M bytes
+0
+// Command: set_mapping_method -sensitive
+0
+// Command: set_parallel_option -threads 1,2 -norelease_license
+// Number of threads is set to 1,2.
+0
+// Command: set_compare_options -threads 1,2
+Set computing threads of compare to 1,2.
+0
+// Command: set env(RC_VERSION)     "23.14-s090_1"
+23.14-s090_1
+// Command: set env(CDN_SYNTH_ROOT) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set CDN_SYNTH_ROOT      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set env(CW_DIR) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set CW_DIR      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set lec_version_required "21.20249"
+21.20249
+// Command: if { ($lec_version < $lec_version_required) &&
+//              [file exists /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim]} {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//          } else {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//          }
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim
+// Command: set_multiplier_implementation boothrca -both
+0
+// Command: set_undefined_cell black_box -noascend -both
+0
+// Command: add_notranslate_modules -library -both sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: add_search_path . /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/tech -library -both
+0
+// Command: read_library -liberty -both \
+//              /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib \
+//              /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib ...
+// Parsing file /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:12)
+// Warning: (RTL9.21) Liberty cell with interface_timing attribute set to true was not an empty cell (occurrence:1)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:6)
+// Note: (HRC1.2) Module/entity is not translated (blackboxed) (occurrence:1)
+// Note: Read Liberty library successfully
+0
+CPU time     : 0.45    seconds
+Elapse time  : 0       seconds
+Memory usage : 110.70  M bytes
+// Command: set_hdl_options -const_port_extend
+0
+// Command: set_hdl_options -unsigned_conversion_overflow on
+0
+// Command: set_hdl_option -v_to_vd on
+// Command: set_hdl_options -v_to_vd on
+// Note: '-v' to '-vd' option is 'ON'
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          set_hdl_option -extract_macro_constraint
+//          }
+// Command: set_hdl_options -extract_macro_constraint
+0
+// Command: set lec_version_required "20.20226"
+20.20226
+// Command: if {$lec_version >= $lec_version_required} {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src"
+//          } else {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src:cwd"
+//          }
+// Command: set_hdl_options -VERILOG_INCLUDE_DIR sep:src
+0
+// Command: read_design -verilog95   -golden -lastmod -noelab $env(GOLDEN_NL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/syn/genus/runs/b3b_genus_tt_r2/out/rv32i_cpu_top.nl.v ...
+0
+CPU time     : 1.35    seconds
+Elapse time  : 1       seconds
+Memory usage : 145.85  M bytes
+// Command: elaborate_design -golden -root {rv32i_cpu_top}
+// Golden root module is set to 'rv32i_cpu_top'
+// Warning: (RTL2.5) Net is referenced without an assignment. Design verification will be based on set_undriven_signal setting (occurrence:272)
+// Warning: (RTL2.13) Undriven pin is detected (occurrence:607)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:901)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:28)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:280)
+// Warning: Total black box modules referenced in Golden = 1
+// Warning: There are 607 undriven nets in Golden
+// Warning: There are 607 undriven pins in Golden
+0
+CPU time     : 1.86    seconds
+Elapse time  : 1       seconds
+Memory usage : 142.77  M bytes
+// Command: read_design -verilog95   -revised -lastmod -noelab $env(IMPL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4f_innovus_nodiode.nl.v ...
+0
+CPU time     : 2.88    seconds
+Elapse time  : 2       seconds
+Memory usage : 178.64  M bytes
+// Command: elaborate_design -revised -root {rv32i_cpu_top}
+// Revised root module is set to 'rv32i_cpu_top'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:322)
+// Note: (HRC3.5b) Open output port connection is detected (occurrence:132)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:8)
+// Warning: (HRC3.16) A wire is declared, but not used in the module (occurrence:1671)
+// Warning: Total black box modules referenced in Revised = 1
+0
+CPU time     : 3.23    seconds
+Elapse time  : 3       seconds
+Memory usage : 172.59  M bytes
+// Command: file mkdir rtl_fv_map_db
+// Command: write_design -golden rtl_fv_map_db/elab.v -replace
+// Note: Wrote VERILOG design successfully
+0
+CPU time     : 6.02    seconds
+Elapse time  : 5       seconds
+Memory usage : 173.48  M bytes
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules         4               1
+Library-cells      26347           33954
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+AND        *     33812                33809
+BUF        *       228                 6994
+DFF               5208                 5208
+INV        *     62847                63560
+OR         *     16163                16165
+TIE0       *         0                  133
+TIE1       *         0                  133
+WIRE       *         0                    4
+------ word-level --------------------------
+BBOX                10                   10
+--------------------------------------------
+Total           118268               126016
+
+0
+// Command: report_black_box
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: report_modules
+Golden:
+   rv32i_cpu_top 
+      rv32i_core_RESET_PC0 
+         rv32i_pipeline_ex1c 
+         rv32i_decode 
+Revised:
+   rv32i_cpu_top 
+0
+// Command: set_flatten_model -seq_constant
+0
+// Command: set_flatten_model -seq_constant_x_to 0
+0
+// Command: set_flatten_model -hier_seq_merge
+0
+// Command: set_flatten_model -seq_merge
+0
+// Command: set_flatten_model -balanced_modeling
+0
+// Command: set lec_version_required "21.10142"
+21.10142
+// Command: if {$lec_version >= $lec_version_required} {
+//              puts "For safety of verification, PIs and POs should be mapped by name."
+//          }
+For safety of verification, PIs and POs should be mapped by name.
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          }
+// Command: set_analyze_option -auto -report_map
+0
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling mapped 10416 out of 10416 DFF/DLATs
+// (F28) Converted 607 internal output port(s) to inout port(s)
+CPU time     : 6.97    seconds
+Elapse time  : 6       seconds
+Memory usage : 253.16  M bytes
+// Mapping key points ...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            124    379    5208   10        5721    
+--------------------------------------------------------------------------------
+Revised           124    379    5208   10        5721    
+================================================================================
+CPU time     : 7.33    seconds
+Elapse time  : 7       seconds
+Memory usage : 255.29  M bytes
+// Running automatic setup...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            124    379    5208   10        5721    
+--------------------------------------------------------------------------------
+Revised           124    379    5208   10        5721    
+================================================================================
+// Automatic setup finished.
+0
+CPU time     : 9.03    seconds
+Elapse time  : 9       seconds
+Memory usage : 257.01  M bytes
+// Command: echo "B4D_GENUS_UNMAPPED_BEGIN"
+B4D_GENUS_UNMAPPED_BEGIN
+// Command: report_unmapped_points -summary
+There is no unmapped point
+0
+// Command: report_unmapped_points -notmapped
+There is no unmapped point
+0
+// Command: report_unmapped_points -extra
+There is no unmapped point
+0
+// Command: report_unmapped_points -unreachable
+There is no unmapped point
+0
+// Command: echo "B4D_GENUS_UNMAPPED_END"
+B4D_GENUS_UNMAPPED_END
+// Command: add_compared_points -all
+// 5597 compared points added to compare list
+0
+// Command: compare
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5208   10        5597    
+================================================================================
+0
+CPU time     : 9.87    seconds
+Elapse time  : 13      seconds
+Memory usage : 257.01  M bytes
+// Command: report_compare_data -class nonequivalent -class abort -class notcompared
+0 Non-equivalent point(s) reported
+0 Abort point(s) reported
+0 Not-compared point(s) reported
+0 compared point(s) reported
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5208   10        5597    
+================================================================================
+0
+// Command: report_verification -verbose
+================================================================================
+                            Verification Report
+--------------------------------------------------------------------------------
+Category                                                                  Count
+--------------------------------------------------------------------------------
+1. Non-standard modeling options used:                                      0
+     Tri-stated output:                                        checked
+     Revised X signals set to E:                               yes
+     Floating signals tied to Z:                               yes
+     Command "add clock" for clock-gating:                     not used
+--------------------------------------------------------------------------------
+2. Incomplete verification:                                                 0
+     All primary outputs are mapped:                           yes
+     Not-mapped DFF/DLAT is detected:                          no
+     All mapped points are added as compare points:            yes
+     All compared points are compared:                         yes
+     User added black box:                                     no
+     Black box mapped with different module name:              no
+     Empty module is not black boxed:                          no
+     Command "add ignore outputs" used:                        no
+     Always false constraints detected:                        no
+--------------------------------------------------------------------------------
+3. User modification to design:                                             0
+     Change gate type:                                         no
+     Change wire:                                              no
+     Primary input added by user:                              no
+--------------------------------------------------------------------------------
+4. Conformal Constraint Designer clock domain crossing checks recommended:  0
+     Multiple clocks in the design:                            no
+--------------------------------------------------------------------------------
+5. Design ambiguity:                                                        0
+     Duplicate module definition:                              no
+     Black box due to undefined cells:                         no
+     Golden design has abnormal ratio of unreachable gates:    no
+     Ratio of golden unreachable gates:                        0%
+     Revised design has abnormal ratio of unreachable gates:   no
+     Ratio of revised unreachable gates:                       0%
+     All primary input bus ordering is consistent:             yes
+     All primary output bus ordering is consistent:            yes
+     DFF/DLAT not compared due to disabled clock port(s):        0
+     Always X compared point is detected:                      not checked
+--------------------------------------------------------------------------------
+6. Compare Results:                                                        PASS
+     Number of EQ compare points:                              5597
+     Number of NON-EQ compare points:                          0
+     Number of Aborted compare points:                         0
+     Number of Uncompared compare points :                     0
+================================================================================
+pass
+// Command: report_statistics
+Mapping and compare statistics
+================================================================================
+                     Compare Result       Golden            Revised
+--------------------------------------------------------------------------------
+Root module name                          rv32i_cpu_top     rv32i_cpu_top     
+
+Primary inputs                               124                124
+   Mapped                                    124                124
+
+Primary outputs                              379                379
+   Mapped                                    379                379
+      Equivalent                379
+
+Black-box key points                          10                 10
+   Mapped                                     10                 10
+      Equivalent                 10
+
+State key points                            5208               5208
+   Mapped                                   5208               5208
+      Equivalent               5208
+================================================================================
+0
+// Command: if {[get_compare_points -NONequivalent -count] > 0 || [get_compare_points -abort -count] > 0 || [get_compare_points -unknown -count] > 0} {
+//              puts "B4D_GENUS_VERDICT: NOT_EQUIVALENT"
+//              write_compared_points noneq.flat.tcl -class noneq -tclmode -replace
+//              analyze_nonequivalent -source_diagnosis
+//              report_nonequivalent_analysis > noneq.flat.source_diag.rpt
+//              report_test_vector -noneq > noneq.flat.test_vector.rpt
+//          } else { puts "B4D_GENUS_VERDICT: EQUIVALENT" }
+// Command: get_compare_points -NONequivalent -count
+// Command: get_compare_points -abort -count
+// Command: get_compare_points -unknown -count
+B4D_GENUS_VERDICT: EQUIVALENT
+// Command: puts "No of compare points = [get_compare_points -count]"
+// Command: get_compare_points -count
+No of compare points = 5597
+// Command: puts "No of diff points    = [get_compare_points -NONequivalent -count]"
+// Command: get_compare_points -NONequivalent -count
+No of diff points    = 0
+// Command: puts "No of abort points   = [get_compare_points -abort -count]"
+// Command: get_compare_points -abort -count
+No of abort points   = 0
+// Command: puts "No of unknown points = [get_compare_points -unknown -count]"
+// Command: get_compare_points -unknown -count
+No of unknown points = 0
+// Command: vpxmode   ;# [B4b-flat] leave tclmode: `exit -f` is only valid in the native mode (the Genus do-file does the same)
+// Command: exit -f

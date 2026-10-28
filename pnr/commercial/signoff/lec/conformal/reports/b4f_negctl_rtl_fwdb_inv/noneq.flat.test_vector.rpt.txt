@@ -1,0 +1,384 @@
+// Confirm all Non-equivalent compared points
+
+Functional test vector for mapped points:
+  (G) + 2607   DFF  /u_core/fwd_b_ex1c_r_reg
+  (R) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+Diagnosis points: [DATA]
+  (G) + 72118  DC   /u_mbist_ctrl/U$597
+  (R) + 76653  INV  /mut_inv/U$1
+
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   98     PI   /mbist_run_i
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   118    PI   /mbist_cfg_i[6]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   119    PI   /mbist_cfg_i[5]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   122    PI   /mbist_cfg_i[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   123    PI   /mbist_cfg_i[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1157   DFF  /u_mbist_ctrl/dcnt_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1158   DFF  /u_mbist_ctrl/dcnt_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1159   DFF  /u_mbist_ctrl/pcnt_q_reg[21]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1160   DFF  /u_mbist_ctrl/pcnt_q_reg[20]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1161   DFF  /u_mbist_ctrl/pcnt_q_reg[19]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1162   DFF  /u_mbist_ctrl/pcnt_q_reg[18]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1163   DFF  /u_mbist_ctrl/pcnt_q_reg[17]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1164   DFF  /u_mbist_ctrl/pcnt_q_reg[16]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1165   DFF  /u_mbist_ctrl/pcnt_q_reg[15]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1166   DFF  /u_mbist_ctrl/pcnt_q_reg[14]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1167   DFF  /u_mbist_ctrl/pcnt_q_reg[13]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1168   DFF  /u_mbist_ctrl/pcnt_q_reg[12]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1169   DFF  /u_mbist_ctrl/pcnt_q_reg[11]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1170   DFF  /u_mbist_ctrl/pcnt_q_reg[10]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1171   DFF  /u_mbist_ctrl/pcnt_q_reg[9]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1172   DFF  /u_mbist_ctrl/pcnt_q_reg[8]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1173   DFF  /u_mbist_ctrl/pcnt_q_reg[7]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1174   DFF  /u_mbist_ctrl/pcnt_q_reg[6]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1175   DFF  /u_mbist_ctrl/pcnt_q_reg[5]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1176   DFF  /u_mbist_ctrl/pcnt_q_reg[4]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1177   DFF  /u_mbist_ctrl/pcnt_q_reg[3]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1178   DFF  /u_mbist_ctrl/pcnt_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1179   DFF  /u_mbist_ctrl/pcnt_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1180   DFF  /u_mbist_ctrl/pcnt_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1181   DFF  /u_mbist_ctrl/slot_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1182   DFF  /u_mbist_ctrl/slot_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1183   DFF  /u_mbist_ctrl/slot_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1184   DFF  /u_mbist_ctrl/addr_q_reg[7]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1185   DFF  /u_mbist_ctrl/addr_q_reg[6]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1186   DFF  /u_mbist_ctrl/addr_q_reg[5]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1187   DFF  /u_mbist_ctrl/addr_q_reg[4]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1188   DFF  /u_mbist_ctrl/addr_q_reg[3]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1189   DFF  /u_mbist_ctrl/addr_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1190   DFF  /u_mbist_ctrl/addr_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1191   DFF  /u_mbist_ctrl/addr_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1192   DFF  /u_mbist_ctrl/pc_q_reg[4]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1193   DFF  /u_mbist_ctrl/pc_q_reg[3]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1194   DFF  /u_mbist_ctrl/pc_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1195   DFF  /u_mbist_ctrl/pc_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1196   DFF  /u_mbist_ctrl/pc_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1197   DFF  /u_mbist_ctrl/pause_cycles_q_reg[21]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1198   DFF  /u_mbist_ctrl/pause_cycles_q_reg[20]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1199   DFF  /u_mbist_ctrl/pause_cycles_q_reg[19]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1200   DFF  /u_mbist_ctrl/pause_cycles_q_reg[18]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1201   DFF  /u_mbist_ctrl/pause_cycles_q_reg[17]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1202   DFF  /u_mbist_ctrl/pause_cycles_q_reg[16]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1203   DFF  /u_mbist_ctrl/pause_cycles_q_reg[15]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1204   DFF  /u_mbist_ctrl/pause_cycles_q_reg[14]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1205   DFF  /u_mbist_ctrl/pause_cycles_q_reg[13]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1206   DFF  /u_mbist_ctrl/pause_cycles_q_reg[12]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1207   DFF  /u_mbist_ctrl/pause_cycles_q_reg[11]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1208   DFF  /u_mbist_ctrl/pause_cycles_q_reg[10]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1209   DFF  /u_mbist_ctrl/pause_cycles_q_reg[9]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1210   DFF  /u_mbist_ctrl/pause_cycles_q_reg[8]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1211   DFF  /u_mbist_ctrl/pause_cycles_q_reg[7]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1212   DFF  /u_mbist_ctrl/pause_cycles_q_reg[6]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1213   DFF  /u_mbist_ctrl/pause_cycles_q_reg[5]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1214   DFF  /u_mbist_ctrl/pause_cycles_q_reg[4]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1215   DFF  /u_mbist_ctrl/pause_cycles_q_reg[3]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1216   DFF  /u_mbist_ctrl/pause_cycles_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1217   DFF  /u_mbist_ctrl/pause_cycles_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1218   DFF  /u_mbist_ctrl/pause_cycles_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1219   DFF  /u_mbist_ctrl/bg_idx_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1220   DFF  /u_mbist_ctrl/bg_idx_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1221   DFF  /u_mbist_ctrl/bg_idx_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1222   DFF  /u_mbist_ctrl/bg_sweep_q_reg
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1223   DFF  /u_mbist_ctrl/alg_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1224   DFF  /u_mbist_ctrl/alg_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1225   DFF  /u_mbist_ctrl/alg_q_reg[0]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1227   DFF  /u_mbist_ctrl/st_q_reg[2]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1228   DFF  /u_mbist_ctrl/st_q_reg[1]
+// Warning: Key point's mapped point is not in compared logic cone
+  (G)   1229   DFF  /u_mbist_ctrl/st_q_reg[0]
+
+  (G) + 2      PI  /rst_n_i = 1
+  (R) + 2      PI  /rst_n_i = 1
+
+  (G) + 98     PI  /mbist_run_i = 1
+
+  (G) + 118    PI  /mbist_cfg_i[6] = 1
+
+  (G) + 119    PI  /mbist_cfg_i[5] = 1
+
+  (G) + 122    PI  /mbist_cfg_i[2] = 1
+
+  (G) + 123    PI  /mbist_cfg_i[1] = 1
+
+  (G) + 1157   DFF /u_mbist_ctrl/dcnt_q_reg[1] = 1
+
+  (G) + 1158   DFF /u_mbist_ctrl/dcnt_q_reg[0] = 0
+
+  (G) + 1159   DFF /u_mbist_ctrl/pcnt_q_reg[21] = 0
+
+  (G) + 1160   DFF /u_mbist_ctrl/pcnt_q_reg[20] = 0
+
+  (G) + 1161   DFF /u_mbist_ctrl/pcnt_q_reg[19] = 0
+
+  (G) + 1162   DFF /u_mbist_ctrl/pcnt_q_reg[18] = 0
+
+  (G) + 1163   DFF /u_mbist_ctrl/pcnt_q_reg[17] = 0
+
+  (G) + 1164   DFF /u_mbist_ctrl/pcnt_q_reg[16] = 0
+
+  (G) + 1165   DFF /u_mbist_ctrl/pcnt_q_reg[15] = 1
+
+  (G) + 1166   DFF /u_mbist_ctrl/pcnt_q_reg[14] = 1
+
+  (G) + 1167   DFF /u_mbist_ctrl/pcnt_q_reg[13] = 1
+
+  (G) + 1168   DFF /u_mbist_ctrl/pcnt_q_reg[12] = 0
+
+  (G) + 1169   DFF /u_mbist_ctrl/pcnt_q_reg[11] = 1
+
+  (G) + 1170   DFF /u_mbist_ctrl/pcnt_q_reg[10] = 0
+
+  (G) + 1171   DFF /u_mbist_ctrl/pcnt_q_reg[9] = 1
+
+  (G) + 1172   DFF /u_mbist_ctrl/pcnt_q_reg[8] = 1
+
+  (G) + 1173   DFF /u_mbist_ctrl/pcnt_q_reg[7] = 1
+
+  (G) + 1174   DFF /u_mbist_ctrl/pcnt_q_reg[6] = 1
+
+  (G) + 1175   DFF /u_mbist_ctrl/pcnt_q_reg[5] = 1
+
+  (G) + 1176   DFF /u_mbist_ctrl/pcnt_q_reg[4] = 1
+
+  (G) + 1177   DFF /u_mbist_ctrl/pcnt_q_reg[3] = 1
+
+  (G) + 1178   DFF /u_mbist_ctrl/pcnt_q_reg[2] = 0
+
+  (G) + 1179   DFF /u_mbist_ctrl/pcnt_q_reg[1] = 1
+
+  (G) + 1180   DFF /u_mbist_ctrl/pcnt_q_reg[0] = 1
+
+  (G) + 1181   DFF /u_mbist_ctrl/slot_q_reg[2] = 0
+
+  (G) + 1182   DFF /u_mbist_ctrl/slot_q_reg[1] = 0
+
+  (G) + 1183   DFF /u_mbist_ctrl/slot_q_reg[0] = 1
+
+  (G) + 1184   DFF /u_mbist_ctrl/addr_q_reg[7] = 0
+
+  (G) + 1185   DFF /u_mbist_ctrl/addr_q_reg[6] = 1
+
+  (G) + 1186   DFF /u_mbist_ctrl/addr_q_reg[5] = 1
+
+  (G) + 1187   DFF /u_mbist_ctrl/addr_q_reg[4] = 1
+
+  (G) + 1188   DFF /u_mbist_ctrl/addr_q_reg[3] = 0
+
+  (G) + 1189   DFF /u_mbist_ctrl/addr_q_reg[2] = 1
+
+  (G) + 1190   DFF /u_mbist_ctrl/addr_q_reg[1] = 1
+
+  (G) + 1191   DFF /u_mbist_ctrl/addr_q_reg[0] = 0
+
+  (G) + 1192   DFF /u_mbist_ctrl/pc_q_reg[4] = 1
+
+  (G) + 1193   DFF /u_mbist_ctrl/pc_q_reg[3] = 1
+
+  (G) + 1194   DFF /u_mbist_ctrl/pc_q_reg[2] = 1
+
+  (G) + 1195   DFF /u_mbist_ctrl/pc_q_reg[1] = 0
+
+  (G) + 1196   DFF /u_mbist_ctrl/pc_q_reg[0] = 1
+
+  (G) + 1197   DFF /u_mbist_ctrl/pause_cycles_q_reg[21] = 0
+
+  (G) + 1198   DFF /u_mbist_ctrl/pause_cycles_q_reg[20] = 0
+
+  (G) + 1199   DFF /u_mbist_ctrl/pause_cycles_q_reg[19] = 1
+
+  (G) + 1200   DFF /u_mbist_ctrl/pause_cycles_q_reg[18] = 0
+
+  (G) + 1201   DFF /u_mbist_ctrl/pause_cycles_q_reg[17] = 0
+
+  (G) + 1202   DFF /u_mbist_ctrl/pause_cycles_q_reg[16] = 0
+
+  (G) + 1203   DFF /u_mbist_ctrl/pause_cycles_q_reg[15] = 0
+
+  (G) + 1204   DFF /u_mbist_ctrl/pause_cycles_q_reg[14] = 1
+
+  (G) + 1205   DFF /u_mbist_ctrl/pause_cycles_q_reg[13] = 1
+
+  (G) + 1206   DFF /u_mbist_ctrl/pause_cycles_q_reg[12] = 0
+
+  (G) + 1207   DFF /u_mbist_ctrl/pause_cycles_q_reg[11] = 0
+
+  (G) + 1208   DFF /u_mbist_ctrl/pause_cycles_q_reg[10] = 1
+
+  (G) + 1209   DFF /u_mbist_ctrl/pause_cycles_q_reg[9] = 1
+
+  (G) + 1210   DFF /u_mbist_ctrl/pause_cycles_q_reg[8] = 1
+
+  (G) + 1211   DFF /u_mbist_ctrl/pause_cycles_q_reg[7] = 1
+
+  (G) + 1212   DFF /u_mbist_ctrl/pause_cycles_q_reg[6] = 0
+
+  (G) + 1213   DFF /u_mbist_ctrl/pause_cycles_q_reg[5] = 0
+
+  (G) + 1214   DFF /u_mbist_ctrl/pause_cycles_q_reg[4] = 0
+
+  (G) + 1215   DFF /u_mbist_ctrl/pause_cycles_q_reg[3] = 1
+
+  (G) + 1216   DFF /u_mbist_ctrl/pause_cycles_q_reg[2] = 0
+
+  (G) + 1217   DFF /u_mbist_ctrl/pause_cycles_q_reg[1] = 1
+
+  (G) + 1218   DFF /u_mbist_ctrl/pause_cycles_q_reg[0] = 1
+
+  (G) + 1219   DFF /u_mbist_ctrl/bg_idx_q_reg[2] = 0
+
+  (G) + 1220   DFF /u_mbist_ctrl/bg_idx_q_reg[1] = 0
+
+  (G) + 1221   DFF /u_mbist_ctrl/bg_idx_q_reg[0] = 1
+
+  (G) + 1222   DFF /u_mbist_ctrl/bg_sweep_q_reg = 1
+
+  (G) + 1223   DFF /u_mbist_ctrl/alg_q_reg[2] = 0
+
+  (G) + 1224   DFF /u_mbist_ctrl/alg_q_reg[1] = 1
+
+  (G) + 1225   DFF /u_mbist_ctrl/alg_q_reg[0] = 0
+
+  (G) + 1227   DFF /u_mbist_ctrl/st_q_reg[2] = 0
+
+  (G) + 1228   DFF /u_mbist_ctrl/st_q_reg[1] = 0
+
+  (G) + 1229   DFF /u_mbist_ctrl/st_q_reg[0] = 0
+
+  (G) + 2145   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][11] = 0
+  (R) + 820    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][11]/U$1 = 0
+
+  (G) + 2146   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][10] = 1
+  (R) + 4987   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][10]/U$1 = 1
+
+  (G) + 2147   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][9] = 0
+  (R) + 4985   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][9]/U$1 = 0
+
+  (G) + 2148   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][8] = 1
+  (R) + 819    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][8]/U$1 = 1
+
+  (G) + 2149   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][7] = 0
+  (R) + 818    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][7]/U$1 = 0
+
+  (G) + 2162   DFF /u_core/ex1a_ex1b_reg_q_reg[reg_wr_en] = 0
+  (R) + 946    DFF /u_core/ex1a_ex1b_reg_q_reg[reg_wr_en]/U$1 = 0
+
+  (G) + 2163   DFF /u_core/ex1a_ex1b_reg_q_reg[mem_rd] = 0
+  (R) + 847    DFF /u_core/ex1a_ex1b_reg_q_reg[mem_rd]/U$1 = 0
+
+  (G) + 4047   DFF /u_core/u_if/if_id_reg_o_reg[instruction][24] = 0
+  (R) + 4771   DFF /u_core/u_if_if_id_reg_o_reg[instruction][24]/U$1 = 0
+
+  (G) + 4048   DFF /u_core/u_if/if_id_reg_o_reg[instruction][23] = 1
+  (R) + 4770   DFF /u_core/u_if_if_id_reg_o_reg[instruction][23]/U$1 = 1
+
+  (G) + 4049   DFF /u_core/u_if/if_id_reg_o_reg[instruction][22] = 1
+  (R) + 5010   DFF /u_core/u_if_if_id_reg_o_reg[instruction][22]/U$1 = 1
+
+  (G) + 4050   DFF /u_core/u_if/if_id_reg_o_reg[instruction][21] = 1
+  (R) + 4769   DFF /u_core/u_if_if_id_reg_o_reg[instruction][21]/U$1 = 1
+
+  (G) + 4051   DFF /u_core/u_if/if_id_reg_o_reg[instruction][20] = 0
+  (R) + 4768   DFF /u_core/u_if_if_id_reg_o_reg[instruction][20]/U$1 = 0
+
+  (G) + 4125   DFF /u_core/u_id/id_ex_reg_o_reg[instruction][11] = 1
+  (R) + 4980   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][11]/U$1 = 1
+
+  (G) + 4126   DFF /u_core/u_id/id_ex_reg_o_reg[instruction][10] = 1
+  (R) + 4998   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][10]/U$1 = 1
+
+  (G) + 4127   DFF /u_core/u_id/id_ex_reg_o_reg[instruction][9] = 0
+  (R) + 4978   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][9]/U$1 = 0
+
+  (G) + 4128   DFF /u_core/u_id/id_ex_reg_o_reg[instruction][8] = 1
+  (R) + 3534   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][8]/U$1 = 1
+
+  (G) + 4129   DFF /u_core/u_id/id_ex_reg_o_reg[instruction][7] = 1
+  (R) + 3533   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][7]/U$1 = 1
+
+  (G) + 4255   DFF /u_core/u_id/id_ex_reg_o_reg[reg_wr_en] = 1
+  (R) + 3595   DFF /u_core/u_id_id_ex_reg_o_reg[reg_wr_en]/U$1 = 1
+
+  (G) + 4256   DFF /u_core/u_id/id_ex_reg_o_reg[mem_rd] = 1
+  (R) + 3557   DFF /u_core/u_id_id_ex_reg_o_reg[mem_rd]/U$1 = 1
+
+
+Simulation result:
+  (G) + 72118  DC  /u_mbist_ctrl/U$597 = 0
+  (R) + 76653  INV /mut_inv/U$1 = 1
+
+

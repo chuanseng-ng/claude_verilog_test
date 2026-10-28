@@ -1,0 +1,75 @@
+// Confirm all Non-equivalent compared points
+
+Functional test vector for mapped points:
+  (G) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+  (R) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+Diagnosis points: [DATA]
+  (G) + 34720  AND  /u_core/g372261/U$1
+  (R) + 76653  INV  /mut_inv/U$1
+
+  (G) + 2      PI  /rst_n_i = 1
+  (R) + 2      PI  /rst_n_i = 1
+
+  (G) + 818    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][7]/U$1 = 1
+  (R) + 818    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][7]/U$1 = 1
+
+  (G) + 819    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][8]/U$1 = 0
+  (R) + 819    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][8]/U$1 = 0
+
+  (G) + 820    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][11]/U$1 = 0
+  (R) + 820    DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][11]/U$1 = 0
+
+  (G) + 847    DFF /u_core/ex1a_ex1b_reg_q_reg[mem_rd]/U$1 = 1
+  (R) + 847    DFF /u_core/ex1a_ex1b_reg_q_reg[mem_rd]/U$1 = 1
+
+  (G) + 946    DFF /u_core/ex1a_ex1b_reg_q_reg[reg_wr_en]/U$1 = 1
+  (R) + 946    DFF /u_core/ex1a_ex1b_reg_q_reg[reg_wr_en]/U$1 = 1
+
+  (G) + 3533   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][7]/U$1 = 0
+  (R) + 3533   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][7]/U$1 = 0
+
+  (G) + 3534   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][8]/U$1 = 1
+  (R) + 3534   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][8]/U$1 = 1
+
+  (G) + 3557   DFF /u_core/u_id_id_ex_reg_o_reg[mem_rd]/U$1 = 1
+  (R) + 3557   DFF /u_core/u_id_id_ex_reg_o_reg[mem_rd]/U$1 = 1
+
+  (G) + 3595   DFF /u_core/u_id_id_ex_reg_o_reg[reg_wr_en]/U$1 = 0
+  (R) + 3595   DFF /u_core/u_id_id_ex_reg_o_reg[reg_wr_en]/U$1 = 0
+
+  (G) + 4768   DFF /u_core/u_if_if_id_reg_o_reg[instruction][20]/U$1 = 1
+  (R) + 4768   DFF /u_core/u_if_if_id_reg_o_reg[instruction][20]/U$1 = 1
+
+  (G) + 4769   DFF /u_core/u_if_if_id_reg_o_reg[instruction][21]/U$1 = 0
+  (R) + 4769   DFF /u_core/u_if_if_id_reg_o_reg[instruction][21]/U$1 = 0
+
+  (G) + 4770   DFF /u_core/u_if_if_id_reg_o_reg[instruction][23]/U$1 = 0
+  (R) + 4770   DFF /u_core/u_if_if_id_reg_o_reg[instruction][23]/U$1 = 0
+
+  (G) + 4771   DFF /u_core/u_if_if_id_reg_o_reg[instruction][24]/U$1 = 0
+  (R) + 4771   DFF /u_core/u_if_if_id_reg_o_reg[instruction][24]/U$1 = 0
+
+  (G) + 4978   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][9]/U$1 = 0
+  (R) + 4978   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][9]/U$1 = 0
+
+  (G) + 4980   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][11]/U$1 = 1
+  (R) + 4980   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][11]/U$1 = 1
+
+  (G) + 4985   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][9]/U$1 = 1
+  (R) + 4985   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][9]/U$1 = 1
+
+  (G) + 4987   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][10]/U$1 = 1
+  (R) + 4987   DFF /u_core/ex1a_ex1b_reg_q_reg[instruction][10]/U$1 = 1
+
+  (G) + 4998   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][10]/U$1 = 1
+  (R) + 4998   DFF /u_core/u_id_id_ex_reg_o_reg[instruction][10]/U$1 = 1
+
+  (G) + 5010   DFF /u_core/u_if_if_id_reg_o_reg[instruction][22]/U$1 = 1
+  (R) + 5010   DFF /u_core/u_if_if_id_reg_o_reg[instruction][22]/U$1 = 1
+
+
+Simulation result:
+  (G) + 34720  AND /u_core/g372261/U$1 = 0
+  (R) + 76653  INV /mut_inv/U$1 = 1
+
+

@@ -1,0 +1,6 @@
+# Compared points are: Non-equivalent
+#  (G) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+#  (R) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+add_compared_points {u_core/fwd_b_ex1c_r_reg/U$1}
+
+# 1 compared points written
