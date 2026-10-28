@@ -1,0 +1,10 @@
+set circuit1 [readnet spice @SPICE@]
+set circuit2 [readnet verilog /dev/null]
+readnet spice @PDK@/libs.ref/sky130_fd_sc_hd/spice/sky130_ef_sc_hd__decap_12.spice $circuit2
+readnet spice @PDK@/libs.ref/sky130_fd_sc_hd/spice/sky130_ef_sc_hd__fill_12.spice $circuit2
+readnet spice @PDK@/libs.ref/sky130_fd_sc_hd/spice/sky130_ef_sc_hd__fill_4.spice $circuit2
+readnet spice @PDK@/libs.ref/sky130_fd_sc_hd/spice/sky130_ef_sc_hd__fill_8.spice $circuit2
+readnet spice @PDK@/libs.ref/sky130_fd_sc_hd/spice/sky130_fd_sc_hd.spice $circuit2
+readnet spice @PDK@/libs.ref/sky130_sram_macros/spice/sky130_sram_1kbyte_1rw1r_32x256_8.spice $circuit2
+readnet verilog @PNL@ $circuit2
+lvs "$circuit1 @TOP@" "$circuit2 @TOP@" @LLS@/netgen/setup.tcl @RPT@ -blackbox -json
