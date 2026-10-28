@@ -472,3 +472,44 @@ A `driver` waiver can now set `"stable": true` and omit `run_id` when the driver
 waiver on a driver that does not violate is STALE. Synthesis-named drivers keep the mandatory `run_id`. Waiver file state after the scan run
 `RUN_2026-10-26_09-59-03`: mux_clk (no run_id, 0.45 pF), din0[22] (0.37 pF, max_ss + nom_ss), din0[23] (0.36), din0[26] (0.355); `_047147_/Y` stays unwaived
 and is tracked here. `--strict-stale` on that run: 7 waived, 1 unwaived, 0 stale. Details: `docs/design/DFT_ARCHITECTURE.md` 14.13.
+
+## 9. Wire-length 1500 adopted as default (2026-10-28, bead `e45j`)
+
+User decision 2026-10-28: `GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH = 1500` is now in `pnr/sky130/soc/config_rccal.json`, the default Sky130 SoC flow. Section 6.4 asked for one more arm on a different RTL vintage before adopting it; this is that arm. `config_rccal_wl1500.json` was the A/B arm of sections 6 and 9 and is **removed** (it was a copy of `config_rccal.json` plus this one key, so it is redundant; nothing else referenced it besides historical text in this file, `DFT_ARCHITECTURE.md` and `SKY130_CDC_MAXSS_ANALYSIS.md`, which are left as history).
+
+**The arm.** `RUN_2026-10-28_05-14-30` against baseline `RUN_2026-10-27_05-40-27` (PR #333, scan re-harden, CPU scan macro, `CVTClassicScan`, `CVT_SYNTH_GATE=warn`, KLayout DRC skipped, `make -C pnr librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=config_rccal_wl1500.json`). Single variable, measured: the flattened `resolved.json` differs in exactly one key (0 -> 1500), and `soc_top.nl.v` of steps 04, 07 and 11 is sha256-identical to the baseline (worktree path normalised). RSZ-0065 in step 38 confirms the knob reached the post-GRT repair; step 29 (post-GPL, `DESIGN_REPAIR_MAX_WIRE_LENGTH`) is unchanged at the automatic 3 205 um. The flow is bit-deterministic here (section 6.1), so every difference is a response to the key.
+
+| | wl1500 `RUN_2026-10-28_05-14-30` | baseline `RUN_2026-10-27_05-40-27` |
+|---|---|---|
+| max-slew violating pins, max_ss | **129** | 1067 |
+| nom_ss / min_ss | 57 / 33 | 709 / 64 |
+| max_tt / nom_tt | 1 / 0 | 695 / 145 |
+| max_ff / nom_ff | 0 / 0 | 596 / 48 |
+| max_ss slew, diode pins | 89 | 930 |
+| max-cap violators in the flow STA, max_ss | 5 | 6 |
+| max-cap with the waiver file, `--strict-stale` | 8 waived, 1 unwaived, 2 stale (old file); **9 waived, 0 unwaived, 0 stale** (file of this section) | 10 unwaived, 3 stale (old file) |
+| setup, max_ss (flow STA) | 5 violators, WNS -0.055, TNS -0.226 ns | 6 violators, WNS -0.153, TNS -0.603 ns |
+| `core_clk` setup nom_tt / nom_ss / max_ss (replica STA, ns) | +5.600 / +0.220 / -0.055 | +5.588 / +0.132 / -0.153 |
+| hold violators, 9 corners | 0 | 0 |
+| `core_clk` hold worst max_ss / nom_ff / max_ff (ns) | +0.336 / +0.245 / +0.247 | +0.231 / +0.280 / +0.268 |
+| done -> `dft_scan_en` -> SE setup, max_ss (ns) | +0.740 | +0.671 |
+| Netgen LVS / routing DRC | 0 / 0 | 0 / 0 |
+| Magic DRC | 10 962 (nwell.4 10 930 + met4.4a 32) | 10 959 (10 927 + 32) |
+| antenna nets / pins (diodes) | 292 / 375 (18 683) | 290 / 382 (20 500) |
+| utilisation / power | 46.63 % / 119.03 mW | 46.64 % / 119.10 mW |
+| instances / timing-repair buffers | 331 309 / 28 879 | 332 973 / 28 726 |
+| step-38 repair (buffers / nets / resized) | 240 / 341 / 184 | 45 / 174 / 63 |
+| post-route CDC budget check | PASS at all 9 corners | PASS (after the check-SDC fix of `DFT_ARCHITECTURE.md` 14.14.1) |
+
+Slew: the 31 diode-heavy nets driven by `wire` repair clkbuf_16 (up to 59 diodes each) are gone, which is where 930 -> 89 diode pins comes from. What is left at max_ss is 10 nets: 25 pins on macro/port nets, two `a22oi_4` nets, three hold dlygates and a `mux2`. The max-slew checker stays skipped in the flow, so these are measured from the STA reports, not gated. Setup: the same NPU weight-memory SRAM -> `npu_weight_mem` flop paths (bead `7dhp`, accepted) at max_ss only; the sixth endpoint (`_169106_`) is now positive. Hold stays positive everywhere but is lower at the nom_ff/max_ff corners (-0.035 / -0.021 ns). Both runs ended `make` with deferred errors; this run's were Magic DRC (accepted, bead `45a`) and one max-cap net, no early exit (all 64 steps ran, LVS included).
+
+**Waiver changes with it (user decision 2026-10-28), `pnr/sky130/soc/constraints/max_cap_waivers.json`.**
+
+* `hold-dlygate-scd-link` class ceiling 0.115 -> **0.120 pF**: `hold18202/X` measured 0.1151 pF at max_ss (0.1053 nom_ss), 0.1 % over the old ceiling, same class and cause (diode pin capacitance on a scan-link hold buffer); the other class members measured 0.1077, 0.1038 and 0.1031 pF. 0.120 is 4.2 % above the worst measured value.
+* `gen-a21oi-107570-run-2026-10-27` and `gen-or4-076179-run-2026-10-27` (run-pinned to the baseline) **deleted**: those two nets no longer violate, so they waived nothing (STALE under `--strict-stale`).
+* `u-ref-cm-mux-clk-cpu-pll-sub` is unchanged: `mux_clk` is 0.442 / 0.463 / 0.468 pF (min/nom/max_ss) against its 0.55 pF ceiling (baseline 0.475 / 0.508 / 0.519).
+* Proof: `make -C pnr sky130-soc-maxcap-check SKY130_SOC_MAXCAP_RUN=/nobackup/sky130_soc_runs/RUN_2026-10-28_05-14-30 STRICT_STALE=1` -> **9 waived, 0 unwaived, 0 stale: PASS**. `tb/tests/test_cvt_maxcap_waiver.py` 100 pass (its pin on the committed file now expects 0.12 and the two run-pinned entries absent). The adopted default has not itself been run end to end; this run used the identical config through a differently named file, so the next full run is the first with `config_rccal.json` directly.
+
+**Scan-chain check needs `--en-net`.** `tools/dft/check_scan_chains.py` counts the resizer's clone of the enable gate (`and2_2 clone13` next to `and2_4 _090536_`, same function and input nets) as the same root only when told the root net: pass **`--en-net dft_scan_en`**. Without it the check fails with "SCE pins trace to 2 different roots" although the netlist is correct (measured both ways on this run). With it: `check_scan_chains.py <49-openroad-fillinsertion/soc_top.nl.v> --en-net dft_scan_en --out-gate-net crypto_wipe_done --expect-chains 6 --expect-unscanned 922 --expect-length 3565,3565,3565,3565,3562,981 --explain-qrx 'u_crypto\.(g_aes\.u_aes\.rk_q|key_q)' --explain-clk tck_i,scan_clk_i` -> exit 0, 18 803 scan flops, 922 unscanned (664 `tck_i`, 2 `scan_clk_i`, 256 crypto keys), SCE roots `{dft_scan_en: 18803}`.
+
+Limits: one arm on this vintage (plus the section 6 arm on an older one, both in the same direction); KLayout DRC skipped (bead `00ef`); the stock max-slew checker still skipped; hold margin at the ff corners is a few tens of ps lower and was not investigated further.

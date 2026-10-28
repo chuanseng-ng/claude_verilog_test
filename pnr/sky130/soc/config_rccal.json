@@ -138,6 +138,7 @@
     "GRT_DESIGN_REPAIR_MAX_CAP_PCT": 30,
     "DESIGN_REPAIR_MAX_SLEW_PCT": 40,
     "DESIGN_REPAIR_MAX_CAP_PCT": 40,
+    "GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH": 1500,
     "PL_RESIZER_HOLD_SLACK_MARGIN": 0.3,
     "RSZ_DONT_TOUCH_RX": "(^|\\.)(u_cpu_cg\\.g_cell\\.u_root_buf|u_ref_cm\\.u_root_buf)$",
     "// RSZ_DONT_TOUCH_NOTE": "j41m.4 (2026-10-17): dont_touch is on the three buf_16 clock-root buffers ONLY (buf_16, not clkbuf_16: clkbuf_16 is in CTS_CLK_BUFFERS and TritonCTS skipped the nets, CTS-0105). The first version also covered the sdlclkp_4 ICG and the two mux2_4, and RUN_2026-10-16_23-48-20 died at CVT.RepairDesignPostGPL with ODB-0370: dft_scan_mode (2895 sinks) feeds SCE/S of those cells and repair_design must rewire it, which a dont_touch instance forbids.",

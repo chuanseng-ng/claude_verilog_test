@@ -31,38 +31,9 @@
                 "nom_ss_100C_1v60",
                 "max_ss_100C_1v60"
             ],
-            "max_cap_pf": 0.115,
+            "max_cap_pf": 0.12,
             "bead": "claude_verilog_test-e45j",
-            "justification": "User decision 2026-10-27 (PR #333). Load-class waiver (cvt_maxcap_waiver.py driver_class): a hold-repair sky130_fd_sc_hd__dlygate4sd3_* whose only non-antenna-diode load is one SCD pin of a scan flop (sky130_fd_sc_hd__sdf*), i.e. the hold buffer on a scan-chain link. The dlygate4sd3_1 has the lowest max-cap limit of the cells used (0.1007 pF); antenna repair attaches 6 to 17 diodes to such links, each adding pin capacitance, so a few of them exceed the limit by a few percent. This is the antenna-diode versus cap trade of bead e45j, not a drive-strength error of a functional net. The class is not new: the previous run (RUN_2026-10-26_09-59-03) had 98 such nets with up to 17 diodes, this one 90 with up to 13. Measured in RUN_2026-10-27_05-40-27 at max_ss: hold19396 0.1113 pF (13 diodes), hold19401 0.1046 pF (6), hold19961 0.1020 pF (12) against 0.1007 pF; hold19396 also 0.1029 pF at nom_ss. The class is proven from the final netlist for every violation (driver cell type, exactly one non-diode load, that load an sdf*/SCD pin; a macro or functional load, or another cell type, is not covered). The 0.115 pF ceiling is 3 percent above the worst measured value, so a regression still fails; the waiver goes STALE (a failure under --strict-stale) on a run where no net of the class violates."
-        },
-        {
-            "id": "gen-a21oi-107570-run-2026-10-27",
-            "driver": {
-                "instance": "_107570_",
-                "pin": "Y"
-            },
-            "run_id": "RUN_2026-10-27_05-40-27",
-            "corners": [
-                "nom_ss_100C_1v60",
-                "max_ss_100C_1v60"
-            ],
-            "max_cap_pf": 0.16,
-            "bead": "claude_verilog_test-e45j",
-            "justification": "User decision 2026-10-27 (PR #333). Run-pinned: _107570_ is a synthesis-generated name (it goes stale on any re-synthesis; the next run needs its own entry or the cause fixed). A functional a21oi_4 (net _050069_) with 15 loads, 13 of which are antenna diodes inserted by antenna repair, plus one a22o_1.B1 and one or4_2.C. Measured in RUN_2026-10-27_05-40-27: max_ss 0.1580 pF and nom_ss 0.1459 pF against the 0.1383 pF limit (+14 and +5 percent); the excess is diode pin capacitance (the antenna-versus-cap trade of bead e45j). Ceiling 0.160 pF is 1.3 percent above the worst measured value. Scoped to the two violating corners."
-        },
-        {
-            "id": "gen-or4-076179-run-2026-10-27",
-            "driver": {
-                "instance": "_076179_",
-                "pin": "X"
-            },
-            "run_id": "RUN_2026-10-27_05-40-27",
-            "corners": [
-                "max_ss_100C_1v60"
-            ],
-            "max_cap_pf": 0.338,
-            "bead": "claude_verilog_test-e45j",
-            "justification": "User decision 2026-10-27 (PR #333). Run-pinned: _076179_ is a synthesis-generated name. A functional or4_4 (net _023103_) with 7 loads (5 o21ai_1.A1, one or4b_4.C, one o211ai_1.A1), no diodes; wire capacitance only. Measured in RUN_2026-10-27_05-40-27 at max_ss: 0.3371 pF against the 0.3360 pF limit (+0.3 percent). Ceiling 0.338 pF is 0.3 percent above the measured value. Scoped to max_ss, the only violating corner."
+            "justification": "User decision 2026-10-27 (PR #333). Load-class waiver (cvt_maxcap_waiver.py driver_class): a hold-repair sky130_fd_sc_hd__dlygate4sd3_* whose only non-antenna-diode load is one SCD pin of a scan flop (sky130_fd_sc_hd__sdf*), i.e. the hold buffer on a scan-chain link. The dlygate4sd3_1 has the lowest max-cap limit of the cells used (0.1007 pF); antenna repair attaches 6 to 17 diodes to such links, each adding pin capacitance, so a few of them exceed the limit by a few percent. This is the antenna-diode versus cap trade of bead e45j, not a drive-strength error of a functional net. The class is not new: the previous run (RUN_2026-10-26_09-59-03) had 98 such nets with up to 17 diodes, this one 90 with up to 13. Measured in RUN_2026-10-27_05-40-27 at max_ss: hold19396 0.1113 pF (13 diodes), hold19401 0.1046 pF (6), hold19961 0.1020 pF (12) against 0.1007 pF; hold19396 also 0.1029 pF at nom_ss. The class is proven from the final netlist for every violation (driver cell type, exactly one non-diode load, that load an sdf*/SCD pin; a macro or functional load, or another cell type, is not covered). The 0.115 pF ceiling is 3 percent above the worst measured value, so a regression still fails; the waiver goes STALE (a failure under --strict-stale) on a run where no net of the class violates. User decision 2026-10-28 (PR for bead e45j wire-length adoption): ceiling raised 0.115 -> 0.120 pF. RUN_2026-10-28_05-14-30 (GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH 1500, same netlist through floorplan) measured hold18202 0.1151 pF at max_ss (0.1053 pF nom_ss), 0.1% above the old ceiling, same class and cause (diode pin capacitance on a scan-link hold buffer); the other class members were hold19028 0.1077, hold19396 0.1038 and hold18031 0.1031 pF. The new 0.120 pF ceiling is 4.2 percent above the worst measured value, so a regression still fails."
         }
     ]
 }
