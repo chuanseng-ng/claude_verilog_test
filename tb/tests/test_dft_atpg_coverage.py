@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Tests for tools/dft/atpg/coverage_report.py (bead j41m.15).
 
 Facts about Quaigh 0.0.6 these tests rely on (read from its source, DFT_ARCHITECTURE 18.1):
@@ -53,17 +54,26 @@ def test_only_proven_untestable_is_subtracted():
 
 
 def test_incomplete_log_is_not_a_result():
-    truncated = "Analyzing network with 4 inputs, 2 outputs, 10 gates, 60 possible faults, 40 unique faults\n" \
-                "Generated 128 random patterns, detecting 20/40 faults (50.00% coverage)\n"
+    truncated = (
+        "Analyzing network with 4 inputs, 2 outputs, 10 gates, 60 possible faults, 40 unique faults\n"
+        "Generated 128 random patterns, detecting 20/40 faults (50.00% coverage)\n"
+    )
     p = cr.parse_log(truncated)
     assert not p["complete"]
-    rep = cr.build_report(truncated, metrics={"completed": False, "rc": 137, "killed_by_cap": True}, exclusions=None, label="x")
+    rep = cr.build_report(
+        truncated,
+        metrics={"completed": False, "rc": 137, "killed_by_cap": True},
+        exclusions=None,
+        label="x",
+    )
     assert rep["status"] == "INCOMPLETE"
     assert rep["test_coverage_pct"] is None and rep["fault_coverage_pct"] is None
 
 
 def test_inconsistent_detected_counts_are_flagged():
-    log = timer_log().replace("Kept 358 patterns, detecting 4336/4692", "Kept 358 patterns, detecting 4300/4692")
+    log = timer_log().replace(
+        "Kept 358 patterns, detecting 4336/4692", "Kept 358 patterns, detecting 4300/4692"
+    )
     p = cr.parse_log(log)
     assert p["inconsistent"]
     rep = cr.build_report(log, metrics={"completed": True, "rc": 0}, exclusions=None, label="x")
@@ -71,8 +81,13 @@ def test_inconsistent_detected_counts_are_flagged():
 
 
 def test_report_carries_exclusion_manifest_and_statement():
-    excl = {"tck_flops": 664, "scan_clk_flops": 2, "crypto_key_flops": 256, "hold_masked_flops": 94,
-            "blackboxes": ["u_cpu"]}
+    excl = {
+        "tck_flops": 664,
+        "scan_clk_flops": 2,
+        "crypto_key_flops": 256,
+        "hold_masked_flops": 94,
+        "blackboxes": ["u_cpu"],
+    }
     metrics = json.loads((FIX / "quaigh_timer.metrics.json").read_text())
     rep = cr.build_report(timer_log(), metrics=metrics, exclusions=excl, label="timer")
     assert rep["status"] == "OK"
@@ -94,6 +109,8 @@ def test_cli_roundtrip(tmp_path):
     rep = json.loads(out.read_text())
     assert rep["detected"] == 4336 and rep["label"] == "timer"
     # a run killed by the memory cap is reported and exits non-zero
-    met.write_text(json.dumps({"completed": False, "rc": 137, "killed_by_cap": True, "oom_kill": 1}))
+    met.write_text(
+        json.dumps({"completed": False, "rc": 137, "killed_by_cap": True, "oom_kill": 1})
+    )
     assert cr.main([str(log), "--metrics", str(met), "--label", "timer", "--out", str(out)]) == 1
     assert json.loads(out.read_text())["status"] == "INCOMPLETE"

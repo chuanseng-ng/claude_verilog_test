@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Tests for tools/dft/atpg/derive_hold_mask.py (bead j41m.15, DFT Stage 3 ATPG spike).
 
 The mask lists the scanned capture flops whose D pin is NOT observed in the ATPG cut because the scan-view
@@ -21,7 +22,9 @@ sys.path.insert(0, str(ATPG_DIR))
 import derive_hold_mask as dhm  # type: ignore[import-not-found]  # noqa: E402
 
 EXEMPT = Path("/nobackup/claude_sim_build/j41m8_sta/new_nom_tt_exempt.d/exempt_pins.txt")
-NET_1026 = Path("/nobackup/sky130_soc_runs/RUN_2026-10-26_09-59-03/49-openroad-fillinsertion/soc_top.nl.v")
+NET_1026 = Path(
+    "/nobackup/sky130_soc_runs/RUN_2026-10-26_09-59-03/49-openroad-fillinsertion/soc_top.nl.v"
+)
 
 
 def flop(inst: str, qnet: str, typ: str = "sdfrtp_1") -> str:
@@ -34,7 +37,9 @@ def flop(inst: str, qnet: str, typ: str = "sdfrtp_1") -> str:
 def mini_netlist(extra: str = "") -> str:
     body = ""
     body += flop("_1_", r"\u_cpu_axi_cdc.u_aw_fifo.u_wr_ptr_to_rd.sync_q[0][0] ")
-    body += flop("_2_", r"\u_cpu_axi_cdc.u_aw_fifo.u_wr_ptr_to_rd.sync_q[1][0] ")  # stage 1: NOT masked
+    body += flop(
+        "_2_", r"\u_cpu_axi_cdc.u_aw_fifo.u_wr_ptr_to_rd.sync_q[1][0] "
+    )  # stage 1: NOT masked
     body += flop("_3_", r"\u_cpu_axi_cdc.u_r_fifo.u_rd_ptr_to_wr.sync_q[0][3] ")
     body += flop("_4_", r"\u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd.sync_q[0][1] ")
     body += flop("_5_", r"\u_mbist.g_cpu.u_xing_cpu.ctl_w[1] ")
@@ -48,7 +53,9 @@ def mini_netlist(extra: str = "") -> str:
 
 def test_match_rules_use_net_names_only():
     assert dhm.rule_for(r"u_cpu_axi_cdc.u_ar_fifo.u_wr_ptr_to_rd.sync_q[0][2]") == "cdc_gray_axi"
-    assert dhm.rule_for(r"u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd.sync_q[0][0]") == "mbist_ptr_sync"
+    assert (
+        dhm.rule_for(r"u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd.sync_q[0][0]") == "mbist_ptr_sync"
+    )
     assert dhm.rule_for(r"u_mbist.g_cpu.u_xing_cpu.ctl_w[0]") == "mbist_ctl_hold"
     assert dhm.rule_for(r"u_mbist.core_cfg_w[25]") == "mbist_core_cfg"
     assert dhm.rule_for(r"mb_cpu_cfg[0]") == "mbist_cpu_cfg"
@@ -63,14 +70,21 @@ def test_derive_selects_exactly_the_named_flops(tmp_path):
     mask = dhm.derive(dhm.read_flops(p))
     assert sorted(m["inst"] for m in mask) == ["_1_", "_3_", "_4_", "_5_", "_6_", "_7_"]
     assert {m["rule"] for m in mask} == {
-        "cdc_gray_axi", "mbist_ptr_sync", "mbist_ctl_hold", "mbist_core_cfg", "mbist_cpu_cfg"}
+        "cdc_gray_axi",
+        "mbist_ptr_sync",
+        "mbist_ctl_hold",
+        "mbist_core_cfg",
+        "mbist_cpu_cfg",
+    }
 
 
 def test_instance_ids_are_irrelevant(tmp_path):
     a = tmp_path / "a.v"
     b = tmp_path / "b.v"
     a.write_text(mini_netlist())
-    b.write_text(mini_netlist().replace("_1_", "_900001_").replace("_4_", "_a_b_").replace("_7_", "_zz_"))
+    b.write_text(
+        mini_netlist().replace("_1_", "_900001_").replace("_4_", "_a_b_").replace("_7_", "_zz_")
+    )
     qa = sorted(m["qnet"] for m in dhm.derive(dhm.read_flops(a)))
     qb = sorted(m["qnet"] for m in dhm.derive(dhm.read_flops(b)))
     assert qa == qb and len(qa) == 6
@@ -96,7 +110,9 @@ def test_validate_reports_missing_and_extra(tmp_path):
 
     # negative control: one expected pin that the derivation does not produce, and one the derivation produces that is not expected
     bad = tmp_path / "exempt_bad.txt"
-    bad.write_text("\n".join([f"{m['inst']}/D" for m in mask if m["inst"] != "_7_"] + ["_8_/D"]) + "\n")
+    bad.write_text(
+        "\n".join([f"{m['inst']}/D" for m in mask if m["inst"] != "_7_"] + ["_8_/D"]) + "\n"
+    )
     rep = dhm.validate(mask, bad)
     assert not rep["ok"]
     assert rep["missing"] == ["_8_"] and rep["extra"] == ["_7_"]
@@ -124,7 +140,9 @@ def test_cli_exit_codes(tmp_path):
     assert dhm.main([str(p), "--validate", str(exempt), "--drop-rule", "mbist_cpu_cfg"]) == 1
 
 
-@pytest.mark.skipif(not (EXEMPT.exists() and NET_1026.exists()), reason="run-10-26 artifacts not mounted")
+@pytest.mark.skipif(
+    not (EXEMPT.exists() and NET_1026.exists()), reason="run-10-26 artifacts not mounted"
+)
 def test_real_run_1026_matches_94_of_94():
     flops = dhm.read_flops(NET_1026)
     mask = dhm.derive(flops)
@@ -134,7 +152,9 @@ def test_real_run_1026_matches_94_of_94():
     assert rep["matched"] == 94 and not rep["missing"] and not rep["extra"]
 
 
-@pytest.mark.skipif(not (EXEMPT.exists() and NET_1026.exists()), reason="run-10-26 artifacts not mounted")
+@pytest.mark.skipif(
+    not (EXEMPT.exists() and NET_1026.exists()), reason="run-10-26 artifacts not mounted"
+)
 def test_real_run_1026_negative_control():
     flops = dhm.read_flops(NET_1026)
     reduced = dhm.derive(flops, drop_rules={"mbist_cpu_cfg"})

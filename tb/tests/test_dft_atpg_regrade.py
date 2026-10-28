@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Tests for tools/dft/atpg/regrade.py (bead j41m.15): the independent bit-parallel fault re-grader."""
 
 import sys
@@ -37,14 +38,14 @@ def test_good_simulation_truth_table():
 def test_detect_known_faults():
     s = rg.Sim(BLIF)
     s.load(["00", "01", "10", "11"])
-    assert s.detect("y", 0) == 3          # y sa0 needs a=b=1: pattern index 3
-    assert s.detect("y", 1) == 0          # y sa1 visible at pattern 0
+    assert s.detect("y", 0) == 3  # y sa0 needs a=b=1: pattern index 3
+    assert s.detect("y", 1) == 0  # y sa1 visible at pattern 0
     assert s.detect("z", 1) == 0
     s.load(["11"])
-    assert s.detect("z", 1) == 0          # z is 0 at 11, stuck-at-1 flips it
-    assert s.detect("z", 0) is None       # stuck-at-0 equals the good value: not detected by this set
+    assert s.detect("z", 1) == 0  # z is 0 at 11, stuck-at-1 flips it
+    assert s.detect("z", 0) is None  # stuck-at-0 equals the good value: not detected by this set
     s.load(["00", "11"])
-    assert s.detect("a", 1) == 0          # a sa1 at 00 changes y? y=0 either way, z flips: detected on z
+    assert s.detect("a", 1) == 0  # a sa1 at 00 changes y? y=0 either way, z flips: detected on z
 
 
 def test_fault_blif_replaces_the_driver():
@@ -89,6 +90,8 @@ def test_injected_mismatch_is_caught(tmp_path, monkeypatch):
     # with a wrong "mine" there are no detected samples to compare, so use the opposite corruption too
     monkeypatch.setattr(rg.Sim, "detect", lambda self, net, v: 0)
     rep2 = rg.regrade(blif, pats, str(QUAIGH), samples=5, n_undet=5, seed=1, tmp=tmp_path)
-    assert rep2["mismatches"], "a simulator that claims detection everywhere must disagree with quaigh on some fault"
+    assert rep2["mismatches"], (
+        "a simulator that claims detection everywhere must disagree with quaigh on some fault"
+    )
     assert not rep2["ok"]
     assert rep is not None

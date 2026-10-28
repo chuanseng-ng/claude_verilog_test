@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Tests for tools/dft/atpg/regrade_vl.py (bead j41m.15): Verilator + Yosys re-grade, independent of Quaigh."""
 
 import shutil
@@ -40,7 +41,9 @@ def test_comb_view_moves_latches_to_ports():
 
 
 needs_env = pytest.mark.skipif(
-    not (shutil.which("nix") and Path(rv.DEFAULT_YOSYS).exists()), reason="needs nix (verilator) and the pinned yosys")
+    not (shutil.which("nix") and Path(rv.DEFAULT_YOSYS).exists()),
+    reason="needs nix (verilator) and the pinned yosys",
+)
 
 
 @needs_env
@@ -48,16 +51,24 @@ def test_verilator_agrees_and_injected_mismatch_is_caught(tmp_path):
     blif = tmp_path / "t.blif"
     blif.write_text(BLIF)
     pats = tmp_path / "p.test"
-    pats.write_text("1: 000\n2: 110\n")   # inputs a b q
-    faults = [{"net": "y", "value": 0, "own_sim_detects": True},     # needs a=b=1: pattern 2
-              {"net": "z", "value": 0, "own_sim_detects": False},    # z is 0 on both patterns: undetected, but testable
-              {"net": "w", "value": 1, "own_sim_detects": True}]     # w = ~a is 0 at pattern 2
+    pats.write_text("1: 000\n2: 110\n")  # inputs a b q
+    faults = [
+        {"net": "y", "value": 0, "own_sim_detects": True},  # needs a=b=1: pattern 2
+        {
+            "net": "z",
+            "value": 0,
+            "own_sim_detects": False,
+        },  # z is 0 on both patterns: undetected, but testable
+        {"net": "w", "value": 1, "own_sim_detects": True},
+    ]  # w = ~a is 0 at pattern 2
     work = tmp_path / "w"
     work.mkdir()
     rep = rv.run(blif, pats, faults, rv.DEFAULT_YOSYS, rv.DEFAULT_VL_SHELL, work)
     assert rep["ok"] and rep["disagreements"] == []
     assert rep["detected"] == 2 and rep["undetected"] == 1
-    assert rep["undetected_testable_hole"] == 1 and rep["undetected_proven_untestable_yosys_sat"] == 0
+    assert (
+        rep["undetected_testable_hole"] == 1 and rep["undetected_proven_untestable_yosys_sat"] == 0
+    )
     # injected mismatch: claim z sa0 is detected -> the comparison must fail
     faults[1]["own_sim_detects"] = True
     work2 = tmp_path / "w2"

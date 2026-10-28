@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Tests for tools/dft/atpg/netlist_prep.py and the cut wrapper helpers in mk_cut.py (bead j41m.15)."""
 
 import json
@@ -42,8 +43,15 @@ def run(tmp_path, **kw):
     src = tmp_path / "n.v"
     src.write_text(NETLIST)
     out = tmp_path / "p.v"
-    man = npp.prep(src, out, kw.get("key_qrx", KEY), ["tck_i", "scan_clk_i"], kw.get("hold_mask", True),
-                   kw.get("keep_unscanned", False), kw.get("full_scan", False))
+    man = npp.prep(
+        src,
+        out,
+        kw.get("key_qrx", KEY),
+        ["tck_i", "scan_clk_i"],
+        kw.get("hold_mask", True),
+        kw.get("keep_unscanned", False),
+        kw.get("full_scan", False),
+    )
     return man, out.read_text()
 
 
@@ -59,23 +67,27 @@ def test_classification_counts(tmp_path):
 def test_reset_flops_tied_to_reset_value_and_removed(tmp_path):
     _, txt = run(tmp_path)
     assert "_tapA_" not in txt and "_tapC_" not in txt and "_key_" not in txt
-    assert re.search(r"assign tapA_q\s+= 1'b0;", txt)      # dfrtp: reset value 0
-    assert re.search(r"assign tapC_q\s+= 1'b1;", txt)      # dfstp: set value 1
+    assert re.search(r"assign tapA_q\s+= 1'b0;", txt)  # dfrtp: reset value 0
+    assert re.search(r"assign tapC_q\s+= 1'b1;", txt)  # dfstp: set value 1
     assert re.search(r"assign \\u_crypto\.key_q\[3\]\s+= 1'b0;", txt)  # key masked in scan mode
 
 
 def test_no_reset_unscanned_flop_becomes_free_input_with_unobserved_d(tmp_path):
     man, txt = run(tmp_path)
-    assert man["free_init_x_flops"] == 2          # _tapB_ (negedge tck) and _sck_
+    assert man["free_init_x_flops"] == 2  # _tapB_ (negedge tck) and _sck_
     m = re.search(r"_tapB_ \((.*?)\);", txt, re.S)
-    assert m and ".D(tapB_q )" in m.group(1) and ".Q(tapB_q)" in m.group(1)  # D = own Q: unobserved, and not mergeable
+    assert (
+        m and ".D(tapB_q )" in m.group(1) and ".Q(tapB_q)" in m.group(1)
+    )  # D = own Q: unobserved, and not mergeable
 
 
 def test_hold_masked_flop_keeps_q_and_drops_d(tmp_path):
     _, txt = run(tmp_path)
     m = re.search(r"_s1_ \((.*?)\);", txt, re.S)
     assert m and ".D(1'b0)" in m.group(1) and "sync_q[0][0]" in m.group(1)
-    assert ".D(d_i)" in re.search(r"_s2_ \((.*?)\);", txt, re.S).group(1)  # an ordinary scan flop is untouched
+    assert ".D(d_i)" in re.search(r"_s2_ \((.*?)\);", txt, re.S).group(
+        1
+    )  # an ordinary scan flop is untouched
 
 
 def test_physical_cells_are_deleted(tmp_path):
@@ -91,7 +103,9 @@ def test_keep_unscanned_leaves_them_as_ordinary_flops(tmp_path):
 
 def test_full_scan_mode_excludes_only_the_key(tmp_path):
     man, txt = run(tmp_path, full_scan=True)
-    assert man["crypto_key_flops"] == 1 and man["tck_flops"] == 0 and man["other_unscanned_flops"] == 0
+    assert (
+        man["crypto_key_flops"] == 1 and man["tck_flops"] == 0 and man["other_unscanned_flops"] == 0
+    )
     assert "_tapA_" in txt
 
 
@@ -106,21 +120,31 @@ def test_cut_wrapper_ties_constants_and_passes_the_rest():
 
 def test_bbox_stub_resolves_parameter_widths(tmp_path):
     hdr = tmp_path / "m.v"
-    hdr.write_text("module sram(clk0, addr0, dout0);\n parameter ADDR_WIDTH = 10 ;\n parameter DATA_WIDTH = 32 ;\n"
-                   " inout vccd1;\n input clk0;\n input [ADDR_WIDTH-1:0] addr0;\n output [DATA_WIDTH-1:0] dout0;\nendmodule\n")
+    hdr.write_text(
+        "module sram(clk0, addr0, dout0);\n parameter ADDR_WIDTH = 10 ;\n parameter DATA_WIDTH = 32 ;\n"
+        " inout vccd1;\n input clk0;\n input [ADDR_WIDTH-1:0] addr0;\n output [DATA_WIDTH-1:0] dout0;\nendmodule\n"
+    )
     stub = mk_cut.bbox_stub(hdr, "sram")
-    assert "(* blackbox *)" in stub and "input [9:0] addr0;" in stub and "output [31:0] dout0;" in stub
+    assert (
+        "(* blackbox *)" in stub and "input [9:0] addr0;" in stub and "output [31:0] dout0;" in stub
+    )
     assert "vccd1" not in stub
 
 
 def test_dce_drops_logic_that_reaches_no_output_or_flop_d():
-    blif = (".model m\n.inputs a b\n.outputs y\n.names a b y\n11 1\n.names a dead\n1 1\n"
-            ".latch y q re clk 2\n.names q n\n0 1\n.end\n")
+    blif = (
+        ".model m\n.inputs a b\n.outputs y\n.names a b y\n11 1\n.names a dead\n1 1\n"
+        ".latch y q re clk 2\n.names q n\n0 1\n.end\n"
+    )
     out, kept, dropped, unmodelled, undriven = mk_cut.dce_blif(blif)
-    assert dropped == 2 and kept == 1 and ".names a dead" not in out and ".latch y q re clk 2" in out
+    assert (
+        dropped == 2 and kept == 1 and ".names a dead" not in out and ".latch y q re clk 2" in out
+    )
     assert unmodelled == [] and undriven == []
-    o3 = mk_cut.dce_blif(blif.replace('.outputs y', '.outputs y u.clk_i'))
-    assert o3[4] == ['u.clk_i'] and '.outputs y\n' in o3[0]
-    out2 = mk_cut.dce_blif(blif.replace('.end', '.gate sky130_fd_sc_hd__sdlclkp_4 A=a GCLK=g\n.end'))
-    assert out2[3] == ['sky130_fd_sc_hd__sdlclkp_4'] and '.gate' not in out2[0]
+    o3 = mk_cut.dce_blif(blif.replace(".outputs y", ".outputs y u.clk_i"))
+    assert o3[4] == ["u.clk_i"] and ".outputs y\n" in o3[0]
+    out2 = mk_cut.dce_blif(
+        blif.replace(".end", ".gate sky130_fd_sc_hd__sdlclkp_4 A=a GCLK=g\n.end")
+    )
+    assert out2[3] == ["sky130_fd_sc_hd__sdlclkp_4"] and ".gate" not in out2[0]
     assert json.dumps(out)
