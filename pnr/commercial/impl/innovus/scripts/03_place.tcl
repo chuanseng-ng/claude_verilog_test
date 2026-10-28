@@ -20,6 +20,14 @@ if {[info exists ::env(B5C_SCREEN)] && $::env(B5C_SCREEN) == 1} {
   createPlaceBlockage -box {0 917.5 300 1100} -type partial -density 15
   puts "B5C_SCREEN: hard placement blockage {0 0 100 917.5}; partial (15 %) {0 917.5 300 1100}"
 }
+# ---- B5d (only when B5D=1): the 3 shorts left in b5c_innovus_s2 are all signal-vs-signal (no PG, no pin access) in the left pocket / its mouth:
+#      met4 at (99.8,520) hugging the SW corner of the D-cache tag SRAM, met3 at (96.7,685.6) 3 um from the macro edge, met4 at (1.2,580) on the outermost track at the die edge.
+if {[info exists ::env(B5D)] && $::env(B5D) == 1} {
+  createPlaceBlockage -box {100 0 120 917.5} -type hard                 ;# hard screen widened from x<100 to x<120 (covers the 100-120 band of the channel/gaps next to the macro edges)
+  createPlaceBlockage -box {0 417.5 300 520} -type partial -density 15  ;# thin the cells at the pocket mouth (short 1 sits at its top-right corner)
+  createRouteBlk -name b5d_leftedge_met4 -layer met4 -box {0 520 3 700} ;# keep the router off the outermost met4 tracks at the die edge beside the pocket (short 3)
+  puts "B5D: hard {100 0 120 917.5}; partial 15 % {0 417.5 300 520}; met4 route blockage {0 520 3 700}"
+}
 set npad 0
 foreach c [dbGet head.allCells.name] {
   set c [lindex $c 0]

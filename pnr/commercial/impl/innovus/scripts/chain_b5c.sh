@@ -1,7 +1,7 @@
 #!/bin/bash
 # chain_b5c.sh -- B5c: rerun 01..06 with the left-edge placement screen (B5C_SCREEN=1 in 03_place.tcl); everything else identical to b5b.
 cd "$(dirname "$0")/.."
-export B5C_SCREEN=1 B5C_STRAP=${B5C_STRAP:-0}
+export B5C_SCREEN=1 B5C_STRAP=${B5C_STRAP:-0} B5D=${B5D:-0}
 T=${TAG:-b5c_innovus}; L=runs/$T/chain.log; : > $L
 for s in 01_floorplan 02_pdn 03_place 04_cts 05a_route; do
   echo "$(date +%T) start $s" >> $L; scripts/run_stage.sh $s $T > runs/$T/$s.out 2>&1; echo "$(date +%T) end $s rc=$?" >> $L
