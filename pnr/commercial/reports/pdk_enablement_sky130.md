@@ -357,3 +357,17 @@ non-ANSI port list because PrimeTime's reader rejects ANSI headers, SVR-4) and `
   (CHKPLC-11), the IMPOPT-2908 origin, PG nets (two pairs), Tempus path for signoff-category checks.
 - **Common**: SRAM Liberty is TT-only in all corners (bead `o1i`); li1 is not routable but is a metal1 mask; the stack/ITF
   convention still needs the StarXtract plate test and OpenRCX correlation (part 2b).
+
+---
+
+# Part 2c / B1c: extraction-stack calibration to OpenRCX (2026-10-26 to 10-28)
+
+Full write-up, tables and numbers: `starrc_extraction_summary.md` section "B1c". Summary of what changed in the stack generators:
+
+- **Correction of section 3 "Corners"**: the min/max ER multipliers (0.7919 / 1.2131) were derived by `corner_scale.py` from the 4th column of the `rules.openrcx.sky130A.*.spef_extractor` decks. That column is resistance per length, and the OpenROAD flow does not use those decks (it uses `rules.openrcx.sky130A.*.calibre`; PDK `config.tcl` prefers `.calibre` when present). The `.spef_extractor` deck is flat (all rows identical, coupling column 0). Section 3's statement that "min/max capacitance comes from OpenRCX" was therefore right in intent and wrong in data.
+- **New corner multipliers**: min **0.9133**, max **1.1109** (was 0.7919 / 1.2131), computed in `scripts/corner_scale.py` as (OpenRCX design total at the corner / at nom) / K_NOM, K_NOM = 0.9772 the StarRC nom wire-proportional slope against OpenRCX. `gen_stack.py` loads `corner_scale.py`, so ITF and ICT use the same values.
+- **Nominal stack: unchanged** (ITF and ICT byte-identical to the untuned files; a running Techgen nom stays valid). No dielectric, thickness, etch or liner knob was moved: the allowed knobs move an isolated wire by at most 7 % against a 15 to 25 % gap that exists only against OpenRCX's foundry-constant edge capacitance.
+- The "calibrated to OpenRCX" label applies: the reference is the Calibre-PEX-derived OpenRCX deck, not silicon.
+- Untuned files kept: `build/tech/{itf,ict}/sky130A_<c>.untuned.*`, `build/nxtgrd/{min,max}.untuned/`.
+- Tooling added under `scripts/tune/`: pattern DEF generator, a numpy 2-D capacitance surrogate (`cap2d.py`, no scipy on the host), sensitivity and regression tools. grdgenxo `-inc` incremental mode and TLU+ generation were considered as fast loops; TLU+ (gzip ASCII, about 1.2k lines) was not used as an evaluator and `-inc` was not needed once the nominal stack was left alone.
+- Host note: grdgenxo min ran in 63 min; two host power-offs killed grdgenxo max (partial directories moved to `build/nxtgrd/max/_killed_partial_*`).

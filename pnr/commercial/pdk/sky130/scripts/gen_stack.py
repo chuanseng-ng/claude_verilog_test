@@ -24,8 +24,9 @@ correlation (part 2) passes.  Source tags used in the comments of the generated 
   [FIT]  Dielectric K per slab: chosen from the K values printed in the figure by coordinate descent so
          that a 1-D plate-capacitance model reproduces Magic's PEX-cap-model area caps (scripts/
          stack_calibrate.py, RMS error printed there).  Not a field solve; indicative.
-  [ORCX] OpenRCX rule decks (libs.tech/openlane/rules.openrcx.sky130A.*) -> min/max capacitance corner
-         multiplier on every ER (scripts/corner_scale.py).
+  [ORCX] OpenRCX (rules.openrcx.sky130A.*.calibre decks, the ones the OpenROAD flow runs) -> min/max capacitance
+         corner multiplier on every ER, calibrated so StarRC reproduces the OpenRCX corner spread (scripts/corner_scale.py).
+         The ITF is calibrated to OpenRCX, not correlated to silicon.
   [DRM]  SkyWater SKY130 design rules (poly/diff min width/space).
   [ABSENT] Not published for Sky130 -> left at 0 / omitted (temperature coefficients, etch/width bias,
          density-dependent thickness (erosion), per-layer CMP variation).
@@ -82,7 +83,13 @@ LICON_W = 0.17
 LICON_RPV = {"poly": (152.0, 52.0, 252.0), "ndiff": (185.0, 95.0, 280.0), "pdiff": (585.0, 345.0, 840.0)}  # [MAGIC] contact pc/ndc/pdc nom/lr/hr
 TLEF_NAME = {"mcon": "mcon", "via1": "via", "via2": "via2", "via3": "via3", "via4": "via4"}
 CORNERS = ("nom", "min", "max")
-ER_SCALE = {"nom": 1.0, "min": 0.7919, "max": 1.2131}   # [ORCX] scripts/corner_scale.py
+# [ORCX] scripts/corner_scale.py (single source: loaded by path because `python3 -I` does not put the script dir on sys.path).
+# B1c 2026-10-26: was {min 0.7919, max 1.2131}, derived from the RESISTANCE column of the wrong OpenRCX deck; now calibrated to
+# the OpenRCX (.calibre deck) corner spread of the OpenROAD DEF: min 0.8866 / max 1.0783.  Nominal stack unchanged.
+import importlib.util as _ilu
+_sp = _ilu.spec_from_file_location("corner_scale", os.path.join(os.path.dirname(os.path.abspath(__file__)), "corner_scale.py"))
+_cs = _ilu.module_from_spec(_sp); _sp.loader.exec_module(_cs)
+ER_SCALE = {k: round(v, 4) for k, v in _cs.er_scales().items()}
 ci = {"nom": 0, "min": 1, "max": 2}
 
 

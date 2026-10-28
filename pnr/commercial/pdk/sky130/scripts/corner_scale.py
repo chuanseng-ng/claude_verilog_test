@@ -1,35 +1,59 @@
 #!/usr/bin/env python3 -I
 """corner_scale.py -- min/max capacitance corner multipliers for the Sky130 ITF/ICT.
 
-No ITF/ICT/nxtgrd ships with Sky130, and the tech-LEF corners (nom/min/max.tlef) vary RESISTANCE only.
-Capacitance corners therefore come from the OpenRCX rule decks that ship in the PDK
-(libs.tech/openlane/rules.openrcx.sky130A.{nom,min,max}.spef_extractor): in them the per-layer
-ground ("OVER 0", 4th column) area capacitance scales by
+HISTORY (B1c, 2026-10-26).  The first version of this script read the 4th column of the 'Metal n OVER 0' tables of
+libs.tech/openlane/rules.openrcx.sky130A.{nom,min,max}.spef_extractor and called it "area capacitance".  Two errors:
+  1. the 4th column of an OpenRCX rules table is RESISTANCE per unit length (value = Rsq/(2 w), e.g. met1
+     0.125/(2*0.14) = 4.46e-4, li1 12.8/(2*0.17) = 0.0376), so the min/max "capacitance" ratios (0.719 .. 1.33 per
+     layer, geomean 0.7919 / 1.2131) were the sheet-resistance corner ratios;
+  2. the OpenROAD/LibreLane flow does not use the *.spef_extractor decks at all: the PDK config.tcl prefers
+     rules.openrcx.sky130A.{nom,min,max}.calibre when it exists (it does), and that is what the OpenROAD arm of the
+     comparison ran (RCX_RULESETS in the run's 56-openroad-rcx/config.json).  The .spef_extractor decks are flat
+     (every table row identical, coupling column 0) and produce no coupling at all.
+The authored min/max ITFs therefore had a +-21 % dielectric spread against OpenRCX's -10.7 % / +8.6 %.
 
-    layer  li1    met1   met2   met3   met4   met5     (min/nom , max/nom)
-    ...as printed below; the fringe column (3rd) is identical in all three decks.
+NOW.  The capacitance corner is a uniform multiplier on every dielectric constant (a plate/fringe/lateral
+capacitance is linear in ER for fixed geometry), calibrated so that StarRC reproduces the OpenRCX corner spread on
+the OpenROAD DEF:
 
-The ITF/ICT corner is a uniform multiplier on every dielectric constant = geometric mean of the six
-per-layer area-cap ratios (a plate capacitance is linear in ER).  Magic's sky130A.tech carries a
-second, independent set (substrate area caps: min 0.78..0.88, max 1.23..1.39 of nom) printed for
-comparison; OpenRCX is used because the OpenROAD run this PDK enablement is compared against uses it.
-Prints ER_SCALE_MIN / ER_SCALE_MAX (consumed by gen_itf.py / gen_ict.py).
+    ER_SCALE_c = ( sum_nets C_OpenRCX(c) / sum_nets C_OpenRCX(nom) ) / K_NOM
+
+with K_NOM = 0.9772 the slope of the wire-proportional part of StarRC(nom) against OpenRCX(nom)
+(least squares C_StarRC = K*C_OpenRCX + 0.161 fF * n_pins + c, LEF_USE_OBS NO over nets with C < 50 fF; the per-pin term is the
+pin/via shape capacitance that StarRC extracts and OpenRCX does not).  The nominal stack is NOT changed.
+The result is "calibrated to OpenRCX (Calibre-PEX-derived rcx_patterns decks)", not correlated to silicon.
+
+Prints ER_SCALE_MIN / ER_SCALE_MAX.  With --remeasure the OpenRCX SPEF totals are re-read from the OpenROAD arm
+(pnr/commercial/runs/openroad/rv32i_cpu_top.{min,nom,max}.spef); otherwise the recorded totals are used.
 """
-import math, os, re, sys
-d = os.path.join(os.environ.get("PDK_ROOT", os.path.expanduser("~/pdk")), "sky130A/libs.tech/openlane")
-names = {1: "li1", 2: "met1", 3: "met2", 4: "met3", 5: "met4", 6: "met5"}
-def load(c):
-    out, cur = {}, None
-    for l in open(os.path.join(d, f"rules.openrcx.sky130A.{c}.spef_extractor")):
-        m = re.match(r"Metal (\d+) OVER 0\s*$", l.strip())
-        if m: cur = int(m.group(1)); out[cur] = []; continue
-        if l.startswith("END"): cur = None; continue
-        if cur and re.match(r"^[\d.]", l): out[cur].append(float(l.split()[3]))
-    return {k: sum(v) / len(v) for k, v in out.items()}
-n, mn, mx = load("nom"), load("min"), load("max")
-res = {}
-for c, dd in (("min", mn), ("max", mx)):
-    r = [dd[k] / n[k] for k in range(1, 7)]
-    res[c] = math.exp(sum(math.log(x) for x in r) / 6)
-    print(c, " ".join(f"{names[k]}={dd[k]/n[k]:.3f}" for k in range(1, 7)), f" geomean={res[c]:.4f}")
-print("ER_SCALE_MIN=%.4f" % res["min"]); print("ER_SCALE_MAX=%.4f" % res["max"])
+import os, sys
+
+# total design capacitance of the OpenRCX SPEFs of the OpenROAD arm, pF (sum of *D_NET totals, incl. coupling)
+ORCX_TOTAL_PF = {"min": 888.048, "nom": 995.003, "max": 1080.149}
+K_NOM = 0.9772   # StarRC(nom, authored ITF) wire-proportional slope against OpenRCX(nom), final StarRC settings (LEF_USE_OBS NO, coupling thresholds as OpenRCX); was 1.0067 with StarRC defaults
+
+
+def measure():
+    here = os.path.dirname(os.path.abspath(__file__))
+    d = os.path.join(here, "../../../runs/openroad")
+    out = {}
+    for c in ("min", "nom", "max"):
+        t = 0.0
+        for l in open(os.path.join(d, f"rv32i_cpu_top.{c}.spef"), errors="replace"):
+            if l.startswith("*D_NET"):
+                t += float(l.split()[2])
+        out[c] = t
+    return out
+
+
+def er_scales(tot=None):
+    tot = tot or ORCX_TOTAL_PF
+    return {"nom": 1.0, "min": tot["min"] / tot["nom"] / K_NOM, "max": tot["max"] / tot["nom"] / K_NOM}
+
+
+if __name__ == "__main__":
+    tot = measure() if "--remeasure" in sys.argv else ORCX_TOTAL_PF
+    s = er_scales(tot)
+    for c in ("min", "max"):
+        print(c, "OpenRCX total %.3f pF  ratio to nom %.4f  /K_NOM -> ER scale %.4f" % (tot[c], tot[c] / tot["nom"], s[c]))
+    print("ER_SCALE_MIN=%.4f" % s["min"]); print("ER_SCALE_MAX=%.4f" % s["max"])

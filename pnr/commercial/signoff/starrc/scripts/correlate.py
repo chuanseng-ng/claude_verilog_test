@@ -39,6 +39,9 @@ print(stat("total C", C0, C1))
 print(stat("ground C", G0, G1))
 m = (R0 > 0) & (R1 > 0)
 print(stat("total R (nets with R>0 both)", R0[m], R1[m]))
+S0 = np.array([ref[n][2] / ref[n][0] for n in sel]); S1 = np.array([tst[n][2] / tst[n][0] for n in sel])
+print("coupling share per net (cc/total), nets with ref C > 1 fF: median ref %.3f test %.3f (diff %+.1f points), p25/p75 ref %.3f/%.3f test %.3f/%.3f" % (
+    np.median(S0), np.median(S1), 100 * (np.median(S1) - np.median(S0)), *np.percentile(S0, [25, 75]), *np.percentile(S1, [25, 75])))
 tc0 = sum(v[0] for v in ref.values()); tc1 = sum(v[0] for v in tst.values())
 tg0 = sum(v[1] for v in ref.values()); tg1 = sum(v[1] for v in tst.values())
 cc0 = sum(v[2] for v in ref.values()) / 2; cc1 = sum(v[2] for v in tst.values()) / 2

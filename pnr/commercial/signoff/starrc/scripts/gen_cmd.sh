@@ -32,6 +32,9 @@ POWER_EXTRACT: NO
 NETLIST_FORMAT: SPEF
 NETLIST_FILE: $out/rv32i_cpu_top.$corner.spef
 SHORTS_LIMIT: 1000000
+COUPLING_ABS_THRESHOLD: 0.1
+COUPLING_REL_THRESHOLD: 0
+LEF_USE_OBS: NO
 NUM_CORES: ${STARRC_CORES:-2}
 CMD
 grep -v "^#" "$PDKB/tech/map/starrc_layer.map" > "$out/sky130.map"   # StarRC rejects # comment lines in the mapping file (SX-1907)

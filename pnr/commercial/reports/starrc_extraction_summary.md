@@ -158,3 +158,77 @@ Do not compare total C across arms as a PPA metric: the DEFs have different cell
 2. Quantus correlation once Techgen produces `qrcTechFile` (not started; not touched).
 3. ITF tuning (coupling/fringe, corner spread) was explicitly not done; the correlation numbers above are the baseline for it.
 4. The nom and max SPEFs carry the **INDICATIVE** label into STA.
+
+---
+
+# B1c: ITF calibration to OpenRCX (2026-10-26 to 10-28)  [IN PROGRESS: updated after each milestone]
+
+**Status**: nom and min done (tuned stack, new settings). **max: PENDING** (grdgenxo max was killed twice by host power-offs; third run started 2026-10-28 18:47, about 65 min). Innovus extracted from `b5c_innovus_s2` (nom, min); a b5d rerun may replace it, re-extract with `make -C pnr/commercial/signoff/starrc innovus`.
+"Calibrated to OpenRCX" means calibrated to the OpenRCX `rules.openrcx.sky130A.*.calibre` decks (the ones the OpenROAD flow runs), **not correlated to silicon**.
+
+## Findings that changed the plan
+
+1. **The coupling-share gap was a StarRC setting, not the stack.** StarRC lumps any coupling below 3 % of the net's total C (`rel_cap_threshold 0.03`, `abs 3e-15 F`) into ground. OpenRCX only grounds couplings below 0.1 fF absolute. Same nxtgrd, only `COUPLING_ABS_THRESHOLD: 0.1`, `COUPLING_REL_THRESHOLD: 0`: design coupling share 0.340 to 0.548 (OpenRCX 0.549), per-net median share diff -16.4 to -2.7 points. Total C is unchanged by thresholds.
+2. **The excess total C is a per-pin term, not the stack.** Regression over nets with C < 50 fF: `C_StarRC = 1.007 * C_OpenRCX + 0.219 fF * n_pins - 0.007` (default settings). StarRC extracts cell pin shapes, cell OBS and vias that OpenRCX does not. Ratio vs net size: C < 1 fF ratio 1.5 to 2.0; C > 50 fF ratio 0.995 to 1.04. With `LEF_USE_OBS: NO` (pins only, which is what the task asks for the SRAM macros and is applied to std cells too): `0.977 * C_OpenRCX + 0.161 fF/pin`, design total 988.0 vs 995.0 pF (x0.993).
+3. **The old corner spread was derived from the wrong file and the wrong column.** `corner_scale.py` read the 4th column of `rules.openrcx.sky130A.*.spef_extractor` as capacitance. That column is resistance per length (Rsq/(2w)), and that deck is not the one the OpenROAD flow uses (it uses `.calibre`; the `.spef_extractor` deck is flat, coupling column 0). The 0.7919/1.2131 multipliers were the sheet-R corner ratios.
+4. **The nominal stack needs no change.** On wire-dominated nets (C > 20 fF) StarRC/OpenRCX total C is 0.995 to 1.07, coupling share within 1 to 2 points. The nominal ITF/ICT are byte-identical to the untuned ones, so the running Techgen nom job stays valid.
+5. **OpenRCX's own tables are not a physical target.** On isolated wires OpenRCX gives 87 to 95 aF/um (foundry LEF edge-cap constants), a 2-D field solve of the published stack with no other layers present gives 40 to 64, StarRC 67 to 75 (it sees the pin squares and end effects). Adjacent-track patterns agree within about 6 % (met1..met4 `T_*_1_1`), sparse environments are 15 to 25 % low in StarRC (`pattern_check_nom.md`). Physically plausible knobs cannot close that (below), and design-level totals agree anyway because crossings dominate.
+
+## Knobs
+
+| Knob | Original | Final | Why |
+|---|---|---|---|
+| ER corner multiplier, min | 0.7919 | **0.9133** | OpenRCX design total min/nom = 0.8925 (888.0/995.0 pF), divided by StarRC nom wire slope K_NOM = 0.9772 |
+| ER corner multiplier, max | 1.2131 | **1.1109** | OpenRCX max/nom = 1.0856 (1080.1/995.0 pF), same K_NOM |
+| nominal dielectric ER (all slabs) | per `gen_stack.py` SLABS/FIT | unchanged | wire-proportional slope 0.977 to 1.007 vs OpenRCX; changing it would invalidate the running nom Techgen |
+| metal thickness, etch bias, conformal liner | FIG values, none, none | unchanged | sensitivity below: no plausible value fixes the isolated-wire gap without breaking the dense-wire match |
+| StarRC `COUPLING_ABS_THRESHOLD` / `COUPLING_REL_THRESHOLD` | defaults 0.003 fF / 0.03 | 0.1 fF / 0 | OpenRCX's grounding rule (setting, not ITF) |
+| StarRC `LEF_USE_OBS` | default (OBS used) | NO | pins-only extraction, as for the SRAM macros |
+
+cap2d sensitivity (`scripts/tune/sensitivity.py`, 2-D numpy surrogate validated within 1 to 11 % of StarRC on the same patterns), change in Ctot for met1..met4 dense / isolated wires: all ER x1.05: +5 % / +5 %; lateral-slab ER x1.10: +8 to +10 % / +4 to +7 %; sub-slab ER x1.10: +0 to +2 % / +2 to +6 %; metal thickness x1.05: +3 % / +0.5 %; 20 nm etch bias: +3 to +9 % / +1 %; 25 nm K=7.3 liner: +5 to +13 % / +1 to +2 %. The isolated-wire gap to OpenRCX is 20 to 30 %.
+
+Single sources: `pnr/commercial/pdk/sky130/scripts/corner_scale.py` (values) is loaded by `gen_stack.py`, which writes ITF and ICT, so they stay consistent.
+
+## Before / after (OpenROAD DEF, StarRC vs OpenRCX, nets with C > 1 fF)
+
+| Corner | | C median | C p5 / p95 | C outside +-10 % | R median | per-net coupling-share median (OpenRCX / StarRC, diff) | Design C StarRC vs OpenRCX |
+|---|---|---|---|---|---|---|---|
+| nom | before | 1.135 | 0.963 / 1.406 | 64.2 % | 0.976 | 0.540 / 0.376 (-16.4 pts) | 1023.4 vs 995.0 (x1.029) |
+| nom | **after** | **1.078** | 0.937 / 1.348 | 45.3 % | 0.976 | 0.540 / 0.571 (+3.0 pts) | 988.0 vs 995.0 (x0.993) |
+| min | before | 1.006 | 0.847 / 1.228 | 35.5 % | 0.958 | 0.555 / 0.369 (-18.5 pts) | 810.5 vs 888.0 (x0.913) |
+| min | **after** | **1.104** | 0.946 / 1.361 | 53.8 % | 0.958 | 0.555 / 0.570 (+1.5 pts) | 902.4 vs 888.0 (x1.016) |
+| max | before | 1.256 | 1.066 / 1.569 | 90.9 % | 0.987 | 0.505 / 0.381 (-12.4 pts) | 1241.5 vs 1080.1 (x1.149) |
+| max | after | PENDING | | | | | |
+
+Wire-proportional slope (`pinfit.py`, nets C < 50 fF): nom 0.977, min 1.003 (before: 0.895 at min with the old +-21 % multipliers, 1.119 at max).
+
+Acceptance status (target: C median +-5 %, coupling-share median +-5 points, R +-5 %, spread close to OpenRCX):
+- coupling share: met at nom and min (+3.0, +1.5 points).
+- R: met (median 0.958 to 0.987; unchanged by the tuning, RPSQ is explicit in the ITF).
+- C median: NOT met (nom 1.078, min 1.104). The remainder is the 0.16 fF per pin that StarRC extracts and OpenRCX does not; matching it by lowering ER would put the wire-dominated nets about 10 % low. Not forced.
+- spread: StarRC design min/nom 0.913 vs OpenRCX 0.8925 (the multiplier was calibrated on the wire slope; calibrating on the design total would give 0.8988 / 1.0933, a second grdgenxo regeneration that was not spent).
+
+## ICC2-native agreement
+
+The ICC2 TLU+ comes from the same ITF. The nominal ITF is unchanged, so the nom TLU+ is unchanged. StarRC on the ICC2 DEF vs ICC2's native nominal SPEF: total C median 0.987 (was 1.008; the 2 % shift is `LEF_USE_OBS: NO`), r 0.9996, design 819.9 vs 833.4 pF (was 829.8). min/max TLU+ regenerated with the new multipliers (`gzip -t` OK, header `TLUPlus_ver 18`; grdgenxo's TLU+ step exits rc=1 after "Done (GRD-0062)", the known exit crash). ICC2 has no native min/max SPEF to compare with.
+
+## Files
+
+Tuned ITF/ICT: `pnr/commercial/pdk/sky130/build/tech/{itf,ict}/sky130A_<c>.{itf,ict}`; untuned kept as `sky130A_<c>.untuned.{itf,ict}`. nom is byte-identical; min and max differ. nxtgrd: `build/nxtgrd/{nom,min,max}/` (untuned min/max in `min.untuned`, `max.untuned`). Superseded SPEFs: `signoff/starrc/runs/_superseded_untuned/`. Tools and tables: `pdk/sky130/scripts/tune/` (`gen_patterns.py`, `cap2d.py`, `patterns2d.py`, `validate.py`, `sensitivity.py`, `def_stats.py`, `pinfit.py`), `signoff/starrc/reports/{correlation_*.md,untuned/,pattern_check_nom.md}`.
+
+## Per-arm table, tuned stack + new settings (max pending; Innovus = b5c_innovus_s2)
+
+| arm | corner | DEF nets | SPEF D_NETs | zero-C nets | opens | total C (pF) | gnd C (pF) | coupling C (pF) | sum R (Mohm) | wall | peak RSS (GB) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| openroad | nom | 42291 | 42291 | 87 | 0 | 988.0 | 399.6 | 294.2 | 7.77 | 2:24.36 | 0.49 |
+| openroad | min | 42291 | 42291 | 87 | 0 | 902.4 | 365.3 | 268.5 | 4.61 | 3:00.59 | 0.49 |
+| icc2 | nom | 35149 | 35149 | 0 | 0 | 819.9 | 306.2 | 256.9 | 5.07 | 2:11.97 | 0.53 |
+| icc2 | min | 35149 | 35149 | 0 | 0 | 748.8 | 279.7 | 234.6 | 2.93 | 1:52.10 | 0.53 |
+| innovus | nom | 35047 | 35047 | 322 | 0 | 984.0 | 429.2 | 277.4 | 6.26 | 2:24.21 | 0.36 |
+| innovus | min | 35047 | 35047 | 322 | 0 | 898.7 | 392.2 | 253.3 | 4.14 | 3:32.44 | 0.36 |
+
+Innovus: 0 opens, 3 residual shorted net pairs (met3/met4) in `star/shorts_all.sum`, so the capacitance of those 6 nets is unreliable (SX-0955). Innovus uses the PDK via names (M1M2_PR, L1M1_PR ...), so no supplementary via LEF was needed. The 322 zero-C Innovus nets are probably nets without routed wiring (not checked). Opens and shorts are read as described in section 6.
+
+## Remaining (automated)
+
+`signoff/starrc/scripts/finish_max.sh` (started 2026-10-28 18:48, setsid) waits for `build/nxtgrd/max/sky130A_max.nxtgrd`, then extracts max for openroad, icc2, innovus one at a time, rebuilds `reports/correlation_*.md`, `reports/per_arm.md`, `reports/pinfit_max.txt`; progress in `reports/finish_max.status`. If the host dies again: re-run `build/nxtgrd/max` via `pnr/commercial/pdk/sky130/scripts/run_grdgenxo.sh max` (move any partial `sky130A_max/` aside first), then `signoff/starrc/scripts/finish_max.sh`. For a b5d Innovus DEF: change `innovus)` in `scripts/arms.sh` (and the path in `collect_stats.py`), move `runs/innovus_*` aside, `make innovus`.
