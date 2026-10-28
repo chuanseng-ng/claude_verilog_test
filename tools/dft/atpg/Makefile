@@ -24,7 +24,7 @@ rung-%:
 timer-known:
 	mkdir -p $(W)/timer_s0
 	./run_capped.sh $(W)/timer_s0 -- $(W)/bin/quaigh atpg /nobackup/claude_sim_build/dft_stage0/q1/timer_cut.blif -o $(W)/timer_s0/timer.test
-	python3 coverage_report.py $(W)/timer_s0/run.log --metrics $(W)/timer_s0/metrics.json --label timer_stage0 --md
+	python3 atpg_coverage_report.py $(W)/timer_s0/run.log --metrics $(W)/timer_s0/metrics.json --label timer_stage0 --md
 
 test:
 	python3 -m pytest ../../../tb/tests/test_dft_atpg_hold_mask.py ../../../tb/tests/test_dft_atpg_coverage.py \

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Turn a Quaigh `atpg` log into a coverage record with its exclusion statement (bead j41m.15).
 
-usage: coverage_report.py QUAIGH_LOG [--metrics metrics.json] [--exclusions exclusions.json] [--label NAME] [--out report.json] [--md]
+usage: atpg_coverage_report.py QUAIGH_LOG [--metrics metrics.json] [--exclusions exclusions.json] [--label NAME] [--out report.json] [--md]
 
 Definitions (DFT_ARCHITECTURE 2.1):
     fault coverage = detected / total

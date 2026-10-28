@@ -1364,7 +1364,7 @@ Labels: **[M]** measured (file or command named), **[R]** read from source, **[A
 
 ### 18.1 What Quaigh 0.0.6 does (Step 0) [R: `quaigh-0.0.6/src/atpg.rs`, `sim/fault.rs`, `equiv.rs`, `cmd.rs`]
 
-- **"unobservable" is a proof.** `find_pattern_detecting_fault` builds the good-vs-faulty miter and calls `prove` (Kissat); `Unsat` returns `None` and the fault is counted `unobservable`; `Interrupted` panics, so a timeout can never be mistaken for a proof. Only these faults are subtracted in test coverage. The count is printed only in the tqdm progress line (`unobservable=N`), not in a summary line; `coverage_report.py` reads the last occurrence.
+- **"unobservable" is a proof.** `find_pattern_detecting_fault` builds the good-vs-faulty miter and calls `prove` (Kissat); `Unsat` returns `None` and the fault is counted `unobservable`; `Interrupted` panics, so a timeout can never be mistaken for a proof. Only these faults are subtracted in test coverage. The count is printed only in the tqdm progress line (`unobservable=N`), not in a summary line; `atpg_coverage_report.py` reads the last occurrence.
 - **Universe.** The collapsed list `Fault::all_unique` (equivalence collapsing of single-fanout and xor/buf/and-input faults) unless `--with-redundant-faults`. Not comparable one-to-one with Tessent's representative faults.
 - **Unresolved faults exist.** `detected + unobservable < total` is possible: the Stage 0 `timer` known answer is 4336 detected, 351 unobservable, 5 neither (4692). They stay undetected in both numbers.
 - **Sequential BLIF is accepted** (`.latch`); `atpg` exposes the flops itself (`expose_dff`: Q appended to the inputs, D to the outputs, in `.latch` order).

@@ -1,5 +1,5 @@
 # ruff: noqa: E501
-"""Tests for tools/dft/atpg/coverage_report.py (bead j41m.15).
+"""Tests for tools/dft/atpg/atpg_coverage_report.py (bead j41m.15).
 
 Facts about Quaigh 0.0.6 these tests rely on (read from its source, DFT_ARCHITECTURE 18.1):
 * `unobservable=N` in the progress line counts faults whose SAT miter is UNSAT (proven untestable in the cut);
@@ -17,7 +17,7 @@ import pytest
 ATPG_DIR = Path(__file__).resolve().parents[2] / "tools" / "dft" / "atpg"
 sys.path.insert(0, str(ATPG_DIR))
 
-import coverage_report as cr  # type: ignore[import-not-found]  # noqa: E402
+import atpg_coverage_report as cr  # type: ignore[import-not-found]  # noqa: E402
 
 FIX = Path(__file__).resolve().parent / "fixtures" / "dft_atpg"
 

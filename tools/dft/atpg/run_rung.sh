@@ -43,5 +43,5 @@ fi
 step prep "$out/prep.v" "$PY" "$here/netlist_prep.py" "$netlist" "$out/prep.v" --exclusions "$out/exclusions.json" "${prep_args[@]}"
 step cut "$out/cut/cut.blif" "$PY" "$here/mk_cut.py" "$out/prep.v" --top "$top" --out "$out/cut" "${cut_args[@]}"
 step atpg "$out/q/metrics.json" "$here/run_capped.sh" "$out/q" -- "$QUAIGH" atpg "$out/cut/cut.blif" -o "$out/q/cut.test"
-"$PY" "$here/coverage_report.py" "$out/q/run.log" --metrics "$out/q/metrics.json" --exclusions "$out/exclusions.json" \
+"$PY" "$here/atpg_coverage_report.py" "$out/q/run.log" --metrics "$out/q/metrics.json" --exclusions "$out/exclusions.json" \
     --label "$rung" --out "$out/q/report.json" --md || true

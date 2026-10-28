@@ -15,7 +15,7 @@ and writes `metrics.json` (rc, wall, maxrss, cgroup peak, oom_kill, timed_out). 
 | `derive_hold_mask.py` | the 94 scan-view hold-masked capture flops from STABLE synchroniser Q-net names; `--validate` against the STA's `exempt_pins.txt` |
 | `netlist_prep.py` | deletes physical cells; classifies and applies the exclusions (tck / scan_clk / crypto key / hold mask); writes `exclusions.json` |
 | `mk_cut.py` | Yosys full-scan cut: Sky130 cells -> logic, scan-mode constants, black boxes, `abc -g`, BLIF with `.latch`, dead-logic drop |
-| `coverage_report.py` | Quaigh log -> fault / test coverage with the exclusion statement |
+| `atpg_coverage_report.py` | Quaigh log -> fault / test coverage with the exclusion statement |
 | `regrade.py` | independent re-grade of the patterns (own simulator + `quaigh simulate` on fault-injected copies) |
 | `run_rung.sh`, `Makefile` | the ladder |
 
