@@ -1,0 +1,11 @@
+B5d PG connectivity (Innovus verify_connectivity on runs/b5d_innovus 06_finish, after fill)   [special_VGND.txt, 47 MB, stays in runs/b5d_innovus/reports/gdsfix/]
+VPWR special : 7 special-wire pieces (IMPVFC-200), 144 regular-routing opens, 168 dangling wires (132 met4, 36 met5), 2 unconnected terminals (ENDCAP VPB)
+VGND special : 6 special-wire pieces, 50,912 regular-routing opens, 78 dangling wires, 295,876 unconnected terminals (VNB pwell pins of DECAP/FILL/std cells = well-pin noise, no metal on that pin)
+regular (signal-side) VPWR / VGND : no problems
+Special-wire pieces (bounding boxes):
+  VPWR: [20.05,24.24 - 3579.91,495.0] (lower), [20.05,520.0 - 3579.91,1778.88] (upper), and 5 isolated met1 rails at y 496.3-499.2, 501.8-504.6, 507.2-510.1, 512.7-515.5, 518.1-520.9
+  VGND: [20.24,21.36 - 3579.72,496.0], [20.24,520.0 - 3579.72,1779.1], and 4 isolated rails at y 499.5-501.5, 504.9-506.9, 510.4-512.3, 515.8-517.8
+Cause: the step-2 met4 strap keep-out {20 495 3580 520} (B5C_STRAP, kept in s2 and b5d) removes every met4 strap crossing the band across the FULL width:
+  - the power grid is split into a lower (icache row + pocket) and an upper (logic + dcache) piece, and
+  - 5 VPWR + 4 VGND followpin rails inside the band have no strap at all (915 logic cells + 8,623 physical cells sit in rows y 495-520).
+144 'regular routing' VPWR opens: 1.76 x 2.83 um patches at x 98.25-100.01, one per VPWR row in the two macro rows' left pocket (y 28-913) = the VPB (nwell) pin of the endcap at the pocket's right end (macro edge, x=100); well-pin class, no signal impact.
