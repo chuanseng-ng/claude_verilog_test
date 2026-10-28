@@ -44,7 +44,8 @@ export PDK_ROOT PDK
 guarded = SAFE_MIN_AVAIL_GB=$(2) SAFE_TIMEOUT=$(3) $(GUARD) $(LOGS)/$(1).log $(ARM)_$(1) $(CTR) $(ARM)_$(1) $(4)
 
 GDS_FIXED := $(RUN)/gds/$(TOP).fixed.gds
-GDS_PINS  := $(RUN)/gds/$(TOP).fixed_pins.gds
+PIN_MODE  ?= rect
+GDS_PINS  := $(if $(filter none,$(PIN_MODE)),$(GDS_FIXED),$(RUN)/gds/$(TOP).fixed_pins.gds)
 .PHONY: addpins lvs-gds-variants lvs-gds lvs-gds-extract lvs-gds-netgen all dirs inspect fixgds lvs lvs-extract lvs-netgen lvs-gds kdrc mdrc mdrc-class antenna summary
 all: inspect fixgds lvs kdrc antenna mdrc mdrc-class summary
 dirs:
@@ -121,7 +122,7 @@ lvs-gds: lvs-gds-extract lvs-gds-netgen
 
 # measurement copy with the DEF pin rectangles added (ICC2 write_gds -output_pin text writes pin NAMES only, no pin metal)
 addpins: dirs
-	$(call guarded,addpins,5,900,klayout -b -r $(S)/gds_add_pins.py -rd gds=$(GDS_FIXED) -rd def=$(DEF_IN) -rd out=$(GDS_PINS) -rd top=$(TOP) -rd report=$(REP)/$(ARM)_gds_addpins.txt)
+	$(call guarded,addpins,5,900,klayout -b -r $(S)/gds_add_pins.py -rd gds=$(GDS_FIXED) -rd def=$(DEF_IN) -rd mode=$(PIN_MODE) -rd out=$(GDS_PINS) -rd top=$(TOP) -rd report=$(REP)/$(ARM)_gds_addpins.txt)
 
 # ---- KLayout DRC (same options as LibreLane KLayout.DRC) ----------------------------------------------------------------
 kdrc: dirs
@@ -154,7 +155,7 @@ ANT_MAP ?= 1
 ANT_DEF := $(if $(filter 1,$(ANT_MAP)),$(RUN)/antenna/mapped.def,$(DEF_IN))
 $(RUN)/antenna/mapped.def: $(DEF_IN)
 	@mkdir -p $(RUN)/antenna
-	$(S)/map_def_vias.sh $< $@
+	$(S)/map_def_vias.sh $< $@   # ICC2: via names; Innovus: drops the 48 zero-geometry VIRTUAL stubs OpenROAD cannot parse
 antenna: dirs $(if $(filter 1,$(ANT_MAP)),$(RUN)/antenna/mapped.def)
 	$(call guarded,antenna,5,3600,env DEF=$(ANT_DEF) TOP=$(TOP) OUT=$(RUN)/antenna/antenna.rpt openroad -exit -no_splash $(S)/antenna_check.tcl)
 	awk '/%OL_CREATE_REPORT/{f=1;next} /%OL_END_REPORT/{f=0} f' $(LOGS)/antenna.log > $(REP)/$(ARM)_antenna.rpt; grep -E 'ANT-000[12]' $(LOGS)/antenna.log

@@ -18,10 +18,10 @@ select top cell
 if {[info exists ::env(PIN_PORTS)] && [file exists $::env(PIN_PORTS)]} { source $::env(PIN_PORTS) }
 if {[info exists ::env(PG_LABELS)] && [file exists $::env(PG_LABELS)]} {
     source $::env(PG_LABELS)
-    foreach {net x y} $::pg_labels {
+    foreach {net x y lay} $::pg_labels {
         box ${x}um ${y}um ${x}um ${y}um
-        label $net center m4
-        puts "pg label $net at $x $y um (met4)"
+        label $net center $lay
+        puts "pg label $net at $x $y um ($lay)"
     }
 }
 select top cell
