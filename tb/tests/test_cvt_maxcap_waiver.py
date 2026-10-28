@@ -940,9 +940,11 @@ def test_committed_waiver_file_loads_and_has_the_expected_kinds():
     assert (
         cls.cls_driver_prefix == "sky130_fd_sc_hd__dlygate4sd3_"
         and cls.cls_load_pin == "SCD"
-        and cls.max_cap_pf == 0.115
+        and cls.max_cap_pf == 0.12  # 0.115 -> 0.120 (user decision 2026-10-28)
     )
+    # the two waivers pinned to RUN_2026-10-27_05-40-27 were deleted (stale on the next run)
     for k in ("gen-a21oi-107570-run-2026-10-27", "gen-or4-076179-run-2026-10-27"):
-        assert by_id[k].run_id == "RUN_2026-10-27_05-40-27" and not by_id[k].stable_driver
+        assert k not in by_id
     assert not any(i.startswith("sram-din0-") for i in by_id)  # stale ones deleted
+    assert not any(w.run_id for w in ws)  # nothing in the committed file is pinned to a run
     assert all(w.justification for w in ws)

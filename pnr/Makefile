@@ -1178,10 +1178,10 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/$(SKY130_SOC_CONFIG)"
 
 # e45j: kept as an alias of the (now rccal-default) -noklayout target for existing notes and scripts.
-# Unlike the pre-adoption recipe it honours SKY130_SOC_CONFIG, e.g. for the wire-length arm of
-# docs/SKY130_SLEW_CAP_E45J.md section 6:
-#   make librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=config_rccal_wl1500.json
-# and confirm the key in <run>/resolved.json.
+# Unlike the pre-adoption recipe it honours SKY130_SOC_CONFIG, e.g. for an A/B arm:
+#   make librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=<arm>.json
+# and confirm the key in <run>/resolved.json. (The wire-length arm config_rccal_wl1500.json was removed
+# 2026-10-28: GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500 is now in config_rccal.json, docs/SKY130_SLEW_CAP_E45J.md section 9.)
 librelane-sky130-soc-rccal-noklayout:
 	@$(MAKE) librelane-sky130-soc-noklayout
 
