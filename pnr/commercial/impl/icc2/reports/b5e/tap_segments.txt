@@ -1,0 +1,10 @@
+rows 645; row segments 2105; segments with NO tap: 0; segments with a tap-free stretch > 26.0 um: 0
+worst tap-free stretches:
+  25.76 um row 643 segment 21.62..3578.34 taps 138
+  25.76 um row 642 segment 21.62..3578.34 taps 139
+  25.76 um row 641 segment 21.62..3578.34 taps 138
+  25.76 um row 640 segment 21.62..3578.34 taps 139
+  25.76 um row 639 segment 21.62..3578.34 taps 138
+  25.76 um row 638 segment 21.62..3578.34 taps 139
+  25.76 um row 637 segment 21.62..3578.34 taps 138
+  25.76 um row 636 segment 21.62..3578.34 taps 139

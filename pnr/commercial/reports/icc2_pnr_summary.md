@@ -1,4 +1,4 @@
-# ICC2 arm, B5e corrective rerun (IN PROGRESS: routing done, finish/outputs queued behind the load gate)
+# ICC2 arm, B5e corrective rerun (complete; 1 DRC / 1 short left)
 
 Run `b5e_icc2` (`pnr/commercial/impl/icc2/runs/b5e_icc2/`, gitignored). `b5a_icc2` is untouched. Same netlist (DC-NXT `b3a_dc_tt`), SDC (md5 `3c696350...`), floorplan,
 macro placement, pins, PDN, scenario and tool settings as B5a. Three fixes:
@@ -11,13 +11,40 @@ macro placement, pins, PDN, scenario and tool settings as B5a. Three fixes:
 2. **Tap/endcap**: see "Findings" below (the premise did not hold; the tap stage is unchanged and audited).
 3. **GDS**: `write_gds ... -long_names -output_pin all -merge_gds_top_cell rv32i_cpu_top` (06_finish.tcl:67).
 
-## Status at hand-back (2026-10-29): routing done, finish/outputs NOT yet produced
-The host was powered off 10-28 21:50 to 10-29 18:54; the design library survived (labels through `05x_route` intact, `rv32i.dlib.bak` kept per stage). Routing is finished
-(`05y_repair`, 1 DRC / 1 short left); `05z_fix` (targeted rip-up of the last short) and `06_finish` + `07_write_verilog` are **queued behind the `safe_run.sh` load gate**
-(host load 10.5-12.3 for the last hour, set by a Techgen job running at about 490 % CPU; the gate needs load < 6 and gives up after 2 h per stage).
-`runs/b5e_icc2/out/` therefore holds only `fp.def` so far. Resume/inspect: `scripts/finish_chain.sh` is already running in the background
-(`runs/b5e_icc2/chain_fin.log`, markers in `reports/stage_markers.txt`); if the process is gone: `scripts/run_stage.sh 05z_fix b5e_icc2` (optional) then
-`B5E_FINISH_BASE=05y_repair scripts/run_stage.sh 06_finish b5e_icc2 && scripts/run_stage.sh 07_write_verilog b5e_icc2`.
+## Result (final, 2026-10-29): outputs complete in `runs/b5e_icc2/out/`
+Final block: `06_finish` from `05y_repair` (`05z_fix`, a targeted rip-up of the last short, left it at 1 DRC / 1 short after 3 passes and was not saved/used). Lineage: 01 floorplan -> 02 pdn -> 03 place -> 04 cts -> `05x_route` -> `05y_repair` -> 06 finish -> 07 write_verilog.
+The host was powered off 10-28 21:50 to 10-29 18:54 mid-run; the design library survived and the run resumed from the saved labels. **ICC2-native numbers, tt/1.80 V/25 C, nominal TLU+, one scenario; not the neutral StarRC->PrimeTime judge.**
+
+| Metric (ICC2 native) | B5a (`b5a_icc2`) | B5e (`b5e_icc2`) | Note |
+|---|---|---|---|
+| Setup WNS / TNS | -0.0046 / -0.0046 ns (1 path) | **+0.0725 / 0** (0 violating paths) | not a quality claim: ICC2 optimises to ~0 and stops, one run per arm |
+| Hold WNS / TNS | +0.0008 / 0 | **+0.0037 / 0** | |
+| Routing DRC (`check_routes`) | 0 | **1** (a 0.14 x 0.14 um met1 short, nets `u_core/ex1c_comb[158]` / `u_core/ex1c_ex1b_reg_q[124]`, at (1918.1, 882.9)) | **not clean**: the 8-pass `05y` loop sat at 1 for 4 passes and a targeted rip-up (`05z`) did not move it |
+| Shorts (`check_lvs`) / opens | 0 / 0 | **1 / 0** | the same single short |
+| Antenna (`check_routes -antenna`) | 0 | 0 | same lenient rule set as B5a (diode_mode 1); the OpenROAD-checker figure on the B5a DEF was 532 nets, not re-measured on B5e |
+| li1 routed wire (ICC2 `check_routes`) | 2,587 um (14 signal wires up to 400 um through SRAMs) | **0 um** | |
+| li1 audit of the written DEF (`li1_audit.py`) | 2,944 segments / 2,670 um on 2,271 nets, longest 400.5 um | **32 segments / 4.6 um total, longest 0.7 um** (32 nets) | the 32 are sub-micron li1 landing patches at mcon vias (min-area/enclosure), no signal routing; 121,342 mcon vias land on li1 cell pins (B5a 122,122) |
+| Routed wirelength | 4,464,228 um | 4,499,456 um (met1 1,098,495; met2 1,473,650; met3 1,284,802; met4 641,933; met5 576) | +0.8 % |
+| Vias / contacts | 389,127 | 390,255 | |
+| Utilisation | site-row 7.23 %, 37.0 % cells+macros (pre-fill) | site-row 7.22 % (cell area 313,097 um2 + 1,917,876 um2 macros) | |
+| Power (tool-native, vectorless) | 55.9 mW (clock network 23.7) | 55.8 mW (dyn 55.7 + leak 0.095; clock network 23.5) | indicative only |
+| Max-transition / max-cap violations (`report_constraints`) | 57 / 164 | 121 / 170 | worse on transition; not tuned (comparison run) |
+| `check_pg_drc` | the file `final_pg_drc.txt` of B5a lists 189 "shorts on pwell" (the B5a text above says "no errors" for the stage-2 check) | 181 "shorts on pwell"; `check_pg_connectivity`: 0 floating macros/pads/terminals/blocks | the pwell reports are in both runs; not investigated |
+| Leaf cells before fill | 34,782 non-physical | 34,731 | |
+| Fillers removed for overlapping routed shapes | 428 | **0** (`FILLER_FIX pass 1: 0`) | consequence of no li1 stubs |
+| Floating n-well islands (`nwell_islands.py` on the DEF) | 7 (13 cells), confirmed by the Netgen LVS | **0** | 1,053 well regions, every one has a tap; max tap-free stretch 12.88 um |
+| Row segments without a tap (02_pdn audit) | 0 of 2,105 | 0 of 2,105 | tap insertion unchanged |
+| ICC2 wall (sum of sessions, final lineage) | ~1,780 s (b5a: place 480, cts 732) | 3,660 s (place 818, cts 757, route 271, repair 1,339, finish 426) | B5e ran with the host at load 10-14; not a tool-speed comparison |
+| Peak RSS | 3.8 GB (CTS) | 3.9 GB (CTS), 3.5 GB finish | |
+
+Outputs (`runs/b5e_icc2/out/`, gitignored): `rv32i_cpu_top.nl.v` (5.9 MB), `.pg.nl.v` (8.3 MB), `.full.pnl.v` (98.8 MB), `.def` (110.9 MB), `.gds` (79.9 MB), `.sdc`, `.icc2native.spef.tlu_nom_25.spef` (127.9 MB); `fp.def` is the floorplan input.
+The netlists are not LEC'd and the GDS is not DRC/LVS'd (downstream steps not run here).
+**Not equivalent to a clean route: 1 DRC / 1 short remains** (see above). Whether it matters for the physical check is the DRC/LVS step's call; it is in a congested SRAM-gap column.
+
+### GDS integrity of the real B5e GDS (`scripts/gds_check.py`)
+368 structures, **1 top cell** (`rv32i_cpu_top`); 0 undefined and 0 empty referenced structures; 10 SRAM instances reference `sky130_sram_1kbyte_1rw1r_32x256_8` (33 chars, not truncated; 20,516 own shapes);
+503 pin-size rectangles (294 met2 0.28 x 4.0 um, 209 met3 4.0 x 0.6 um) and 503 labels (69:5 / 70:5), **all 503 labels inside a pin rectangle**; top-level li1 boundaries 32 (the landing patches).
+Layer data type: pin geometry is written on the drawing datatype (69:20 / 70:20), text on 69:5 / 70:5. Only the stream was parsed; it was not opened in KLayout.
 
 ## Routing: DRC / short trend (check_routes DRCs / check_lvs shorts, before each incremental `route_detail` pass)
 | Stage (base) | Change vs the previous line | Counts |
@@ -30,7 +57,7 @@ The host was powered off 10-28 21:50 to 10-29 18:54; the design library survived
 | `05e` (from 05c, rip-up of the 248 nets in shorts + `route_eco`) | | 222/423 -> 1073/2360 -> 594/1164 -> 433/833 -> 378/676 -> final 322/585. **Regression, discarded** (05c kept) |
 | `05x_route` (from 04_cts, hard li1 ban) | `route.global.effort_level high`, `route.global.macro_boundary_track_utilization 60`, `route.detail.optimize_partition_size_for_drc true` | route_auto 266 DRC; after `route_opt` **231 / 347** (0 opens) |
 | `05y_repair` (from 05x, 8 passes) | same repair loop | 231/347, 90/183, 47/94, 25/44, **1/1**, 1/1, 1/1, 1/1 -> final **1 DRC (1 short, met1, nets `u_core/ex1c_comb[158]` / `u_core/ex1c_ex1b_reg_q[124]`, bbox 0.14 x 0.14 um at (1918.1, 882.9))**, 0 opens |
-`05y` final (ICC2 `check_routes`): li1 wire length **0 um**, met5 576 um (the soft max-layer setting, as in B5a: 468 um), 4,500,627 um total, 390,255 contacts. Wire/via counts of the DEF-level li1 audit follow with the final DEF.
+`05y` final (ICC2 `check_routes`): li1 wire length **0 um**, met5 576 um (the soft max-layer setting, as in B5a: 468 um), 4,500,627 um total, 390,255 contacts. DEF-level li1 audit of the final DEF: see Result.
 
 **What caused the extra passes: the li1 ban, not the tap handling.** (1) The tap stage was not changed and its output is bit-identical to B5a's (`scripts/tap_segments.py`: 645 rows, 2,105 row segments, 0 without a tap, longest tap-free stretch 25.76 um <= 26 um).
 Placement/CTS moved only marginally (place setup -0.03 vs 0.00 ns, CTS identical 0.02 ns, leaf cells -0.2 %/-0.2 %). (2) With li1 banned, the first route has 3.6x the DRCs of B5a (291 vs 81) and the shorts sit in one column,
@@ -43,14 +70,14 @@ Not isolated either: the li1 effect vs the two small placement differences; but 
 ## Findings that differ from the task description
 - **Tap/endcap insertion does not miss row segments** (B5a DEF audited with `scripts/tap_segments.py`: 2,105 segments, 0 without a tap). The 7 floating-well islands (13 cells) are reproduced exactly by
   `scripts/nwell_islands.py` on the B5a DEF (well bands merged across abutting cells and row pairs): each is a chain of 1-4 cells whose neighbours are missing. The gaps are the fillers `06_finish` removes
-  where they overlapped router li1 pin-access stubs (428 removed in B5a), which breaks n-well abutment. So the island is a consequence of li1 routing, not of tap placement; with no li1 wires the removals should vanish.
-  This is verified on the B5e final DEF (see below, pending). No change was made to tap insertion; it is audited in `02_pdn.tcl` (error if any segment has no tap) and the well-island check runs on the final DEF.
+  where they overlapped router li1 pin-access stubs (428 removed in B5a), which breaks n-well abutment. So the island is a consequence of li1 routing, not of tap placement; with no li1 wires the removals vanish (B5e: 0 removed).
+  This is verified on the B5e final DEF (result: 0 islands, see Result). No change was made to tap insertion; it is audited in `02_pdn.tcl` (error if any segment has no tap) and the well-island check runs on the final DEF.
 - Both floorplans have the die area offset by 3.36 um in y (`DIEAREA ( 0 3360 ) ( 3600000 1803360 )`); the bottom-edge ports at y = 0..4 um are partly outside it (router warnings ZRT-720). Unchanged from B5a (identical floorplan was requested); worth a look in the next floorplan revision.
 
 ## GDS write (tested on the B5a block copy, before the rerun)
 `write_gds -layer_map ... -merge_files ... -long_names -output_pin all -merge_gds_top_cell rv32i_cpu_top -units 1000` (18 s). `scripts/gds_check.py` (own stream reader): 368 structures, **1 top cell**,
 0 undefined and 0 empty referenced structures, 10 SRAM instances reference the full-length `sky130_sram_1kbyte_1rw1r_32x256_8` (20,516 own shapes, no rename), **503 pin rectangles (294 met2 0.28x4.0, 209 met3 4.0x0.6) and 503 labels, every label inside a pin rectangle**.
-The same checks on the real B5e GDS are listed with the final results.
+The real B5e GDS gives the same result (see Result).
 
 ## Tool gotchas found in this step (for the agent suite)
 - `route.common.global_min_layer_mode` / `global_max_layer_mode` default to **soft**: `set_ignored_layers -min_routing_layer` alone does not stop the router (the man page says "the router respects this setting", the default mode makes that "discouraged"). Use `hard`; `allow_pin_connection` lets <= ~5.75 um li1 stubs through.
