@@ -1,3 +1,5 @@
+# numpy is needed by correlate.py/pinfit.py; the venvs here lack it, Calibre's bundled python3 has it.
+PY ?= /home/EDA/mentor/calibre2026/aok_cal_2026.1_17.11/bin/python3
 # StarRC neutral-judge extraction, Sky130 rv32i_cpu_top (B1 part 2b).  Run from this directory.
 #   make smoke            OpenROAD DEF at nom (mapping / layer / open checks)
 #   make corr-extract     OpenROAD DEF at nom, min, max (inputs of the correlation gate)
@@ -27,14 +29,14 @@ $(RUNS)/%/.done:
 # OpenRCX reference SPEFs (OpenROAD arm) -> tsv; StarRC SPEFs -> tsv
 $(RUNS)/corr/rcx_openroad_%.tsv:
 	@mkdir -p $(RUNS)/corr
-	python3 -I scripts/spef_stats.py ../../runs/openroad/rv32i_cpu_top.$*.spef $@
+	$(PY) -I scripts/spef_stats.py ../../runs/openroad/rv32i_cpu_top.$*.spef $@
 $(RUNS)/corr/sr_%.tsv: $(RUNS)/%/.done
 	@mkdir -p $(RUNS)/corr
-	@n=$*; c=$${n##*_}; python3 -I scripts/spef_stats.py $(RUNS)/$*/rv32i_cpu_top.$$c.spef $@
+	@n=$*; c=$${n##*_}; $(PY) -I scripts/spef_stats.py $(RUNS)/$*/rv32i_cpu_top.$$c.spef $@
 
 corr: $(foreach c,$(CORNERS),reports/correlation_$(c).md)
 reports/correlation_%.md: $(RUNS)/corr/rcx_openroad_%.tsv $(RUNS)/corr/sr_openroad_%.tsv
-	python3 -I scripts/correlate.py $(RUNS)/corr/rcx_openroad_$*.tsv $(RUNS)/corr/sr_openroad_$*.tsv $* > $@
+	$(PY) -I scripts/correlate.py $(RUNS)/corr/rcx_openroad_$*.tsv $(RUNS)/corr/sr_openroad_$*.tsv $* > $@
 
 stats:
-	python3 -I scripts/collect_stats.py > reports/per_arm.md
+	$(PY) -I scripts/collect_stats.py > reports/per_arm.md
