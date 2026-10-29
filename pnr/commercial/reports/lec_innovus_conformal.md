@@ -1,6 +1,55 @@
-# Conformal LEC of the post-route Innovus netlist, Sky130 `rv32i_cpu_top` (B4f: b5d current; B4e: b5c and B4d: b5b superseded)
+# Conformal LEC of the post-route Innovus netlist, Sky130 `rv32i_cpu_top` (B4g: b5g current; B4f: b5d, B4e: b5c and B4d: b5b superseded)
 
-## B4f: `b5d_innovus` (CURRENT, final Innovus deliverable, routing DRC 0)
+## B4g: `b5g_innovus` (CURRENT, b5f + 232 axi_rdata_i input repeaters)
+
+**Verdict: EQUIVALENT, both compares, with and without the diodes; all four negative controls are caught.** Same tool, method and settings as the sections below
+(Conformal 24.10-p100, `lec -nogui -xl`, 2 threads, `safe_run.sh` 6 GB cap, flat compares, no `fv_map`, no Genus implementation info, no constraints, no waivers; same do-files, same RTL file list/defines incl. `SRAM_SKY130`, same Genus golden `syn/genus/runs/b3b_genus_tt_r2/out/rv32i_cpu_top.nl.v`, same name-mapping file as B4f).
+Revised netlist: `pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.nl.v`, **md5 `3c8d320e1df88c385b772ce6dd716344`** (verified before the run; flat, 1 module, logical only, no PG cells).
+Command: `make -C pnr/commercial/signoff/lec/conformal lec-innovus-all INNTAG=b5g_innovus STEP=b4g` (tags `b4g_*`; B4d/B4e/B4f runs untouched).
+
+### Results (measured from `lec.log`; 0 non-equivalent / 0 aborted / 0 unknown in every EQUIVALENT run)
+| Run (`runs/<tag>`, copies in `signoff/lec/conformal/reports/<tag>/`) | Golden | Revised | EQ points | Unmapped | Wall, RSS |
+|---|---|---|---|---|---|
+| `b4g_innovus_vs_rtl` **(a)** | RTL | b5g netlist | 5,597 = 379 PO + 5,208 DFF + 10 SRAM BBOX (5,791 counting merged points) | golden 947 DFF unreachable; revised 283 diode BBOX unreachable; 0 not-mapped | 76.5 s, 385 MB |
+| `b4g_innovus_vs_genus` **(b)** | Genus netlist | b5g netlist | 5,597 (same mix) | revised 283 diode BBOX unreachable; 0 golden | 12.0 s, 272 MB |
+| `b4g_innovus_nodiode_vs_rtl` | RTL | b5g, 283 `diode_2` stripped | 5,597 (5,791) | revised **0**; golden 947 DFF unreachable | 36.2 s, 388 MB |
+| `b4g_innovus_nodiode_vs_genus` | Genus netlist | stripped copy | 5,597 | **0 / 0** | 12.0 s, 271 MB |
+
+Compare-point counts (all four): non-equivalent 0, aborted 0, unknown 0; compare points 5,791 (RTL golden) / 5,597 (Genus golden). Peak RSS 388 MB. The host was quiet (load < 2), so wall times are lower than B4f.
+EQ counts are identical to B4f (b5d): the 232 repeaters add no compare point, and the compare-DFF count is still exactly 5,208.
+
+### What changed vs b5d/b5f, re-derived from the files
+| | b5d | b5f | **b5g** |
+|---|---|---|---|
+| std-cell instances (`sky130_fd_sc_hd__*`) | 34,196 | 34,834 | **35,076** |
+| `buf_8` | 156 | 198 | **431** (198 + 232 `B5G<n>__inst_<k>` + 1 other) |
+| `diode_2` | 252 | 274 | **283** (111 `PORTDIODE_*` + 172 other, derived by `strip_diodes.py`) |
+
+The 232 ECO repeaters were counted directly: 232 distinct `sky130_fd_sc_hd__buf_8 B5G<1..28>__inst_<k>` instances (28 net groups). Pure buffers; Conformal treats them as logic and proves the cones equal.
+Diodes rose 274 -> 283 relative to b5f; `strip_diodes.py` and the unmapped list agree on 283. Not waived: the stripped copy repeats both compares with 0 unmapped and identical EQ counts.
+
+### Unmapped points, by class (unchanged classes)
+- **Revised: 283 `diode_2`**: black boxes, no output in the Liberty, "unreachable: all paths to outputs are blocked", no golden counterpart. Per-instance list: `reports/b4g_innovus_vs_genus/unmapped_unreachable_points.txt`.
+- **Golden (RTL): 947 DFF unreachable** (+ merged/constant points): identical to B4b..B4f (an RTL/Genus property, untouched by P&R). Compare (b) has no golden-only points.
+
+### Negative controls (REQUIRED): 4 of 4 caught, each mutant against both goldens
+Mutants built by `scripts/mk_mutant_innovus.py` from the **b5g** netlist (same anchors as B4f: `\u_core/fwd_b_ex1c_r_reg` and gate `\u_core/g419910`). Diffs: `reports/b4g_mutant_*.diff.txt` (7 and 8 lines against the real netlist).
+| Mutant | vs RTL | vs Genus netlist |
+|---|---|---|
+| `fwdb_inv`: inverter inserted on D (`\u_core/n_13109`) of `\u_core/fwd_b_ex1c_r_reg` | **NON-EQUIVALENT** (`B4D_RTL_VERDICT: NOT_EQUIVALENT`), 1 failing point `fwd_b_ex1c_r_reg`; 1 diff / 0 abort / 0 unknown | **NON-EQUIVALENT**, 1 failing point `fwd_b_ex1c_r_reg`; 1 diff |
+| `swap`: A1 and B1 swapped on `a211o_1 \u_core/g419910` (`n_265` <-> `n_8722`; drives D of `ex1a_ex1b_reg_q_reg[alu_result][5]`) | **NON-EQUIVALENT**, 1 failing point `alu_result[5]` flop; 1 diff | **NON-EQUIVALENT**, 1 failing point `alu_result[5]` flop; 1 diff |
+
+`make lec-innovus-negctl` prints `NON-EQUIVALENT (good)` for all four and fails the recipe if any mutant is judged equivalent. Mutants were not run on the stripped-diode netlist (as in B4d..B4f).
+
+### Reproduce
+```
+make -C pnr/commercial/signoff/lec/conformal lec-innovus-all INNTAG=b5g_innovus STEP=b4g      # b5g (tags b4g_*)
+```
+Caveats: logical netlist only (PG/physical cells and the 232 repeaters' placement/routing/DRC are other steps' results, not LEC's); rerun after any ECO; single tt library view; LEC says netlist == RTL, not that the RTL is right.
+
+---
+
+## B4f: `b5d_innovus` (SUPERSEDED by b5g; text kept as recorded)
 
 **Verdict: EQUIVALENT, both compares, with and without the diodes; all four negative controls are caught.** Same tool, method and settings as the sections below
 (Conformal 24.10-p100, `lec -nogui -xl`, 2 threads, `safe_run.sh` 6 GB cap, flat compares, no `fv_map`, no Genus implementation info, no constraints, no waivers).

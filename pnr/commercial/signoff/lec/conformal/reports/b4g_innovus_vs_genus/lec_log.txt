@@ -1,0 +1,976 @@
+                          CONFORMAL (R)
+                   Version 24.10-p100 (30-May-2024) (64 bit executable)
+   Copyright (c) Cadence Design Systems, Inc., 1997-2024. All Rights Reserved
+
+
+This program is proprietary and confidential information belonging to
+Cadence Design Systems, Inc., and may be used and disclosed only as authorized
+in a license agreement controlling such use and disclosure.
+
+// Warning: This version is 881 days old. You can download the latest version from http://downloads.cadence.com.
+
+0
+// Command: usage -auto -elapse
+CPU time     : 0.17    seconds
+Elapse time  : 0       seconds
+Memory usage : 88.40   M bytes
+0
+// Command: set_mapping_method -sensitive
+0
+// Command: set_parallel_option -threads 1,2 -norelease_license
+// Number of threads is set to 1,2.
+0
+// Command: set_compare_options -threads 1,2
+Set computing threads of compare to 1,2.
+0
+// Command: set env(RC_VERSION)     "23.14-s090_1"
+23.14-s090_1
+// Command: set env(CDN_SYNTH_ROOT) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set CDN_SYNTH_ROOT      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set env(CW_DIR) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set CW_DIR      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set lec_version_required "21.20249"
+21.20249
+// Command: if { ($lec_version < $lec_version_required) &&
+//              [file exists /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim]} {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//          } else {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//          }
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim
+// Command: set_multiplier_implementation boothrca -both
+0
+// Command: set_undefined_cell black_box -noascend -both
+0
+// Command: add_notranslate_modules -library -both sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: add_search_path . /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/tech -library -both
+0
+// Command: read_library -liberty -both \
+//              /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib \
+//              /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib ...
+// Parsing file /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:12)
+// Warning: (RTL9.21) Liberty cell with interface_timing attribute set to true was not an empty cell (occurrence:1)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:6)
+// Note: (HRC1.2) Module/entity is not translated (blackboxed) (occurrence:1)
+// Note: Read Liberty library successfully
+0
+CPU time     : 0.46    seconds
+Elapse time  : 0       seconds
+Memory usage : 110.47  M bytes
+// Command: set_hdl_options -const_port_extend
+0
+// Command: set_hdl_options -unsigned_conversion_overflow on
+0
+// Command: set_hdl_option -v_to_vd on
+// Command: set_hdl_options -v_to_vd on
+// Note: '-v' to '-vd' option is 'ON'
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          set_hdl_option -extract_macro_constraint
+//          }
+// Command: set_hdl_options -extract_macro_constraint
+0
+// Command: set lec_version_required "20.20226"
+20.20226
+// Command: if {$lec_version >= $lec_version_required} {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src"
+//          } else {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src:cwd"
+//          }
+// Command: set_hdl_options -VERILOG_INCLUDE_DIR sep:src
+0
+// Command: read_design -verilog95   -golden -lastmod -noelab $env(GOLDEN_NL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/syn/genus/runs/b3b_genus_tt_r2/out/rv32i_cpu_top.nl.v ...
+0
+CPU time     : 1.36    seconds
+Elapse time  : 1       seconds
+Memory usage : 145.62  M bytes
+// Command: elaborate_design -golden -root {rv32i_cpu_top}
+// Golden root module is set to 'rv32i_cpu_top'
+// Warning: (RTL2.5) Net is referenced without an assignment. Design verification will be based on set_undriven_signal setting (occurrence:272)
+// Warning: (RTL2.13) Undriven pin is detected (occurrence:607)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:901)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:28)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:280)
+// Warning: Total black box modules referenced in Golden = 1
+// Warning: There are 607 undriven nets in Golden
+// Warning: There are 607 undriven pins in Golden
+0
+CPU time     : 1.86    seconds
+Elapse time  : 1       seconds
+Memory usage : 142.91  M bytes
+// Command: read_design -verilog95   -revised -lastmod -noelab $env(IMPL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.nl.v ...
+0
+CPU time     : 2.89    seconds
+Elapse time  : 2       seconds
+Memory usage : 178.24  M bytes
+// Command: elaborate_design -revised -root {rv32i_cpu_top}
+// Revised root module is set to 'rv32i_cpu_top'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:322)
+// Note: (HRC3.5b) Open output port connection is detected (occurrence:132)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:8)
+// Warning: (HRC3.16) A wire is declared, but not used in the module (occurrence:1667)
+// Warning: Total black box modules referenced in Revised = 2
+0
+CPU time     : 3.25    seconds
+Elapse time  : 2       seconds
+Memory usage : 173.86  M bytes
+// Command: file mkdir rtl_fv_map_db
+// Command: write_design -golden rtl_fv_map_db/elab.v -replace
+// Note: Wrote VERILOG design successfully
+0
+CPU time     : 4.69    seconds
+Elapse time  : 4       seconds
+Memory usage : 175.01  M bytes
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules         4               1
+Library-cells      26347           35086
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+AND        *     33812                33805
+BUF        *       228                 7670
+DFF               5208                 5208
+INV        *     62847                63706
+OR         *     16163                16164
+TIE0       *         0                  133
+TIE1       *         0                  133
+WIRE       *         0                    3
+------ word-level --------------------------
+BBOX       *        10                  293
+--------------------------------------------
+Total           118268               127115
+
+0
+// Command: report_black_box
+SYSTEM: (R) sky130_fd_sc_hd__diode_2
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: report_modules
+Golden:
+   rv32i_cpu_top 
+      rv32i_core_RESET_PC0 
+         rv32i_pipeline_ex1c 
+         rv32i_decode 
+Revised:
+   rv32i_cpu_top 
+0
+// Command: set_flatten_model -seq_constant
+0
+// Command: set_flatten_model -seq_constant_x_to 0
+0
+// Command: set_flatten_model -hier_seq_merge
+0
+// Command: set_flatten_model -seq_merge
+0
+// Command: set_flatten_model -balanced_modeling
+0
+// Command: set lec_version_required "21.10142"
+21.10142
+// Command: if {$lec_version >= $lec_version_required} {
+//              puts "For safety of verification, PIs and POs should be mapped by name."
+//          }
+For safety of verification, PIs and POs should be mapped by name.
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          }
+// Command: set_analyze_option -auto -report_map
+0
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling mapped 10416 out of 10416 DFF/DLATs
+// (F28) Converted 607 internal output port(s) to inout port(s)
+CPU time     : 5.61    seconds
+Elapse time  : 5       seconds
+Memory usage : 254.52  M bytes
+// Warning: Golden and Revised have different numbers of key points:
+// Golden  key points = 5721
+// Revised key points = 6004
+// Mapping key points ...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            124    379    5208   10        5721    
+--------------------------------------------------------------------------------
+Revised           124    379    5208   10        5721    
+================================================================================
+Unmapped points:
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       283       283     
+================================================================================
+CPU time     : 5.99    seconds
+Elapse time  : 5       seconds
+Memory usage : 258.29  M bytes
+// Running automatic setup...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            124    379    5208   10        5721    
+--------------------------------------------------------------------------------
+Revised           124    379    5208   10        5721    
+================================================================================
+Unmapped points:
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       283       283     
+================================================================================
+// Automatic setup finished.
+0
+CPU time     : 7.69    seconds
+Elapse time  : 7       seconds
+Memory usage : 258.29  M bytes
+// Command: echo "B4D_GENUS_UNMAPPED_BEGIN"
+B4D_GENUS_UNMAPPED_BEGIN
+// Command: report_unmapped_points -summary
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       283       283     
+================================================================================
+0
+// Command: report_unmapped_points -notmapped
+
+0 unmapped points reported
+0
+// Command: report_unmapped_points -extra
+
+0 unmapped points reported
+0
+// Command: report_unmapped_points -unreachable
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5712   BBOX /DIODE_166
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5713   BBOX /DIODE_165
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5714   BBOX /DIODE_164
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5715   BBOX /DIODE_163
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5716   BBOX /DIODE_160
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5717   BBOX /DIODE_159
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5718   BBOX /DIODE_158
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5719   BBOX /DIODE_157
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5720   BBOX /DIODE_156
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5721   BBOX /DIODE_155
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5722   BBOX /DIODE_154
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5723   BBOX /DIODE_153
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5724   BBOX /DIODE_152
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5725   BBOX /DIODE_151
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5726   BBOX /DIODE_150
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5727   BBOX /DIODE_149
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5728   BBOX /DIODE_148
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5729   BBOX /DIODE_147
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5730   BBOX /DIODE_146
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5731   BBOX /DIODE_145
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5732   BBOX /DIODE_144
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5733   BBOX /DIODE_143
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5734   BBOX /DIODE_142
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5735   BBOX /DIODE_141
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5736   BBOX /DIODE_140
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5737   BBOX /DIODE_139
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5738   BBOX /DIODE_138
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5739   BBOX /DIODE_137
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5740   BBOX /DIODE_136
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5741   BBOX /DIODE_135
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5742   BBOX /DIODE_134
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5743   BBOX /DIODE_133
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5744   BBOX /DIODE_132
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5745   BBOX /DIODE_131
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5746   BBOX /DIODE_130
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5747   BBOX /DIODE_129
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5748   BBOX /DIODE_128
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5749   BBOX /DIODE_127
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5750   BBOX /DIODE_126
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5751   BBOX /DIODE_125
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5752   BBOX /DIODE_124
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5753   BBOX /DIODE_123
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5754   BBOX /DIODE_122
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5755   BBOX /DIODE_121
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5756   BBOX /DIODE_120
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5757   BBOX /DIODE_119
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5758   BBOX /DIODE_118
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5759   BBOX /DIODE_117
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5760   BBOX /DIODE_116
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5761   BBOX /DIODE_115
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5762   BBOX /DIODE_114
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5763   BBOX /DIODE_113
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5764   BBOX /DIODE_112
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5765   BBOX /DIODE_111
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5766   BBOX /DIODE_110
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5767   BBOX /DIODE_109
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5768   BBOX /DIODE_108
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5769   BBOX /DIODE_107
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5770   BBOX /DIODE_106
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5771   BBOX /DIODE_105
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5772   BBOX /DIODE_104
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5773   BBOX /DIODE_100
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5774   BBOX /DIODE_99
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5775   BBOX /DIODE_97
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5776   BBOX /DIODE_96
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5777   BBOX /DIODE_94
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5778   BBOX /DIODE_93
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5779   BBOX /DIODE_92
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5780   BBOX /DIODE_91
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5781   BBOX /DIODE_90
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5782   BBOX /DIODE_89
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5783   BBOX /DIODE_87
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5784   BBOX /DIODE_85
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5785   BBOX /DIODE_83
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5786   BBOX /DIODE_80
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5787   BBOX /DIODE_73
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5788   BBOX /DIODE_72
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5789   BBOX /DIODE_71
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5790   BBOX /DIODE_70
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5791   BBOX /DIODE_62
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5792   BBOX /DIODE_61
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5793   BBOX /DIODE_60
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5794   BBOX /DIODE_59
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5795   BBOX /DIODE_58
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5796   BBOX /DIODE_57
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5797   BBOX /DIODE_56
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5798   BBOX /DIODE_55
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5799   BBOX /DIODE_54
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5800   BBOX /DIODE_53
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5801   BBOX /DIODE_52
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5802   BBOX /DIODE_51
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5803   BBOX /DIODE_50
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5804   BBOX /DIODE_49
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5805   BBOX /DIODE_48
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5806   BBOX /DIODE_46
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5807   BBOX /DIODE_42
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5808   BBOX /DIODE_41
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5809   BBOX /DIODE_33
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5810   BBOX /DIODE_25
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5811   BBOX /DIODE_23
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5812   BBOX /DIODE_22
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5813   BBOX /DIODE_18
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5814   BBOX /DIODE_17
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5815   BBOX /DIODE_14
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5816   BBOX /PORTDIODE_FE_OFC6499_mbist_cfg_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5817   BBOX /PORTDIODE_FE_OFC11322_mbist_cfg_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5818   BBOX /PORTDIODE_FE_OFC5560_mbist_cfg_i_2_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5819   BBOX /PORTDIODE_FE_OFC6292_mbist_cfg_i_3_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5820   BBOX /PORTDIODE_FE_OFC5556_mbist_cfg_i_4_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5821   BBOX /PORTDIODE_FE_OFC5554_mbist_cfg_i_5_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5822   BBOX /PORTDIODE_FE_OFC5552_mbist_cfg_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5823   BBOX /PORTDIODE_FE_OFC7832_mbist_cfg_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5824   BBOX /PORTDIODE_FE_OFC7696_mbist_cfg_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5825   BBOX /PORTDIODE_FE_OFC6326_mbist_cfg_i_9_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5826   BBOX /PORTDIODE_FE_OFC5541_mbist_cfg_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5827   BBOX /PORTDIODE_FE_OFC5538_mbist_cfg_i_11_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5828   BBOX /PORTDIODE_FE_OFC5535_mbist_cfg_i_12_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5829   BBOX /PORTDIODE_FE_OFC5532_mbist_cfg_i_13_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5830   BBOX /PORTDIODE_FE_OFC5529_mbist_cfg_i_14_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5831   BBOX /PORTDIODE_FE_OFC7715_mbist_cfg_i_15_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5832   BBOX /PORTDIODE_FE_OFC11318_mbist_cfg_i_16_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5833   BBOX /PORTDIODE_FE_OFC789_mbist_cfg_i_17_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5834   BBOX /PORTDIODE_FE_OFC6602_mbist_cfg_i_22_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5835   BBOX /PORTDIODE_FE_OFC6708_mbist_cfg_i_23_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5836   BBOX /PORTDIODE_FE_OFC6667_mbist_cfg_i_24_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5837   BBOX /PORTDIODE_FE_OFC11334_mbist_cfg_i_25_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5838   BBOX /PORTDIODE_FE_OFC11320_mbist_run_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5839   BBOX /PORTDIODE_FE_OFC11324_timer_irq_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5840   BBOX /PORTDIODE_FE_OFC6642_ext_irq_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5841   BBOX /PORTDIODE_FE_OFC6524_apb_pwdata_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5842   BBOX /PORTDIODE_FE_OFC6791_apb_pwdata_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5843   BBOX /PORTDIODE_FE_OFC6630_apb_pwdata_i_2_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5844   BBOX /PORTDIODE_FE_OFC6594_apb_pwdata_i_3_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5845   BBOX /PORTDIODE_FE_OFC6600_apb_pwdata_i_4_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5846   BBOX /PORTDIODE_FE_OFC11328_apb_pwdata_i_5_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5847   BBOX /PORTDIODE_FE_OFC5334_apb_pwdata_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5848   BBOX /PORTDIODE_FE_OFC5331_apb_pwdata_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5849   BBOX /PORTDIODE_FE_OFC5328_apb_pwdata_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5850   BBOX /PORTDIODE_FE_OFC6566_apb_pwdata_i_9_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5851   BBOX /PORTDIODE_FE_OFC5322_apb_pwdata_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5852   BBOX /PORTDIODE_FE_OFC6531_apb_pwdata_i_11_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5853   BBOX /PORTDIODE_FE_OFC7839_apb_pwdata_i_12_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5854   BBOX /PORTDIODE_FE_OFC6577_apb_pwdata_i_13_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5855   BBOX /PORTDIODE_FE_OFC6537_apb_pwdata_i_14_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5856   BBOX /PORTDIODE_FE_OFC11327_apb_pwdata_i_15_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5857   BBOX /PORTDIODE_FE_OFC5303_apb_pwdata_i_16_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5858   BBOX /PORTDIODE_FE_OFC5300_apb_pwdata_i_17_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5859   BBOX /PORTDIODE_FE_OFC6668_apb_pwdata_i_18_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5860   BBOX /PORTDIODE_FE_OFC5294_apb_pwdata_i_19_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5861   BBOX /PORTDIODE_FE_OFC5291_apb_pwdata_i_20_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5862   BBOX /PORTDIODE_FE_OFC6571_apb_pwdata_i_21_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5863   BBOX /PORTDIODE_FE_OFC6725_apb_pwdata_i_22_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5864   BBOX /PORTDIODE_FE_OFC11336_apb_pwdata_i_23_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5865   BBOX /PORTDIODE_FE_OFC11329_apb_pwdata_i_24_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5866   BBOX /PORTDIODE_FE_OFC6587_apb_pwdata_i_25_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5867   BBOX /PORTDIODE_FE_OFC5273_apb_pwdata_i_26_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5868   BBOX /PORTDIODE_FE_OFC6617_apb_pwdata_i_27_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5869   BBOX /PORTDIODE_FE_OFC11325_apb_pwdata_i_28_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5870   BBOX /PORTDIODE_FE_OFC11326_apb_pwdata_i_29_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5871   BBOX /PORTDIODE_FE_OFC5261_apb_pwdata_i_30_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5872   BBOX /PORTDIODE_FE_OFC5258_apb_pwdata_i_31_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5873   BBOX /PORTDIODE_FE_OFC6679_apb_pwrite_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5874   BBOX /PORTDIODE_FE_OFC6539_apb_penable_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5875   BBOX /PORTDIODE_FE_OFC6727_apb_psel_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5876   BBOX /PORTDIODE_g46406_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5877   BBOX /PORTDIODE_FE_OFC5243_apb_paddr_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5878   BBOX /PORTDIODE_FE_OFC5240_apb_paddr_i_2_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5879   BBOX /PORTDIODE_FE_OFC6471_apb_paddr_i_3_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5880   BBOX /PORTDIODE_FE_OFC7776_apb_paddr_i_4_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5881   BBOX /PORTDIODE_FE_OFC7790_apb_paddr_i_5_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5882   BBOX /PORTDIODE_FE_OFC7803_apb_paddr_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5883   BBOX /PORTDIODE_FE_OFC5222_apb_paddr_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5884   BBOX /PORTDIODE_FE_OFC5218_apb_paddr_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5885   BBOX /PORTDIODE_FE_OFC11335_apb_paddr_i_9_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5886   BBOX /PORTDIODE_FE_OFC6330_apb_paddr_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5887   BBOX /PORTDIODE_g24102_B
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5888   BBOX /PORTDIODE_FE_OFC7567_axi_rdata_i_22_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5889   BBOX /PORTDIODE_FE_OFC6462_rst_n_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5890   BBOX /u_core/DIODE_172
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5891   BBOX /u_core/DIODE_171
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5892   BBOX /u_core/DIODE_170
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5893   BBOX /u_core/DIODE_169
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5894   BBOX /u_core/DIODE_168
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5895   BBOX /u_core/DIODE_167
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5896   BBOX /u_core/DIODE_162
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5897   BBOX /u_core/DIODE_161
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5898   BBOX /u_core/DIODE_103
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5899   BBOX /u_core/DIODE_102
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5900   BBOX /u_core/DIODE_101
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5901   BBOX /u_core/DIODE_98
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5902   BBOX /u_core/DIODE_95
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5903   BBOX /u_core/DIODE_88
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5904   BBOX /u_core/DIODE_86
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5905   BBOX /u_core/DIODE_84
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5906   BBOX /u_core/DIODE_82
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5907   BBOX /u_core/DIODE_81
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5908   BBOX /u_core/DIODE_79
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5909   BBOX /u_core/DIODE_78
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5910   BBOX /u_core/DIODE_77
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5911   BBOX /u_core/DIODE_76
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5912   BBOX /u_core/DIODE_75
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5913   BBOX /u_core/DIODE_74
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5914   BBOX /u_core/DIODE_69
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5915   BBOX /u_core/DIODE_68
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5916   BBOX /u_core/DIODE_67
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5917   BBOX /u_core/DIODE_66
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5918   BBOX /u_core/DIODE_65
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5919   BBOX /u_core/DIODE_64
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5920   BBOX /u_core/DIODE_63
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5921   BBOX /u_core/DIODE_47
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5922   BBOX /u_core/DIODE_45
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5923   BBOX /u_core/DIODE_44
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5924   BBOX /u_core/DIODE_43
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5925   BBOX /u_core/DIODE_40
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5926   BBOX /u_core/DIODE_39
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5927   BBOX /u_core/DIODE_38
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5928   BBOX /u_core/DIODE_37
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5929   BBOX /u_core/DIODE_36
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5930   BBOX /u_core/DIODE_35
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5931   BBOX /u_core/DIODE_34
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5932   BBOX /u_core/DIODE_32
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5933   BBOX /u_core/DIODE_31
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5934   BBOX /u_core/DIODE_30
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5935   BBOX /u_core/DIODE_29
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5936   BBOX /u_core/DIODE_28
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5937   BBOX /u_core/DIODE_27
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5938   BBOX /u_core/DIODE_26
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5939   BBOX /u_core/DIODE_24
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5940   BBOX /u_core/DIODE_21
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5941   BBOX /u_core/DIODE_20
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5942   BBOX /u_core/DIODE_19
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5943   BBOX /u_core/DIODE_16
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5944   BBOX /u_core/DIODE_15
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5945   BBOX /u_core/DIODE_13
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5946   BBOX /u_core/DIODE_12
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5947   BBOX /u_core/DIODE_11
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5948   BBOX /u_core/DIODE_10
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5949   BBOX /u_core/DIODE_9
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5950   BBOX /u_core/DIODE_8
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5951   BBOX /u_core/DIODE_7
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5952   BBOX /u_core/DIODE_6
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5953   BBOX /u_core/DIODE_5
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5954   BBOX /u_core/DIODE_4
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5955   BBOX /u_core/DIODE_3
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5956   BBOX /u_core/DIODE_2
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5957   BBOX /u_core/DIODE_1
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5958   BBOX /u_core/PORTDIODE_FE_OFC6002_axi_rlast_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5959   BBOX /u_core/PORTDIODE_FE_OFC7641_axi_rvalid_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5960   BBOX /u_core/PORTDIODE_FE_OFC5205_axi_rresp_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5961   BBOX /u_core/PORTDIODE_FE_OFC5927_axi_rresp_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5962   BBOX /u_core/PORTDIODE_FE_OFC5200_axi_rdata_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5963   BBOX /u_core/PORTDIODE_FE_OFC7730_axi_rdata_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5964   BBOX /u_core/PORTDIODE_FE_OFC7713_axi_rdata_i_3_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5965   BBOX /u_core/PORTDIODE_FE_OFC7695_axi_rdata_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5966   BBOX /u_core/PORTDIODE_FE_OFC6702_axi_rdata_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5967   BBOX /u_core/PORTDIODE_FE_OFC5885_axi_rdata_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5968   BBOX /u_core/PORTDIODE_FE_OFC7686_axi_rdata_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5969   BBOX /u_core/PORTDIODE_FE_OFC411_axi_rdata_i_11_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5970   BBOX /u_core/PORTDIODE_FE_OFC5872_axi_rdata_i_12_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5971   BBOX /u_core/PORTDIODE_FE_OFC7610_axi_rdata_i_13_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5972   BBOX /u_core/PORTDIODE_FE_OFC7605_axi_rdata_i_14_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5973   BBOX /u_core/PORTDIODE_FE_OFC11319_axi_rdata_i_15_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5974   BBOX /u_core/PORTDIODE_FE_OFC7587_axi_rdata_i_16_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5975   BBOX /u_core/PORTDIODE_FE_OFC5169_axi_rdata_i_17_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5976   BBOX /u_core/PORTDIODE_FE_OFC7697_axi_rdata_i_18_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5977   BBOX /u_core/PORTDIODE_FE_OFC11321_axi_rdata_i_19_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5978   BBOX /u_core/PORTDIODE_FE_OFC7706_axi_rdata_i_20_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5979   BBOX /u_core/PORTDIODE_FE_OFC385_axi_rdata_i_21_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5980   BBOX /u_core/PORTDIODE_FE_OFC7831_axi_rdata_i_23_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5981   BBOX /u_core/PORTDIODE_FE_OFC7708_axi_rdata_i_24_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5982   BBOX /u_core/PORTDIODE_FE_OFC5147_axi_rdata_i_25_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5983   BBOX /u_core/PORTDIODE_FE_OFC7595_axi_rdata_i_26_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5984   BBOX /u_core/PORTDIODE_FE_OFC7838_axi_rdata_i_27_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5985   BBOX /u_core/PORTDIODE_FE_OFC7837_axi_rdata_i_28_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5986   BBOX /u_core/PORTDIODE_FE_OFC7598_axi_rdata_i_29_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5987   BBOX /u_core/PORTDIODE_FE_OFC7835_axi_rdata_i_30_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5988   BBOX /u_core/PORTDIODE_FE_OFC5132_axi_rdata_i_31_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5989   BBOX /u_core/PORTDIODE_FE_OFC6014_axi_arready_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5990   BBOX /u_core/PORTDIODE_FE_OFC5096_axi_bvalid_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5991   BBOX /u_core/PORTDIODE_FE_OFC5854_axi_bresp_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5992   BBOX /u_core/PORTDIODE_FE_OFC11315_axi_bresp_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5993   BBOX /u_core/PORTDIODE_FE_OFC6015_axi_wready_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5994   BBOX /u_core/PORTDIODE_FE_OFC6477_axi_awready_i_A
+
+283 unmapped points reported
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       283       283     
+================================================================================
+0
+// Command: echo "B4D_GENUS_UNMAPPED_END"
+B4D_GENUS_UNMAPPED_END
+// Command: add_compared_points -all
+// 5597 compared points added to compare list
+0
+// Command: compare
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5208   10        5597    
+================================================================================
+0
+CPU time     : 8.83    seconds
+Elapse time  : 12      seconds
+Memory usage : 260.16  M bytes
+// Command: report_compare_data -class nonequivalent -class abort -class notcompared
+0 Non-equivalent point(s) reported
+0 Abort point(s) reported
+0 Not-compared point(s) reported
+0 compared point(s) reported
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5208   10        5597    
+================================================================================
+0
+// Command: report_verification -verbose
+================================================================================
+                            Verification Report
+--------------------------------------------------------------------------------
+Category                                                                  Count
+--------------------------------------------------------------------------------
+1. Non-standard modeling options used:                                      0
+     Tri-stated output:                                        checked
+     Revised X signals set to E:                               yes
+     Floating signals tied to Z:                               yes
+     Command "add clock" for clock-gating:                     not used
+--------------------------------------------------------------------------------
+2. Incomplete verification:                                                 0
+     All primary outputs are mapped:                           yes
+     Not-mapped DFF/DLAT is detected:                          no
+     All mapped points are added as compare points:            yes
+     All compared points are compared:                         yes
+     User added black box:                                     no
+     Black box mapped with different module name:              no
+     Empty module is not black boxed:                          no
+     Command "add ignore outputs" used:                        no
+     Always false constraints detected:                        no
+--------------------------------------------------------------------------------
+3. User modification to design:                                             0
+     Change gate type:                                         no
+     Change wire:                                              no
+     Primary input added by user:                              no
+--------------------------------------------------------------------------------
+4. Conformal Constraint Designer clock domain crossing checks recommended:  0
+     Multiple clocks in the design:                            no
+--------------------------------------------------------------------------------
+5. Design ambiguity:                                                        0
+     Duplicate module definition:                              no
+     Black box due to undefined cells:                         no
+     Golden design has abnormal ratio of unreachable gates:    no
+     Ratio of golden unreachable gates:                        0%
+     Revised design has abnormal ratio of unreachable gates:   no
+     Ratio of revised unreachable gates:                       0%
+     All primary input bus ordering is consistent:             yes
+     All primary output bus ordering is consistent:            yes
+     DFF/DLAT not compared due to disabled clock port(s):        0
+     Always X compared point is detected:                      not checked
+--------------------------------------------------------------------------------
+6. Compare Results:                                                        PASS
+     Number of EQ compare points:                              5597
+     Number of NON-EQ compare points:                          0
+     Number of Aborted compare points:                         0
+     Number of Uncompared compare points :                     0
+================================================================================
+pass
+// Command: report_statistics
+Mapping and compare statistics
+================================================================================
+                     Compare Result       Golden            Revised
+--------------------------------------------------------------------------------
+Root module name                          rv32i_cpu_top     rv32i_cpu_top     
+
+Primary inputs                               124                124
+   Mapped                                    124                124
+
+Primary outputs                              379                379
+   Mapped                                    379                379
+      Equivalent                379
+
+Black-box key points                          10                293
+   Mapped                                     10                 10
+      Equivalent                 10
+   Unmapped                                    0                283
+      Unreachable                              0                283
+
+State key points                            5208               5208
+   Mapped                                   5208               5208
+      Equivalent               5208
+================================================================================
+0
+// Command: if {[get_compare_points -NONequivalent -count] > 0 || [get_compare_points -abort -count] > 0 || [get_compare_points -unknown -count] > 0} {
+//              puts "B4D_GENUS_VERDICT: NOT_EQUIVALENT"
+//              write_compared_points noneq.flat.tcl -class noneq -tclmode -replace
+//              analyze_nonequivalent -source_diagnosis
+//              report_nonequivalent_analysis > noneq.flat.source_diag.rpt
+//              report_test_vector -noneq > noneq.flat.test_vector.rpt
+//          } else { puts "B4D_GENUS_VERDICT: EQUIVALENT" }
+// Command: get_compare_points -NONequivalent -count
+// Command: get_compare_points -abort -count
+// Command: get_compare_points -unknown -count
+B4D_GENUS_VERDICT: EQUIVALENT
+// Command: puts "No of compare points = [get_compare_points -count]"
+// Command: get_compare_points -count
+No of compare points = 5597
+// Command: puts "No of diff points    = [get_compare_points -NONequivalent -count]"
+// Command: get_compare_points -NONequivalent -count
+No of diff points    = 0
+// Command: puts "No of abort points   = [get_compare_points -abort -count]"
+// Command: get_compare_points -abort -count
+No of abort points   = 0
+// Command: puts "No of unknown points = [get_compare_points -unknown -count]"
+// Command: get_compare_points -unknown -count
+No of unknown points = 0
+// Command: vpxmode   ;# [B4b-flat] leave tclmode: `exit -f` is only valid in the native mode (the Genus do-file does the same)
+// Command: exit -f
