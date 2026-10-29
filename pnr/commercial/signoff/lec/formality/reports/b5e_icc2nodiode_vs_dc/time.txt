@@ -1,0 +1,23 @@
+	Command being timed: "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/scripts/safe_run.sh /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/b5e_icc2nodiode_vs_dc/fm.log fm_shell -f /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/scripts/fm_lec_icc2.tcl"
+	User time (seconds): 57.80
+	System time (seconds): 58.37
+	Percent of CPU this job got: 59%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 3:14.50
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 542524
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 3
+	Minor (reclaiming a frame) page faults: 169779
+	Voluntary context switches: 502
+	Involuntary context switches: 1734
+	Swaps: 0
+	File system inputs: 136
+	File system outputs: 1176
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

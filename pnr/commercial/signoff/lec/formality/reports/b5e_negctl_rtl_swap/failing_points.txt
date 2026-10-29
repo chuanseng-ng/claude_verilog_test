@@ -1,0 +1,39 @@
+**************************************************
+Report         : failing_points
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Thu Oct 29 20:54:25 2026
+**************************************************
+
+1 Failing compare point (1 matched, 0 unmatched):
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_alu_result__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_alu_result__5_
+
+ [BBNet: multiply-driven net
+  BBPin: black-box pin
+  Cut:   cut-point
+  DFF:   non-constant DFF register
+  DFF0:  constant 0 DFF register
+  DFF1:  constant 1 DFF register
+  DFFX:  constant X DFF register
+  DFF0X: constrained 0X DFF register
+  DFF1X: constrained 1X DFF register
+  LAT:   non-constant latch register
+  LAT0:  constant 0 latch register
+  LAT1:  constant 1 latch register
+  LATX:  constant X latch register
+  LAT0X: constrained 0X latch register
+  LAT1X: constrained 1X latch register
+  LATCG: clock-gating latch register
+  TLA:   transparent latch register
+  TLA0X: transparent constrained 0X latch register
+  TLA1X: transparent constrained 1X latch register
+  Loop:  cycle break point
+  Port:  primary (top-level) port
+  Und:   undriven signal cut-point
+  Unk:   unknown signal cut-point]
+
+1

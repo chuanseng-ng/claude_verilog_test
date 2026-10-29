@@ -58,7 +58,10 @@ lec-dc-svfprobe:
 	@for t in b4a_rtlmut_m2_merge b4a_rtlmut_m3_const; do grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log && echo "svfprobe $$t: FAILED (good)" || { echo "svfprobe $$t: PASSED -- SVF guidance is not verified"; exit 1; }; done
 
 # ---------------- B4c: post-route ICC2 netlist ----------------
-ICC2OUT := $(REPO)/pnr/commercial/impl/icc2/runs/b5a_icc2/out
+ICC2RUN ?= b5a_icc2
+PFX     ?= b4c
+MUTP    ?= $(HERE)/runs/mutant_icc2
+ICC2OUT := $(REPO)/pnr/commercial/impl/icc2/runs/$(ICC2RUN)/out
 ICC2NL  ?= $(ICC2OUT)/rv32i_cpu_top.nl.v
 DCNL    := $(DCOUT)/rv32i_cpu_top.nl.v
 define RUNFM2
@@ -78,22 +81,34 @@ lec-icc2-dc:         # (b) DC netlist vs ICC2 netlist, no SVF
 	$(call RUNFM2,$(ICC2NL),none,dc)
 lec-icc2-negctl:     # mutants of the ICC2 netlist vs the DC netlist (netlist hop, cheap); each must FAIL
 	@mkdir -p $(HERE)/runs
-	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(HERE)/runs/mutant_icc2_fwdb_inv.nl.v fwdb_inv
-	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(HERE)/runs/mutant_icc2_swap.nl.v swap
-	-$(MAKE) lec-icc2-dc ICC2NL=$(HERE)/runs/mutant_icc2_fwdb_inv.nl.v TAG=b4c_negctl_dc_fwdb_inv
-	-$(MAKE) lec-icc2-dc ICC2NL=$(HERE)/runs/mutant_icc2_swap.nl.v TAG=b4c_negctl_dc_swap
-	-$(MAKE) lec-icc2-rtl ICC2NL=$(HERE)/runs/mutant_icc2_fwdb_inv.nl.v TAG=b4c_negctl_rtl_fwdb_inv
-	-$(MAKE) lec-icc2-rtl ICC2NL=$(HERE)/runs/mutant_icc2_swap.nl.v TAG=b4c_negctl_rtl_swap
-	@for t in b4c_negctl_dc_fwdb_inv b4c_negctl_dc_swap b4c_negctl_rtl_fwdb_inv b4c_negctl_rtl_swap; do \
+	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(MUTP)_fwdb_inv.nl.v fwdb_inv
+	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(MUTP)_swap.nl.v swap
+	-$(MAKE) lec-icc2-dc ICC2NL=$(MUTP)_fwdb_inv.nl.v TAG=$(PFX)_negctl_dc_fwdb_inv
+	-$(MAKE) lec-icc2-dc ICC2NL=$(MUTP)_swap.nl.v TAG=$(PFX)_negctl_dc_swap
+	-$(MAKE) lec-icc2-rtl ICC2NL=$(MUTP)_fwdb_inv.nl.v TAG=$(PFX)_negctl_rtl_fwdb_inv
+	-$(MAKE) lec-icc2-rtl ICC2NL=$(MUTP)_swap.nl.v TAG=$(PFX)_negctl_rtl_swap
+	@for t in $(PFX)_negctl_dc_fwdb_inv $(PFX)_negctl_dc_swap $(PFX)_negctl_rtl_fwdb_inv $(PFX)_negctl_rtl_swap; do \
 	  if grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log; then echo "negctl $$t: NON-EQUIVALENT (good)"; \
 	  else echo "negctl $$t: NOT DETECTED -- LEC verdict is untrustworthy"; exit 1; fi; done
 
 # Variant with the 115 passive port diodes stripped (0 unmatched points): each diode has a single input pin and no output, so it cannot affect function.
-STRIPNL := $(HERE)/runs/icc2_nodiode.nl.v
+STRIPNL ?= $(HERE)/runs/icc2_nodiode.nl.v
 .PHONY: lec-icc2-nodiode
 lec-icc2-nodiode:
 	@mkdir -p $(HERE)/runs
-	python3 $(HERE)/scripts/strip_diodes.py $(ICC2NL) $(STRIPNL)
-	-$(MAKE) lec-icc2-dc ICC2NL=$(STRIPNL) TAG=b4c_icc2nodiode_vs_dc
-	-$(MAKE) lec-icc2-rtl ICC2NL=$(STRIPNL) TAG=b4c_icc2nodiode_vs_rtl_svf
-	@for t in b4c_icc2nodiode_vs_dc b4c_icc2nodiode_vs_rtl_svf; do grep -q "Verification SUCCEEDED" $(HERE)/runs/$$t/fm.log && echo "$$t: SUCCEEDED" || { echo "$$t: NOT EQUIVALENT"; exit 1; }; done
+	python3 $(HERE)/scripts/strip_diodes.py $(ICC2NL) $(STRIPNL) $(STRIPFLAGS)
+	-$(MAKE) lec-icc2-dc ICC2NL=$(STRIPNL) TAG=$(PFX)_icc2nodiode_vs_dc
+	-$(MAKE) lec-icc2-rtl ICC2NL=$(STRIPNL) TAG=$(PFX)_icc2nodiode_vs_rtl_svf
+	@for t in $(PFX)_icc2nodiode_vs_dc $(PFX)_icc2nodiode_vs_rtl_svf; do grep -q "Verification SUCCEEDED" $(HERE)/runs/$$t/fm.log && echo "$$t: SUCCEEDED" || { echo "$$t: NOT EQUIVALENT"; exit 1; }; done
+
+# ---------------- B4c re-run on a later ICC2 run (e.g. b5e): leaves the b5a/b4c results untouched ----------------
+#   make lec-icc2-b5e            runs (b) vs DC, (a) vs RTL+SVF, nodiode variants, 4 negative controls; all outputs tagged b5e_*
+B5E := ICC2RUN=b5e_icc2 PFX=b5e MUTP=$(HERE)/runs/mutant_b5e_icc2 STRIPNL=$(HERE)/runs/b5e_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+.PHONY: lec-icc2-b5e lec-icc2-b5e-real lec-icc2-b5e-negctl
+lec-icc2-b5e-real:
+	-$(MAKE) lec-icc2-dc $(B5E) TAG=b5e_icc2_vs_dc
+	-$(MAKE) lec-icc2-rtl $(B5E) TAG=b5e_icc2_vs_rtl_svf
+	-$(MAKE) lec-icc2-nodiode $(B5E)
+lec-icc2-b5e-negctl:
+	$(MAKE) lec-icc2-negctl $(B5E)
+lec-icc2-b5e: lec-icc2-b5e-real lec-icc2-b5e-negctl

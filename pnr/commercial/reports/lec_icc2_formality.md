@@ -1,5 +1,41 @@
 # Formality LEC of the post-route ICC2 netlist, Sky130 `rv32i_cpu_top` (step B4c)
 
+## b5e update (2026-10-29): ICC2 b5e netlist (li1-free reroute, replaces b5a), Formality
+
+**Verdict: EQUIVALENT, both compares, with negative controls detected (4 of 4).** `impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.nl.v`,
+md5 `1ee342edb00e6da7cb9ef040dc64241a` (120,113 lines, flat, no PG; b5a was `e9150655...`) is equivalent to (a) the RTL (28 files via `rtl_list.sh`, 5 defines incl. `SRAM_SKY130`, DC SVF 1,177/1,177 accepted)
+and (b) the DC-NXT netlist (`b3a_dc_tt`, md5 `698e56f0...`; SVF md5 `0740dd79...`). Reference, setup script (`scripts/fm_lec_icc2.tcl`) and rules are unchanged from b4c: no `set_constant`, no `set_dont_verify_point`, no user matches, no waivers; SRAMs are `.db` black boxes on both sides (10 instances, 570 input-pin points). Formality X-2025.06, 2 cores, `safe_run.sh` (6 GB cap), Innovus running concurrently.
+
+| Run (`runs/<tag>`, copies in `signoff/lec/formality/reports/<tag>/`) | Reference | Verdict | Passing / Failing / Aborted / Unverified | Unmatched ref/impl | Wall, RSS |
+|---|---|---|---|---|---|
+| `b5e_icc2_vs_dc` **(b)** | DC netlist, no SVF | **SUCCEEDED** | 6,233 / 0 / 0 / 0 | 0 / 115 | 56 s, 495 MB |
+| `b5e_icc2_vs_rtl_svf` **(a)** | RTL + DC SVF | **SUCCEEDED** | 6,233 / 0 / 0 / 0 | 0 / 115 | 36 s, 575 MB |
+
+Compare-point mix (both): 5,284 DFF + 379 port + 570 black-box input pins, identical to b5a (so the li1-free reroute added/removed no register). 6,233 matched by name, 0 by signature/topology. In (a), 889 reference "unread" points: same as b5a.
+The only unmatched objects are the 115 `PORTDIODE__*` `diode_2` cells (BBox + BBPin, implementation side only; one-pin cells with no output, as in b5a). Difference from b5a: 2 of the 115 sit on buffered internal copies of input nets (`ropt_net_3171`, `ropt_net_3215`) instead of directly on the port net; still pure sinks.
+
+### Negative control (required): 4 of 4 detected, one failing point each
+Mutants of the b5e netlist from `scripts/mk_mutant_icc2.py` (unchanged; anchors exist exactly once in b5e): `fwdb_inv` = inverter on the D pin of `\u_core/fwd_b_ex1c_r_reg`; `swap` = pins A1/C1 exchanged on `o221ai_1 \u_core/U2793` (drives D of `ex1a_ex1b_reg_q_reg_alu_result__5_`).
+| Mutant | vs DC netlist | vs RTL (+SVF) |
+|---|---|---|
+| `fwdb_inv` | FAILED: 6,232 pass / 1 fail (`u_core/fwd_b_ex1c_r_reg`), 14 s | FAILED: 6,232 / 1 (same flop), 32 s |
+| `swap` | FAILED: 6,232 / 1 (`ex1a_ex1b_reg_q_reg_alu_result[5]`), 14 s | FAILED: 6,232 / 1 (same flop), 87 s |
+Make target `lec-icc2-negctl` printed `NON-EQUIVALENT (good)` for all four. So the setup is able to catch a single-gate / single-flop defect on this netlist and the SUCCEEDED verdicts count.
+
+### Tooling change (b5a/b4c results untouched)
+`Makefile`: new `ICC2RUN` (default `b5a_icc2`), `PFX` (default `b4c`), `MUTP`, `STRIPFLAGS`; new target `make -C pnr/commercial/signoff/lec/formality lec-icc2-b5e` (tags `b5e_*`, mutants `runs/mutant_b5e_icc2_*`). Defaults reproduce the old b5a invocations byte for byte.
+`scripts/strip_diodes.py`: new optional `--allow-internal-nets` (default off keeps the old assertion that every diode net is a primary input; b5e needs it for the 2 `ropt_net` diodes; the one-pin/no-output form assertion is kept).
+
+### 0-unmatched variant (115 port diodes stripped, as b4c)
+`b5e_icc2nodiode_vs_dc` (b5e with all 115 `diode_2` removed by `strip_diodes.py --allow-internal-nets`): **SUCCEEDED, 6,233 / 0 / 0 / 0, unmatched 0 / 0**, 3:14 wall (mostly the load gate waiting on Innovus). `b5e_icc2nodiode_vs_rtl_svf`: **NOT RUN**: queued behind the host load gate (loadavg1 >= 6) and cancelled to save time; run (a) above already covers the RTL reference with the 115 diodes as the only unmatched objects. Re-run: `make -C pnr/commercial/signoff/lec/formality lec-icc2-nodiode ICC2RUN=b5e_icc2 PFX=b5e STRIPNL=<runs/b5e_icc2_nodiode.nl.v> STRIPFLAGS=--allow-internal-nets`.
+
+### Caveats (as b4c)
+Logical netlist only (`write_verilog -exclude {pg_netlist physical_only_cells}`); PG netlist and `.full.pnl.v` not LEC'd (LVS covers them). Single tt library view. Edits after `06_finish` are not covered. LEC says netlist == RTL, not that the RTL is correct.
+Reproduce: `make -C pnr/commercial/signoff/lec/formality lec-icc2-b5e`.
+
+---
+(Earlier result: b5a / step B4c, kept unchanged below.)
+
 **Verdict: EQUIVALENT, both compares.** The ICC2 post-route netlist (`impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v`, md5 `e9150655...`, flat, no PG,
 no physical-only cells) is equivalent to (a) the RTL and (b) the DC-NXT netlist. 6,233 passing / 0 failing / 0 aborted / 0 unverified in every
 successful run. Negative controls on the ICC2 netlist fail as required. Formality X-2025.06, 2 cores, under `safe_run.sh` (6 GB cap), Innovus running concurrently.
