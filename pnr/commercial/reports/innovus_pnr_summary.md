@@ -49,6 +49,49 @@ Outputs (`pnr/commercial/impl/innovus/runs/b5d_innovus/out/`): `rv32i_cpu_top.nl
 `rv32i_cpu_top.innovus_native.spef` (tech-LEF RC, NOT signoff). Reports: `reports/b5d/*.txt` (the top-level `reports/*.txt` still hold the s2 copies). Databases: `runs/b5d_innovus/dbs` (final labels `05_route`, `06_finish`).
 Reproduce: `TAG=b5d_innovus B5C_STRAP=1 B5D=1 scripts/chain_b5c.sh` (resume after interruption: `scripts/chain_b5d_resume.sh`, then `FROM_LABEL=05_route scripts/run_stage.sh 06_finish b5d_innovus`).
 
+## B5f: PG split fixed at its root (narrow D-cache-column strap keep-out), one run - acceptance NOT met, b5f does NOT replace b5d
+**Change (from 02_pdn, run `runs/b5f_innovus`; b5d untouched):** the full-width met4 strap keep-out `{20 495 3580 520}` is replaced (`B5F=1` in `02_pdn.tcl`) by five keep-outs on the D-cache SRAM pin columns only: macro x-extent +-5 um,
+y 495-520 (`{95 495 584.78 520} {674.78 495 1164.56 520} {1354.56 495 1844.34 520} {2034.34 495 2524.12 520} {2714.12 495 3203.9 520}`); straps stay continuous through the gaps beside and between the macros (ICC2 also cut only at macros).
+All b5d placement screens and the met4 left-edge routing blockage are unchanged; SDC, tt MMMC, tech-LEF RC unchanged. New in 02_pdn: a **PDN self-check** (`verify_connectivity -type special -net` per PG net, counts the "special routes with opens" pieces, prints
+`PDN_SELFCHECK ... PASS/FAIL`; the chain stops on FAIL; endcap-VPB/VNB well-pin messages are a different class and ignored). It passed at 02_pdn (VPWR 1 piece, VGND 1 piece). The b5d database measured with the same command gives 7 and 6 pieces, so the check discriminates; I did not re-run a negative control stage.
+
+**Acceptance vs result**
+| Criterion | Result |
+|---|---|
+| `verify_drc` = 0 | **FAIL, 1 marker**: a Metal Short on met1 at (8.9, 923.0), open core at the left die edge at the top of the pocket (`FE_OFN19511_debug_rs1_data_o_4` vs `FE_PDN506_axi_awaddr_o_22`). It is NOT at the D-cache pin edge, so the narrowed keep-out was not too narrow. NanoRoute 2 -> `ecoRoute` 2 -> post-route opt 1... final 1 |
+| VPWR / VGND special wiring each ONE piece | **PASS**: 1 piece each (`IMPVFC-200` = 1; was 7 / 6 in b5d) |
+| No floating followpin rails | **PASS**: 0 isolated rails (was 5 VPWR + 4 VGND) |
+| No material timing/DRV regression vs b5d | **FAIL, setup**: WNS **-2.702 ns**, 21 violating paths, TNS -31.6 (b5d +0.047 ns, 0 paths). Hold fine (+0.264). DRV slightly better |
+Per the instructions I stopped here (one run, no iteration).
+
+**Setup failure, cause as far as seen.** All 21 violators are I/O-to-macro/flop paths from `axi_rdata_i[*]` (bottom-edge input pins) to the D-cache SRAM `din0` and the `uncached_rdata` / refill-buffer flops (reg2reg stays +1.899 ns). Path 1 (`axi_rdata_i[30]`): one `FE_OFC7835_axi_rdata_i_30`
+`buf_12` has a **13.45 ns stage delay** (a very long or heavily loaded net, i.e. the same unrepaired max-tran/max-cap class that exists in every Innovus run), followed by an inverter-pair chain; pre-opt WNS was -6.405 ns and post-route opt recovered it only to -2.702 ns. This is a
+different placement/route/opt outcome from b5d (the PDN change alters every downstream stage), not an effect I can attribute to the PG change itself; the same endpoints met timing in b5b/c/d. The fix would be a DRV/timing repair of that net class (e.g. a max-tran-driven `optDesign -postRoute -drv`), which I did not try.
+
+### b5d -> b5f
+| Metric | b5d | **b5f** |
+|---|---|---|
+| `verify_drc` final | 0 | **1** (met1 short, open core, (8.9, 923.0)) |
+| VPWR / VGND special-wire pieces | 7 / 6 | **1 / 1** |
+| Isolated followpin rails | 5 VPWR + 4 VGND | **0** |
+| VPWR dangling wires / VGND dangling | 168 / 78 | 146 / 66 |
+| Endcap VPB patches (VPWR "regular opens", well-pin class) | 144 | 144 (unchanged, harmless) |
+| met4 / met5 stripes | 68+70 / 28+28 | 69+70 / 28+28 |
+| Setup WNS tt (I/O group; reg2reg) | +0.047 ns (+2.022) | **-2.702 ns**, TNS -31.6, 21 paths (+1.899) |
+| Hold WNS tt (reg2reg) | +0.102 ns (+2.671) | +0.264 ns (+2.834) |
+| Antenna (`verifyProcessAntenna`) | 1 net / 1 pin | 5 violations / 4 nets |
+| max_tran / max_cap violating nets (worst) | 122 (-4.408 ns) / 484 (-0.856 pF) | 111 (-4.416 ns) / 457 (-0.593 pF) |
+| Power (default activity) | 91.39 mW | 91.65 mW |
+| Signal wirelength | 6,440,254 um | 6,524,044 um (+1.3 %) |
+| Cut vias | 301,229 | 304,270 |
+| `report_area` incl. macros | 2,254,240 um2 | 2,261,987 um2 (+0.34 %) |
+| diode_2 / conb_1 | 252 / 133 | 274 / 133 |
+| Wall: place / CTS / route / finish | 10.9 / 10.1 / 6.3 / 49.0 min | 7.7 / 8.3 / 4.6 / 4.3 min (idle host) |
+| GDS | fixed map | fixed map: one top cell, 441 structures, 0 unresolved SREFs, 503 pin labels |
+**Verdict: b5f fixes the PG topology (the stated root cause) but fails `verify_drc` (1) and setup timing (-2.702 ns), so it does not replace b5d.** b5d keeps DRC 0 and timing met but has the PG split (PG status FAIL); b5f has a connected grid but is not DRC/timing clean.
+Candidate next step (needs approval): keep the b5f PDN and repair the two residuals in place on `runs/b5f_innovus/dbs/05_route` - `optDesign -postRoute -drv` (or a targeted resize/buffer of `axi_rdata_i[*]` nets) for the setup paths, then a local `ecoRoute -fix_drc` for the single met1 short.
+Outputs: `runs/b5f_innovus/out/` (nl.v, pg.pnl.v, def, gds with the fixed map, sdc, native SPEF), reports `reports/b5f/*.txt`, full PG reports in `runs/b5f_innovus/reports/gdsfix/`. Reproduce: `scripts/chain_b5f.sh`.
+
 ## B5d GDS re-stream (no re-route) and PG connectivity check
 **GDS map fix (`scripts/gds_layer_map.innovus`; old map kept as `.badmap`, old GDS as `out/rv32i_cpu_top.gds.badmap`).** Diff: (1) removed the six per-layer `LABEL` lines (accepted, wrote no text);
 (2) added `VIA` entries on every metal: `li1 VIA 67 20`, `met1 VIA 68 20`, `met2 VIA 69 20`, `met3 VIA 70 20`, `met4 VIA 71 20`, `met5 VIA 72 20` (the via metal enclosure pads); (3) added pin-text lines

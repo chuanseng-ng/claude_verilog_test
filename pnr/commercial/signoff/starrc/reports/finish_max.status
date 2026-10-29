@@ -1,1 +1,3 @@
 2026-10-28T18:48:50+08:00 waiting for ../../pdk/sky130/build/nxtgrd/max/sky130A_max.nxtgrd
+2026-10-28T20:08:16+08:00 nxtgrd max present, extracting
+2026-10-28T20:23:14+08:00 DONE: reports/correlation_max.md reports/per_arm.md reports/pinfit_max.txt

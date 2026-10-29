@@ -8,7 +8,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 DEF = {"openroad": "pnr/commercial/runs/openroad/rv32i_cpu_top.def",
        "icc2": "pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.def",
-       "innovus": "pnr/commercial/impl/innovus/runs/b5c_innovus_s2/out/rv32i_cpu_top.def"}
+       "innovus": "pnr/commercial/impl/innovus/runs/b5d_innovus/out/rv32i_cpu_top.def"}
 
 def def_nets(arm):
     with open(os.path.join(ROOT, DEF[arm])) as f:

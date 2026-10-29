@@ -29,6 +29,13 @@ sroute -connect corePin -nets {VPWR VGND} -allowJogging 0 -allowLayerChange 0 -c
 # i.e. at the D-cache SRAM bottom edge where the macro pins are; keep the met4 straps 25 um away from that edge (the ICC2 arm cut its met4 straps at the macros altogether).
 set _blk {}
 if {[info exists ::env(B5C_STRAP)] && $::env(B5C_STRAP) == 1} { set _blk [list {20 495 3580 520}]; puts "B5C_STRAP: met4 strap blockage $_blk" }
+# B5f (B5F=1): the full-width keep-out above split the PG grid in two pieces and left 9 followpin rails floating (b5d finding).  Keep-outs now cover ONLY the five D-cache SRAM pin
+# columns (macro x-extent +- 5 um margin, y 495-520, where the signal-vs-strap met4 spacing DRCs were); straps stay continuous through the gaps between/beside the macros (ICC2 also cut only at macros).
+if {[info exists ::env(B5F)] && $::env(B5F) == 1} {
+  set _blk {}
+  foreach x0 {100.0 679.78 1359.56 2039.34 2719.12} { lappend _blk [list [expr {$x0 - 5}] 495 [expr {$x0 + 479.78 + 5}] 520] }
+  puts "B5F: met4 strap blockages (D-cache pin columns only): $_blk"
+}
 if {[llength $_blk]} {
   addStripe -layer met4 -direction vertical   -nets {VPWR VGND} -width 3.1 -spacing 1.7 -set_to_set_distance 100 -start_from left   -start_offset 20 -area_blockage $_blk
 } else {
@@ -47,5 +54,15 @@ verify_connectivity -type special -report $RUN/reports/pg_connectivity.txt -erro
 verifyPowerVia -report $RUN/reports/pg_powervia.txt
 catch {report_power_rail -help}
 save_stage 02_pdn
+# ---- B5f PDN self-check: every special-wire piece must be connected to the main grid (one piece per PG net).  Well-pin patches (endcap VPB / VNB pwell) are another message class and are ignored.
+proc _pieces {f} { set n 0; set fh [open $f r]; while {[gets $fh l] >= 0} { if {[string match "*has special routes with opens*" $l]} { incr n } }; close $fh; return $n }
+set _bad 0
+foreach n {VPWR VGND} {
+  verify_connectivity -type special -net $n -error 100000 -report $RUN/reports/pdn_special_$n.txt
+  set p [_pieces $RUN/reports/pdn_special_$n.txt]
+  puts "PDN_SELFCHECK $n: special-wire pieces = $p"
+  if {$p > 1} { set _bad 1 }
+}
+if {$_bad} { puts "PDN_SELFCHECK: FAIL (a special-wire piece is not connected to the main grid)" } else { puts "PDN_SELFCHECK: PASS (one piece per PG net)" }
 stage_time pdn $t0
 exit
