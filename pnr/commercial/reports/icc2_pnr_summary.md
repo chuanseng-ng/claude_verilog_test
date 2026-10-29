@@ -1,3 +1,73 @@
+# ICC2 arm, B5e corrective rerun (IN PROGRESS: routing done, finish/outputs queued behind the load gate)
+
+Run `b5e_icc2` (`pnr/commercial/impl/icc2/runs/b5e_icc2/`, gitignored). `b5a_icc2` is untouched. Same netlist (DC-NXT `b3a_dc_tt`), SDC (md5 `3c696350...`), floorplan,
+macro placement, pins, PDN, scenario and tool settings as B5a. Three fixes:
+
+1. **Router never on li1** (fixed at the generator): `gen_techfile.py` now emits into `sky130_tech_setup.tcl`
+   `set_ignored_layers -min_routing_layer met1 -max_routing_layer met4` and `set_app_options -name route.common.global_min_layer_mode -value hard`
+   (new args `--route-min-layer/--route-max-layer`). Root cause confirmed from the man pages: `set_ignored_layers -min_routing_layer` IS the router's global minimum,
+   but `route.common.global_min_layer_mode` defaults to `soft` ("discouraged, not forbidden"), so B5a's setting was never enforced. `.tf` is byte-identical (md5 `c845f6d1...`),
+   so no NDM rebuild. Vias down to li1 cell pins stay allowed (`number_of_vias_under_global_min_layer` = 1). `reload.tcl` now aborts a stage if the mode is not `hard`.
+2. **Tap/endcap**: see "Findings" below (the premise did not hold; the tap stage is unchanged and audited).
+3. **GDS**: `write_gds ... -long_names -output_pin all -merge_gds_top_cell rv32i_cpu_top` (06_finish.tcl:67).
+
+## Status at hand-back (2026-10-29): routing done, finish/outputs NOT yet produced
+The host was powered off 10-28 21:50 to 10-29 18:54; the design library survived (labels through `05x_route` intact, `rv32i.dlib.bak` kept per stage). Routing is finished
+(`05y_repair`, 1 DRC / 1 short left); `05z_fix` (targeted rip-up of the last short) and `06_finish` + `07_write_verilog` are **queued behind the `safe_run.sh` load gate**
+(host load 10.5-12.3 for the last hour, set by a Techgen job running at about 490 % CPU; the gate needs load < 6 and gives up after 2 h per stage).
+`runs/b5e_icc2/out/` therefore holds only `fp.def` so far. Resume/inspect: `scripts/finish_chain.sh` is already running in the background
+(`runs/b5e_icc2/chain_fin.log`, markers in `reports/stage_markers.txt`); if the process is gone: `scripts/run_stage.sh 05z_fix b5e_icc2` (optional) then
+`B5E_FINISH_BASE=05y_repair scripts/run_stage.sh 06_finish b5e_icc2 && scripts/run_stage.sh 07_write_verilog b5e_icc2`.
+
+## Routing: DRC / short trend (check_routes DRCs / check_lvs shorts, before each incremental `route_detail` pass)
+| Stage (base) | Change vs the previous line | Counts |
+|---|---|---|
+| B5a `route_auto`+`route_opt`, then repair | li1 routable (soft min layer) | 81 / 100 -> 35 -> 9 -> 4 -> 0 |
+| B5e `05_route` (hard li1 ban) | only the li1 fix | **291 / 439** (0 opens) |
+| `05b_repair` passes 1-4 | route_detail, `drc_convergence_effort_level high` | 291/439, 1714/3793, 779/1633, 605/1208 |
+| `05c_repair` passes 1-8 + final | same | 508/963, 425/840, 394/761, 345/739, 309/608, 287/612, 266/480, 236/453, final **222 / 423** |
+| `05d` (from 05c, `allow_pin_connection`) | li1 pin stubs allowed again | 218/423, 172/332, 158/315, final 167/335. **Discarded**: only ~25 % better and it reopens li1 |
+| `05e` (from 05c, rip-up of the 248 nets in shorts + `route_eco`) | | 222/423 -> 1073/2360 -> 594/1164 -> 433/833 -> 378/676 -> final 322/585. **Regression, discarded** (05c kept) |
+| `05x_route` (from 04_cts, hard li1 ban) | `route.global.effort_level high`, `route.global.macro_boundary_track_utilization 60`, `route.detail.optimize_partition_size_for_drc true` | route_auto 266 DRC; after `route_opt` **231 / 347** (0 opens) |
+| `05y_repair` (from 05x, 8 passes) | same repair loop | 231/347, 90/183, 47/94, 25/44, **1/1**, 1/1, 1/1, 1/1 -> final **1 DRC (1 short, met1, nets `u_core/ex1c_comb[158]` / `u_core/ex1c_ex1b_reg_q[124]`, bbox 0.14 x 0.14 um at (1918.1, 882.9))**, 0 opens |
+`05y` final (ICC2 `check_routes`): li1 wire length **0 um**, met5 576 um (the soft max-layer setting, as in B5a: 468 um), 4,500,627 um total, 390,255 contacts. Wire/via counts of the DEF-level li1 audit follow with the final DEF.
+
+**What caused the extra passes: the li1 ban, not the tap handling.** (1) The tap stage was not changed and its output is bit-identical to B5a's (`scripts/tap_segments.py`: 645 rows, 2,105 row segments, 0 without a tap, longest tap-free stretch 25.76 um <= 26 um).
+Placement/CTS moved only marginally (place setup -0.03 vs 0.00 ns, CTS identical 0.02 ns, leaf cells -0.2 %/-0.2 %). (2) With li1 banned, the first route has 3.6x the DRCs of B5a (291 vs 81) and the shorts sit in one column,
+x 1900-1960 um, y 300-1000 um, i.e. the 200 um gap between the D-cache (and I-cache) data SRAMs and its junction with the 102.5 um cache channel, where the ~370 SRAM pins facing the bottom/channel escape.
+B5a had solved exactly this spot by sending 14 long vertical li1 wires (up to 400 um) through the SRAM interiors, which the SRAM LEF does not obstruct on li1 (those were the KLayout li.1/li.3 hits).
+(3) Plain detail-route iteration converges only at about -8 %/pass in that spot (222 after 12 passes, with the router oscillating at 450-520 violations inside each pass); rip-up (`05e`) made it worse.
+What helped was a routing-only combination (`05x`): global-route effort high + lower macro-boundary track utilisation + DRC-aware partition sizing. **The three options were applied together in one run, so their individual contributions are not separated** (and `05x` vs `05b/c` is also a different global route, so the comparison is one run per arm).
+Not isolated either: the li1 effect vs the two small placement differences; but B5a (same everything except the soft li1 setting) had no such hot spot, which is the only controlled comparison available.
+
+## Findings that differ from the task description
+- **Tap/endcap insertion does not miss row segments** (B5a DEF audited with `scripts/tap_segments.py`: 2,105 segments, 0 without a tap). The 7 floating-well islands (13 cells) are reproduced exactly by
+  `scripts/nwell_islands.py` on the B5a DEF (well bands merged across abutting cells and row pairs): each is a chain of 1-4 cells whose neighbours are missing. The gaps are the fillers `06_finish` removes
+  where they overlapped router li1 pin-access stubs (428 removed in B5a), which breaks n-well abutment. So the island is a consequence of li1 routing, not of tap placement; with no li1 wires the removals should vanish.
+  This is verified on the B5e final DEF (see below, pending). No change was made to tap insertion; it is audited in `02_pdn.tcl` (error if any segment has no tap) and the well-island check runs on the final DEF.
+- Both floorplans have the die area offset by 3.36 um in y (`DIEAREA ( 0 3360 ) ( 3600000 1803360 )`); the bottom-edge ports at y = 0..4 um are partly outside it (router warnings ZRT-720). Unchanged from B5a (identical floorplan was requested); worth a look in the next floorplan revision.
+
+## GDS write (tested on the B5a block copy, before the rerun)
+`write_gds -layer_map ... -merge_files ... -long_names -output_pin all -merge_gds_top_cell rv32i_cpu_top -units 1000` (18 s). `scripts/gds_check.py` (own stream reader): 368 structures, **1 top cell**,
+0 undefined and 0 empty referenced structures, 10 SRAM instances reference the full-length `sky130_sram_1kbyte_1rw1r_32x256_8` (20,516 own shapes, no rename), **503 pin rectangles (294 met2 0.28x4.0, 209 met3 4.0x0.6) and 503 labels, every label inside a pin rectangle**.
+The same checks on the real B5e GDS are listed with the final results.
+
+## Tool gotchas found in this step (for the agent suite)
+- `route.common.global_min_layer_mode` / `global_max_layer_mode` default to **soft**: `set_ignored_layers -min_routing_layer` alone does not stop the router (the man page says "the router respects this setting", the default mode makes that "discouraged"). Use `hard`; `allow_pin_connection` lets <= ~5.75 um li1 stubs through.
+- Layer attributes set with `set_attribute [get_layers ..] routing_direction` need an open block (ATTR-15), they live in the block, not the .tf: the setup script must be re-sourced after every `open_block`.
+- Hard li1 ban makes the first route much worse in macro-gap hot spots; the DRC-aware partition option + global-route effort/macro-boundary utilisation fixed it where 12 plain passes and a rip-up did not.
+- `route_eco` after `remove_routes` of 248 violating nets is a regression (1073 DRCs). Rip-up helps only for a handful of nets.
+- `write_gds`: `-merge_gds_top_cell <top>` gives one top cell and keeps the SRAM name; `-output_pin all` is the default but the old script overrode it with `text`.
+- A stage script that ends with `exit` returns 0 even when its loop did not converge: a chain driver must read the result lines (`REPAIR_FINAL`), not the exit code. `run_chain.sh` ran `06_finish` on an unconverged route for that reason (killed, discarded).
+- `safe_run.sh` load gate: with another job using ~5 cores the gate (load < 6, 240 x 30 s) can block a stage for hours; stage timing in `.time` files includes the wait.
+- zsh: `[ $(grep -c ... missing_file) -ge 5 ]` -> "unknown condition" when the file does not exist yet; use `"$(...)"` with a default.
+- Scripts here: `li1_audit.py` (DEF layer-tracking through via chains; a per-segment layer without following the via chain over-counts), `nwell_islands.py`, `tap_segments.py`, `gds_check.py`, `run_chain.sh`, `finish_chain.sh`.
+
+
+---
+
+# (B5a text below, unchanged)
+
 # Synopsys ICC2 arm, Sky130 `rv32i_cpu_top` place and route (step B5a)
 
 **Comparison run, no tuning target.** One flow pass from the Formality-proven DC-NXT netlist (`syn/dc/runs/b3a_dc_tt/out/rv32i_cpu_top.nl.v`,

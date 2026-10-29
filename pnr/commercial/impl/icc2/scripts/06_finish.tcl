@@ -1,7 +1,10 @@
 # 06_finish.tcl -- Step B5a stage 6: fillers/decaps, final checks and reports (tt, TLU+ nom), all outputs (verilog, def, gds, sdc, spef).
 source [file join [file dirname [info script]] common.tcl]
 set t0 [clock seconds]
-open_stage 05c_repair 06_finish
+set _fb 05y_repair
+if {[info exists ::env(B5E_FINISH_BASE)]} { set _fb $::env(B5E_FINISH_BASE) }
+puts "FINISH_BASE: $_fb"
+open_stage $_fb 06_finish
 source [file join $SCRIPTDIR reload.tcl]
 set O $RUN/out
 set R $RUN/reports
@@ -64,6 +67,6 @@ set rc [catch {write_def $O/rv32i_cpu_top.def} e]; puts "write_def rc=$rc $e"
 set rc [catch {write_sdc -output $O/rv32i_cpu_top.sdc} e]; puts "write_sdc rc=$rc $e"
 set rc [catch {write_parasitics -output $O/rv32i_cpu_top.icc2native.spef -format spef} e]; puts "write_parasitics rc=$rc $e"
 set pdk $::env(HOME)/pdk/sky130A/libs.ref
-set rc [catch {write_gds -layer_map $SCRIPTDIR/gds_layer_map.txt -merge_files "$pdk/sky130_fd_sc_hd/gds/sky130_fd_sc_hd.gds $pdk/sky130_sram_macros/gds/${SRAM}.gds" -output_pin text -units 1000 $O/rv32i_cpu_top.gds} e]; puts "write_gds rc=$rc $e"
+set rc [catch {write_gds -layer_map $SCRIPTDIR/gds_layer_map.txt -merge_files "$pdk/sky130_fd_sc_hd/gds/sky130_fd_sc_hd.gds $pdk/sky130_sram_macros/gds/${SRAM}.gds" -long_names -output_pin all -merge_gds_top_cell $TOP -units 1000 $O/rv32i_cpu_top.gds} e]; puts "write_gds rc=$rc $e"
 stage_time finish $t0
 exit

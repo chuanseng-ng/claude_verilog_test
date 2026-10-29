@@ -19,5 +19,8 @@ redirect -file $RUN/reports/cts_timing.txt { report_timing -max_paths 5 -delay_t
 redirect -file $RUN/reports/cts_qor.txt { report_qor -summary; report_qor }
 redirect -file $RUN/reports/cts_legality.txt { check_legality -verbose }
 save_stage 04_cts
+# B5e: clock routing happens in clock_opt, so audit li1 use right here (DEF dump -> scripts/li1_audit.py offline)
+file mkdir $RUN/probe
+write_def $RUN/probe/cts.def
 stage_time cts $t0
 exit

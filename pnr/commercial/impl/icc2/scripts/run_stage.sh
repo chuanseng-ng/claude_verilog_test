@@ -2,7 +2,7 @@
 # run_stage.sh <script.tcl> [TAG] -- run one ICC2 stage script under safe_run.sh (memory cap, load gate, process-group kill).
 #   Log: runs/<TAG>/logs/<script>.log ; peak RSS/wall: runs/<TAG>/logs/<script>.time
 set -u
-S=$1; TAG=${2:-b5a_icc2}
+S=$1; TAG=${2:-b5e_icc2}
 HERE=$(cd "$(dirname "$0")/.." && pwd)
 REPO=$(cd "$HERE/../../../.." && pwd)
 PDKDIR=$REPO/pnr/commercial/pdk/sky130

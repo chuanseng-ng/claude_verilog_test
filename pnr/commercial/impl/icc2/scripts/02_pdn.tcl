@@ -25,6 +25,13 @@ create_boundary_cells -left_boundary_cell $endcap -right_boundary_cell $endcap -
 puts "ENDCAPS: [sizeof_collection [get_cells -quiet ENDCAP_*]]"
 create_tap_cells -lib_cell $tap -distance 26 -pattern stagger -skip_fixed_cells -prefix TAP_
 puts "TAPS: [sizeof_collection [get_cells -quiet TAP_*]]"
+# B5e: every row segment (between boundary cells, i.e. also the short ones next to / between macros) must carry a tap, with no tap-free stretch above 26 um.
+file mkdir $RUN/probe
+write_def $RUN/probe/tap.def
+set _o [exec python3 -I $SCRIPTDIR/tap_segments.py $RUN/probe/tap.def 26]
+puts "TAP_SEGMENTS:\n$_o"
+set fh [open $RUN/reports/tap_segments.txt w]; puts $fh $_o; close $fh
+if {![regexp {segments with NO tap: (\d+)} $_o -> _nt] || $_nt != 0} { error "B5e: row segments without a tap: $_nt" }
 connect_pg_net -net VPWR [get_pins -hierarchical */VPWR]
 connect_pg_net -net VPWR [get_pins -hierarchical */VPB]
 connect_pg_net -net VGND [get_pins -hierarchical */VGND]

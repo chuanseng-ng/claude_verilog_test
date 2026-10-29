@@ -12,7 +12,7 @@ arm_netlist() {
   case "$1" in
     openroad|openroad_rcx) echo pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v ;;
     icc2)    echo pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v ;;
-    innovus) echo pnr/commercial/impl/innovus/runs/b5c_innovus_s2/out/rv32i_cpu_top.nl.v ;;
+    innovus) echo pnr/commercial/impl/innovus/runs/b5d_innovus/out/rv32i_cpu_top.nl.v ;;
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
 }
