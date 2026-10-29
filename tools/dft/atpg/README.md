@@ -19,7 +19,11 @@ and writes `metrics.json` (rc, wall, maxrss, cgroup peak, oom_kill, timed_out). 
 | `regrade.py` | independent re-grade of the patterns (own simulator + `quaigh simulate` on fault-injected copies) |
 | `run_rung.sh`, `Makefile` | the ladder |
 
-Tools: Yosys 0.46 (the flow's), sv2v 0.0.13.1, Quaigh 0.0.6 (pinned external binary, `tools/dft/build_quaigh.sh`). The `dft` devshell in
+Tools: Yosys 0.46 (the flow's), sv2v 0.0.13.1, Quaigh 0.0.6 (pinned external binary, `tools/dft/build_quaigh.sh`).
+**Use the patched Quaigh `0.0.6+cvt1` for the fabric** (bead j41m.18, DFT_ARCHITECTURE 18.9): `tools/dft/build_quaigh.sh patched`
+applies `quaigh/*.patch` (sparse pattern-detection rows; pattern files byte-identical to stock on timer/npu/crypto/dma,
+dma peak 11.42 -> 0.94 GiB) and installs to `/nobackup/claude_sim_build/j41m18/qroot`. Run with
+`QUAIGH=/nobackup/claude_sim_build/j41m18/qroot/bin/quaigh W=/nobackup/claude_sim_build/j41m18 make rung-fabric` (5.1 GiB, 50 min). The `dft` devshell in
 `flake.nix` provides yosys, sv2v, python; point `QUAIGH=` at the binary.
 
 Quaigh facts relied on (read from its source, DFT_ARCHITECTURE 18.1): `unobservable=N` counts faults whose SAT miter is UNSAT (proven

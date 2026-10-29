@@ -1360,7 +1360,7 @@ sections 8, 14, 15 and decision N4 unchanged, is not back-annotated into PD, and
 
 Labels: **[M]** measured (file or command named), **[R]** read from source, **[A]** assumed or inferred. Code: `tools/dft/atpg/` (README there); heavy outputs under `/nobackup/claude_sim_build/j41m15/`, none in git. **Evaluation only: no RTL and no PD config was touched.** Box (user decision 2026-10-28, N12): about 5 working days, **12 GB RAM and 24 h wall per run**, stop at the first rung that breaks a limit. Each Quaigh run is under `tools/dft/atpg/run_capped.sh` (`systemd-run --user --scope -p MemoryMax=12G -p MemorySwapMax=0`, `timeout 24h`, `/usr/bin/time -v`), which writes `metrics.json` (rc, wall, max RSS, cgroup peak, `oom_kill`).
 
-**Result in one paragraph.** Quaigh 0.0.6 completes the three module rungs (`npu`, `crypto`, `dma`) and **breaks the 12 GB box on the fabric rung**: the real Stage 2 post-fill netlist (`RUN_2026-10-28_05-14-30`, 412,472 collapsed faults) is OOM-killed at 12 GiB after 679 s with 29,376 patterns stored (78 % progress). No fabric-level deterministic coverage number exists. A random-pattern-only grade of the same cut gives 69.59 % (a lower bound, not an ATPG result). Per decision 8 and the strict list of 2.4, the 99.0 % / 98.0 % goal is therefore **not demonstrated at SoC scale**; a restated target is proposed in 18.8 and **not adopted**.
+**Result in one paragraph.** Quaigh 0.0.6 completes the three module rungs (`npu`, `crypto`, `dma`) and **breaks the 12 GB box on the fabric rung**: the real Stage 2 post-fill netlist (`RUN_2026-10-28_05-14-30`, 412,472 collapsed faults) is OOM-killed at 12 GiB after 679 s with 29,376 patterns stored (78 % progress). No fabric-level deterministic coverage number exists. A random-pattern-only grade of the same cut gives 69.59 % (a lower bound, not an ATPG result). Per decision 8 and the strict list of 2.4, the 99.0 % / 98.0 % goal is therefore **not demonstrated at SoC scale**; a restated target is proposed in 18.8 and **not adopted**. **Update (bead `j41m.18`, 18.9): with a sparse-row patch, Quaigh completes the fabric rung in the same box (5.12 GiB, 50 min): 99.16 % fault / 99.95 % test coverage on the collapsed, excluded universe.**
 
 ### 18.1 What Quaigh 0.0.6 does (Step 0) [R: `quaigh-0.0.6/src/atpg.rs`, `sim/fault.rs`, `equiv.rs`, `cmd.rs`]
 
@@ -1458,7 +1458,7 @@ What follows [A]: nothing in the module rungs contradicts a high ceiling (97.9 t
 - The SRAM macros are not shadowed (6.3): the largest recoverable class in the Tessent data.
 - The CPU macro (5,299 scan flops) is a black box; its own scan netlist as an extra rung was not run.
 - Fault (AUCOHL) was not built: the user allowed it only as a fallback when Quaigh fails a rung; it did fail the fabric rung, but Fault's own engine is random patterns plus an `iverilog` fault simulation (2.2) and Atalanta/PODEM are non-commercial, so a build was judged not worth the time-box without the owner's decision (listed in 18.8).
-- `quaigh` was not patched. The O(patterns x faults) byte matrix is a data-structure limit: bit-packing it (8x) or splitting the fault list is a change to the tool, not a parameter.
+- `quaigh` was not patched. The O(patterns x faults) byte matrix is a data-structure limit: bit-packing it (8x) or splitting the fault list is a change to the tool, not a parameter. **Superseded by 18.9 (bead `j41m.18`): a sparse-row patch fixed it and the fabric rung completes.**
 - Whole-SoC fault coverage (the 98 % of 2.1) needs the fault count inside the excluded cones. A/B estimate [M count, A reading]: the same fabric cut built with `netlist_prep.py --keep-unscanned` (the 922 unscanned flops kept as ordinary full-scan flops, `fabric_noexcl/`) has **416,278** collapsed faults against **412,472** with the exclusions applied, i.e. the exclusions remove about **3,806 faults (0.91 % of the larger list)**. If every one of them counted as undetected, the whole-SoC fault coverage could not exceed 412,472 / 416,278 = **99.09 %** even with perfect detection elsewhere; the 98 % goal leaves about 1.1 points for everything else. The two cuts are not a subset pair (Quaigh gate counts 262,016 vs 261,111), so this is an estimate of the order of magnitude, in line with the 0.7 % + 0.2-0.4 % budget of 2.1.
 
 ### 18.8 Proposed restated target (NOT adopted: the owner decides)
@@ -1467,3 +1467,30 @@ What follows [A]: nothing in the module rungs contradicts a high ceiling (97.9 t
 2. **Per-block targets (the fallback of 2.4)**, measured with this flow: stuck-at test coverage >= 99.0 % and fault coverage >= 97.0 % per block on blocks of <= ~9 k flops (npu 100.00 / 99.73, crypto 100.00 / 97.92, dma 100.00 / 99.85 are the evidence), each with the exclusion statement of 18.4 and the SAT-proven untestable count itemised.
 3. **For the SoC number choose one of**: (a) a commercial or patched engine run (Tessent has a measured 94.17 % on an older netlist and finishes in minutes), (b) Quaigh patched to a bit-packed detection matrix, then re-run the fabric rung, (c) partition the fabric by hierarchy into cuts that fit the box and report per block. Options (b) and (c) keep the open-tool route; (a) is the only one with a measured SoC-scale result.
 4. Keep 99.0 / 98.0 as a goal (decision 8), not a commitment.
+
+**Owner decisions 2026-10-29 (bead `j41m.18`):** route **(b)** chosen and executed (result in 18.9); **Fault (AUCOHL) is dropped** as a fallback (random patterns plus an `iverilog` fault simulation add nothing over a completing Quaigh); the restated target above is still **not adopted**: the owner decides it with the 18.9 number in hand (follow-up bead).
+
+### 18.9 Patched Quaigh: fabric result (bead `j41m.18`, 2026-10-29)
+
+**Patch [R/M].** `tools/dft/atpg/quaigh/0001-sparse-pattern-detections.patch` (Quaigh `0.0.6+cvt1`, built by `tools/dft/build_quaigh.sh patched` into `/nobackup/claude_sim_build/j41m18/qroot`; the stock binary is kept). `pattern_detections` becomes, per pattern, the ascending list of detected fault indices (`u32`) instead of one byte per (pattern, fault). Reason, read from `atpg.rs`: only the first 256 random patterns are graded against every fault; each later 64-pattern batch is graded against the still-undetected faults only, so its dense rows were almost all zeros. `compress_patterns` builds `fault_to_patterns` from the sparse rows in the same ascending order and keeps the `max_by` tie-break, so pattern selection is unchanged. `patterns` (one byte per input) is left dense. No other file changed.
+
+**Equivalence gate [M: `cmp -s` of the pattern files; each `metrics.json` under `/nobackup/claude_sim_build/{j41m15,j41m18}/`].** Same cuts (symlinked from j41m.15), same seed; only the binary differs.
+
+| Rung | Pattern file vs stock | Peak RAM stock -> patched (cgroup) | Wall stock -> patched |
+|---|---|---|---|
+| `timer` (Stage 0 known answer) | identical | 42 MiB -> 9 MiB | 1.5 s -> 1.4 s |
+| `npu` | identical | 1.21 GiB -> 0.08 GiB | 56 s -> 42 s |
+| `crypto` | identical | 1.68 GiB -> 0.12 GiB | 149 s -> 138 s |
+| `dma` | identical | 11.42 GiB -> 0.94 GiB | 845 s -> 269 s |
+
+**Fabric rung [M: `j41m18/fabric/q/metrics.json`, `report.json`, `run.log`].** Same cut as 18.3 (`RUN_2026-10-28_05-14-30`, exclusions of 18.4, CPU macro and SRAMs black-boxed), under `run_capped.sh` (12 GiB, 24 h): **completed**, 2,977 s, cgroup peak **5.12 GiB**, `oom_kill=0`.
+
+| Collapsed faults | Detected | Proven untestable (SAT) | Unresolved | Fault coverage | Test coverage | Patterns generated / kept |
+|---|---|---|---|---|---|---|
+| 412,472 | 409,022 | 3,230 | 220 | **99.16 %** | **99.95 %** | 218,944 / 23,627 |
+
+The random phase is the one 18.3 recorded (256 patterns, 274,941 detected). 218,944 generated patterns x 412,472 B would have been about 90 GB in the stock byte matrix, so the stock tool could not have finished this rung with any cap this host offers.
+
+**Independent re-grade [M: `j41m18/fabric/regrade_own.json`, `regrade_vl.json`; method of 18.5].** 250 sampled faults (200 detected, 50 undetected per Quaigh): Verilator confirms all 200 detected, **0 disagreements**; Yosys SAT proves **all 50 undetected untestable, 0 coverage holes**; all-zero control detects 27 vs 200. `regrade.py` (own simulator) agrees; `quaigh simulate` was skipped (too slow at this size). Wall 5 min + 51 min, peak 4.1 GB. The 220 unresolved faults are not in the sample.
+
+**Reading [A].** Every caveat of 18.6/18.7 still applies: generic-gate collapsed faults (not Sky130 cell pins), stuck-at only, no X (the coverage around the CPU macro, SRAMs and NPU macro is an upper bound), 922 unscanned flops and their exclusive cones outside the universe (whole-SoC fault coverage ceiling about 99.09 % from 18.7), patterns not mapped to chains or replayed on the scan netlist. The dma finding of 18.5 (testable faults missed outside Quaigh's collapsed list) was not repeated here: the uncollapsed `atpg-report --with-redundant-faults` grade of the fabric patterns was not run. Against decision 8: fabric test coverage 99.95 % >= 99.0 % on this flow's universe; fault coverage 99.16 % on the excluded universe, whose whole-SoC equivalent, counting every excluded fault as undetected against the `fabric_noexcl` list of 18.7, is about 409,022 / 416,278 = **98.26 %** [A: the two cuts are not a subset pair, so this is an estimate]. Neither is a sign-off number until the owner restates the target (18.8) and the cell-pin re-simulation is done.
