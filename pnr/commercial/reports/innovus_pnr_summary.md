@@ -1,5 +1,32 @@
 # Cadence Innovus place-and-route, Sky130 `rv32i_cpu_top` (steps B5b, B5c)
 
+## B5g: in-place repair of b5f - DRC 0, setup +0.394 ns, PG still one piece per net (antenna 4, not 0)
+**Result (Innovus-native, tt, tech-LEF RC; not signoff):** `verify_drc` = 0, setup WNS **+0.394 ns** / TNS 0 / 0 violators (b5f -2.702 / -31.576 / 21), hold WNS **+0.252 ns** / 0 violators (b5f +0.264),
+PDN self-check **VPWR 1 piece / VGND 1 piece** (before and after fill), connectivity unchanged vs b5f (144 endcap-VPB "regular opens" + 1 IMPVFC-200, baseline class), antenna **4 violations on 3 clock-tree nets (b5f 5, b5d 1) - NOT zero**.
+No re-placement and no CTS: restored the pre-fill post-route database `runs/b5f_innovus/dbs/05_route` into `runs/b5g_innovus` (b5f unchanged); fill/decap re-added by `06_finish`.
+
+**Cause and fix.** The 21 setup violators were all `axi_rdata_i[*]` input ports on the bottom die edge (x up to 2867 um) whose first buffer sits near x~600 um: the port nets were 2-6 mm routed and unbuffered (port slew 3.3 ns,
+first `buf_12` stage 13.45 ns, max_cap -0.593 pF); post-route `optDesign` had left them. Fix: `ecoAddRepeater -net <net> -cell sky130_fd_sc_hd__buf_8 -firstSpreadDist 40 -spreadDist 600` on the 28 AXI input nets longer than 2 mm
+(`reports/b5g/g_nets.txt`), 232 repeaters kept, then `ecoRoute` and `ecoRoute -fix_drc`. That also rerouted away the b5f met1 short at (8.9, 923). One repeater (`B5G16__inst_131`) could not be legalised and created two new met1 shorts with VPWR/VGND;
+`ecoDeleteRepeater` removed it (the wire merges, no timing loss) and a final `ecoRoute` gave DRC 0. An `attachDiode` attempt on the 4 antenna-violating clock-tree pins had no effect (no such instances in the final DEF).
+Scripts: `scripts/05g_repair.tcl`, `scripts/05h_fix.tcl`, `scripts/b5g_nets.py`; then `06_finish` (FROM_LABEL=05h_final) and `07_restream` with the fixed map `gds_layer_map.innovus`.
+
+| Metric | b5d | b5f | **b5g** |
+|---|---|---|---|
+| `verify_drc` | 0 | 1 | **0** |
+| VPWR / VGND special pieces | 7 / 6 | 1 / 1 | **1 / 1** |
+| Setup WNS (I/O group; reg2reg) | +0.047 | -2.702 (+1.899) | **+0.394 (+1.854)** |
+| Setup TNS / violators | 0 / 0 | -31.576 / 21 | **0 / 0** |
+| Hold WNS | +0.102 | +0.264 | **+0.252** |
+| Antenna | 1 | 5 | **4** (3 clock nets) |
+| max_tran / max_cap nets | 122 / 484 | 111 / 457 | 100 / 433 (unrepaired) |
+| Power (default activity) | 91.39 mW | 91.65 mW | 92.65 mW |
+| Signal wirelength | 6,440,254 um | 6,524,044 um | 6,557,473 um |
+| Area incl. macros | 2,254,240 um2 | 2,261,987 um2 | 2,265,508 um2 |
+
+**Not done / caveats.** Antenna is not 0. Conformal LEC (the netlist now has 232 extra buffers vs the Genus netlist), LVS, KLayout/Magic DRC, Quantus/StarRC and the signoff STA were NOT re-run on b5g; all numbers above are Innovus-native.
+Outputs: `pnr/commercial/impl/innovus/runs/b5g_innovus/out/` (DEF, logical + PG netlists, SDC, native SPEF, GDS; md5 in `runs/b5g_innovus/SUMMARY.md`). Tracked reports: `pnr/commercial/impl/innovus/reports/b5g/`.
+
 **UPDATE B5d: `verify_drc` = 0 on `runs/b5d_innovus` - see the B5d section; it replaces s2.**
 
 **B5c verdict (superseded by B5d): the flow completes to GDS with timing met at tt but routing DRC is NOT zero: 3 `verify_drc` Metal Short markers remain (B5b: 1,579).**
