@@ -1,0 +1,27 @@
+# OpenROAD arm, three views per corner (ns)
+
+native = OpenSTA + OpenRCX SPEF (LibreLane, metrics.json); PT/RCX = PrimeTime + the same OpenRCX SPEF (engine effect = PT/RCX - native);
+PT/StarRC = PrimeTime + StarRC SPEF (extractor effect = PT/StarRC - PT/RCX).  Native r2r WNS is OpenSTA's `timing__*_r2r__ws`.
+
+corner            | SETUP WNS:   native   PT/RCX PT/StarRC | SETUP viol: native PT/RCX PT/Star | HOLD WNS:   native   PT/RCX PT/StarRC | HOLD viol: native PT/RCX PT/Star | HOLD r2r viol: native PT/RCX PT/Star
+nom_tt_025C_1v80  |            +3.0307        -   +3.1230 |                  0      -       0 |            -0.4584        -   +0.5257 |               156      -       0 |                     0      -       0
+nom_ss_100C_1v60  |            -3.3228        -   -3.4259 |                939      -    1014 |            -1.0736        -   +0.9777 |               176      -       0 |                     0      -       0
+nom_ff_n40C_1v95  |            +3.2182        -   +3.9284 |                  0      -       0 |            -0.2264        -   +0.2425 |                33      -       0 |                     0      -       0
+min_tt_025C_1v80  |            +3.3062        -   +3.1861 |                  0      -       0 |            -0.2951        -   +0.5420 |                65      -       0 |                     0      -       0
+min_ss_100C_1v60  |            -2.5199        -   -2.7770 |                697      -     788 |            -0.8104        -   +1.1903 |               132      -       0 |                     0      -       0
+min_ff_n40C_1v95  |            +3.5083        -   +4.0664 |                  0      -       0 |            -0.1015        -   +0.2496 |                 7      -       0 |                     0      -       0
+max_tt_025C_1v80  |            +2.7409        -   +3.0186 |                  0      -       0 |            -0.6030        -   +0.4952 |               208      -       0 |                     0      -       0
+max_ss_100C_1v60  |            -3.9958        -   -4.3264 |               1149      -    1155 |            -1.2959        -   +0.7070 |               217      -       0 |                     0      -       0
+max_ff_n40C_1v95  |            +2.9675        -   +3.7132 |                  0      -       0 |            -0.3333        -   +0.2122 |                44      -       0 |                     0      -       0
+
+DRV violating pins: native (OpenSTA: lib + SDC limits; slew=max_slew count) vs PT (report_constraint, lib + SDC limits)
+corner            | max_tran:  native  PT/RCX PT/Star | max_cap:  native  PT/RCX PT/Star
+nom_tt_025C_1v80  |              3437       -    3613 |              270       -     268
+nom_ss_100C_1v60  |             41447       -   52862 |              295       -     290
+nom_ff_n40C_1v95  |              1736       -    1429 |              262       -     262
+min_tt_025C_1v80  |              2281       -    2422 |              262       -     258
+min_ss_100C_1v60  |             25083       -   37292 |              286       -     282
+min_ff_n40C_1v95  |              1011       -     888 |              254       -     255
+max_tt_025C_1v80  |              5003       -    6230 |              274       -     277
+max_ss_100C_1v60  |             56084       -   71277 |              304       -     302
+max_ff_n40C_1v95  |              2359       -    2408 |              265       -     268
