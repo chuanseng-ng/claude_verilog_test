@@ -41,7 +41,7 @@ set_clock_latency -source 1.0 [get_clocks clk_i]
 # --- I/O clock: virtual, IDEAL (symmetric, SDC-visible replacement of Innovus' hidden update_io_latency) ---
 create_clock -name clk_io -period 13.333
 set_clock_latency -source 1.0 [get_clocks clk_io]
-set_clock_latency 0.0 [get_clocks clk_io]
+# network latency 0.0: statement omitted on purpose (Innovus stores SDC latencies in the view's latency.sdc and re-applies that file AFTER the SDC on restore/update; a literal 0 would override the post-CTS value)
 set_clock_uncertainty        0.5 [get_clocks clk_io]
 set_clock_uncertainty -hold  0.2 [get_clocks clk_io]
 

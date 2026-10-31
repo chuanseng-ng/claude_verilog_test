@@ -4,8 +4,8 @@ for i in $(seq 1 720); do
   avail=$(awk '/MemAvailable/{printf "%d", $2/1048576}' /proc/meminfo)
   heavy=0
   pgrep -x magic >/dev/null && heavy=1
-  for p in $(pgrep -x klayout); do r=$(awk '/VmRSS/{printf "%d",$2/1048576}' /proc/$p/status 2>/dev/null); [ "${r:-0}" -ge 4 ] && heavy=1; done
-  for t in innovus innovus_exec icc2_shell pt_shell StarXtract; do pgrep -x $t >/dev/null && heavy=1; done
+  for p in $(pgrep -x klayout); do r=$(awk '/VmRSS/{printf "%d",$2/1048576}' /proc/$p/status 2>/dev/null); [ "${r:-0}" -ge 6 ] && heavy=1; done
+  for t in innovus innovus_exec icc2_shell pt_shell StarXtract; do for p in $(pgrep -x $t); do st=$(awk '/^State/{print $2}' /proc/$p/status 2>/dev/null); [ "$st" != Z ] && [ -n "$st" ] && heavy=1; done; done
   [ $heavy = 0 ] && [ "$avail" -ge 6 ] && exit 0
   sleep 30
 done
