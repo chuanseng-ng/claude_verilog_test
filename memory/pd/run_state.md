@@ -13,3 +13,5 @@ tool:        icc2_shell X-2025.06-SP1 (2 threads, safe_run.sh)
 start_time:  2026-10-28T19:45:00+08:00
 run_dir:     pnr/commercial/impl/icc2/runs/b5e_icc2  (chain: scripts/run_chain.sh; markers: reports/stage_markers.txt; dlib backup rv32i.dlib.bak)
 last_stage:  B5e COMPLETE 2026-10-29 20:41 (out/ ready; 1 DRC/1 short; not LEC/DRC/LVS checked)
+run_id: pd_20261031_b7_drclvs_b5e_b5g
+last_stage: B7 complete (ICC2 b5e, Innovus b5g)

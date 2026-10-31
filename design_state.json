@@ -2335,6 +2335,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "escalate",
       "reason": "bead 3ogd PR #317: rtl.signoff left false - synth_check not run and PD timing of u_cpu_iso_ack_sync unvalidated (see rtl.unverified); human review of the PR and CI result required"
+    },
+    {
+      "timestamp": "2026-10-31T16:18:50+08:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "drc_lvs",
+      "retry_strategy": "regenerate",
+      "suggested_next_step": "loop_back_to:routing",
+      "reason": "B7 physical verification of ICC2 b5e and Innovus b5g (measurement only): ICC2 has 1 met1 short (LVS) + 132 m4.5ab; Innovus has isolated endcap n-well column (nwell.2a 434) + 3 assign-aliased ports; signoff not achieved; no pd.signoff change",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [

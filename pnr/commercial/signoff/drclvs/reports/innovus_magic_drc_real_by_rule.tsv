@@ -1,0 +1,35 @@
+rule	inside_sram	straddle	outside
+All nwells must contain metal-connected N+ taps (nwell.4)	0	593	4373
+HVI to HVI or LV nwell spacing < 0.7um (hvi.5)	0	0	438
+N-well spacing < 1.27um (nwell.2a)	0	0	147
+Core local interconnect spacing < 0.14um (li.c2)	676000	0	0
+Diffusion contact to SRAM gate < 0.04um (licon.11)	644020	0	0
+Diffusion width < 0.15um (diff/tap.1)	1859000	0	0
+Local interconnect overlap of diffusion contact < 0.08um in one direction (li.5)	339620	0	0
+Local interconnect spacing < 0.17um (li.3)	941900	0	0
+Local interconnect width < 0.17um (li.1)	2326370	0	0
+Metal1 overlap of local interconnect contact < 0.03um (met1.4)	859360	0	0
+N-Diffusion overhang of nFET < 0.25um (poly.7)	2644	0	0
+N-Diffusion spacing to N-well < 0.34um (diff/tap.9)	3081030	0	0
+N-diffusion contact width < 0.17um (licon.1)	1031500	0	0
+N-diffusion overlap of N-diffusion contact < 0.04um (licon.5a)	1803670	0	0
+N-diffusion overlap of N-diffusion contact < 0.06um in one direction (licon.5c)	5280	0	0
+N-tap contact width     < 0.17um (licon.1)	253500	0	0
+N-well overlap of Deep N-well < 0.4um outside, 1.03um inside (nwell.5a, 7)	84	0	0
+N-well overlap of N-tap < 0.18um (diff/tap.10)	929500	0	0
+P-Transistor in SRAM core width < 0.14um (diff/tap.2)	338000	0	0
+P-diffusion contact width < 0.17um (licon.1)	425080	0	0
+P-diffusion overlap of P-diffusion contact < 0.04um (licon.5a)	507000	0	0
+P-tap minimum area < 0.07011um^2 (psd.10b)	257790	0	0
+P-tap overlap of P-tap contact < 0.12um in one direction (licon.7)	686400	0	0
+This layer can't abut or partially overlap between subcells	509520	0	0
+Via1 width < 0.26um (via.1a + 2 * via.4a)	1630920	0	0
+nFET cannot abut P-diffusion (diff/tap.3)	429390	0	0
+poly contact spacing to diffusion < 0.19um (licon.14)	1733880	0	0
+poly contact width        < 0.17um (licon.1)	917110	0	0
+poly overhang of SRAM core transistor < 0.11um (poly.8)	1872512	0	0
+poly overlap of poly contact < 0.05um (licon.8)	1888900	0	0
+poly overlap of poly contact < 0.08um in one direction (licon.8a)	696752	0	0
+poly spacing < 0.21um (poly.2)	300760	0	0
+poly spacing to Diffusion < 0.075um (poly.4)	1367600	0	0
+# total_parsed=28320643 report_COUNT=28320643
