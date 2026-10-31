@@ -23,6 +23,19 @@ stage_time ccopt_cts $t1
 save_stage 04a_cts_raw
 report_ccopt_clock_trees -file $RUN/reports/cts_clock_trees.txt
 report_ccopt_skew_groups -file $RUN/reports/cts_skew_groups.txt
+if {$B5H} {
+  # ---- B5h: symmetric, SDC-visible I/O latency = measured mean clock insertion delay (Avg ID of the early skew-group row, = mean of rise/fall sink arrival, excluding the 1.0 ns source latency)
+  set fh [open $RUN/reports/cts_skew_groups.txt r]; set LIO ""
+  while {[gets $fh l] >= 0} { if {[regexp {^dc_tt:both\.early\s+clk_i/func\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)} $l -> mn mx av]} { set LIO $av } }
+  close $fh
+  if {$LIO eq ""} { error "B5H: could not parse Avg ID from cts_skew_groups.txt" }
+  puts "B5H: mean clock insertion delay (Avg ID) = $LIO ns -> clk_io network latency"
+  exec python3 -I $REPO/pnr/commercial/constraints/gen_innovus_io_sdc.py $LIO $RUN/out/sky130_cpu_innovus_post.sdc --propagated
+  update_constraint_mode -name func -sdc_files [list $RUN/out/sky130_cpu_innovus_post.sdc]
+  set_ccopt_property update_io_latency false
+  catch { report_clocks > $RUN/reports/b5h_clocks_postcts.txt }
+  catch { report_clock_timing -type latency -clock clk_i > $RUN/reports/b5h_clock_latency_postcts.txt }
+}
 timeDesign -postCTS -outDir $RUN/reports/timing_postCTS
 timeDesign -postCTS -hold -outDir $RUN/reports/timing_postCTS_hold
 set t2 [clock seconds]

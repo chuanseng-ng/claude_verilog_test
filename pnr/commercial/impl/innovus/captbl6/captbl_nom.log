@@ -1,0 +1,82 @@
+
+Cadence Innovus(TM) Implementation System.
+Copyright 2024 Cadence Design Systems, Inc. All rights reserved worldwide.
+
+Version:	v23.14-s088_1, built Fri Feb 28 12:25:44 PST 2025
+Options:	-nowin -files /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/scripts/gen_captbl6.tcl -log /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/captbl_nom.innovus.log -overwrite 
+Date:		Sat Oct 31 10:36:15 2026
+Host:		eda.ic (x86_64 w/Linux 4.18.0-553.78.1.el8_10.x86_64) (6cores*6cpus*AMD Ryzen 7 7800X3D 8-Core Processor 1024KB)
+OS:		Red Hat Enterprise Linux 8.10 (Ootpa)
+
+License:
+		[10:36:15.280449] Configured Lic search path (23.02-s006): 5280@eda.ic
+
+		invs	Innovus Implementation System	23.1	checkout succeeded
+		8 CPU jobs allowed with the current license(s). Use setMultiCpuUsage to set your required CPU count.
+Create and set the environment variable TMPDIR to /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/innovus_temp_67021_e379302b-8482-4a88-a319-e4adb4a64201_eda.ic_ryan_3T6GJJ.
+
+Change the soft stacksize limit to 0.2%RAM (31 mbytes). Set global soft_stack_size_limit to change the value.
+Info: Process UID = 67021 / e379302b-8482-4a88-a319-e4adb4a64201 / q5TxqAhE8h
+
+**INFO:  MMMC transition support version v31-84 
+
+[INFO] Loading PVS 24.12 fill procedures
+**WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+Sourcing file "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/scripts/gen_captbl6.tcl" ...
+innovus 1> source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/scripts/gen_captbl6.tcl
+Info: Running the command:
+	generateCapTbl  -ict /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/sky130A_nom_li1m1.ict -output /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/sky130A_nom_li1m1.captbl 
+Info: Using default coyote.
+**WARN: (IMPEXT-6004):	LEF file not specified, generateCapTbl will not use info from LEF file.
+#WARNING (NRDB-407) pitch for LAYER M1 is defined too small, reset to 280
+#Start testing solver coyote 
+#Finished testing solver coyote 
+
+**** Start Generating BASIC_CAP_TABLE...
+         0%  done at 10:36:37 on 10/31/2026
+        10%  done at 10:36:38 on 10/31/2026
+        20%  done at 10:36:39 on 10/31/2026
+        30%  done at 10:36:40 on 10/31/2026
+        40%  done at 10:36:41 on 10/31/2026
+        50%  done at 10:36:42 on 10/31/2026
+        60%  done at 10:36:44 on 10/31/2026
+        70%  done at 10:36:47 on 10/31/2026
+        80%  done at 10:36:51 on 10/31/2026
+        90%  done at 10:36:54 on 10/31/2026
+       100%  done at 10:37:42 on 10/31/2026
+
+**** BASIC_CAP_TABLE Completed.
+
+**** Start Generating EXTENDED_CAP_TABLE...
+#	0%   done at 10:37:42 on 10/31/2026
+EDP: start server on eda.ic:54343
+EDP: start server on eda.ic:35163
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6
+Connected to eda.ic 37969 0 ( PID=67882 ). Wait time was 737 seconds
+Connected to eda.ic 60621 1 ( PID=67868 ). Wait time was 761 seconds
+EDP: Task 0 finished (source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/_tmpGenCapTbl/captable_job_0_1.tcl)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6
+Connected to eda.ic 37673 0 ( PID=76661 ). Wait time was 22 seconds
+EDP: Task 1 finished (source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/_tmpGenCapTbl/captable_job_0_2.tcl)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6
+Connected to eda.ic 40455 1 ( PID=79508 ). Wait time was 19 seconds
+EDP: Task 1 finished (source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/_tmpGenCapTbl/captable_job_0_4.tcl)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6
+EDP: Task 0 finished (source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/_tmpGenCapTbl/captable_job_0_3.tcl)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6
+Connected to eda.ic 43223 1 ( PID=86311 ). Wait time was 71 seconds
+Connected to eda.ic 41041 0 ( PID=86355 ). Wait time was 72 seconds
+EDP: Task 0 finished (source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/_tmpGenCapTbl/captable_job_0_6.tcl)
+EDP: Task 1 finished (source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/captbl6/_tmpGenCapTbl/captable_job_0_5.tcl)
+#	100% done at 11:32:12 on 10/31/2026
+
+**** EXTENDED_CAP_TABLE Completed.
+
+**** generateCapTbl Finished (CPU Time: 0:18:59  MEM: 1999.109M)
+
+*** Memory Usage v#2 (Current mem = 1991.109M, initial mem = 839.766M) ***
+*** Message Summary: 2 warning(s), 0 error(s)
+
+--- Ending "Innovus" (totcpu=0:19:25, real=0:55:57, mem=1991.1M) ---
+

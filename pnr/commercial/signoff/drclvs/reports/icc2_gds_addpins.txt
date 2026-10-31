@@ -1,1 +1,0 @@
-pin rectangles added: 503; skipped 2 ['VGND', 'VPWR']

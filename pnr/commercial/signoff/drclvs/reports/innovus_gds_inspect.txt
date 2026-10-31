@@ -1,7 +1,7 @@
-GDS /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5d_innovus/out/rv32i_cpu_top.gds  dbu=0.0009999999999999998  cells=437  layers=49
+GDS /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.gds  dbu=0.0009999999999999998  cells=441  layers=49
 top cell rv32i_cpu_top: found=True  bbox um=(0,0;3600,1800)
 top cells in file: ['rv32i_cpu_top']
-std-cell structures: 249; with zero shapes: 0
+std-cell structures: 253; with zero shapes: 0
 sram-related structures: 161; with zero shapes+zero instances: 0
    sram struct sky130_sram_1kbyte_1rw1r_32x256_8_bitcell_array: own shapes=63170 child instances=8192
    sram struct sky130_sram_1kbyte_1rw1r_32x256_8: own shapes=20516 child instances=6085
@@ -10,7 +10,7 @@ sram-related structures: 161; with zero shapes+zero instances: 0
    sram struct sky130_sram_1kbyte_1rw1r_32x256_8_hierarchical_decoder: own shapes=3885 child instances=1847
    sram struct sky130_sram_1kbyte_1rw1r_32x256_8_port_address_0: own shapes=3247 child instances=20
 completely empty structures (0 shapes, 0 instances): 0  e.g. []
-cells reachable from top: 436; std 249; sram ['sky130_fd_bd_sram__openram_dff', 'sky130_fd_bd_sram__openram_dp_cell', 'sky130_fd_bd_sram__openram_dp_cell_cap_col']...
+cells reachable from top: 440; std 253; sram ['sky130_fd_bd_sram__openram_dff', 'sky130_fd_bd_sram__openram_dp_cell', 'sky130_fd_bd_sram__openram_dp_cell_cap_col']...
 reachable cells with EMPTY geometry (would be reference-only): 0 []
 
 layer:datatype | top-cell own shapes | all-cells own shapes
@@ -18,78 +18,78 @@ layer:datatype | top-cell own shapes | all-cells own shapes
   22:22  |          0 |           12
   33:42  |          0 |          155
   33:43  |          0 |          192
-  64:5   |          0 |          263
-  64:16  |          0 |          264
+  64:5   |          0 |          266
+  64:16  |          0 |          267
   64:18  |          0 |            1
-  64:20  |          0 |          323
-  64:59  |          0 |          264
+  64:20  |          0 |          327
+  64:59  |          0 |          267
   65:5   |          0 |            4
-  65:20  |          0 |          886
+  65:20  |          0 |          902
   65:44  |          0 |           31
   66:5   |          0 |           42
   66:15  |          0 |            2
-  66:20  |          0 |         2183
-  66:44  |          0 |         8743
+  66:20  |          0 |         2201
+  66:44  |          0 |         9118
   66:83  |          0 |           50
-  67:5   |          0 |         3019
-  67:16  |          0 |         2046
-  67:20  |          0 |         7238
-  67:44  |          0 |         5192
-  68:5   |          0 |        23536
-  68:16  |          0 |          563
-  68:20  |     376101 |       393528
+  67:5   |          0 |         3067
+  67:16  |          0 |         2093
+  67:20  |          0 |         7284
+  67:44  |          0 |         5358
+  68:5   |          0 |        23542
+  68:16  |          0 |          569
+  68:20  |     383375 |       400819
   68:44  |          0 |           82
-  69:5   |          0 |        29948
+  69:5   |        294 |        30242
   69:16  |        294 |          324
-  69:20  |     366568 |       384643
+  69:20  |     373109 |       391196
   69:44  |          0 |           28
-  70:5   |          0 |        13930
+  70:5   |        209 |        14139
   70:16  |        209 |          209
-  70:20  |     126300 |       149561
+  70:20  |     127347 |       150619
   70:44  |          0 |           26
   71:5   |          0 |          224
-  71:20  |      21188 |        24602
+  71:20  |      20605 |        24031
   71:44  |          0 |           11
-  72:20  |         56 |           56
-  78:44  |          0 |          255
+  72:20  |         56 |           62
+  78:44  |          0 |          259
   81:2   |          0 |            4
-  81:4   |          0 |          442
+  81:4   |          0 |          446
   81:23  |          0 |            1
-  83:44  |          0 |          328
-  93:44  |          0 |          356
-  94:20  |          0 |          346
-  95:20  |          0 |          330
- 122:16  |          0 |          265
+  83:44  |          0 |          332
+  93:44  |          0 |          360
+  94:20  |          0 |          350
+  95:20  |          0 |          334
+ 122:16  |          0 |          268
  235:0   |          0 |           18
  235:4   |          0 |          200
- 236:0   |          0 |          246
+ 236:0   |          0 |          250
 
 spot-check (Sky130 layer map): name  l:d  top-shapes  all-shapes
-   nwell   64:20  top=0  all=323
-   diff    65:20  top=0  all=886
+   nwell   64:20  top=0  all=327
+   diff    65:20  top=0  all=902
    tap     65:44  top=0  all=31
-   poly    66:20  top=0  all=2183
-   licon1  66:44  top=0  all=8743
-   li1     67:20  top=0  all=7238
-   mcon    67:44  top=0  all=5192
-   met1    68:20  top=376101  all=393528
+   poly    66:20  top=0  all=2201
+   licon1  66:44  top=0  all=9118
+   li1     67:20  top=0  all=7284
+   mcon    67:44  top=0  all=5358
+   met1    68:20  top=383375  all=400819
    via     68:44  top=0  all=82
-   met2    69:20  top=366568  all=384643
+   met2    69:20  top=373109  all=391196
    via2    69:44  top=0  all=28
-   met3    70:20  top=126300  all=149561
+   met3    70:20  top=127347  all=150619
    via3    70:44  top=0  all=26
-   met4    71:20  top=21188  all=24602
+   met4    71:20  top=20605  all=24031
    via4    71:44  top=0  all=11
-   met5    72:20  top=56  all=56
-   npc     95:20  top=0  all=330
-   nsdm    93:44  top=0  all=356
-   psdm    94:20  top=0  all=346
-text labels in top cell: 0; layers: []
-sample labels: []
+   met5    72:20  top=56  all=62
+   npc     95:20  top=0  all=334
+   nsdm    93:44  top=0  all=360
+   psdm    94:20  top=0  all=350
+text labels in top cell: 503; layers: ['69/5', '70/5']
+sample labels: [('69/5', 'clk_i'), ('69/5', 'rst_n_i'), ('69/5', 'axi_wdata_o[31]'), ('69/5', 'axi_wdata_o[30]'), ('69/5', 'axi_wdata_o[29]'), ('69/5', 'axi_wdata_o[28]')]
   label VPWR: []
   label VGND: []
-  label clk_i: []
-  label rst_n_i: []
+  label clk_i: ['69/5']
+  label rst_n_i: ['69/5']
 top-level SRAM instances: 10
    sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (679.78,520;1159.56,917.5)
    sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (1359.56,520;1839.34,917.5)

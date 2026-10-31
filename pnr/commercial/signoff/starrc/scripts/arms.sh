@@ -6,6 +6,7 @@ arm_def() {
     openroad) echo pnr/commercial/runs/openroad/rv32i_cpu_top.def ;;
     icc2)     echo pnr/commercial/impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.def ;;
     innovus)  echo pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.def ;;   # b5c reroute (b5b superseded, not extracted for results)
+    innovusb5h) echo pnr/commercial/impl/innovus/runs/b5h_innovus/out/rv32i_cpu_top.def ;;   # b5h: capTable + symmetric clk_io latency (arm name has no '_': the Makefile pattern splits on it)
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
 }

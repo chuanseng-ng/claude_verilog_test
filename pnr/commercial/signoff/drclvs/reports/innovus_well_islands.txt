@@ -1,41 +1,41 @@
-instances checked: 461434; power-pin nodes not on VPWR/VGND: 152 nets, 720769 pins
-  net sky130_fd_sc_hd__ha_1_9/VPB: Xsky130_fd_sc_hd__decap_12_180460(decap_12).VPB, Xsky130_fd_sc_hd__decap_12_180460(decap_12).VPWR, Xsky130_fd_sc_hd__tapvpwrvgnd_1_48880(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__decap_4_49238(decap_4).VPB, Xsky130_fd_sc_hd__decap_4_49238(decap_4).VPWR, Xsky130_fd_sc_hd__decap_3_44451(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_44451(decap_3).VPWR, Xsky130_fd_sc_hd__decap_12_87340(decap_12).VPB
-  net sky130_fd_sc_hd__inv_8_84/VPB: Xsky130_fd_sc_hd__decap_6_1246(decap_6).VPB, Xsky130_fd_sc_hd__decap_6_1246(decap_6).VPWR, Xsky130_fd_sc_hd__fill_2_277(fill_2).VPB, Xsky130_fd_sc_hd__fill_2_277(fill_2).VPWR, Xsky130_fd_sc_hd__decap_4_13540(decap_4).VPB, Xsky130_fd_sc_hd__decap_4_13540(decap_4).VPWR, Xsky130_fd_sc_hd__decap_4_13551(decap_4).VPB, Xsky130_fd_sc_hd__decap_4_13551(decap_4).VPWR
-  net sky130_fd_sc_hd__inv_8_97/VPB: Xsky130_fd_sc_hd__tapvpwrvgnd_1_6465(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__clkbuf_16_99(clkbuf_16).VPB, Xsky130_fd_sc_hd__clkbuf_16_99(clkbuf_16).VPWR, Xsky130_fd_sc_hd__decap_4_13562(decap_4).VPB, Xsky130_fd_sc_hd__decap_4_13562(decap_4).VPWR, Xsky130_fd_sc_hd__decap_8_3403(decap_8).VPB, Xsky130_fd_sc_hd__decap_8_3403(decap_8).VPWR, Xsky130_fd_sc_hd__inv_12_118(inv_12).VPB
-  net sky130_fd_sc_hd__buf_1_1/VPB: Xsky130_fd_sc_hd__decap_4_5995(decap_4).VPB, Xsky130_fd_sc_hd__decap_4_5995(decap_4).VPWR, Xsky130_fd_sc_hd__decap_6_1213(decap_6).VPB, Xsky130_fd_sc_hd__decap_6_1213(decap_6).VPWR, Xsky130_fd_sc_hd__decap_12_47590(decap_12).VPB, Xsky130_fd_sc_hd__decap_12_47590(decap_12).VPWR, Xsky130_fd_sc_hd__tapvpwrvgnd_1_5764(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__decap_8_3425(decap_8).VPB
-  net sky130_fd_sc_hd__inv_8_94/VPB: Xsky130_fd_sc_hd__decap_6_1279(decap_6).VPB, Xsky130_fd_sc_hd__decap_6_1279(decap_6).VPWR, Xsky130_fd_sc_hd__tapvpwrvgnd_1_10019(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__tapvpwrvgnd_1_5786(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__decap_4_12850(decap_4).VPB, Xsky130_fd_sc_hd__decap_4_12850(decap_4).VPWR, Xsky130_fd_sc_hd__decap_3_6195(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_6195(decap_3).VPWR
-  net sky130_fd_sc_hd__inv_8_25/VPB: Xsky130_fd_sc_hd__tapvpwrvgnd_1_6410(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__tapvpwrvgnd_1_6421(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__tapvpwrvgnd_1_6454(tapvpwrvgnd_1).VPWR, Xsky130_fd_sc_hd__clkbuf_8_107(clkbuf_8).VPB, Xsky130_fd_sc_hd__clkbuf_8_107(clkbuf_8).VPWR, Xsky130_fd_sc_hd__decap_8_3436(decap_8).VPB, Xsky130_fd_sc_hd__decap_8_3436(decap_8).VPWR, Xsky130_fd_sc_hd__buf_4_136(buf_4).VPB
-  net sky130_fd_sc_hd__decap_3_15143/VPB: Xsky130_fd_sc_hd__decap_3_15133(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15143(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15144/VPB: Xsky130_fd_sc_hd__decap_3_15144(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15141(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15156/VPB: Xsky130_fd_sc_hd__decap_3_15155(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15156(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15178/VPB: Xsky130_fd_sc_hd__decap_3_15177(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15178(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17421/VPB: Xsky130_fd_sc_hd__decap_3_17421(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17391(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17432/VPB: Xsky130_fd_sc_hd__decap_3_17432(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17344(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17443/VPB: Xsky130_fd_sc_hd__decap_3_17443(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17438(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17473/VPB: Xsky130_fd_sc_hd__decap_3_17465(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17473(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17512/VPB: Xsky130_fd_sc_hd__decap_3_17476(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17512(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15304/VPB: Xsky130_fd_sc_hd__decap_3_15304(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15300(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15316/VPB: Xsky130_fd_sc_hd__decap_3_15315(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15316(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15348/VPB: Xsky130_fd_sc_hd__decap_3_15348(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15343(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15574/VPB: Xsky130_fd_sc_hd__decap_3_15359(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15574(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15137/VPB: Xsky130_fd_sc_hd__decap_3_15134(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15137(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15197/VPB: Xsky130_fd_sc_hd__decap_3_15189(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15197(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_16209/VPB: Xsky130_fd_sc_hd__decap_3_16209(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15276(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17412/VPB: Xsky130_fd_sc_hd__decap_3_17411(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17412(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17444/VPB: Xsky130_fd_sc_hd__decap_3_17444(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17441(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17468/VPB: Xsky130_fd_sc_hd__decap_3_17466(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17468(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17477/VPB: Xsky130_fd_sc_hd__decap_3_17477(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17475(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15306/VPB: Xsky130_fd_sc_hd__decap_3_15305(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15306(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15349/VPB: Xsky130_fd_sc_hd__decap_3_15349(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15318(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15180/VPB: Xsky130_fd_sc_hd__decap_3_15179(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15180(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17423/VPB: Xsky130_fd_sc_hd__decap_3_17423(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17372(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17470/VPB: Xsky130_fd_sc_hd__decap_3_17467(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17470(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17479/VPB: Xsky130_fd_sc_hd__decap_3_17478(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17479(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15317/VPB: Xsky130_fd_sc_hd__decap_3_15317(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15311(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15341/VPB: Xsky130_fd_sc_hd__decap_3_15339(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15341(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17290/VPB: Xsky130_fd_sc_hd__decap_3_17286(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17290(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15136/VPB: Xsky130_fd_sc_hd__decap_3_15136(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15126(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15148/VPB: Xsky130_fd_sc_hd__decap_3_15147(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15148(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17414/VPB: Xsky130_fd_sc_hd__decap_3_17413(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17414(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_15307/VPB: Xsky130_fd_sc_hd__decap_3_15307(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_15301(decap_3).VPB
-  net sky130_fd_sc_hd__decap_3_17288/VPB: Xsky130_fd_sc_hd__decap_3_17287(decap_3).VPB, Xsky130_fd_sc_hd__decap_3_17288(decap_3).VPB
+instances checked: 461943; power-pin nodes not on VPWR/VGND: 146 nets, 290 pins
+  net ENDCAP_3520/VPB: XENDCAP_3508(decap_3).VPB, XENDCAP_3520(decap_3).VPB
+  net ENDCAP_3328/VPB: XENDCAP_3316(decap_3).VPB, XENDCAP_3328(decap_3).VPB
+  net ENDCAP_1936/VPB: XENDCAP_1936(decap_3).VPB, XENDCAP_1924(decap_3).VPB
+  net ENDCAP_3136/VPB: XENDCAP_3124(decap_3).VPB, XENDCAP_3136(decap_3).VPB
+  net ENDCAP_1586/VPB: XENDCAP_1574(decap_3).VPB, XENDCAP_1586(decap_3).VPB
+  net ENDCAP_410/VPB: XENDCAP_398(decap_3).VPB, XENDCAP_410(decap_3).VPB
+  net ENDCAP_1394/VPB: XENDCAP_1382(decap_3).VPB, XENDCAP_1394(decap_3).VPB
+  net ENDCAP_1202/VPB: XENDCAP_1190(decap_3).VPB, XENDCAP_1202(decap_3).VPB
+  net ENDCAP_1960/VPB: XENDCAP_1948(decap_3).VPB, XENDCAP_1960(decap_3).VPB
+  net ENDCAP_2992/VPB: XENDCAP_2980(decap_3).VPB, XENDCAP_2992(decap_3).VPB
+  net ENDCAP_3160/VPB: XENDCAP_3148(decap_3).VPB, XENDCAP_3160(decap_3).VPB
+  net ENDCAP_2200/VPB: XENDCAP_2200(decap_3).VPB, XENDCAP_2188(decap_3).VPB
+  net ENDCAP_1610/VPB: XENDCAP_1598(decap_3).VPB, XENDCAP_1610(decap_3).VPB
+  net ENDCAP_890/VPB: XENDCAP_890(decap_3).VPB, XENDCAP_878(decap_3).VPB
+  net ENDCAP_2416/VPB: XENDCAP_2404(decap_3).VPB, XENDCAP_2416(decap_3).VPB
+  net ENDCAP_2224/VPB: XENDCAP_2212(decap_3).VPB, XENDCAP_2224(decap_3).VPB
+  net ENDCAP_314/VPB: XENDCAP_302(decap_3).VPB, XENDCAP_314(decap_3).VPB
+  net ENDCAP_2032/VPB: XENDCAP_2020(decap_3).VPB, XENDCAP_2032(decap_3).VPB
+  net ENDCAP_122/VPB: XENDCAP_110(decap_3).VPB, XENDCAP_122(decap_3).VPB
+  net ENDCAP_2608/VPB: XENDCAP_2608(decap_3).VPB, XENDCAP_2596(decap_3).VPB
+  net ENDCAP_506/VPB: XENDCAP_506(decap_3).VPB, XENDCAP_494(decap_3).VPB
+  net ENDCAP_2440/VPB: XENDCAP_2428(decap_3).VPB, XENDCAP_2440(decap_3).VPB
+  net ENDCAP_530/VPB: XENDCAP_518(decap_3).VPB, XENDCAP_530(decap_3).VPB
+  net ENDCAP_2248/VPB: XENDCAP_2236(decap_3).VPB, XENDCAP_2248(decap_3).VPB
+  net ENDCAP_1514/VPB: XENDCAP_1502(decap_3).VPB, XENDCAP_1514(decap_3).VPB
+  net ENDCAP_3472/VPB: XENDCAP_3460(decap_3).VPB, XENDCAP_3472(decap_3).VPB
+  net ENDCAP_338/VPB: XENDCAP_326(decap_3).VPB, XENDCAP_338(decap_3).VPB
+  net ENDCAP_2056/VPB: XENDCAP_2044(decap_3).VPB, XENDCAP_2056(decap_3).VPB
+  net ENDCAP_1322/VPB: XENDCAP_1310(decap_3).VPB, XENDCAP_1322(decap_3).VPB
+  net ENDCAP_146/VPB: XENDCAP_134(decap_3).VPB, XENDCAP_146(decap_3).VPB
+  net ENDCAP_1706/VPB: XENDCAP_1706(decap_3).VPB, XENDCAP_1694(decap_3).VPB
+  net ENDCAP_3280/VPB: XENDCAP_3280(decap_3).VPB, XENDCAP_3268(decap_3).VPB
+  net ENDCAP_1130/VPB: XENDCAP_1130(decap_3).VPB, XENDCAP_1118(decap_3).VPB
+  net ENDCAP_1730/VPB: XENDCAP_1718(decap_3).VPB, XENDCAP_1730(decap_3).VPB
+  net ENDCAP_2920/VPB: XENDCAP_2920(decap_3).VPB, XENDCAP_2908(decap_3).VPB
+  net ENDCAP_1538/VPB: XENDCAP_1526(decap_3).VPB, XENDCAP_1538(decap_3).VPB
+  net ENDCAP_3496/VPB: XENDCAP_3484(decap_3).VPB, XENDCAP_3496(decap_3).VPB
+  net ENDCAP_2080/VPB: XENDCAP_2068(decap_3).VPB, XENDCAP_2080(decap_3).VPB
+  net ENDCAP_1346/VPB: XENDCAP_1334(decap_3).VPB, XENDCAP_1346(decap_3).VPB
+  net ENDCAP_3304/VPB: XENDCAP_3292(decap_3).VPB, XENDCAP_3304(decap_3).VPB

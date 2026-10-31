@@ -11,7 +11,7 @@ for d, hi, lo, n in re.findall(r"^\s*(input|output|inout)\s+(?:\[(\d+):(\d+)\]\s
     else: ports.add(n)
 ports -= {"VPWR", "VGND"}
 vmap = collections.defaultdict(collections.Counter)
-for m in re.finditer(r"^(sky130_\w+)\s+(?:\\\S+|\S+)\s*\((.*?)\)\s*;", txt, re.M | re.S):
+for m in re.finditer(r"^\s*(sky130_\w+)\s+(?:\\\S+|\S+)\s*\((.*?)\)\s*;", txt, re.M | re.S):
     cell, body = m.group(1), m.group(2)
     for pin, net in re.findall(r"\.(\w+)\s*\(\s*([^)]*?)\s*\)", body):
         net = net.strip()

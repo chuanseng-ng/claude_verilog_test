@@ -13,6 +13,7 @@ ROOT=$(cd "$HERE/../../../../.." && pwd)
 case "${PT_SDC:-base}" in
   base)  SDC=$ROOT/pnr/sky130/cpu/constraints/sky130_cpu.sdc; SDC_MD5=3c69635042a9d65cb87e71a9db713e4e ;;
   iolat) SDC=$ROOT/pnr/commercial/constraints/sky130_cpu_iolat.sdc; SDC_MD5=$(tr -d ' \n' < "$SDC.md5") ;;
+  own)   SDC=$ROOT/${PT_SDC_FILE:?PT_SDC=own needs PT_SDC_FILE (repo-relative)}; SDC_MD5=$(md5sum "$SDC" | cut -d' ' -f1) ;;   # the arm's OWN exported SDC (e.g. Innovus b5h out/rv32i_cpu_top.sdc); md5 recorded in inputs.txt
   *) echo "unknown PT_SDC=$PT_SDC" >&2; exit 2 ;;
 esac
 [ "$(md5sum "$SDC" | cut -d' ' -f1)" = "$SDC_MD5" ] || { echo "SDC md5 mismatch for variant ${PT_SDC:-base}: $SDC" >&2; exit 5; }

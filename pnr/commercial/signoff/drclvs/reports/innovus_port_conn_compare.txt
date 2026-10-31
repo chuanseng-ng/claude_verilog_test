@@ -1,0 +1,1 @@
+signal ports 503; ports whose attached (cell,pin) set differs layout vs netlist: 0

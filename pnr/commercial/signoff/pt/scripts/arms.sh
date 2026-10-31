@@ -13,12 +13,13 @@ arm_netlist() {
     openroad|openroad_rcx) echo pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v ;;
     icc2)    echo pnr/commercial/impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.nl.v ;;
     innovus) echo pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.nl.v ;;
+    innovusb5h) echo pnr/commercial/impl/innovus/runs/b5h_innovus/out/rv32i_cpu_top.nl.v ;;
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
 }
 arm_spef() {
   case "$1" in
-    openroad|icc2|innovus) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
+    openroad|icc2|innovus|innovusb5h) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
     openroad_rcx)          echo pnr/commercial/runs/openroad/rv32i_cpu_top.$2.spef ;;
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
@@ -26,7 +27,7 @@ arm_spef() {
 # StarRC completion marker (star/.starrc_complete) -- only for StarRC arms
 arm_spef_marker() {
   case "$1" in
-    openroad|icc2|innovus) echo $STARRC/$1_$2/star/.starrc_complete ;;
+    openroad|icc2|innovus|innovusb5h) echo $STARRC/$1_$2/star/.starrc_complete ;;
     *) echo "" ;;
   esac
 }

@@ -1,4 +1,4 @@
 empty structures reachable from rv32i_cpu_top: []
-orphan root structures pruned: 0 (cells in file before: 437)
-cells after prune: 437; top cells: ['rv32i_cpu_top']
+orphan root structures pruned: 0 (cells in file before: 441)
+cells after prune: 441; top cells: ['rv32i_cpu_top']
 wrote /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/innovus/gds/rv32i_cpu_top.fixed.gds; instances repaired=0
