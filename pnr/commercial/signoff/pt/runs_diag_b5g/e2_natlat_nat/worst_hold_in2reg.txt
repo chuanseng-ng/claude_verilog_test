@@ -1,0 +1,112 @@
+****************************************
+Report : timing
+	-path_type full_clock_expanded
+	-delay_type min
+	-input_pins
+	-nets
+	-max_paths 1
+	-transition_time
+	-sort_by slack
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 09:43:38 2026
+****************************************
+
+Warning: There are 90 invalid end points for constrained paths. (UITE-416)
+
+  Startpoint: axi_rdata_i[13]
+               (input port clocked by clk_io)
+  Endpoint: u_core/u_icache_data_din_q_reg[13]
+               (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: IO
+  Path Type: min
+
+  Point                                  Fanout  Trans       Incr       Path
+  -----------------------------------------------------------------------------
+  clock clk_io (rise edge)                      0.0000     0.0000     0.0000
+  clock network delay (ideal)                              3.9088     3.9088
+  input external delay                                     0.5000     4.4088 f
+  axi_rdata_i[13] (in)                          0.1316     0.1028 &   4.5116 f
+  axi_rdata_i[13] (net)                     2
+  u_core/FE_OFC7610_axi_rdata_i_13/A (sky130_fd_sc_hd__buf_6)
+                                                0.1316     0.0202 &   4.5319 f
+  u_core/FE_OFC7610_axi_rdata_i_13/X (sky130_fd_sc_hd__buf_6)
+                                                0.1679     0.2544 &   4.7863 f
+  u_core/FE_OFN22801_axi_rdata_i_13 (net)
+                                            2
+  u_core/g374629/B_N (sky130_fd_sc_hd__nor2b_1)
+                                                0.1679     0.0449 &   4.8312 f
+  u_core/g374629/Y (sky130_fd_sc_hd__nor2b_1)   0.0350     0.1807 &   5.0119 f
+  u_core/n_11474 (net)                      1
+  u_core/u_icache_data_din_q_reg[13]/D (sky130_fd_sc_hd__dfxtp_1)
+                                                0.0350     0.0000 &   5.0120 f
+  data arrival time                                                   5.0120
+
+  clock clk_i (rise edge)                                  0.0000     0.0000
+  clock source latency                                     1.0000     1.0000
+  clk_i (in)                                    0.1758     0.1113 &   1.1113 r
+  clk_i (net)                               1
+  CTS_cpc_drv_buf_00277/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1776     0.0159 &   1.1272 r
+  CTS_cpc_drv_buf_00277/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2050     0.2380 &   1.3652 r
+  CTS_88 (net)                              1
+  CTS_cpc_drv_buf_00271/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2607     0.0944 &   1.4596 r
+  CTS_cpc_drv_buf_00271/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2887     0.3491 &   1.8087 r
+  CTS_87 (net)                              1
+  CTS_cpc_drv_buf_00263/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2916     0.0325 &   1.8412 r
+  CTS_cpc_drv_buf_00263/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3014     0.3652 &   2.2064 r
+  CTS_86 (net)                              1
+  CTS_ccl_buf_00251/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3051     0.0353 &   2.2417 r
+  CTS_ccl_buf_00251/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1771     0.2954 &   2.5372 r
+  CTS_85 (net)                              1
+  CTS_ccl_a_buf_00250/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1789     0.0219 &   2.5591 r
+  CTS_ccl_a_buf_00250/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1624     0.2442 &   2.8033 r
+  CTS_84 (net)                              2
+  CTS_ccl_buf_00248/A (sky130_fd_sc_hd__clkbuf_4)
+                                                0.1688     0.0299 &   2.8333 r
+  CTS_ccl_buf_00248/X (sky130_fd_sc_hd__clkbuf_4)
+                                                0.1302     0.2368 &   3.0700 r
+  CTS_83 (net)                              2
+  CTS_ccl_buf_00244/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1305     0.0039 &   3.0739 r
+  CTS_ccl_buf_00244/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1836     0.2367 &   3.3107 r
+  CTS_10 (net)                              1
+  CTS_ccl_buf_00241/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2015     0.0524 &   3.3631 r
+  CTS_ccl_buf_00241/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1373     0.2399 &   3.6030 r
+  CTS_9 (net)                               2
+  CTS_ccl_a_buf_00235/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1397     0.0132 &   3.6162 r
+  CTS_ccl_a_buf_00235/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1741     0.2450 &   3.8612 r
+  CTS_4 (net)                              10
+  u_core/CTS_ccl_a_buf_00161/A (sky130_fd_sc_hd__clkbuf_8)
+                                                0.1757     0.0190 &   3.8802 r
+  u_core/CTS_ccl_a_buf_00161/X (sky130_fd_sc_hd__clkbuf_8)
+                                                0.1732     0.2651 &   4.1453 r
+  u_core/CTS_78 (net)                      25
+  u_core/u_icache_data_din_q_reg[13]/CLK (sky130_fd_sc_hd__dfxtp_1)
+                                                0.1734     0.0042 &   4.1495 r
+  clock reconvergence pessimism                            0.0000     4.1495
+  clock uncertainty                                        0.2000     4.3495
+  library hold time                                       -0.0204     4.3290
+  data required time                                                  4.3290
+  -----------------------------------------------------------------------------
+  data required time                                                  4.3290
+  data arrival time                                                  -5.0120
+  -----------------------------------------------------------------------------
+  slack (MET)                                                         0.6829
+
+
+1

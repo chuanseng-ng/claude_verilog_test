@@ -1,0 +1,292 @@
+
+                                 PrimeTime (R)
+
+                 Version X-2025.06 for linux64 - May 29, 2025 
+
+                    Copyright (c) 1988 - 2025 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+   or distribution of this software is strictly prohibited.  Licensed Products
+     communicate with Synopsys servers for the purpose of providing software
+    updates, detecting software piracy and verifying that customers are using
+    Licensed Products in conformity with the applicable License Key for such
+  Licensed Products. Synopsys will use information gathered in connection with
+    this process to deliver software updates and pursue software pirates and
+                                   infringers.
+
+ Inclusivity & Diversity - Visit SolvNetPlus to read the "Synopsys Statement on
+            Inclusivity and Diversity" (Refer to article 000036315 at
+                        https://solvnetplus.synopsys.com)
+# diag_gap.tcl -- DIAGNOSTIC PrimeTime run for the Innovus b5g judge-vs-native gap (one variable per call).
+# env: G_ROOT G_NETLIST G_SPEF G_SDC G_LIB(tt) G_OUT G_TOGGLE(0.1) G_POWER(0|1) G_ASSERT_MD5(optional)
+set ROOT $::env(G_ROOT)
+/home/RD/ryan/Desktop/Github/claude_verilog_test
+set DB $ROOT/pnr/commercial/pdk/sky130/build/db
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db
+array set LIBN {tt sky130_fd_sc_hd__tt_025C_1v80 ss sky130_fd_sc_hd__ss_100C_1v60 ff sky130_fd_sc_hd__ff_n40C_1v95}
+set lib [expr {[info exists ::env(G_LIB)] ? $::env(G_LIB) : "tt"}]
+tt
+set fh [open metrics.tsv w]
+file36
+proc m {k v} { global fh; puts $fh "$k\t$v"; flush $fh }
+set_host_options -max_cores 2
+Information: The max_cores limit for the local (current) process has been modified by -2 to 2. (CMCR-103)
+1
+set_app_var report_default_significant_digits 4
+4
+set_app_var si_enable_analysis false
+false
+set dopower [expr {[info exists ::env(G_POWER)] ? $::env(G_POWER) : 0}]
+1
+if {$dopower} { set_app_var power_enable_analysis true; set_app_var power_analysis_mode averaged }
+Information: Checked out license 'PrimePower' (PT-019)
+averaged
+set_app_var search_path [list $DB]
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db
+set_app_var link_path [list * $LIBN($lib).db sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db]
+* sky130_fd_sc_hd__tt_025C_1v80.db sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db
+read_verilog $::env(G_NETLIST); current_design rv32i_cpu_top; link_design
+Information: current_design won't return any data before link (DES-071)
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.nl.v'
+Loading db file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_fd_sc_hd__tt_025C_1v80.db'
+Loading db file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db'
+Linking design rv32i_cpu_top...
+Information: 183 (42.76%) library cells are unused in library sky130_fd_sc_hd__tt_025C_1v80..... (LNK-045)
+Information: total 183 library cells are unused (LNK-046)
+Design 'rv32i_cpu_top' was successfully linked.
+Information: There are 35590 leaf cells, ports, hiers and 37648 nets in the design (LNK-047)
+1
+set md5 [lindex [exec md5sum $::env(G_SDC)] 0]
+3c69635042a9d65cb87e71a9db713e4e
+m sdc $::env(G_SDC); m sdc_md5 $md5; m spef $::env(G_SPEF)
+read_sdc $::env(G_SDC)
+
+Reading SDC version 2.2...
+1
+1
+if {[info exists ::env(G_PROP_ALL)] && $::env(G_PROP_ALL)} { set_propagated_clock [all_clocks] } else { set_propagated_clock [get_clocks clk_i] }
+1
+if {[info exists ::env(G_EXTRA_TCL)] && $::env(G_EXTRA_TCL) ne ""} { source $::env(G_EXTRA_TCL) }
+read_parasitics -format spef $::env(G_SPEF)
+Information: Log for 'read_parasitics command' will be generated in 'parasitics_command.log'. (PARA-107)
+Information: read_parasitics command is executed in background
+1
+update_timing
+Information: Building multi voltage information for entire design. (MV-022)
+Warning: Some timing arcs have been disabled for breaking timing loops or because of constant propagation. Use the 'report_disable_timing' command to get the list of these disabled timing arcs. (PTE-003)
+Warning: The drive-resistance for the timing arc through port axi_bresp_i[1] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port axi_bresp_i[1] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port axi_rdata_i[10] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port axi_rdata_i[10] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port axi_rdata_i[9] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port axi_rdata_i[9] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[6] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[6] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[5] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[5] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[4] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[4] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[3] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[3] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port axi_rlast_i (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port axi_rlast_i (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[2] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[2] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[11] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[11] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[1] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[1] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[10] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[10] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[0] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[0] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[9] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[9] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_psel_i (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[8] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[8] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[7] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_paddr_i[7] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[25] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[25] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[24] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[24] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[23] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[23] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[22] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[22] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[20] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[20] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[19] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[19] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[18] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[18] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[17] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[17] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[16] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[16] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[15] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[15] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[14] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[14] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[13] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[13] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[12] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[12] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[11] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[11] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[10] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[10] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[9] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[9] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[8] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[8] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[7] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[7] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[6] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[6] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[5] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[5] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[4] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[4] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[3] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[3] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_psel_i (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_penable_i (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_penable_i (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwrite_i (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwrite_i (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[31] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[31] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[30] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[30] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[29] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[29] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[28] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[28] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[27] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[27] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[26] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port apb_pwdata_i[26] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port mbist_cfg_i[11] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port mbist_cfg_i[11] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port mbist_cfg_i[10] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port mbist_cfg_i[10] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port mbist_cfg_i[3] (min rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Warning: The drive-resistance for the timing arc through port mbist_cfg_i[3] (max rising & falling) is much less than the network impedance to ground; PrimeTime has adjusted the drive-resistance to improve accuracy. (RC-009)
+Note - message 'RC-009' limit (100) exceeded.  Remainder will be suppressed.
+1
+redirect -file annot.txt { report_annotated_parasitics -check -internal_nets -boundary_nets -driverless_nets -loadless_nets -pin_to_pin_nets -max_nets 10 }
+redirect -file clock_latency.txt { report_clock_timing -type latency -clock clk_i -nworst 1 -verbose }
+redirect -file clock_skew.txt { report_clock_timing -type skew -clock clk_i }
+proc stats {dt from to} {
+  set args [list -delay_type $dt -max_paths 1000000 -nworst 1 -slack_lesser_than 1000]
+  if {$from ne ""} { lappend args -from $from }
+  if {$to ne ""} { lappend args -to $to }
+  set vp [get_timing_paths {*}$args]
+  array unset worst
+  foreach_in_collection p $vp {
+    set e [get_object_name [get_attribute $p endpoint]]
+    set s [get_attribute $p slack]
+    if {$s eq "INFINITY" || $s eq "" } continue
+    if {![info exists worst($e)] || $s < $worst($e)} { set worst($e) $s }
+  }
+  set wns 1e9; set tns 0.0; set n 0
+  foreach e [array names worst] { if {$worst($e) < $wns} { set wns $worst($e) }; if {$worst($e) < 0} { set tns [expr {$tns + $worst($e)}]; incr n } }
+  return [list $wns $tns $n [array size worst]]
+}
+set regs [all_registers -edge_triggered]
+{"u_core/u_dcache_tag_dout_r_reg[10]", "u_core/u_if_if_id_reg_o_reg[pc][10]", "u_core/u_dcache_tag_dout_r_reg[11]", "u_core/u_regfile_regs_reg[29][0]", "u_core/u_if_if_id_reg_o_reg[pc][11]", "u_core/u_dcache_tag_dout_r_reg[12]", "u_core/u_regfile_regs_reg[29][1]", "u_core/u_if_if_id_reg_o_reg[pc][12]", "u_core/u_dcache_tag_dout_r_reg[13]", "u_core/u_regfile_regs_reg[29][2]", "u_core/u_ex2_ex_mem_reg_o_reg[jump]", "u_core/u_dcache_dc_addr_q_reg[20]", "u_core/u_if_if_id_reg_o_reg[pc][13]", "u_core/u_dcache_tag_dout_r_reg[14]", "u_core/u_regfile_regs_reg[29][3]", "u_core/u_dcache_dc_addr_q_reg[21]", "u_core/u_if_if_id_reg_o_reg[pc][14]", "u_core/u_dcache_tag_dout_r_reg[15]", "u_core/u_regfile_regs_reg[29][4]", "u_core/u_dcache_dc_addr_q_reg[22]", "u_core/u_if_if_id_reg_o_reg[pc][15]", "u_core/u_dcache_tag_dout_r_reg[16]", "u_core/u_regfile_regs_reg[29][5]", "u_core/u_dcache_dc_addr_q_reg[23]", "u_core/u_if_if_id_reg_o_reg[pc][16]", "u_core/u_dcache_tag_dout_r_reg[17]", "u_core/ex1c_ex1b_reg_q_reg[pc][10]", "u_core/u_regfile_regs_reg[29][6]", "u_core/u_dcache_dc_addr_q_reg[24]", "u_core/u_if_if_id_reg_o_reg[pc][17]", "u_core/u_dcache_tag_dout_r_reg[18]", "u_core/u_regfile_regs_reg[1][20]", "u_core/ex1c_ex1b_reg_q_reg[pc][11]", "u_core/u_regfile_regs_reg[29][7]", "u_core/u_dcache_dc_addr_q_reg[25]", "u_core/u_if_if_id_reg_o_reg[pc][18]", "u_core/u_dcache_tag_dout_r_reg[19]", "u_core/u_regfile_regs_reg[1][21]", "u_core/ex1c_ex1b_reg_q_reg[pc][12]", "u_core/u_regfile_regs_reg[13][0]", "u_core/u_regfile_regs_reg[29][8]", "u_core/u_dcache_dc_addr_q_reg[26]", "u_core/u_if_if_id_reg_o_reg[pc][19]", "u_core/u_regfile_regs_reg[1][22]", "u_core/u_id_id_ex_reg_o_reg[csr_access]", "u_core/ex1c_ex1b_reg_q_reg[pc][13]", "u_core/u_regfile_regs_reg[13][1]", "u_core/u_regfile_regs_reg[29][9]", "u_core/u_id_id_ex_reg_o_reg[fence_i]", "u_core/u_dcache_dc_addr_q_reg[27]", "u_core/u_regfile_regs_reg[1][23]", "u_core/ex1c_ex1b_reg_q_reg[pc][14]", "u_core/u_regfile_regs_reg[13][2]", "u_core/u_dcache_dc_addr_q_reg[28]", "u_core/u_regfile_regs_reg[1][24]", "u_core/ex1c_ex1b_reg_q_reg[pc][15]", "u_core/u_regfile_regs_reg[13][3]", "u_core/u_dcache_dc_addr_q_reg[29]", "u_core/u_regfile_regs_reg[1][25]", "u_core/ex1c_ex1b_reg_q_reg[pc][16]", "u_core/u_regfile_regs_reg[13][4]", "u_core/u_regfile_regs_reg[1][26]", "u_core/ex1c_ex1b_reg_q_reg[pc][17]", "u_core/u_regfile_regs_reg[13][5]", "u_core/ex1c_ex1b_reg_q_reg[pre_wdata_aligned][30]", "u_core/u_regfile_regs_reg[1][27]", "u_core/ex1c_ex1b_reg_q_reg[pc][18]", "u_core/u_regfile_regs_reg[13][6]", "u_core/ex1a_ex1b_reg_q_reg[fwd_store][30]", "u_core/u_regfile_regs_reg[11][30]", "u_core/ex1c_ex1b_reg_q_reg[pre_wdata_aligned][31]", "u_core/ex1b_ex2_reg_q_reg[pc][10]", "u_core/u_regfile_regs_reg[1][28]", "u_core/ex1c_ex1b_reg_q_reg[pc][19]", "u_core/u_regfile_regs_reg[13][7]", "u_core/ex1a_ex1b_reg_q_reg[fwd_store][31]", "u_core/u_regfile_regs_reg[11][31]", "u_core/ex1b_ex2_reg_q_reg[pc][11]", "u_core/u_regfile_regs_reg[1][29]", "u_core/u_regfile_regs_reg[13][8]", "u_core/ex1b_ex2_reg_q_reg[pc][12]", "u_core/u_dcache_valid_array_reg[120]", "u_core/u_id_id_ex_reg_o_reg[mem_unsigned]", "u_core/u_regfile_regs_reg[13][9]", "u_core/ex1b_ex2_reg_q_reg[pc][13]", "u_core/u_dcache_valid_array_reg[121]", "u_core/u_mem_mem_wb_reg_o_reg[instruction][0]", "u_core/ex1b_ex2_reg_q_reg[trap_valid]", "u_core/ex1b_ex2_reg_q_reg[pc][14]", "u_core/u_dcache_valid_array_reg[122]", "u_core/u_mem_mem_wb_reg_o_reg[instruction][1]", "u_core/u_icache_refill_buf_q_reg[0][10]", "u_core/ex1b_ex2_reg_q_reg[pc][15]", "u_core/u_dcache_valid_array_reg[123]", "u_core/u_mem_mem_wb_reg_o_reg[instruction][2]", "u_core/u_icache_refill_buf_q_reg[0][11]", "u_core/ex1b_ex2_reg_q_reg[pc][16]", "u_core/u_dcache_valid_array_reg[124]", "u_core/u_mem_mem_wb_reg_o_reg[instruction][3]", "u_core/u_icache_refill_buf_q_reg[0][12]"...}
+set regd [all_registers -edge_triggered -data_pins]
+{"u_core/u_dcache_tag_dout_r_reg[10]/D", "u_core/u_if_if_id_reg_o_reg[pc][10]/D", "u_core/u_dcache_tag_dout_r_reg[11]/D", "u_core/u_regfile_regs_reg[29][0]/D", "u_core/u_if_if_id_reg_o_reg[pc][11]/D", "u_core/u_dcache_tag_dout_r_reg[12]/D", "u_core/u_regfile_regs_reg[29][1]/D", "u_core/u_if_if_id_reg_o_reg[pc][12]/D", "u_core/u_dcache_tag_dout_r_reg[13]/D", "u_core/u_regfile_regs_reg[29][2]/D", "u_core/u_ex2_ex_mem_reg_o_reg[jump]/D", "u_core/u_dcache_dc_addr_q_reg[20]/D", "u_core/u_if_if_id_reg_o_reg[pc][13]/D", "u_core/u_dcache_tag_dout_r_reg[14]/D", "u_core/u_regfile_regs_reg[29][3]/D", "u_core/u_dcache_dc_addr_q_reg[21]/D", "u_core/u_if_if_id_reg_o_reg[pc][14]/D", "u_core/u_dcache_tag_dout_r_reg[15]/D", "u_core/u_regfile_regs_reg[29][4]/D", "u_core/u_dcache_dc_addr_q_reg[22]/D", "u_core/u_if_if_id_reg_o_reg[pc][15]/D", "u_core/u_dcache_tag_dout_r_reg[16]/D", "u_core/u_regfile_regs_reg[29][5]/D", "u_core/u_dcache_dc_addr_q_reg[23]/D", "u_core/u_if_if_id_reg_o_reg[pc][16]/D", "u_core/u_dcache_tag_dout_r_reg[17]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][10]/D", "u_core/u_regfile_regs_reg[29][6]/D", "u_core/u_dcache_dc_addr_q_reg[24]/D", "u_core/u_if_if_id_reg_o_reg[pc][17]/D", "u_core/u_dcache_tag_dout_r_reg[18]/D", "u_core/u_regfile_regs_reg[1][20]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][11]/D", "u_core/u_regfile_regs_reg[29][7]/D", "u_core/u_dcache_dc_addr_q_reg[25]/D", "u_core/u_if_if_id_reg_o_reg[pc][18]/D", "u_core/u_dcache_tag_dout_r_reg[19]/D", "u_core/u_regfile_regs_reg[1][21]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][12]/D", "u_core/u_regfile_regs_reg[13][0]/D", "u_core/u_regfile_regs_reg[29][8]/D", "u_core/u_dcache_dc_addr_q_reg[26]/D", "u_core/u_if_if_id_reg_o_reg[pc][19]/D", "u_core/u_regfile_regs_reg[1][22]/D", "u_core/u_id_id_ex_reg_o_reg[csr_access]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][13]/D", "u_core/u_regfile_regs_reg[13][1]/D", "u_core/u_regfile_regs_reg[29][9]/D", "u_core/u_id_id_ex_reg_o_reg[fence_i]/D", "u_core/u_dcache_dc_addr_q_reg[27]/D", "u_core/u_regfile_regs_reg[1][23]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][14]/D", "u_core/u_regfile_regs_reg[13][2]/D", "u_core/u_dcache_dc_addr_q_reg[28]/D", "u_core/u_regfile_regs_reg[1][24]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][15]/D", "u_core/u_regfile_regs_reg[13][3]/D", "u_core/u_dcache_dc_addr_q_reg[29]/D", "u_core/u_regfile_regs_reg[1][25]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][16]/D", "u_core/u_regfile_regs_reg[13][4]/D", "u_core/u_regfile_regs_reg[1][26]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][17]/D", "u_core/u_regfile_regs_reg[13][5]/D", "u_core/ex1c_ex1b_reg_q_reg[pre_wdata_aligned][30]/D", "u_core/u_regfile_regs_reg[1][27]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][18]/D", "u_core/u_regfile_regs_reg[13][6]/D", "u_core/ex1a_ex1b_reg_q_reg[fwd_store][30]/D", "u_core/u_regfile_regs_reg[11][30]/D", "u_core/ex1c_ex1b_reg_q_reg[pre_wdata_aligned][31]/D", "u_core/ex1b_ex2_reg_q_reg[pc][10]/D", "u_core/u_regfile_regs_reg[1][28]/D", "u_core/ex1c_ex1b_reg_q_reg[pc][19]/D", "u_core/u_regfile_regs_reg[13][7]/D", "u_core/ex1a_ex1b_reg_q_reg[fwd_store][31]/D", "u_core/u_regfile_regs_reg[11][31]/D", "u_core/ex1b_ex2_reg_q_reg[pc][11]/D", "u_core/u_regfile_regs_reg[1][29]/D", "u_core/u_regfile_regs_reg[13][8]/D", "u_core/ex1b_ex2_reg_q_reg[pc][12]/D", "u_core/u_dcache_valid_array_reg[120]/D", "u_core/u_id_id_ex_reg_o_reg[mem_unsigned]/D", "u_core/u_regfile_regs_reg[13][9]/D", "u_core/ex1b_ex2_reg_q_reg[pc][13]/D", "u_core/u_dcache_valid_array_reg[121]/D", "u_core/u_mem_mem_wb_reg_o_reg[instruction][0]/D", "u_core/ex1b_ex2_reg_q_reg[trap_valid]/D", "u_core/ex1b_ex2_reg_q_reg[pc][14]/D", "u_core/u_dcache_valid_array_reg[122]/D", "u_core/u_mem_mem_wb_reg_o_reg[instruction][1]/D", "u_core/u_icache_refill_buf_q_reg[0][10]/D", "u_core/ex1b_ex2_reg_q_reg[pc][15]/D", "u_core/u_dcache_valid_array_reg[123]/D", "u_core/u_mem_mem_wb_reg_o_reg[instruction][2]/D", "u_core/u_icache_refill_buf_q_reg[0][11]/D", "u_core/ex1b_ex2_reg_q_reg[pc][16]/D", "u_core/u_dcache_valid_array_reg[124]/D", "u_core/u_mem_mem_wb_reg_o_reg[instruction][3]/D", "u_core/u_icache_refill_buf_q_reg[0][12]/D"...}
+foreach {dt tag} {max setup min hold} {
+  lassign [stats $dt "" ""] w t n tot;           m ${tag}_all_wns $w; m ${tag}_all_tns $t; m ${tag}_all_viol $n; m ${tag}_all_ep $tot
+  lassign [stats $dt [all_inputs] $regd] w t n tot; m ${tag}_in2reg_wns $w; m ${tag}_in2reg_tns $t; m ${tag}_in2reg_viol $n; m ${tag}_in2reg_ep $tot
+  lassign [stats $dt $regs [all_outputs]] w t n tot; m ${tag}_reg2out_wns $w; m ${tag}_reg2out_tns $t; m ${tag}_reg2out_viol $n; m ${tag}_reg2out_ep $tot
+  lassign [stats $dt $regs $regd] w t n tot;     m ${tag}_reg2reg_wns $w; m ${tag}_reg2reg_tns $t; m ${tag}_reg2reg_viol $n; m ${tag}_reg2reg_ep $tot
+  lassign [stats $dt [all_inputs] [all_outputs]] w t n tot; m ${tag}_in2out_wns $w; m ${tag}_in2out_viol $n; m ${tag}_in2out_ep $tot
+  redirect -file worst_${tag}.txt { report_timing -delay_type $dt -max_paths 1 -path_type full_clock_expanded -input_pins -transition_time -capacitance -nets }
+  redirect -file worst_${tag}_in2reg.txt { report_timing -delay_type $dt -from [all_inputs] -to $regd -max_paths 1 -path_type full_clock_expanded -input_pins -transition_time -nets }
+  redirect -file worst_${tag}_reg2out.txt { report_timing -delay_type $dt -from $regs -to [all_outputs] -max_paths 1 -path_type full_clock_expanded -input_pins -transition_time -nets }
+  redirect -file worst_${tag}_reg2reg.txt { report_timing -delay_type $dt -from $regs -to $regd -max_paths 1 -path_type full_clock_expanded -input_pins -transition_time -nets }
+}
+Warning: There are 90 invalid end points for constrained paths. (UITE-416)
+Warning: There are 11922 invalid start points. (UITE-416)
+Warning: There are 11922 invalid start points. (UITE-416)
+Warning: There are 90 invalid end points for constrained paths. (UITE-416)
+Warning: There are 90 invalid end points for constrained paths. (UITE-416)
+Warning: There are 11922 invalid start points. (UITE-416)
+Warning: There are 11922 invalid start points. (UITE-416)
+Warning: There are 90 invalid end points for constrained paths. (UITE-416)
+# per-endpoint worst slack dump (every endpoint) for later joins with native
+foreach {dt tag} {max setup min hold} {
+  set f [open ep_${tag}.tsv w]
+  set vp [get_timing_paths -delay_type $dt -max_paths 1000000 -nworst 1 -slack_lesser_than 1000]
+  array unset worst; array unset sp
+  foreach_in_collection p $vp {
+    set e [get_object_name [get_attribute $p endpoint]]; set s [get_attribute $p slack]
+    if {$s eq "INFINITY" || $s eq ""} continue
+    if {![info exists worst($e)] || $s < $worst($e)} { set worst($e) $s; set sp($e) [get_object_name [get_attribute $p startpoint]] }
+  }
+  foreach e [array names worst] { puts $f "$e\t$sp($e)\t$worst($e)" }
+  close $f
+}
+if {$dopower} {
+  set tg [expr {[info exists ::env(G_TOGGLE)] ? $::env(G_TOGGLE) : 0.1}]
+  set_app_var power_default_toggle_rate $tg
+  set_app_var power_default_static_probability 0.5
+  m power_toggle_rate $tg
+  update_power
+  redirect -file power_A.txt { report_power -nosplit }
+  set rq [all_registers -output_pins]
+  set_switching_activity -toggle_rate $tg -static_probability 0.5 -base_clock clk_i $rq
+  update_power
+  redirect -file power_B.txt { report_power -nosplit }
+}
+Warning: Neither event file or switching activity data present for power estimation. The command will propagate switching activity values for power calculation.  (PWR-246)
+Information: Running averaged power analysis... (PWR-601)
+Information: Running power calculation with 2 threads. (PWR-602)
+Information: Running averaged power analysis... (PWR-601)
+Information: Running power calculation with 2 threads. (PWR-602)
+close $fh
+exit
+Information: Defining new variable 'e'. (CMD-041)
+Information: Defining new variable 'f'. (CMD-041)
+Information: Defining new variable 'n'. (CMD-041)
+Information: Defining new variable 'p'. (CMD-041)
+Information: Defining new variable 's'. (CMD-041)
+Information: Defining new variable 't'. (CMD-041)
+Information: Defining new variable 'w'. (CMD-041)
+Information: Defining new variable 'LIBN'. (CMD-041)
+Information: Defining new variable 'DB'. (CMD-041)
+Information: Defining new variable 'dt'. (CMD-041)
+Information: Defining new variable 'fh'. (CMD-041)
+Information: Defining new variable 'rq'. (CMD-041)
+Information: Defining new variable 'tg'. (CMD-041)
+Information: Defining new variable 'sp'. (CMD-041)
+Information: Defining new variable 'vp'. (CMD-041)
+Information: Defining new variable 'ROOT'. (CMD-041)
+Information: Defining new variable 'md5'. (CMD-041)
+Information: Defining new variable 'lib'. (CMD-041)
+Information: Defining new variable 'tag'. (CMD-041)
+Information: Defining new variable 'regd'. (CMD-041)
+Information: Defining new variable 'regs'. (CMD-041)
+Information: Defining new variable 'tot'. (CMD-041)
+Information: Defining new variable 'dopower'. (CMD-041)
+Information: Defining new variable 'worst'. (CMD-041)
+Suppressed Messages Summary:
+Id          Severity      Occurrences   Suppressed
+-------------------------------------------------------------------------------
+RC-009      Warning               112           12
+Total 1 type of message is suppressed
+
+Timing updates: 1 (0 implicit, 1 explicit) (0 incremental, 1 full, 0 logical)
+Noise updates: 0 (0 implicit, 0 explicit) (0 incremental, 0 full)
+Maximum memory usage for this session: 2823.39 MB
+CPU usage for this session: 191 seconds 
+Elapsed time for this session: 289 seconds
+Elapsed time spent in memory sampling: 0 seconds
+Diagnostics summary: 3 errors, 118 warnings, 36 informationals
+
+Thank you for using pt_shell!

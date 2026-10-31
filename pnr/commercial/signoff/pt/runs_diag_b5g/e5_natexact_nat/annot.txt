@@ -1,0 +1,29 @@
+****************************************
+Report : annotated_parasitics
+	-check
+	-internal_nets
+	-boundary_nets
+	-driverless_nets
+	-loadless_nets
+	-pin_to_pin_nets
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 09:51:38 2026
+****************************************
+
+                    |         |         |         |   RC    |   Not   |
+Net Type            |  Total  | Lumped  |  RC pi  | network |Annotated|
+--------------------+---------+---------+---------+---------+---------+
+Internal nets       |         |         |         |         |         |
+  - Pin to pin nets |   35071 |       0 |       0 |   35071 |       0 |
+  - Driverless nets |    1752 |       0 |       0 |       0 |    1752 |
+  - Loadless nets   |     322 |       0 |       0 |       0 |     322 |
+--------------------+---------+---------+---------+---------+---------+
+Boundary/port nets  |         |         |         |         |         |
+  - Pin to pin nets |     492 |       0 |       0 |     492 |       0 |
+  - Driverless nets |       0 |       0 |       0 |       0 |       0 |
+  - Loadless nets   |       8 |       0 |       0 |       0 |       8 |
+--------------------+---------+---------+---------+---------+---------+
+                    |   37645 |       0 |       0 |   35563 |    2082 |
+
+1
