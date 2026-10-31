@@ -4,8 +4,8 @@
 arm_def() {
   case "$1" in
     openroad) echo pnr/commercial/runs/openroad/rv32i_cpu_top.def ;;
-    icc2)     echo pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.def ;;
-    innovus)  echo pnr/commercial/impl/innovus/runs/b5d_innovus/out/rv32i_cpu_top.def ;;   # b5c reroute (b5b superseded, not extracted for results)
+    icc2)     echo pnr/commercial/impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.def ;;
+    innovus)  echo pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.def ;;   # b5c reroute (b5b superseded, not extracted for results)
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
 }

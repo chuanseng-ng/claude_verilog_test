@@ -163,7 +163,7 @@ Do not compare total C across arms as a PPA metric: the DEFs have different cell
 
 # B1c: ITF calibration to OpenRCX (2026-10-26 to 10-28)  [IN PROGRESS: updated after each milestone]
 
-**Status**: nom and min done (tuned stack, new settings). **max: PENDING** (grdgenxo max was killed twice by host power-offs; third run started 2026-10-28 18:47, about 65 min). Innovus extracted from `b5c_innovus_s2` (nom, min); a b5d rerun may replace it, re-extract with `make -C pnr/commercial/signoff/starrc innovus`.
+**Status (updated 2026-10-31)**: nom, min and max done (tuned stack, new settings; the max nxtgrd finished 2026-10-28 20:08). The ICC2 and Innovus rows below are the SUPERSEDED b5a / b5d extractions, kept as history; the current ones are b5e / b5g in section B7 at the end of this file.
 "Calibrated to OpenRCX" means calibrated to the OpenRCX `rules.openrcx.sky130A.*.calibre` decks (the ones the OpenROAD flow runs), **not correlated to silicon**.
 
 ## Findings that changed the plan
@@ -198,7 +198,7 @@ Single sources: `pnr/commercial/pdk/sky130/scripts/corner_scale.py` (values) is 
 | min | before | 1.006 | 0.847 / 1.228 | 35.5 % | 0.958 | 0.555 / 0.369 (-18.5 pts) | 810.5 vs 888.0 (x0.913) |
 | min | **after** | **1.104** | 0.946 / 1.361 | 53.8 % | 0.958 | 0.555 / 0.570 (+1.5 pts) | 902.4 vs 888.0 (x1.016) |
 | max | before | 1.256 | 1.066 / 1.569 | 90.9 % | 0.987 | 0.505 / 0.381 (-12.4 pts) | 1241.5 vs 1080.1 (x1.149) |
-| max | after | PENDING | | | | | |
+| max | **after** | **1.091** | 0.954 / 1.376 | 48.4 % | 0.987 | 0.505 / 0.571 (+6.5 pts) | 1097.6 vs 1080.1 (x1.016) |
 
 Wire-proportional slope (`pinfit.py`, nets C < 50 fF): nom 0.977, min 1.003 (before: 0.895 at min with the old +-21 % multipliers, 1.119 at max).
 
@@ -232,3 +232,35 @@ Innovus: 0 opens, 3 residual shorted net pairs (met3/met4) in `star/shorts_all.s
 ## Remaining (automated)
 
 `signoff/starrc/scripts/finish_max.sh` (started 2026-10-28 18:48, setsid) waits for `build/nxtgrd/max/sky130A_max.nxtgrd`, then extracts max for openroad, icc2, innovus one at a time, rebuilds `reports/correlation_*.md`, `reports/per_arm.md`, `reports/pinfit_max.txt`; progress in `reports/finish_max.status`. If the host dies again: re-run `build/nxtgrd/max` via `pnr/commercial/pdk/sky130/scripts/run_grdgenxo.sh max` (move any partial `sky130A_max/` aside first), then `signoff/starrc/scripts/finish_max.sh`. For a b5d Innovus DEF: change `innovus)` in `scripts/arms.sh` (and the path in `collect_stats.py`), move `runs/innovus_*` aside, `make innovus`.
+
+
+---
+
+# B7: ICC2 b5e and Innovus b5g re-extraction (2026-10-31)
+
+StarRC X-2025.06-SP1, tuned nxtgrds (nom, min, max), identical settings for every arm (`gen_cmd.sh`: `COUPLING_ABS_THRESHOLD 0.1`, `COUPLING_REL_THRESHOLD 0`, `LEF_USE_OBS NO`, `TOP_DEF_FILE`, `NUM_CORES 2`), one extraction at a time under `safe_run.sh`.
+**"Calibrated to OpenRCX" means calibrated to the OpenRCX decks the OpenROAD flow runs, not correlated to silicon.** `scripts/arms.sh` and `scripts/collect_stats.py` now point at `impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.def` and `impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.def`.
+The previous extractions are kept (not deleted) as `runs/_superseded_b5a/icc2_b5a_{nom,min,max}` and `runs/_superseded_b5d/innovus_b5d_{nom,min,max}`.
+
+| arm | corner | DEF nets | SPEF D_NETs | zero-C nets | opens | total C (pF) | gnd C (pF) | coupling C (pF) | sum R (Mohm) | wall | peak RSS (GB) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| icc2 b5e | nom | 35096 | 35096 | 0 | 0 | 828.7 | 309.2 | 259.7 | 4.88 | 3:54.60 | 0.53 |
+| icc2 b5e | min | 35096 | 35096 | 0 | 0 | 756.8 | 282.5 | 237.2 | 2.80 | 2:52.98 | 0.53 |
+| icc2 b5e | max | 35096 | 35096 | 0 | 0 | 920.5 | 343.3 | 288.6 | 9.34 | 3:13.98 | 0.53 |
+| innovus b5g | nom | 35893 | 35893 | 322 | 0 | 974.0 | 428.7 | 272.7 | 6.26 | 2:51.28 | 0.37 |
+| innovus b5g | min | 35893 | 35893 | 322 | 0 | 889.6 | 391.7 | 249.0 | 4.13 | 12:21.48 (load-gate waits) | 0.37 |
+| innovus b5g | max | 35893 | 35893 | 322 | 0 | 1082.0 | 476.0 | 303.0 | 10.38 | 3:21.57 | 0.37 |
+| openroad (unchanged), max now done | max | 42291 | 42291 | 87 | 0 | 1097.6 | 443.7 | 326.9 | 14.48 | 7:43.88 | 0.49 |
+
+Previous vintages for reference (tuned stack): ICC2 b5a nom/min total C 819.9 / 748.8 pF (superseded; max run is in `_superseded_b5a`); Innovus b5d nom 984.0, min 898.7 (earlier row of the B1c table above).
+
+Completeness (read from the run directories, not from make): all six runs have `star/.starrc_complete`, `rc=0` in `time.txt`, SPEF ending `*END`, no `^ERROR` in `starrc.log`, `report_opens NETID1 : 0`, no SX-2064 (ICC2 via names resolved by `icc2_via_names.lef`; Innovus uses the PDK via names) and no SX-2144.
+
+**Shorts (physical caveat that the extraction inherits):**
+- **ICC2 b5e: 1 met1 short pair**, identical in nom, min and max: nets `u_core/ex1c_comb[158]` and `u_core/ex1c_ex1b_reg_q[124]`, layer met1, BBox (1918.13, 882.91) to (1918.27, 883.05) um (3 lines in `star/shorts_all.sum`; SX-0955 raised once per run). This is the known remaining DRC short of the b5e layout; StarRC finds it independently of ICC2. **The extraction of these two nets includes the short, so their R and C are unreliable and the two nets are electrically merged in the SPEF**; every other net is unaffected. b5a had no short.
+- **Innovus b5g: no shorts** (no `shorts_all.sum`, no SX-0955). The b5d extraction had 3 shorted pairs in the earlier b5c_s2 vintage; those are gone.
+- Innovus b5g also carries 4 antenna violations on 3 clock-tree nets and 232 ECO `buf_8` repeaters on the `axi_rdata_i` inputs. Neither is an extraction issue, but both are in the netlist the SPEFs belong to.
+- The 322 zero-C Innovus nets are unchanged from b5d (probably nets without routed wiring; not checked).
+
+**Correlation.** OpenROAD StarRC vs OpenRCX is unchanged by this step (same DEF, same decks): max corner is now measured, `reports/correlation_max.md`: C median 1.091, p5/p95 0.954/1.376, r 0.9977, 48.4 % outside +-10 %, coupling-share diff +6.5 points, R median 0.987, design 1097.6 vs 1080.1 pF (x1.016); wire-proportional slope 0.9949 (`reports/pinfit_max.txt`). Nom and min figures are in the B1c table above. The tuned stack is therefore still INDICATIVE at nom and max by the stated C-median criterion (+-5 % not met, 1.078 / 1.091).
+StarRC vs the ICC2-native SPEF (nominal TLU+, no coupling), new b5e layout, nom: **total C median 0.987, p5/p95 0.911/1.102, r 0.9997, design 828.7 vs 842.0 pF (x0.984); R median 0.985, design x0.984** (`reports/correlation_icc2native_b5e_nom.md`). Same agreement as on b5a (0.987, r 0.9996), so the ICC2 arm's extraction is as consistent with its own tool as before. (Ground C and coupling-share rows of that report are not comparable: the native SPEF has no coupling.) No Innovus native comparison was run.
