@@ -1,11 +1,3 @@
 # KLayout DRC report /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/icc2/kdrc/drc_violations.klayout.xml
-TOTAL_VIOLATION_ITEMS 4877  RULES_VIOLATED 9
-      4055  li.3
-       604  li.1
+TOTAL_VIOLATION_ITEMS 132  RULES_VIOLATED 1
        132  m4.5ab
-        66  nwell.2a
-         6  m3.6
-         4  nwell.1
-         4  hvtp.1
-         4  hvtp.2
-         2  m2.2
