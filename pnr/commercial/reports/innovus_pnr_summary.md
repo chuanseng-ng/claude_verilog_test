@@ -305,3 +305,6 @@ python3 -I scripts/classify_drc.py runs/b5b_innovus/reports/final_drc.txt
 make reports        # native reports -> reports/*.txt
 ```
 Note: the original `05a_routed` database was produced by the routing half of the first-draft `05_route.tcl`; `scripts/05a_route.tcl` is that half, split out afterwards and not re-executed.
+
+## B5h (2026-10-31): capTable RC + symmetric SDC-visible I/O latency
+See `reports/innovus_b5h_report.md`. Native nom_tt: DRC 0, antenna 1, PG 1/1, setup +0.215, hold +0.139, 87.5 mW @0.2 / 70.6 mW @0.1; judge with its own exported SDC: +0.706 / +0.140, PrimePower 69.5 mW. Same 144+1 well-tap opens as b5g.

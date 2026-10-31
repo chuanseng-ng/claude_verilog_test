@@ -47,6 +47,6 @@ rc_=0
 "$ROOT/pnr/commercial/pdk/sky130/scripts/safe_run.sh" "$out/pt.log" \
   /usr/bin/time -v -o "$out/time.txt" pt_shell -f "$HERE/judge.tcl" || rc_=$?
 echo "rc=$rc_" >> "$out/time.txt"
-if [ $rc_ -eq 0 ] && [ -s metrics.tsv ] && grep -q '^hold_viol' metrics.tsv && { [ "$pw" = 0 ] || [ -s power_B.txt ]; }; then
+if [ $rc_ -eq 0 ] && [ -s metrics.tsv ] && grep -qP '^setup_wns\t\S' metrics.tsv && grep -qP '^hold_wns\t\S' metrics.tsv && grep -q '^hold_viol' metrics.tsv && { [ "$pw" = 0 ] || [ -s power_B.txt ]; }; then
   echo "$stamp" > .done; echo "DONE $tag"
 else echo "FAILED $tag rc=$rc_ (see $out/pt.log)" >&2; exit 1; fi

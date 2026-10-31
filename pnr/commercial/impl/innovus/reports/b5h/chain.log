@@ -1,0 +1,44 @@
+11:32:40 start 01_floorplan
+11:33:07 end 01_floorplan rc=0
+11:33:37 start 02_pdn
+11:34:05 end 02_pdn rc=0
+PDN_SELFCHECK VPWR: special-wire pieces = 1
+PDN_SELFCHECK VGND: special-wire pieces = 1
+PDN_SELFCHECK: PASS (one piece per PG net)
+11:34:05 start 03_place
+11:43:26 end 03_place rc=0
+11:43:26 start 04_cts
+11:55:14 end 04_cts rc=0
+11:55:14 start 05a_route
+resume: PRE_STAGES='' POST_STAGES='04_cts 05a_route'
+PDN_SELFCHECK VPWR: special-wire pieces = 1
+PDN_SELFCHECK VGND: special-wire pieces = 1
+PDN_SELFCHECK: PASS (one piece per PG net)
+11:55:46 start 04_cts
+resume: PRE_STAGES='' POST_STAGES='04_cts 05a_route'
+PDN_SELFCHECK VPWR: special-wire pieces = 1
+PDN_SELFCHECK VGND: special-wire pieces = 1
+PDN_SELFCHECK: PASS (one piece per PG net)
+14:08:37 start 04_cts
+14:57:51 end 04_cts rc=0
+14:57:51 start 05a_route
+resume: PRE_STAGES='' POST_STAGES='04_cts 05a_route'
+PDN_SELFCHECK VPWR: special-wire pieces = 1
+PDN_SELFCHECK VGND: special-wire pieces = 1
+PDN_SELFCHECK: PASS (one piece per PG net)
+15:01:59 start 04_cts
+resume: PRE_STAGES='' POST_STAGES='04_cts 05a_route'
+PDN_SELFCHECK VPWR: special-wire pieces = 1
+PDN_SELFCHECK VGND: special-wire pieces = 1
+PDN_SELFCHECK: PASS (one piece per PG net)
+15:11:31 start 04_cts
+15:21:01 end 04_cts rc=0
+15:21:01 start 05a_route
+15:45:39 end 05a_route rc=0
+DRC after route: 0
+15:50:13 start 05_route from 05a_routed
+15:54:49 end 05_route rc=0  chain (to 05_route) done
+15:55:47 start 06_finish
+16:02:22 end 06_finish rc=0
+16:02:22 start 07_restream
+16:02:58 end 07_restream rc=0
