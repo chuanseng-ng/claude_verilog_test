@@ -1,25 +1,5 @@
 # KLayout DRC report /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/innovus/kdrc/drc_violations.klayout.xml
-TOTAL_VIOLATION_ITEMS 1847295  RULES_VIOLATED 23
-    700180  via.4a_a
-    495619  m1.4
-    421463  m2.4_a
-     82597  m3.4
-     56036  via2.4_a
-     32206  m4.3
-     31632  via3.4
-     10175  via3.5
-      8903  ct.4
-      3335  m2.6
-      2896  m1.6
-       711  m3.6
-       588  m4.3_a
+TOTAL_VIOLATION_ITEMS 482  RULES_VIOLATED 3
        434  nwell.2a
-       215  via.4a
-       161  via.5a
-        71  m3.4_a
-        25  via3.4_a
-        18  via4.4
-        13  m5.3
-         9  791_m1.4
-         6  npc.2
-         2  m5.3_a
+        40  m3.6
+         8  npc.2
