@@ -1,6 +1,6 @@
 # Neutral PrimeTime / PrimePower judge, Sky130 `rv32i_cpu_top` (task B6)
 
-**Pass label: UNTUNED ITF.** Every timing and power number below uses the StarRC SPEFs extracted with the authored, uncalibrated ITF
+**Pass label (sections 1 to 10): UNTUNED ITF; the tuned-ITF baseline and the ICC2 b5e / Innovus b5g re-judge are sections 11 and 12 at the end of this file.** Every timing and power number below uses the StarRC SPEFs extracted with the authored, uncalibrated ITF
 (`starrc_extraction_summary.md`: correlation vs OpenRCX fails the gate at nom and max, both labelled **INDICATIVE**; min passes the median test only by cancellation).
 The extraction agent is regenerating the SPEFs with a tuned ITF; this pass reads the frozen copies in
 `pnr/commercial/signoff/starrc/runs/_superseded_untuned/`. **Re-run on the tuned SPEFs with one command: `make -C pnr/commercial/signoff/pt rejudge`** (reads the
@@ -374,3 +374,116 @@ Reading (measured, from the tables above):
 - iolat SDC (comparison-only): OpenROAD hold is met at 9/9 corners; ICC2 b5a leaves 2 to 101 hold endpoints per corner (worst -0.472 ns at max_ss); Innovus b5d meets hold at ff/tt min and fails at ss (worst -1.531 ns).
 - Setup at nom_tt on the base SDC: OpenROAD +3.172, ICC2 b5a +0.040, Innovus b5d -0.617 (5 I/O endpoints, `apb_prdata_o` outputs). Different netlists and CTS; this compares the implementations as judged.
 - Power (PrimePower, nom_tt, headline variant B): OpenROAD 93.13, ICC2 b5a 67.77, Innovus b5d 70.09 mW. SRAM macros equal at 29 mW; the difference is clock network and combinational power.
+
+---
+
+# 12. ICC2 b5e and Innovus b5g re-judged (task B7, 2026-10-31)
+
+**Judge, not native.** PrimeTime X-2025.06 + PrimePower on the tuned StarRC SPEFs of the new layouts, same SDCs and PT settings as section 11. **"Calibrated to OpenRCX" (the OpenRCX decks the OpenROAD flow runs), not correlated to silicon.**
+The tools' own figures (ICC2 `report_*`, Innovus `report_*`) are quoted only as **native** and are not on the same SDC/parasitic basis.
+
+Inputs, recorded per run in `pt/runs{,_iolat}/<tag>/inputs.txt` (SPEFs snapshotted with md5 before and after the copy by `run_one.sh`):
+- ICC2 b5e: netlist `impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.nl.v` md5 `1ee342edb00e6da7cb9ef040dc64241a`; SPEFs `starrc/runs/icc2_{nom,min,max}` (nom md5 `6a08de3b3370cf02219381c86de11ccc`, max `e4002a246e19636c64462781ce5766e5`).
+- Innovus b5g: netlist `impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.nl.v` md5 `3c8d320e1df88c385b772ce6dd716344`; nom SPEF md5 `4c99d1ce5ba4736901a0231d7a87cf2d`.
+- SDC md5 asserted in every run: base `3c69635042a9d65cb87e71a9db713e4e`, iolat `e90bdba8b93f8f4e985c5fbaa6d4ab90`. OpenROAD runs were not repeated (stamp unchanged; SPEF, netlist, SDC and scripts identical to section 11).
+- 36 new runs (2 arms x 9 corners x 2 SDCs), all with `.done`, annotation gate PASS 9/9 for both arms, PrimePower variants A and B in each nom_tt run.
+
+**Physical caveats that these numbers inherit (not timing-clean layouts):**
+- **ICC2 b5e has 1 met1 short** at (1918.1, 882.9) um between nets `u_core/ex1c_comb[158]` and `u_core/ex1c_ex1b_reg_q[124]` (0.14 x 0.14 um). StarRC finds it independently (3 lines in `shorts_all.sum`, SX-0955, in nom, min and max), so the extraction merges that one pair; R and C of those two nets are unreliable, all other nets are unaffected. ICC2 `check_routes`: 1 DRC, 1 short.
+- **Innovus b5g**: `verify_drc` 0, but **4 antenna violations on 3 clock-tree nets**, and **232 ECO `buf_8` repeaters on the `axi_rdata_i` inputs** (28 long input-port nets) were added by an in-place repair after CTS. Conformal LEC, LVS and signoff DRC on b5g were not part of that run (the netlist has 232 more buffers than the Genus netlist); the StarRC extraction found no shorts and no opens.
+- Neither layout is signed off physically; this is a timing/power comparison of the implementations as judged.
+
+Cells are WNS / TNS / violating endpoints (ns); five columns = OpenROAD, ICC2 b5a, ICC2 b5e, Innovus b5d, Innovus b5g.
+
+#### SETUP WNS / TNS / violators (ns), base SDC (sky130_cpu.sdc, md5 3c69635042a9d65cb87e71a9db713e4e)
+
+| corner | OpenROAD | ICC2 b5a | ICC2 b5e | Innovus b5d | Innovus b5g |
+|---|---:|---:|---:|---:|---:|
+| nom_tt | +3.172 / 0.0 / 0 | +0.040 / 0.0 / 0 | +0.085 / 0.0 / 0 | -0.617 / -1.7 / 5 | -0.320 / -0.3 / 1 |
+| nom_ss | -3.426 / -1221.5 / 1062 | -14.883 / -4393.6 / 1444 | -14.332 / -4683.8 / 1360 | -7.868 / -2937.5 / 1440 | -7.872 / -1227.6 / 840 |
+| nom_ff | +3.928 / 0.0 / 0 | +2.692 / 0.0 / 0 | +3.335 / 0.0 / 0 | +2.035 / 0.0 / 0 | +2.540 / 0.0 / 0 |
+| min_tt | +3.548 / 0.0 / 0 | +0.263 / 0.0 / 0 | +0.227 / 0.0 / 0 | +0.149 / 0.0 / 0 | +0.316 / 0.0 / 0 |
+| min_ss | -2.777 / -776.6 / 800 | -14.698 / -3654.0 / 1139 | -14.074 / -3936.4 / 1212 | -7.119 / -2157.2 / 1211 | -7.147 / -850.7 / 579 |
+| min_ff | +4.066 / 0.0 / 0 | +2.910 / 0.0 / 0 | +3.524 / 0.0 / 0 | +2.742 / 0.0 / 0 | +3.047 / 0.0 / 0 |
+| max_tt | +2.679 / 0.0 / 0 | -0.525 / -1.7 / 7 | -0.361 / -3.6 / 25 | -1.813 / -7.7 / 6 | -1.242 / -2.6 / 3 |
+| max_ss | -4.326 / -1948.5 / 1207 | -15.118 / -5670.4 / 1914 | -14.668 / -5805.7 / 1623 | -8.859 / -4084.5 / 1672 | -8.879 / -1914.9 / 1174 |
+| max_ff | +3.713 / 0.0 / 0 | +2.393 / 0.0 / 0 | +3.077 / 0.0 / 0 | +0.992 / 0.0 / 0 | +1.790 / 0.0 / 0 |
+
+#### HOLD WNS / TNS / violators (ns), base SDC (sky130_cpu.sdc, md5 3c69635042a9d65cb87e71a9db713e4e)
+
+| corner | OpenROAD | ICC2 b5a | ICC2 b5e | Innovus b5d | Innovus b5g |
+|---|---:|---:|---:|---:|---:|
+| nom_tt | -0.319 / -3.5 / 51 | -1.162 / -170.5 / 430 | -1.226 / -246.5 / 521 | -1.796 / -92.0 / 209 | -2.044 / -112.2 / 430 |
+| nom_ss | -0.800 / -25.6 / 121 | -2.084 / -399.4 / 469 | -2.223 / -551.6 / 550 | -3.010 / -267.0 / 383 | -3.523 / -319.4 / 468 |
+| nom_ff | -0.136 / -0.5 / 8 | -0.720 / -81.4 / 401 | -0.776 / -112.9 / 534 | -1.164 / -45.3 / 89 | -1.349 / -46.9 / 191 |
+| min_tt | -0.174 / -0.5 / 5 | -1.084 / -151.8 / 408 | -1.136 / -219.1 / 512 | -1.653 / -94.7 / 259 | -1.897 / -111.6 / 429 |
+| min_ss | -0.588 / -7.4 / 78 | -1.960 / -370.1 / 467 | -2.072 / -509.3 / 547 | -2.801 / -278.7 / 413 | -3.326 / -317.9 / 468 |
+| min_ff | -0.015 / -0.0 / 3 | -0.661 / -70.8 / 371 | -0.707 / -97.6 / 505 | -1.062 / -44.2 / 123 | -1.238 / -41.8 / 188 |
+| max_tt | -0.522 / -21.8 / 169 | -1.270 / -196.4 / 454 | -1.356 / -282.4 / 538 | -1.984 / -91.0 / 167 | -2.240 / -115.3 / 401 |
+| max_ss | -1.071 / -55.3 / 155 | -2.250 / -440.3 / 476 | -2.406 / -602.2 / 555 | -3.309 / -261.2 / 367 | -3.800 / -324.1 / 478 |
+| max_ff | -0.307 / -3.3 / 43 | -0.801 / -97.1 / 421 | -0.878 / -138.3 / 583 | -1.303 / -49.1 / 82 | -1.489 / -51.7 / 183 |
+
+#### SETUP WNS / TNS / violators (ns), iolat SDC (comparison-only, md5 e90bdba8b93f8f4e985c5fbaa6d4ab90)
+
+| corner | OpenROAD | ICC2 b5a | ICC2 b5e | Innovus b5d | Innovus b5g |
+|---|---:|---:|---:|---:|---:|
+| nom_tt | +3.123 / 0.0 / 0 | +0.040 / 0.0 / 0 | +0.085 / 0.0 / 0 | +1.161 / 0.0 / 0 | +1.458 / 0.0 / 0 |
+| nom_ss | -3.426 / -1193.0 / 1014 | -14.883 / -4434.2 / 1462 | -14.332 / -4682.3 / 1383 | -7.868 / -2897.3 / 1421 | -7.872 / -1184.7 / 820 |
+| nom_ff | +3.928 / 0.0 / 0 | +2.692 / 0.0 / 0 | +3.335 / 0.0 / 0 | +3.642 / 0.0 / 0 | +3.953 / 0.0 / 0 |
+| min_tt | +3.186 / 0.0 / 0 | +0.263 / 0.0 / 0 | +0.227 / 0.0 / 0 | +1.712 / 0.0 / 0 | +2.094 / 0.0 / 0 |
+| min_ss | -2.777 / -774.8 / 788 | -14.698 / -3686.4 / 1169 | -14.074 / -3935.2 / 1209 | -7.119 / -2128.1 / 1189 | -7.147 / -819.5 / 564 |
+| min_ff | +4.066 / 0.0 / 0 | +2.910 / 0.0 / 0 | +3.524 / 0.0 / 0 | +3.946 / 0.0 / 0 | +4.300 / 0.0 / 0 |
+| max_tt | +3.019 / 0.0 / 0 | -0.525 / -1.7 / 7 | -0.361 / -3.6 / 25 | -0.035 / -0.0 / 1 | +0.536 / 0.0 / 0 |
+| max_ss | -4.326 / -1880.3 / 1155 | -15.118 / -5710.3 / 1901 | -14.668 / -5831.6 / 1703 | -8.859 / -4027.2 / 1653 | -8.823 / -1856.8 / 1143 |
+| max_ff | +3.713 / 0.0 / 0 | +2.393 / 0.0 / 0 | +3.077 / 0.0 / 0 | +2.770 / 0.0 / 0 | +3.463 / 0.0 / 0 |
+
+#### HOLD WNS / TNS / violators (ns), iolat SDC (comparison-only, md5 e90bdba8b93f8f4e985c5fbaa6d4ab90)
+
+| corner | OpenROAD | ICC2 b5a | ICC2 b5e | Innovus b5d | Innovus b5g |
+|---|---:|---:|---:|---:|---:|
+| nom_tt | +0.526 / 0.0 / 0 | -0.016 / -0.0 / 5 | +0.001 / 0.0 / 0 | -0.018 / -0.0 / 1 | -0.266 / -0.3 / 1 |
+| nom_ss | +0.978 / 0.0 / 0 | -0.306 / -3.3 / 22 | -0.445 / -6.2 / 28 | -1.232 / -19.4 / 37 | -1.745 / -12.7 / 18 |
+| nom_ff | +0.243 / 0.0 / 0 | -0.098 / -4.0 / 99 | -0.095 / -4.6 / 117 | +0.027 / 0.0 / 0 | +0.015 / 0.0 / 0 |
+| min_tt | +0.542 / 0.0 / 0 | -0.011 / -0.0 / 2 | +0.007 / 0.0 / 0 | +0.125 / 0.0 / 0 | -0.119 / -0.1 / 1 |
+| min_ss | +1.190 / 0.0 / 0 | -0.182 / -1.0 / 11 | -0.294 / -2.8 / 20 | -1.023 / -14.6 / 29 | -1.548 / -10.4 / 16 |
+| min_ff | +0.250 / 0.0 / 0 | -0.097 / -3.9 / 100 | -0.089 / -4.2 / 112 | +0.024 / 0.0 / 0 | +0.012 / 0.0 / 0 |
+| max_tt | +0.495 / 0.0 / 0 | -0.021 / -0.0 / 8 | -0.010 / -0.0 / 3 | -0.206 / -0.2 / 1 | -0.462 / -0.9 / 5 |
+| max_ss | +0.707 / 0.0 / 0 | -0.472 / -7.9 / 31 | -0.628 / -11.8 / 44 | -1.531 / -27.3 / 39 | -2.022 / -16.4 / 23 |
+| max_ff | +0.212 / 0.0 / 0 | -0.106 / -4.4 / 101 | -0.102 / -5.3 / 121 | +0.030 / 0.0 / 0 | +0.018 / 0.0 / 0 |
+
+#### Power, PrimePower nom_tt (mW), variant B (headline) / variant A, base SDC
+
+| set | B total | B internal | B switching | B clock_nw | B comb | B memory | A total |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| OpenROAD | 93.13 | 65.26 | 27.90 | 42.8 | 18.3 | 29.1 | 76.49 |
+| ICC2 b5a | 67.77 | 48.65 | 19.14 | 23.4 | 12.3 | 29.0 | 55.60 |
+| ICC2 b5e | 67.70 | 48.66 | 19.00 | 23.2 | 12.4 | 29.0 | 55.46 |
+| Innovus b5d | 70.09 | 50.66 | 19.34 | 23.8 | 15.3 | 29.0 | 56.75 |
+| Innovus b5g | 70.59 | 50.81 | 19.69 | 23.8 | 15.8 | 29.0 | 57.30 |
+
+#### Annotation gate and DRV (violating pins), base SDC
+
+| set | gate PASS corners | max_tran nom_tt / max_ss | max_cap nom_tt / max_ss |
+|---|---:|---|---|
+| OpenROAD | 9/9 | 3613 / 71277 | 268 / 302 |
+| ICC2 b5a | 9/9 | 550 / 45120 | 163 / 168 |
+| ICC2 b5e | 9/9 | 855 / 45122 | 172 / 186 |
+| Innovus b5d | 9/9 | 351 / 28217 | 227 / 267 |
+| Innovus b5g | 9/9 | 266 / 28958 | 203 / 243 |
+
+#### Native vs judge (nom_tt, labelled; not ranked against each other)
+
+| Arm | native (tool, own SDC/RC/activity) | judge, base SDC | judge, iolat SDC |
+|---|---|---|---|
+| ICC2 b5e | **native**: setup WNS +0.0725 / TNS 0, hold WNS +0.0037, power 55.8 mW (ICC2 `report_power`, nominal TLU+) | setup +0.085, hold -1.226; power 55.46 mW (A, same engine) | setup +0.085, hold +0.001 |
+| ICC2 b5a | **native**: setup -0.0046, hold +0.0008, power 55.9 mW | setup +0.040, hold -1.162; power 55.60 mW | setup +0.040, hold -0.016 |
+| Innovus b5g | **native**: setup +0.394 / 0 violators, hold +0.252, power 92.65 mW (default activity, tech-LEF RC) | setup -0.320 (1 endpoint), hold -2.044; power 70.59 (B) / 57.30 (A) mW | setup +1.458, hold -0.266 |
+| Innovus b5d | **native**: setup +0.047, hold +0.102, power 91.39 mW | setup -0.617, hold -1.796; power 70.09 / 56.75 mW | setup +1.161, hold -0.018 |
+
+Reading:
+- ICC2: the judge reproduces ICC2's native nom_tt power to 0.6 % (55.46 vs 55.8 mW, same engine) and, with the iolat SDC (which carries ICC2's own `set_clock_latency 1.778 ns` io-latency intent), native hold (+0.001 vs +0.0037). Base-SDC hold fails for the reason in 5.2 (the shared SDC lacks the io-latency line). Same pattern as b5a.
+- Innovus: the judge does NOT reproduce the native numbers. Native setup +0.394 / hold +0.252 against judge base -0.320 / -2.044 (iolat +1.458 / -0.266), and native power 92.65 mW against 70.59 (B) / 57.30 (A) mW. Not diagnosed. INFERRED (untested) contributors: Innovus ran with tech-LEF RC and its own SDC (`out/rv32i_cpu_top.sdc`), not the shared SDC, and its default power activity differs from the PT assumptions; the same gap already existed for b5d, so it is not a b5g effect. Treat the Innovus-native figures as native only.
+- b5e vs b5a (judge, base SDC): nom_tt setup +0.040 -> +0.085, max_tt -0.525 -> -0.361 (7 -> 25 endpoints), ss corners within +-0.7 ns (max_ss -15.118 -> -14.668, fewer violators 1914 -> 1623); hold gets worse on the base SDC (nom_tt -1.162 -> -1.226, violators 430 -> 521; with iolat nom_tt/min_tt become clean, +0.001/+0.007). Power 67.77 -> 67.70 mW (B). One run per arm; ICC2 stops at ~0 slack, so small deltas are not a quality claim.
+- b5g vs b5d (judge, base SDC): setup improves at every tt/ff corner (nom_tt -0.617 -> -0.320, max_tt -1.813 -> -1.242, max_ff +0.992 -> +1.790) and ss TNS roughly halves (nom_ss -2937 -> -1228, 1440 -> 840 violators), ss WNS unchanged (-7.87). Hold gets worse at every corner (nom_tt -1.796 -> -2.044, max_ss -3.309 -> -3.800; violators up, e.g. nom_tt 209 -> 430), most of it on I/O paths (the repeaters sit on the `axi_rdata_i` inputs, where hold is the weak side). Power 70.09 -> 70.59 mW (B), 232 more buffers.
+- Against OpenROAD (judge, base SDC): OpenROAD has the best setup at every corner and the smallest hold violations, at 93.13 mW vs 67.7 to 70.6 mW for ICC2/Innovus (clock network 42.8 vs 23.2 to 23.8 mW). All five sets fail setup at all three ss corners (SRAM timed at TT, bead `o1i`, plus the same ss reg-to-reg paths) and fail base-SDC hold at all nine corners, so none meets the sign-off criteria (setup/hold WNS >= 0, TNS = 0 at all corners): `sta.signoff` stays false.
+- max_tran / max_cap violating pins (nom_tt): ICC2 b5e 855 / 172 (b5a 550 / 163), Innovus b5g 266 / 203 (b5d 351 / 227), OpenROAD 3613 / 268.
