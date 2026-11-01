@@ -1,3 +1,20 @@
+# Innovus b5j (b5h routed + 146 well-tie taps): physical verification, CURRENT. The b5g text below is kept as recorded.
+
+Arm `innovus_b5j` (`signoff/drclvs/arms/innovus_b5j.mk`, `scripts/chain_innovus_b5j.sh`, `PIN_MODE=none`), GDS = `impl/innovus/runs/b5j_innovus/out/rv32i_cpu_top.gds` (07_restream). Magic DRC was NOT run (host never idle: load 20-97 during the whole session).
+
+| Check | b5g (previous) | b5h (never run) | **b5j** |
+|---|---|---|---|
+| Netgen LVS, GDS-mode extraction (Magic from GDS, cells as LEF abstracts) | not run | n/a | **devices 34,255 = 34,255, nets 35,214 = 35,214; no isolated VPB nets; "Top level cell failed pin matching" only on 3 output-port pairs (`axi_awlen_o[1]`, `axi_arlen_o[1]`, `axi_arburst_o[0]`: netlist `assign`s) + the layout-only `VPWR`/`VGND` labels** (clean / merged variants give the same, so there are no islands to merge) |
+| Netgen LVS, DEF+LEF extraction | devices 35,228 vs 35,083, nets 36,161 vs 36,019 (146 VPB islands) | n/a | **devices 34,255 = 34,255, nets 35,214 = 35,214; pin matching fails on the same kind of 3 pairs (`axi_awlen_o[1]`, `axi_arlen_o[1]`, `axi_arsize_o[1]`)** |
+| KLayout DRC (`sky130A_mr.drc`) | 482: `nwell.2a` 434, `m3.6` 40, `npc.2` 8 | n/a | **60: `m3.6` 54, `npc.2` 6, `nwell.2a` 0** |
+| Signoff antenna (OpenROAD `check_antennas`) | 16 nets / 22 pins | n/a | **10 nets / 10 pins** (Innovus native: 1) |
+| Magic DRC | 28,320,643 (5,551 outside SRAM) | n/a | NOT RUN |
+
+Attribution: b5h is a re-route from the start of P&R (capTable + clk_io latency), not an ECO of b5g, so `m3.6` 40 -> 54, `npc.2` 8 -> 6 and antenna 16/22 -> 10/10 are b5g-vs-b5h lineage differences that cannot be separated from the tap ECO without a b5h DRC run (not done). What the tap ECO itself changed is exactly measurable: `nwell.2a` 434 -> 0 (all 434 sat at x = 98.17-98.25 um), the 146 VPB islands -> 0 (DEF- and GDS-mode LVS), Innovus special-wire IMPVFC-92 144 -> 0, and the logic netlist, SDC, timing and power are unchanged.
+Remaining KLayout items (left for round 2, not fixed here): `m3.6` = 0.33 x 0.33 um met3 stubs (area ~0.109 um2 < 0.24) at the die edges (x 0.5-3.6 and 3595.9-3599.4 um, y 130-1722 um), i.e. the I/O pin stubs; `npc.2` = six 0.13 um npc spacing pairs inside the logic area at (1454.4,1127.4), (1524.3,1396.7), (1197.8,1195.3), (1781.5,1094.8), (1203.3,1189.9), (1499.1,1287.8) - cell-internal / abutment geometry, root cause not yet isolated.
+
+---
+
 # Physical verification (DRC + LVS + Magic) of the Innovus arm, Sky130 `rv32i_cpu_top` (step B7b, rerun on b5g)
 
 **Comparison run, measure and report only.** The layout was not modified. The b5d results further down are **superseded** (kept and labelled; run products in `pnr/commercial/signoff/drclvs/runs/innovus_superseded_b5d/`, report copies in `reports/superseded_b5a_b5d/`).

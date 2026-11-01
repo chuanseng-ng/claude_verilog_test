@@ -1,0 +1,4 @@
+# KLayout DRC report /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/innovus_b5j/kdrc/drc_violations.klayout.xml
+TOTAL_VIOLATION_ITEMS 60  RULES_VIOLATED 2
+        54  m3.6
+         6  npc.2
