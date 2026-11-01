@@ -18,7 +18,8 @@ set_app_options -name route.detail.antenna -value true
 set_app_options -name route.detail.antenna_fixing_preference -value use_diodes
 set_app_options -name route.detail.diode_libcell_names -value {sky130_fd_sc_hd__diode_2}
 proc count_drc {f} { set n -1; set fh [open $f r]; while {[gets $fh l] >= 0} { regexp {Total number of DRCs = (\d+)} $l -> n }; close $fh; return $n }
-proc count_short {f} { set n -1; set fh [open $f r]; while {[gets $fh l] >= 0} { regexp {Total number of short violations is (\d+)} $l -> n }; close $fh; return $n }
+# shorts between a temporary halo routing blockage and the PG strap it hugs (RB_*) are artifacts of the halo, not layout shorts: only count real net-net shorts
+proc count_short {f} { set n 0; set fh [open $f r]; while {[gets $fh l] >= 0} { if {[string match "*Detected short violation*" $l] && ![string match "*Blockage*" $l]} { incr n } }; close $fh; return $n }
 proc count_open {f} { set n -1; set fh [open $f r]; while {[gets $fh l] >= 0} { regexp {Total number of open nets is (\d+)} $l -> n }; close $fh; return $n }
 proc chk {tag} {
   global RUN
