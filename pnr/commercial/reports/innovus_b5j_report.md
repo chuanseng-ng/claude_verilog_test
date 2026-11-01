@@ -30,13 +30,15 @@ Checker after the fix: **untied n-well islands 146 -> 0.**
 | Conformal LEC (RTL and Genus goldens, +/- diodes) | never run | **EQUIVALENT, 5,597 compare points, 0 non-eq / 0 abort / 0 unknown; 4/4 negative controls caught** (`lec_innovus_conformal.md` B4j) |
 | StarRC (tuned ITF) nets | 35,088 | 35,088 (SPEF md5 differs by the 146 taps' parasitics) |
 | PT judge, own SDC, nom_tt setup / hold | +0.706 / +0.140 | **+0.706 / +0.140 (identical to 6 digits)**; power (PrimePower B) 69.5 mW both |
-| PT judge, own SDC, other 8 corners | see `sta` record | identical to b5h where b5h was recorded (nom_ss -7.766/-0.456, nom_ff +2.651/-0.310, min_tt +1.066/+0.139, max_tt +0.214/+0.140, max_ss -8.759/-0.744); min_ss -7.032/-0.239, min_ff +2.945/-0.446, max_ff +2.143/-0.129 |
-| PT judge, shared SDC, nom_tt | -0.456 / -2.200 | **-0.456 / -2.200 (identical)** |
+| PT judge, all 27 runs (own / shared / iolat SDC x 9 corners), setup WNS and hold WNS (+ hold-violator count) | b5h recorded | **identical in all 27 runs** (compared metrics.tsv setup_wns, setup_tns, hold_wns, hold_viol of every b5h/b5j pair: 0 differ) |
+|  own SDC | nom_tt +0.706/+0.140; ss/ff corners fail (SRAM tt-only model) | nom_tt +0.706/+0.140, min_tt +1.066/+0.139, max_tt +0.214/+0.140; nom_ss -7.766/-0.456, min_ss -7.032/-0.239, max_ss -8.759/-0.744; nom_ff +2.651/-0.310 (11 viol), min_ff +2.945/-0.446 (29), max_ff +2.143/-0.129 (2) |
+|  shared SDC | nom_tt -0.456/-2.200 | nom_tt -0.456/-2.200, min_tt +0.316/-2.046, max_tt -1.609/-2.396, nom_ss -8.455/-3.751, min_ss -7.470/-3.534, max_ss -9.761/-4.039, nom_ff +2.185/-1.459, min_ff +2.833/-1.351, max_ff +1.212/-1.608 |
+|  iolat SDC | nom_tt +1.322/-0.422 | nom_tt +1.322/-0.422, min_tt +2.094/-0.268, max_tt +0.169/-0.618, nom_ss -7.766/-1.973, min_ss -7.032/-1.756, max_ss -8.759/-2.261, nom_ff +3.963/+0.022, min_ff +4.462/+0.020, max_ff +2.990/+0.023 |
 
 Attribution: b5h is a re-route from the start of P&R, not an ECO of b5g, so KLayout `m3.6`/`npc.2` and antenna differ from b5g's by lineage; they could not be split from the tap ECO without a b5h DRC run. What the ECO changed is measured exactly (nwell.2a 434 -> 0, islands 146 -> 0, connectivity opens 144 -> 0) and timing, power, netlist and SDC did not move.
 Remaining KLayout items: `m3.6` = 0.33 x 0.33 um met3 squares (0.109 um2 < 0.24) at the die edges (x 0.5-3.6 and 3595.9-3599.4, y 130-1722), `npc.2` = six 0.13 um npc spacing pairs at (1454.4,1127.4), (1524.3,1396.7), (1197.8,1195.3), (1781.5,1094.8), (1203.3,1189.9), (1499.1,1287.8).
 
 ## 4. Host and process notes
-A host power loss (2026-10-31 night) lost the first tap-fix attempt; restarted from the verified copy. Innovus start-up/exit took 10-25 min under host memory thrash (kswapd / 100 % system time, load 40-97). Two licensed tools once started together (pgrep race) before the flock lock was introduced. Judge variants shared / iolat for the remaining corners were still running when this was written.
+A host power loss (2026-10-31 night) lost the first tap-fix attempt; restarted from the verified copy. Innovus start-up/exit took 10-25 min under host memory thrash (kswapd / 100 % system time, load 40-97). Two licensed tools once started together (pgrep race) before the flock lock was introduced. All 27 judge runs completed (2026-11-02 02:10).
 
 Out of scope, unchanged: max_cap/max_tran nets (480/110), 26 unconstrained mbist inputs, min/max capTables (round 2 / b5k).
