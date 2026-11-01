@@ -214,3 +214,11 @@ Run `pnr/commercial/impl/icc2/runs/b5i_icc2/` (copy of the b5e library; b5e unto
 
 Root cause of m4.5ab: the offending shapes are 0.3 um signal met4 wires and 0.33 um via3 pads 0.365-0.38 um from the 3.1 um PG straps. The ICC2 tech does contain the wide-metal table (`fat_table_threshold 0 3`, `fat_table_parallel_length 0 0.001`, `fat_table_spacing 0.3 0.3 0.3 0.4`, equal to the tech LEF), so the rule is not missing; ICC2 detail route and `check_routes` do not apply it between a signal wire and a PG stripe. The residual KLayout item is at the VGND strap start (1738.69-1741.79, y 942.93, bottom of the lowest met5 stripe) against a via-stack pad edge at y 942.63: a PDN geometry item, not routable.
 Met1 short: the net124 jog crossed the comb[158] wire on met1; it did not clear in b5e 05z (3 plain re-routes) but cleared once the 59 neighbouring nets were ripped up together with halo blockages (the router re-solved the region).
+
+### B5i Netgen LVS verdict (GDS-mode Magic extraction vs full.pnl.v, PIN_MODE=none) -- 2026-11-01
+| variant | b5e | b5i |
+|---|---|---|
+| as delivered (`supply1/0` declarations + case-colliding names untouched) | not equal (35,440 vs 35,441 nets; pin matching failed) | not equal (35,441 vs 35,440; pin matching failed) - the known artifacts, same class as b5e |
+| `_clean` (supply1/0 removed, case-colliding names made unique) | **not equal** (35,440 vs 35,441: the met1 short merged two nets) | **Circuits match uniquely** (35,441 vs 35,441 nets) |
+| `_merged` (clean + isolated well-tie islands renamed VPWR) | not equal (35,440 vs 35,441) | **Circuits match uniquely** (35,441 vs 35,441) |
+The b5e net-count difference of one was the met1 short (ex1c_comb[158] x ex1c_ex1b_reg_q[124]); with it gone the layout and netlist agree. Reports: `signoff/drclvs/reports/icc2_b5i_lvsgds{,_clean,_merged}_netgen.rpt.full`.
