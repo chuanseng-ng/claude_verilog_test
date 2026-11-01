@@ -1,5 +1,25 @@
 # Conformal LEC of the post-route Innovus netlist, Sky130 `rv32i_cpu_top` (B4g: b5g current; B4f: b5d, B4e: b5c and B4d: b5b superseded)
 
+
+## B4j: `b5j_innovus` (CURRENT: b5h routed + 146 well-tie taps)
+
+**Verdict: EQUIVALENT, all four compares (RTL and Genus goldens, with and without the 262 diodes); all four negative controls are caught.** Same tool, method and settings as B4g
+(Conformal 24.10-p100, `lec -nogui -xl`, flat compares, no `fv_map`, no constraints, no waivers, same do-files/RTL list/defines incl. `SRAM_SKY130`, same Genus golden). This is also the first LEC of the b5h lineage (b5h itself never had one; its logic netlist is identical to b5j's).
+Revised netlist: `pnr/commercial/impl/innovus/runs/b5j_innovus/out/rv32i_cpu_top.nl.v`, md5 `0260794cb05992297aeba6d46821a5b4` (differs from b5h's file only in the comment header: the non-comment text has md5 `6f3a123afa3c95f111d47cb192666e7a` in both). The 146 added cells are `tapvpwrvgnd_1`, physical-only, excluded from the logical netlist by `saveNetlist -excludeCellInst`.
+Command: `flock /tmp/claude-1001/licensed_tool.lock make -C pnr/commercial/signoff/lec/conformal lec-innovus-all INNTAG=b5j_innovus STEP=b4j` (tags `b4j_*`, logs copied to `signoff/lec/conformal/reports/b4j_*`).
+
+| Run | Golden | Revised | EQ points | Unmapped | Wall, RSS |
+|---|---|---|---|---|---|
+| `b4j_innovus_vs_rtl` | RTL | b5j | 5,597 = 379 PO + 5,208 DFF + 10 SRAM BBOX | golden 947 DFF unreachable + 81 not-mapped (identical to B4g); revised 262 diode BBOX unreachable | 3:55 (host loaded), 375 MB |
+| `b4j_innovus_vs_genus` | Genus netlist | b5j | 5,597 | revised 262 diode BBOX unreachable | 0:24, 272 MB |
+| `b4j_innovus_nodiode_vs_rtl` | RTL | b5j, diodes stripped | 5,597 | golden only (same as above) | 1:01, 376 MB |
+| `b4j_innovus_nodiode_vs_genus` | Genus netlist | stripped | 5,597 | none | 0:22, 270 MB |
+Non-equivalent 0, aborted 0, unknown 0 in all four (`No of abort points = 0`, `No of unknown points = 0`; `B4D_RTL_VERDICT`/`B4D_GENUS_VERDICT: EQUIVALENT`).
+
+Negative controls (mutants built by `scripts/mk_mutant_innovus.py` from the b5j netlist, same anchors as B4g; diffs `reports/b4j_mutant_*.diff.txt`, 7 and 8 lines): `make lec-innovus-negctl` printed
+`negctl rtl_fwdb_inv / rtl_swap (vs RTL): NON-EQUIVALENT (good)` and `genus_fwdb_inv / genus_swap (vs Genus netlist): NON-EQUIVALENT (good)`: 4 of 4 caught.
+Caveats as before: logical netlist only (the tap ECO, fill and routing are other steps' results), single tt library view, LEC says netlist == RTL, not that the RTL is right. Unmapped-point lists were not copied (counts above come from `lec.log`).
+
 ## B4g: `b5g_innovus` (CURRENT, b5f + 232 axi_rdata_i input repeaters)
 
 **Verdict: EQUIVALENT, both compares, with and without the diodes; all four negative controls are caught.** Same tool, method and settings as the sections below
