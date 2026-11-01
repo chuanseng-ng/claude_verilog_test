@@ -195,3 +195,22 @@ Netlist changes relative to DC (function unchanged by construction, **not formal
 ## Not done / open
 - Neutral StarRC->PrimeTime judging, ss/ff corners, Magic/KLayout DRC and Netgen LVS on the ICC2 GDS, Formality of the ICC2 netlist against RTL, IR drop (RedHawk), a second timing-repair pass to clear the -0.0046 ns path.
 - Reproduce: `make -C pnr/commercial/impl/icc2 all` (needs `pnr/commercial/pdk/sky130/build/{ndm,nxtgrd,tech}` from `make part2a`/the TLU+ queue and the DC netlist); one stage: `scripts/run_stage.sh 06_finish b5a_icc2`.
+
+## B5i: in-place routing ECO on b5e (met1 short + met4 m4.5ab) -- 2026-11-01
+
+Run `pnr/commercial/impl/icc2/runs/b5i_icc2/` (copy of the b5e library; b5e untouched). Base = b5e `05y_repair`, no re-place, no opt. Script `scripts/05i_eco.tcl`:
+72 temporary 0.1 um met4 halo blockages on the >3 um PG straps + rip-up/reroute (route_eco, then route_detail incremental) of 61 nets (the 2 shorted nets + 59 nets within 0.4 um of a strap, from `scripts/met4_near_strap.py` and the KLayout marker positions); blockages removed before save.
+
+| | b5e | b5i |
+|---|---|---|
+| check_routes DRCs / check_lvs shorts / opens / antenna (native) | 1 / 1 / 0 / 0 | **0 / 0 / 0 / 0** (cleared at pass A1; nets rerouted: 61) |
+| native setup / hold WNS (tt, own RC) | +0.0725 / +0.0037 | +0.0746 / **-0.0016** (1 path) |
+| native power | 55.8 mW | 55.8 mW |
+| li1 stubs / n-well islands / GDS pins | 32 / 0 / 503 | 31 / 0 / 503 |
+| KLayout DRC | 132 (`m4.5ab`) | **1** (`m4.5ab`) |
+| nl.v md5 | 1ee342ed... | 5b3934b4... (differs only in the `Generated on` and `Write Command` header comments; md5 of the rest 69919654... for both; pg.nl.v and full.pnl.v likewise identical) |
+| StarRC | `SX-0955` shorted nets warning | no short warning (nom/min/max) |
+| judge (shared SDC) nom_tt setup / hold | +0.0855 / -1.2264 | +0.0851 / -1.2282 |
+
+Root cause of m4.5ab: the offending shapes are 0.3 um signal met4 wires and 0.33 um via3 pads 0.365-0.38 um from the 3.1 um PG straps. The ICC2 tech does contain the wide-metal table (`fat_table_threshold 0 3`, `fat_table_parallel_length 0 0.001`, `fat_table_spacing 0.3 0.3 0.3 0.4`, equal to the tech LEF), so the rule is not missing; ICC2 detail route and `check_routes` do not apply it between a signal wire and a PG stripe. The residual KLayout item is at the VGND strap start (1738.69-1741.79, y 942.93, bottom of the lowest met5 stripe) against a via-stack pad edge at y 942.63: a PDN geometry item, not routable.
+Met1 short: the net124 jog crossed the comb[158] wire on met1; it did not clear in b5e 05z (3 plain re-routes) but cleared once the 59 neighbouring nets were ripped up together with halo blockages (the router re-solved the region).
