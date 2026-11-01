@@ -1,8 +1,10 @@
 #!/bin/bash
-# StarRC nom/min/max for Innovus b5j (arm innovusb5j), strictly one at a time; skips corners already complete.  Waits for every other licensed tool (gate_licensed.sh).
+# StarRC nom/min/max for Innovus b5j (arm innovusb5j), strictly one at a time; skips corners already complete.
+# Every StarXtract launch holds the host-wide licensed-tool lock for the whole tool lifetime (flock; pgrep checks alone are racy), then applies the memory gate.
 cd "$(dirname "$0")/.."
+LOCK=/tmp/claude-1001/licensed_tool.lock
 for c in ${CORNERS:-nom min max}; do
   [ -f runs/innovusb5j_$c/star/.starrc_complete ] && continue
-  GATE_LIGHT=1 ../../impl/innovus/scripts/gate_licensed.sh || exit 1
-  echo "$(date +%T) start starrc $c"; scripts/run_starrc.sh innovusb5j $c > runs/innovusb5j_$c.out 2>&1; echo "$(date +%T) end starrc $c rc=$?"
+  echo "$(date +%T) wait lock starrc $c"
+  flock $LOCK bash -c "GATE_LIGHT=1 ../../impl/innovus/scripts/gate_host.sh || exit 1; echo \"\$(date +%T) start starrc $c\"; scripts/run_starrc.sh innovusb5j $c > runs/innovusb5j_$c.out 2>&1; echo \"\$(date +%T) end starrc $c rc=\$?\""
 done
