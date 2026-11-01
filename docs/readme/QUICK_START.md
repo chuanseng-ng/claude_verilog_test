@@ -189,6 +189,7 @@ nix develop --command make -C tb/cocotb/soc FPGA=1 soc_all_ci
 
 # Struct-member select gate (blocking in qa-checks; PR #275)
 python3 tools/verif/check_struct_member_select.py -v
+python3 tools/verif/check_elab_strict.py        # strict pyslang elaboration (use-before-declare etc.)
 
 # FPGA Stage 0 open-tool synthesis: one job per call (see the script header)
 tools/fpga/stage0_synth.sh <repo-root> <out-dir> <gpu|nogpu> <xc7|ecp5>
