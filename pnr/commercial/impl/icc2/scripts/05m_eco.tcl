@@ -206,14 +206,27 @@ if {"C" in $SECT} { if {[catch {
     set sp [get_timing_paths -delay_type max -through $pin -max_paths 1]
     set ssl 9.9
     if {[sizeof_collection $sp]} { set ssl [get_attribute $sp slack] }
-    if {$ssl > 0.30} { set lc sky130_fd_sc_hd__dlygate4sd1_1 } elseif {$ssl > 0.15} { set lc sky130_fd_sc_hd__buf_1 } else { puts "C_SKIP: $ep setup slack $ssl too small"; continue }
+    if {$ssl > 0.15} { set lc sky130_fd_sc_hd__buf_1 } elseif {$ssl > 0.15} { set lc sky130_fd_sc_hd__buf_1 } else { puts "C_SKIP: $ep setup slack $ssl too small"; continue }
     puts "C_PLAN: $ep setup_slack=$ssl cell=$lc"
-    if {![catch {add_buffer -new_cell_names HOLDBUF_$nb -new_net_names HOLDNET_$nb -lib_cell [get_lib_cells */$lc] $pin} e]} { incr nb } else { puts "C_WARN: $ep: $e" }
+    if {![catch {add_buffer -new_cell_names HOLDBUF_$nb -new_net_names HOLDNET_$nb -lib_cell [get_lib_cells */$lc] $pin} e]} {
+      # add_buffer drops the cell off the row grid on top of neighbours: re-seat it on the endpoint flop's row, right of the flop, orientation of the flop
+      set fc [get_cells -of_objects $pin -filter "name!~HOLDBUF*"]
+      set fb [get_attribute $fc bbox]
+      set_cell_location HOLDBUF_$nb -coordinates [list [lindex $fb 0 0] [lindex $fb 0 1]]
+      legalize_placement -cells [get_cells HOLDBUF_$nb]
+      puts "C_PLACED: HOLDBUF_$nb at [get_attribute [get_cells HOLDBUF_$nb] bbox]"
+      incr nb
+    } else { puts "C_WARN: $ep: $e" }
   }
   puts "C_BUFFERS: $nb"
   if {$nb > 0} {
-    legalize_placement
-    route_clean C
+    redirect -file $R/m_legality_C.txt { check_legality -verbose }
+    set rc_ [route_clean C]
+    if {[lindex $rc_ 0] != 0 || [lindex $rc_ 1] != 0 || [lindex $rc_ 2] != 0} {
+      puts "C_REVERT: hold buffer left DRCs=[lindex $rc_ 0] shorts=[lindex $rc_ 1] opens=[lindex $rc_ 2]; removing the HOLDBUF cells"
+      catch {remove_buffers [get_cells HOLDBUF_*]} e; puts "C_REVERT rc: $e"
+      chk Crev
+    }
   }
   tim C
   snapshot 05m_hold
