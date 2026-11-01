@@ -8,7 +8,10 @@
 # Every section is wrapped in catch; labels 05m_pdn 05m_ant 05m_drv 05m_hold 05m_exp are written as they complete.  Env: B5M_SECTIONS (default "P A B C E").
 source [file join [file dirname [info script]] common.tcl]
 set t0 [clock seconds]
-open_stage 05i_eco 05m_eco
+set B5M_IN 05i_eco
+if {[info exists ::env(B5M_IN)]} { set B5M_IN $::env(B5M_IN) }
+puts "M_BASE: $B5M_IN"
+open_stage $B5M_IN 05m_eco
 set_app_options -name route.detail.drc_convergence_effort_level -value high
 catch {set_app_options -name route.detail.repair_shorts_over_macros_effort_level -value high}
 set_app_options -name route.detail.optimize_wire_via_effort_level -value medium
@@ -199,7 +202,13 @@ if {"C" in $SECT} { if {[catch {
   foreach ep $eps {
     set pin [get_pins -quiet [list $ep]]
     if {[sizeof_collection $pin] == 0} continue
-    if {![catch {add_buffer -new_cell_names HOLDBUF_$nb -new_net_names HOLDNET_$nb -lib_cell [get_lib_cells */sky130_fd_sc_hd__dlygate4sd1_1] $pin} e]} { incr nb } else { puts "C_WARN: $ep: $e" }
+    # pick the delay element from the endpoint's own setup slack (tt): enough margin for dlygate4sd1_1 (~0.18 ns), else buf_1 (~0.08 ns), else skip
+    set sp [get_timing_paths -delay_type max -through $pin -max_paths 1]
+    set ssl 9.9
+    if {[sizeof_collection $sp]} { set ssl [get_attribute $sp slack] }
+    if {$ssl > 0.30} { set lc sky130_fd_sc_hd__dlygate4sd1_1 } elseif {$ssl > 0.15} { set lc sky130_fd_sc_hd__buf_1 } else { puts "C_SKIP: $ep setup slack $ssl too small"; continue }
+    puts "C_PLAN: $ep setup_slack=$ssl cell=$lc"
+    if {![catch {add_buffer -new_cell_names HOLDBUF_$nb -new_net_names HOLDNET_$nb -lib_cell [get_lib_cells */$lc] $pin} e]} { incr nb } else { puts "C_WARN: $ep: $e" }
   }
   puts "C_BUFFERS: $nb"
   if {$nb > 0} {

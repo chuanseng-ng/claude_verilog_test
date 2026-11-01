@@ -90,7 +90,7 @@ $(RUN)/lvsgds/extract/env.tcl: dirs
 	   echo 'set ::env(SAVE_SPICE) $(RUN)/lvsgds/extract/$(TOP).spice'; } > $@
 lvs-gds-extract: $(RUN)/lvsgds/extract/env.tcl
 	$(CTR) pins_$(ARM) klayout -b -r $(S)/gds_pin_ports.py -rd gds=$(GDS_PINS) -rd top=$(TOP) -rd out=$(RUN)/lvsgds/pin_ports.tcl
-	$(call guarded,lvsgds_extract,5,5400,bash $(S)/in_container/magic_step.sh $< $(RUN)/lvsgds/extract $(S)/magic/gds_abs_extract.tcl)
+	$(call guarded,lvsgds_extract,5,$(or $(EXTRACT_TIMEOUT),5400),bash $(S)/in_container/magic_step.sh $< $(RUN)/lvsgds/extract $(S)/magic/gds_abs_extract.tcl)
 # netgen on the GDS-mode extraction. Variants (measurement copies, the layout/netlist inputs are never edited):
 #   NG_TAG=            as extracted vs PNL_IN as delivered
 #   NG_TAG=_clean      PNL_IN without its `supply1/0` declarations (Netgen makes phantom devices of them) and with case-colliding net
