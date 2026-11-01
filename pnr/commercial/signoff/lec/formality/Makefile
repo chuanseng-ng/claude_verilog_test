@@ -124,3 +124,30 @@ lec-icc2-b5i-real:
 lec-icc2-b5i-negctl:
 	$(MAKE) lec-icc2-negctl $(B5I)
 lec-icc2-b5i: lec-icc2-b5i-real lec-icc2-b5i-negctl
+
+# ---------------- B4f: syn v2 (MCMM) DC netlist.  Same fm_lec.tcl; v1 runs/reports untouched (tags b4a2_*).  Needs DC TAG b3c_dc_mcmm. ----------------
+#   make lec-dc-v2 lec-dc-v2-negctl lec-dc-v2-svfprobe     (4 negative controls: 2 netlist mutants + 2 RTL/SVF-guidance probes, all must FAIL)
+V2DC  ?= b3c_dc_mcmm
+V2NL  := $(REPO)/pnr/commercial/syn/dc/runs/$(V2DC)/out/rv32i_cpu_top.nl.v
+.PHONY: lec-dc-v2 lec-dc-v2-negctl lec-dc-v2-svfprobe
+lec-dc-v2:
+	$(MAKE) lec-dc DCTAG=$(V2DC) TAG=b4a2_dc_v2_vs_rtl
+lec-dc-v2-negctl:
+	@mkdir -p $(HERE)/runs
+	python3 -I $(HERE)/scripts/mk_mutant_v2.py $(V2NL) $(HERE)/runs/mutant_v2_fwdb_inv.nl.v fwdb_inv
+	python3 -I $(HERE)/scripts/mk_mutant_v2.py $(V2NL) $(HERE)/runs/mutant_v2_swap.nl.v swap
+	-$(MAKE) lec-dc DCTAG=$(V2DC) IMPL=$(HERE)/runs/mutant_v2_fwdb_inv.nl.v TAG=b4a2_negctl_fwdb_inv
+	-$(MAKE) lec-dc DCTAG=$(V2DC) IMPL=$(HERE)/runs/mutant_v2_swap.nl.v TAG=b4a2_negctl_swap
+	@for t in b4a2_negctl_fwdb_inv b4a2_negctl_swap; do \
+	  if grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log; then echo "negctl $$t: NON-EQUIVALENT (good)"; \
+	  else echo "negctl $$t: NOT DETECTED -- LEC verdict is untrustworthy"; exit 1; fi; done
+RTLMUT2 := $(HERE)/runs/rtlmut_v2
+lec-dc-v2-svfprobe:
+	@mkdir -p $(RTLMUT2)
+	sed '535s/<= fwd_b_sel_pre_w;/<= ~fwd_b_sel_pre_w;/' $(REPO)/rtl/cpu/core/rv32i_core.sv > $(RTLMUT2)/rv32i_core_m2.sv
+	sed "335s/flush_ex_mem  = 1'b0;/flush_ex_mem  = 1'b1;/" $(REPO)/rtl/cpu/core/rv32i_pipeline_pkg.sv > $(RTLMUT2)/rv32i_pipeline_pkg_m3.sv
+	cmp -s $(RTLMUT2)/rv32i_core_m2.sv $(REPO)/rtl/cpu/core/rv32i_core.sv && { echo "m2 sed anchor missed"; exit 1; } || true
+	cmp -s $(RTLMUT2)/rv32i_pipeline_pkg_m3.sv $(REPO)/rtl/cpu/core/rv32i_pipeline_pkg.sv && { echo "m3 sed anchor missed"; exit 1; } || true
+	-$(MAKE) lec-dc DCTAG=$(V2DC) TAG=b4a2_rtlmut_m2_merge RTL_SUBST=$(REPO)/rtl/cpu/core/rv32i_core.sv=$(RTLMUT2)/rv32i_core_m2.sv
+	-$(MAKE) lec-dc DCTAG=$(V2DC) TAG=b4a2_rtlmut_m3_const RTL_SUBST=$(REPO)/rtl/cpu/core/rv32i_pipeline_pkg.sv=$(RTLMUT2)/rv32i_pipeline_pkg_m3.sv
+	@for t in b4a2_rtlmut_m2_merge b4a2_rtlmut_m3_const; do grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log && echo "svfprobe $$t: FAILED (good)" || { echo "svfprobe $$t: PASSED -- guidance not verified"; exit 1; }; done

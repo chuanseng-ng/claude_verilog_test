@@ -1,0 +1,50 @@
+ 
+****************************************
+Report : timing
+        -path full
+        -delay min
+        -max_paths 1
+Design : rv32i_cpu_top
+Scenario(s): hold_ff
+Version: X-2025.06-SP3
+Date   : Sun Nov  1 23:28:17 2026
+****************************************
+
+Information: Some cells in the scenario are using inferred operating conditions.
+
+ * Some/all delay information is back-annotated.
+
+ # A fanout number of 1000 was used for high fanout net computations.
+Wire Load Model Mode: Inactive.
+
+  Startpoint: u_mbist_ctrl_tg_addr_q_reg_1__6_
+              (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_tg_addr_q_reg_2__6_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Scenario: hold_ff
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                                                Incr       Path      Voltage
+  -------------------------------------------------------------------------------------------------
+  clock clk_i (rise edge)                                              0.00       0.00      
+  clock network delay (ideal)                                          1.00       1.00      
+  u_mbist_ctrl_tg_addr_q_reg_1__6_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00 #     1.00 r    1.95
+  u_mbist_ctrl_tg_addr_q_reg_1__6_/Q (sky130_fd_sc_hd__dfxtp_1)        0.17       1.17 r    1.95
+  u_mbist_ctrl_tg_addr_q_reg_2__6_/D (sky130_fd_sc_hd__dfxtp_1)        0.00 *     1.17 r    1.95
+  data arrival time                                                               1.17      
+
+  clock clk_i (rise edge)                                              0.00       0.00      
+  clock network delay (ideal)                                          1.00       1.00      
+  clock uncertainty                                                    0.20       1.20      
+  u_mbist_ctrl_tg_addr_q_reg_2__6_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00       1.20 r    
+  library hold time                                                   -0.02       1.18      
+  data required time                                                              1.18      
+  -------------------------------------------------------------------------------------------------
+  data required time                                                              1.18      
+  data arrival time                                                              -1.17      
+  -------------------------------------------------------------------------------------------------
+  slack (VIOLATED)                                                               -0.01      
+
+
+1

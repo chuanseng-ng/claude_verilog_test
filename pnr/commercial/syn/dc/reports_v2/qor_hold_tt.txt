@@ -1,0 +1,142 @@
+ 
+****************************************
+Report : qor
+Design : rv32i_cpu_top
+Scenario(s): setup_ss setup_tt hold_ff hold_tt
+Version: X-2025.06-SP3
+Date   : Sun Nov  1 23:28:17 2026
+****************************************
+
+
+  Scenario 'setup_ss'
+  Timing Path Group 'PIPELINE'
+  -----------------------------------
+  Levels of Logic:              33.00
+  Critical Path Length:         12.51
+  Critical Path Slack:           0.00
+  Critical Path Clk Period:     13.33
+  Total Negative Slack:          0.00
+  No. of Violating Paths:        0.00
+  Worst Hold Violation:          0.00
+  Total Hold Violation:          0.00
+  No. of Hold Violations:        0.00
+  -----------------------------------
+
+
+  Scenario 'setup_tt'
+  Timing Path Group 'PIPELINE'
+  -----------------------------------
+  Levels of Logic:               2.00
+  Critical Path Length:          3.70
+  Critical Path Slack:           2.35
+  Critical Path Clk Period:     13.33
+  Total Negative Slack:          0.00
+  No. of Violating Paths:        0.00
+  Worst Hold Violation:          0.00
+  Total Hold Violation:          0.00
+  No. of Hold Violations:        0.00
+  -----------------------------------
+
+
+  Scenario 'hold_ff'
+  Timing Path Group 'PIPELINE'
+  -----------------------------------
+  Levels of Logic:               2.00
+  Critical Path Length:          3.26
+  Critical Path Slack:           2.84
+  Critical Path Clk Period:     13.33
+  Total Negative Slack:          0.00
+  No. of Violating Paths:        0.00
+  Worst Hold Violation:         -0.01
+  Total Hold Violation:         -0.12
+  No. of Hold Violations:       22.00
+  -----------------------------------
+
+
+  Scenario 'hold_tt'
+  Timing Path Group 'PIPELINE'
+  -----------------------------------
+  Levels of Logic:               2.00
+  Critical Path Length:          3.70
+  Critical Path Slack:           2.35
+  Critical Path Clk Period:     13.33
+  Total Negative Slack:          0.00
+  No. of Violating Paths:        0.00
+  Worst Hold Violation:          0.00
+  Total Hold Violation:          0.00
+  No. of Hold Violations:        0.00
+  -----------------------------------
+
+
+  Cell Count
+  -----------------------------------
+  Hierarchical Cell Count:          1
+  Hierarchical Port Count:        353
+  Leaf Cell Count:              35644
+  Buf/Inv Cell Count:            8490
+  Buf Cell Count:                2738
+  Inv Cell Count:                5752
+  CT Buf/Inv Cell Count:            0
+  Combinational Cell Count:     30350
+  Sequential Cell Count:         5294
+  Macro Count:                      0
+  -----------------------------------
+
+
+  Area
+  -----------------------------------
+  Combinational Area:   178796.476638
+  Noncombinational Area: 107281.638353
+  Buf/Inv Area:          37048.030980
+  Total Buffer Area:         15041.93
+  Total Inverter Area:       22006.10
+  Macro/Black Box Area: 1907125.468750
+  Net Area:                  0.000000
+  Net XLength        :     1706378.12
+  Net YLength        :     1281287.00
+  -----------------------------------
+  Cell Area:           2193203.583741
+  Design Area:         2193203.583741
+  Net Length        :      2987665.00
+
+
+  Design Rules
+  -----------------------------------
+  Total Number of Nets:         36134
+  Nets With Violations:          7242
+  Max Trans Violations:          6970
+  Max Cap Violations:             541
+  Max Fanout Violations:           72
+  -----------------------------------
+
+
+  Hostname: eda.ic
+
+  Compile CPU Statistics
+  -----------------------------------------
+  Resource Sharing:                    9.17
+  Logic Optimization:                 16.53
+  Mapping Optimization:               56.82
+  -----------------------------------------
+  Overall Compile Time:              307.74
+  Overall Compile Wall Clock Time:   333.57
+
+  --------------------------------------------------------------------
+
+  Scenario: setup_ss   WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+  Scenario: setup_tt   WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+  Scenario: hold_ff   WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+  Scenario: hold_tt   WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+  Design  WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+
+
+  Scenario: setup_ss  (Hold)  WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+  Scenario: setup_tt  (Hold)  WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+  Scenario: hold_ff  (Hold)  WNS: 0.01  TNS: 0.12  Number of Violating Paths: 22
+  Scenario: hold_tt  (Hold)  WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+  Design (Hold)  WNS: 0.01  TNS: 0.12  Number of Violating Paths: 22
+
+  --------------------------------------------------------------------
+
+
+1
