@@ -102,6 +102,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | `docs/verification/VERIFICATION_PLAN.md` | Verification strategy (RTL + physical design) |
 | `docs/verification/PROPRIETARY_SIM_FLOW.md` | VCS / Xcelium setup, regression run, portability rules (EDA hosts without nix) |
 | `docs/verification/DQC_FLOW.md` | Local SpyGlass lint/CDC/RDC + Cadence HAL flow (`make -C dqc ...`), waivers, licence matrix, open RTL findings |
+| `docs/XEZIM_EVALUATION.md` | Measured evaluation of xezim as secondary compile/sim tool vs Verilator/VCS/Xcelium/slang: not adopted for regression; pyslang recommended for use-before-declare (bead `qd9l`) |
 | `docs/RANDOM_TESTS_STATUS.md` | Random instruction test results and guide |
 | `fixes/FIXES_INDEX.md` | ⭐ Central reference for all RTL bug fixes |
 
