@@ -43,6 +43,9 @@ if {[lsearch $PH mc] >= 0} {
   set CT $REPO/pnr/commercial/impl/innovus/captbl6
   set HDLIB "$::env(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/lib"
   set SRAMLIB "$REPO/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+  # Innovus keeps clock latencies (clk_io network 3.295, source 1.0) in each view's latency.sdc, NOT in the mode SDC: a new view starts with an EMPTY one (first b5k run: clk_io latency 0 in the new views,
+  # hold -1.8 ns / setup -2.4 ns that are not real).  Give every new view the av_tt file (kept in constraints/).
+  set LATF $REPO/pnr/commercial/constraints/sky130_cpu_innovus_b5k_latency.sdc
   create_library_set -name lib_ff -timing [list $HDLIB/sky130_fd_sc_hd__ff_n40C_1v95.lib $SRAMLIB]
   create_rc_corner -name rc_min -temperature 25 -cap_table $CT/sky130A_min_li1m1.captbl
   create_rc_corner -name rc_max -temperature 25 -cap_table $CT/sky130A_max_li1m1.captbl
@@ -50,10 +53,10 @@ if {[lsearch $PH mc] >= 0} {
   create_delay_corner -name dc_ff_nom -library_set lib_ff -rc_corner rc_nom
   create_delay_corner -name dc_ff_min -library_set lib_ff -rc_corner rc_min
   create_delay_corner -name dc_ff_max -library_set lib_ff -rc_corner rc_max
-  create_analysis_view -name av_tt_max -constraint_mode func -delay_corner dc_tt_max
-  create_analysis_view -name av_ff_nom -constraint_mode func -delay_corner dc_ff_nom
-  create_analysis_view -name av_ff_min -constraint_mode func -delay_corner dc_ff_min
-  create_analysis_view -name av_ff_max -constraint_mode func -delay_corner dc_ff_max
+  create_analysis_view -name av_tt_max -constraint_mode func -delay_corner dc_tt_max -latency_file $LATF
+  create_analysis_view -name av_ff_nom -constraint_mode func -delay_corner dc_ff_nom -latency_file $LATF
+  create_analysis_view -name av_ff_min -constraint_mode func -delay_corner dc_ff_min -latency_file $LATF
+  create_analysis_view -name av_ff_max -constraint_mode func -delay_corner dc_ff_max -latency_file $LATF
   set_analysis_view -setup {av_tt av_tt_max} -hold {av_tt av_ff_nom av_ff_min av_ff_max}
   puts "K_MMMC: views [all_analysis_views]"
   extractRC
