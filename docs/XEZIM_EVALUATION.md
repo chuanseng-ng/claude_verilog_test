@@ -100,7 +100,7 @@ Gap: Verilator and sv2v accept use-before-declare, while VCS and Xcelium reject 
 Limits:
 - **`--ignore-unknown-modules` hides missing modules** (measured: missing-module control exits 0). Macro arms need it because macro models aren't in the file lists. Use it only there, or add macro stubs.
 - Testbench code wasn't checked. Default warning set only; stricter `-Wextra` not evaluated.
-- Trial used a throwaway script. No gate was added: that's decision 1 in section 9.
+- This section reports the trial. The gate that followed is `tools/verif/check_elab_strict.py`, clean on its 6 arms: 3 defaults, FPGA with `rtl/fpga/*.sv`, Sky130 and ASAP7 `__pnr__`.
 
 ## 6. Differentiators (measured)
 
@@ -124,7 +124,7 @@ Limits:
 | **Yosys `sim`** | Race-free cycle model, proved useful in `u99` | Niche; netlist only | Keep for GLS triage |
 | **sv2v + Yosys** | Sky130 fabric flow | Silent on missing modules; slow on SoC (yosys ~10 min) | Unchanged, synthesis only |
 | **Synlig** | CPU macro baseline | Proven silent struct-select defects | Guarded, per existing gates |
-| **pyslang** | Strictest measured, fastest, already pinned | Elaboration only; `--ignore-unknown-modules` trap | **Add as CI gate** |
+| **pyslang** | Strictest measured, fastest, already pinned | Elaboration only; `--ignore-unknown-modules` trap | **Blocking CI gate** (`lvdk`) |
 | **SpyGlass / HAL** | Deep lint | Local only; CDC/RDC core rules not run | Unchanged |
 
 Xezim claims not supported by this work: README near-parity with commercial sim vs `NOTES.md:3288` "4-5x faster" reference; README sv-tests 99.0 % (0.11.0) vs checked-in 91.3 % (0.8.1); README "keep warm cache on" vs `--help` "EXPERIMENTAL, off by default"; `Cargo.toml` "MIT OR Apache-2.0" vs `LICENSE` Apache-2.0.
@@ -132,7 +132,7 @@ Xezim claims not supported by this work: README near-parity with commercial sim 
 ## 8. Improvement areas
 
 **This repo (independent of xezim):**
-1. Add pyslang strict-elaboration gate (section 5). Closes the use-before-declare CI gap.
+1. Pyslang strict-elaboration gate (section 5): done, bead `lvdk`. Closes the use-before-declare CI gap.
 2. `uv.lock` pins cocotb 2.0.1 while `requirements.txt` says `<2.0`.
 3. `sim/Makefile:90-91, 124-125` list `mem_collar.sv` and `mbist_ctrl.sv` twice; yosys fails on sv2v output unless de-duplicated (those two lists may serve different targets: check before editing).
 4. Stale docs: `docs/CI_CD_WORKFLOW.md:533` suggests Icarus; `docs/verification/VERIFICATION_PLAN.md:402` says "Verilator + SDF", which is not implemented. Icarus remains in `flake.nix:203` + `tb/cocotb/cpu/Makefile:101`.
@@ -152,10 +152,10 @@ Xezim claims not supported by this work: README near-parity with commercial sim 
 | Compile / elaboration check | **Use pyslang instead** |
 
 Open human decisions:
-1. Add the pyslang gate to CI (proposed: blocking, default arm, no ignore flag).
-2. Report section 4 and section 3 upstream (public action).
-3. Run the xezim-core prototype (plan written, not started).
-4. Whether Phase 3 is ever wanted, which needs cocotb 2 migration or accepting the shim.
+1. **Decided:** pyslang gate added, blocking, on 6 arms (`tools/verif/check_elab_strict.py`, bead `lvdk`).
+2. **Decided:** upstream reports drafted for the user to post from their own account (bead `gxg0`).
+3. **Deferred:** xezim-core prototype, revisit after upstream responds (bead `1ljh`).
+4. **Deferred:** Phase 3, until the section 4 miscompile is fixed and a cocotb route exists (bead `9xn3`).
 
 ## 10. What was NOT verified
 

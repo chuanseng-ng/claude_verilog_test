@@ -151,7 +151,7 @@ clear of them, because CI only runs Verilator.
 5. **LRM 9.2.2.4:** a variable written by `always_ff` must not also be written by `initial` or a declaration
    initialiser. VCS rejects it with `ICPD`.
 6. **Use-before-declare in RTL is an RTL bug.** VCS (`IND`/`IPDW`) and Xcelium (`UNDIDN`/`DUPIMP`) reject
-   it, even though Verilator accepts it.
+   it, even though Verilator accepts it. CI now catches this with `tools/verif/check_elab_strict.py` (bead `lvdk`).
 7. **Zero-delay races.** Logic that depends on the delta order between a clock and a gated copy of it is not
    race-free. The `dft_clk_switch` enable latch was one such case, failing only on Xcelium.
 

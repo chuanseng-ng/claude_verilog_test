@@ -20,6 +20,8 @@ Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project.
 
 Per-phase completion records → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md) and [`docs/PHASE_STATUS.md`](docs/PHASE_STATUS.md).
 
+**Strict elaboration rule (bead `lvdk`; blocking `qa-checks` gate)**: `tools/verif/check_elab_strict.py` runs pyslang over `soc_top`, `rv32i_cpu_top` and `gpu_top` on 6 arms (3 default, FPGA, 2 macro), because Verilator and sv2v accept use-before-declare while VCS and Xcelium reject it. Add a new define arm to its `ARMS` table. Only macro arms may use `--ignore-unknown-modules`, which also hides genuinely missing modules.
+
 ## Project Phases
 
 See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for current status.
