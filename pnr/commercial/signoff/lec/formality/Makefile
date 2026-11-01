@@ -151,3 +151,15 @@ lec-dc-v2-svfprobe:
 	-$(MAKE) lec-dc DCTAG=$(V2DC) TAG=b4a2_rtlmut_m2_merge RTL_SUBST=$(REPO)/rtl/cpu/core/rv32i_core.sv=$(RTLMUT2)/rv32i_core_m2.sv
 	-$(MAKE) lec-dc DCTAG=$(V2DC) TAG=b4a2_rtlmut_m3_const RTL_SUBST=$(REPO)/rtl/cpu/core/rv32i_pipeline_pkg.sv=$(RTLMUT2)/rv32i_pipeline_pkg_m3.sv
 	@for t in b4a2_rtlmut_m2_merge b4a2_rtlmut_m3_const; do grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log && echo "svfprobe $$t: FAILED (good)" || { echo "svfprobe $$t: PASSED -- guidance not verified"; exit 1; }; done
+
+# ---------------- B5m (b5i + antenna diodes + net-name hygiene; supply-statement-free export): same recipe, outputs tagged b5m_* ----------------
+#   make lec-icc2-b5m            (b) vs DC, (a) vs RTL+SVF, nodiode variants (556 antenna + 115 port diodes stripped), 4 negative controls
+B5M := ICC2RUN=b5m_icc2 PFX=b5m MUTP=$(HERE)/runs/mutant_b5m_icc2 STRIPNL=$(HERE)/runs/b5m_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+.PHONY: lec-icc2-b5m lec-icc2-b5m-real lec-icc2-b5m-negctl
+lec-icc2-b5m-real:
+	-$(MAKE) lec-icc2-dc $(B5M) TAG=b5m_icc2_vs_dc
+	-$(MAKE) lec-icc2-rtl $(B5M) TAG=b5m_icc2_vs_rtl_svf
+	-$(MAKE) lec-icc2-nodiode $(B5M)
+lec-icc2-b5m-negctl:
+	$(MAKE) lec-icc2-negctl $(B5M)
+lec-icc2-b5m: lec-icc2-b5m-real lec-icc2-b5m-negctl
