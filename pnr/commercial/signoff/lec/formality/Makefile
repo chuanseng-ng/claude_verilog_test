@@ -112,3 +112,15 @@ lec-icc2-b5e-real:
 lec-icc2-b5e-negctl:
 	$(MAKE) lec-icc2-negctl $(B5E)
 lec-icc2-b5e: lec-icc2-b5e-real lec-icc2-b5e-negctl
+
+# ---------------- B5i (b5e + in-place met1-short / met4-spacing routing ECO): same recipe, outputs tagged b5i_* ----------------
+#   make lec-icc2-b5i            (b) vs DC, (a) vs RTL+SVF, nodiode variants, 4 negative controls
+B5I := ICC2RUN=b5i_icc2 PFX=b5i MUTP=$(HERE)/runs/mutant_b5i_icc2 STRIPNL=$(HERE)/runs/b5i_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+.PHONY: lec-icc2-b5i lec-icc2-b5i-real lec-icc2-b5i-negctl
+lec-icc2-b5i-real:
+	-$(MAKE) lec-icc2-dc $(B5I) TAG=b5i_icc2_vs_dc
+	-$(MAKE) lec-icc2-rtl $(B5I) TAG=b5i_icc2_vs_rtl_svf
+	-$(MAKE) lec-icc2-nodiode $(B5I)
+lec-icc2-b5i-negctl:
+	$(MAKE) lec-icc2-negctl $(B5I)
+lec-icc2-b5i: lec-icc2-b5i-real lec-icc2-b5i-negctl
