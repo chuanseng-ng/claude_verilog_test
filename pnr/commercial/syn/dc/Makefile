@@ -34,3 +34,15 @@ dc-elab:
 dc-synth:
 	$(call RUNDC,all)
 	@grep -q "^DC_DONE" $(RUN)/dc.log && echo "DC SYNTH OK" || { echo "DC SYNTH FAILED (no DC_DONE)"; exit 1; }
+
+# ---------------- syn v2 (B3c): MCMM (setup ss+tt, hold ff+tt).  v1 outputs untouched; new TAG default b3c_dc_mcmm. ----------------
+#   make -C pnr/commercial/syn/dc dc-synth-v2 [V2TAG=b3c_dc_mcmm] [STOP=compile_setup]
+LOCKED = $(PDKDIR)/scripts/licensed_lock.sh $(PDKDIR)/scripts/safe_run.sh
+.PHONY: dc-synth-v2
+dc-synth-v2:
+	@$(PE); $(SAFE); RUN=$(HERE)/runs/$(or $(V2TAG),b3c_dc_mcmm); mkdir -p $$RUN; cd $$RUN; \
+	  export REPO=$(REPO) PDKDIR=$(PDKDIR) RUN=$$RUN STOP=$(or $(STOP),all) SCRIPTDIR=$(HERE)/scripts RTL_LIST=$$RUN/rtl.f; \
+	  $(HERE)/scripts/rtl_list.sh $(REPO) $$RUN/rtl.f; \
+	  md5sum $(SDC) > $$RUN/sdc.md5; cat $$RUN/sdc.md5; \
+	  /usr/bin/time -v -o $$RUN/time.txt $(LOCKED) $$RUN/dc.log dcnxt_shell -topographical_mode -f $(HERE)/scripts/dc_synth_v2.tcl; \
+	  rc=$$?; echo "dcnxt rc=$$rc"; grep -q "^DC_DONE" $$RUN/dc.log && echo "DC SYNTH V2 OK" || echo "DC SYNTH V2: no DC_DONE (STOP=$(or $(STOP),all))"; exit $$rc

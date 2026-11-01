@@ -35,3 +35,15 @@ genus-elab:
 genus-synth:
 	$(call RUNGENUS,all)
 	@grep -q "^GENUS_DONE" $(RUN)/genus.log && echo "GENUS SYNTH OK" || { echo "GENUS SYNTH FAILED (no GENUS_DONE)"; exit 1; }
+
+# ---------------- syn v2 (B3d): MCMM (setup av_ss av_tt, hold av_ff av_tt).  v1 outputs untouched. ----------------
+#   make -C pnr/commercial/syn/genus genus-synth-v2 [V2TAG=b3d_genus_mcmm] [PHYS=1]
+LOCKED = $(PDKDIR)/scripts/licensed_lock.sh $(PDKDIR)/scripts/safe_run.sh
+.PHONY: genus-synth-v2
+genus-synth-v2:
+	@$(PE); $(SAFE); RUN=$(HERE)/runs/$(or $(V2TAG),b3d_genus_mcmm); mkdir -p $$RUN; cd $$RUN; \
+	  export REPO=$(REPO) PDKDIR=$(PDKDIR) RUN=$$RUN STOP=$(or $(STOP),all) PHYS=$(PHYS) SCRIPTDIR=$(HERE)/scripts RTL_LIST=$$RUN/rtl.f; \
+	  $(HERE)/scripts/rtl_list.sh $(REPO) $$RUN/rtl.f; \
+	  md5sum $(SDC) > $$RUN/sdc.md5; cat $$RUN/sdc.md5; \
+	  /usr/bin/time -v -o $$RUN/time.txt $(LOCKED) $$RUN/genus.log genus -no_gui -overwrite -f $(HERE)/scripts/genus_synth_v2.tcl; \
+	  rc=$$?; echo "genus rc=$$rc"; grep -q "^GENUS_DONE" $$RUN/genus.log && echo "GENUS SYNTH V2 OK" || echo "GENUS SYNTH V2: no GENUS_DONE"; exit $$rc
