@@ -10,6 +10,7 @@ arm_def() {
     icc2b5m) echo pnr/commercial/impl/icc2/runs/b5m_icc2/out/rv32i_cpu_top.def ;;   # b5m: b5i + PDN strap-end trim + antenna diodes + net-name hygiene
     icc2b5i) echo pnr/commercial/impl/icc2/runs/b5i_icc2/out/rv32i_cpu_top.def ;;   # b5i: b5e routed + in-place met1-short / met4-spacing ECO (arm name has no '_')
     innovusb5j) echo pnr/commercial/impl/innovus/runs/b5j_innovus/out/rv32i_cpu_top.def ;;   # b5j: b5h routed + endcap n-well tie ECO (in-place)
+    innovusb5k) echo pnr/commercial/impl/innovus/runs/b5k_innovus/out/rv32i_cpu_top.def ;;   # b5k: round 2 ECOs (hold, port repeaters, pin stubs, antenna diodes, npc.2 fill swap)
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
 }
