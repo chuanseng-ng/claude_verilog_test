@@ -234,4 +234,52 @@ Run `runs/b5m_icc2/` (copy of the b5i library; b5e, b5i untouched), base label `
 | C: hold fix | **abandoned**: one buffer on the single hold endpoint (`u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__16_/D`; fixes hold to +2.3 ps in the model) could not be placed legally in that dense site: dlygate4sd1_1 and buf_1 both left cell/rail overlaps (3-4 check_lvs shorts) after `legalize_placement`, and `remove_buffers` of the reverted cell left 1 open + 2 min-area DRCs. b5m therefore keeps tt hold at -3.2 ps (1 path). Multi-corner (ff/ss) hold ECO not attempted: only the tt NDM is linked in this flow (ff/ss NDMs share cell names), no min/max TLU+; the b5e iolat judge shows ff 112-121 and ss 20-44 reg-to-reg hold violators (-0.09 / -0.45..-0.63 ns), far beyond the +0.075 ns tt setup margin without a PrimeTime-ECO flow |
 | E: export hygiene | `change_names -rules (net, -case_insensitive)` renamed exactly the 3 case-colliding nets (`u_core/n1435`, `n1438`, `n1439` -> `_0`); `write_verilog -exclude supply_statements`: 0 `supply1/supply0` lines in nl.v / pg.nl.v / full.pnl.v |
 Native b5m (label `05m_exp` -> 06_finish): check_routes DRC 0, antenna 0, check_lvs shorts 0 opens 0; setup +0.0746 ns; hold -0.0032 ns (1 path); power 55.8 mW; nl.v md5 86af59b6... (556 ANTDIO diodes added, 3 nets renamed, supply lines removed).
-Pending at the time of writing (running unattended): KLayout DRC, signoff antenna, Netgen LVS, Formality (4 negative controls), StarRC nom/min/max, PT judge; results will be appended to this section.
+Verification results: see "B5m verification" below.
+
+### B5m verification (all measured 2026-11-02; b5e -> b5i -> b5m)
+| check | b5e | b5i | b5m |
+|---|---|---|---|
+| native check_routes DRC / check_lvs shorts / opens | 1 / 1 / 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+| native setup / hold WNS (tt, ICC2 RC) | +0.0725 / +0.0037 | +0.0746 / -0.0016 | +0.0746 / -0.0032 |
+| KLayout DRC (sky130A_mr, same options as LibreLane) | 132 (`m4.5ab`) | 1 (`m4.5ab`, VPWR strap start) | **0** (0 rules violated) |
+| signoff antenna (OpenROAD `check_antennas`) | 488 nets / 549 pins | 492 nets / 556 pins | **3 nets / 3 pins** (556 diode_2 added) |
+| Netgen LVS, GDS-mode, `_clean` / `_merged` | no match (35,440 vs 35,441) | match uniquely (35,441) | match uniquely (35,441); as delivered also **matches** (no supply1/0, no case collisions) |
+| Formality RTL vs ICC2 netlist (with SVF) | EQUIVALENT (97a1307) | cited from b5e (netlist content identical) | **SUCCEEDED**, 6,233 passing, 0 failing; 671 unmatched impl points = the 115 port + 556 antenna diodes; the diode-stripped variant has 0 unmatched and also SUCCEEDED (vs RTL+SVF and vs DC) |
+| Formality negative controls | 4/4 | n/a | **4/4 detected** (fwdb_inv, swap x vs DC and vs RTL) |
+| StarRC nom / min / max | `SX-0955` shorted-nets warning | no short warning, 3/3 rc=0 | 3/3 complete, rc=0, SPEF `*END` present |
+| PrimePower nom_tt (vectorless) | 67.8 mW | 67.8 mW | 67.8 mW (4-digit resolution; diode leakage not visible) |
+| nl.v md5 (as written) | 1ee342ed... | 5b3934b4... | 86af59b6... |
+
+Judge (PrimeTime, StarRC SPEFs, setup WNS / hold WNS in ns, (hold violators)). The shared SDC has its known I/O hold artefact (-1.2 ns at nom_tt for all three); the iolat SDC (ICC2's symmetric latency) is the meaningful hold view:
+
+**shared SDC: setup WNS / hold WNS (ns) per corner; hold violators**
+
+| corner | b5e | b5i | b5m |
+|---|---|---|---|
+| nom_tt | +0.0855 / -1.2264 (521) | +0.0851 / -1.2282 (523) | +0.0853 / -1.2315 (523) |
+| nom_ss | -14.3315 / -2.2231 (550) | -14.3333 / -2.2258 (549) | -14.3330 / -2.2319 (549) |
+| nom_ff | +3.3352 / -0.7755 (534) | +3.3447 / -0.7768 (533) | +3.3448 / -0.7787 (534) |
+| min_tt | +0.2274 / -1.1363 (512) | +0.2272 / -1.1378 (512) | +0.2274 / -1.1411 (512) |
+| min_ss | -14.0743 / -2.0721 (547) | -14.0747 / -2.0749 (546) | -14.0745 / -2.0808 (547) |
+| min_ff | +3.5241 / -0.7074 (505) | +3.5337 / -0.7085 (505) | +3.5334 / -0.7104 (505) |
+| max_tt | -0.3612 / -1.3561 (538) | -0.3625 / -1.3582 (544) | -0.3653 / -1.3612 (545) |
+| max_ss | -14.6682 / -2.4058 (555) | -14.6705 / -2.4095 (554) | -14.6702 / -2.4157 (553) |
+| max_ff | +3.0773 / -0.8779 (583) | +3.0875 / -0.8793 (586) | +3.0874 / -0.8812 (585) |
+
+**iolat SDC: setup WNS / hold WNS (ns) per corner; hold violators**
+
+| corner | b5e | b5i | b5m |
+|---|---|---|---|
+| nom_tt | +0.0855 / +0.0013 (0) | +0.0851 / -0.0051 (2) | +0.0853 / -0.0070 (2) |
+| nom_ss | -14.3315 / -0.4451 (28) | -14.3333 / -0.4478 (28) | -14.3330 / -0.4539 (29) |
+| nom_ff | +3.3352 / -0.0949 (117) | +3.3447 / -0.0999 (115) | +3.3448 / -0.1011 (115) |
+| min_tt | +0.2274 / +0.0075 (0) | +0.2272 / +0.0036 (0) | +0.2274 / +0.0019 (0) |
+| min_ss | -14.0743 / -0.2941 (20) | -14.0747 / -0.2969 (19) | -14.0745 / -0.3028 (20) |
+| min_ff | +3.5241 / -0.0886 (112) | +3.5337 / -0.0926 (112) | +3.5334 / -0.0936 (112) |
+| max_tt | -0.3612 / -0.0104 (3) | -0.3625 / -0.0175 (6) | -0.3653 / -0.0196 (6) |
+| max_ss | -14.6682 / -0.6278 (44) | -14.6705 / -0.6315 (44) | -14.6702 / -0.6377 (46) |
+| max_ff | +3.0773 / -0.1023 (121) | +3.0875 / -0.1102 (121) | +3.0874 / -0.1115 (121) |
+
+**PrimePower nom_tt (vectorless, mW)**: b5e 67.80, b5i 67.80, b5m 67.80
+
+Reading of the table: the like-for-like layout fixes (b5i: met1 short + 131 of 132 `m4.5ab`; b5m: last `m4.5ab`, antenna 556->3, supply/case export hygiene) leave setup within 3 ps of b5e at every corner but **cost hold**: nom_tt iolat hold +1.3 ps (0 violators) -> -5.1 ps (b5i, 2) -> -7.0 ps (b5m, 2), max_tt iolat -10.4 -> -17.5 -> -19.6 ps. The ss/ff hold violators (28-46 ss, 112-121 ff) and the 135/169 max-transition/max-cap violators are unchanged and are left to b6 (user decision); the tt hold regression is the part of those a b6 hold ECO has to absorb.
