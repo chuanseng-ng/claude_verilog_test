@@ -153,7 +153,7 @@ Xezim claims not supported by this work: README near-parity with commercial sim 
 
 Open human decisions:
 1. **Decided:** pyslang gate added, blocking, on 6 arms (`tools/verif/check_elab_strict.py`, bead `lvdk`).
-2. **Decided:** upstream reports drafted for the user to post from their own account (bead `gxg0`).
+2. **Done:** both reports filed upstream on 2026-11-02, after both reproduced on git `0f4d2fcf`: the section 4 miscompile as [aionhw/xezim#810](https://github.com/aionhw/xezim/issues/810) and the cocotb 1.9.2 abort as [#811](https://github.com/aionhw/xezim/issues/811) (bead `gxg0`).
 3. **Deferred:** xezim-core prototype, revisit after upstream responds (bead `1ljh`).
 4. **Deferred:** Phase 3, until the section 4 miscompile is fixed and a cocotb route exists (bead `9xn3`).
 
