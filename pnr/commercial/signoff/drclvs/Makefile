@@ -145,7 +145,7 @@ $(MDIR)/env.tcl: dirs
 	   echo 'set ::env(CURRENT_DEF) $(DEF_IN)'; echo 'set ::env(CURRENT_GDS) $(GDS_FIXED)'; \
 	   echo 'set ::env(SRAM_MODE) $(SRAM_MODE)'; } > $@
 mdrc: $(MDIR)/env.tcl
-	$(call guarded,mdrc_$(SRAM_MODE),$(if $(filter real,$(SRAM_MODE)),11,5),5400,bash $(S)/in_container/magic_step.sh $< $(MDIR) $(if $(filter gds,$(MDRC_MODE)),$(S)/magic/gds_abs_drc.tcl,drc.tcl))
+	$(call guarded,mdrc_$(SRAM_MODE),$(if $(filter real,$(SRAM_MODE)),11,5),$(or $(MDRC_TIMEOUT),5400),bash $(S)/in_container/magic_step.sh $< $(MDIR) $(if $(filter gds,$(MDRC_MODE)),$(S)/magic/gds_abs_drc.tcl,drc.tcl))
 mdrc-class: dirs
 	python3 $(S)/sram_boxes.py $(DEF_IN) > $(RUN)/sram_boxes.txt
 	$(S)/magic_drc_classify.sh $(MDIR)/reports/drc_violations.magic.rpt $(RUN)/sram_boxes.txt $(REP)/$(ARM)_magic_drc_$(SRAM_MODE)_by_rule.tsv $(MDIR)/outside_sample.txt
