@@ -153,9 +153,9 @@ Xezim claims not supported by this work: README near-parity with commercial sim 
 
 Open human decisions:
 1. **Decided:** pyslang gate added, blocking, on 6 arms (`tools/verif/check_elab_strict.py`, bead `lvdk`).
-2. **Done:** both reports filed upstream on 2026-11-02, after both reproduced on git `0f4d2fcf`: the section 4 miscompile as [aionhw/xezim#810](https://github.com/aionhw/xezim/issues/810) and the cocotb 1.9.2 abort as [#811](https://github.com/aionhw/xezim/issues/811) (bead `gxg0`).
+2. **Done:** both reports filed upstream on 2026-11-02, after both reproduced on git `0f4d2fcf`: the section 4 miscompile as [aionhw/xezim#810](https://github.com/aionhw/xezim/issues/810) and the cocotb 1.9.2 abort as [#811](https://github.com/aionhw/xezim/issues/811) (bead `gxg0`). Upstream fixed both the same day (`9cad2c17`). Measured on `d20039e4`: both testcases pass, and `test_mbist_soc_slice` passes 3/3 on stock cocotb 1.9.2 and on 2.0.1, with no shim. All other results in this document are still from `9dcffd69`.
 3. **Deferred:** xezim-core prototype, revisit after upstream responds (bead `1ljh`).
-4. **Deferred:** Phase 3, until the section 4 miscompile is fixed and a cocotb route exists (bead `9xn3`).
+4. **Open:** Phase 3 was deferred until the section 4 miscompile was fixed and a cocotb route existed. Both conditions are now met on `d20039e4`, so running it is a user decision (bead `9xn3`).
 
 ## 10. What was NOT verified
 
