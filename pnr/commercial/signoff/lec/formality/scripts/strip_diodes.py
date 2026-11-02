@@ -7,7 +7,7 @@ import sys, re
 src, dst = sys.argv[1:3]
 allow_internal = "--allow-internal-nets" in sys.argv[3:]   # b5e: ICC2 route-opt left 4 port diodes on buffered (internal) copies of input nets
 t = open(src).read()
-pat = re.compile(r"^sky130_fd_sc_hd__diode_2 (\S+) \( \.DIODE \( (\S+) \) \) ;\n", re.M)
+pat = re.compile(r"^sky130_fd_sc_hd__diode_2 (\S+) \(\s*\.DIODE \( (.+?) \) \) ;\n", re.M)   # an instance may be wrapped over two lines (long escaped net names, e.g. the b5m ANTDIO cells)
 found = pat.findall(t)
 nd = t.count("sky130_fd_sc_hd__diode_2 ")
 assert len(found) == nd, (len(found), nd)
