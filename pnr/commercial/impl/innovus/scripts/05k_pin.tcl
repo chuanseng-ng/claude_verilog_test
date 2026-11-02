@@ -13,17 +13,8 @@ set ok 0; set bad 0; set k 0
 foreach s $B5K_STUBS {
   lassign $s net x0 y0 x1 y1 side
   incr k
-  set n0 [nwires $net]
-  set done 0
-  foreach cmd [list \
-     [list create_shape -layer met3 -net $net -rect [list $x0 $y0 $x1 $y1] -shape none] \
-     [list create_shape -layer met3 -net $net -rect [list $x0 $y0 $x1 $y1]] \
-     [list editAddRoute -net $net -layer met3 -width 0.33 -pts [list [list [expr {$side eq "E" ? $x0 + 0.165 : $x1 - 0.165}] [expr {($y0+$y1)/2}]] [list [expr {$side eq "E" ? $x1 : $x0}] [expr {($y0+$y1)/2}]]]]] {
-    if {[catch $cmd e]} { if {$k == 1} { puts "K_PIN_CMD_FAIL: $cmd -> $e" }; continue }
-    if {[nwires $net] != $n0 || [llength [dbGet [dbGet -p top.nets.name $net].sWires]] > 0} { set done 1; if {$k == 1} { puts "K_PIN_CMD_OK: $cmd" }; break }
-    if {$k == 1} { puts "K_PIN_CMD_NOEFFECT: $cmd" }
-  }
-  if {$done} { incr ok } else { incr bad; puts "K_PIN_FAIL $net" }
+  # Innovus 23.14 has no create_shape / working editAddRoute; add_shape creates a met3 SPECIAL wire on the signal net (verified on commit_pc_o[4]: returned object, sWire box = rect, verify_drc clean)
+  if {[catch { add_shape -layer met3 -net $net -rect [list $x0 $y0 $x1 $y1] } obj] || $obj eq "0x0" || $obj eq ""} { incr bad; puts "K_PIN_FAIL $net: $obj" } else { incr ok }
 }
 puts "K_PIN: stubs ok=$ok bad=$bad of [llength $B5K_STUBS]"
 verify_drc -limit 100000 -report $R/kp_drc.txt
