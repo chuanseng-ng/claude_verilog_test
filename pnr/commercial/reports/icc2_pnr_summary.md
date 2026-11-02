@@ -283,3 +283,5 @@ Judge (PrimeTime, StarRC SPEFs, setup WNS / hold WNS in ns, (hold violators)). T
 **PrimePower nom_tt (vectorless, mW)**: b5e 67.80, b5i 67.80, b5m 67.80
 
 Reading of the table: the like-for-like layout fixes (b5i: met1 short + 131 of 132 `m4.5ab`; b5m: last `m4.5ab`, antenna 556->3, supply/case export hygiene) leave setup within 3 ps of b5e at every corner but **cost hold**: nom_tt iolat hold +1.3 ps (0 violators) -> -5.1 ps (b5i, 2) -> -7.0 ps (b5m, 2), max_tt iolat -10.4 -> -17.5 -> -19.6 ps. The ss/ff hold violators (28-46 ss, 112-121 ff) and the 135/169 max-transition/max-cap violators are unchanged and are left to b6 (user decision); the tt hold regression is the part of those a b6 hold ECO has to absorb.
+
+Magic DRC on b5m: **not run (user decision: b6 only)**. A first attempt was killed by the guard at 9.2 GiB container RSS (cap 9) and a second (cap 11) was stopped on request; no Magic DRC result exists for b5i or b5m. The b5e Magic result (27,738,097 total, `met4.5a/b` 984 outside the SRAM footprints) is the last measured; the `met4.5a/b` items correspond to the KLayout `m4.5ab` that is now 0 on b5m.
