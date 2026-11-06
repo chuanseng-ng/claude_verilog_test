@@ -26,6 +26,10 @@ foreach p $PINS {
   if {!$rc} { incr ok }
 }
 puts "K_ANT: diodes attached ok=$ok of [llength $PINS]"
+# attachDiode drops each diode at an off-grid spot (e.g. 388.26 1393.797) on top of its neighbour: run 1 of b5k had 5 diodes overlapping std cells (KLayout licon/li/difftap hits, LVS nets 35684 vs 35688,
+# checkPlace 19 violations vs b5j's 5).  Legalise BEFORE the eco route so the routes follow the final positions.
+set rc [catch { refinePlace } e]; puts "K_ANT refinePlace rc=$rc"
+checkPlace $R/ka2_checkPlace.txt
 save_stage 05k_antfix_pre
 set rc [catch { ecoRoute } e]; puts "ecoRoute rc=$rc $e"
 verify_drc -limit 100000 -report $R/ka2_drc_1.txt

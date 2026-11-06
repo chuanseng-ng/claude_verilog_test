@@ -1,6 +1,18 @@
 # Conformal LEC of the post-route Innovus netlist, Sky130 `rv32i_cpu_top` (B4g: b5g current; B4f: b5d, B4e: b5c and B4d: b5b superseded)
 
 
+
+## B4l: `b5k_innovus` (CURRENT: b5j + round-2 ECOs)
+
+**Verdict: EQUIVALENT, all four compares (RTL and Genus goldens, with and without the 372 diodes); all four negative controls caught.** Same tool, method and settings as B4j/B4g. Revised netlist `impl/innovus/runs/b5k_innovus/out/rv32i_cpu_top.nl.v`, md5 `c329135d38c3e3369e986ed0d537eb46` (b5k = b5j + 108 port-net `buf_8` repeaters `B5KDRV*`, hold-fix buffers, 110 more `diode_2`, 6 decap->fill swaps; the added cells are buffers/diodes, so the proof is the point). Command: `licensed_lock.sh make -C pnr/commercial/signoff/lec/conformal lec-innovus-all INNTAG=b5k_innovus STEP=b4l` (tags `b4l_*`, copies in `reports/b4l_*`; tags `b4k_*` in `runs/` are the superseded run 1 on the overlapping-diode layout and are not committed).
+| Run | Golden | EQ points | Unmapped | Wall |
+|---|---|---|---|---|
+| `b4l_innovus_vs_rtl` | RTL | 5,597 (379 PO + 5,208 DFF + 10 SRAM BBOX) | golden 947 DFF unreachable + 81 not-mapped (identical to B4g/B4j); revised 372 diode BBOX unreachable | 1:12 |
+| `b4l_innovus_vs_genus` | Genus netlist | 5,597 | revised 372 diode BBOX | 0:14 |
+| `b4l_innovus_nodiode_vs_rtl` | RTL | 5,597 | golden only | 0:40 |
+| `b4l_innovus_nodiode_vs_genus` | Genus netlist | 5,597 | none | 0:12 |
+Non-equivalent 0, aborted 0, unknown 0 in all four. Negative controls (mutants of the b5k netlist, diffs `reports/b4l_mutant_*.diff.txt`): `rtl_fwdb_inv`, `rtl_swap`, `genus_fwdb_inv`, `genus_swap` all NON-EQUIVALENT (good), 4 of 4.
+
 ## B4j: `b5j_innovus` (CURRENT: b5h routed + 146 well-tie taps)
 
 **Verdict: EQUIVALENT, all four compares (RTL and Genus goldens, with and without the 262 diodes); all four negative controls are caught.** Same tool, method and settings as B4g
