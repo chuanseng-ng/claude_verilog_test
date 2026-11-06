@@ -285,3 +285,155 @@ Judge (PrimeTime, StarRC SPEFs, setup WNS / hold WNS in ns, (hold violators)). T
 Reading of the table: the like-for-like layout fixes (b5i: met1 short + 131 of 132 `m4.5ab`; b5m: last `m4.5ab`, antenna 556->3, supply/case export hygiene) leave setup within 3 ps of b5e at every corner but **cost hold**: nom_tt iolat hold +1.3 ps (0 violators) -> -5.1 ps (b5i, 2) -> -7.0 ps (b5m, 2), max_tt iolat -10.4 -> -17.5 -> -19.6 ps. The ss/ff hold violators (28-46 ss, 112-121 ff) and the 135/169 max-transition/max-cap violators are unchanged and are left to b6 (user decision); the tt hold regression is the part of those a b6 hold ECO has to absorb.
 
 Magic DRC on b5m: **not run (user decision: b6 only)**. A first attempt was killed by the guard at 9.2 GiB container RSS (cap 9) and a second (cap 11) was stopped on request; no Magic DRC result exists for b5i or b5m. The b5e Magic result (27,738,097 total, `met4.5a/b` 984 outside the SRAM footprints) is the last measured; the `met4.5a/b` items correspond to the KLayout `m4.5ab` that is now 0 on b5m.
+
+
+---
+
+## B6: ICC2 MCMM arm from the DC v2 (MCMM) netlist -- 2026-11-07
+
+**Comparison run, no target.** Run `runs/b6_icc2/` (gitignored; scripts `scripts/b6_*.tcl`, driver `scripts/b6_chain.sh`, verification driver `signoff/chain_b6_all.sh`, both resumable with done markers). Netlist = DC v2 `syn/dc/runs/b3c_dc_mcmm` (md5 `ffe468f2...`, Formality 6,233/0 with 4/4 negative controls), SDC = shared `sky130_cpu.sdc` (md5 `3c696350...`, asserted in the log), floorplan / 10 SRAM placements / 503 pins / PDN / max layer met4 / CTS cells clkbuf_2/4/8/16 / taps+endcaps identical to b5. **The 10 SRAM `.db` is TT 1.8 V 25 C only in every scenario (bead `o1i`)**: the ss and ff scenarios time the SRAM-limited paths (cache `*_dout_r`, tag) with a TT macro, so ss is not pessimistic on them, in ICC2 and in the PrimeTime judge alike.
+
+### What changed vs b5m
+1. **MCMM, with the ss/ff/tt cell-name clash solved at the library level.** Linking `sky130_hd_{tt,ss,ff}.ndm` together binds every instance to the first library (`Library has 1 pane`, `PVT-030` voltage/temperature mismatches at ss and ff, measured in `b6_03a_mcmmtest`): ICC2 has no per-scenario link library. The mechanism that works is **one reference NDM with three PVT panes**: `pdk/sky130/scripts/build_ndm_mcmm.tcl` reads LEF once and `read_db` of the tt, ss and ff `.db` into one `icc2_lm_shell` workspace (`check_workspace -allow_missing`; without it the check fails on 316 missing arcs, all of them `clock_pulse_width_*` / `clock_gating_pulse_width_low` checks that exist in only some corners, 0 delay/setup/hold arcs). Each corner then selects its pane with `set_process_number 1 / set_voltage {1.6|1.8|1.95} / set_temperature {100|25|-40}`; the SRAM cells are pinned to 1.8 V / 25 C / process 1. Result: `PVT-032 no PVT mismatches` in all three corners, and per-scenario `report_timing -scenarios` differs (floorplan probe: hold ff -0.013 ns, tt +0.110 ns).
+2. **Scenarios**: `func_ss` (setup, max TLU+ 100 C), `func_tt` (setup + hold, nom TLU+ 25 C), `func_ff` (hold, min TLU+ -40 C); max-transition / max-capacitance enforced at ss and tt; power at tt; the same SDC read unchanged into each. Mapping equals `pdk/sky130/scripts/mmmc.tcl` and DC v2.
+3. **b5 fixes applied up front, not as ECOs**: `route.common.global_min_layer_mode hard`; strap-end trim (b5m section P) and 72 met4 halo routing blockages (0.1 um, all PG straps wider than 3 um) created in the PDN stage and kept through CTS and routing (they are removed in the ECO stage); `change_names -case_insensitive` + `write_verilog -exclude supply_statements` in the export (0 `supply1/supply0` lines in nl.v / pg.nl.v / full.pnl.v); route.global.effort high + macro-boundary track utilisation 60 + DRC-aware partitioning from b5x from the first route; antenna diodes taken from OpenROAD `check_antennas` (not the lenient ICC2 rule).
+4. **Hold by the optimiser with all views active, no tt-only hold ECO**: `place_opt`, `clock_opt` and `route_opt` ran with ff+tt hold and ss+tt setup+DRV together; the hold cell set is restricted by `set_lib_cell_purpose` to real delay cells (`dlygate*`, `dlymetal*`, `clkdlybuf*`; 106 inserted: clkdlybuf4s25_1 61, clkdlybuf4s50_1 16, dlygate4sd1_1 15, dlymetal6s2s_1 14). Post-CTS and post-route ff hold was 0.00 with 0 violators; the b5m failure mode (upsizing the weak buffer chains lost hold) did not arise. No DRV upsizing ECO was run.
+
+### Route convergence (check_routes DRC / shorts / opens; shorts exclude the artefact between a halo blockage and the strap it covers)
+| step | b5e | b6 |
+|---|---|---|
+| after `route_auto` | 266 DRC (05x) | 3 / 570 / 114 opens |
+| after `route_opt` | 231 / 347 | **2 / 4 / 0** |
+| after the repair loop (10 passes) | 1 / 1 (8 passes) | 1 / 2 / 0 (stuck from pass 1) |
+| residual | met1 short at (1918, 883), x 1900-1960 d-cache macro gap | met2 short `HFSNET_4041` x `HFSNET_6006` at (1916.3, 879.2): a 620 um repeater net runs on met2 across the access point of `u_core_u_dcache/U895/B1` (same macro-gap column) |
+| fix | b5i: rip-up of 61 nets with halos | **ECO section S4**: `set_routing_rule -min_routing_layer met3 -min_layer_mode allow_pin_connection` on the long net + rip-up/reroute of 37 neighbours -> 0 / 0 / 0 (plain rip-up of the two nets, then of the nets within 4 um, did not move it) |
+The up-front halos + global-route settings took the first-route count from 291 DRC / 439 shorts (b5e, li1 ban only) to 2 / 4 after `route_opt`.
+
+### b5m -> b6 table
+ICC2-native numbers are tool-native (own RC); the judge rows are PrimeTime on StarRC SPEFs (not native). b5m: single tt scenario; b6: three scenarios.
+| Metric | b5m | b6 |
+|---|---|---|
+| Synthesis netlist | DC v1 (tt only, ss -10.46 ns zero-wire) | DC v2 MCMM (ss +1.16 ns zero-wire); 35,644 cells |
+| Scenarios / TLU+ | 1 (tt) / nom | 3 (ss tt ff) / max nom min, 3-pane NDM |
+| Native setup WNS (ns) | +0.0746 (tt) | ss **-0.0225** (3 paths, TNS -0.040); tt +3.344 |
+| Native hold WNS (ns) | -0.0032 (tt, 1 path) | ff **+0.0029**; tt +0.111 |
+| Native route DRC / shorts / opens / antenna | 0 / 0 / 0 / 0 | **0 / 0 / 0 / 0** (630 + 11 + 4 antenna diodes, 115 port diodes) |
+| Native max-transition / max-cap violators | 135 / 169 (tt) | tt 2 / 159; ss 113 / 160 (about 155 are the 10 SRAM macro `dout0` nets against the 0.03 pF pin limit, not tuned) |
+| Native power (vectorless, tt) | 55.8 mW | 57.9 mW dynamic + 0.095 leakage |
+| Clock (post-CTS) | global skew 1.08 ns tt | 5,304 sinks, 8 levels, 408 repeaters; global skew ff 0.49 / tt 0.74 / ss 1.37 ns; max latency 1.37 / 2.09 / 3.80 ns |
+| Wall (tool, host idle) | ~3,660 s total at load 10-14 | place 1,515 s, CTS 1,412 s, route 512 s, ECO 4 + 2 + 1.5 min, finish 146 s; peak RSS 4.1 GB (CTS) |
+| KLayout DRC (sky130A_mr.drc) | 0 | **0** (2 `m1.7` after ECO round 1 were re-routed away) |
+| Deck antenna (OpenROAD `check_antennas`) | 3 nets / 3 pins | **1 net / 1 pin** (`u_core_u_dcache/n3594` -> `data_dout_r_reg_2__26_/D`, survives 3 extra diodes; **not closed**) |
+| Netgen LVS, GDS-mode (as delivered / clean / merged) | match uniquely x3 | match uniquely x3 (41,741 nets each side) |
+| Formality RTL+SVF v2 vs netlist; vs DC v2 netlist | 6,233 pass / 0 fail | 6,233 pass / 0 fail, 0 unmatched with diodes stripped (760 unmatched = port/antenna diodes in the as-delivered variant) |
+| Negative controls | 4/4 | **4/4** detected: `fwdb_inv` 1 failing point (vs DC and vs RTL), `swap` 43 failing points (vs DC and vs RTL) |
+| StarRC | nom/min/max | nom/min/max, annotation gate: 0 unannotated pin-to-pin nets |
+| Magic DRC | not run | see "Magic DRC" below |
+
+### Neutral judge (PrimeTime + StarRC), ICC2 b6 next to b5m, Innovus b5k and OpenROAD
+Cells are `setup WNS ns (violators) / hold WNS ns (violators)`; judge SDC variants: `base` = shared SDC (md5 `3c696350...`), `iolat` = comparison-only `sky130_cpu_iolat.sdc` (virtual I/O clock; removes the I/O-port hold artefact), `own` = the arm's own exported SDC (ICC2 b6: `func_tt` written SDC, md5 `44ce62ce...`; no own file for b5m / OpenROAD). 27 runs per arm and variant set: 9 corners x 3 variants for b6, all `rc=0`. Generated by `signoff/pt/scripts/table_b6.py`.
+
+### SDC variant `base`: setup WNS ns (violators) / hold WNS ns (violators)
+
+| corner | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|
+| nom_tt | +3.314 (0) / -1.230 (556) | +0.085 (0) / -1.232 (523) | -0.594 (3) / -2.224 (510) | +3.172 (0) / -0.319 (51) |
+| nom_ss | -1.594 (12) / -2.234 (577) | -14.333 (1356) / -2.232 (549) | -8.484 (948) / -3.792 (548) | -3.426 (1062) / -0.800 (121) |
+| nom_ff | +4.015 (0) / -0.780 (374) | +3.345 (0) / -0.779 (534) | +2.242 (0) / -1.477 (241) | +3.928 (0) / -0.136 (8) |
+| min_tt | +3.505 (0) / -1.145 (544) | +0.227 (0) / -1.141 (512) | +0.120 (0) / -2.068 (526) | +3.548 (0) / -0.174 (5) |
+| min_ss | -1.079 (7) / -2.107 (571) | -14.074 (1201) / -2.081 (547) | -7.513 (723) / -3.571 (574) | -2.777 (800) / -0.588 (78) |
+| min_ff | +4.165 (0) / -0.722 (325) | +3.533 (0) / -0.710 (505) | +2.814 (0) / -1.367 (336) | +4.066 (0) / -0.015 (3) |
+| max_tt | +3.028 (0) / -1.345 (570) | -0.365 (26) / -1.361 (545) | -1.640 (4) / -2.424 (457) | +2.679 (0) / -0.522 (169) |
+| max_ss | -2.268 (26) / -2.412 (586) | -14.670 (1619) / -2.416 (553) | -9.759 (1189) / -4.085 (545) | -4.326 (1207) / -1.071 (155) |
+| max_ff | +3.774 (0) / -0.865 (441) | +3.087 (0) / -0.881 (585) | +1.396 (0) / -1.627 (163) | +3.713 (0) / -0.307 (43) |
+
+reg-to-reg (r2rx) worst setup / hold, ns (violators):
+
+| corner | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|
+| nom_tt | none (0) / none (0) | none (0) / -0.007 (2) | none (0) / none (0) | none (0) / none (0) |
+| nom_ss | none (0) / none (0) | -14.333 (1320) / none (0) | -7.833 (848) / none (0) | -3.426 (987) / none (0) |
+| nom_ff | none (0) / -0.004 (2) | none (0) / -0.101 (115) | none (0) / none (0) | none (0) / none (0) |
+| min_tt | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) |
+| min_ss | none (0) / none (0) | -14.074 (1173) / none (0) | -7.099 (641) / none (0) | -2.777 (761) / none (0) |
+| min_ff | none (0) / none (0) | none (0) / -0.094 (112) | none (0) / none (0) | none (0) / none (0) |
+| max_tt | none (0) / none (0) | -0.365 (26) / -0.020 (6) | none (0) / none (0) | none (0) / none (0) |
+| max_ss | -0.059 (3) / none (0) | -14.670 (1563) / none (0) | -8.829 (1064) / none (0) | -4.326 (1122) / none (0) |
+| max_ff | none (0) / -0.027 (8) | none (0) / -0.112 (121) | none (0) / none (0) | none (0) / none (0) |
+
+nom_tt PrimePower total (raw `Total` row tail, W): ICC2 b6 70.8 mW; ICC2 b5m 67.8 mW; Innovus b5k 70.5 mW; OpenROAD 93.1 mW
+
+### SDC variant `iolat`: setup WNS ns (violators) / hold WNS ns (violators)
+
+| corner | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|
+| nom_tt | +3.314 (0) / +0.114 (0) | +0.085 (0) / -0.007 (2) | +1.184 (0) / -0.446 (5) | +3.123 (0) / +0.526 (0) |
+| nom_ss | +0.184 (0) / -0.456 (42) | -14.333 (1378) / -0.454 (29) | -7.833 (940) / -2.014 (81) | -3.426 (1014) / +0.978 (0) |
+| nom_ff | +4.015 (0) / -0.004 (2) | +3.345 (0) / -0.101 (115) | +4.020 (0) / +0.022 (0) | +3.928 (0) / +0.243 (0) |
+| min_tt | +3.505 (0) / +0.115 (0) | +0.227 (0) / +0.002 (0) | +1.898 (0) / -0.290 (1) | +3.186 (0) / +0.542 (0) |
+| min_ss | +0.699 (0) / -0.329 (31) | -14.074 (1199) / -0.303 (20) | -7.099 (727) / -1.793 (71) | -2.777 (788) / +1.190 (0) |
+| min_ff | +4.165 (0) / +0.003 (0) | +3.533 (0) / -0.094 (112) | +4.420 (0) / +0.020 (0) | +4.066 (0) / +0.250 (0) |
+| max_tt | +3.028 (0) / +0.112 (0) | -0.365 (26) / -0.020 (6) | +0.138 (0) / -0.646 (15) | +3.019 (0) / +0.495 (0) |
+| max_ss | -0.490 (5) / -0.634 (66) | -14.670 (1707) / -0.638 (46) | -8.829 (1166) / -2.307 (96) | -4.326 (1155) / +0.707 (0) |
+| max_ff | +3.774 (0) / -0.027 (8) | +3.087 (0) / -0.112 (121) | +3.174 (0) / +0.023 (0) | +3.713 (0) / +0.212 (0) |
+
+reg-to-reg (r2rx) worst setup / hold, ns (violators):
+
+| corner | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|
+| nom_tt | none (0) / none (0) | none (0) / -0.007 (2) | none (0) / none (0) | none (0) / none (0) |
+| nom_ss | none (0) / none (0) | -14.333 (1320) / none (0) | -7.833 (848) / none (0) | -3.426 (987) / none (0) |
+| nom_ff | none (0) / -0.004 (2) | none (0) / -0.101 (115) | none (0) / none (0) | none (0) / none (0) |
+| min_tt | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) |
+| min_ss | none (0) / none (0) | -14.074 (1173) / none (0) | -7.099 (641) / none (0) | -2.777 (761) / none (0) |
+| min_ff | none (0) / none (0) | none (0) / -0.094 (112) | none (0) / none (0) | none (0) / none (0) |
+| max_tt | none (0) / none (0) | -0.365 (26) / -0.020 (6) | none (0) / none (0) | none (0) / none (0) |
+| max_ss | -0.059 (3) / none (0) | -14.670 (1563) / none (0) | -8.829 (1064) / none (0) | -4.326 (1122) / none (0) |
+| max_ff | none (0) / -0.027 (8) | none (0) / -0.112 (121) | none (0) / none (0) | none (0) / none (0) |
+
+nom_tt PrimePower total (raw `Total` row tail, W): ICC2 b6 70.8 mW; ICC2 b5m 67.8 mW; Innovus b5k 70.5 mW; OpenROAD 93.1 mW
+
+### SDC variant `own`: setup WNS ns (violators) / hold WNS ns (violators)
+
+| corner | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|
+| nom_tt | +3.314 (0) / -1.230 (556) | n/a | +1.006 (0) / +0.140 (0) | n/a |
+| nom_ss | -1.594 (12) / -2.234 (577) | n/a | -7.833 (962) / -0.497 (1) | n/a |
+| nom_ff | +4.015 (0) / -0.780 (374) | n/a | +2.673 (0) / -0.013 (3) | n/a |
+| min_tt | +3.505 (0) / -1.145 (544) | n/a | +1.315 (0) / +0.139 (0) | n/a |
+| min_ss | -1.079 (7) / -2.107 (571) | n/a | -7.099 (734) / -0.276 (1) | n/a |
+| min_ff | +4.165 (0) / -0.722 (325) | n/a | +3.020 (0) / -0.159 (27) | n/a |
+| max_tt | +3.028 (0) / -1.345 (570) | n/a | +0.456 (0) / +0.140 (0) | n/a |
+| max_ss | -2.268 (26) / -2.412 (586) | n/a | -8.829 (1193) / -0.790 (5) | n/a |
+| max_ff | +3.774 (0) / -0.865 (441) | n/a | +2.154 (0) / +0.023 (0) | n/a |
+
+reg-to-reg (r2rx) worst setup / hold, ns (violators):
+
+| corner | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|
+| nom_tt | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| nom_ss | none (0) / none (0) | n/a | -7.833 (848) / none (0) | n/a |
+| nom_ff | none (0) / -0.004 (2) | n/a | none (0) / none (0) | n/a |
+| min_tt | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| min_ss | none (0) / none (0) | n/a | -7.099 (641) / none (0) | n/a |
+| min_ff | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| max_tt | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| max_ss | -0.059 (3) / none (0) | n/a | -8.829 (1064) / none (0) | n/a |
+| max_ff | none (0) / -0.027 (8) | n/a | none (0) / none (0) | n/a |
+
+nom_tt PrimePower total (raw `Total` row tail, W): ICC2 b6 70.8 mW; ICC2 b5m -; Innovus b5k 70.5 mW; OpenROAD -
+
+
+Reading the judge:
+- **ss is where MCMM pays.** With the iolat SDC b6 closes `nom_ss` at +0.184 ns (0 violators) against -14.33 ns for b5m (1,378 violators), -7.83 Innovus b5k and -3.43 OpenROAD; `min_ss` +0.699; `max_ss` -0.490 (5 violators) against -14.67 / -8.83 / -4.33. b6 is the best of the four at every ss corner. The base-SDC ss figures (-1.59 nom, -2.27 max) are I/O-port paths with the 0-latency I/O artefact; reg-to-reg ss is clean at nom and min and -0.059 ns (3 endpoints) at `max_ss`.
+- tt / ff setup is large positive (tt +3.0 to +3.5 ns): the netlist is ss-sized, so tt carries unused slack (not a quality claim; b5m optimised to ~0 at tt).
+- **Hold**: tt hold is clean with iolat (+0.114 / +0.115 / +0.112); ff hold is -0.004 (2 endpoints, nom) and -0.027 (8, max), min_ff +0.003. **ss hold fails** (nom -0.456, 42 endpoints; max -0.634, 66): ss was a setup-only scenario, as in the mmmc definition (hold on ff and tt only), and the judge checks ss hold; all ss hold violators are I/O-port paths (reg-to-reg ss hold: none). Not repaired.
+- **Power (PrimePower, nom_tt, vectorless)**: b6 70.8 mW, b5m 67.8, Innovus b5k 70.5, OpenROAD 93.1 mW (comparison run, no budget). b6 is +3 mW over b5m (+10 % std-cell area from DC v2 and 4,364 vs 1,230 optimiser buffers, mostly the ss-driven `ZBUF_`/`ZINV_` buffering).
+
+### Not closed / caveats
+- Deck antenna 1 net / 1 pin (OpenROAD checker); ICC2's own antenna check is 0 (lenient rule). Innovus b5k is at 2.
+- Native ss setup -0.0225 ns (3 paths) was left; the judge's ss result differs (StarRC max RC + the TT SRAM model).
+- Max-cap (about 155 SRAM-output nets) and ss max-transition (113) were not tuned (comparison run).
+- ss hold fails on I/O ports in the judge (above); ss is not a hold scenario.
+- Wire-load: none; native numbers use the tool's own RC (TLU+ from the tuned-ITF generation, not correlated with StarRC for sign-off purposes: `starrc_extraction_summary.md` WARN applies, all numbers are **indicative**).
+- ECO history of this run: first pass `06_eco` (0/0/0), deck found 2 KLayout `m1.7` + 11 antenna pins -> `06b_eco2` (5 nets re-routed, 11 diodes) -> deck 2 antenna pins -> `06c_eco3` (2 more diodes on each) -> deck 1 antenna pin. Verification of the passes superseded earlier ones is in `signoff/chain_b6_pass1`, `chain_b6_pass2`; the reported numbers are all from the final pass (`06c_eco3` -> `07_finish`).
