@@ -41,6 +41,77 @@ proc tim {tag} {
 puts "B6_HALO_PRESENT: [sizeof_collection [get_routing_blockages -quiet]] routing blockages"
 chk 0
 tim 0
+
+# ============================================================ S: residual net-net shorts of the b6_05 repair loop (b5: a macro-gap column at x 1900-1960 um needs a re-solve of the region)
+proc short_info {f} {
+  set nets {}; set boxes {}
+  set fh [open $f r]
+  while {[gets $fh l] >= 0} {
+    if {![string match "*Detected short violation*" $l] || [string match "*Blockage*" $l]} continue
+    if {[regexp {Net1: (\S+)\. Net2: (\S+)\. BBox: \(([-0-9.]+) ([-0-9.]+)\)\(([-0-9.]+) ([-0-9.]+)\)} $l -> n1 n2 x1 y1 x2 y2]} {
+      lappend nets $n1 $n2; lappend boxes [list $x1 $y1 $x2 $y2]
+    }
+  }
+  close $fh
+  return [list [lsort -unique $nets] $boxes]
+}
+proc nets_of {names} {
+  set c {}
+  foreach n $names { set x [get_nets -quiet [list $n]]; if {[sizeof_collection $x]} { set c [add_to_collection $c $x] } else { puts "S_WARN: net $n not found" } }
+  return $c
+}
+proc nets_near {boxes m} {
+  set names {}
+  foreach b $boxes {
+    lassign $b x1 y1 x2 y2
+    catch {
+      foreach_in_collection sh [get_shapes -quiet -intersect [list [list [expr {$x1-$m}] [expr {$y1-$m}]] [list [expr {$x2+$m}] [expr {$y2+$m}]]]] {
+        set o [get_attribute $sh owner]
+        if {$o ne ""} { lappend names [get_attribute $o full_name] }
+      }
+    }
+  }
+  return [lsort -unique $names]
+}
+if {"S" in {S}} {
+  lassign [short_info $R/e_lvs_0.txt] snets sboxes
+  puts "S_START: [llength $snets] shorted nets $snets at [llength $sboxes] boxes"
+  if {[llength $snets] > 0} {
+    set rr [list 0 0 0]
+    foreach {pass margin} {S2 4 S4 4} {
+      set names $snets
+      if {$margin > 0} { set names [lsort -unique [concat $snets [nets_near $sboxes $margin]]] }
+      set names [lsearch -all -inline -not -glob $names {VPWR}]
+      set names [lsearch -all -inline -not -glob $names {VGND}]
+      set nn [nets_of $names]
+      puts "S_$pass: rip up and reroute [sizeof_collection $nn] nets (margin $margin um)"
+      if {$pass eq "S4"} {
+        # the long (>100 um) shorted nets are forced off met1/met2 (min layer met3, pin access allowed): their long vertical runs go to met4 (halos keep it clear of the PG straps)
+        foreach n $snets {
+          set net [get_nets -quiet [list $n]]
+          if {[sizeof_collection $net] == 0} continue
+          set ys {}
+          foreach_in_collection p [get_pins -quiet -of_objects $net] { lappend ys [lindex [get_attribute $p bbox] 0 1] }
+          if {[llength $ys] > 1 && ([tcl::mathfunc::max {*}$ys] - [tcl::mathfunc::min {*}$ys]) > 100} {
+            set rc [catch {set_routing_rule -min_routing_layer met3 -min_layer_mode allow_pin_connection $net} e]
+            puts "S_S4_RULE $n rc=$rc $e"
+          }
+        }
+      }
+      remove_routes -nets $nn -detail_route -global_route
+      route_eco -max_detail_route_iterations 60
+      set rr [chk ${pass}_0]
+      for {set i 1} {$i <= 2} {incr i} {
+        if {[lindex $rr 0] == 0 && [lindex $rr 1] == 0 && [lindex $rr 2] == 0} break
+        route_detail -incremental true -initial_drc_from_input true -max_number_iterations 60
+        set rr [chk ${pass}_$i]
+      }
+      puts "S_$pass RESULT: DRCs=[lindex $rr 0] shorts=[lindex $rr 1] opens=[lindex $rr 2]"
+      if {[lindex $rr 0] == 0 && [lindex $rr 1] == 0 && [lindex $rr 2] == 0} break
+    }
+    tim S
+  }
+}
 # ============================================================ A: antenna diodes
 if {[file exists $RUN/eco_in/ant_pins.txt]} {
   set fh [open $RUN/eco_in/ant_pins.txt r]; set pairs {}

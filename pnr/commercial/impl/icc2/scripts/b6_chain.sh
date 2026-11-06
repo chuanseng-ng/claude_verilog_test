@@ -7,7 +7,7 @@ set -u
 TAG=b6_icc2
 HERE=$(cd "$(dirname "$0")/.." && pwd); RUN=$HERE/runs/$TAG; M=$RUN/markers; CL=$RUN/reports/chain.log
 mkdir -p $M $RUN/reports $RUN/logs
-STAGES=${B6_STAGES:-"b6_01_floorplan b6_02_pdn b6_03_place b6_04_cts b6_05_route b6_06_eco b6_07_finish"}
+STAGES=${B6_STAGES:-"b6_01_floorplan b6_02_pdn b6_03_place b6_04_cts b6_05_route b6_06_eco b6_07_finish b6_08_write_verilog"}
 FIRST=${1:-}; LAST=${2:-}; on=1; [ -n "$FIRST" ] && on=0
 LAST_START=0
 stagger() {
