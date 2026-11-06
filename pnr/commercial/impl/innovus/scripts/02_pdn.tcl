@@ -17,6 +17,49 @@ addEndCap -preCap sky130_fd_sc_hd__decap_3 -postCap sky130_fd_sc_hd__decap_3 -pr
 puts "ENDCAPS: [llength [dbGet -p2 top.insts.cell.name sky130_fd_sc_hd__decap_3]]"
 addWellTap -cell sky130_fd_sc_hd__tapvpwrvgnd_1 -cellInterval 26 -checkerBoard -prefix TAP
 puts "TAPS: [llength [dbGet -p2 top.insts.cell.name sky130_fd_sc_hd__tapvpwrvgnd_1]]"
+# ---- b6 (B6=1): taps fixed AT THE SOURCE.  The lattice (every 25.76 um from the row start) ends one site (0.46 um) short of a row-segment endcap in about half of the rows next to a macro edge:
+#      the 0.08 um slit between tap n-well and endcap n-well is KLayout nwell.2a and the endcap n-well is untied (b5h: 146 islands, IMPVFC-92 opens; b5j fixed it as an ECO).
+#      Rule: for every endcap whose nearest tap on its left is 0 < gap <= 1.0 um away (the slit signature; gaps of 13+ um are normal and untouched), add one tapvpwrvgnd_1 abutting the endcap,
+#      same row, orientation of that neighbour tap.  Checked afterwards with nwell_islands_innovus.py on the floorplan DEF (expect 0 untied islands).
+if {[info exists ::env(B6)] && $::env(B6) == 1} {
+  proc b6_nw {tag} {
+    global RUN SCRIPTDIR PDKREF
+    defOut -floorplan $RUN/out/pdn_tapcheck_$tag.def
+    set rc [catch { exec python3 $SCRIPTDIR/nwell_islands_innovus.py $RUN/out/pdn_tapcheck_$tag.def $PDKREF/sky130_fd_sc_hd/lef/sky130_fd_sc_hd.lef } er]
+    foreach l [split $er "\n"] { if {[string match "std cells*" $l]} { puts "B6_NWELL($tag): $l" } }
+  }
+  b6_nw before
+  set TAPC sky130_fd_sc_hd__tapvpwrvgnd_1
+  array set tapr {}
+  foreach i [dbGet -p2 top.insts.cell.name $TAPC] {
+    lassign [lindex [dbGet $i.box] 0] x1 y1 x2 y2
+    lappend tapr([format %.3f $y1]) [list $x2 [dbGet $i.orient] $x1]
+  }
+  set nadd 0
+  foreach e [dbGet -p2 top.insts.cell.name sky130_fd_sc_hd__decap_3] {
+    lassign [lindex [dbGet $e.box] 0] ex1 ey1 ex2 ey2
+    set k [format %.3f $ey1]
+    if {![info exists tapr($k)]} continue
+    set best {}; set bx -1e9
+    foreach tp $tapr($k) { set tx2 [lindex $tp 0]; if {$tx2 <= $ex1 + 1e-6 && $tx2 > $bx} { set bx $tx2; set best $tp } }
+    if {$best eq ""} continue
+    set gap [expr {$ex1 - $bx}]
+    if {$gap > 0.3 && $gap <= 1.0} {
+      if {$nadd == 0} { puts "B6_TAPFIX first: endcap [dbGet $e.name] box [dbGet $e.box] neighbour tap urx $bx orient [lindex $best 1]" }
+      set nx [expr {$ex1 - 0.46}]
+      set nm B6_TAP_$nadd
+      if {[catch { addInst -cell $TAPC -inst $nm -loc [list $nx $ey1] -ori [string map {N R0 S R180 FN MY FS MX} [string toupper [lindex $best 1]]] -physical } er]} { puts "B6_TAPFIX_FAIL $nm: $er"; continue }
+      catch { set_db inst:$nm .place_status fixed }
+      incr nadd
+    }
+  }
+  puts "B6_TAPFIX: added $nadd taps abutting row-segment endcaps; taps now [llength [dbGet -p2 top.insts.cell.name $TAPC]]"
+  globalNetConnect VPWR -type pgpin -pin VPWR -all -override
+  globalNetConnect VGND -type pgpin -pin VGND -all -override
+  globalNetConnect VPWR -type pgpin -pin VPB  -all -override
+  globalNetConnect VGND -type pgpin -pin VNB  -all -override
+  b6_nw after
+}
 globalNetConnect VPWR -type pgpin -pin VPWR -all -override
 globalNetConnect VGND -type pgpin -pin VGND -all -override
 globalNetConnect VPWR -type pgpin -pin VPB  -all -override

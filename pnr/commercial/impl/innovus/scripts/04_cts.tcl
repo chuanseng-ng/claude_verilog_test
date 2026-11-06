@@ -26,7 +26,24 @@ save_stage 04a_cts_raw
 }
 report_ccopt_clock_trees -file $RUN/reports/cts_clock_trees.txt
 report_ccopt_skew_groups -file $RUN/reports/cts_skew_groups.txt
-if {$B5H} {
+if {$B6} {
+  # ---- b6: clk_io virtual clock with the fixed network latency 3.295 ns (same value as b5h..b5k; the measured Avg ID of THIS tree is reported below for the record), mbist input delays included.
+  catch { exec cp $RUN/reports/cts_skew_groups.txt $RUN/reports/b6_cts_skew_groups_raw.txt }
+  set LATF $REPO/pnr/commercial/constraints/sky130_cpu_innovus_b5k_latency.sdc
+  update_constraint_mode -name func -sdc_files [list $REPO/pnr/commercial/constraints/sky130_cpu_innovus_b5k_post.sdc]
+  # every view: explicit latency file with clk_io 3.295 (update_analysis_view), then the explicit interactive latency as in b5h
+  foreach v [all_analysis_views] { if {[catch { update_analysis_view -name $v -latency_file $LATF } e]} { puts "B6_LATF_FAIL $v: $e" } else { puts "B6_LATF $v ok" } }
+  set_interactive_constraint_modes func
+  set_clock_latency 3.295 [get_clocks clk_io]
+  set_interactive_constraint_modes {}
+  set_ccopt_property update_io_latency false
+  catch { report_clocks > $RUN/reports/b6_clocks_postcts.txt }
+  foreach v [all_hold_analysis_views] {
+    catch { report_timing -view $v -from [get_ports {axi_rdata_i[10]}] -early -path_type full_clock -max_paths 1 > $RUN/reports/b6_spot_input_hold_$v.txt }
+  }
+  setOptMode -holdTargetSlack 0.2
+  puts "B6: post-CTS constraint mode = b5k_post.sdc, clk_io 3.295, holdTargetSlack 0.2"
+} elseif {$B5H} {
   # ---- B5h: symmetric, SDC-visible I/O latency = measured mean clock insertion delay (Avg ID of the early skew-group row, = mean of rise/fall sink arrival, excluding the 1.0 ns source latency)
   set fh [open $RUN/reports/cts_skew_groups.txt r]; set LIO ""
   while {[gets $fh l] >= 0} { if {[regexp {^dc_tt:both\.early\s+clk_i/func\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)} $l -> mn mx av]} { if {$LIO eq ""} { set LIO $av } } }

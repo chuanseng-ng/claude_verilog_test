@@ -1,0 +1,8 @@
+set_clock_latency -source -early -min  1 [get_clocks {clk_io}]
+set_clock_latency -source -early -max  1 [get_clocks {clk_io}]
+set_clock_latency -source -late -min  1 [get_clocks {clk_io}]
+set_clock_latency -source -late -max  1 [get_clocks {clk_io}]
+set_clock_latency -source -early -min  1 [get_clocks {clk_i}]
+set_clock_latency -source -early -max  1 [get_clocks {clk_i}]
+set_clock_latency -source -late -min  1 [get_clocks {clk_i}]
+set_clock_latency -source -late -max  1 [get_clocks {clk_i}]

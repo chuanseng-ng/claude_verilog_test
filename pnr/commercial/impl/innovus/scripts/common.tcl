@@ -17,6 +17,15 @@ if {[info exists ::env(B5H)] && $::env(B5H) == 1} {
 }
 set NETLIST $REPO/pnr/commercial/syn/genus/runs/b3b_genus_tt_r2/out/rv32i_cpu_top.nl.v
 set SCRIPTDIR [file dirname [file normalize [info script]]]
+# ---- B6 (B6=1): everything of B5H plus FULL MMMC (mmmc_b6.tcl: ss/tt/ff views, captbl6 nom/min/max, explicit per-view latency files) and the b5k SDC family (mbist input delays).
+#      Pre-CTS SDC = sky130_cpu_innovus_b6_pre.sdc; 04_cts switches to sky130_cpu_innovus_b5k_post.sdc (clk_io network latency 3.295, clk_i propagated) + sky130_cpu_innovus_b5k_latency.sdc.
+set B6 0
+set MMMCFILE $SCRIPTDIR/mmmc_tt.tcl
+if {[info exists ::env(B6)] && $::env(B6) == 1} {
+  set B6 1; set B5H 1
+  set SDC $REPO/pnr/commercial/constraints/sky130_cpu_innovus_b6_pre.sdc
+  set MMMCFILE $SCRIPTDIR/mmmc_b6.tcl
+}
 set PDKREF $::env(PDK_ROOT)/sky130A/libs.ref
 set ::env(SDC) $SDC
 file mkdir $RUN/reports $RUN/out $RUN/logs $RUN/dbs

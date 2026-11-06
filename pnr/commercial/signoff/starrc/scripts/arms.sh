@@ -8,6 +8,7 @@ arm_def() {
     innovus)  echo pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.def ;;   # b5c reroute (b5b superseded, not extracted for results)
     innovusb5h) echo pnr/commercial/impl/innovus/runs/b5h_innovus/out/rv32i_cpu_top.def ;;   # b5h: capTable + symmetric clk_io latency (arm name has no '_': the Makefile pattern splits on it)
     icc2b5m) echo pnr/commercial/impl/icc2/runs/b5m_icc2/out/rv32i_cpu_top.def ;;   # b5m: b5i + PDN strap-end trim + antenna diodes + net-name hygiene
+    innovusb6) echo pnr/commercial/impl/innovus/runs/b6_innovus/out/rv32i_cpu_top.def ;;   # b6: full MMMC (ss/tt/ff) flow, taps at source, b5k ECO set folded in
     icc2b6) echo pnr/commercial/impl/icc2/runs/b6_icc2/out/rv32i_cpu_top.def ;;   # b6: DC v2 MCMM netlist, ICC2 MCMM flow
     icc2b5i) echo pnr/commercial/impl/icc2/runs/b5i_icc2/out/rv32i_cpu_top.def ;;   # b5i: b5e routed + in-place met1-short / met4-spacing ECO (arm name has no '_')
     innovusb5j) echo pnr/commercial/impl/innovus/runs/b5j_innovus/out/rv32i_cpu_top.def ;;   # b5j: b5h routed + endcap n-well tie ECO (in-place)

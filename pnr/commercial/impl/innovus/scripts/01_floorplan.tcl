@@ -8,7 +8,7 @@ set init_lef_file [list $PDKREF/sky130_fd_sc_hd/techlef/sky130_fd_sc_hd__nom.tle
                         $PDKREF/sky130_sram_macros/lef/${SRAM}.lef]
 set init_verilog   $NETLIST
 set init_top_cell  $TOP
-set init_mmmc_file $SCRIPTDIR/mmmc_tt.tcl
+set init_mmmc_file $MMMCFILE
 set init_pwr_net   {VPWR}
 set init_gnd_net   {VGND}
 init_design
