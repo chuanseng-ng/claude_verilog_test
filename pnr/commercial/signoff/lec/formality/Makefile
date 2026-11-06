@@ -81,8 +81,8 @@ lec-icc2-dc:         # (b) DC netlist vs ICC2 netlist, no SVF
 	$(call RUNFM2,$(ICC2NL),none,dc)
 lec-icc2-negctl:     # mutants of the ICC2 netlist vs the DC netlist (netlist hop, cheap); each must FAIL
 	@mkdir -p $(HERE)/runs
-	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(MUTP)_fwdb_inv.nl.v fwdb_inv
-	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(MUTP)_swap.nl.v swap
+	python3 -I $(HERE)/scripts/$(or $(MUTSCRIPT),mk_mutant_icc2.py) $(ICC2NL) $(MUTP)_fwdb_inv.nl.v fwdb_inv
+	python3 -I $(HERE)/scripts/$(or $(MUTSCRIPT),mk_mutant_icc2.py) $(ICC2NL) $(MUTP)_swap.nl.v swap
 	-$(MAKE) lec-icc2-dc ICC2NL=$(MUTP)_fwdb_inv.nl.v TAG=$(PFX)_negctl_dc_fwdb_inv
 	-$(MAKE) lec-icc2-dc ICC2NL=$(MUTP)_swap.nl.v TAG=$(PFX)_negctl_dc_swap
 	-$(MAKE) lec-icc2-rtl ICC2NL=$(MUTP)_fwdb_inv.nl.v TAG=$(PFX)_negctl_rtl_fwdb_inv
@@ -166,7 +166,7 @@ lec-icc2-b5m: lec-icc2-b5m-real lec-icc2-b5m-negctl
 
 # ---------------- B6 (ICC2 MCMM flow from the DC v2 netlist): same recipe as b5m, reference = DC v2 (b3c_dc_mcmm) netlist + its SVF; outputs tagged b6_* ----------------
 #   make lec-icc2-b6             (b) vs DC v2, (a) vs RTL+SVF v2, nodiode variants (port + antenna diodes stripped), 4 negative controls
-B6 := DCTAG=b3c_dc_mcmm ICC2RUN=b6_icc2 PFX=b6 MUTP=$(HERE)/runs/mutant_b6_icc2 STRIPNL=$(HERE)/runs/b6_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+B6 := MUTSCRIPT=mk_mutant_b6.py DCTAG=b3c_dc_mcmm ICC2RUN=b6_icc2 PFX=b6 MUTP=$(HERE)/runs/mutant_b6_icc2 STRIPNL=$(HERE)/runs/b6_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
 .PHONY: lec-icc2-b6 lec-icc2-b6-real lec-icc2-b6-negctl
 lec-icc2-b6-real:
 	-$(MAKE) lec-icc2-dc $(B6) TAG=b6_icc2_vs_dc

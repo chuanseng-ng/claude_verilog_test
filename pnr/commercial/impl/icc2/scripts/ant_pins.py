@@ -11,5 +11,5 @@ for ln in open(sys.argv[1]):
     if "(VIOLATED)" in ln and net and pin and (net, pin) not in viol:
         viol.add((net, pin)); order.append((net, pin))
 with open(sys.argv[2], "w") as f:
-    for n, p in order: f.write("{%s} {%s}\n" % (n, p))
+    for n, p in order: f.write("{%s} {%s}\n" % (n.replace("\\/", "/"), p.replace("\\/", "/")))
 print("violating nets", len({n for n, _ in order}), "pins", len(order))
