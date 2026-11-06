@@ -1,0 +1,7 @@
+B6_NWELL(before): std cells 67731; n-well islands 63961; islands with NO tap: 767
+B6_TAPFIX first: endcap ENDCAP_2 box {98.44 24.48 99.82 27.2} neighbour tap urx 97.98 orient MX
+B6_TAPFIX: added 293 taps abutting row-segment endcaps; taps now 63814
+B6_NWELL(after): std cells 68024; n-well islands 63668; islands with NO tap: 474
+PDN_SELFCHECK VPWR: special-wire pieces = 1
+PDN_SELFCHECK VGND: special-wire pieces = 1
+PDN_SELFCHECK: PASS (one piece per PG net)

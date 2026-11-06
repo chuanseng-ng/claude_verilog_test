@@ -244,3 +244,12 @@ Files: `pnr/commercial/signoff/lec/conformal/{Makefile, scripts/{mk_innovus_do.p
 - Equivalence is of the logical netlist (`saveNetlist`). The PG netlist (`.pg.pnl.v`) and physical cells (taps, fill) were not LEC'd; they have no logic and are covered by LVS, not LEC. Whether the GDS matches this netlist is Netgen LVS's job.
 - ECOs or edits after this Innovus run are not covered: rerun `lec-innovus-*` after any change. Gate names (`g419910`) change per run; flop names are stable; re-anchor the mutants.
 - Single tt library view (logic equivalence is corner independent). Constant-0 flops rely on `-seq_constant_x_to 0`, same caveat as B4a/B4b. LEC says netlist == RTL, not that the RTL is correct.
+
+## B4m: `b6_innovus` (full-MMMC flow, taps at source, b5k ECO set folded in)
+
+**Verdict: EQUIVALENT, all four compares (RTL and Genus goldens, with and without the 282 diodes); all four negative controls caught.** Same tool, method and settings as B4l (Conformal, flat, no fv_map). Netlist `impl/innovus/runs/b6_innovus/out/rv32i_cpu_top.nl.v` (md5 `48d9c7657ab7...`), `make -C signoff/lec/conformal lec-innovus-all INNTAG=b6_innovus STEP=b4m`.
+| Run | Result |
+|---|---|
+| `b4m_innovus_vs_rtl`, `b4m_innovus_vs_genus`, `..._nodiode_vs_rtl`, `..._nodiode_vs_genus` | EQUIVALENT, 5,597 compare points (379 PO + 5,208 DFF + 10 SRAM BBOX), 0 non-equivalent / 0 abort / 0 unknown |
+| `b4m_negctl_rtl_fwdb_inv`, `..._rtl_swap`, `..._genus_fwdb_inv`, `..._genus_swap` | NOT_EQUIVALENT (4/4, good) |
+Note: the `swap` mutant anchors on instance `\u_core/g419910`, which the b6 optimisation resized from `a211o_1` to `a211o_2`; `mk_mutant_innovus.py` now matches `a211o_[12]`. The chain's first LEC step returned rc=2 because the controls aborted on the anchor (the four compares had already finished EQUIVALENT); the controls were re-run alone and passed.

@@ -3209,3 +3209,13 @@ most 2026-08 → 2026-09 lessons were already hand-written into the sections abo
 - Hold with ff+tt views active and `set_lib_cell_purpose -include hold` limited to dlygate/dlymetal/clkdlybuf: hold clean after CTS/route_opt, 106 real delay cells, no DRV ECO needed.
 - Deck antenna (OpenROAD check_antennas) after one diode_2 per violating sink pin: 582 -> 11 -> 2 -> 1 nets over three ECO rounds; ICC2's own antenna check stays 0 throughout.
 - `write_verilog -include {pg_netlist}` cannot be combined with `-exclude`. A `grep -r` over runs/ directories can saturate IO on this VM (load 17-56) and slows ICC2 stages 20x.
+
+## Innovus b6 (2026-11-07): full MMMC closes what the tt-only P&R could not (Sky130 rv32i_cpu_top, Genus v1 netlist)
+- With ss+tt setup and ff+tt hold views active in place_opt/ccopt/postRoute, the PT judge's reg-to-reg ss loss (b5k -7.1..-8.8 ns, 641-1064 violators) goes to 0 violators at all 9 corners x 3 SDCs. The loss was P&R corner scope, not synthesis. Cost: buffers x2.1, +8 % PrimePower power.
+- Innovus: every analysis view needs an explicit `-latency_file`; `update_constraint_mode` with the SDC that carries `set_clock_latency 3.295 clk_io` already propagated it to all views in a probe; `update_analysis_view -name V -latency_file F` works post-CTS. `report_timing -view` needs `-early` only for hold views, `-late` for setup views (TCLCMD-997).
+- A fixed virtual clk_io latency (3.295) is wrong at ss (tree 5.7-6.7 ns) and ff (1.95): the remaining ss/ff failures are all I/O. Per-view clk_io would remove them.
+- Taps at source: after addWellTap add a tap abutting every endcap whose nearest left tap is 0.3..1.0 um away (293 taps); final-DEF island check 0 untied. The checker is only meaningful on the final DEF (without std cells 474 artefact islands remain).
+- npc.2: and2_0 adjacent to a decap on EITHER side can violate (b5k found only mirrored+right); replace that decap by fill.
+- Conformal swap mutant anchored on a cell name breaks when the optimiser resizes it (a211o_1 -> a211o_2): match the drive-strength family.
+- Waiting: a foreground `sleep` is capped ~180 s; an until-loop on a log line like "end <stage>" matches stale lines from an earlier run: use done-marker files.
+- Innovus `report_power` in MMMC uses the first power view (av_ss here: leakage 0.43 mW vs 0.095 at tt); quote PrimePower.

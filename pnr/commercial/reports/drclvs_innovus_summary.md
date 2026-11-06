@@ -150,3 +150,6 @@ so the Magic run is not spent on a GDS without via pads. One line (about 30 min 
 ## Files
 Harness `pnr/commercial/signoff/drclvs/` (`arms/innovus.mk` sets `PIN_MODE=text`); reports `reports/innovus_*`; run products (gitignored) `runs/innovus/`. `runs/innovus/lvsgds_m4label/` is a superseded extraction
 (PG label on a met4 stripe; same split) kept for reference.
+
+## b6 (full-MMMC Innovus flow; arm `innovus_b6`, final layout)
+Open decks, `make ARM=innovus_b6` (GDS-mode): **KLayout DRC 0** (draft before the ECO set: 38 = m3.6 37 + npc.2 1; the npc.2 rule was extended to a non-mirrored `and2_0` with a decap on its left and the finish re-run); **nwell.2a 0 and no untied n-well islands without any tap ECO** (taps abut every row-segment endcap, 293 taps from `02_pdn.tcl`); **Netgen LVS (GDS)** devices 46,175 = 46,175, nets 47,113 = 47,113, top-level pin matching fails only on the 3 `assign` pairs and the layout-only VPWR/VGND labels (as b5j/b5k); **OpenROAD check_antennas: 2 nets / 2 pins** (13 before the diode ECO; side area on long wires). Magic DRC: see `innovus_b6_report.md`.

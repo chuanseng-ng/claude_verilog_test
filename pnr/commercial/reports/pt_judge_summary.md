@@ -582,3 +582,97 @@ reg-to-reg (r2rx) worst setup / hold, ns (violators):
 | max_ff | none (0) / -0.027 (8) | n/a | none (0) / none (0) | n/a |
 
 nom_tt PrimePower total (raw `Total` row tail, W): ICC2 b6 70.8 mW; ICC2 b5m -; Innovus b5k 70.5 mW; OpenROAD -
+
+## 14. Innovus b6 (full MMMC ss/tt/ff P&R, Genus v1 netlist): judge next to ICC2 b6, ICC2 b5m, Innovus b5k, OpenROAD
+
+StarRC nom/min/max on `impl/innovus/runs/b6_innovus/out/rv32i_cpu_top.def` (final layout; SPEF md5 and netlist md5 checked per run, 0 unannotated pin-to-pin nets in all 27 runs), PrimeTime X-2025.06, SDC md5s: shared `3c69635042a9d65cb87e71a9db713e4e`, iolat `e90bdba8b93f8f4e985c5fbaa6d4ab90`, own = Innovus b6 exported SDC (`constraints/sky130_cpu_innovus_b6_own_pt.sdc`, md5 `99df2bf2...`). Reading and the b5k -> b6 table: `innovus_b6_report.md`. Status: measurement, `sta.signoff=false`; figures indicative (SRAM TT-only in every view, bead `o1i`; clk_io is a fixed 3.295 ns in the own SDC, so the ss/ff I/O items carry a modelling error). **Headline: reg-to-reg is clean (0 violators) at all 9 corners under all three SDCs; Innovus b5k had 641..1064 reg-to-reg setup violators at ss.**
+
+### SDC variant `own`: setup WNS ns (violators) / hold WNS ns (violators)
+
+| corner | Innovus b6 | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|---|
+| nom_tt | +2.830 (0) / +0.411 (0) | +3.314 (0) / -1.230 (556) | n/a | +1.006 (0) / +0.140 (0) | n/a |
+| nom_ss | +0.177 (0) / +0.113 (0) | -1.594 (12) / -2.234 (577) | n/a | -7.833 (962) / -0.497 (1) | n/a |
+| nom_ff | +3.830 (0) / +0.197 (0) | +4.015 (0) / -0.780 (374) | n/a | +2.673 (0) / -0.013 (3) | n/a |
+| min_tt | +2.958 (0) / +0.401 (0) | +3.505 (0) / -1.145 (544) | n/a | +1.315 (0) / +0.139 (0) | n/a |
+| min_ss | +0.260 (0) / +0.396 (0) | -1.079 (7) / -2.107 (571) | n/a | -7.099 (734) / -0.276 (1) | n/a |
+| min_ff | +3.947 (0) / -0.007 (1) | +4.165 (0) / -0.722 (325) | n/a | +3.020 (0) / -0.159 (27) | n/a |
+| max_tt | +2.594 (0) / +0.416 (0) | +3.028 (0) / -1.345 (570) | n/a | +0.456 (0) / +0.140 (0) | n/a |
+| max_ss | -0.050 (4) / -0.254 (3) | -2.268 (26) / -2.412 (586) | n/a | -8.829 (1193) / -0.790 (5) | n/a |
+| max_ff | +3.630 (0) / +0.202 (0) | +3.774 (0) / -0.865 (441) | n/a | +2.154 (0) / +0.023 (0) | n/a |
+
+reg-to-reg (r2rx) worst setup / hold, ns (violators):
+
+| corner | Innovus b6 | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|---|
+| nom_tt | none (0) / none (0) | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| nom_ss | none (0) / none (0) | none (0) / none (0) | n/a | -7.833 (848) / none (0) | n/a |
+| nom_ff | none (0) / none (0) | none (0) / -0.004 (2) | n/a | none (0) / none (0) | n/a |
+| min_tt | none (0) / none (0) | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| min_ss | none (0) / none (0) | none (0) / none (0) | n/a | -7.099 (641) / none (0) | n/a |
+| min_ff | none (0) / none (0) | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| max_tt | none (0) / none (0) | none (0) / none (0) | n/a | none (0) / none (0) | n/a |
+| max_ss | none (0) / none (0) | -0.059 (3) / none (0) | n/a | -8.829 (1064) / none (0) | n/a |
+| max_ff | none (0) / none (0) | none (0) / -0.027 (8) | n/a | none (0) / none (0) | n/a |
+
+nom_tt PrimePower total (raw `Total` row tail, W): Innovus b6 76.2 mW; ICC2 b6 70.8 mW; ICC2 b5m -; Innovus b5k 70.5 mW; OpenROAD -
+
+### SDC variant `base`: setup WNS ns (violators) / hold WNS ns (violators)
+
+| corner | Innovus b6 | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|---|
+| nom_tt | +2.455 (0) / -1.929 (455) | +3.314 (0) / -1.230 (556) | +0.085 (0) / -1.232 (523) | -0.594 (3) / -2.224 (510) | +3.172 (0) / -0.319 (51) |
+| nom_ss | -1.993 (71) / -3.182 (472) | -1.594 (12) / -2.234 (577) | -14.333 (1356) / -2.232 (549) | -8.484 (948) / -3.792 (548) | -3.426 (1062) / -0.800 (121) |
+| nom_ff | +4.131 (0) / -1.323 (356) | +4.015 (0) / -0.780 (374) | +3.345 (0) / -0.779 (534) | +2.242 (0) / -1.477 (241) | +3.928 (0) / -0.136 (8) |
+| min_tt | +2.992 (0) / -1.732 (422) | +3.505 (0) / -1.145 (544) | +0.227 (0) / -1.141 (512) | +0.120 (0) / -2.068 (526) | +3.548 (0) / -0.174 (5) |
+| min_ss | -1.253 (49) / -2.899 (449) | -1.079 (7) / -2.107 (571) | -14.074 (1201) / -2.081 (547) | -7.513 (723) / -3.571 (574) | -2.777 (800) / -0.588 (78) |
+| min_ff | +4.277 (0) / -1.168 (308) | +4.165 (0) / -0.722 (325) | +3.533 (0) / -0.710 (505) | +2.814 (0) / -1.367 (336) | +4.066 (0) / -0.015 (3) |
+| max_tt | +1.686 (0) / -2.193 (504) | +3.028 (0) / -1.345 (570) | -0.365 (26) / -1.361 (545) | -1.640 (4) / -2.424 (457) | +2.679 (0) / -0.522 (169) |
+| max_ss | -3.028 (107) / -3.549 (488) | -2.268 (26) / -2.412 (586) | -14.670 (1619) / -2.416 (553) | -9.759 (1189) / -4.085 (545) | -4.326 (1207) / -1.071 (155) |
+| max_ff | +3.536 (0) / -1.534 (419) | +3.774 (0) / -0.865 (441) | +3.087 (0) / -0.881 (585) | +1.396 (0) / -1.627 (163) | +3.713 (0) / -0.307 (43) |
+
+reg-to-reg (r2rx) worst setup / hold, ns (violators):
+
+| corner | Innovus b6 | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|---|
+| nom_tt | none (0) / none (0) | none (0) / none (0) | none (0) / -0.007 (2) | none (0) / none (0) | none (0) / none (0) |
+| nom_ss | none (0) / none (0) | none (0) / none (0) | -14.333 (1320) / none (0) | -7.833 (848) / none (0) | -3.426 (987) / none (0) |
+| nom_ff | none (0) / none (0) | none (0) / -0.004 (2) | none (0) / -0.101 (115) | none (0) / none (0) | none (0) / none (0) |
+| min_tt | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) |
+| min_ss | none (0) / none (0) | none (0) / none (0) | -14.074 (1173) / none (0) | -7.099 (641) / none (0) | -2.777 (761) / none (0) |
+| min_ff | none (0) / none (0) | none (0) / none (0) | none (0) / -0.094 (112) | none (0) / none (0) | none (0) / none (0) |
+| max_tt | none (0) / none (0) | none (0) / none (0) | -0.365 (26) / -0.020 (6) | none (0) / none (0) | none (0) / none (0) |
+| max_ss | none (0) / none (0) | -0.059 (3) / none (0) | -14.670 (1563) / none (0) | -8.829 (1064) / none (0) | -4.326 (1122) / none (0) |
+| max_ff | none (0) / none (0) | none (0) / -0.027 (8) | none (0) / -0.112 (121) | none (0) / none (0) | none (0) / none (0) |
+
+nom_tt PrimePower total (raw `Total` row tail, W): Innovus b6 76.2 mW; ICC2 b6 70.8 mW; ICC2 b5m 67.8 mW; Innovus b5k 70.5 mW; OpenROAD 93.1 mW
+
+### SDC variant `iolat`: setup WNS ns (violators) / hold WNS ns (violators)
+
+| corner | Innovus b6 | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|---|
+| nom_tt | +3.628 (0) / -0.151 (3) | +3.314 (0) / +0.114 (0) | +0.085 (0) / -0.007 (2) | +1.184 (0) / -0.446 (5) | +3.123 (0) / +0.526 (0) |
+| nom_ss | -0.215 (4) / -1.404 (39) | +0.184 (0) / -0.456 (42) | -14.333 (1378) / -0.454 (29) | -7.833 (940) / -2.014 (81) | -3.426 (1014) / +0.978 (0) |
+| nom_ff | +4.131 (0) / +0.197 (0) | +4.015 (0) / -0.004 (2) | +3.345 (0) / -0.101 (115) | +4.020 (0) / +0.022 (0) | +3.928 (0) / +0.243 (0) |
+| min_tt | +3.772 (0) / +0.046 (0) | +3.505 (0) / +0.115 (0) | +0.227 (0) / +0.002 (0) | +1.898 (0) / -0.290 (1) | +3.186 (0) / +0.542 (0) |
+| min_ss | +0.525 (0) / -1.121 (29) | +0.699 (0) / -0.329 (31) | -14.074 (1199) / -0.303 (20) | -7.099 (727) / -1.793 (71) | -2.777 (788) / +1.190 (0) |
+| min_ff | +4.277 (0) / +0.190 (0) | +4.165 (0) / +0.003 (0) | +3.533 (0) / -0.094 (112) | +4.420 (0) / +0.020 (0) | +4.066 (0) / +0.250 (0) |
+| max_tt | +3.439 (0) / -0.415 (6) | +3.028 (0) / +0.112 (0) | -0.365 (26) / -0.020 (6) | +0.138 (0) / -0.646 (15) | +3.019 (0) / +0.495 (0) |
+| max_ss | -1.250 (40) / -1.771 (78) | -0.490 (5) / -0.634 (66) | -14.670 (1707) / -0.638 (46) | -8.829 (1166) / -2.307 (96) | -4.326 (1155) / +0.707 (0) |
+| max_ff | +3.927 (0) / +0.202 (0) | +3.774 (0) / -0.027 (8) | +3.087 (0) / -0.112 (121) | +3.174 (0) / +0.023 (0) | +3.713 (0) / +0.212 (0) |
+
+reg-to-reg (r2rx) worst setup / hold, ns (violators):
+
+| corner | Innovus b6 | ICC2 b6 | ICC2 b5m | Innovus b5k | OpenROAD |
+|---|---|---|---|---|---|
+| nom_tt | none (0) / none (0) | none (0) / none (0) | none (0) / -0.007 (2) | none (0) / none (0) | none (0) / none (0) |
+| nom_ss | none (0) / none (0) | none (0) / none (0) | -14.333 (1320) / none (0) | -7.833 (848) / none (0) | -3.426 (987) / none (0) |
+| nom_ff | none (0) / none (0) | none (0) / -0.004 (2) | none (0) / -0.101 (115) | none (0) / none (0) | none (0) / none (0) |
+| min_tt | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) | none (0) / none (0) |
+| min_ss | none (0) / none (0) | none (0) / none (0) | -14.074 (1173) / none (0) | -7.099 (641) / none (0) | -2.777 (761) / none (0) |
+| min_ff | none (0) / none (0) | none (0) / none (0) | none (0) / -0.094 (112) | none (0) / none (0) | none (0) / none (0) |
+| max_tt | none (0) / none (0) | none (0) / none (0) | -0.365 (26) / -0.020 (6) | none (0) / none (0) | none (0) / none (0) |
+| max_ss | none (0) / none (0) | -0.059 (3) / none (0) | -14.670 (1563) / none (0) | -8.829 (1064) / none (0) | -4.326 (1122) / none (0) |
+| max_ff | none (0) / none (0) | none (0) / -0.027 (8) | none (0) / -0.112 (121) | none (0) / none (0) | none (0) / none (0) |
+
+nom_tt PrimePower total (raw `Total` row tail, W): Innovus b6 76.2 mW; ICC2 b6 70.8 mW; ICC2 b5m 67.8 mW; Innovus b5k 70.5 mW; OpenROAD 93.1 mW
