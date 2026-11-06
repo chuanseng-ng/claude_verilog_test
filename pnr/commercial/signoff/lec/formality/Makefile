@@ -163,3 +163,15 @@ lec-icc2-b5m-real:
 lec-icc2-b5m-negctl:
 	$(MAKE) lec-icc2-negctl $(B5M)
 lec-icc2-b5m: lec-icc2-b5m-real lec-icc2-b5m-negctl
+
+# ---------------- B6 (ICC2 MCMM flow from the DC v2 netlist): same recipe as b5m, reference = DC v2 (b3c_dc_mcmm) netlist + its SVF; outputs tagged b6_* ----------------
+#   make lec-icc2-b6             (b) vs DC v2, (a) vs RTL+SVF v2, nodiode variants (port + antenna diodes stripped), 4 negative controls
+B6 := DCTAG=b3c_dc_mcmm ICC2RUN=b6_icc2 PFX=b6 MUTP=$(HERE)/runs/mutant_b6_icc2 STRIPNL=$(HERE)/runs/b6_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+.PHONY: lec-icc2-b6 lec-icc2-b6-real lec-icc2-b6-negctl
+lec-icc2-b6-real:
+	-$(MAKE) lec-icc2-dc $(B6) TAG=b6_icc2_vs_dc
+	-$(MAKE) lec-icc2-rtl $(B6) TAG=b6_icc2_vs_rtl_svf
+	-$(MAKE) lec-icc2-nodiode $(B6)
+lec-icc2-b6-negctl:
+	$(MAKE) lec-icc2-negctl $(B6)
+lec-icc2-b6: lec-icc2-b6-real lec-icc2-b6-negctl
