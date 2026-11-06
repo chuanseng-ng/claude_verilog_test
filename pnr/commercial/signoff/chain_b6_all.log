@@ -1,0 +1,82 @@
+02:33:47 start drclvs_inspect
+02:34:01 end drclvs_inspect rc=0
+02:34:47 start drclvs_fixgds
+02:34:51 end drclvs_fixgds rc=0
+02:35:47 start drclvs_lvs-gds-extract
+02:38:05 end drclvs_lvs-gds-extract rc=0
+02:38:05 start drclvs_lvs-gds-netgen
+02:40:11 end drclvs_lvs-gds-netgen rc=0
+02:40:11 start drclvs_lvs-gds-variants
+02:44:03 end drclvs_lvs-gds-variants rc=0
+02:44:03 start drclvs_kdrc
+02:55:12 end drclvs_kdrc rc=0
+02:55:12 start drclvs_antenna
+02:55:40 end drclvs_antenna rc=0
+02:56:12 start drclvs_summary
+02:56:12 end drclvs_summary rc=0
+02:57:12 start lec
+03:00:13 end lec rc=0
+03:00:13 start starrc_nom
+03:02:30 end starrc_nom rc=0
+03:02:30 start starrc_min
+03:04:36 end starrc_min rc=0
+03:04:36 start starrc_max
+03:06:42 end starrc_max rc=0
+03:06:42 start pt_own_nom_tt
+03:07:36 end pt_own_nom_tt rc=0
+03:07:42 start pt_own_nom_ss
+03:07:55 end pt_own_nom_ss rc=0
+03:08:42 start pt_own_nom_ff
+03:08:54 end pt_own_nom_ff rc=0
+03:09:42 start pt_own_min_tt
+03:09:55 end pt_own_min_tt rc=0
+03:10:42 start pt_own_min_ss
+03:10:55 end pt_own_min_ss rc=0
+03:11:42 start pt_own_min_ff
+03:11:54 end pt_own_min_ff rc=0
+03:12:42 start pt_own_max_tt
+03:12:55 end pt_own_max_tt rc=0
+03:13:42 start pt_own_max_ss
+03:13:54 end pt_own_max_ss rc=0
+03:14:42 start pt_own_max_ff
+03:14:55 end pt_own_max_ff rc=0
+03:15:42 start pt_base_nom_tt
+03:16:03 end pt_base_nom_tt rc=0
+03:16:42 start pt_base_nom_ss
+03:16:53 end pt_base_nom_ss rc=0
+03:17:42 start pt_base_nom_ff
+03:17:52 end pt_base_nom_ff rc=0
+03:18:42 start pt_base_min_tt
+03:18:55 end pt_base_min_tt rc=0
+03:19:42 start pt_base_min_ss
+03:19:57 end pt_base_min_ss rc=0
+03:20:42 start pt_base_min_ff
+03:20:55 end pt_base_min_ff rc=0
+03:21:42 start pt_base_max_tt
+03:21:55 end pt_base_max_tt rc=0
+03:22:42 start pt_base_max_ss
+03:22:54 end pt_base_max_ss rc=0
+03:23:42 start pt_base_max_ff
+03:23:55 end pt_base_max_ff rc=0
+03:24:42 start pt_iolat_nom_tt
+03:25:07 end pt_iolat_nom_tt rc=0
+03:25:42 start pt_iolat_nom_ss
+03:26:13 end pt_iolat_nom_ss rc=0
+03:26:42 start pt_iolat_nom_ff
+03:26:56 end pt_iolat_nom_ff rc=0
+03:27:42 start pt_iolat_min_tt
+03:27:57 end pt_iolat_min_tt rc=0
+03:28:42 start pt_iolat_min_ss
+03:28:55 end pt_iolat_min_ss rc=0
+03:29:42 start pt_iolat_min_ff
+03:29:55 end pt_iolat_min_ff rc=0
+03:30:42 start pt_iolat_max_tt
+03:30:54 end pt_iolat_max_tt rc=0
+03:31:42 start pt_iolat_max_ss
+03:31:55 end pt_iolat_max_ss rc=0
+03:32:42 start pt_iolat_max_ff
+03:32:54 end pt_iolat_max_ff rc=0
+03:32:54 chain_b6_all done
+03:33:27 start magic_drc
+03:54:54 end magic_drc rc=0
+03:54:54 chain_b6_all done

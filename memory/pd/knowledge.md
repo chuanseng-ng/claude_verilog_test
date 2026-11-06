@@ -3201,3 +3201,11 @@ both roots 14 s apart). It is an intentional duplicate of provenance, not two ru
 _Last distilled: 2026-10-06 from the 11 XDG-era experience records (2026-08-09 → 2026-10-04,
 the last 11 of 66 lines in `experiences.jsonl`). Records 1–55 were not re-audited in this pass;
 most 2026-08 → 2026-09 lessons were already hand-written into the sections above._
+
+## ICC2 multi-corner with cell-name-sharing per-corner NDMs (b6, 2026-11-07)
+- Linking sky130_hd_tt/ss/ff NDMs together does not work as multi-PVT: every instance binds to the first lib (report_pvt shows "Library has 1 pane", PVT-030 mismatches at ss/ff). Build ONE reference NDM with three panes: icc2_lm_shell, one workspace, `read_lef` once, `read_db` tt, ss, ff, `check_workspace -allow_missing` (the plain check fails on pulse-width arcs present in only some corners). Then per corner `set_process_number 1`, `set_voltage <v>`, `set_temperature <t>` select the pane (PVT-032 "no mismatches"). Pin single-PVT macros (TT-only SRAM) per corner with `-object_list`. `get_lib_cells */x` then returns one cell per lib; use the explicit lib prefix in create_boundary_cells / add_port_protection_diodes.
+- `report_timing` in MCMM reports the worst over all scenarios; use `-scenarios $s` for per-scenario numbers.
+- Up-front met4 halo blockages (0.1 um around every >3 um PG strap) + strap-end trim in the PDN stage, global-route effort high + macro_boundary_track_utilization 60 + DRC-aware partitioning from the first route: first route 3 DRC/570 shorts -> 2/4 after route_opt (b5e: 291/439). A short that survives plain and neighbour rip-up (long repeater net crossing a pin access on met2 in a macro-gap column) clears with `set_routing_rule -min_routing_layer met3 -min_layer_mode allow_pin_connection` on that net + rip-up/route_eco.
+- Hold with ff+tt views active and `set_lib_cell_purpose -include hold` limited to dlygate/dlymetal/clkdlybuf: hold clean after CTS/route_opt, 106 real delay cells, no DRV ECO needed.
+- Deck antenna (OpenROAD check_antennas) after one diode_2 per violating sink pin: 582 -> 11 -> 2 -> 1 nets over three ECO rounds; ICC2's own antenna check stays 0 throughout.
+- `write_verilog -include {pg_netlist}` cannot be combined with `-exclude`. A `grep -r` over runs/ directories can saturate IO on this VM (load 17-56) and slows ICC2 stages 20x.
