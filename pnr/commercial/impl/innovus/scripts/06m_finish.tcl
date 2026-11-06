@@ -53,17 +53,25 @@ proc npc2_fix {} {
   set P sky130_fd_sc_hd__
   array set WD {and2_0 2.30 decap_3 1.38 decap_4 1.84 decap_6 2.76 decap_8 3.68 decap_12 5.52 fill_1 0.46 fill_2 0.92 fill_4 1.84 fill_8 3.68}
   array set bydec {}
+  array set bydecU {}
   foreach t {decap_3 decap_4 decap_6 decap_8 decap_12} {
-    foreach d [dbGet -p2 top.insts.cell.name ${P}$t] { lassign [ibox $d] llx lly urx ury; set bydec([format %.3f $llx],[format %.3f $lly]) $d }
+    foreach d [dbGet -p2 top.insts.cell.name ${P}$t] { lassign [ibox $d] llx lly urx ury; set bydec([format %.3f $llx],[format %.3f $lly]) $d; set bydecU([format %.3f $urx],[format %.3f $lly]) $d }
   }
   set n 0; set log {}
   foreach i [dbGet -p2 top.insts.cell.name ${P}and2_0] {
     set o [string toupper [dbGet $i.orient]]
-    if {$o ne "R180" && $o ne "MY"} continue
     lassign [ibox $i] llx lly urx ury
-    set k "[format %.3f $urx],[format %.3f $lly]"
-    if {![info exists bydec($k)]} continue
-    set d $bydec($k); set dn [dbGet $d.name]; set dc [string map [list $P ""] [dbGet $d.cell.name]]; lassign [ibox $d] x y x2 y2; set do [dbGet $d.orient]
+    if {$o eq "R180" || $o eq "MY"} {
+      set k "[format %.3f $urx],[format %.3f $lly]"
+      if {![info exists bydec($k)]} continue
+      set d $bydec($k)
+    } else {
+      # b6: the non-mirrored and2_0 violates the same way against a decap on its LEFT (mirror image of the b5k case; KLayout npc.2 at (1595.7,1062.3) on the b6 draft)
+      set k "[format %.3f $llx],[format %.3f $lly]"
+      if {![info exists bydecU($k)]} continue
+      set d $bydecU($k)
+    }
+    set dn [dbGet $d.name]; set dc [string map [list $P ""] [dbGet $d.cell.name]]; lassign [ibox $d] x y x2 y2; set do [dbGet $d.orient]
     switch -- $dc decap_8 { set fl fill_8 } decap_4 { set fl fill_4 } decap_12 { set fl {fill_8 fill_4} } decap_6 { set fl {fill_4 fill_2} } decap_3 { set fl {fill_2 fill_1} } default { continue }
     set in [dbGet $i.name]
     deleteInst $dn
