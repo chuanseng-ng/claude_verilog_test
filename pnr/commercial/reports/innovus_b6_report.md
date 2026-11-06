@@ -48,7 +48,7 @@ Native power: the Innovus power view is `av_ss` (leakage 0.43 mW against 0.095 a
 | Native hold WNS | +0.139 | +0.011 | **+0.145** (SI off +0.197) |
 | KLayout DRC | 60 | 0 | **0** (draft 38: m3.6 37, npc.2 1) |
 | Netgen LVS (GDS) | devices 34,255 = 34,255; nets 35,214 = 35,214 | 34,800 = 34,800; 35,688 = 35,688 | **46,175 = 46,175; 47,113 = 47,113** |
-| Magic DRC | not run | not run | MAGIC_PLACEHOLDER |
+| Magic DRC | not run | not run | **28,320,055 total (ICC2 b6 28,2xx,xxx class): 28,315,092 inside SRAM footprints, 737 straddling, 4,226 outside** (see section 8) |
 | Conformal LEC | EQ 4/4 negctl | EQ 4/4 negctl | **EQ 5,597 points (RTL and Genus goldens, +/- 282 diodes), 4/4 negative controls caught** |
 | Judge own SDC nom_tt setup / hold | +0.706 / +0.140 | +1.006 / +0.140 | **+2.830 / +0.411** |
 | Judge own, nom/min/max_ss setup (viol) | -7.77 / -7.03 / -8.76 | -7.83 (962) / -7.10 (734) / -8.83 (1193) | **+0.177 (0) / +0.260 (0) / -0.050 (4)** |
@@ -73,8 +73,15 @@ Full tables and the Innovus b6 column next to ICC2 b6, ICC2 b5m, Innovus b5k and
 - Antenna: the 13-diode ECO took the deck count 13 -> 2 nets; the remaining two are side-area violations on long wires (no diode helps), as in b5k.
 - Netgen LVS fails top-level pin matching only on the 3 netlist `assign` pairs (`axi_awlen_o[1]`, `axi_arlen_o[1]`, `axi_arburst_o[0]`) and the layout-only VPWR/VGND labels, identical to b5j/b5k.
 
+## 8. Magic DRC (run alone, last, `GUARD_RSS_GB=11`, 24 min, `make ARM=innovus_b6 SRAM_MODE=real mdrc mdrc-class`)
+Classified as the ICC2 b6 run was (rule x inside / straddle / outside the SRAM footprints; `drclvs/reports/innovus_b6_magic_drc_real_by_rule.tsv`):
+- **Inside the SRAM footprints: 28,315,092**, every rule except nwell.4 is 100 % inside (li.c2, licon.11, diff/tap.1, ... the known PDK SRAM-abstract artifact, bead `45a`); same rule set and the same order of magnitude as ICC2 b6.
+- **nwell.4 (the known abstract artifact class): 4,963 = 737 straddling + 4,226 outside.** Of the 4,226 outside: **3,035 are identical to ICC2 b6's 3,035** (long well strips along the SRAM edges, 314.56 x 2.83 um x 1,740, 119.75 x 2.83 um x 319, ...: same geometry, same count), and **1,191 are Innovus-specific and NOT in that class**: tap-sized wells (0.84 x 1.61 um x 855, 2.22 x 1.61, 1.76 x 1.23, ...) at x = 20, 33, 46, 59, 72, 84, 97, 110 um on the 12.9 um tap lattice inside the left pocket (x < 125, y < 920 um, hard placement blockage: only taps and endcaps are there). The straddle count is 737 against ICC2's 592 (+145, unclassified). **Open:** Magic says those pocket tap wells have no metal-connected N+ tap although the island checker (0 untied), KLayout (nwell.2a 0, no tap rule hit) and Netgen (no isolated VPB nets) are clean; INFERRED, not isolated: a Magic reading of the tap-only rows in the blocked pocket (the ICC2 arm has logic cells there and shows none). Not reclassified as waived.
+Total outside-SRAM items: 4,963 against ICC2 b6's 3,627.
+
 ## 7. Not closed
 - ss and ff are timed with a TT SRAM model (bead `o1i`); the cache SRAM paths are therefore not pessimistic at ss.
 - clk_io is a single fixed 3.295 ns in all views (mandated). A per-view clk_io (6.66 / 3.05 / 1.95) would remove the ss/ff I/O artefacts in P&R and in the judge; not done.
 - Deck antenna 2 nets; max_cap 369 nets (160 SRAM pins); max_fanout 209 (CTS buffers).
+- Magic nwell.4: 1,191 pocket tap wells (+145 straddle) not in the artifact class (section 8).
 - Native-to-judge ff hold offset ~0.15..0.2 ns remains (Innovus max/min capTable vs StarRC).
