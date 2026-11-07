@@ -1,6 +1,6 @@
 # Quantus vs StarRC extraction cross-check, Sky130 `rv32i_cpu_top` (plan step B1/B6 remainder)
 
-Status: **nom corner complete; min and max Techgen runs are in flight** (see section 6). Numbers below are measured unless marked inferred.
+Status: **nom, min and max complete** (Techgen for all three corners, Quantus on the three arms at all three corners; every step rc 0). Numbers below are measured unless marked inferred.
 Everything here is **INDICATIVE in the sense of the plan's calibration gate**: both extractors read the *same authored stack*
 (`pdk/sky130/build/tech/ict/sky130A_<corner>.ict` for Quantus, the matching ITF for StarRC). Agreement between them says the two engines
 interpret the stack alike. It says nothing about silicon or a foundry deck.
@@ -23,11 +23,15 @@ interpret the stack alike. It says nothing about silicon or a foundry deck.
 |---|---|---|---|
 | 2026-10-25/29 `-simulation_FS_off -2d_only` (single CPU, then 2 CPUs; host powered off twice) | transistor-level 2-D done; cell level done ("CPU Time to generate technology file = 5.83 hours", `RCGEN` 2.0 MB); last step crashed | not meaningful (outages); 2-D phase 5.9 h, cell-level restarted 3 times | not recorded |
 | `Techgen -migrate` over that `RCGEN` (the final step) | `qrcTechFile` 2.0 MB, rc 0 | 2 s (0.45 s `time -v`) | 22.8 MB |
-| Fresh `Techgen -cell` re-run, 2 CPUs, 2026-11-07 09:41 | **stopped at 39 % after 1 h 45 min** to free the host (resumable, `build/qrc/nom.fresh_partial_20261107_39pct`); rate fell from 2 %/3 min to 1 %/6-9 min after 36 % | 1 h 45 min for 39 % (inferred total above 5 h) | 455 MB session peak (sum over the process session, 20 s samples) |
+| **Fresh `Techgen -cell`, min, 2 CPUs, 2026-11-07 11:52** | `RCGEN` + `qrcTechFile` 2.0 MB, rc 0 | **3 h 19 min** (11,962 s; plan 4 s, migrate 2 s) | **440 MB** session peak |
+| **Fresh `Techgen -cell`, max, 2 CPUs, 2026-11-07 15:30** | `RCGEN` + `qrcTechFile` 2.0 MB, rc 0 | **3 h 17 min** (11,849 s; plan 4 s, migrate 3 s) | **445 MB** session peak |
+| Fresh `Techgen -cell` re-run of nom, 2 CPUs, 2026-11-07 09:41 | **stopped at 39 % after 1 h 45 min** to free the host (resumable, `build/qrc/nom.fresh_partial_20261107_39pct`); rate fell from 2 %/3 min to 1 %/6-9 min after 36 % | 1 h 45 min for 39 % (inferred total about 3.3 h, from the min/max runs: the rate falls after 36 %) | 455 MB session peak (sum over the process session, 20 s samples) |
+
+min and max are single fresh end-to-end `run_techgen_cell.sh` runs (`build/qrc/{min,max}/techgen_cell.timing`).
 
 **The nom `qrcTechFile` used below is therefore the one from the 2026-10 `RCGEN` (same ICT: `cmp` identical to the current `sky130A_nom.ict`) plus the migrate step, not a single fresh end-to-end run.** `build/qrc/nom/PROVENANCE.txt` says so.
 
-## 2. Quantus run cost (nom, 2 CPUs requested, `safe_run.sh`)
+## 2. Quantus run cost (2 CPUs requested, `safe_run.sh`)
 
 | Arm | Wall | Session peak RSS | Nets extracted | Errors |
 |---|---:|---:|---:|---:|
@@ -35,10 +39,12 @@ interpret the stack alike. It says nothing about silicon or a foundry deck.
 | Innovus b6 | 2 min 32 s | 1.23 GB | 46,661 | 0 |
 | OpenROAD | 2 min 24 s | 1.17 GB | 42,196 | 0 |
 
+min: ICC2 133 s / 1.05 GB, Innovus 514 s / 1.25 GB (cold cache after the 3.3 h Techgen run), OpenROAD 86 s / 1.18 GB. max: ICC2 69 s / 1.02 GB, Innovus 73 s / 1.24 GB, OpenROAD 107 s / 1.19 GB. All 9 runs: 0 errors, same net counts at every corner.
+
 (StarRC: about 2.3 min and 0.52 GB for the ICC2 case.) Quantus used one CPU for most stages despite `-multi_cpu 2`. The incomplete-net lists
 (16 to 660 nets, "no physical wire") are the loadless/driverless nets StarRC also leaves out.
 
-## 3. Per-net correlation, Quantus against StarRC (nom)
+## 3. Per-net correlation, Quantus against StarRC (nom, then min and max)
 
 Population: nets present in both SPEFs with StarRC total C above 1 fF (the calibration-gate population). Error = (Quantus / StarRC - 1) x 100.
 "Outside" = share of nets with |error| above 10 %.
@@ -56,6 +62,21 @@ Population: nets present in both SPEFs with StarRC total C above 1 fF (the calib
 | OpenROAD | ground C | 37,897 | +3.76 | 11.58 | 48.02 | 55.6 % | 0.9904 |
 
 Design totals (all nets, Quantus / StarRC): C 0.963 (ICC2), 1.019 (Innovus), 0.986 (OpenROAD); R 0.983, 0.954, 0.971; coupling C 1.055, 1.010, 0.961.
+
+### min and max corners
+
+| Arm | Corner | Total C median % | Total C p95 \|err\| % | Outside 10 % | Total R median % | Total R p95 \|err\| % | Ground C median % | Design C / R ratio |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| ICC2 b6 | min | -3.11 | 9.39 | 4.0 % | +2.71 | 5.89 | -16.42 | 0.961 / 0.981 |
+| ICC2 b6 | max | -3.13 | 9.96 | 4.9 % | +0.81 | 1.26 | -16.72 | 0.962 / 0.987 |
+| Innovus b6 | min | +2.02 | **19.13** | 20.9 % | +2.05 | 7.53 | +6.11 | 1.015 / 0.951 |
+| Innovus b6 | max | +1.69 | **19.19** | 22.0 % | +0.78 | 4.10 | +5.72 | 1.014 / 0.962 |
+| OpenROAD | min | -2.23 | **12.03** | 8.7 % | +2.93 | 7.07 | +3.96 | 0.986 / 0.967 |
+| OpenROAD | max | -2.39 | **13.16** | 10.7 % | +0.80 | 1.54 | +3.50 | 0.985 / 0.978 |
+
+The corner dependence is small: total-C medians move by at most 0.5 point between nom, min and max. Total R is the only quantity with a corner trend (median +2.7..+2.9 % at min, +0.8 % at max,
+against +1.3..+1.6 % at nom), probably because the min/max resistivity and via-resistance scaling is realised differently by the ICT (Quantus) and the ITF/TCAD tables (StarRC) (inferred, not isolated). All nine cases pass the median gate on total C and total R;
+the total-C tail beyond +-10 % at p95 (Innovus about 19 %, OpenROAD 12..13 %) is the same at every corner, so it is a structural per-net difference, not a corner-scaling error. Full table: `signoff/quantus/reports/quantus_vs_starrc.md`.
 
 Reading against the plan's gate (beyond +-10 % is *indicative*):
 - **Total C and total R pass on the median for all three arms** (median |error| 1.5 to 4.6 %). Total R is tight everywhere (p95 under 5 %).
@@ -92,6 +113,7 @@ PrimeTime took 8 min on the first ICC2 read of the Quantus SPEF (cold cache) and
 
 ## 6. Not closed
 
-- **min and max qrcTechFiles and Quantus extractions**: `pnr/commercial/signoff/quantus/scripts/chain_all.sh` (CORNERS="min max") is running Techgen min, Quantus on the three arms, Techgen max, Quantus on the three arms; `finish_after_chain.sh` then regenerates `reports/quantus_vs_starrc.{json,md}` and `reports/quantus_runs.json`. Expected Techgen time per corner: above 5 h at 2 CPUs. Until they land the min/max rows of this report and the JSON are absent.
-- The nom Techgen figure is not a single fresh end-to-end run (section 1).
-- Quantus parallelism (-multi_cpu 2) was not exploited by the tool; no tuning attempted.
+- The nom Techgen figure is not a single fresh end-to-end run (section 1); min and max are. The fresh nom re-run (39 % done) is resumable but was not completed, since the min/max runs show it would take about 3.3 h and the nom `RCGEN` already used is from the same ICT.
+- Agreement is between two extractors reading one authored stack. There is still no calibration to silicon or a foundry deck.
+- The total-C tail (p95 above 10 % for Innovus b6 and OpenROAD) is reported, not diagnosed per net.
+- PrimeTime sensitivity was run at nom_tt only, as planned.

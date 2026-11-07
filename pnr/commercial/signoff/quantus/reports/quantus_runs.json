@@ -1,5 +1,27 @@
 {
  "quantus_runs": {
+  "icc2b6_max": {
+   "wall_s": 69.1,
+   "max_single_process_rss_kb": 68528,
+   "session_peak_rss_kb": 1016324,
+   "rc": "0",
+   "nets_extracted": 41413,
+   "warnings": 31,
+   "errors": 0,
+   "spef_bytes": 130161821,
+   "spef_md5": "b1889fc3e393ac36a0824a9afab969f5"
+  },
+  "icc2b6_min": {
+   "wall_s": 133.2,
+   "max_single_process_rss_kb": 68444,
+   "session_peak_rss_kb": 1048164,
+   "rc": "0",
+   "nets_extracted": 41413,
+   "warnings": 31,
+   "errors": 0,
+   "spef_bytes": 129888543,
+   "spef_md5": "b8e26116b10b89be99bd6f1fe19ecc48"
+  },
   "icc2b6_nom": {
    "wall_s": 137.2,
    "max_single_process_rss_kb": 66564,
@@ -11,6 +33,28 @@
    "spef_bytes": 130473823,
    "spef_md5": "059ef34a8bd463df0ec96664e46b5959"
   },
+  "innovusb6_max": {
+   "wall_s": 72.6,
+   "max_single_process_rss_kb": 67296,
+   "session_peak_rss_kb": 1240156,
+   "rc": "0",
+   "nets_extracted": 46661,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 184584100,
+   "spef_md5": "4b7bf07841e5dfc978771d39a96a84ab"
+  },
+  "innovusb6_min": {
+   "wall_s": 513.9,
+   "max_single_process_rss_kb": 68604,
+   "session_peak_rss_kb": 1252564,
+   "rc": "0",
+   "nets_extracted": 46661,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 183449372,
+   "spef_md5": "9b6cc0b6c86ffb0994aa0debd08f904d"
+  },
   "innovusb6_nom": {
    "wall_s": 152.2,
    "max_single_process_rss_kb": 68584,
@@ -21,6 +65,28 @@
    "errors": 0,
    "spef_bytes": 184754715,
    "spef_md5": "ecd620cbe50885675dfe575573393b8f"
+  },
+  "openroad_max": {
+   "wall_s": 106.8,
+   "max_single_process_rss_kb": 69672,
+   "session_peak_rss_kb": 1186116,
+   "rc": "0",
+   "nets_extracted": 42196,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 157340892,
+   "spef_md5": "f7f38f283625eb0799a7af7df96f7003"
+  },
+  "openroad_min": {
+   "wall_s": 85.7,
+   "max_single_process_rss_kb": 68516,
+   "session_peak_rss_kb": 1181332,
+   "rc": "0",
+   "nets_extracted": 42196,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 156549080,
+   "spef_md5": "a231ec43b6b76d77827954b429f7ee3e"
   },
   "openroad_nom": {
    "wall_s": 144.1,
@@ -41,6 +107,24 @@
    ],
    "qrcTechFile_bytes": 2006772,
    "provenance": "nom RCGEN = Techgen cell-level models from the 2026-10-25/29 run (build/qrc/nom.run1_20261029_partial, Techgen -simulation_FS_off ... -2d_only),\nwhich completed the cell level (\"Cell level Techgen has successfully generated the technology file RCGEN\", CPU time 5.83 h, same ICT: cmp-identical to\ntech/ict/sky130A_nom.ict).  qrcTechFile = Techgen -migrate -rcgen RCGEN (the final unified-file step that run crashed on).\nA fresh re-run of the cell flow was started 2026-11-07 09:41 and stopped at 39 % (1 h 45 min, 2 CPUs) to free the host: build/qrc/nom.fresh_partial_20261107_39pct (resumable)."
+  },
+  "min": {
+   "timing_lines": [
+    "plan rc=0 wall_s=4 session_peak_rss_kb=0",
+    "parallel rc=0 wall_s=11962 session_peak_rss_kb=440432",
+    "migrate rc=0 wall_s=2 session_peak_rss_kb=0"
+   ],
+   "qrcTechFile_bytes": 2005892,
+   "provenance": null
+  },
+  "max": {
+   "timing_lines": [
+    "plan rc=0 wall_s=4 session_peak_rss_kb=0",
+    "parallel rc=0 wall_s=11849 session_peak_rss_kb=444992",
+    "migrate rc=0 wall_s=3 session_peak_rss_kb=0"
+   ],
+   "qrcTechFile_bytes": 2006476,
+   "provenance": null
   }
  },
  "pt_sensitivity_nom_tt": {

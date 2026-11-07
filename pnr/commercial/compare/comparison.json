@@ -140,6 +140,50 @@
     "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
     "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
    },
+   "icc2b6_min": {
+    "value": {
+     "total_C_median_err_pct": -3.11,
+     "total_C_median_abs_err_pct": 3.73,
+     "total_C_p95_abs_err_pct": 9.39,
+     "total_R_median_err_pct": 2.71,
+     "total_R_p95_abs_err_pct": 5.89,
+     "ground_C_median_err_pct": -16.42,
+     "design_C_ratio": 0.9615,
+     "design_R_ratio": 0.9813,
+     "gate_population_nets": 38641,
+     "label": "within gate (median)",
+     "tail_beyond_10pct": {
+      "total_C": false,
+      "total_R": false
+     }
+    },
+    "unit": "percent error, Quantus vs StarRC",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
+    "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
+   },
+   "icc2b6_max": {
+    "value": {
+     "total_C_median_err_pct": -3.13,
+     "total_C_median_abs_err_pct": 3.82,
+     "total_C_p95_abs_err_pct": 9.96,
+     "total_R_median_err_pct": 0.81,
+     "total_R_p95_abs_err_pct": 1.26,
+     "ground_C_median_err_pct": -16.72,
+     "design_C_ratio": 0.9624,
+     "design_R_ratio": 0.9868,
+     "gate_population_nets": 40053,
+     "label": "within gate (median)",
+     "tail_beyond_10pct": {
+      "total_C": false,
+      "total_R": false
+     }
+    },
+    "unit": "percent error, Quantus vs StarRC",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
+    "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
+   },
    "innovusb6_nom": {
     "value": {
      "total_C_median_err_pct": 2.1,
@@ -151,6 +195,50 @@
      "design_C_ratio": 1.0187,
      "design_R_ratio": 0.9535,
      "gate_population_nets": 41688,
+     "label": "within gate (median)",
+     "tail_beyond_10pct": {
+      "total_C": true,
+      "total_R": false
+     }
+    },
+    "unit": "percent error, Quantus vs StarRC",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
+    "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
+   },
+   "innovusb6_min": {
+    "value": {
+     "total_C_median_err_pct": 2.02,
+     "total_C_median_abs_err_pct": 4.41,
+     "total_C_p95_abs_err_pct": 19.13,
+     "total_R_median_err_pct": 2.05,
+     "total_R_p95_abs_err_pct": 7.53,
+     "ground_C_median_err_pct": 6.11,
+     "design_C_ratio": 1.015,
+     "design_R_ratio": 0.9507,
+     "gate_population_nets": 40534,
+     "label": "within gate (median)",
+     "tail_beyond_10pct": {
+      "total_C": true,
+      "total_R": false
+     }
+    },
+    "unit": "percent error, Quantus vs StarRC",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
+    "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
+   },
+   "innovusb6_max": {
+    "value": {
+     "total_C_median_err_pct": 1.69,
+     "total_C_median_abs_err_pct": 4.57,
+     "total_C_p95_abs_err_pct": 19.19,
+     "total_R_median_err_pct": 0.78,
+     "total_R_p95_abs_err_pct": 4.1,
+     "ground_C_median_err_pct": 5.72,
+     "design_C_ratio": 1.0145,
+     "design_R_ratio": 0.962,
+     "gate_population_nets": 43096,
      "label": "within gate (median)",
      "tail_beyond_10pct": {
       "total_C": true,
@@ -183,9 +271,77 @@
     "label": "signoff",
     "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
     "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
+   },
+   "openroad_min": {
+    "value": {
+     "total_C_median_err_pct": -2.23,
+     "total_C_median_abs_err_pct": 3.49,
+     "total_C_p95_abs_err_pct": 12.03,
+     "total_R_median_err_pct": 2.93,
+     "total_R_p95_abs_err_pct": 7.07,
+     "ground_C_median_err_pct": 3.96,
+     "design_C_ratio": 0.9859,
+     "design_R_ratio": 0.9673,
+     "gate_population_nets": 36825,
+     "label": "within gate (median)",
+     "tail_beyond_10pct": {
+      "total_C": true,
+      "total_R": false
+     }
+    },
+    "unit": "percent error, Quantus vs StarRC",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
+    "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
+   },
+   "openroad_max": {
+    "value": {
+     "total_C_median_err_pct": -2.39,
+     "total_C_median_abs_err_pct": 3.66,
+     "total_C_p95_abs_err_pct": 13.16,
+     "total_R_median_err_pct": 0.8,
+     "total_R_p95_abs_err_pct": 1.54,
+     "ground_C_median_err_pct": 3.5,
+     "design_C_ratio": 0.9854,
+     "design_R_ratio": 0.9779,
+     "gate_population_nets": 39044,
+     "label": "within gate (median)",
+     "tail_beyond_10pct": {
+      "total_C": true,
+      "total_R": false
+     }
+    },
+    "unit": "percent error, Quantus vs StarRC",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_vs_starrc.json",
+    "note": "nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon"
    }
   },
   "cost": {
+   "icc2b6_max": {
+    "value": {
+     "wall_s": 69.1,
+     "session_peak_rss_kb": 1016324,
+     "nets": 41413,
+     "errors": 0
+    },
+    "unit": "s / kB / nets",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s"
+   },
+   "icc2b6_min": {
+    "value": {
+     "wall_s": 133.2,
+     "session_peak_rss_kb": 1048164,
+     "nets": 41413,
+     "errors": 0
+    },
+    "unit": "s / kB / nets",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s"
+   },
    "icc2b6_nom": {
     "value": {
      "wall_s": 137.2,
@@ -198,11 +354,59 @@
     "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
     "note": "quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s"
    },
+   "innovusb6_max": {
+    "value": {
+     "wall_s": 72.6,
+     "session_peak_rss_kb": 1240156,
+     "nets": 46661,
+     "errors": 0
+    },
+    "unit": "s / kB / nets",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s"
+   },
+   "innovusb6_min": {
+    "value": {
+     "wall_s": 513.9,
+     "session_peak_rss_kb": 1252564,
+     "nets": 46661,
+     "errors": 0
+    },
+    "unit": "s / kB / nets",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s"
+   },
    "innovusb6_nom": {
     "value": {
      "wall_s": 152.2,
      "session_peak_rss_kb": 1231144,
      "nets": 46661,
+     "errors": 0
+    },
+    "unit": "s / kB / nets",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s"
+   },
+   "openroad_max": {
+    "value": {
+     "wall_s": 106.8,
+     "session_peak_rss_kb": 1186116,
+     "nets": 42196,
+     "errors": 0
+    },
+    "unit": "s / kB / nets",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s"
+   },
+   "openroad_min": {
+    "value": {
+     "wall_s": 85.7,
+     "session_peak_rss_kb": 1181332,
+     "nets": 42196,
      "errors": 0
     },
     "unit": "s / kB / nets",
@@ -342,6 +546,34 @@
     "label": "signoff",
     "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
     "note": "nom RCGEN = Techgen cell-level models from the 2026-10-25/29 run (build/qrc/nom.run1_20261029_partial, Techgen -simulation_FS_off ... -2d_only),\nwhich completed the cell level (\"Cell level Techgen has successfully generated the technology file RCGEN\", CPU time 5.83 h, same ICT: cmp-identical to\ntech/ict/sky130A_nom.ict).  qrcTechFile = Techgen -migrate -rcgen RCGEN (the final unified-file step that run crashed on).\nA fresh re-run of the cell flow was started 2026-11-07 09:41 and stopped at 39 % (1 h 45 min, 2 CPUs) to free the host: build/qrc/nom.fresh_partial_20261107_39pct (resumable)."
+   },
+   "min": {
+    "value": {
+     "timing_lines": [
+      "plan rc=0 wall_s=4 session_peak_rss_kb=0",
+      "parallel rc=0 wall_s=11962 session_peak_rss_kb=440432",
+      "migrate rc=0 wall_s=2 session_peak_rss_kb=0"
+     ],
+     "qrcTechFile_bytes": 2005892
+    },
+    "unit": "s / kB",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "fresh cell-level Techgen run"
+   },
+   "max": {
+    "value": {
+     "timing_lines": [
+      "plan rc=0 wall_s=4 session_peak_rss_kb=0",
+      "parallel rc=0 wall_s=11849 session_peak_rss_kb=444992",
+      "migrate rc=0 wall_s=3 session_peak_rss_kb=0"
+     ],
+     "qrcTechFile_bytes": 2006476
+    },
+    "unit": "s / kB",
+    "label": "signoff",
+    "source": "pnr/commercial/signoff/quantus/reports/quantus_runs.json",
+    "note": "fresh cell-level Techgen run"
    }
   }
  },
