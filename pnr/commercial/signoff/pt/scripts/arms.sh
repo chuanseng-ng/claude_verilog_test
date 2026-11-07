@@ -32,6 +32,7 @@ arm_spef() {
 }
 # StarRC completion marker (star/.starrc_complete) -- only for StarRC arms
 arm_spef_marker() {
+  [ -n "${PT_NO_MARKER:-}" ] && { echo ""; return; }   # non-StarRC SPEF set (e.g. Quantus, PT_STARRC_DIR=.../quantus/runs): no star/.starrc_complete exists
   case "$1" in
     openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6) echo $STARRC/$1_$2/star/.starrc_complete ;;
     *) echo "" ;;
