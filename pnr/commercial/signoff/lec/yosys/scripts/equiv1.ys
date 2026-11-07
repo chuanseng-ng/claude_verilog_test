@@ -1,0 +1,34 @@
+# route 2: Yosys equivalence of the sv2v file (gold) against the Yosys synthesis netlist of the B2 run (gate).  SRAM = black box on both sides.
+# gold is run through the SAME coarse/fine Yosys flow as LibreLane (synth -flatten, no abc), so fsm recoding, memory_map and opt happen on gold exactly as in the B2 run:
+# the FSM re-encoding is therefore Yosys applying its own transform on both sides (recorded in the report), everything after it is checked.
+read_verilog -sv /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v
+read_verilog -sv /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/rv32i_cpu_top_sv2v.v
+hierarchy -check -top rv32i_cpu_top
+synth -top rv32i_cpu_top -flatten -noabc
+opt_clean
+# SRAM = black box on both sides: its input pins become extra top-level outputs and its output pins extra top-level inputs, named after instance.pin (same on both sides),
+# so every SRAM input pin is proven equivalent and both designs read the same free SRAM data
+expose -evert t:sky130_sram_1kbyte_1rw1r_32x256_8
+splitnets
+opt_clean
+rename rv32i_cpu_top gold
+design -stash gold_d
+read_liberty -overwrite -ignore_miss_func -ignore_miss_dir -ignore_miss_data_latch /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+read_verilog -sv /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v
+read_verilog -sv /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/runs/b2_openroad/06-yosys-synthesis/rv32i_cpu_top.nl.v
+hierarchy -check -top rv32i_cpu_top
+flatten
+techmap
+opt_expr
+opt_clean
+expose -evert t:sky130_sram_1kbyte_1rw1r_32x256_8
+splitnets
+opt_clean
+rename rv32i_cpu_top gate
+design -copy-from gold_d -as gold gold
+stat
+equiv_make gold gate equiv
+hierarchy -top equiv
+equiv_status
+tee -o equiv_after_make.txt equiv_status
+write_rtlil equiv_made.il

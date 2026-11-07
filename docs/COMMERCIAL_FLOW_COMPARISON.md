@@ -506,7 +506,10 @@ Beads are not available on this host, so the follow-ups are tracked here.
    facts and feed them to Formality as verified guidance, or prove that leg with Yosys `equiv_make`/`equiv_induct`, or re-synthesise
    without register merging. Second session: the Yosys log shows `fsm` re-encoded `fwd_a_sel_r`, `fwd_b_sel_r`, `grant_q` to one-hot;
    Formality knobs (merge duplicates, constants, net-name match, FSM commands, a one-hot reference copy) reduce the failures from 3,902 to
-   2,316 but do not close the leg (`reports/lec_openroad.md`, continuation section). Next: Yosys `equiv_make`/`equiv_induct`.
+   2,316 but do not close the leg (`reports/lec_openroad.md`, continuation section). Third session: Yosys `equiv_make`/`equiv_induct`
+   in the LibreLane container proves the sv2v design equal to both the Yosys netlist and the OpenROAD final netlist (6,156 / 0 unproven
+   `$equiv` cells each; limits in the report). **Its negative controls were still running when this was written**, so the OpenROAD netlist
+   is not yet recorded as EQUIVALENT.
 2. **Magic `nwell.4` outside the SRAMs** is open on all arms (3,626 / 3,035 + 592 / 4,226 + 737).
    Root-cause the 1,191 Innovus-specific pocket tap wells and the +145 straddle items
    (`reports/innovus_b6_report.md` section 8). Then decide waiver vs fix per class with the owner.

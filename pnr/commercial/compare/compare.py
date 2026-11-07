@@ -670,6 +670,25 @@ def openroad():
     )
     fm = lec_formality("or")
     cf = lec_conformal("or_cf")
+    ye = {}
+    yb = f"{COM}/signoff/lec/yosys/reports"
+    for d in sorted(p(yb).glob("e[0-9]*")):
+        f = f"{yb}/{d.name}/equiv_after_induct.txt"
+        if not p(f).is_file():
+            continue
+        t = text(f)
+        m = re.search(r"Of those cells (\d+) are proven and (\d+) are unproven", t)
+        tot = re.search(r"Found (\d+) \$equiv cells", t)
+        ye[d.name] = E(
+            ("EQUIVALENT" if m and m.group(2) == "0" else "NOT_PROVEN") if m else None,
+            "verdict",
+            "signoff",
+            f,
+            proven=int(m.group(1)) if m else None,
+            unproven=int(m.group(2)) if m else None,
+            equiv_cells=int(tot.group(1)) if tot else None,
+        )
+    out["lec_yosys_runs"] = ye
     out["lec_runs"] = {**fm, **cf}
 
     def v(k):
@@ -677,23 +696,29 @@ def openroad():
 
     ctl = [k for k in fm if "negctl" in k]
     caught = [k for k in ctl if fm[k]["value"] == "FAILED"]
+    yneg = [k for k in ye if k.startswith("e") and "_neg_" in k]
+    ycaught = [k for k in yneg if ye[k]["value"] == "NOT_PROVEN"]
+    yfinal = (ye.get("e5_final") or {}).get("value")
+    ysyn = (ye.get("e4") or {}).get("value")
     closed = (
         v("or_fe_rtl_vs_sv2v") == "SUCCEEDED"
         and v("or_nodiode_vs_syn") == "SUCCEEDED"
-        and v("or_syn_vs_sv2v") == "SUCCEEDED"
+        and yfinal == "EQUIVALENT"
+        and len(yneg) >= 4
+        and len(ycaught) == len(yneg)
     )
     out["lec"] = E(
-        ("EQUIVALENT" if closed else "NOT CLOSED")
-        + f": RTL==sv2v {v('or_fe_rtl_vs_sv2v')}; final==Yosys netlist {v('or_nodiode_vs_syn')}"
-        f" (with diodes {v('or_phys_vs_syn')}); Yosys netlist vs sv2v {v('or_syn_vs_sv2v')};"
-        f" direct RTL vs final {v('or_phys_vs_rtl')}; Conformal RTL vs Yosys netlist {v('or_cf_synnamed_vs_rtl')};"
-        f" {len(caught)}/{len(ctl)} negative controls of the two proven legs caught",
+        ("EQUIVALENT (RTL==sv2v by Formality; sv2v==final netlist by Yosys equiv_induct)" if closed else "NOT CLOSED")
+        + f": Formality RTL==sv2v {v('or_fe_rtl_vs_sv2v')}; Formality final==Yosys netlist {v('or_nodiode_vs_syn')};"
+        f" Yosys equiv_induct sv2v vs Yosys netlist {ysyn}, sv2v vs final netlist {yfinal};"
+        f" Formality sv2v/Yosys-netlist compare {v('or_syn_vs_sv2v')}; Conformal RTL vs Yosys netlist {v('or_cf_synnamed_vs_rtl')};"
+        f" negative controls caught: Formality {len(caught)}/{len(ctl)}, Yosys {len(ycaught)}/{len(yneg)}",
         "verdict",
         "derived",
         sorted(
-            {x["source"] for x in {**fm, **cf}.values() if isinstance(x["source"], str)}
+            {x["source"] for x in {**fm, **cf, **ye}.values() if isinstance(x["source"], str)}
         ),
-        rule="derived from the per-run verdicts in lec_runs; EQUIVALENT only if the RTL==sv2v, final==Yosys and Yosys==sv2v legs all SUCCEEDED",
+        rule="derived from lec_runs and lec_yosys_runs; closed only if RTL==sv2v, final==Yosys, Yosys end-to-end EQUIVALENT and >=4 Yosys mutants all NOT_PROVEN",
     )
     out.update(redhawk("openroad"))
     return out

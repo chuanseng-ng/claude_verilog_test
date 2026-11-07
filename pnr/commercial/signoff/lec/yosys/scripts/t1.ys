@@ -1,0 +1,5 @@
+read_liberty -overwrite -setattr liberty_cell -ignore_miss_func -ignore_miss_dir -ignore_miss_data_latch /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+read_verilog -sv /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v
+read_verilog -sv /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/runs/b2_openroad/06-yosys-synthesis/rv32i_cpu_top.nl.v
+hierarchy -top rv32i_cpu_top
+stat

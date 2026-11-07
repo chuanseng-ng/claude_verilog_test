@@ -229,6 +229,17 @@ def lec_openroad() -> None:
         for f in ("unmatched_points.txt", "failing_points.txt"):
             if (d / f).is_file() and (d / f).stat().st_size < 1_500_000:
                 copy(d / f, fr / "reports" / d.name / f, required=False)
+    yr = COM / "signoff/lec/yosys"
+    for d in sorted((yr / "runs").glob("e[0-9]*")):
+        if not (d / "equiv_after_induct.txt").is_file():
+            continue
+        for f in ("equiv_after_make.txt", "equiv_after_struct.txt", "equiv_after_induct.txt", "equiv1.ys", "equiv3.ys", "prove.log"):
+            if (d / f).is_file() and (d / f).stat().st_size < 1_500_000:
+                copy(d / f, yr / "reports" / d.name / f, required=False)
+        if (d / "make.log").is_file():
+            tail = "".join(open(d / "make.log", errors="replace").readlines()[-60:])
+            (yr / "reports" / d.name).mkdir(parents=True, exist_ok=True)
+            (yr / "reports" / d.name / "make_tail.txt").write_text(tail)
     cr = COM / "signoff/lec/conformal"
     for name in ("or_cf_synnamed_vs_rtl", "or_cf_syn_vs_rtl_anon_ABORTED_mapping_gt20min"):
         d = cr / "runs" / name

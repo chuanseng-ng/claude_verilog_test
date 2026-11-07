@@ -2212,6 +2212,35 @@
      "source": "pnr/commercial/compare/snapshot/openroad/step_runtime.tsv",
      "rule": "06-yosys-synthesis runtime.txt"
     },
+    "lec_yosys_runs": {
+     "e3": {
+      "value": "NOT_PROVEN",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/e3/equiv_after_induct.txt",
+      "proven": 5825,
+      "unproven": 330,
+      "equiv_cells": 6155
+     },
+     "e4": {
+      "value": "EQUIVALENT",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/e4/equiv_after_induct.txt",
+      "proven": 6156,
+      "unproven": 0,
+      "equiv_cells": 6156
+     },
+     "e5_final": {
+      "value": "EQUIVALENT",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/e5_final/equiv_after_induct.txt",
+      "proven": 6156,
+      "unproven": 0,
+      "equiv_cells": 6156
+     }
+    },
     "lec_runs": {
      "or_fe_rtl_vs_sv2v": {
       "value": "SUCCEEDED",
@@ -2381,7 +2410,7 @@
      }
     },
     "lec": {
-     "value": "NOT CLOSED: RTL==sv2v SUCCEEDED; final==Yosys netlist SUCCEEDED (with diodes SUCCEEDED); Yosys netlist vs sv2v FAILED; direct RTL vs final FAILED; Conformal RTL vs Yosys netlist NOT_EQUIVALENT; 6/6 negative controls of the two proven legs caught",
+     "value": "NOT CLOSED: Formality RTL==sv2v SUCCEEDED; Formality final==Yosys netlist SUCCEEDED; Yosys equiv_induct sv2v vs Yosys netlist EQUIVALENT, sv2v vs final netlist EQUIVALENT; Formality sv2v/Yosys-netlist compare FAILED; Conformal RTL vs Yosys netlist NOT_EQUIVALENT; negative controls caught: Formality 6/6, Yosys 0/0",
      "unit": "verdict",
      "label": "derived",
      "source": [
@@ -2405,9 +2434,12 @@
       "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_cprop/fm_log.txt",
       "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_fsm/fm_log.txt",
       "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_mergedup/fm_log.txt",
-      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_netmatch/fm_log.txt"
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_netmatch/fm_log.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/e3/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/e4/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/e5_final/equiv_after_induct.txt"
      ],
-     "rule": "derived from the per-run verdicts in lec_runs; EQUIVALENT only if the RTL==sv2v, final==Yosys and Yosys==sv2v legs all SUCCEEDED"
+     "rule": "derived from lec_runs and lec_yosys_runs; closed only if RTL==sv2v, final==Yosys, Yosys end-to-end EQUIVALENT and >=4 Yosys mutants all NOT_PROVEN"
     },
     "ir_static_vpwr_drop_mV": {
      "value": 12.4,

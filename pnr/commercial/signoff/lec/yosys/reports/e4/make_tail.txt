@@ -1,0 +1,60 @@
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161071: \axi_araddr_o_gold [16] \axi_araddr_o_gate [16]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161070: \axi_araddr_o_gold [15] \axi_araddr_o_gate [15]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161069: \axi_araddr_o_gold [14] \axi_araddr_o_gate [14]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161068: \axi_araddr_o_gold [13] \axi_araddr_o_gate [13]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161067: \axi_araddr_o_gold [12] \axi_araddr_o_gate [12]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161066: \axi_araddr_o_gold [11] \axi_araddr_o_gate [11]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161065: \axi_araddr_o_gold [10] \axi_araddr_o_gate [10]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161064: \axi_araddr_o_gold [9] \axi_araddr_o_gate [9]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161063: \axi_araddr_o_gold [8] \axi_araddr_o_gate [8]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161062: \axi_araddr_o_gold [7] \axi_araddr_o_gate [7]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161061: \axi_araddr_o_gold [6] \axi_araddr_o_gate [6]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161060: \axi_araddr_o_gold [5] \axi_araddr_o_gate [5]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161059: \axi_araddr_o_gold [4] \axi_araddr_o_gate [4]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161058: \axi_araddr_o_gold [3] \axi_araddr_o_gate [3]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161057: \axi_araddr_o_gold [2] \axi_araddr_o_gate [2]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161056: \axi_araddr_o_gold [1] \axi_araddr_o_gate [1]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161055: \axi_araddr_o_gold [0] \axi_araddr_o_gate [0]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161054: \apb_pslverr_o_gold \apb_pslverr_o_gate
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161053: \apb_pready_o_gold \apb_pready_o_gate
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161052: \apb_prdata_o_gold [31] \apb_prdata_o_gate [31]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161051: \apb_prdata_o_gold [30] \apb_prdata_o_gate [30]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161050: \apb_prdata_o_gold [29] \apb_prdata_o_gate [29]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161049: \apb_prdata_o_gold [28] \apb_prdata_o_gate [28]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161048: \apb_prdata_o_gold [27] \apb_prdata_o_gate [27]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161047: \apb_prdata_o_gold [26] \apb_prdata_o_gate [26]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161046: \apb_prdata_o_gold [25] \apb_prdata_o_gate [25]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161045: \apb_prdata_o_gold [24] \apb_prdata_o_gate [24]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161044: \apb_prdata_o_gold [23] \apb_prdata_o_gate [23]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161043: \apb_prdata_o_gold [22] \apb_prdata_o_gate [22]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161042: \apb_prdata_o_gold [21] \apb_prdata_o_gate [21]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161041: \apb_prdata_o_gold [20] \apb_prdata_o_gate [20]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161040: \apb_prdata_o_gold [19] \apb_prdata_o_gate [19]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161039: \apb_prdata_o_gold [18] \apb_prdata_o_gate [18]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161038: \apb_prdata_o_gold [17] \apb_prdata_o_gate [17]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161037: \apb_prdata_o_gold [16] \apb_prdata_o_gate [16]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161036: \apb_prdata_o_gold [15] \apb_prdata_o_gate [15]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161035: \apb_prdata_o_gold [14] \apb_prdata_o_gate [14]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161034: \apb_prdata_o_gold [13] \apb_prdata_o_gate [13]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161033: \apb_prdata_o_gold [12] \apb_prdata_o_gate [12]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161032: \apb_prdata_o_gold [11] \apb_prdata_o_gate [11]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161031: \apb_prdata_o_gold [10] \apb_prdata_o_gate [10]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161030: \apb_prdata_o_gold [9] \apb_prdata_o_gate [9]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161029: \apb_prdata_o_gold [8] \apb_prdata_o_gate [8]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161028: \apb_prdata_o_gold [7] \apb_prdata_o_gate [7]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161027: \apb_prdata_o_gold [6] \apb_prdata_o_gate [6]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161026: \apb_prdata_o_gold [5] \apb_prdata_o_gate [5]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161025: \apb_prdata_o_gold [4] \apb_prdata_o_gate [4]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161024: \apb_prdata_o_gold [3] \apb_prdata_o_gate [3]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161023: \apb_prdata_o_gold [2] \apb_prdata_o_gate [2]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161022: \apb_prdata_o_gold [1] \apb_prdata_o_gate [1]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$161021: \apb_prdata_o_gold [0] \apb_prdata_o_gate [0]
+Found a total of 7032 unproven $equiv cells.
+
+25. Executing RTLIL backend.
+Output filename: equiv_made.il
+
+Warnings: 21 unique messages, 42 total
+End of script. Logfile hash: 14ccc8343d, CPU: user 23.84s system 1.05s, MEM: 1817.15 MB peak
+Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)
+Time spent: 24% 44x opt_clean (5 sec), 13% 64x opt_expr (3 sec), ...

@@ -103,3 +103,24 @@ kept a word 0 for the `reg [31:0] regs [1:31]` array, never read because `rd_add
 
 Next (not started): (1) Yosys `equiv_make`/`equiv_simple`/`equiv_induct` of the sv2v file against the Yosys netlist inside the LibreLane container (route 2), which also proves the re-encoding copy; (2) pair the
 remaining ~100 unmatched registers with structural evidence (alias chain in the sv2v file) before any `set_user_match`; (3) for any point still failing after matching, take a Formality counterexample (`analyze_points`) and replay it in gate-vs-RTL simulation. Re-synthesis without register merging only with approval.
+
+## Route 2 (third session): Yosys `equiv_make` / `equiv_struct` / `equiv_induct` in the LibreLane container
+
+Setup (`signoff/lec/yosys/scripts/equiv1.ys`, `equiv3.ys`, `run_equiv.sh`, `chain_equiv.sh`): podman image `ghcr.io/librelane/librelane:2.4.13` (Yosys 0.46, the B2 run's build), under `licensed_lock.sh` + `safe_run.sh` (2 threads, 10 GB cap).
+Gold = `rv32i_cpu_top_sv2v.v` through `synth -flatten -noabc` (the LibreLane flow minus abc, so `proc`, `fsm` re-encoding, `memory_map`, `opt` are applied to gold exactly as in the B2 run) then `splitnets`.
+Gate = the netlist, read with `read_liberty` of `sky130_fd_sc_hd__tt_025C_1v80.lib` (functional cell models), flattened and `techmap`ped, then `splitnets`. SRAM instances are black boxes on both sides: `expose -evert` turns each SRAM input pin into an extra
+output and each SRAM output pin into an extra input named `<instance>.<pin>` on both sides, so every SRAM input pin is proven and both sides read the same free SRAM data. `equiv_make` matches wires by name, `equiv_struct` merges identical structure, `equiv_induct -seq 2` proves by induction.
+
+| Tag | Gate netlist | `$equiv` cells | Proven / unproven |
+|---|---|---|---|
+| `e3` (superseded) | Yosys netlist, SRAM instances left in place | 6,155 | 5,825 / 330 (all 330 are SRAM `dout` pairs of two separate black boxes, plus 10 `ev0_w` that read them: an artefact of the missing pin cut, fixed in e4) |
+| `e4` | Yosys synthesis netlist (md5 cb24a60d...) | 6,156 | **6,156 / 0** |
+| `e5_final` | OpenROAD FINAL netlist, physical cells and diodes stripped (`or_nodiode.nl.v`) | 6,156 | **6,156 / 0** |
+
+So the sequential equivalence of the sv2v design and the OpenROAD final netlist is proven by Yosys induction, covering all 379 outputs, every flop (name-matched after `splitnets`) and every SRAM input pin.
+
+Limits of this proof, stated plainly:
+- Gold goes through the same Yosys front/coarse passes (`proc`, `fsm` recode, `opt`, `memory_map`) as the netlist did. A bug in those passes that affects both would not be seen; the proof covers what happens after them (abc, `dfflibmap`, hold/resizer buffering, CTS, diode insertion, OpenROAD edits) and shows nothing else differs. The FSM re-encoding of `fwd_a_sel_r`, `fwd_b_sel_r`, `grant_q` is Yosys proving its own transform. RTL == sv2v is independently proven by Formality (leg 1).
+- Induction is `-seq 2`; the proof is not a bounded check. Cut points are same-named wires; unmatched logic is covered by induction through the `$equiv` cells.
+- The Formality and Conformal runs of the same comparison still fail (matching problem). They are not contradicted by this result, but they are not confirmed either.
+- Negative controls for the Yosys proof (4 mutants of the final netlist, each must leave unproven `$equiv` cells): chain `chain_equiv.sh` tags `e6_neg_fwdb_inv`, `e7_neg_swap`, `e8_neg_bufinv`, `e9_neg_tiehi`. **Status at the time of writing: running; results are not in this report yet.** Until all four are caught, treat `e4`/`e5_final` as unvalidated.
