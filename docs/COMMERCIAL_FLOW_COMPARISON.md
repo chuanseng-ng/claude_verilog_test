@@ -49,7 +49,7 @@ PDN pitch, max layer met4 and the CTS cell set. All three P&R flows are judged b
 | **native** routed wirelength (um) / vias | 5,586,306 / 517,723 | **4,634,225** / 393,701 | 7,342,159 / **362,426** |
 | **signoff** KLayout DRC / deck antenna nets | 0 / 116 | 0 / **1** | 0 / 2 |
 | **signoff** Netgen LVS (GDS) | 0 errors (LibreLane) | match uniquely | nets/devices equal; top pin match fails (3 `assign` pairs) |
-| **signoff** LEC (post-route vs RTL, 4 neg. controls) | **not run** | Formality 4/4, 4/4 caught | Conformal 4/4, 4/4 caught |
+| **signoff** LEC (post-route vs RTL, 4 neg. controls) | **not closed**: RTL==sv2v and final==Yosys netlist proven (Formality, 6,302 / 6,248 points, 6/6 controls caught); Yosys netlist vs RTL **not proven** (Formality and Conformal both fail), `reports/lec_openroad.md` | Formality 4/4, 4/4 caught | Conformal 4/4, 4/4 caught |
 | **signoff** Magic DRC outside SRAM (all `nwell.4`) | 3,626 | **3,035** (+592 straddle) | 4,226 (+737 straddle) |
 | **signoff** RedHawk static worst VDD+VSS (mV) | 24.7 | 23.9 | **18.0** |
 | **signoff** RedHawk dynamic worst avgTW (mV) | **79.1** | 192.6 | 163.2 |
@@ -384,7 +384,7 @@ the shared or iolat SDC instead of each tool's own SDC, and SI off. Section 5 of
 | deck antenna nets / pins | 116 / 119 | 1 / 1 | 2 / 2 |
 | Magic total / inside SRAM | 27,733,913 / 27,730,287 | 27,737,113 / 27,733,486 | 28,320,055 / 28,315,092 |
 | Magic straddle / outside (all `nwell.4`) | 0 / 3,626 | 592 / 3,035 | 737 / 4,226 |
-| LEC post-route | not run | Formality: 4/4 SUCCEEDED, 6,233 passing / 0 failing; controls `fwdb_inv` 1 and `swap` 43 failing points (4/4 caught) | Conformal: 4/4 EQUIVALENT, 5,597 (Genus golden) / 5,791 (RTL golden, merged points) compare points; 4/4 controls NOT_EQUIVALENT |
+| LEC post-route | **not closed**: RTL==sv2v SUCCEEDED (6,302 / 0); final==Yosys netlist SUCCEEDED (6,248 / 0, with and without 64,086 diodes); Yosys netlist vs sv2v FAILED (3,902 failing, unmatched merged/renamed registers); Conformal RTL vs Yosys NOT_EQUIVALENT; 6/6 controls of the proven legs caught | Formality: 4/4 SUCCEEDED, 6,233 passing / 0 failing; controls `fwdb_inv` 1 and `swap` 43 failing points (4/4 caught) | Conformal: 4/4 EQUIVALENT, 5,597 (Genus golden) / 5,791 (RTL golden, merged points) compare points; 4/4 controls NOT_EQUIVALENT |
 | LEC synthesis netlist vs RTL | not run | Formality DC v2: SUCCEEDED, 6,233 / 0 | Conformal Genus v1 (hierarchical): EQUIVALENT, 1,076 points |
 | RedHawk static VPWR / VGND worst (mV) | 12.4 / 12.3 | 12.1 / 11.8 | 9.0 / 9.0 |
 | RedHawk static EM violations | 0 | 0 | 0 |
@@ -495,8 +495,16 @@ corner. (c) b5j is identical to b5h in all 27 judge runs: the tap ECO changed no
 
 Beads are not available on this host, so the follow-ups are tracked here.
 
-1. **OpenROAD post-route LEC** was never run. Run Formality or Conformal of `runs/openroad`
-   `rv32i_cpu_top.nl.v` against RTL, with negative controls.
+1. **OpenROAD post-route LEC: partly closed, one leg open** (`reports/lec_openroad.md`, 2026-11-08).
+   Proven with Formality: RTL == `rv32i_cpu_top_sv2v.v` (6,302 points, 0 unmatched) and OpenROAD final netlist
+   (md5 `a0f07319...`, the judge's netlist) == Yosys synthesis netlist of the same run (6,248 points, with and without the 64,086
+   antenna diodes; fill/decap/tap stripped, all with empty port lists). 6/6 negative controls on those two legs were caught.
+   **Not proven**: Yosys netlist == sv2v/RTL. Formality fails (3,902 failing points, 242 reference / 113 implementation registers
+   unmatched: merged, renamed or constant flops) and Conformal reports NOT_EQUIVALENT after name-annotating the flops (4,335 points,
+   164 / 139 unmapped). Whether this is only the cascade of unmatched registers or a real Yosys difference is not established, and nothing
+   was waived. The OpenROAD netlist therefore has **no** EQUIVALENT-to-RTL verdict. Owner decision: derive the Yosys merge/constant/rename
+   facts and feed them to Formality as verified guidance, or prove that leg with Yosys `equiv_make`/`equiv_induct`, or re-synthesise
+   without register merging.
 2. **Magic `nwell.4` outside the SRAMs** is open on all arms (3,626 / 3,035 + 592 / 4,226 + 737).
    Root-cause the 1,191 Innovus-specific pocket tap wells and the +145 straddle items
    (`reports/innovus_b6_report.md` section 8). Then decide waiver vs fix per class with the owner.

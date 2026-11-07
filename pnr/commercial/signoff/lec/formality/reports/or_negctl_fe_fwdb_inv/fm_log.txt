@@ -1,0 +1,295 @@
+
+                                 Formality (R)
+
+                 Version X-2025.06 for linux64 - May 25, 2025 
+
+                    Copyright (c) 1988 - 2025 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+   or distribution of this software is strictly prohibited.  Licensed Products
+     communicate with Synopsys servers for the purpose of providing software
+    updates, detecting software piracy and verifying that customers are using
+    Licensed Products in conformity with the applicable License Key for such
+  Licensed Products. Synopsys will use information gathered in connection with
+    this process to deliver software updates and pursue software pirates and
+                                   infringers.
+
+ Inclusivity & Diversity - Visit SolvNetPlus to read the "Synopsys Statement on
+            Inclusivity and Diversity" (Refer to article 000036315 at
+                        https://solvnetplus.synopsys.com)
+
+Build: 9835556
+Hostname: eda.ic
+Current time: Sun Nov  8 04:45:30 2026
+
+Loading db file '/home/EDA/synopsys/fm/X-2025.06/libraries/syn/gtech.db'
+
+Script: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/scripts/fm_lec_or_frontend.tcl
+
+Information: Term was not able to be set up using xterm-256color . Using "xterm" by default instead. (CLE-10)
+# fm_lec_or_frontend.tcl -- B2 OpenROAD arm, hop 1: RTL (the 28 SV files + 5 defines, as in fm_lec_icc2.tcl REFMODE=rtl) == the sv2v output
+# (pnr/sky130/cpu/rv32i_cpu_top_sv2v.v, Verilog-2005) that LibreLane/Yosys actually synthesised (USE_SYNLIG=false).  Needed because Yosys names its flops by the
+# flattened packed-struct bit index (u_core.ex1a_ex1b_reg_q[310]) and cells anonymously (_NNNNN_), so an RTL-vs-netlist compare cannot be matched by name
+# (see report); sv2v keeps those bit-index names, so hop 2 (sv2v vs Yosys/OpenROAD netlist) is matched by name.
+#   env: REPO PDKDIR RUN SV2V   (RTL_LIST from rtl_list.sh).  Same rules as fm_lec_icc2.tcl: no set_constant / set_dont_verify / user_match / waivers.
+set REPO   $::env(REPO)
+/home/RD/ryan/Desktop/Github/claude_verilog_test
+set PDKDIR $::env(PDKDIR)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130
+set RUN    $::env(RUN)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/or_negctl_fe_fwdb_inv
+set SV2V   $::env(SV2V)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v
+set TOP    rv32i_cpu_top
+rv32i_cpu_top
+set B      $PDKDIR/build/db
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db
+set SRAMDB $B/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db
+file mkdir $RUN
+set_host_options -max_cores 2
+1
+set_app_var hdlin_unresolved_modules error
+error
+set_app_var verification_failing_point_limit 0
+0
+puts "NO SVF"
+NO SVF
+read_db -container r -technology_library $SRAMDB
+Loading db file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db'
+Current container set to 'r'
+1
+set files {}
+set fh [open $::env(RTL_LIST) r]
+file13
+while {[gets $fh l] >= 0} { if {[string trim $l] ne ""} { lappend files [string trim $l] } }
+close $fh
+foreach f $files { if {[string match *stub* $f]} { error "SRAM stub must not be read: $f" } }
+set defines {PDK_sky130A SCL_sky130_fd_sc_hd __librelane__ __pnr__ SRAM_SKY130}
+PDK_sky130A SCL_sky130_fd_sc_hd __librelane__ __pnr__ SRAM_SKY130
+read_sverilog -container r -libname WORK -define $defines $files
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv'
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv Line: 787)  (FMR_VLOG-038)
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv'
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv Line: 1036)  (FMR_VLOG-038)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv Line: 1037)  (FMR_VLOG-038)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv Line: 1038)  (FMR_VLOG-038)
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv'
+1
+set_top r:/WORK/$TOP
+Setting top design to 'r:/WORK/rv32i_cpu_top'
+Status:   Elaborating design rv32i_cpu_top   ...  
+Status:   Elaborating design mbist_ctrl  N_MEM=10, AW=8, RD_LAT=2, P1_MASK='0, ASYNC_RST=1'b0, LOCAL_CMP=1'h1 ...  
+Information: Created design named 'mbist_ctrl_10_8_2_P1_MASK_'0_0_1'. (FE-LINK-13)
+Status:   Elaborating design rv32i_core  RESET_PC=32'h00000000 ...  
+Information: Created design named 'rv32i_core_00000000'. (FE-LINK-13)
+Status:   Elaborating design rv32i_pipeline_ex1c   ...  
+Status:   Elaborating design rv32i_hazard_unit   ...  
+Status:   Elaborating design rv32i_forwarding_unit   ...  
+Status:   Elaborating design rv32i_csr_file   ...  
+Status:   Elaborating design rv32i_interrupt_ctrl   ...  
+Status:   Elaborating design rv32i_regfile   ...  
+Status:   Elaborating design rv32i_pipeline_if  RESET_PC=32'h00000000 ...  
+Information: Created design named 'rv32i_pipeline_if_00000000'. (FE-LINK-13)
+Status:   Elaborating design rv32i_pipeline_id   ...  
+Status:   Elaborating design rv32i_decode   ...  
+Status:   Elaborating design rv32i_imm_gen   ...  
+Status:   Elaborating design rv32i_pipeline_ex   ...  
+Status:   Elaborating design rv32i_alu   ...  
+Warning: Signed to unsigned assignment occurs. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv Line: 78)  (FMR_VLOG-063)
+Status:   Elaborating design rv32i_branch_comp   ...  
+Status:   Elaborating design rv32i_pipeline_ex1b   ...  
+Status:   Elaborating design rv32i_pipeline_ex2   ...  
+Status:   Elaborating design rv32i_pipeline_mem   ...  
+Status:   Elaborating design rv32i_pipeline_wb   ...  
+Status:   Elaborating design rv32i_icache   ...  
+Status:   Elaborating design mem_collar  AW=8, HAS_P1=1'b0, LOCAL_CMP=1'b1 ...  
+Information: Created design named 'mem_collar_8_0_1'. (FE-LINK-13)
+Status:   Elaborating design rv32i_dcache   ...  
+Status:   Elaborating design rv32i_cache_arbiter   ...  
+Status:  Implementing inferred operators...
+Top design set to 'r:/WORK/rv32i_cpu_top' with warnings
+Reference design set to 'r:/WORK/rv32i_cpu_top'
+1
+read_db -container i -technology_library $SRAMDB
+Loading db file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db'
+Current container set to 'i'
+1
+read_sverilog -container i -libname WORK $SV2V
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v'
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 173)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 179)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 185)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 749)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 797)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 829)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 861)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 933)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 1280)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 1472)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 1798)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 1836)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 2254)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 2526)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 2698)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 2821)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 2930)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 3153)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 3210)  (FMR_VLOG-101)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 3658)  (FMR_VLOG-038)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 3659)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 4375)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 4594)  (FMR_VLOG-101)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 5532)  (FMR_VLOG-038)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 5533)  (FMR_VLOG-038)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 5534)  (FMR_VLOG-038)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 5535)  (FMR_VLOG-101)
+Warning: INITIAL statements are not supported. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 5970)  (FMR_VLOG-101)
+1
+set_top i:/WORK/$TOP
+Setting top design to 'i:/WORK/rv32i_cpu_top'
+Status:   Elaborating design rv32i_cpu_top   ...  
+Warning: Evaluating override expression with width '1' to match parameter 'P1_MASK' declaration width '10'. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 5680)  (FMR_VLOG-934)
+Status:   Elaborating design mbist_ctrl  N_MEM=10, AW=8, RD_LAT=2, P1_MASK=10'sh000, ASYNC_RST=1'b0, LOCAL_CMP=1'h1 ...  
+Information: Created design named 'mbist_ctrl_10_8_2_s000_0_1'. (FE-LINK-13)
+Status:   Elaborating design rv32i_core  RESET_PC=32'h00000000 ...  
+Information: Created design named 'rv32i_core_00000000'. (FE-LINK-13)
+Status:   Elaborating design rv32i_pipeline_ex1c   ...  
+Status:   Elaborating design rv32i_hazard_unit   ...  
+Status:   Elaborating design rv32i_forwarding_unit   ...  
+Status:   Elaborating design rv32i_csr_file   ...  
+Status:   Elaborating design rv32i_interrupt_ctrl   ...  
+Status:   Elaborating design rv32i_regfile   ...  
+Status:   Elaborating design rv32i_pipeline_if  RESET_PC=32'h00000000 ...  
+Information: Created design named 'rv32i_pipeline_if_00000000'. (FE-LINK-13)
+Status:   Elaborating design rv32i_pipeline_id   ...  
+Status:   Elaborating design rv32i_decode   ...  
+Status:   Elaborating design rv32i_imm_gen   ...  
+Status:   Elaborating design rv32i_pipeline_ex   ...  
+Status:   Elaborating design rv32i_alu   ...  
+Warning: Signed to unsigned assignment occurs. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_sv2v_fwdb_inv.v Line: 791)  (FMR_VLOG-063)
+Status:   Elaborating design rv32i_branch_comp   ...  
+Status:   Elaborating design rv32i_pipeline_ex1b   ...  
+Status:   Elaborating design rv32i_pipeline_ex2   ...  
+Status:   Elaborating design rv32i_pipeline_mem   ...  
+Status:   Elaborating design rv32i_pipeline_wb   ...  
+Status:   Elaborating design rv32i_icache   ...  
+Status:   Elaborating design mem_collar  AW=8, HAS_P1=1'b0, LOCAL_CMP=1'b1 ...  
+Information: Created design named 'mem_collar_8_0_1'. (FE-LINK-13)
+Status:   Elaborating design rv32i_dcache   ...  
+Status:   Elaborating design rv32i_cache_arbiter   ...  
+Status:  Implementing inferred operators...
+Top design set to 'i:/WORK/rv32i_cpu_top' with warnings
+Implementation design set to 'i:/WORK/rv32i_cpu_top'
+1
+match
+Reference design is 'r:/WORK/rv32i_cpu_top'
+Implementation design is 'i:/WORK/rv32i_cpu_top'
+Status:  Checking designs...
+    Warning: Design r:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB/sky130_sram_1kbyte_1rw1r_32x256_8 is a black box and there are cells referencing it (FM-160)
+    Warning: Design i:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB/sky130_sram_1kbyte_1rw1r_32x256_8 is a black box and there are cells referencing it (FM-160)
+    Warning: 10 (10) black-box references found in reference (implementation) design; see formality.log for list (FM-182)
+Status:  Building verification models...
+    Info:  Constant registers have been identified that were initialized by some objects that were assumed to toggle.
+           For more info use commands: report_potentially_constant_registers  and report_init_toggle_objects
+Status:  Matching...
+    
+*********************************** Matching Results ***********************************    
+ 4536 Compare points matched by name    
+ 1766 Compare points matched by signature analysis    
+ 0 Compare points matched by topology    
+ 436 Matched primary inputs, black-box outputs    
+ 0(0) Unmatched reference(implementation) compare points    
+ 0(0) Unmatched reference(implementation) primary inputs, black-box outputs    
+ 701(701) Unmatched reference(implementation) unread points    
+****************************************************************************************
+
+    Info:  Formality Guide Files (SVF) can improve matching performance and success by automating setup.
+1
+redirect -file $RUN/unmatched_points.txt {report_unmatched_points}
+redirect -file $RUN/black_boxes.txt {report_black_boxes -all}
+puts "MATCH_DONE"
+MATCH_DONE
+set rc [verify]
+Reference design is 'r:/WORK/rv32i_cpu_top'
+Implementation design is 'i:/WORK/rv32i_cpu_top'
+    
+*********************************** Matching Results ***********************************    
+ 4536 Compare points matched by name    
+ 1766 Compare points matched by signature analysis    
+ 0 Compare points matched by topology    
+ 436 Matched primary inputs, black-box outputs    
+ 0(0) Unmatched reference(implementation) compare points    
+ 0(0) Unmatched reference(implementation) primary inputs, black-box outputs    
+ 701(701) Unmatched reference(implementation) unread points    
+****************************************************************************************
+
+Status:  Verifying...
+    Compare point u_core/fwd_b_ex1c_r_reg failed (is not equivalent)
+
+
+********************************* Verification Results *********************************
+Verification FAILED
+-------------------
+ Reference design: r:/WORK/rv32i_cpu_top
+ Implementation design: i:/WORK/rv32i_cpu_top
+ 6301 Passing compare points
+ 1 Failing compare points (1 matched, 0 unmatched)
+ 0 Aborted compare points
+ 0 Unverified compare points
+----------------------------------------------------------------------------------------
+Matched Compare Points     BBPin    Loop   BBNet     Cut    Port     DFF     LAT   TOTAL
+----------------------------------------------------------------------------------------
+Passing (equivalent)         570       0       0       0     379    5352       0    6301
+Failing (not equivalent)       0       0       0       0       0       1       0       1
+Not Compared
+  Constant reg                                                       141       0     141
+  Unread                       0       0       0       0       0     121       0     121
+****************************************************************************************
+Info:  Try the analyze_points command to see if Formality can determine potential
+causes, or suggest next steps for a FAILED or INCONCLUSIVE verification.
+See the man page for analyze_points usage and options.
+Info:  Formality Guide Files (SVF) can improve verification success by automating setup.
+0
+puts "VERIFY_RESULT: $rc"
+VERIFY_RESULT: 0
+redirect -file $RUN/failing_points.txt {report_failing_points}
+redirect -file $RUN/aborted_points.txt {report_aborted_points}
+redirect -file $RUN/unverified_points.txt {report_unverified_points}
+puts "FM_DONE"
+FM_DONE
+exit
+
+Maximum memory usage for this session: 1164 MB
+CPU usage for this session: 46.43 seconds ( 0.01 hours )
+Current time: Sun Nov  8 04:46:08 2026
+Elapsed time: 38 seconds ( 0.01 hours )
+Number of cores used: 2
+
+Thank you for using Formality (R)!

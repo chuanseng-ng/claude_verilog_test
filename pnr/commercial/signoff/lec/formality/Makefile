@@ -175,3 +175,48 @@ lec-icc2-b6-real:
 lec-icc2-b6-negctl:
 	$(MAKE) lec-icc2-negctl $(B6)
 lec-icc2-b6: lec-icc2-b6-real lec-icc2-b6-negctl
+
+# ---------------- B2 OpenROAD/LibreLane post-route netlist (the arm that had no LEC; open item 1 of docs/COMMERCIAL_FLOW_COMPARISON.md section 7) ----------------
+# Same engine as the ICC2 runs: scripts/fm_lec_icc2.tcl (RTL = the 28 SV files + 5 defines incl. SRAM_SKY130, SRAM black box from the macro .db, no SVF, no waivers),
+# REFMODE=rtl  : reference = RTL
+# REFMODE=dc   : reference = the Yosys synthesis netlist of the same LibreLane run (06-yosys-synthesis), netlist-to-netlist hop (DCNL is overridden to ORSYN)
+# Implementation netlist = the one the judge used (md5 asserted).  The physical-only cells (fill/decap/tap, all with an EMPTY port list) are stripped
+# in a copy (scripts/strip_openroad_physical.py), because sky130_ef_sc_hd__decap_12 has no .db model; diodes are kept (or_phys) or stripped (or_nodiode).
+#   make lec-or-prep ; make lec-or-run IMPL=<nl> REF=rtl|syn TAG=<tag> ; make lec-or-negctl
+OR_NL     := $(REPO)/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v
+OR_NL_MD5 := a0f0731993ea3e6a5422e2579810f1e5
+OR_SYN    := $(REPO)/pnr/sky130/cpu/runs/b2_openroad/06-yosys-synthesis/rv32i_cpu_top.nl.v
+OR_SYN_MD5:= cb24a60da5a503a157af328753e2ce19
+ORP       := $(HERE)/runs/or_phys.nl.v
+ORN       := $(HERE)/runs/or_nodiode.nl.v
+ORMUT     := $(HERE)/runs/mutant_or
+.PHONY: lec-or-prep lec-or-run lec-or-negctl
+lec-or-prep:
+	@mkdir -p $(HERE)/runs
+	@echo "$(OR_NL_MD5)  $(OR_NL)" | md5sum -c - && echo "$(OR_SYN_MD5)  $(OR_SYN)" | md5sum -c -
+	python3 -I $(HERE)/scripts/strip_openroad_physical.py $(OR_NL) $(ORP)
+	python3 -I $(HERE)/scripts/strip_openroad_physical.py $(OR_NL) $(ORN) --diodes
+lec-or-run:
+	@echo "$(OR_SYN_MD5)  $(OR_SYN)" | md5sum -c - >/dev/null
+	$(call RUNFM2,$(IMPL),none,$(if $(filter syn,$(REF)),dc,$(if $(filter sv2v,$(REF)),sv2v,rtl)))
+# negative controls (each must end 'Verification FAILED'); mutants of the with-diodes physical-stripped copy; MODES default = the b6 classes
+ORMODES ?= fwdb_inv swap
+lec-or-negctl:
+	@mkdir -p $(HERE)/runs
+	@for m in $(ORMODES); do python3 -I $(HERE)/scripts/mk_mutant_openroad.py $(ORP) $(ORMUT)_$$m.nl.v $$m || exit 1; done
+	@for m in $(ORMODES); do \
+	  $(MAKE) lec-or-run IMPL=$(ORMUT)_$$m.nl.v REF=syn DCNL=$(OR_SYN) TAG=or_negctl_syn_$$m; \
+	  $(MAKE) lec-or-run IMPL=$(ORMUT)_$$m.nl.v REF=rtl DCNL=$(OR_SYN) TAG=or_negctl_rtl_$$m; done; true
+	@for m in $(ORMODES); do for r in syn rtl; do t=or_negctl_$${r}_$$m; \
+	  if grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log; then echo "negctl $$t: NON-EQUIVALENT (good)"; \
+	  else echo "negctl $$t: NOT DETECTED -- LEC verdict is untrustworthy"; fi; done; done
+
+# ---- B2 OpenROAD hop 1: RTL (SV) == sv2v output that Yosys synthesised.  (RTL-vs-netlist cannot be name-matched: Yosys flop names are bit indices of flattened structs.)
+OR_SV2V     := $(REPO)/pnr/sky130/cpu/rv32i_cpu_top_sv2v.v
+.PHONY: lec-or-fe
+lec-or-fe:
+	@$(PE); $(SAFE); mkdir -p $(RUN); cd $(RUN); \
+	  export REPO=$(REPO) PDKDIR=$(PDKDIR) RUN=$(RUN) SV2V=$(OR_SV2V) RTL_LIST=$(RUN)/rtl.f; \
+	  $(REPO)/pnr/commercial/syn/dc/scripts/rtl_list.sh $(REPO) $(RUN)/rtl.f; \
+	  /usr/bin/time -v -o $(RUN)/time.txt $(PDKDIR)/scripts/safe_run.sh $(RUN)/fm.log fm_shell -f $(HERE)/scripts/fm_lec_or_frontend.tcl; \
+	  rc=$$?; echo "fm_shell rc=$$rc"; grep -E "VERIFY_RESULT|FM_DONE|Verification (SUCCEEDED|FAILED|INCONCLUSIVE)" $(RUN)/fm.log; exit $$rc

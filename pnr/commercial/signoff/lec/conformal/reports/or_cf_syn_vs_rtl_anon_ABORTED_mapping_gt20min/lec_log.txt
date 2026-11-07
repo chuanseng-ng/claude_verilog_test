@@ -1,0 +1,327 @@
+                          CONFORMAL (R)
+                   Version 24.10-p100 (30-May-2024) (64 bit executable)
+   Copyright (c) Cadence Design Systems, Inc., 1997-2024. All Rights Reserved
+
+
+This program is proprietary and confidential information belonging to
+Cadence Design Systems, Inc., and may be used and disclosed only as authorized
+in a license agreement controlling such use and disclosure.
+
+// Warning: This version is 891 days old. You can download the latest version from http://downloads.cadence.com.
+
+0
+// Command: usage -auto -elapse
+CPU time     : 6.99    seconds
+Elapse time  : 6       seconds
+Memory usage : 90.15   M bytes
+0
+// Command: set_mapping_method -sensitive
+0
+// Command: set_parallel_option -threads 1,2 -norelease_license
+// Number of threads is set to 1,2.
+0
+// Command: set_compare_options -threads 1,2
+Set computing threads of compare to 1,2.
+0
+// Command: set env(RC_VERSION)     "23.14-s090_1"
+23.14-s090_1
+// Command: set env(CDN_SYNTH_ROOT) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set CDN_SYNTH_ROOT      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set env(CW_DIR) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set CW_DIR      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set lec_version_required "21.20249"
+21.20249
+// Command: if { ($lec_version < $lec_version_required) &&
+//              [file exists /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim]} {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//          } else {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//          }
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim
+// Command: set_multiplier_implementation boothrca -both
+0
+// Command: set_undefined_cell black_box -noascend -both
+0
+// Command: add_notranslate_modules -library -both sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: add_search_path . /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/tech -library -both
+0
+// Command: read_library -liberty -both \
+//              /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib \
+//              /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib ...
+// Parsing file /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:12)
+// Warning: (RTL9.21) Liberty cell with interface_timing attribute set to true was not an empty cell (occurrence:1)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:6)
+// Note: (HRC1.2) Module/entity is not translated (blackboxed) (occurrence:1)
+// Note: Read Liberty library successfully
+0
+CPU time     : 13.44   seconds
+Elapse time  : 11      seconds
+Memory usage : 113.46  M bytes
+// Command: set_undriven_signal 0 -golden
+0
+// Command: set_naming_style genus -golden
+0
+// Command: set_naming_rule "%s\[%d\]" -instance_array -golden
+0
+// Command: set_naming_rule "%s_reg" -register -golden
+0
+// Command: set_naming_rule "%L.%s" "%L\[%d\].%s" "%s" -instance -golden
+0
+// Command: set_naming_rule "%L.%s" "%L\[%d\].%s" "%s" -variable -golden
+0
+// Command: set_naming_rule -ungroup_separator {_} -golden
+0
+// Command: set_hdl_options -const_port_extend
+0
+// Command: set_hdl_options -unsigned_conversion_overflow on
+0
+// Command: set_hdl_option -v_to_vd on
+// Command: set_hdl_options -v_to_vd on
+// Note: '-v' to '-vd' option is 'ON'
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          set_hdl_option -extract_macro_constraint
+//          }
+// Command: set_hdl_options -extract_macro_constraint
+0
+// Command: set lec_version_required "20.20226"
+20.20226
+// Command: if {$lec_version >= $lec_version_required} {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src"
+//          } else {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src:cwd"
+//          }
+// Command: set_hdl_options -VERILOG_INCLUDE_DIR sep:src
+0
+// Command: read_design -enumconstraint -define PDK_sky130A -define SCL_sky130_fd_sc_hd -define __librelane__ -define __pnr__ -define SRAM_SKY130 -define SYNTHESIS  -merge bbox -golden -lastmod -noelab  -sv09 /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv ...
+0
+// Command: elaborate_design -golden -root {rv32i_cpu_top} -rootonly -rootonly  
+// Golden root module is set to 'rv32i_cpu_top'
+// Warning: (RTL1.2) Variable/signal is assigned by multiple non-blocking assignments (occurrence:1314)
+// Warning: (RTL1.5b) Potential loss of RHS msb or carry-out bit (occurrence:33)
+// Note: (RTL5.5a) Default case item with non-X assignment(s) (occurrence:43)
+// Note: (RTL5.7) Default case item with inconsistent assignment(s). (occurrence:18)
+// Warning: (RTL6.4) Enum value constraint is added (occurrence:49)
+// Warning: (RTL7.3) Array index in RHS might be out of range (occurrence:3)
+// Warning: (RTL7.4) Array index in LHS might be out of range (occurrence:2)
+// Warning: (RTL7.10) Comparison with signed and unsigned operands (occurrence:1)
+// Warning: (RTL7.10d) Comparison with positive constant of different signedness (occurrence:8)
+// Warning: (RTL8.3) Unreachable DFF/DLAT is removed (occurrence:14)
+// Warning: (RTL10) Both posedge and negedge are used in different always/process (occurrence:19)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:58)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:143)
+// Note: (VLG2.2b) Non-binary case item is used in casez statement (occurrence:6)
+// Note: (VLG6.4) Supported system datapath function call (occurrence:3)
+// Note: (VLG9.2) The `define macro is used (occurrence:6)
+// Note: (SV8.1) Package imported (occurrence:19)
+// Warning: (DIR6.2) Supported compiler directive is detected (occurrence:36)
+// Note: (DIR6.3) Conditional compiler directive clause is effective (occurrence:10)
+// Warning: (IGN1.1) Initial construct is not supported. The entire initial construct will be ignored (occurrence:4)
+// Warning: (IGN4) Attribute instance(s) are ignored (occurrence:2)
+// Note: (HRC3.5b) Open output port connection is detected (occurrence:11)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:1165)
+// Warning: (HRC3.16) A wire is declared, but not used in the module (occurrence:11)
+// Warning: Total black box modules referenced in Golden = 1
+// Warning: Total black box modules referenced in Golden = 1
+0
+CPU time     : 13.71   seconds
+Elapse time  : 12      seconds
+Memory usage : 161.32  M bytes
+// Command: read_design -verilog95   -revised -lastmod -noelab $env(IMPL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/runs/b2_openroad/06-yosys-synthesis/rv32i_cpu_top.nl.v ...
+0
+CPU time     : 14.26   seconds
+Elapse time  : 12      seconds
+Memory usage : 198.38  M bytes
+// Command: elaborate_design -revised -root {rv32i_cpu_top}
+// Revised root module is set to 'rv32i_cpu_top'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:103)
+// Note: (HRC3.5b) Open output port connection is detected (occurrence:247)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:8)
+// Warning: Total black box modules referenced in Revised = 1
+0
+CPU time     : 14.56   seconds
+Elapse time  : 12      seconds
+Memory usage : 188.36  M bytes
+// Command: file mkdir rtl_fv_map_db
+// Command: write_design -golden rtl_fv_map_db/elab.v -replace
+// Note: Wrote VERILOG design successfully
+0
+CPU time     : 16.72   seconds
+Elapse time  : 15      seconds
+Memory usage : 188.36  M bytes
+// Command: uniquify -all -nolib -golden
+Uniquified 0 module(s)
+0
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules        35               1
+Library-cells       1305           30369
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+$CNTRT     *         4                    0
+AND        *     20684                33917
+BUF        *       268                 4558
+DFF        *      6236                 5299
+INV        *      2198                20535
+MUX        *     24419                    0
+NAND       *         3                    0
+NOR        *       840                    0
+OR         *      5229                17322
+TIE0       *         0                  237
+TIE1       *         0                  237
+WIRE       *      2711                    0
+XNOR       *       157                    0
+XOR        *      1781                    0
+------ word-level --------------------------
+ADD        *        30                    0
+EQ         *        30                    0
+GE         *         5                    0
+GT         *         2                    0
+LE         *         2                    0
+LT         *         5                    0
+NE         *         3                    0
+SLL        *         2                    0
+SRA        *         1                    0
+SRL        *         1                    0
+SUBTRACT   *         6                    0
+WAND       *        18                    0
+WINV       *         2                    0
+WMUX       *       931                    0
+WOR        *        21                    0
+WSEL       *       215                    0
+WXOR       *        23                    0
+BBOX                10                   10
+------ don't care --------------------------
+X-assignments      110                    0
+--------------------------------------------
+Total            64650                82115
+
+0
+// Command: report_black_box
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: report_modules
+Golden:
+   rv32i_cpu_top 
+      mbist_ctrl_N_MEM10_AW8_RD_LAT2_P1_MASK0_ASYNC_RST0_LOCAL_CMP1 
+      rv32i_core_RESET_PC0 
+         rv32i_pipeline_ex1c 
+            VDW_ADD_32_1_0 
+         rv32i_hazard_unit 
+         rv32i_forwarding_unit 
+         rv32i_csr_file 
+         rv32i_interrupt_ctrl 
+         rv32i_regfile 
+         rv32i_pipeline_if_RESET_PC0 
+         rv32i_pipeline_id 
+            VDW_ADD_32_1_0 
+            rv32i_decode 
+            rv32i_imm_gen 
+         rv32i_pipeline_ex 
+            rv32i_alu 
+            rv32i_branch_comp 
+         rv32i_pipeline_ex1b 
+         rv32i_pipeline_ex2 
+         rv32i_pipeline_mem 
+         rv32i_pipeline_wb 
+         rv32i_icache 
+            mem_collar_AW8_HAS_P10_LOCAL_CMP1 
+         rv32i_dcache 
+            mem_collar_AW8_HAS_P10_LOCAL_CMP1 
+         rv32i_cache_arbiter 
+Revised:
+   rv32i_cpu_top 
+0
+// Command: set_flatten_model -seq_constant
+0
+// Command: set_flatten_model -seq_constant_x_to 0
+0
+// Command: set_flatten_model -hier_seq_merge
+0
+// Command: set_flatten_model -seq_merge
+0
+// Command: set_flatten_model -balanced_modeling
+0
+// Command: set lec_version_required "21.10142"
+21.10142
+// Command: if {$lec_version >= $lec_version_required} {
+//              puts "For safety of verification, PIs and POs should be mapped by name."
+//              set_mapping_method -mapping_file_nopipo
+//          }
+For safety of verification, PIs and POs should be mapped by name.
+// Command: set_mapping_method -mapping_file_nopipo
+0
+// Command: if {$env(MAPFILE) ne ""} { set_mapping_method -search_in_mapping_file }
+// Command: if {$env(MAPFILE) ne ""} { set_analyze_option -mapping_file $env(MAPFILE) }
+// Command: if {$env(MAPFILE) ne ""} { check_mapping_setup -mapping_file_quality -summary }
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          }
+// Command: set_analyze_option -auto -report_map
+0
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Warning: (F34) Converted 110 X assignment(s) as don't care(s)
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling mapped 0 out of 11535 DFF/DLATs
+// (F18) Converted 388 DFF/DLAT(s) in (G) to ZERO/ONE
+// (F36) Added 6498 don't care(s) due to $constraints.
+// (F18) Converted 35 DFF/DLAT(s) in (R) to ZERO/ONE
+CPU time     : 17.81   seconds
+Elapse time  : 16      seconds
+Memory usage : 262.00  M bytes
+// Warning: Golden and Revised have different numbers of key points:
+// Golden  key points = 6749
+// Revised key points = 5812
+// Mapping key points ...
+// Warning: More than 1/3 of the key points have mis-matched names
+// Warning: Please use renaming rules if automatic mapping fails to finish

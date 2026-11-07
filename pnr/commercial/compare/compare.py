@@ -668,13 +668,32 @@ def openroad():
         rt,
         rule="06-yosys-synthesis runtime.txt",
     )
+    fm = lec_formality("or")
+    cf = lec_conformal("or_cf")
+    out["lec_runs"] = {**fm, **cf}
+
+    def v(k):
+        return (fm.get(k) or cf.get(k) or {}).get("value")
+
+    ctl = [k for k in fm if "negctl" in k]
+    caught = [k for k in ctl if fm[k]["value"] == "FAILED"]
+    closed = (
+        v("or_fe_rtl_vs_sv2v") == "SUCCEEDED"
+        and v("or_nodiode_vs_syn") == "SUCCEEDED"
+        and v("or_syn_vs_sv2v") == "SUCCEEDED"
+    )
     out["lec"] = E(
-        "not run",
+        ("EQUIVALENT" if closed else "NOT CLOSED")
+        + f": RTL==sv2v {v('or_fe_rtl_vs_sv2v')}; final==Yosys netlist {v('or_nodiode_vs_syn')}"
+        f" (with diodes {v('or_phys_vs_syn')}); Yosys netlist vs sv2v {v('or_syn_vs_sv2v')};"
+        f" direct RTL vs final {v('or_phys_vs_rtl')}; Conformal RTL vs Yosys netlist {v('or_cf_synnamed_vs_rtl')};"
+        f" {len(caught)}/{len(ctl)} negative controls of the two proven legs caught",
         "verdict",
-        "signoff",
-        f"{COM}/reports/lec_icc2_formality.md",
-        kind="prose",
-        locator="no OpenROAD netlist LEC exists in reports/lec_*.md",
+        "derived",
+        sorted(
+            {x["source"] for x in {**fm, **cf}.values() if isinstance(x["source"], str)}
+        ),
+        rule="derived from the per-run verdicts in lec_runs; EQUIVALENT only if the RTL==sv2v, final==Yosys and Yosys==sv2v legs all SUCCEEDED",
     )
     out.update(redhawk("openroad"))
     return out

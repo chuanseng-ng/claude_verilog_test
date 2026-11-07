@@ -1,6 +1,7 @@
 # fm_lec_icc2.tcl -- Step B4c: Formality LEC of the post-route ICC2 netlist.
 #   fm_shell -f fm_lec_icc2.tcl     env: REPO PDKDIR RUN IMPL REFMODE=rtl|dc  SVF=<file>|none  [RTL_LIST] [REF_NETLIST]
 #   REFMODE=rtl : reference = the 28 SV files + 5 defines (as B4a), optional DC SVF (see report for why it may be useless here)
+#   REFMODE=sv2v: (B2 OpenROAD arm) reference = sv2v-generated Verilog-2005 file given in REF_NETLIST
 #   REFMODE=dc  : reference = DC-NXT netlist (itself proven == RTL in B4a), no SVF; netlist-to-netlist hop
 # Implementation = ICC2 write_verilog -exclude {pg_netlist physical_only_cells} output: flat, no PG pins, 115 port diodes, no assigns.
 # Same rules as B4a: no set_constant / set_dont_verify / user_match / waivers.  Every setting carries its reason.
@@ -35,6 +36,12 @@ if {$MODE eq "rtl"} {
   foreach f $files { if {[string match *stub* $f]} { error "SRAM stub must not be read: $f" } }
   set defines {PDK_sky130A SCL_sky130_fd_sc_hd __librelane__ __pnr__ SRAM_SKY130}
   read_sverilog -container r -libname WORK -define $defines $files
+  set_top r:/WORK/$TOP
+} elseif {$MODE eq "sv2v"} {
+  # B2 OpenROAD arm only: reference = the sv2v output (Verilog-2005) that Yosys synthesised; SRAM .db first so the 10 sram instances resolve as the library macro.
+  # (proven == the 28 RTL files in fm_lec_or_frontend.tcl)
+  read_db -container r -technology_library $SRAMDB
+  read_sverilog -container r -libname WORK $::env(REF_NETLIST)
   set_top r:/WORK/$TOP
 } else {
   # reference = DC netlist; std-cell + SRAM .db read in 'r' BEFORE its netlist (tech library must precede the design)

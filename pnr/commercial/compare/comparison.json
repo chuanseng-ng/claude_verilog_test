@@ -2212,13 +2212,148 @@
      "source": "pnr/commercial/compare/snapshot/openroad/step_runtime.tsv",
      "rule": "06-yosys-synthesis runtime.txt"
     },
+    "lec_runs": {
+     "or_fe_rtl_vs_sv2v": {
+      "value": "SUCCEEDED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_fe_rtl_vs_sv2v/fm_log.txt",
+      "passing": 6302,
+      "failing": 0
+     },
+     "or_negctl_fe_fwdb_inv": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_negctl_fe_fwdb_inv/fm_log.txt",
+      "passing": 6301,
+      "failing": 1
+     },
+     "or_negctl_fe_swap": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_negctl_fe_swap/fm_log.txt",
+      "passing": 6301,
+      "failing": 1
+     },
+     "or_negctl_syn_bufinv": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_bufinv/fm_log.txt",
+      "passing": 6244,
+      "failing": 1
+     },
+     "or_negctl_syn_fwdb_inv": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_fwdb_inv/fm_log.txt",
+      "passing": 6244,
+      "failing": 1
+     },
+     "or_negctl_syn_swap": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_swap/fm_log.txt",
+      "passing": 5937,
+      "failing": 308
+     },
+     "or_negctl_syn_tiehi": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_tiehi/fm_log.txt",
+      "passing": 6244,
+      "failing": 1
+     },
+     "or_nodiode_vs_sv2v": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_nodiode_vs_sv2v/fm_log.txt",
+      "passing": 2231,
+      "failing": 3902
+     },
+     "or_nodiode_vs_syn": {
+      "value": "SUCCEEDED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_nodiode_vs_syn/fm_log.txt",
+      "passing": 6248,
+      "failing": 0
+     },
+     "or_phys_vs_rtl": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_rtl/fm_log.txt",
+      "passing": 1376,
+      "failing": 3670
+     },
+     "or_phys_vs_sv2v": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_sv2v/fm_log.txt",
+      "passing": 2637,
+      "failing": 3414
+     },
+     "or_phys_vs_syn": {
+      "value": "SUCCEEDED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_syn/fm_log.txt",
+      "passing": 6248,
+      "failing": 0
+     },
+     "or_syn_vs_sv2v": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v/fm_log.txt",
+      "passing": 2231,
+      "failing": 3902
+     },
+     "or_cf_syn_vs_rtl_anon_ABORTED_mapping_gt20min": {
+      "value": null,
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/conformal/reports/or_cf_syn_vs_rtl_anon_ABORTED_mapping_gt20min/lec_log.txt"
+     },
+     "or_cf_synnamed_vs_rtl": {
+      "value": "NOT_EQUIVALENT",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/conformal/reports/or_cf_synnamed_vs_rtl/lec_log.txt",
+      "compare_points": 5701,
+      "diff_points": 4389
+     }
+    },
     "lec": {
-     "value": "not run",
+     "value": "NOT CLOSED: RTL==sv2v SUCCEEDED; final==Yosys netlist SUCCEEDED (with diodes SUCCEEDED); Yosys netlist vs sv2v FAILED; direct RTL vs final FAILED; Conformal RTL vs Yosys netlist NOT_EQUIVALENT; 6/6 negative controls of the two proven legs caught",
      "unit": "verdict",
-     "label": "signoff",
-     "source": "pnr/commercial/reports/lec_icc2_formality.md",
-     "kind": "prose",
-     "locator": "no OpenROAD netlist LEC exists in reports/lec_*.md"
+     "label": "derived",
+     "source": [
+      "pnr/commercial/signoff/lec/conformal/reports/or_cf_syn_vs_rtl_anon_ABORTED_mapping_gt20min/lec_log.txt",
+      "pnr/commercial/signoff/lec/conformal/reports/or_cf_synnamed_vs_rtl/lec_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_fe_rtl_vs_sv2v/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_negctl_fe_fwdb_inv/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_negctl_fe_swap/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_bufinv/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_fwdb_inv/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_swap/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_negctl_syn_tiehi/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_nodiode_vs_sv2v/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_nodiode_vs_syn/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_rtl/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_sv2v/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_syn/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v/fm_log.txt"
+     ],
+     "rule": "derived from the per-run verdicts in lec_runs; EQUIVALENT only if the RTL==sv2v, final==Yosys and Yosys==sv2v legs all SUCCEEDED"
     },
     "ir_static_vpwr_drop_mV": {
      "value": 12.4,

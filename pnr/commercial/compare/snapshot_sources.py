@@ -217,6 +217,26 @@ def lec() -> None:
             copy(d / f, fr / "reports" / t / f, required=False)
 
 
+def lec_openroad() -> None:
+    """B2 OpenROAD arm (docs/COMMERCIAL_FLOW_COMPARISON.md section 7 item 1): copies the or_* Formality and Conformal runs into reports/.
+    unmatched_points / failing_points are copied only where they are small (the with-diode variants list 64,086 diode black boxes, 4 MB)."""
+    fr = COM / "signoff/lec/formality"
+    for d in sorted((fr / "runs").glob("or_*")):
+        if not (d.is_dir() and (d / "fm.log").is_file()):
+            continue
+        copy(d / "fm.log", fr / "reports" / d.name / "fm_log.txt")
+        copy(d / "time.txt", fr / "reports" / d.name / "time.txt", required=False)
+        for f in ("unmatched_points.txt", "failing_points.txt"):
+            if (d / f).is_file() and (d / f).stat().st_size < 1_500_000:
+                copy(d / f, fr / "reports" / d.name / f, required=False)
+    cr = COM / "signoff/lec/conformal"
+    for name in ("or_cf_synnamed_vs_rtl", "or_cf_syn_vs_rtl_anon_ABORTED_mapping_gt20min"):
+        d = cr / "runs" / name
+        if (d / "lec.log").is_file():
+            copy(d / "lec.log", cr / "reports" / name / "lec_log.txt")
+            copy(d / "time.txt", cr / "reports" / name / "time.txt", required=False)
+
+
 def cell_area() -> None:
     lefs = [PDK_LEF_DIR / "sky130_fd_sc_hd.lef", PDK_LEF_DIR / "sky130_ef_sc_hd.lef"]
     sram = sorted(REPO.glob("pnr/sky130/**/sky130_sram_1kbyte_1rw1r_32x256_8.lef"))
@@ -275,6 +295,7 @@ def main() -> None:
     icc2()
     innovus()
     lec()
+    lec_openroad()
     cell_area()
     (SNAP / "MANIFEST.tsv").write_text(
         "snapshot\torigin\torigin_sha256\tbytes\n"
