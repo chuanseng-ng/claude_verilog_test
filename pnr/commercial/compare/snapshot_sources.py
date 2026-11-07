@@ -32,7 +32,15 @@ REPO = Path(__file__).resolve().parents[3]
 COM = REPO / "pnr/commercial"
 SNAP = COM / "compare/snapshot"
 
-PT_DIRS = {"base": "runs", "iolat": "runs_iolat", "own": "runs_own"}
+PT_DIRS = {
+    "base": "runs",
+    "iolat": "runs_iolat",
+    "own": "runs_own",
+    "iolat_pv": "runs_iolat_pv",
+    "iolat_pvs": "runs_iolat_pvs",
+}
+PV_VARIANTS = ("iolat_pv", "iolat_pvs")
+PV_ARMS = ["openroad", "icc2b6", "innovusb6"]
 PT_ARMS = [
     "openroad",
     "icc2b6",
@@ -87,8 +95,10 @@ def derived(dst: Path, origin: str, text: str) -> None:
     manifest.append((rel(dst), origin, "derived", len(text.encode())))
 
 
-def pt() -> None:
+def pt(only=None) -> None:
     for var, d in PT_DIRS.items():
+        if only and var not in only:
+            continue
         for arm in PT_ARMS:
             for c in CORNERS:
                 src = COM / "signoff/pt" / d / f"{arm}_{c}"
@@ -97,11 +107,29 @@ def pt() -> None:
                 dst = SNAP / "pt" / var / f"{arm}_{c}"
                 for f in ("metrics.tsv", "inputs.txt", "global_timing.txt"):
                     copy(src / f, dst / f)
+                if var in PV_VARIANTS:
+                    copy(src / "iolat_pv.txt", dst / "iolat_pv.txt")
+                    copy(src / "io_viol_summary.tsv", dst / "io_viol_summary.tsv", required=False)
+                    copy(src / "io_viol.tsv", dst / "io_viol.tsv", required=False)
                 if c == "nom_tt":
                     copy(src / "power_B.txt", dst / "power_B.txt", required=False)
                     copy(src / "time.txt", dst / "time.txt", required=False)
                     if var == "base":
                         copy(src / "constraint_drv.txt", dst / "constraint_drv.txt", required=False)
+
+
+def clklat() -> None:
+    """Per-pin-statistics of the clk_i insertion latency (pt/scripts/measure_clk_latency.tcl), the per-view iolat tables and their sources."""
+    for arm in PV_ARMS:
+        for c in CORNERS:
+            src = COM / "signoff/pt/runs_clklat" / f"{arm}_{c}"
+            if not (src / "clk_latency.tsv").is_file():
+                continue
+            dst = SNAP / "clklat" / f"{arm}_{c}"
+            for f in ("clk_latency.tsv", "inputs.txt", "annot_clock.txt"):
+                copy(src / f, dst / f)
+    for f in sorted((COM / "signoff/pt/iolat_pv").glob("*.tsv")):
+        copy(f, SNAP / "iolat_pv" / f.name)
 
 
 def openroad() -> None:
@@ -214,10 +242,35 @@ def cell_area() -> None:
     )
 
 
+def merge_pv() -> None:
+    """Refresh ONLY the per-view iolat parts of the snapshot (pt/iolat_pv*, clklat, iolat_pv) and merge their MANIFEST rows;
+    every other snapshot file and manifest row is left untouched."""
+    for d in [SNAP / "pt" / v for v in PV_VARIANTS] + [SNAP / "clklat", SNAP / "iolat_pv"]:
+        if d.exists():
+            shutil.rmtree(d)
+    mf = SNAP / "MANIFEST.tsv"
+    keep = [
+        l
+        for l in mf.read_text().splitlines(True)
+        if not any(
+            l.startswith(f"{rel(SNAP)}/{p}") for p in ("pt/iolat_pv/", "pt/iolat_pvs/", "clklat/", "iolat_pv/")
+        )
+    ]
+    pt(only=PV_VARIANTS)
+    clklat()
+    rows = "".join("\t".join(map(str, r)) + "\n" for r in manifest)
+    mf.write_text("".join(keep) + rows)
+    print(f"{len(manifest)} per-view files merged into {rel(mf)}")
+
+
 def main() -> None:
+    if "--only-pv" in sys.argv:
+        merge_pv()
+        return
     if SNAP.exists():
         shutil.rmtree(SNAP)
     pt()
+    clklat()
     openroad()
     icc2()
     innovus()

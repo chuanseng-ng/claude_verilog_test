@@ -68,7 +68,7 @@ def test_final_arms_complete_and_no_warnings(tmp_path):
     data = _build(tmp_path)
     assert data["warnings"] == []
     for arm in ("openroad_b2", "icc2_b6", "innovus_b6"):
-        for var in ("base", "iolat"):
+        for var in ("base", "iolat", "iolat_pv", "iolat_pvs"):
             corners = data["judge"][arm][var]["corners"]
             assert all(corners[c] for c in corners) and len(corners) == 9, (arm, var)
             assert data["judge"][arm][var]["power"]["values"]["total_mW"] > 0

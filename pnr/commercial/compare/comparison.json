@@ -30,6 +30,20 @@
    "source": "pnr/commercial/constraints/sky130_cpu_iolat.sdc",
    "rule": "md5 of the file"
   },
+  "iolat_pv": {
+   "value": "57e67934c24b53f40489ad30eeb3c1cf",
+   "unit": "md5",
+   "label": "derived",
+   "source": "pnr/commercial/constraints/sky130_cpu_iolat_pv.sdc",
+   "rule": "md5 of the file"
+  },
+  "iolat_pvs": {
+   "value": "57e67934c24b53f40489ad30eeb3c1cf",
+   "unit": "md5",
+   "label": "derived",
+   "source": "pnr/commercial/constraints/sky130_cpu_iolat_pv.sdc",
+   "rule": "md5 of the file"
+  },
   "own:icc2_b6": {
    "value": "44ce62ce6e6075a2110cd5f62a5b4100",
    "unit": "md5",
@@ -64,6 +78,1362 @@
    "label": "derived",
    "source": "pnr/commercial/constraints/sky130_cpu_innovus_b5h_own_pt.sdc",
    "rule": "md5 of the file"
+  }
+ },
+ "clock_latency": {
+  "measured": {
+   "openroad_b2": {
+    "nom_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_nom_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 2.4691,
+      "all_median": 2.8998,
+      "all_mean": 2.8995,
+      "all_max": 3.1264,
+      "flop_n": 5299,
+      "flop_min": 2.4691,
+      "flop_median": 2.9,
+      "flop_mean": 2.8999,
+      "flop_max": 3.1264,
+      "sram_n": 20,
+      "sram_min": 2.6031,
+      "sram_median": 2.7074,
+      "sram_mean": 2.7802,
+      "sram_max": 3.1107,
+      "in_capture_n": 1436,
+      "in_capture_min": 2.5713,
+      "in_capture_median": 2.8585,
+      "in_capture_mean": 2.8591,
+      "in_capture_max": 3.1264,
+      "out_launch_n": 601,
+      "out_launch_min": 2.6222,
+      "out_launch_median": 2.8732,
+      "out_launch_mean": 2.8977,
+      "out_launch_max": 3.1111
+     }
+    },
+    "nom_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_nom_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 4.2097,
+      "all_median": 5.0275,
+      "all_mean": 5.0351,
+      "all_max": 5.406,
+      "flop_n": 5299,
+      "flop_min": 4.2097,
+      "flop_median": 5.0276,
+      "flop_mean": 5.0362,
+      "flop_max": 5.406,
+      "sram_n": 20,
+      "sram_min": 4.4729,
+      "sram_median": 4.6546,
+      "sram_mean": 4.7505,
+      "sram_max": 5.3766,
+      "in_capture_n": 1436,
+      "in_capture_min": 4.4661,
+      "in_capture_median": 4.957,
+      "in_capture_mean": 4.9634,
+      "in_capture_max": 5.4059,
+      "out_launch_n": 601,
+      "out_launch_min": 4.5384,
+      "out_launch_median": 4.9837,
+      "out_launch_mean": 5.021,
+      "out_launch_max": 5.3604
+     }
+    },
+    "nom_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_nom_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 1.7672,
+      "all_median": 2.002,
+      "all_mean": 2.0019,
+      "all_max": 2.1711,
+      "flop_n": 5299,
+      "flop_min": 1.7672,
+      "flop_median": 2.002,
+      "flop_mean": 2.0022,
+      "flop_max": 2.1711,
+      "sram_n": 20,
+      "sram_min": 1.801,
+      "sram_median": 1.8788,
+      "sram_mean": 1.9244,
+      "sram_max": 2.1687,
+      "in_capture_n": 1436,
+      "in_capture_min": 1.7816,
+      "in_capture_median": 1.9756,
+      "in_capture_mean": 1.9749,
+      "in_capture_max": 2.1687,
+      "out_launch_n": 601,
+      "out_launch_min": 1.819,
+      "out_launch_median": 1.985,
+      "out_launch_mean": 2.003,
+      "out_launch_max": 2.1711
+     }
+    },
+    "min_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_min_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 2.335,
+      "all_median": 2.7308,
+      "all_mean": 2.731,
+      "all_max": 2.9338,
+      "flop_n": 5299,
+      "flop_min": 2.335,
+      "flop_median": 2.7314,
+      "flop_mean": 2.7314,
+      "flop_max": 2.9338,
+      "sram_n": 20,
+      "sram_min": 2.4425,
+      "sram_median": 2.5342,
+      "sram_mean": 2.6054,
+      "sram_max": 2.9179,
+      "in_capture_n": 1436,
+      "in_capture_min": 2.4169,
+      "in_capture_median": 2.6908,
+      "in_capture_mean": 2.6925,
+      "in_capture_max": 2.9338,
+      "out_launch_n": 601,
+      "out_launch_min": 2.4592,
+      "out_launch_median": 2.7065,
+      "out_launch_mean": 2.7262,
+      "out_launch_max": 2.9058
+     }
+    },
+    "min_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_min_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 4.0278,
+      "all_median": 4.7524,
+      "all_mean": 4.7607,
+      "all_max": 5.0805,
+      "flop_n": 5299,
+      "flop_min": 4.0278,
+      "flop_median": 4.7528,
+      "flop_mean": 4.7617,
+      "flop_max": 5.0805,
+      "sram_n": 20,
+      "sram_min": 4.2265,
+      "sram_median": 4.3979,
+      "sram_mean": 4.4814,
+      "sram_max": 5.0517,
+      "in_capture_n": 1436,
+      "in_capture_min": 4.2164,
+      "in_capture_median": 4.6845,
+      "in_capture_mean": 4.6913,
+      "in_capture_max": 5.0805,
+      "out_launch_n": 601,
+      "out_launch_min": 4.2699,
+      "out_launch_median": 4.708,
+      "out_launch_mean": 4.743,
+      "out_launch_max": 5.042
+     }
+    },
+    "min_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_min_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 1.6582,
+      "all_median": 1.8801,
+      "all_mean": 1.8815,
+      "all_max": 2.0152,
+      "flop_n": 5299,
+      "flop_min": 1.6582,
+      "flop_median": 1.8809,
+      "flop_mean": 1.8818,
+      "flop_max": 2.0152,
+      "sram_n": 20,
+      "sram_min": 1.6871,
+      "sram_median": 1.7524,
+      "sram_mean": 1.7982,
+      "sram_max": 2.0123,
+      "in_capture_n": 1436,
+      "in_capture_min": 1.6728,
+      "in_capture_median": 1.8556,
+      "in_capture_mean": 1.8555,
+      "in_capture_max": 2.0133,
+      "out_launch_n": 601,
+      "out_launch_min": 1.6996,
+      "out_launch_median": 1.866,
+      "out_launch_mean": 1.8797,
+      "out_launch_max": 2.0152
+     }
+    },
+    "max_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_max_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 2.6507,
+      "all_median": 3.1281,
+      "all_mean": 3.1278,
+      "all_max": 3.4073,
+      "flop_n": 5299,
+      "flop_min": 2.6507,
+      "flop_median": 3.1282,
+      "flop_mean": 3.1282,
+      "flop_max": 3.4071,
+      "sram_n": 20,
+      "sram_min": 2.8183,
+      "sram_median": 2.9453,
+      "sram_mean": 3.0154,
+      "sram_max": 3.4073,
+      "in_capture_n": 1436,
+      "in_capture_min": 2.7783,
+      "in_capture_median": 3.0817,
+      "in_capture_mean": 3.0834,
+      "in_capture_max": 3.4073,
+      "out_launch_n": 601,
+      "out_launch_min": 2.848,
+      "out_launch_median": 3.0947,
+      "out_launch_mean": 3.1279,
+      "out_launch_max": 3.4071
+     }
+    },
+    "max_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_max_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 4.4529,
+      "all_median": 5.3756,
+      "all_mean": 5.3778,
+      "all_max": 5.817,
+      "flop_n": 5299,
+      "flop_min": 4.4529,
+      "flop_median": 5.3759,
+      "flop_mean": 5.3789,
+      "flop_max": 5.817,
+      "sram_n": 20,
+      "sram_min": 4.769,
+      "sram_median": 4.9689,
+      "sram_mean": 5.0776,
+      "sram_max": 5.7888,
+      "in_capture_n": 1436,
+      "in_capture_min": 4.7713,
+      "in_capture_median": 5.2888,
+      "in_capture_mean": 5.2969,
+      "in_capture_max": 5.8166,
+      "out_launch_n": 601,
+      "out_launch_min": 4.8709,
+      "out_launch_median": 5.3149,
+      "out_launch_mean": 5.3646,
+      "out_launch_max": 5.7632
+     }
+    },
+    "max_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroad_max_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 1.9095,
+      "all_median": 2.1596,
+      "all_mean": 2.1595,
+      "all_max": 2.3903,
+      "flop_n": 5299,
+      "flop_min": 1.9095,
+      "flop_median": 2.1598,
+      "flop_mean": 2.1598,
+      "flop_max": 2.3903,
+      "sram_n": 20,
+      "sram_min": 1.9494,
+      "sram_median": 2.0417,
+      "sram_mean": 2.0892,
+      "sram_max": 2.388,
+      "in_capture_n": 1436,
+      "in_capture_min": 1.9228,
+      "in_capture_median": 2.1303,
+      "in_capture_mean": 2.1303,
+      "in_capture_max": 2.388,
+      "out_launch_n": 601,
+      "out_launch_min": 1.9756,
+      "out_launch_median": 2.141,
+      "out_launch_mean": 2.1641,
+      "out_launch_max": 2.3903
+     }
+    }
+   },
+   "icc2_b6": {
+    "nom_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_nom_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 1.3151,
+      "all_median": 1.8475,
+      "all_mean": 1.819,
+      "all_max": 2.0792,
+      "flop_n": 5284,
+      "flop_min": 1.3151,
+      "flop_median": 1.8475,
+      "flop_mean": 1.8193,
+      "flop_max": 2.0792,
+      "sram_n": 20,
+      "sram_min": 1.535,
+      "sram_median": 1.799,
+      "sram_mean": 1.7507,
+      "sram_max": 1.9847,
+      "in_capture_n": 1417,
+      "in_capture_min": 1.5329,
+      "in_capture_median": 1.8444,
+      "in_capture_mean": 1.8108,
+      "in_capture_max": 2.041,
+      "out_launch_n": 599,
+      "out_launch_min": 1.5071,
+      "out_launch_median": 1.8392,
+      "out_launch_mean": 1.8106,
+      "out_launch_max": 1.9979
+     }
+    },
+    "nom_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_nom_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 2.2187,
+      "all_median": 3.1328,
+      "all_mean": 3.0803,
+      "all_max": 3.5262,
+      "flop_n": 5284,
+      "flop_min": 2.2187,
+      "flop_median": 3.1328,
+      "flop_mean": 3.0809,
+      "flop_max": 3.5262,
+      "sram_n": 20,
+      "sram_min": 2.5199,
+      "sram_median": 2.9795,
+      "sram_mean": 2.9362,
+      "sram_max": 3.3576,
+      "in_capture_n": 1417,
+      "in_capture_min": 2.5199,
+      "in_capture_median": 3.1257,
+      "in_capture_mean": 3.0647,
+      "in_capture_max": 3.4776,
+      "out_launch_n": 599,
+      "out_launch_min": 2.5372,
+      "out_launch_median": 3.1085,
+      "out_launch_mean": 3.0657,
+      "out_launch_max": 3.4133
+     }
+    },
+    "nom_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_nom_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 0.9134,
+      "all_median": 1.2804,
+      "all_mean": 1.2627,
+      "all_max": 1.44,
+      "flop_n": 5284,
+      "flop_min": 0.9134,
+      "flop_median": 1.2804,
+      "flop_mean": 1.2629,
+      "flop_max": 1.44,
+      "sram_n": 20,
+      "sram_min": 1.0704,
+      "sram_median": 1.2445,
+      "sram_mean": 1.2126,
+      "sram_max": 1.3714,
+      "in_capture_n": 1417,
+      "in_capture_min": 1.0704,
+      "in_capture_median": 1.2799,
+      "in_capture_mean": 1.257,
+      "in_capture_max": 1.4102,
+      "out_launch_n": 599,
+      "out_launch_min": 1.0522,
+      "out_launch_median": 1.2789,
+      "out_launch_mean": 1.2567,
+      "out_launch_max": 1.3818
+     }
+    },
+    "min_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_min_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 1.2386,
+      "all_median": 1.753,
+      "all_mean": 1.7247,
+      "all_max": 1.9596,
+      "flop_n": 5284,
+      "flop_min": 1.2386,
+      "flop_median": 1.753,
+      "flop_mean": 1.725,
+      "flop_max": 1.9596,
+      "sram_n": 20,
+      "sram_min": 1.4461,
+      "sram_median": 1.7076,
+      "sram_mean": 1.653,
+      "sram_max": 1.8901,
+      "in_capture_n": 1417,
+      "in_capture_min": 1.4449,
+      "in_capture_median": 1.7504,
+      "in_capture_mean": 1.716,
+      "in_capture_max": 1.9364,
+      "out_launch_n": 599,
+      "out_launch_min": 1.4305,
+      "out_launch_median": 1.7428,
+      "out_launch_mean": 1.7158,
+      "out_launch_max": 1.8953
+     }
+    },
+    "min_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_min_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 2.1031,
+      "all_median": 2.9888,
+      "all_mean": 2.9381,
+      "all_max": 3.3416,
+      "flop_n": 5284,
+      "flop_min": 2.1031,
+      "flop_median": 2.9888,
+      "flop_mean": 2.9386,
+      "flop_max": 3.3416,
+      "sram_n": 20,
+      "sram_min": 2.4068,
+      "sram_median": 2.8487,
+      "sram_mean": 2.7976,
+      "sram_max": 3.22,
+      "in_capture_n": 1417,
+      "in_capture_min": 2.4068,
+      "in_capture_median": 2.9781,
+      "in_capture_mean": 2.9214,
+      "in_capture_max": 3.3186,
+      "out_launch_n": 599,
+      "out_launch_min": 2.4246,
+      "out_launch_median": 2.966,
+      "out_launch_mean": 2.9214,
+      "out_launch_max": 3.2569
+     }
+    },
+    "min_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_min_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 0.8609,
+      "all_median": 1.2155,
+      "all_mean": 1.1977,
+      "all_max": 1.3533,
+      "flop_n": 5284,
+      "flop_min": 0.8609,
+      "flop_median": 1.2156,
+      "flop_mean": 1.1979,
+      "flop_max": 1.3533,
+      "sram_n": 20,
+      "sram_min": 1.0084,
+      "sram_median": 1.1835,
+      "sram_mean": 1.1431,
+      "sram_max": 1.3057,
+      "in_capture_n": 1417,
+      "in_capture_min": 1.0084,
+      "in_capture_median": 1.2137,
+      "in_capture_mean": 1.1915,
+      "in_capture_max": 1.3394,
+      "out_launch_n": 599,
+      "out_launch_min": 0.9967,
+      "out_launch_median": 1.2138,
+      "out_launch_mean": 1.1911,
+      "out_launch_max": 1.3157
+     }
+    },
+    "max_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_max_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 1.4124,
+      "all_median": 1.9707,
+      "all_mean": 1.9427,
+      "all_max": 2.2318,
+      "flop_n": 5284,
+      "flop_min": 1.4124,
+      "flop_median": 1.9707,
+      "flop_mean": 1.9429,
+      "flop_max": 2.2318,
+      "sram_n": 20,
+      "sram_min": 1.6574,
+      "sram_median": 1.9174,
+      "sram_mean": 1.8804,
+      "sram_max": 2.102,
+      "in_capture_n": 1417,
+      "in_capture_min": 1.6522,
+      "in_capture_median": 1.972,
+      "in_capture_mean": 1.9359,
+      "in_capture_max": 2.1807,
+      "out_launch_n": 599,
+      "out_launch_min": 1.6096,
+      "out_launch_median": 1.9704,
+      "out_launch_mean": 1.936,
+      "out_launch_max": 2.1343
+     }
+    },
+    "max_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_max_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 2.3738,
+      "all_median": 3.3326,
+      "all_mean": 3.2772,
+      "all_max": 3.7848,
+      "flop_n": 5284,
+      "flop_min": 2.3738,
+      "flop_median": 3.3326,
+      "flop_mean": 3.2778,
+      "flop_max": 3.7848,
+      "sram_n": 20,
+      "sram_min": 2.678,
+      "sram_median": 3.1599,
+      "sram_mean": 3.1294,
+      "sram_max": 3.5512,
+      "in_capture_n": 1417,
+      "in_capture_min": 2.678,
+      "in_capture_median": 3.3254,
+      "in_capture_mean": 3.2616,
+      "in_capture_max": 3.6898,
+      "out_launch_n": 599,
+      "out_launch_min": 2.7014,
+      "out_launch_median": 3.313,
+      "out_launch_mean": 3.2624,
+      "out_launch_max": 3.6216
+     }
+    },
+    "max_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/icc2b6_max_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5304,
+      "all_min": 0.9883,
+      "all_median": 1.3731,
+      "all_mean": 1.3546,
+      "all_max": 1.5587,
+      "flop_n": 5284,
+      "flop_min": 0.9883,
+      "flop_median": 1.3732,
+      "flop_mean": 1.3548,
+      "flop_max": 1.5587,
+      "sram_n": 20,
+      "sram_min": 1.163,
+      "sram_median": 1.3301,
+      "sram_mean": 1.3095,
+      "sram_max": 1.4565,
+      "in_capture_n": 1417,
+      "in_capture_min": 1.1553,
+      "in_capture_median": 1.3736,
+      "in_capture_mean": 1.3513,
+      "in_capture_max": 1.5133,
+      "out_launch_n": 599,
+      "out_launch_min": 1.1248,
+      "out_launch_median": 1.372,
+      "out_launch_mean": 1.3507,
+      "out_launch_max": 1.4791
+     }
+    }
+   },
+   "innovus_b6": {
+    "nom_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_nom_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 3.0175,
+      "all_median": 3.1816,
+      "all_mean": 3.1774,
+      "all_max": 3.2987,
+      "flop_n": 5208,
+      "flop_min": 3.0545,
+      "flop_median": 3.1816,
+      "flop_mean": 3.1774,
+      "flop_max": 3.2986,
+      "sram_n": 20,
+      "sram_min": 3.0175,
+      "sram_median": 3.1894,
+      "sram_mean": 3.1892,
+      "sram_max": 3.2987,
+      "in_capture_n": 1407,
+      "in_capture_min": 3.0175,
+      "in_capture_median": 3.168,
+      "in_capture_mean": 3.1591,
+      "in_capture_max": 3.2873,
+      "out_launch_n": 589,
+      "out_launch_min": 3.0709,
+      "out_launch_median": 3.177,
+      "out_launch_mean": 3.1763,
+      "out_launch_max": 3.281
+     }
+    },
+    "nom_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_nom_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 4.9701,
+      "all_median": 5.2731,
+      "all_mean": 5.2605,
+      "all_max": 5.4423,
+      "flop_n": 5208,
+      "flop_min": 5.0506,
+      "flop_median": 5.2731,
+      "flop_mean": 5.2605,
+      "flop_max": 5.4423,
+      "sram_n": 20,
+      "sram_min": 4.9701,
+      "sram_median": 5.2668,
+      "sram_mean": 5.258,
+      "sram_max": 5.4423,
+      "in_capture_n": 1407,
+      "in_capture_min": 4.9701,
+      "in_capture_median": 5.2482,
+      "in_capture_mean": 5.2274,
+      "in_capture_max": 5.4363,
+      "out_launch_n": 589,
+      "out_launch_min": 5.0506,
+      "out_launch_median": 5.2533,
+      "out_launch_mean": 5.2544,
+      "out_launch_max": 5.4344
+     }
+    },
+    "nom_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_nom_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 2.1606,
+      "all_median": 2.2752,
+      "all_mean": 2.2727,
+      "all_max": 2.3665,
+      "flop_n": 5208,
+      "flop_min": 2.1792,
+      "flop_median": 2.2752,
+      "flop_mean": 2.2727,
+      "flop_max": 2.3665,
+      "sram_n": 20,
+      "sram_min": 2.1606,
+      "sram_median": 2.28,
+      "sram_mean": 2.2835,
+      "sram_max": 2.3617,
+      "in_capture_n": 1407,
+      "in_capture_min": 2.1606,
+      "in_capture_median": 2.266,
+      "in_capture_mean": 2.2587,
+      "in_capture_max": 2.353,
+      "out_launch_n": 589,
+      "out_launch_min": 2.2036,
+      "out_launch_median": 2.2705,
+      "out_launch_mean": 2.2728,
+      "out_launch_max": 2.3484
+     }
+    },
+    "min_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_min_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 2.7906,
+      "all_median": 2.9644,
+      "all_mean": 2.9595,
+      "all_max": 3.0616,
+      "flop_n": 5208,
+      "flop_min": 2.8427,
+      "flop_median": 2.9644,
+      "flop_mean": 2.9595,
+      "flop_max": 3.0615,
+      "sram_n": 20,
+      "sram_min": 2.7906,
+      "sram_median": 2.9676,
+      "sram_mean": 2.96,
+      "sram_max": 3.0616,
+      "in_capture_n": 1407,
+      "in_capture_min": 2.7906,
+      "in_capture_median": 2.9523,
+      "in_capture_mean": 2.9408,
+      "in_capture_max": 3.0524,
+      "out_launch_n": 589,
+      "out_launch_min": 2.85,
+      "out_launch_median": 2.9569,
+      "out_launch_mean": 2.9578,
+      "out_launch_max": 3.0503
+     }
+    },
+    "min_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_min_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 4.652,
+      "all_median": 4.9606,
+      "all_mean": 4.9458,
+      "all_max": 5.0994,
+      "flop_n": 5208,
+      "flop_min": 4.7324,
+      "flop_median": 4.9606,
+      "flop_mean": 4.9458,
+      "flop_max": 5.0994,
+      "sram_n": 20,
+      "sram_min": 4.652,
+      "sram_median": 4.9482,
+      "sram_mean": 4.9298,
+      "sram_max": 5.0978,
+      "in_capture_n": 1407,
+      "in_capture_min": 4.652,
+      "in_capture_median": 4.9357,
+      "in_capture_mean": 4.9113,
+      "in_capture_max": 5.0994,
+      "out_launch_n": 589,
+      "out_launch_min": 4.7324,
+      "out_launch_median": 4.9406,
+      "out_launch_mean": 4.9393,
+      "out_launch_max": 5.098
+     }
+    },
+    "min_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_min_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 1.9812,
+      "all_median": 2.1009,
+      "all_mean": 2.0982,
+      "all_max": 2.1772,
+      "flop_n": 5208,
+      "flop_min": 2.0138,
+      "flop_median": 2.1009,
+      "flop_mean": 2.0982,
+      "flop_max": 2.1772,
+      "sram_n": 20,
+      "sram_min": 1.9812,
+      "sram_median": 2.1055,
+      "sram_mean": 2.1008,
+      "sram_max": 2.1727,
+      "in_capture_n": 1407,
+      "in_capture_min": 1.9812,
+      "in_capture_median": 2.0927,
+      "in_capture_mean": 2.0855,
+      "in_capture_max": 2.1681,
+      "out_launch_n": 589,
+      "out_launch_min": 2.0256,
+      "out_launch_median": 2.0974,
+      "out_launch_mean": 2.0982,
+      "out_launch_max": 2.1635
+     }
+    },
+    "max_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_max_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 3.3192,
+      "all_median": 3.4718,
+      "all_mean": 3.4694,
+      "all_max": 3.6192,
+      "flop_n": 5208,
+      "flop_min": 3.3353,
+      "flop_median": 3.4718,
+      "flop_mean": 3.4693,
+      "flop_max": 3.619,
+      "sram_n": 20,
+      "sram_min": 3.3192,
+      "sram_median": 3.4885,
+      "sram_mean": 3.4979,
+      "sram_max": 3.6192,
+      "in_capture_n": 1407,
+      "in_capture_min": 3.3192,
+      "in_capture_median": 3.4566,
+      "in_capture_mean": 3.4503,
+      "in_capture_max": 3.5993,
+      "out_launch_n": 589,
+      "out_launch_min": 3.3674,
+      "out_launch_median": 3.4641,
+      "out_launch_mean": 3.4679,
+      "out_launch_max": 3.5961
+     }
+    },
+    "max_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_max_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 5.3938,
+      "all_median": 5.6882,
+      "all_mean": 5.6794,
+      "all_max": 5.8947,
+      "flop_n": 5208,
+      "flop_min": 5.468,
+      "flop_median": 5.6882,
+      "flop_mean": 5.6794,
+      "flop_max": 5.8947,
+      "sram_n": 20,
+      "sram_min": 5.3938,
+      "sram_median": 5.6905,
+      "sram_mean": 5.6914,
+      "sram_max": 5.8947,
+      "in_capture_n": 1407,
+      "in_capture_min": 5.3938,
+      "in_capture_median": 5.6577,
+      "in_capture_mean": 5.6478,
+      "in_capture_max": 5.8818,
+      "out_launch_n": 589,
+      "out_launch_min": 5.4697,
+      "out_launch_median": 5.6686,
+      "out_launch_mean": 5.6725,
+      "out_launch_max": 5.874
+     }
+    },
+    "max_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/innovusb6_max_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5228,
+      "all_min": 2.4011,
+      "all_median": 2.507,
+      "all_mean": 2.5057,
+      "all_max": 2.6207,
+      "flop_n": 5208,
+      "flop_min": 2.4037,
+      "flop_median": 2.5069,
+      "flop_mean": 2.5056,
+      "flop_max": 2.6207,
+      "sram_n": 20,
+      "sram_min": 2.4011,
+      "sram_median": 2.5191,
+      "sram_mean": 2.5297,
+      "sram_max": 2.6154,
+      "in_capture_n": 1407,
+      "in_capture_min": 2.4011,
+      "in_capture_median": 2.4969,
+      "in_capture_mean": 2.4916,
+      "in_capture_max": 2.6015,
+      "out_launch_n": 589,
+      "out_launch_min": 2.4417,
+      "out_launch_median": 2.5021,
+      "out_launch_mean": 2.507,
+      "out_launch_max": 2.5977
+     }
+    }
+   }
+  },
+  "tables": {
+   "arm": {
+    "label": "derived",
+    "source": [
+     "pnr/commercial/compare/snapshot/iolat_pv/iolat_pv_arm.tsv"
+    ],
+    "unit": "ns (clk_io network latency; SDC adds 1.0 ns source latency)",
+    "values": {
+     "openroad": {
+      "nom_tt": {
+       "early_ns": 2.8962,
+       "late_ns": 2.8995
+      },
+      "nom_ss": {
+       "early_ns": 5.035,
+       "late_ns": 5.0351
+      },
+      "nom_ff": {
+       "early_ns": 1.9999,
+       "late_ns": 2.0019
+      },
+      "min_tt": {
+       "early_ns": 2.7308,
+       "late_ns": 2.731
+      },
+      "min_ss": {
+       "early_ns": 4.7607,
+       "late_ns": 4.7607
+      },
+      "min_ff": {
+       "early_ns": 1.8804,
+       "late_ns": 1.8815
+      },
+      "max_tt": {
+       "early_ns": 3.1181,
+       "late_ns": 3.1278
+      },
+      "max_ss": {
+       "early_ns": 5.3726,
+       "late_ns": 5.3778
+      },
+      "max_ff": {
+       "early_ns": 2.1528,
+       "late_ns": 2.1595
+      }
+     },
+     "icc2b6": {
+      "nom_tt": {
+       "early_ns": 1.8182,
+       "late_ns": 1.819
+      },
+      "nom_ss": {
+       "early_ns": 3.0799,
+       "late_ns": 3.0803
+      },
+      "nom_ff": {
+       "early_ns": 1.2614,
+       "late_ns": 1.2627
+      },
+      "min_tt": {
+       "early_ns": 1.7245,
+       "late_ns": 1.7247
+      },
+      "min_ss": {
+       "early_ns": 2.9379,
+       "late_ns": 2.9381
+      },
+      "min_ff": {
+       "early_ns": 1.1975,
+       "late_ns": 1.1977
+      },
+      "max_tt": {
+       "early_ns": 1.9365,
+       "late_ns": 1.9427
+      },
+      "max_ss": {
+       "early_ns": 3.2755,
+       "late_ns": 3.2772
+      },
+      "max_ff": {
+       "early_ns": 1.3501,
+       "late_ns": 1.3546
+      }
+     },
+     "innovusb6": {
+      "nom_tt": {
+       "early_ns": 3.1448,
+       "late_ns": 3.1774
+      },
+      "nom_ss": {
+       "early_ns": 5.207,
+       "late_ns": 5.2605
+      },
+      "nom_ff": {
+       "early_ns": 2.264,
+       "late_ns": 2.2727
+      },
+      "min_tt": {
+       "early_ns": 2.9364,
+       "late_ns": 2.9595
+      },
+      "min_ss": {
+       "early_ns": 4.9139,
+       "late_ns": 4.9458
+      },
+      "min_ff": {
+       "early_ns": 2.0891,
+       "late_ns": 2.0982
+      },
+      "max_tt": {
+       "early_ns": 3.417,
+       "late_ns": 3.4694
+      },
+      "max_ss": {
+       "early_ns": 5.5896,
+       "late_ns": 5.6794
+      },
+      "max_ff": {
+       "early_ns": 2.4981,
+       "late_ns": 2.5057
+      }
+     }
+    },
+    "rule": "arm: each arm's own mean register-clock-pin latency; shared: mean of the three arms per corner"
+   },
+   "shared": {
+    "label": "derived",
+    "source": [
+     "pnr/commercial/compare/snapshot/iolat_pv/iolat_pv_shared.tsv"
+    ],
+    "unit": "ns (clk_io network latency; SDC adds 1.0 ns source latency)",
+    "values": {
+     "openroad": {
+      "nom_tt": {
+       "early_ns": 2.6197,
+       "late_ns": 2.632
+      },
+      "nom_ss": {
+       "early_ns": 4.4406,
+       "late_ns": 4.4587
+      },
+      "nom_ff": {
+       "early_ns": 1.8417,
+       "late_ns": 1.8458
+      },
+      "min_tt": {
+       "early_ns": 2.4639,
+       "late_ns": 2.4717
+      },
+      "min_ss": {
+       "early_ns": 4.2041,
+       "late_ns": 4.2148
+      },
+      "min_ff": {
+       "early_ns": 1.7223,
+       "late_ns": 1.7258
+      },
+      "max_tt": {
+       "early_ns": 2.8239,
+       "late_ns": 2.8467
+      },
+      "max_ss": {
+       "early_ns": 4.7459,
+       "late_ns": 4.7781
+      },
+      "max_ff": {
+       "early_ns": 2.0003,
+       "late_ns": 2.0066
+      }
+     },
+     "icc2b6": {
+      "nom_tt": {
+       "early_ns": 2.6197,
+       "late_ns": 2.632
+      },
+      "nom_ss": {
+       "early_ns": 4.4406,
+       "late_ns": 4.4587
+      },
+      "nom_ff": {
+       "early_ns": 1.8417,
+       "late_ns": 1.8458
+      },
+      "min_tt": {
+       "early_ns": 2.4639,
+       "late_ns": 2.4717
+      },
+      "min_ss": {
+       "early_ns": 4.2041,
+       "late_ns": 4.2148
+      },
+      "min_ff": {
+       "early_ns": 1.7223,
+       "late_ns": 1.7258
+      },
+      "max_tt": {
+       "early_ns": 2.8239,
+       "late_ns": 2.8467
+      },
+      "max_ss": {
+       "early_ns": 4.7459,
+       "late_ns": 4.7781
+      },
+      "max_ff": {
+       "early_ns": 2.0003,
+       "late_ns": 2.0066
+      }
+     },
+     "innovusb6": {
+      "nom_tt": {
+       "early_ns": 2.6197,
+       "late_ns": 2.632
+      },
+      "nom_ss": {
+       "early_ns": 4.4406,
+       "late_ns": 4.4587
+      },
+      "nom_ff": {
+       "early_ns": 1.8417,
+       "late_ns": 1.8458
+      },
+      "min_tt": {
+       "early_ns": 2.4639,
+       "late_ns": 2.4717
+      },
+      "min_ss": {
+       "early_ns": 4.2041,
+       "late_ns": 4.2148
+      },
+      "min_ff": {
+       "early_ns": 1.7223,
+       "late_ns": 1.7258
+      },
+      "max_tt": {
+       "early_ns": 2.8239,
+       "late_ns": 2.8467
+      },
+      "max_ss": {
+       "early_ns": 4.7459,
+       "late_ns": 4.7781
+      },
+      "max_ff": {
+       "early_ns": 2.0003,
+       "late_ns": 2.0066
+      }
+     }
+    },
+    "rule": "arm: each arm's own mean register-clock-pin latency; shared: mean of the three arms per corner"
+   }
+  },
+  "io_violators": {
+   "iolat_pv": {
+    "openroad_b2": {
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 847,
+        "skew_limited": 40,
+        "surviving": 807,
+        "worst_matched_slack": -4.709674
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 738,
+        "skew_limited": 76,
+        "surviving": 662,
+        "worst_matched_slack": -4.310479
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 907,
+        "skew_limited": 9,
+        "surviving": 898,
+        "worst_matched_slack": -5.241386
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     }
+    },
+    "innovus_b6": {
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 282,
+        "skew_limited": 55,
+        "surviving": 227,
+        "worst_matched_slack": -1.814473
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 105,
+        "skew_limited": 25,
+        "surviving": 80,
+        "worst_matched_slack": -1.421589
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 504,
+        "skew_limited": 14,
+        "surviving": 490,
+        "worst_matched_slack": -2.443304
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     }
+    }
+   },
+   "iolat_pvs": {
+    "openroad_b2": {
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 606,
+        "skew_limited": 0,
+        "surviving": 606,
+        "worst_matched_slack": -4.709675
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 515,
+        "skew_limited": 0,
+        "surviving": 515,
+        "worst_matched_slack": -4.310478
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 780,
+        "skew_limited": 0,
+        "surviving": 780,
+        "worst_matched_slack": -5.241387
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     }
+    },
+    "icc2_b6": {
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 34,
+        "skew_limited": 34,
+        "surviving": 0,
+        "worst_matched_slack": 0.581791
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 18,
+        "skew_limited": 18,
+        "surviving": 0,
+        "worst_matched_slack": 0.834445
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 53,
+        "skew_limited": 53,
+        "surviving": 0,
+        "worst_matched_slack": 0.243742
+       },
+       "reg2out_hold": {
+        "violators": 1,
+        "skew_limited": 1,
+        "surviving": 0,
+        "worst_matched_slack": 1.998301
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     }
+    },
+    "innovus_b6": {
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 69,
+        "skew_limited": 0,
+        "surviving": 69,
+        "worst_matched_slack": -1.814474
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 30,
+        "skew_limited": 0,
+        "surviving": 30,
+        "worst_matched_slack": -1.42159
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_ss/io_viol_summary.tsv",
+      "unit": "count",
+      "values": {
+       "in2reg_setup": {
+        "violators": 228,
+        "skew_limited": 0,
+        "surviving": 228,
+        "worst_matched_slack": -2.443306
+       }
+      },
+      "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival"
+     }
+    }
+   }
   }
  },
  "extraction_calibration": {
@@ -3606,6 +4976,812 @@
      "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
     }
    },
+   "iolat_pv": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.001507,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.525697,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.543236,
+       "setup_tns": -2080.203115,
+       "setup_viol": 1769,
+       "hold_wns": 1.344958,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -3.425896,
+       "r2rx_setup_tns": -1178.527619,
+       "r2rx_setup_viol": 987,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1769,
+         "viol_r2r": 922,
+         "viol_io": 847,
+         "wns_r2r": -3.4259,
+         "wns_io": -4.5432
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.928449,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.24252,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.233117,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.542046,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.153481,
+       "setup_tns": -1405.973833,
+       "setup_viol": 1435,
+       "hold_wns": 1.334896,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -2.777033,
+       "r2rx_setup_tns": -763.768709,
+       "r2rx_setup_viol": 761,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_53707_/CLK",
+       "hold_worst_end": "_53709_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1435,
+         "viol_r2r": 697,
+         "viol_io": 738,
+         "wns_r2r": -2.777,
+         "wns_io": -4.1535
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.066365,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.249573,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.66876,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.495161,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.057123,
+       "setup_tns": -3166.753337,
+       "setup_viol": 1956,
+       "hold_wns": 1.306305,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.326357,
+       "r2rx_setup_tns": -1859.68343,
+       "r2rx_setup_viol": 1122,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1956,
+         "viol_r2r": 1049,
+         "viol_io": 907,
+         "wns_r2r": -4.3264,
+         "wns_io": -5.0571
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.713226,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.212176,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -5.057123,
+      "hold_wns_worst": 0.212176,
+      "setup_tns_sum": -6652.93,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 5160,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 2870,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pv; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroad_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 93.10000000000001,
+      "clock_network_mW": 42.8,
+      "register_mW": 2.926,
+      "combinational_mW": 18.3,
+      "memory_mW": 29.1
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "iolat_pvs": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.269007,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.525697,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -3.966837,
+       "setup_tns": -1656.208847,
+       "setup_viol": 1529,
+       "hold_wns": 1.344958,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -3.425896,
+       "r2rx_setup_tns": -1178.527619,
+       "r2rx_setup_viol": 987,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1529,
+         "viol_r2r": 923,
+         "viol_io": 606,
+         "wns_r2r": -3.4259,
+         "wns_io": -3.9668
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.928449,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.24252,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.492418,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.542046,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -3.60758,
+       "setup_tns": -1079.075941,
+       "setup_viol": 1228,
+       "hold_wns": 1.334896,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -2.777033,
+       "r2rx_setup_tns": -763.768709,
+       "r2rx_setup_viol": 761,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_53707_/CLK",
+       "hold_worst_end": "_53709_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1228,
+         "viol_r2r": 713,
+         "viol_io": 515,
+         "wns_r2r": -2.777,
+         "wns_io": -3.6076
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.066365,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.249573,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.949861,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.495161,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.457424,
+       "setup_tns": -2644.443377,
+       "setup_viol": 1870,
+       "hold_wns": 1.306305,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.326357,
+       "r2rx_setup_tns": -1859.68343,
+       "r2rx_setup_viol": 1122,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1870,
+         "viol_r2r": 1090,
+         "viol_io": 780,
+         "wns_r2r": -4.3264,
+         "wns_io": -4.4574
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.713226,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.212176,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -4.457424,
+      "hold_wns_worst": 0.212176,
+      "setup_tns_sum": -5379.728,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 4627,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 2870,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pvs; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 93.10000000000001,
+      "clock_network_mW": 42.8,
+      "register_mW": 2.926,
+      "combinational_mW": 18.3,
+      "memory_mW": 29.1
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
    "drv_nom_tt_base": {
     "label": "judge",
     "unit": "violating pins",
@@ -4947,6 +7123,829 @@
      "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
     }
    },
+   "iolat_pv": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.313606,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.113885,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 0.416538,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.452696,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_dcache/state_q_reg_2_/CLK",
+       "setup_worst_end": "u_core_u_id_id_ex_reg_o_reg_rs2_data__26_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.015162,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": -0.004255,
+       "hold_tns": -0.007876,
+       "hold_viol": 2,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": -0.004255,
+       "r2rx_hold_tns": -0.007876,
+       "r2rx_hold_viol": 2,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "dbg_bp1_ctrl_reg_18_/CLK",
+       "hold_worst_end": "apb_prdata_o_reg_18_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "hold": {
+         "viol_total": 2,
+         "viol_r2r": 2,
+         "viol_io": 0,
+         "wns_r2r": -0.0043,
+         "wns_io": 0.0
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.504837,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.115043,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 0.714773,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.452675,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_mem_mem_wb_reg_o_reg_pc__10_/CLK",
+       "setup_worst_end": "u_core_u_csr_mepc_q_reg_12_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.165329,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.002922,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.028263,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.111586,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -0.059254,
+       "setup_tns": -0.116024,
+       "setup_viol": 3,
+       "hold_wns": 0.451674,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -0.059254,
+       "r2rx_setup_tns": -0.116024,
+       "r2rx_setup_viol": 3,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_ic_addr_q_reg_26_/CLK",
+       "setup_worst_end": "u_core_u_if_pc_q_reg_29_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 3,
+         "viol_r2r": 3,
+         "viol_io": 0,
+         "wns_r2r": -0.0593,
+         "wns_io": 0.0
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.773662,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": -0.026789,
+       "hold_tns": -0.067385,
+       "hold_viol": 8,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": -0.026789,
+       "r2rx_hold_tns": -0.067385,
+       "r2rx_hold_viol": 8,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "dbg_bp1_ctrl_reg_18_/CLK",
+       "hold_worst_end": "apb_prdata_o_reg_18_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "hold": {
+         "viol_total": 8,
+         "viol_r2r": 8,
+         "viol_io": 0,
+         "wns_r2r": -0.0268,
+         "wns_io": 0.0
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -0.059254,
+      "hold_wns_worst": -0.026789,
+      "setup_tns_sum": -0.116,
+      "hold_tns_sum": -0.075,
+      "setup_viol_sum": 3,
+      "hold_viol_sum": 10,
+      "r2r_setup_viol_sum": 3,
+      "r2r_hold_viol_sum": 10,
+      "corners_setup_clean": 8,
+      "corners_hold_clean": 7,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pv; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/icc2b6_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 70.8,
+      "clock_network_mW": 25.2,
+      "register_mW": 2.284,
+      "combinational_mW": 14.3,
+      "memory_mW": 29.0
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "iolat_pvs": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.313606,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.113885,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -0.719835,
+       "setup_tns": -12.83468,
+       "setup_viol": 34,
+       "hold_wns": 0.046897,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[6]",
+       "setup_worst_end": "apb_prdata_o_reg_19_/D",
+       "hold_worst_start": "apb_pslverr_o_reg/CLK",
+       "hold_worst_end": "apb_pslverr_o",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 34,
+         "viol_r2r": 0,
+         "viol_io": 34,
+         "wns_r2r": 0.0,
+         "wns_io": -0.7198
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.015162,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": -0.004255,
+       "hold_tns": -0.007876,
+       "hold_viol": 2,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": -0.004255,
+       "r2rx_hold_tns": -0.007876,
+       "r2rx_hold_viol": 2,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "dbg_bp1_ctrl_reg_18_/CLK",
+       "hold_worst_end": "apb_prdata_o_reg_18_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "hold": {
+         "viol_total": 2,
+         "viol_r2r": 2,
+         "viol_io": 0,
+         "wns_r2r": -0.0043,
+         "wns_io": 0.0
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.504837,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.115043,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -0.376226,
+       "setup_tns": -3.616261,
+       "setup_viol": 18,
+       "hold_wns": 0.147565,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[6]",
+       "setup_worst_end": "apb_prdata_o_reg_19_/D",
+       "hold_worst_start": "apb_pslverr_o_reg/CLK",
+       "hold_worst_end": "apb_pslverr_o",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 18,
+         "viol_r2r": 0,
+         "viol_io": 18,
+         "wns_r2r": 0.0,
+         "wns_io": -0.3762
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.165329,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.002922,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.028263,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.111586,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_0__1_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_1__1_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -1.162956,
+       "setup_tns": -34.870219,
+       "setup_viol": 56,
+       "hold_wns": -0.078373,
+       "hold_tns": -0.078373,
+       "hold_viol": 1,
+       "r2rx_setup_wns": -0.059254,
+       "r2rx_setup_tns": -0.116024,
+       "r2rx_setup_viol": 3,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[6]",
+       "setup_worst_end": "apb_prdata_o_reg_19_/D",
+       "hold_worst_start": "apb_pslverr_o_reg/CLK",
+       "hold_worst_end": "apb_pslverr_o",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 56,
+         "viol_r2r": 3,
+         "viol_io": 53,
+         "wns_r2r": -0.0593,
+         "wns_io": -1.163
+        },
+        "hold": {
+         "viol_total": 1,
+         "viol_r2r": 0,
+         "viol_io": 1,
+         "wns_r2r": 0.0,
+         "wns_io": -0.0784
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.773662,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": -0.026789,
+       "hold_tns": -0.067385,
+       "hold_viol": 8,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": -0.026789,
+       "r2rx_hold_tns": -0.067385,
+       "r2rx_hold_viol": 8,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_0__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_0__3_/D",
+       "hold_worst_start": "dbg_bp1_ctrl_reg_18_/CLK",
+       "hold_worst_end": "apb_prdata_o_reg_18_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 41696,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "hold": {
+         "viol_total": 8,
+         "viol_r2r": 8,
+         "viol_io": 0,
+         "wns_r2r": -0.0268,
+         "wns_io": 0.0
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -1.162956,
+      "hold_wns_worst": -0.078373,
+      "setup_tns_sum": -51.321,
+      "hold_tns_sum": -0.154,
+      "setup_viol_sum": 108,
+      "hold_viol_sum": 11,
+      "r2r_setup_viol_sum": 3,
+      "r2r_hold_viol_sum": 10,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 6,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pvs; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/icc2b6_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 70.8,
+      "clock_network_mW": 25.2,
+      "register_mW": 2.284,
+      "combinational_mW": 14.3,
+      "memory_mW": 29.0
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
    "drv_nom_tt_base": {
     "label": "judge",
     "unit": "violating pins",
@@ -6236,6 +9235,812 @@
      "label": "judge",
      "unit": "mW",
      "source": "pnr/commercial/compare/snapshot/pt/iolat/innovusb6_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 76.2,
+      "clock_network_mW": 24.1,
+      "register_mW": 1.788,
+      "combinational_mW": 21.3,
+      "memory_mW": 29.0
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "iolat_pv": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.947859,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.411387,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[5]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_xm_q_reg[0][0]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_xm_q_reg[1][0]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -1.788261,
+       "setup_tns": -154.582395,
+       "setup_viol": 282,
+       "hold_wns": 0.998494,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[0]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_core/u_ex2_ex_mem_reg_o_reg[instruction][19]/CLK",
+       "hold_worst_end": "u_core/u_mem_mem_wb_reg_o_reg[instruction][19]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 282,
+         "viol_r2r": 0,
+         "viol_io": 282,
+         "wns_r2r": 0.0,
+         "wns_io": -1.7883
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.131489,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.197131,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_gen_data_sram[1].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_data_dout_r_reg[1][9]/D",
+       "hold_worst_start": "u_core/u_icache_ic_addr_q_reg[31]/CLK",
+       "hold_worst_end": "u_core/u_icache_refill_line_addr_q_reg[31]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.293936,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.40085,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[5]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_core/u_dcache_valid_array_reg[113]/CLK",
+       "hold_worst_end": "u_core/u_dcache_valid_array_reg[113]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -1.391006,
+       "setup_tns": -52.786305,
+       "setup_viol": 105,
+       "hold_wns": 0.988532,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[0]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_core/u_ex2_ex_mem_reg_o_reg[instruction][19]/CLK",
+       "hold_worst_end": "u_core/u_mem_mem_wb_reg_o_reg[instruction][19]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 105,
+         "viol_r2r": 0,
+         "viol_io": 105,
+         "wns_r2r": 0.0,
+         "wns_io": -1.391
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.276747,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.190276,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_gen_data_sram[1].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_data_dout_r_reg[1][9]/D",
+       "hold_worst_start": "u_core/u_dcache_valid_array_reg[113]/CLK",
+       "hold_worst_end": "u_core/u_dcache_valid_array_reg[113]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.42001,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.416303,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[5]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_xm_q_reg[0][0]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_xm_q_reg[1][0]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -2.434629,
+       "setup_tns": -458.571948,
+       "setup_viol": 504,
+       "hold_wns": 1.01689,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[5]",
+       "setup_worst_end": "apb_prdata_o_reg[19]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_xm_q_reg[0][0]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_xm_q_reg[1][0]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 504,
+         "viol_r2r": 0,
+         "viol_io": 504,
+         "wns_r2r": 0.0,
+         "wns_io": -2.4346
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.92693,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.202114,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_gen_data_sram[1].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_data_dout_r_reg[1][9]/D",
+       "hold_worst_start": "u_core/u_icache_data_dout_r_reg[2][12]/CLK",
+       "hold_worst_end": "u_core/u_icache_data_dout_r_reg[2][12]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -2.434629,
+      "hold_wns_worst": 0.190276,
+      "setup_tns_sum": -665.941,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 891,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 0,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 9
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pv; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/innovusb6_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 76.2,
+      "clock_network_mW": 24.1,
+      "register_mW": 1.788,
+      "combinational_mW": 21.3,
+      "memory_mW": 29.0
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "iolat_pvs": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.493258,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.411387,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[5]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_xm_q_reg[0][0]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_xm_q_reg[1][0]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -0.986462,
+       "setup_tns": -26.999078,
+       "setup_viol": 69,
+       "hold_wns": 0.998494,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[0]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_core/u_ex2_ex_mem_reg_o_reg[instruction][19]/CLK",
+       "hold_worst_end": "u_core/u_mem_mem_wb_reg_o_reg[instruction][19]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 69,
+         "viol_r2r": 0,
+         "viol_io": 69,
+         "wns_r2r": 0.0,
+         "wns_io": -0.9865
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.131489,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.197131,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_gen_data_sram[1].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_data_dout_r_reg[1][9]/D",
+       "hold_worst_start": "u_core/u_icache_ic_addr_q_reg[31]/CLK",
+       "hold_worst_end": "u_core/u_icache_refill_line_addr_q_reg[31]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.772328,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.40085,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_gen_data_sram[1].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_data_dout_r_reg[1][9]/D",
+       "hold_worst_start": "u_core/u_dcache_valid_array_reg[113]/CLK",
+       "hold_worst_end": "u_core/u_dcache_valid_array_reg[113]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -0.660007,
+       "setup_tns": -10.558828,
+       "setup_viol": 30,
+       "hold_wns": 0.988532,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[0]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_core/u_ex2_ex_mem_reg_o_reg[instruction][19]/CLK",
+       "hold_worst_end": "u_core/u_mem_mem_wb_reg_o_reg[instruction][19]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 30,
+         "viol_r2r": 0,
+         "viol_io": 30,
+         "wns_r2r": 0.0,
+         "wns_io": -0.66
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.276747,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.190276,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_gen_data_sram[1].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_data_dout_r_reg[1][9]/D",
+       "hold_worst_start": "u_core/u_dcache_valid_array_reg[113]/CLK",
+       "hold_worst_end": "u_core/u_dcache_valid_array_reg[113]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.042707,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.416303,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[5]",
+       "setup_worst_end": "apb_prdata_o_reg[8]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_xm_q_reg[0][0]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_xm_q_reg[1][0]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -1.533331,
+       "setup_tns": -115.725485,
+       "setup_viol": 228,
+       "hold_wns": 1.01689,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[5]",
+       "setup_worst_end": "apb_prdata_o_reg[19]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_xm_q_reg[0][0]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_xm_q_reg[1][0]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 228,
+         "viol_r2r": 0,
+         "viol_io": 228,
+         "wns_r2r": 0.0,
+         "wns_io": -1.5333
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.92693,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.202114,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_gen_data_sram[1].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_data_dout_r_reg[1][9]/D",
+       "hold_worst_start": "u_core/u_icache_data_dout_r_reg[2][12]/CLK",
+       "hold_worst_end": "u_core/u_icache_data_dout_r_reg[2][12]/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 46187,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -1.533331,
+      "hold_wns_worst": 0.190276,
+      "setup_tns_sum": -153.283,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 327,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 0,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 9
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pvs; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb6_nom_tt/power_B.txt",
      "values": {
       "total_mW": 76.2,
       "clock_network_mW": 24.1,

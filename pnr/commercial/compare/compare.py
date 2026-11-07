@@ -36,7 +36,7 @@ COM = "pnr/commercial"
 SNAP = f"{COM}/compare/snapshot"
 OUT = f"{COM}/compare/comparison.json"
 CORNERS = [f"{rc}_{lib}" for rc in ("nom", "min", "max") for lib in ("tt", "ss", "ff")]
-VARIANTS = ("own", "base", "iolat")
+VARIANTS = ("own", "base", "iolat", "iolat_pv", "iolat_pvs")
 
 # arm id -> PT arm name, display name, role, synthesis, notes
 ARMS = {
@@ -108,6 +108,8 @@ ARMS = {
 SDC_FILES = {
     "base": "pnr/sky130/cpu/constraints/sky130_cpu.sdc",
     "iolat": f"{COM}/constraints/sky130_cpu_iolat.sdc",
+    "iolat_pv": f"{COM}/constraints/sky130_cpu_iolat_pv.sdc",
+    "iolat_pvs": f"{COM}/constraints/sky130_cpu_iolat_pv.sdc",
     "own:icc2_b6": f"{COM}/constraints/sky130_cpu_icc2_b6_own_pt.sdc",
     "own:innovus_b6": f"{COM}/constraints/sky130_cpu_innovus_b6_own_pt.sdc",
     "own:innovus_b5k": f"{COM}/constraints/sky130_cpu_innovus_b5k_own_pt.sdc",
@@ -1136,6 +1138,72 @@ def quantus_crosscheck():
     return out
 
 
+def clock_latency():
+    """Measured clk_i insertion latency (PrimeTime, StarRC SPEF) per arm and corner, and the per-view clk_io tables built from it."""
+    out = {"measured": {}, "tables": {}, "io_violators": {}}
+    for arm, meta in ARMS.items():
+        if meta["role"] != "final":
+            continue
+        rows = {}
+        for c in CORNERS:
+            f = f"{SNAP}/clklat/{meta['pt']}_{c}/clk_latency.tsv"
+            if not p(f).is_file():
+                continue
+            m = tsv(f)
+            keep = {}
+            for g in ("all", "flop", "sram", "in_capture", "out_launch"):
+                for st in ("n", "min", "median", "mean", "max"):
+                    k = f"{g}_rise_late_{st}"
+                    if k in m:
+                        v = num(m[k])
+                        keep[f"{g}_{st}"] = v if st == "n" else round(v - 1.0, 4)
+            rows[c] = {
+                "label": "judge",
+                "source": f,
+                "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+                "values": keep,
+            }
+        if rows:
+            out["measured"][arm] = rows
+    for v in ("arm", "shared"):
+        f = f"{SNAP}/iolat_pv/iolat_pv_{v}.tsv"
+        if not p(f).is_file():
+            continue
+        tab = {}
+        for line in text(f).splitlines():
+            if line.startswith("#") or not line.strip():
+                continue
+            a, rc, lib, e, l = line.split("\t")
+            tab.setdefault(a, {})[f"{rc}_{lib}"] = {"early_ns": float(e), "late_ns": float(l)}
+        out["tables"][v] = {
+            "label": "derived",
+            "source": [f],
+            "unit": "ns (clk_io network latency; SDC adds 1.0 ns source latency)",
+            "values": tab,
+            "rule": "arm: each arm's own mean register-clock-pin latency; shared: mean of the three arms per corner",
+        }
+    for var in ("iolat_pv", "iolat_pvs"):
+        for arm, meta in ARMS.items():
+            if meta["role"] != "final":
+                continue
+            for c in CORNERS:
+                f = f"{SNAP}/pt/{var}/{meta['pt']}_{c}/io_viol_summary.tsv"
+                if not p(f).is_file():
+                    continue
+                cnt = {}
+                for line in text(f).splitlines()[1:]:
+                    kind, tp, n, nm, wm = line.split("\t")
+                    cnt[f"{kind}_{tp}"] = {"violators": int(n), "skew_limited": int(nm), "surviving": int(n) - int(nm), "worst_matched_slack": num(wm)}
+                out["io_violators"].setdefault(var, {}).setdefault(arm, {})[c] = {
+                    "label": "judge",
+                    "source": f,
+                    "unit": "count",
+                    "values": cnt,
+                    "note": "diag_io_viol.tcl: skew_limited = violators whose slack is >= 0 when clk_io is aligned to the macro register's own clock arrival",
+                }
+    return out
+
+
 def sdc():
     out = {}
     for k, f in SDC_FILES.items():
@@ -1165,6 +1233,7 @@ def build():
             "derived": "computed by compare.py by one stated rule",
         },
         "sdc": sdc(),
+        "clock_latency": clock_latency(),
         "extraction_calibration": calibration(),
         "quantus_crosscheck": quantus_crosscheck(),
         "arms": {},

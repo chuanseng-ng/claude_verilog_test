@@ -1,0 +1,30 @@
+# clk_io latency table for sky130_cpu_iolat_pv.sdc: arm, rc, lib, early_ns, late_ns (NETWORK latency; the SDC adds the 1.0 ns source latency).
+# early = mean over all register clock pins of the min rise arrival - 1.0; late = same with the max rise arrival.  Built by mk_iolat_tables.py.
+# variant 'shared': per corner, the mean of the three arms' values, the same row for every arm.
+openroad	nom	tt	2.6197	2.6320
+icc2b6	nom	tt	2.6197	2.6320
+innovusb6	nom	tt	2.6197	2.6320
+openroad	nom	ss	4.4406	4.4587
+icc2b6	nom	ss	4.4406	4.4587
+innovusb6	nom	ss	4.4406	4.4587
+openroad	nom	ff	1.8417	1.8458
+icc2b6	nom	ff	1.8417	1.8458
+innovusb6	nom	ff	1.8417	1.8458
+openroad	min	tt	2.4639	2.4717
+icc2b6	min	tt	2.4639	2.4717
+innovusb6	min	tt	2.4639	2.4717
+openroad	min	ss	4.2041	4.2148
+icc2b6	min	ss	4.2041	4.2148
+innovusb6	min	ss	4.2041	4.2148
+openroad	min	ff	1.7223	1.7258
+icc2b6	min	ff	1.7223	1.7258
+innovusb6	min	ff	1.7223	1.7258
+openroad	max	tt	2.8239	2.8467
+icc2b6	max	tt	2.8239	2.8467
+innovusb6	max	tt	2.8239	2.8467
+openroad	max	ss	4.7459	4.7781
+icc2b6	max	ss	4.7459	4.7781
+innovusb6	max	ss	4.7459	4.7781
+openroad	max	ff	2.0003	2.0066
+icc2b6	max	ff	2.0003	2.0066
+innovusb6	max	ff	2.0003	2.0066
