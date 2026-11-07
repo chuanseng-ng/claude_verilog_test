@@ -26,8 +26,8 @@ sampler() {  # sampler <tag>: sum RSS over the session of the first Techgen proc
 }
 step() {  # step <name> <timeout_s> <cmd...>
   nm=$1; to=$2; shift 2
-  sleep "${STEP_GAP:-60}"   # >= 60 s between job starts (host rule)
   [ -f "$d/.done_$nm" ] && { echo "skip $nm (done)"; return 0; }
+  sleep "${STEP_GAP:-60}"   # >= 60 s between job starts (host rule)
   t0=$(date +%s); smp=$(sampler "$nm")
   ( cd "$d" && SAFE_TIMEOUT=$to SAFE_THREADS=$N SAFE_MEM_MAX=${SAFE_MEM_MAX:-8G} SAFE_MIN_AVAIL_GB=${SAFE_MIN_AVAIL_GB:-6} "$here/licensed_lock.sh" "$here/safe_run.sh" "$b/logs/techgen_cell_${c}_$nm.log" \
       /usr/bin/time -v -o "$d/time_$nm.txt" "$@" ); rc=$?
