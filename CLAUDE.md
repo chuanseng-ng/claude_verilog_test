@@ -94,6 +94,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | `docs/design/UPF_POWER_SPEC.md` | Power intent and UPF specification |
 | `docs/design/SDC_TIMING_SPEC.md` | Timing constraints and STA guidelines |
 | `pnr/README.md` | Physical design directory structure |
+| `docs/COMMERCIAL_FLOW_COMPARISON.md` | Sky130 CPU macro: OpenROAD vs DC->ICC2 vs Genus->Innovus, one StarRC->PrimeTime judge; data in `pnr/commercial/compare/comparison.json` |
 
 ### Verification & Fixes
 
@@ -135,6 +136,9 @@ Three nodes are supported by the existing `pnr/Makefile`. Use the right node for
 | **Sky130 130nm** | `librelane-sky130-cpu`, `librelane-sky130-soc` | ✅ Complete (`pnr/sky130/`) | 75–100 MHz | ✅ Yes (SkyWater MPW) | Functional sign-off; tape-out candidate |
 | **FreePDK45 / NanGate45 45nm** | `librelane-nangate45` | ✅ Complete (`pnr/freepdk45/`) | 150–250 MHz | No (predictive) | First non-Sky130 exploration; SRAM macros available |
 | **ASAP7 7nm FinFET** | `librelane-asap7` | ✅ Complete (`pnr/asap7/`); Run 43 signoff 2026-05-20 | **1418 MHz achieved (Run 43)** | No (predictive) | Phase 2+3 RTL PPA sign-off completed at 1418 MHz / 27.27 mW / 3 844 µm² |
+
+### Commercial flows (`pnr/commercial/`, Sky130 only, indicative)
+DC -> ICC2 and Genus -> Innovus flows for the Sky130 CPU macro `rv32i_cpu_top`, built on the EDA host (no nix). They are judged with OpenROAD B2 by one StarRC -> PrimeTime/PrimePower chain, plus KLayout/Magic/Netgen, Formality/Conformal and RedHawk. Final arms are ICC2 b6 and Innovus b6. All figures are indicative: StarRC is calibrated to OpenRCX, not silicon, and the SRAM Liberty is TT-only (`o1i`). No arm meets sign-off. Results and caveats are in `docs/COMMERCIAL_FLOW_COMPARISON.md`.
 
 ### Legacy P&R directories (superseded — do not start new work here)
 `pnr/librelane/` and `pnr/openlane1/` are the pre-per-node Sky130 CPU flows. Both are
