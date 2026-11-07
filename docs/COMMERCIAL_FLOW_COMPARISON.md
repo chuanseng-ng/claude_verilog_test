@@ -19,8 +19,8 @@ python3 -m pytest -q pnr/commercial/compare/test_compare.py
 
 > **Read the caveats (section 2) before any number.** StarRC is calibrated to OpenRCX, not to
 > silicon. The SRAM Liberty is TT-only at every corner. The three arms use three different
-> synthesis netlists. The I/O latency model leaves artefacts at ss/ff. The IR figures are
-> indicative.
+> synthesis netlists. The fixed I/O latency of the iolat and Innovus-own SDCs leaves artefacts at ss/ff
+> (removed for iolat by the per-view variant, section 4.2b). The IR figures are indicative.
 
 ## 1. Executive summary
 
@@ -39,6 +39,8 @@ PDN pitch, max layer met4 and the CTS cell set. All three P&R flows are judged b
 | **judge** reg-to-reg setup violators, 9 corners | **2,870** (ss only) | **3** (max_ss) | **0** |
 | **judge** reg-to-reg hold violators, 9 corners | 0 | 10 (nom_ff 2, max_ff 8) | **0** |
 | **judge** worst hold WNS, iolat SDC (ns) | **+0.212 (clean, 9/9)** | -0.634 (149 viol.) | -1.771 (155 viol.) |
+| **judge** per-view iolat SDC (4.2b): I/O + reg-to-reg setup violators / hold violators, 9 corners | 2,290 + 2,870 / **0** | 0 + 3 / 10 (all reg-to-reg) | 891 + 0 / **0** |
+| **judge** worst hold WNS, per-view iolat (ns) | **+0.212 (clean, 9/9)** | -0.027 (8 reg-to-reg) | **+0.190 (clean, 9/9)** |
 | **judge** own SDC, worst setup / hold (ns) | n/a | -2.268 / -2.412 | **-0.050 / -0.254** (4 / 4 viol.) |
 | **judge** PrimePower nom_tt (mW) | 93.1 (clock 42.8) | **70.8** (clock 25.2) | 76.2 (clock 24.1) |
 | **judge** max_tran / max_cap pins, nom_tt | 3,613 / 268 | **4** / 159 | 7 / 160 |
@@ -61,11 +63,17 @@ What the numbers say:
    all 27 judge runs. The earlier tt-only arms lost 7 to 15 ns at ss (section 5). At tt and ff, all
    three have about +2.5 to +4.3 ns of setup margin.
 2. **Hold depends on the I/O latency model, not on the router.** Under the shared SDC, every arm
-   fails hold on I/O-port paths at all 9 corners. Under the iolat SDC (a virtual I/O clock),
-   OpenROAD is hold-clean at 9/9. ICC2 b6 fails at the three ss corners and at nom/max_ff.
-   Innovus b6 fails at the three ss corners and at nom/max_tt. Innovus' failures are all I/O paths
-   measured against the fixed clk_io latency (caveat 4). Only ICC2
-   has reg-to-reg hold violators (10, at ff).
+   fails hold on I/O-port paths at all 9 corners (it has no I/O latency). The fixed-latency iolat SDC
+   (1.778 ns for every view) still left ICC2 b6 with 149 and Innovus b6 with 155 hold violators.
+   With a **per-view I/O latency** (each arm's own measured clock tree at that corner, sections 4.2b
+   and 4.2c), **all 139 + 155 of those I/O hold violators disappear**. They were artefacts of the
+   fixed latency (caveat 4). OpenROAD stays hold-clean. The only hold violators left anywhere are
+   ICC2's 10 reg-to-reg ones at nom/max_ff (-0.004 / -0.027 ns), which are real.
+   The same correction **unmasks I/O setup at ss**: the fixed 1.778 ns launched I/O data 1.3 to 3.9 ns
+   earlier than the ss trees, so it hid I/O setup failures. With per-view latency, ICC2 has no I/O
+   violator in 9 corners, while OpenROAD (2,290 I/O endpoints) and Innovus b6 (891) fail I/O setup at
+   the three ss corners. The diagnostic keeps most of them after removing the intra-macro skew
+   (section 4.2d), so they are real for this SDC.
 3. **Power and area favour ICC2.** ICC2 b6 uses the least logic (357k um2, half the buffers of the
    others), the shortest wire and the lowest power (70.8 mW). The 22 mW gap to OpenROAD is almost
    all clock network (42.8 vs 25.2 mW). Memory power (29 mW, constant) is the same in every arm.
@@ -96,11 +104,18 @@ What the numbers say:
    puts the netlists at ss WNS -1.919 (Yosys, 152 violators), +1.163 (DC v2) and +0.606 (Genus v1)
    ns, and at 30,369 / 35,644 / 26,347 leaf cells (`syn/ss_probe/reports/*.tsv`). Part of the ss
    gap between OpenROAD and the commercial arms is already present in the netlist.
-4. **The fixed clk_io 3.295 ns latency causes ss/ff I/O artefacts.** The Innovus own SDC (and the
-   iolat SDC, which uses 1.778 ns) applies one I/O clock latency to every view. The b6 CTS tree is
-   5.66 / 6.66 ns (ss early / late), 3.05 ns (tt) and 1.95 ns (ff). Every remaining ss/ff I/O
-   setup or hold item on the Innovus and ICC2 iolat/own rows carries that modelling error. The
-   shared SDC has no I/O latency at all, which is why all arms show I/O hold failures under it.
+4. **A fixed clk_io latency causes ss/ff I/O artefacts. Section 4.2b removes them for the iolat
+   variant; the Innovus own SDC is not yet re-run.** The Innovus own SDC (3.295 ns) and the iolat
+   SDC (1.778 ns) apply one I/O clock latency to every view. Measured on the judge inputs (StarRC
+   SPEFs, PrimeTime, mean over all register clock pins, **network latency = arrival minus the 1.0 ns
+   source latency**), the trees are OpenROAD 2.9 / 5.0 / 2.0 ns, ICC2 b6 1.8 / 3.1 / 1.3 ns and
+   Innovus b6 3.2 / 5.3 / 2.3 ns at nom tt / ss / ff (section 4.2c, spread over the sinks about 0.4
+   ns at ff to 1.4 ns at ss). The earlier text of this caveat quoted 5.66 / 6.66 ns (ss early /
+   late), 3.05 ns (tt) and 1.95 ns (ff). Those figures were not measured on the judge inputs and
+   mixed arrival with network latency, so they are superseded by the table in 4.2c. Every ss/ff I/O
+   setup or hold item on the fixed-latency iolat rows and on the Innovus own row carries that
+   modelling error. The shared SDC has no I/O latency at all, which is why all arms show I/O hold
+   failures under it.
 5. **IR is indicative.** The RedHawk tech is authored and uncorrelated. Cell currents are RedHawk
    defaults (no APL). Decap capacitance is estimated from spice W/L. The supply is an ideal edge
    feed (met5 stripe ends, no package). Power is PrimePower vectorless at 0.1 / 0.5.
@@ -132,6 +147,7 @@ What the numbers say:
   |---|---|---|
   | base (shared) | `pnr/sky130/cpu/constraints/sky130_cpu.sdc` | `3c69635042a9d65cb87e71a9db713e4e` |
   | iolat (comparison only) | `pnr/commercial/constraints/sky130_cpu_iolat.sdc` | `e90bdba8b93f8f4e985c5fbaa6d4ab90` |
+  | iolat_pv (per-view, comparison only) | `pnr/commercial/constraints/sky130_cpu_iolat_pv.sdc` | `57e67934c24b53f40489ad30eeb3c1cf` |
   | own, ICC2 b6 (func_tt write_sdc) | `pnr/commercial/constraints/sky130_cpu_icc2_b6_own_pt.sdc` | `44ce62ce6e6075a2110cd5f62a5b4100` |
   | own, Innovus b6 | `pnr/commercial/constraints/sky130_cpu_innovus_b6_own_pt.sdc` | `99df2bf2e7b03449bfad4cd01e1c9936` |
   | own, Innovus b5k | `.../sky130_cpu_innovus_b5k_own_pt.sdc` | `4518e91562d3e0ced3bffaeef7ca9cba` |
@@ -194,6 +210,120 @@ except ICC2's 10 ff reg-to-reg (`report_global_timing` split, JSON `io_split`).
 | max_ss | -4.326 / -1880.28 / 1155 ; +0.707 / 0.00 / 0 | -0.490 / -0.61 / 5 ; -0.634 / -18.72 / 66 | -1.250 / -23.49 / 40 ; -1.771 / -31.26 / 78 |
 | max_ff | +3.713 / 0.00 / 0 ; +0.212 / 0.00 / 0 | +3.774 / 0.00 / 0 ; -0.027 / -0.07 / 8 | +3.927 / 0.00 / 0 ; +0.202 / 0.00 / 0 |
 
+### 4.2b Per-view iolat SDC (clk_io latency = each arm's own tree at that corner)
+
+`sky130_cpu_iolat_pv.sdc` is the iolat SDC with one change: the virtual clock `clk_io` takes its
+early and late latency (1.0 ns source latency + the table value) from a per-arm, per-corner table
+(`signoff/pt/iolat_pv/iolat_pv_arm.tsv`) read when the SDC is read. **One SDC file, one md5
+(`57e67934...`), identical for every arm and corner**, and the old iolat SDC is untouched. The
+table is the mean network latency of `clk_i` over all register clock pins, measured in PrimeTime on
+the same netlist and StarRC SPEF as the judge run (section 4.2c). Same netlists, SPEFs, judge
+script and settings as sections 4.1 to 4.3. Source: `judge.<arm>.iolat_pv.corners.<corner>`.
+
+| corner | OpenROAD B2 | ICC2 b6 | Innovus b6 |
+|---|---|---|---|
+| nom_tt | +2.002 / 0.00 / 0 ; +0.526 / 0.00 / 0 | +3.314 / 0.00 / 0 ; +0.114 / 0.00 / 0 | +2.948 / 0.00 / 0 ; +0.411 / 0.00 / 0 |
+| nom_ss | -4.543 / -2080.20 / 1769 ; +1.345 / 0.00 / 0 | +0.417 / 0.00 / 0 ; +0.453 / 0.00 / 0 | -1.788 / -154.58 / 282 ; +0.998 / 0.00 / 0 |
+| nom_ff | +3.928 / 0.00 / 0 ; +0.243 / 0.00 / 0 | +4.015 / 0.00 / 0 ; -0.004 / -0.01 / 2 | +4.131 / 0.00 / 0 ; +0.197 / 0.00 / 0 |
+| min_tt | +2.233 / 0.00 / 0 ; +0.542 / 0.00 / 0 | +3.505 / 0.00 / 0 ; +0.115 / 0.00 / 0 | +3.294 / 0.00 / 0 ; +0.401 / 0.00 / 0 |
+| min_ss | -4.153 / -1405.97 / 1435 ; +1.335 / 0.00 / 0 | +0.715 / 0.00 / 0 ; +0.453 / 0.00 / 0 | -1.391 / -52.79 / 105 ; +0.989 / 0.00 / 0 |
+| min_ff | +4.066 / 0.00 / 0 ; +0.250 / 0.00 / 0 | +4.165 / 0.00 / 0 ; +0.003 / 0.00 / 0 | +4.277 / 0.00 / 0 ; +0.190 / 0.00 / 0 |
+| max_tt | +1.669 / 0.00 / 0 ; +0.495 / 0.00 / 0 | +3.028 / 0.00 / 0 ; +0.112 / 0.00 / 0 | +2.420 / 0.00 / 0 ; +0.416 / 0.00 / 0 |
+| max_ss | -5.057 / -3166.75 / 1956 ; +1.306 / 0.00 / 0 | -0.059 / -0.12 / 3 ; +0.452 / 0.00 / 0 | -2.435 / -458.57 / 504 ; +1.017 / 0.00 / 0 |
+| max_ff | +3.713 / 0.00 / 0 ; +0.212 / 0.00 / 0 | +3.774 / 0.00 / 0 ; -0.027 / -0.07 / 8 | +3.927 / 0.00 / 0 ; +0.202 / 0.00 / 0 |
+
+Violators summed over the 9 corners (violating endpoints; I/O = total minus the reg-to-reg
+`-from` register clock pins `-to` register data pins count, JSON `r2r_*_viol_sum`):
+
+| | OpenROAD B2 | ICC2 b6 | Innovus b6 |
+|---|---|---|---|
+| setup, fixed iolat (I/O / reg-to-reg) | 87 / 2,870 | 2 / 3 | 44 / 0 |
+| setup, **per-view iolat** | 2,290 / 2,870 | **0** / 3 | 891 / 0 |
+| setup, shared latency per corner (4.2e) | 1,757 / 2,870 | 105 / 3 | 327 / 0 |
+| hold, fixed iolat | 0 / 0 | 139 / 10 | 155 / 0 |
+| hold, **per-view iolat** | 0 / 0 | **0** / 10 | **0** / 0 |
+| hold, shared latency per corner (4.2e) | 0 / 0 | 1 / 10 | 0 / 0 |
+
+PrimePower at nom_tt does not change: 93.1 / 70.8 / 76.2 mW (fixed iolat, per-view and shared
+variants identical to the printed digits, `power_B.txt` of each run).
+
+### 4.2c Measured `clk_i` insertion latency (network latency, ns)
+
+Method: PrimeTime X-2025.06 on the base SDC (md5 `3c696350...`), `clk_i` propagated, no derate,
+SI off, the judge's own SPEF copy (md5 checked against the judge run and against the StarRC
+output) and netlist, 0 unannotated clock nets. Script `signoff/pt/scripts/measure_clk_latency.tcl`:
+for every register clock pin (flops and the 20 SRAM macros, 5,300 pins per arm) it reads the
+rising-edge arrival (`min_/max_rise_arrival`, which is what a path report prints as capture clock
+arrival) and subtracts the 1.0 ns source latency. At every pin early and late agree to
+under 0.5 ps (no OCV), so "early / late" of the tree means the sink-to-sink spread, shown
+below as min..max. The table value is the mean. The mean over only the registers that capture
+input-port paths or launch output-port paths differs from the all-register mean by 0.01 to 0.07 ns.
+
+| corner | OpenROAD B2 | ICC2 b6 | Innovus b6 |
+|---|---|---|---|
+| nom_tt | 2.900 (2.47..3.13) | 1.819 (1.32..2.08) | 3.177 (3.02..3.30) |
+| nom_ss | 5.035 (4.21..5.41) | 3.080 (2.22..3.53) | 5.261 (4.97..5.44) |
+| nom_ff | 2.002 (1.77..2.17) | 1.263 (0.91..1.44) | 2.273 (2.16..2.37) |
+| min_tt | 2.731 (2.33..2.93) | 1.725 (1.24..1.96) | 2.959 (2.79..3.06) |
+| min_ss | 4.761 (4.03..5.08) | 2.938 (2.10..3.34) | 4.946 (4.65..5.10) |
+| min_ff | 1.881 (1.66..2.02) | 1.198 (0.86..1.35) | 2.098 (1.98..2.18) |
+| max_tt | 3.128 (2.65..3.41) | 1.943 (1.41..2.23) | 3.469 (3.32..3.62) |
+| max_ss | 5.378 (4.45..5.82) | 3.277 (2.37..3.78) | 5.679 (5.39..5.89) |
+| max_ff | 2.159 (1.91..2.39) | 1.355 (0.99..1.56) | 2.506 (2.40..2.62) |
+
+Values are `mean (min..max over sinks)`. Source: `clock_latency.measured.<arm>.<corner>` in the
+JSON.
+
+### 4.2d What is artefact and what is real
+
+`signoff/pt/scripts/diag_io_viol.tcl` lists every violating I/O endpoint (worst path per
+endpoint) of the per-view runs, and recomputes its slack as if `clk_io` arrived exactly when the
+clock reaches the macro register on the other end of that path. If that slack is >= 0, the
+violation exists only because the external clock is modelled at the tree mean while this register
+sits at the early or late end of the tree (**skew-limited**). If it is < 0, the port-to-register
+path itself is too slow or too fast (**real** for this SDC). Counts below are per-view
+endpoints with an input as worst startpoint (JSON `clock_latency.io_violators`).
+
+| | fixed iolat | per-view iolat | verdict |
+|---|---|---|---|
+| ICC2 b6 ss hold (42 / 31 / 66) | 139 I/O violators | **0** (hold +0.45 ns at all three ss) | **artefact, does not survive** |
+| ICC2 b6 max_ss setup I/O (2) | 2 | 0 (3 left are reg-to-reg) | artefact |
+| ICC2 b6 ff hold (nom 2, max 8) | 10 reg-to-reg | 10 reg-to-reg | **real** (not an I/O path, latency-independent) |
+| ICC2 b6 max_ss setup reg-to-reg (3) | 3 | 3 | real |
+| Innovus b6 hold (nom_tt 3, ss 39 / 29 / 78, max_tt 6) | 155 | **0** | **artefact** |
+| Innovus b6 ss I/O setup | 4 / 0 / 40 (nom / min / max_ss) | 282 / 105 / 504 | **real**: 94 of 891 are skew-limited, 797 survive alignment (worst -2.44 ns, starts `apb_paddr_i`, `axi_rlast_i`) |
+| OpenROAD ss I/O setup | 27 / 27 / 33 (nom / min / max_ss) | 782 / 674 / 834 (total minus reg-to-reg; 847 / 738 / 907 endpoints have an input as worst startpoint) | **real**: 125 of those 2,492 are skew-limited (starts `axi_rvalid_i`, `axi_bvalid_i`, `apb_paddr_i`, `axi_rlast_i`) |
+
+Why the I/O setup grows at ss: with the fixed 1.778 ns the I/O data launched 1.3 to 3.9 ns before
+the ss tree, which is optimistic for setup. Aligning the launch to the tree shows high-fanout
+control inputs (`axi_rlast_i`, `axi_rvalid_i`, `axi_bvalid_i`, `apb_paddr_i`) reaching hundreds of
+flops through slow ss logic, more than the 13.333 ns period minus the 2.0 / 3.5 ns input delay.
+The reg-to-reg ss violators of OpenROAD (987 / 761 / 1,122) are unchanged. The SRAM Liberty is
+TT-only (caveat 2), so none of the ss figures is a silicon claim.
+
+### 4.2e Shared latency per corner (sensitivity)
+
+Same SDC and judge; the table `iolat_pv_shared.tsv` has ONE value per corner (the mean of the
+three arms' values), the same for every arm. Per-arm is the recommended judge: SoC clock-tree
+synthesis balances the clock to the macro's insertion delay, so the external registers follow the
+macro's own tree, and the trees differ by up to 2.4 ns (ICC2 vs Innovus at max_ss). A shared value
+credits deep-tree arms and charges shallow ones: ICC2 b6 gets 105 **extra** I/O setup violators
+(all 105 skew-limited, i.e. artefacts of the later shared clock) and one extra hold violator,
+while OpenROAD (5,160 -> 4,627) and Innovus (891 -> 327) lose violators because the shared value is
+shallower than their trees. The 327 Innovus ones are all real after alignment. Full table:
+
+| corner | OpenROAD B2 | ICC2 b6 | Innovus b6 |
+|---|---|---|---|
+| nom_tt | +2.269 / 0.00 / 0 ; +0.526 / 0.00 / 0 | +3.314 / 0.00 / 0 ; +0.114 / 0.00 / 0 | +3.493 / 0.00 / 0 ; +0.411 / 0.00 / 0 |
+| nom_ss | -3.967 / -1656.21 / 1529 ; +1.345 / 0.00 / 0 | -0.720 / -12.83 / 34 ; +0.047 / 0.00 / 0 | -0.986 / -27.00 / 69 ; +0.998 / 0.00 / 0 |
+| nom_ff | +3.928 / 0.00 / 0 ; +0.243 / 0.00 / 0 | +4.015 / 0.00 / 0 ; -0.004 / -0.01 / 2 | +4.131 / 0.00 / 0 ; +0.197 / 0.00 / 0 |
+| min_tt | +2.492 / 0.00 / 0 ; +0.542 / 0.00 / 0 | +3.505 / 0.00 / 0 ; +0.115 / 0.00 / 0 | +3.772 / 0.00 / 0 ; +0.401 / 0.00 / 0 |
+| min_ss | -3.608 / -1079.08 / 1228 ; +1.335 / 0.00 / 0 | -0.376 / -3.62 / 18 ; +0.148 / 0.00 / 0 | -0.660 / -10.56 / 30 ; +0.989 / 0.00 / 0 |
+| min_ff | +4.066 / 0.00 / 0 ; +0.250 / 0.00 / 0 | +4.165 / 0.00 / 0 ; +0.003 / 0.00 / 0 | +4.277 / 0.00 / 0 ; +0.190 / 0.00 / 0 |
+| max_tt | +1.950 / 0.00 / 0 ; +0.495 / 0.00 / 0 | +3.028 / 0.00 / 0 ; +0.112 / 0.00 / 0 | +3.043 / 0.00 / 0 ; +0.416 / 0.00 / 0 |
+| max_ss | -4.457 / -2644.44 / 1870 ; +1.306 / 0.00 / 0 | -1.163 / -34.87 / 56 ; -0.078 / -0.08 / 1 | -1.533 / -115.73 / 228 ; +1.017 / 0.00 / 0 |
+| max_ff | +3.713 / 0.00 / 0 ; +0.212 / 0.00 / 0 | +3.774 / 0.00 / 0 ; -0.027 / -0.07 / 8 | +3.927 / 0.00 / 0 ; +0.202 / 0.00 / 0 |
+
 ### 4.3 Own SDC (what each commercial tool closed against)
 
 | corner | ICC2 b6 (= base: its written SDC carries no I/O latency) | Innovus b6 |
@@ -208,6 +338,7 @@ except ICC2's 10 ff reg-to-reg (`report_global_timing` split, JSON `io_split`).
 | max_ss | -2.268 / -16.85 / 26 ; -2.412 / -599.32 / 586 | -0.050 / -0.09 / 4 ; -0.254 / -0.61 / 3 |
 | max_ff | +3.774 / 0.00 / 0 ; -0.865 / -130.99 / 441 | +3.630 / 0.00 / 0 ; +0.202 / 0.00 / 0 |
 
+Its fixed 3.295 ns clk_io is close to the measured tt tree (3.1 to 3.5 ns) but not to ss (5.2 to 5.7 ns) or ff (2.3 to 2.5 ns), so its ss/ff I/O items (max_ss setup and hold, min_ff hold) carry the caveat 4 error. A per-view own SDC was not run.
 Innovus b6 against its own SDC is the closest any arm comes to sign-off. 3 of its 18 corner checks
 fail (max_ss setup, max_ss hold, min_ff hold), with 8 violating endpoints in total. All are I/O
 paths and none is reg-to-reg.
@@ -369,10 +500,16 @@ Beads are not available on this host, so the follow-ups are tracked here.
 2. **Magic `nwell.4` outside the SRAMs** is open on all arms (3,626 / 3,035 + 592 / 4,226 + 737).
    Root-cause the 1,191 Innovus-specific pocket tap wells and the +145 straddle items
    (`reports/innovus_b6_report.md` section 8). Then decide waiver vs fix per class with the owner.
-3. **Per-view clk_io latency** (6.66 / 3.05 / 1.95 ns) in the Innovus own SDC and in the iolat
-   variant, to remove the ss/ff I/O artefacts (caveat 4).
-4. **ICC2 b6 ss hold** (42 / 31 / 66 I/O-port violators in iolat) and its ff reg-to-reg hold
-   (2 / 8). Add ss as a hold scenario, or close them with a PrimeTime ECO.
+3. **Per-view clk_io latency**: done for the iolat variant (sections 4.2b to 4.2e, per-arm and
+   shared). Still open: the same correction for the **Innovus own SDC** (fixed 3.295 ns), which
+   needs a per-view copy of `sky130_cpu_innovus_b6_own_pt.sdc` and 9 more PrimeTime runs, and a
+   decision on the 797 + 2,367 ss I/O setup endpoints of Innovus and OpenROAD that survive
+   (4.2d): relax the input delays, add multicycle exceptions for the quasi-static APB inputs, or
+   accept them as real.
+4. **ICC2 b6 ss hold** (42 / 31 / 66): **closed as an artefact**. With the per-view clk_io the ss
+   I/O hold violators are 0 and the hold WNS is +0.45 ns at all three ss corners. What remains of
+   this item is ICC2's **ff reg-to-reg hold** (2 at nom_ff, 8 at max_ff; -0.004 / -0.027 ns), which
+   no latency model changes. Close it with a PrimeTime ECO or by adding ff as a hold scenario.
 5. **Deck antenna**: ICC2 b6 1 net (`u_core_u_dcache/n3594`), Innovus b6 2 side-area nets,
    OpenROAD 116.
 6. **Max-cap on the 160 SRAM `dout0` pins** (all arms) depends on the TT-only SRAM Liberty. It
@@ -396,6 +533,9 @@ Beads are not available on this host, so the follow-ups are tracked here.
 - `pnr/commercial/compare/test_compare.py`: checks that every JSON value has a source in the git
   index, that the final arms are complete with no md5 warnings, and that the committed JSON is
   current.
+- Per-view iolat study: `pnr/commercial/constraints/{gen_iolat_pv_sdc.py,sky130_cpu_iolat_pv.sdc}`,
+  `pnr/commercial/signoff/pt/scripts/{measure_clk_latency.tcl,measure_one.sh,mk_iolat_tables.py,run_iolat_pv.sh,diag_io_viol.tcl,run_diag_pv.sh,summ_io_viol.py}`,
+  tables in `pnr/commercial/signoff/pt/iolat_pv/`, chain `pnr/commercial/signoff/chain_clkio_pv*.sh`.
 - Underlying reports: `pnr/commercial/reports/` (`pt_judge_summary.md` sections 13 and 14,
   `icc2_pnr_summary.md`, `innovus_b6_report.md`, `redhawk_ir_summary.md`,
   `starrc_extraction_summary.md`, `lec_*.md`, `synth_ss_probe_step1.md`,

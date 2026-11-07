@@ -676,3 +676,46 @@ reg-to-reg (r2rx) worst setup / hold, ns (violators):
 | max_ff | none (0) / none (0) | none (0) / -0.027 (8) | none (0) / -0.112 (121) | none (0) / none (0) | none (0) / none (0) |
 
 nom_tt PrimePower total (raw `Total` row tail, W): Innovus b6 76.2 mW; ICC2 b6 70.8 mW; ICC2 b5m 67.8 mW; Innovus b5k 70.5 mW; OpenROAD 93.1 mW
+
+
+## 15. Per-view I/O clock latency (iolat_pv), task of 2026-11-08, comparison only
+
+**Why.** The iolat SDC (section 10) applies one clk_io latency, 1.778 ns, to every view, while the b6 clock trees are 1.2 to 5.7 ns deep. Every ss/ff I/O setup or hold item on the fixed-latency rows carries that error (COMMERCIAL_FLOW_COMPARISON caveat 4, open item 3).
+
+**Measure.** `pt/scripts/measure_clk_latency.tcl` (`measure_one.sh`): same netlist, StarRC SPEF copy (md5 checked against the base judge run and the StarRC output), base SDC md5 `3c696350...`, clk_i propagated, no derate, SI off. It reads the rising-edge arrival of clk_i at every register clock pin (flops and SRAM) and subtracts the 1.0 ns source latency. 27 runs (3 arms x 9 corners), 0 unannotated clock nets. Early and late are equal per pin to under 0.5 ps; the spread across sinks is 0.4 (ff) to 1.4 ns (ss). The mean over the registers that face the ports differs by 0.01 to 0.07 ns. Table: `pt/iolat_pv/clk_latency_measured.tsv`; data per run in `runs_clklat/` (gitignored), statistics copied to `compare/snapshot/clklat/`.
+
+**Variant.** `constraints/gen_iolat_pv_sdc.py` writes `sky130_cpu_iolat_pv.sdc` (md5 `57e67934c24b53f40489ad30eeb3c1cf`), identical for every arm. clk_io has early and late source latency `1.0 + table value` (PrimeTime allows `-early/-late` only with `-source`), read at `read_sdc` time from `IOLAT_PV_TABLE` / `IOLAT_PV_KEY` (a missing row is an error, the applied row is echoed and verified by `run_iolat_pv.sh`, evidence in each run's `iolat_pv.txt`). Setup launches on the late value, hold on the early value. Tables: `iolat_pv_arm.tsv` (each arm's own mean tree, recommended) and `iolat_pv_shared.tsv` (mean of the three arms per corner). Judge script `judge.tcl` and `run_one.sh` unchanged (`PT_SDC=own`), 54 runs plus a 15-run diagnostic, PrimePower at nom_tt only. PrimePower is unchanged to the printed digits: 93.1 / 70.8 / 76.2 mW, same as the fixed iolat runs.
+
+### Per-arm table: setup WNS / TNS / violators ; hold WNS / TNS / violators (ns)
+
+| corner | OpenROAD B2 | ICC2 b6 | Innovus b6 |
+|---|---|---|---|
+| nom_tt | +2.002 / 0.00 / 0 ; +0.526 / 0.00 / 0 | +3.314 / 0.00 / 0 ; +0.114 / 0.00 / 0 | +2.948 / 0.00 / 0 ; +0.411 / 0.00 / 0 |
+| nom_ss | -4.543 / -2080.20 / 1769 ; +1.345 / 0.00 / 0 | +0.417 / 0.00 / 0 ; +0.453 / 0.00 / 0 | -1.788 / -154.58 / 282 ; +0.998 / 0.00 / 0 |
+| nom_ff | +3.928 / 0.00 / 0 ; +0.243 / 0.00 / 0 | +4.015 / 0.00 / 0 ; -0.004 / -0.01 / 2 | +4.131 / 0.00 / 0 ; +0.197 / 0.00 / 0 |
+| min_tt | +2.233 / 0.00 / 0 ; +0.542 / 0.00 / 0 | +3.505 / 0.00 / 0 ; +0.115 / 0.00 / 0 | +3.294 / 0.00 / 0 ; +0.401 / 0.00 / 0 |
+| min_ss | -4.153 / -1405.97 / 1435 ; +1.335 / 0.00 / 0 | +0.715 / 0.00 / 0 ; +0.453 / 0.00 / 0 | -1.391 / -52.79 / 105 ; +0.989 / 0.00 / 0 |
+| min_ff | +4.066 / 0.00 / 0 ; +0.250 / 0.00 / 0 | +4.165 / 0.00 / 0 ; +0.003 / 0.00 / 0 | +4.277 / 0.00 / 0 ; +0.190 / 0.00 / 0 |
+| max_tt | +1.669 / 0.00 / 0 ; +0.495 / 0.00 / 0 | +3.028 / 0.00 / 0 ; +0.112 / 0.00 / 0 | +2.420 / 0.00 / 0 ; +0.416 / 0.00 / 0 |
+| max_ss | -5.057 / -3166.75 / 1956 ; +1.306 / 0.00 / 0 | -0.059 / -0.12 / 3 ; +0.452 / 0.00 / 0 | -2.435 / -458.57 / 504 ; +1.017 / 0.00 / 0 |
+| max_ff | +3.713 / 0.00 / 0 ; +0.212 / 0.00 / 0 | +3.774 / 0.00 / 0 ; -0.027 / -0.07 / 8 | +3.927 / 0.00 / 0 ; +0.202 / 0.00 / 0 |
+
+### Fixed iolat -> per-view -> shared (violators over 9 corners, I/O / reg-to-reg)
+
+| | OpenROAD | ICC2 b6 | Innovus b6 |
+|---|---|---|---|
+| setup fixed iolat | 87 / 2,870 | 2 / 3 | 44 / 0 |
+| setup per-view | 2,290 / 2,870 | 0 / 3 | 891 / 0 |
+| setup shared per corner | 1,757 / 2,870 | 105 / 3 | 327 / 0 |
+| hold fixed iolat | 0 / 0 | 139 / 10 | 155 / 0 |
+| hold per-view | 0 / 0 | 0 / 10 | 0 / 0 |
+| hold shared per corner | 0 / 0 | 1 / 10 | 0 / 0 |
+
+### Reading
+
+- **Artefacts (gone with per-view latency):** ICC2 b6 ss hold (42 / 31 / 66; now 0 and +0.45 ns at all three ss), its 2 max_ss I/O setup violators, all 155 Innovus b6 hold violators.
+- **Real:** ICC2 b6 ff reg-to-reg hold (2 / 8, -0.004 / -0.027 ns) and its 3 max_ss reg-to-reg setup; OpenROAD's 987 / 761 / 1,122 ss reg-to-reg setup; and the **ss I/O setup** of OpenROAD and Innovus b6, which the fixed 1.778 ns had hidden because it launched I/O data 1.3 to 3.9 ns before the ss trees. `diag_io_viol.tcl` re-computes each violating endpoint's slack with clk_io aligned to that endpoint's own register: Innovus 797 of 891 stay negative (worst -2.44 ns), OpenROAD 2,367 of 2,492 endpoints with an input worst startpoint stay negative (worst -5.24 ns). Start points are `axi_rlast_i`, `axi_rvalid_i`, `axi_bvalid_i`, `apb_paddr_i`. The rest (94 and 125) are skew-limited.
+- **Shared per corner is the less fair judge:** all 105 extra ICC2 I/O setup violators are skew-limited (the shared clock is later than ICC2's shallower tree), while OpenROAD and Innovus lose 533 and 564 violators because the shared value is shallower than their trees.
+- Not done: the Innovus own SDC (fixed 3.295 ns) with per-view latency; the ss/ff items of that row keep the caveat.
+
+Files: `compare/snapshot/pt/iolat_pv{,s}/`, `compare/snapshot/clklat/`, `compare/snapshot/iolat_pv/`, JSON `judge.<arm>.iolat_pv{,s}`, `clock_latency`. Chain: `signoff/chain_clkio_pv.sh`, `chain_clkio_pv_stage2.sh`.
