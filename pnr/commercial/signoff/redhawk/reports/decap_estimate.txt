@@ -1,0 +1,6 @@
+sky130_fd_sc_hd__decap_3 C_pF=0.00705 R_ohm=1099
+sky130_fd_sc_hd__decap_4 C_pF=0.01255 R_ohm=1956
+sky130_fd_sc_hd__decap_6 C_pF=0.02355 R_ohm=3669
+sky130_fd_sc_hd__decap_8 C_pF=0.03455 R_ohm=5382
+sky130_fd_sc_hd__decap_12 C_pF=0.05655 R_ohm=8809
+sky130_ef_sc_hd__decap_12 C_pF=0.05655 R_ohm=8809

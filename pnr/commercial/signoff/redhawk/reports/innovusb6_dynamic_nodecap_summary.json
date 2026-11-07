@@ -1,0 +1,255 @@
+{
+ "arm": "innovusb6",
+ "run": "rh-dynamic-nodecap",
+ "populations": {
+  "logic": {
+   "n": 45076,
+   "worst_avgTW_mV": 248.60000000000016,
+   "worst_avgTW_at": [
+    2859.82,
+    518.16,
+    "u_core/FE_OFC11670_u_dcache_data_dout0_3__1"
+   ],
+   "mean_avgTW_mV": 42.483115183246575,
+   "worst_minTW_mV": 291.70000000000005,
+   "worst_minWC_mV": 292.2,
+   "worst_minWC_at": [
+    2899.84,
+    518.16,
+    "u_core/FE_OFC1360_u_dcache_data_dout0_3__9"
+   ],
+   "mean_minWC_mV": 109.58744786582609,
+   "frac_inst_avgTW_gt_5pct": 0.052045434377495786,
+   "frac_inst_avgTW_gt_10pct": 0.00028840181027597834
+  },
+  "sram": {
+   "n": 10,
+   "worst_avgTW_mV": 152.80000000000004,
+   "worst_avgTW_at": [
+    2279.23,
+    218.75,
+    "u_core/u_icache_gen_data_sram[2].u_data_sram"
+   ],
+   "mean_avgTW_mV": 101.04000000000006,
+   "worst_minTW_mV": 193.30000000000004,
+   "worst_minWC_mV": 223.50000000000003,
+   "worst_minWC_at": [
+    2279.23,
+    218.75,
+    "u_core/u_icache_gen_data_sram[2].u_data_sram"
+   ],
+   "mean_minWC_mV": 141.77,
+   "frac_inst_avgTW_gt_5pct": 0.7,
+   "frac_inst_avgTW_gt_10pct": 0.0
+  },
+  "fill_tap": null,
+  "logic+sram": {
+   "n": 45086,
+   "worst_avgTW_mV": 248.60000000000016,
+   "worst_avgTW_at": [
+    2859.82,
+    518.16,
+    "u_core/FE_OFC11670_u_dcache_data_dout0_3__1"
+   ],
+   "mean_avgTW_mV": 42.496103003150026,
+   "worst_minTW_mV": 291.70000000000005,
+   "worst_minWC_mV": 292.2,
+   "worst_minWC_at": [
+    2899.84,
+    518.16,
+    "u_core/FE_OFC1360_u_dcache_data_dout0_3__9"
+   ],
+   "mean_minWC_mV": 109.59458590249693,
+   "frac_inst_avgTW_gt_5pct": 0.0521891496251608,
+   "frac_inst_avgTW_gt_10pct": 0.00028833784323293264
+  }
+ },
+ "hotspot_tiles_200um": [
+  {
+   "x_um": [
+    2800.0,
+    3000.0
+   ],
+   "y_um": [
+    400.0,
+    600.0
+   ],
+   "mean_avgTW_mV": 80.39135802469136,
+   "n_inst": 81
+  },
+  {
+   "x_um": [
+    1000.0,
+    1200.0
+   ],
+   "y_um": [
+    600.0,
+    800.0
+   ],
+   "mean_avgTW_mV": 75.0788461538462,
+   "n_inst": 104
+  },
+  {
+   "x_um": [
+    1400.0,
+    1600.0
+   ],
+   "y_um": [
+    1400.0,
+    1600.0
+   ],
+   "mean_avgTW_mV": 69.79752475247521,
+   "n_inst": 606
+  },
+  {
+   "x_um": [
+    1800.0,
+    2000.0
+   ],
+   "y_um": [
+    1600.0,
+    1800.0
+   ],
+   "mean_avgTW_mV": 63.865544871794924,
+   "n_inst": 624
+  },
+  {
+   "x_um": [
+    1400.0,
+    1600.0
+   ],
+   "y_um": [
+    1200.0,
+    1400.0
+   ],
+   "mean_avgTW_mV": 63.78782742681055,
+   "n_inst": 649
+  }
+ ],
+ "top5_inst_avgTW": [
+  {
+   "inst": "u_core/FE_OFC11670_u_dcache_data_dout0_3__1",
+   "x": 2859.82,
+   "y": 518.16,
+   "drop_mV": 248.60000000000016
+  },
+  {
+   "inst": "u_core/FE_OFC1360_u_dcache_data_dout0_3__9",
+   "x": 2899.84,
+   "y": 518.16,
+   "drop_mV": 243.8
+  },
+  {
+   "inst": "u_core/FE_OFC2889_u_dcache_data_dout0_3__10",
+   "x": 2885.35,
+   "y": 518.16,
+   "drop_mV": 243.0000000000001
+  },
+  {
+   "inst": "u_core/FE_OFC580_u_dcache_data_dout0_3__4",
+   "x": 2872.01,
+   "y": 518.16,
+   "drop_mV": 242.39999999999995
+  },
+  {
+   "inst": "FE_OFC13584_mbist_status_o_62",
+   "x": 2846.94,
+   "y": 518.16,
+   "drop_mV": 235.20000000000007
+  }
+ ],
+ "sram_macros": [
+  {
+   "name": "u_core/u_icache_gen_data_sram[2].u_data_sram",
+   "avgTW_mV": 152.80000000000004,
+   "minWC_mV": 223.50000000000003
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[2].u_data_sram",
+   "avgTW_mV": 143.69999999999993,
+   "minWC_mV": 198.9000000000001
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[3].u_data_sram",
+   "avgTW_mV": 128.70000000000005,
+   "minWC_mV": 185.99999999999994
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 127.90000000000012,
+   "minWC_mV": 170.40000000000012
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 122.60000000000004,
+   "minWC_mV": 163.10000000000002
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[3].u_data_sram",
+   "avgTW_mV": 115.90000000000012,
+   "minWC_mV": 161.00000000000003
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[0].u_data_sram",
+   "avgTW_mV": 108.20000000000007,
+   "minWC_mV": 153.69999999999996
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[0].u_data_sram",
+   "avgTW_mV": 75.30000000000014,
+   "minWC_mV": 105.39999999999993
+  },
+  {
+   "name": "u_core/u_dcache_u_tag_sram",
+   "avgTW_mV": 23.500000000000078,
+   "minWC_mV": 38.599999999999966
+  },
+  {
+   "name": "u_core/u_icache_u_tag_sram",
+   "avgTW_mV": 11.800000000000033,
+   "minWC_mV": 17.100000000000115
+  }
+ ],
+ "log_worst_block": [
+  "---------------------------------------------------",
+  "WIRE  151.90mV  VPWR  1.800  (2899.840,519.520) met1",
+  "WIRE  140.60mV  VGND  0.000  (2859.820,516.800) met1",
+  "avgTW 248.60mV  VPWR  1.800  (2859.820,518.160) u_core/FE_OFC11670_u_dcache_data_dout0_3__1",
+  "maxTW 201.27mV  VPWR  1.800  (2899.840,518.160) u_core/FE_OFC1360_u_dcache_data_dout0_3__9",
+  "minTW 291.70mV  VPWR  1.800  (2859.820,518.160) u_core/FE_OFC11670_u_dcache_data_dout0_3__1",
+  "minWC 292.19mV  VPWR  1.800  (2899.840,518.160) u_core/FE_OFC1360_u_dcache_data_dout0_3__9"
+ ],
+ "rh_total_power_mW": 76.217,
+ "presim_ps": 3500,
+ "decap_instances_in_dynamic": 358070,
+ "em_by_mode": {
+  "AVG": {
+   "file_mode": "AVG",
+   "entries_ge_50pct": 0,
+   "max_ratio_pct": 0.0,
+   "violations_ge_100pct": 0,
+   "violations_by_layer": {},
+   "worst_wire_ratio_line": "WIRE 8.48% VPWR 1.34mA (3220.920,1776.160) met1"
+  },
+  "RMS": {
+   "file_mode": "RMS",
+   "entries_ge_50pct": 0,
+   "max_ratio_pct": 0.0,
+   "violations_ge_100pct": 0,
+   "violations_by_layer": {},
+   "worst_wire_ratio_line": "WIRE 22.77% VPWR 1.34mA (3220.920,1776.160) met1"
+  },
+  "PEAK": {
+   "file_mode": "PEAK",
+   "entries_ge_50pct": 3326,
+   "max_ratio_pct": 199.764,
+   "violations_ge_100pct": 358,
+   "violations_by_layer": {
+    "met4": 99,
+    "met1": 230,
+    "met5": 29
+   },
+   "worst_wire_ratio_line": "WIRE 199.76% VPWR 5.03mA (574.150,918.722) met4"
+  }
+ }
+}

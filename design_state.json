@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-18T22:12:57+00:00",
+  "updated_at": "2026-11-07T08:21:42+08:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -2347,6 +2347,18 @@
       "suggested_next_step": "loop_back_to:routing",
       "reason": "B7 physical verification of ICC2 b5e and Innovus b5g (measurement only): ICC2 has 1 met1 short (LVS) + 132 m4.5ab; Innovus has isolated endcap n-well column (nwell.2a 434) + 3 assign-aliased ports; signoff not achieved; no pd.signoff change",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-11-07T08:21:42+08:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "ir_em",
+      "decision": "proceed",
+      "confidence": "low",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "B7 RedHawk IR, three arms, INDICATIVE only: static worst VPWR+VGND 23.9/18.0/24.7 mV (ICC2 b6/Innovus b6/OpenROAD, <1.4%), EM 0 violations; dynamic worst avgTW 10.7/9.1/4.4% with estimated decap and default currents (decap-dependent); pd.signoff not set (scoped step, tech file uncorrelated, no APL)",
+      "constraint_ref": "power.ir_drop_pct_max"
     }
   ],
   "fix_requests": [
