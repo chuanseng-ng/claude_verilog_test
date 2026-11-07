@@ -1085,6 +1085,57 @@ def calibration():
     return out
 
 
+def quantus_crosscheck():
+    """Cadence Quantus (Techgen cell-level qrcTechFile from the same authored ICT) vs StarRC, per net, on the three b6 DEFs.
+    Every value comes from the committed reports written by signoff/quantus/scripts/{correlate_all,collect_runs}.py."""
+    rep = f"{COM}/signoff/quantus/reports/quantus_vs_starrc.json"
+    runs = f"{COM}/signoff/quantus/reports/quantus_runs.json"
+    if not (tracked(rep) and tracked(runs)):
+        warnings.append("quantus reports not committed; quantus_crosscheck omitted")
+        return {}
+    out = {"correlation": {}, "cost": {}, "pt_sensitivity_nom_tt": {}, "techgen": {}}
+    for k, r in json.loads(text(rep))["results"].items():
+        out["correlation"][k] = E(
+            {
+                "total_C_median_err_pct": round(r["total_C"]["median_err_pct"], 2),
+                "total_C_median_abs_err_pct": round(r["total_C"]["median_abs_err_pct"], 2),
+                "total_C_p95_abs_err_pct": round(r["total_C"]["p95_abs_err_pct"], 2),
+                "total_R_median_err_pct": round(r["total_R"]["median_err_pct"], 2),
+                "total_R_p95_abs_err_pct": round(r["total_R"]["p95_abs_err_pct"], 2),
+                "ground_C_median_err_pct": round(r["ground_C"]["median_err_pct"], 2),
+                "design_C_ratio": round(r["design"]["C_ratio"], 4),
+                "design_R_ratio": round(r["design"]["R_ratio"], 4),
+                "gate_population_nets": r["gate_population_nets"],
+                "label": r["label"],
+                "tail_beyond_10pct": r["tail_flag"],
+            },
+            "percent error, Quantus vs StarRC",
+            "signoff",
+            rep,
+            note="nets with StarRC total C > 1 fF; same authored ITF/ICT stack in both extractors, so agreement is not accuracy vs silicon",
+        )
+    q = json.loads(text(runs))
+    for k, r in q["quantus_runs"].items():
+        out["cost"][k] = E(
+            {"wall_s": r["wall_s"], "session_peak_rss_kb": r["session_peak_rss_kb"], "nets": r["nets_extracted"], "errors": r["errors"]},
+            "s / kB / nets",
+            "signoff",
+            runs,
+            note="quantus -multi_cpu 2 under safe_run.sh; session RSS = sum over the process session sampled every 10 s",
+        )
+    for arm, r in q["pt_sensitivity_nom_tt"].items():
+        out["pt_sensitivity_nom_tt"][arm] = E(
+            r, "ns / mW", "signoff", runs,
+            note="PrimeTime nom_tt, base SDC, same netlist; only the SPEF changes (StarRC vs Quantus); delta = Quantus - StarRC",
+        )
+    for c, r in q["techgen"].items():
+        out["techgen"][c] = E(
+            {"timing_lines": r["timing_lines"], "qrcTechFile_bytes": r["qrcTechFile_bytes"]}, "s / kB", "signoff", runs,
+            note=(r.get("provenance") or "fresh cell-level Techgen run"),
+        )
+    return out
+
+
 def sdc():
     out = {}
     for k, f in SDC_FILES.items():
@@ -1115,6 +1166,7 @@ def build():
         },
         "sdc": sdc(),
         "extraction_calibration": calibration(),
+        "quantus_crosscheck": quantus_crosscheck(),
         "arms": {},
         "judge": {},
     }
