@@ -176,6 +176,15 @@ lec-icc2-b6-negctl:
 	$(MAKE) lec-icc2-negctl $(B6)
 lec-icc2-b6: lec-icc2-b6-real lec-icc2-b6-negctl
 
+# RUNFM2 with the OpenROAD-specific script (scripts/fm_lec_openroad.tcl); fm_lec_icc2.tcl stays the ICC2 script
+define RUNFMOR
+	@$(PE); $(SAFE); mkdir -p $(RUN); cd $(RUN); \
+	  export REPO=$(REPO) PDKDIR=$(PDKDIR) RUN=$(RUN) IMPL=$(1) SVF=$(2) REFMODE=$(3) REF_NETLIST=$(DCNL) RTL_LIST=$(RUN)/rtl.f; \
+	  $(REPO)/pnr/commercial/syn/dc/scripts/rtl_list.sh $(REPO) $(RUN)/rtl.f; \
+	  /usr/bin/time -v -o $(RUN)/time.txt $(PDKDIR)/scripts/safe_run.sh $(RUN)/fm.log fm_shell -f $(HERE)/scripts/fm_lec_openroad.tcl; \
+	  rc=$$?; echo "fm_shell rc=$$rc"; grep -E "VERIFY_RESULT|FM_DONE|Verification (SUCCEEDED|FAILED|INCONCLUSIVE)" $(RUN)/fm.log; exit $$rc
+endef
+
 # ---------------- B2 OpenROAD/LibreLane post-route netlist (the arm that had no LEC; open item 1 of docs/COMMERCIAL_FLOW_COMPARISON.md section 7) ----------------
 # Same engine as the ICC2 runs: scripts/fm_lec_icc2.tcl (RTL = the 28 SV files + 5 defines incl. SRAM_SKY130, SRAM black box from the macro .db, no SVF, no waivers),
 # REFMODE=rtl  : reference = RTL
@@ -198,7 +207,7 @@ lec-or-prep:
 	python3 -I $(HERE)/scripts/strip_openroad_physical.py $(OR_NL) $(ORN) --diodes
 lec-or-run:
 	@echo "$(OR_SYN_MD5)  $(OR_SYN)" | md5sum -c - >/dev/null
-	$(call RUNFM2,$(IMPL),none,$(if $(filter syn,$(REF)),dc,$(if $(filter sv2v,$(REF)),sv2v,rtl)))
+	$(call RUNFMOR,$(IMPL),none,$(if $(filter syn,$(REF)),dc,$(if $(filter sv2v,$(REF)),sv2v,rtl)))
 # negative controls (each must end 'Verification FAILED'); mutants of the with-diodes physical-stripped copy; MODES default = the b6 classes
 ORMODES ?= fwdb_inv swap
 lec-or-negctl:

@@ -2309,6 +2309,22 @@
       "passing": 6248,
       "failing": 0
      },
+     "or_syn_vs_fsmoh": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_fsmoh/fm_log.txt",
+      "passing": 2602,
+      "failing": 3541
+     },
+     "or_syn_vs_fsmoh_mergedup": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_fsmoh_mergedup/fm_log.txt",
+      "passing": 3831,
+      "failing": 2316
+     },
      "or_syn_vs_sv2v": {
       "value": "FAILED",
       "unit": "verdict",
@@ -2316,6 +2332,38 @@
       "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v/fm_log.txt",
       "passing": 2231,
       "failing": 3902
+     },
+     "or_syn_vs_sv2v_cprop": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_cprop/fm_log.txt",
+      "passing": 3206,
+      "failing": 2918
+     },
+     "or_syn_vs_sv2v_fsm": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_fsm/fm_log.txt",
+      "passing": 2231,
+      "failing": 3902
+     },
+     "or_syn_vs_sv2v_mergedup": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_mergedup/fm_log.txt",
+      "passing": 3206,
+      "failing": 2918
+     },
+     "or_syn_vs_sv2v_netmatch": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_netmatch/fm_log.txt",
+      "passing": 3202,
+      "failing": 2921
      },
      "or_cf_syn_vs_rtl_anon_ABORTED_mapping_gt20min": {
       "value": null,
@@ -2351,7 +2399,13 @@
       "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_rtl/fm_log.txt",
       "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_sv2v/fm_log.txt",
       "pnr/commercial/signoff/lec/formality/reports/or_phys_vs_syn/fm_log.txt",
-      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v/fm_log.txt"
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_fsmoh/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_fsmoh_mergedup/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_cprop/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_fsm/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_mergedup/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_netmatch/fm_log.txt"
      ],
      "rule": "derived from the per-run verdicts in lec_runs; EQUIVALENT only if the RTL==sv2v, final==Yosys and Yosys==sv2v legs all SUCCEEDED"
     },

@@ -504,7 +504,9 @@ Beads are not available on this host, so the follow-ups are tracked here.
    164 / 139 unmapped). Whether this is only the cascade of unmatched registers or a real Yosys difference is not established, and nothing
    was waived. The OpenROAD netlist therefore has **no** EQUIVALENT-to-RTL verdict. Owner decision: derive the Yosys merge/constant/rename
    facts and feed them to Formality as verified guidance, or prove that leg with Yosys `equiv_make`/`equiv_induct`, or re-synthesise
-   without register merging.
+   without register merging. Second session: the Yosys log shows `fsm` re-encoded `fwd_a_sel_r`, `fwd_b_sel_r`, `grant_q` to one-hot;
+   Formality knobs (merge duplicates, constants, net-name match, FSM commands, a one-hot reference copy) reduce the failures from 3,902 to
+   2,316 but do not close the leg (`reports/lec_openroad.md`, continuation section). Next: Yosys `equiv_make`/`equiv_induct`.
 2. **Magic `nwell.4` outside the SRAMs** is open on all arms (3,626 / 3,035 + 592 / 4,226 + 737).
    Root-cause the 1,191 Innovus-specific pocket tap wells and the +145 straddle items
    (`reports/innovus_b6_report.md` section 8). Then decide waiver vs fix per class with the owner.

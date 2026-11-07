@@ -73,3 +73,33 @@ of the synthesis leg; both fail. Formality alone was used for legs (1) and (2) (
 Scripts: `signoff/lec/formality/scripts/{strip_openroad_physical,mk_mutant_openroad,mk_mutant_sv2v}.py`, `fm_lec_or_frontend.tcl`, `fm_lec_icc2.tcl` (new `REFMODE=sv2v`), `chain_or.sh`, `chain_or2.sh`;
 `signoff/lec/conformal/scripts/name_flops_openroad.py`; Makefile targets `lec-or-prep`, `lec-or-run`, `lec-or-fe`, `lec-or-negctl` (formality) and `lec-innovus-rtl INNMAP=` (conformal).
 Reports: `signoff/lec/formality/reports/or_*`, `signoff/lec/conformal/reports/or_cf_*`. Run times: 26 s (leg 1), 6-10 s (leg 2), 4 min 44 s (leg 3), 5 min 42 s (direct), Conformal named run 3 min; peak RSS 0.43-0.88 GB.
+
+## Continuation 2026-11-08 (second session): attempts to close leg (3) in Formality, no SVF. Leg (3) is STILL OPEN
+
+New fact from the Yosys log (`06-yosys-synthesis/yosys-synthesis.log`, section 48, lines 7449-7644): the `fsm` pass **re-encoded three 2-bit registers to one-hot**:
+`u_core.fwd_a_sel_r`, `u_core.fwd_b_sel_r` (the forwarding-select flops, the `dud4` class) and `u_core.u_cache_arb.grant_q`. Stated mapping (old -> new, bit 0 right): `00 -> 0001`, `10 -> 0010`, `01 -> 0100`, `11 -> 1000`.
+In the netlist `fwd_*_sel_r` keep bits [3:1] only (bit 0 has no reader), `grant_q` keeps four flops (bit 3 has the port net `axi_bready_o`). A combinational point-to-point LEC cannot match a re-encoded state
+register, and the forwarding selects feed every ALU operand, so this alone explains a large cascade. The log names no per-flop merges or constant removals (only anonymous "Setting constant" counts), so nothing else can be derived from it.
+
+All runs are Formality, Yosys netlist (impl) vs `rv32i_cpu_top_sv2v.v` (ref) unless noted; every run is FAILED. Counts are Passing / Failing, unmatched reference / implementation compare points.
+
+| Tag | Knob | Pass / Fail | Unmatched ref / impl |
+|---|---|---|---|
+| `or_syn_vs_sv2v` | baseline | 2,231 / 3,902 | 242 / 113 |
+| `or_syn_vs_sv2v_mergedup` | `verification_merge_duplicated_registers true` | 3,206 / 2,918 | 103 / 123 |
+| `or_syn_vs_sv2v_cprop` | + `verification_propagate_const_reg_x true` | identical to mergedup | identical |
+| `or_syn_vs_sv2v_netmatch` | + `name_match_net`, `name_match_pin_net`, `signature_analysis_allow_net_match` | 3,202 / 2,921 | 104 / 124 |
+| `or_syn_vs_sv2v_fsm` | `set_fsm_state_vector` + `set_fsm_encoding` for the 3 FSMs (accepted, **no effect** in the flat match: identical to baseline) | 2,231 / 3,902 | 242 / 113 |
+| `or_syn_vs_fsmoh` | reference copy with the 3 FSM registers re-encoded as the log states (`mk_ref_fsm_onehot.py`, one-hot register keeps the original name) | 2,602 / 3,541 | 235 / 103 |
+| `or_syn_vs_fsmoh_mergedup` | both of the above | 3,831 / 2,316 | 85 / 99 |
+
+`or_syn_vs_fsmoh*` use a modified reference. That copy is **not yet proven equal to the original sv2v file**; that proof (Yosys `equiv_make`/`equiv_induct`, cut at the named decoded wires) is the next step, and without it those runs prove nothing.
+
+Remaining unmatched families (mergedup run): reference `mem_trap_cause_val_r` (30, constant 0/X), `rec_addr_q` (10, 0/X), `if_id_reg_o` (9), `wb_index_q` (8), `data_idx_q` (8), `regs_reg` (5); implementation `u_regfile.regs[0][*]` (31 flops: Yosys
+kept a word 0 for the `reg [31:0] regs [1:31]` array, never read because `rd_addr==0` is masked), `if_id_instr_w` (10), `wb_addr_base` (8), and about 40 anonymous `_000NN_` flops. `scripts/analyze_cone_openroad.py` on the mergedup run: of 2,918 failing points,
+1,878 have an unmatched implementation flop in their implementation fan-in cone; 1,040 do not (the reference side was not analysed), so the cascade explanation is partly supported and not complete.
+`verification_*` knobs for constants/merging do not change this. No user match and no `set_constant` was used. `fm_lec_icc2.tcl` was reverted to its committed state; the OpenROAD runs use `scripts/fm_lec_openroad.tcl`
+(the committed run evidence above was produced with an `fm_lec_icc2.tcl` that had the `sv2v` mode added; the logic of the other modes is unchanged).
+
+Next (not started): (1) Yosys `equiv_make`/`equiv_simple`/`equiv_induct` of the sv2v file against the Yosys netlist inside the LibreLane container (route 2), which also proves the re-encoding copy; (2) pair the
+remaining ~100 unmatched registers with structural evidence (alias chain in the sv2v file) before any `set_user_match`; (3) for any point still failing after matching, take a Formality counterexample (`analyze_points`) and replay it in gate-vs-RTL simulation. Re-synthesis without register merging only with approval.
