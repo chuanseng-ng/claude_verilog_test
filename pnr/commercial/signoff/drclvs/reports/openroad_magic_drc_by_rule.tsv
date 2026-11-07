@@ -1,0 +1,33 @@
+rule	inside_sram	straddle	outside
+All nwells must contain metal-connected N+ taps (nwell.4)	0	0	3626
+Core local interconnect spacing < 0.14um (li.c2)	661744	0	0
+Diffusion contact to SRAM gate < 0.04um (licon.11)	630820	0	0
+Diffusion width < 0.15um (diff/tap.1)	1820192	0	0
+Local interconnect overlap of diffusion contact < 0.08um in one direction (li.5)	332492	0	0
+Local interconnect spacing < 0.17um (li.3)	922628	0	0
+Local interconnect width < 0.17um (li.1)	2278399	0	0
+Metal1 overlap of local interconnect contact < 0.03um (met1.4)	841738	0	0
+N-Diffusion overhang of nFET < 0.25um (poly.7)	2644	0	0
+N-Diffusion spacing to N-well < 0.34um (diff/tap.9)	3017505	0	0
+N-diffusion contact width < 0.17um (licon.1)	1010182	0	0
+N-diffusion overlap of N-diffusion contact < 0.04um (licon.5a)	1766550	0	0
+N-diffusion overlap of N-diffusion contact < 0.06um in one direction (licon.5c)	5280	0	0
+N-tap contact width     < 0.17um (licon.1)	248154	0	0
+N-well overlap of Deep N-well < 0.4um outside, 1.03um inside (nwell.5a, 7)	84	0	0
+N-well overlap of N-tap < 0.18um (diff/tap.10)	910162	0	0
+P-Transistor in SRAM core width < 0.14um (diff/tap.2)	331004	0	0
+P-diffusion contact width < 0.17um (licon.1)	416248	0	0
+P-diffusion overlap of P-diffusion contact < 0.04um (licon.5a)	496440	0	0
+P-tap minimum area < 0.07011um^2 (psd.10b)	252510	0	0
+P-tap overlap of P-tap contact < 0.12um in one direction (licon.7)	672408	0	0
+This layer can't abut or partially overlap between subcells	499092	0	0
+Via1 width < 0.26um (via.1a + 2 * via.4a)	1597260	0	0
+nFET cannot abut P-diffusion (diff/tap.3)	420678	0	0
+poly contact spacing to diffusion < 0.19um (licon.14)	1697877	0	0
+poly contact width        < 0.17um (licon.1)	898278	0	0
+poly overhang of SRAM core transistor < 0.11um (poly.8)	1833704	0	0
+poly overlap of poly contact < 0.05um (licon.8)	1850092	0	0
+poly overlap of poly contact < 0.08um in one direction (licon.8a)	682544	0	0
+poly spacing < 0.21um (poly.2)	294490	0	0
+poly spacing to Diffusion < 0.075um (poly.4)	1339088	0	0
+# total_parsed=27733913 report_COUNT=27733913

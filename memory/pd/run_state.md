@@ -1,8 +1,6 @@
-run_id:      pd_20261027_sky130_soc_scan_reharden_j41m17
-design_name: soc_top (Sky130, scan, crypto scan_en withhold)
+run_id:      pd_20261107_quantus_crosscheck
+design_name: rv32i_cpu_top
 pdk:         sky130A
-tool:        LibreLane CVTClassicScan via make -C pnr librelane-sky130-soc-noklayout (config_rccal.json), CVT_SYNTH_GATE=warn, MAKEFLAGS=-j2, detached systemd --user service
-branch:      feat/sky130-soc-scan-reharden-j41m17 (base origin/main 2d22477), worktree .claude/worktrees/agent-af01ae5a0dd6edc58
-start_time:  2026-10-27T05:10+07:00 (gated relaunch 05:40)
-baseline:    RUN_2026-10-26_09-59-03 (scan SoC run, j41m.8)
-last_stage:  max-cap waiver set applied (10 waived, 0 unwaived, 0 stale); PR #333 draft, CI pending
+tool:        Quantus 23.1.1 / Techgen (cell flow), pt_shell
+start_time:  2026-11-07T09:02:00+08:00
+last_stage:  complete (nom/min/max Techgen + Quantus + correlation + report + compare.py; chain finished 18:57)

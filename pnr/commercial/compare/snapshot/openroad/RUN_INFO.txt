@@ -1,0 +1,4 @@
+run_dir: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/runs/b2_openroad  (gitignored)
+config:  /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/config.json (unchanged; CLI overrides: -j 4 -c DRT_THREADS=4)
+flow:    LibreLane 3562a8d (2.4.13-2-g3562a8d) + pnr/librelane_patches/librelane_live_state_2026-09-26.diff (15 files) + 2 untracked sources, in container ghcr.io/librelane/librelane:2.4.13 (OpenROAD edf00dff)
+git:     915cc01300c643c92e860781d4564cfd5f75de38 (branch feat/commercial-pd-sky130)

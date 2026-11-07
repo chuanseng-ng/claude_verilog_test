@@ -1,0 +1,22 @@
+total markers parsed: 30
+
+by type:
+      23  SPACING ParallelRunLength Spacing
+       7  SHORT Metal Short
+
+by layer:
+      27  met4
+       1  met2
+       1  met3
+       1  met1
+
+by location:
+      27  within 10um of SRAM edge  (90.0 %)
+       2  open core  (6.7 %)
+       1  inside SRAM footprint  (3.3 %)
+
+type x location:
+      22  SPACING ParallelRunLength Spacing @ within 10um of SRAM edge
+       5  SHORT Metal Short @ within 10um of SRAM edge
+       2  SHORT Metal Short @ open core
+       1  SPACING ParallelRunLength Spacing @ inside SRAM footprint

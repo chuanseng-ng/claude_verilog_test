@@ -1,0 +1,326 @@
+**************************************************
+Report         : unmatched_points
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Mon Oct 26 00:24:02 2026
+**************************************************
+
+143 Unmatched points (143 reference, 0 implementation):
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[flush_ex_mem]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][10]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][11]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][12]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][13]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][14]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][15]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][16]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][17]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][18]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][19]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][20]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][21]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][22]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][23]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][24]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][25]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][26]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][27]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][28]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][29]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][30]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][4]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][5]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][6]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][7]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[irq_cause][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[mem_size][2]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[mtvec][0]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg\[mtvec][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg\[mem_size][2]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][10]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][11]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][12]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][13]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][14]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][15]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][16]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][17]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][18]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][19]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][20]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][21]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][22]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][23]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][24]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][25]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][26]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][27]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][28]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][29]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][30]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][4]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][5]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][6]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][7]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[dec_trap_cause][9]
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[flush_ex_mem]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/ex1c_ex1b_reg_q_reg\[mem_size][2]
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/fwd_store_ex1b2_r_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/fwd_store_ex1c_r_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/fwd_store_sel_r_reg[0]
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/fwd_store_sel_r_reg[1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[0]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[10]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[11]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[12]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[13]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[14]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[15]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[16]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[17]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[18]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[19]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[20]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[21]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[22]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[23]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[24]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[25]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[26]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[27]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[28]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[29]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[30]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[31]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[3]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[4]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[5]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[6]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[7]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_cause_val_r_reg[9]
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/mem_trap_redirect_r_reg
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_target_r_reg[0]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/mem_trap_target_r_reg[1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_ex2/ex_mem_reg_o_reg\[mem_size][2]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/cancel_wait_r_q_reg
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[20]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[21]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[22]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[23]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[24]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[25]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[26]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[27]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[28]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[29]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[30]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_icache/tag_din_q_reg[31]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_core/u_id/id_ex_reg_o_reg\[mem_size][2]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[0][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[0][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[1][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[1][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[2][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[2][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[3][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[3][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[4][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[4][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[5][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[5][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[6][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[6][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[7][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[7][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[8][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[8][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[9][8]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_addr_q_reg[9][9]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[0][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[1][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[2][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[3][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[4][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[5][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[6][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[7][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[8][1]
+
+  Ref  DFF0X      r:/WORK/rv32i_cpu_top/u_mbist_ctrl/rec_port_q_reg[9][1]
+
+ [BBNet: multiply-driven net
+  BBox:  black-box
+  BBPin: black-box pin
+  Block: hierarchical block
+  BlPin: hierarchical block pin
+  Cut:   cut-point
+  DFF:   non-constant DFF register
+  DFF0:  constant 0 DFF register
+  DFF1:  constant 1 DFF register
+  DFFX:  constant X DFF register
+  DFF0X: constrained 0X DFF register
+  DFF1X: constrained 1X DFF register
+  LAT:   non-constant latch register
+  LAT0:  constant 0 latch register
+  LAT1:  constant 1 latch register
+  LATX:  constant X latch register
+  LAT0X: constrained 0X latch register
+  LAT1X: constrained 1X latch register
+  LATCG: clock-gating latch register
+  TLA:   transparent latch register
+  TLA0X: transparent constrained 0X latch register
+  TLA1X: transparent constrained 1X latch register
+  Loop:  cycle break point
+  Net:   matchable net
+  Port:  primary (top-level) port
+  Und:   undriven signal cut-point
+  Unk:   unknown signal cut-point]
+
+1

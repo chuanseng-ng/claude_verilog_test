@@ -1,0 +1,170 @@
+****************************************
+Report : timing
+	-path_type full_clock_expanded
+	-delay_type max
+	-input_pins
+	-max_paths 1
+	-transition_time
+	-sort_by slack
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sun Nov  1 21:52:45 2026
+****************************************
+
+
+  Startpoint: u_core/ex1a_ex1b_reg_q_reg[pc][1]
+               (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex1c_ex1b_reg_q_reg[dec_redirect_target][31]
+               (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: max
+
+  Point                                          Trans       Incr       Path
+  -----------------------------------------------------------------------------
+  clock clk_i (rise edge)                       0.0000     0.0000     0.0000
+  clock network delay (ideal)                              1.0000     1.0000
+  u_core/ex1a_ex1b_reg_q_reg[pc][1]/CLK (sky130_fd_sc_hd__dfxbp_1)
+                                                0.0000     0.0000     1.0000 r
+  u_core/ex1a_ex1b_reg_q_reg[pc][1]/Q (sky130_fd_sc_hd__dfxbp_1)
+                                                0.1265     0.6397     1.6397 f
+  u_core/u_ex1c/add_208_58_g2__1705/B (sky130_fd_sc_hd__or2_2)
+                                                0.1265     0.0020     1.6417 f
+  u_core/u_ex1c/add_208_58_g2__1705/X (sky130_fd_sc_hd__or2_2)
+                                                0.1272     0.6627     2.3044 f
+  u_core/u_ex1c/g7518/A2 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1272     0.0031     2.3075 f
+  u_core/u_ex1c/g7518/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.3991     2.7066 f
+  u_core/u_ex1c/g7517/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     2.7097 f
+  u_core/u_ex1c/g7517/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.3553     3.0650 f
+  u_core/u_ex1c/g7516/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     3.0681 f
+  u_core/u_ex1c/g7516/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.3553     3.4234 f
+  u_core/u_ex1c/g7515/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     3.4265 f
+  u_core/u_ex1c/g7515/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.3553     3.7819 f
+  u_core/u_ex1c/g7514/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     3.7850 f
+  u_core/u_ex1c/g7514/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.3553     4.1403 f
+  u_core/u_ex1c/g7513/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     4.1434 f
+  u_core/u_ex1c/g7513/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.3553     4.4987 f
+  u_core/u_ex1c/g7512/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     4.5018 f
+  u_core/u_ex1c/g7512/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.0994     0.3546     4.8564 f
+  u_core/u_ex1c/add_208_58_g2952__6783/A (sky130_fd_sc_hd__nand2_1)
+                                                0.0994     0.0030     4.8594 f
+  u_core/u_ex1c/add_208_58_g2952__6783/Y (sky130_fd_sc_hd__nand2_1)
+                                                0.0958     0.1174     4.9768 r
+  u_core/u_ex1c/g3/A (sky130_fd_sc_hd__and2_1)
+                                                0.0958     0.0020     4.9788 r
+  u_core/u_ex1c/g3/X (sky130_fd_sc_hd__and2_1)
+                                                0.0818     0.2255     5.2042 r
+  u_core/u_ex1c/g2/A1 (sky130_fd_sc_hd__o21a_1)
+                                                0.0818     0.0048     5.2091 r
+  u_core/u_ex1c/g2/X (sky130_fd_sc_hd__o21a_1)
+                                                0.1085     0.2657     5.4748 r
+  u_core/u_ex1c/g7522/CIN (sky130_fd_sc_hd__fahcin_1)
+                                                0.1085     0.0091     5.4839 r
+  u_core/u_ex1c/g7522/COUT (sky130_fd_sc_hd__fahcin_1)
+                                                0.2066     0.2078     5.6917 f
+  u_core/u_ex1c/g7511/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.2066     0.0031     5.6948 f
+  u_core/u_ex1c/g7511/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.4004     6.0952 f
+  u_core/u_ex1c/g7510/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     6.0983 f
+  u_core/u_ex1c/g7510/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.3553     6.4537 f
+  u_core/u_ex1c/g7509/A1 (sky130_fd_sc_hd__a21bo_1)
+                                                0.1002     0.0031     6.4568 f
+  u_core/u_ex1c/g7509/X (sky130_fd_sc_hd__a21bo_1)
+                                                0.0628     0.3139     6.7707 f
+  u_core/u_ex1c/g7521/CI (sky130_fd_sc_hd__fah_1)
+                                                0.0628     0.0046     6.7753 f
+  u_core/u_ex1c/g7521/COUT (sky130_fd_sc_hd__fah_1)
+                                                0.0919     0.4501     7.2253 f
+  u_core/u_ex1c/g7520/CI (sky130_fd_sc_hd__fah_1)
+                                                0.0919     0.0046     7.2299 f
+  u_core/u_ex1c/g7520/COUT (sky130_fd_sc_hd__fah_1)
+                                                0.1413     0.5300     7.7599 f
+  u_core/u_ex1c/g7507/C_N (sky130_fd_sc_hd__or3b_2)
+                                                0.1413     0.0019     7.7619 f
+  u_core/u_ex1c/g7507/X (sky130_fd_sc_hd__or3b_2)
+                                                0.0847     0.4144     8.1763 r
+  u_core/u_ex1c/add_208_58_g2925__1617/A2 (sky130_fd_sc_hd__o221ai_2)
+                                                0.0847     0.0058     8.1821 r
+  u_core/u_ex1c/add_208_58_g2925__1617/Y (sky130_fd_sc_hd__o221ai_2)
+                                                0.2044     0.2486     8.4307 f
+  u_core/u_ex1c/add_208_58_g2919__6260/A1 (sky130_fd_sc_hd__a31o_1)
+                                                0.2044     0.0030     8.4338 f
+  u_core/u_ex1c/add_208_58_g2919__6260/X (sky130_fd_sc_hd__a31o_1)
+                                                0.0665     0.3739     8.8076 f
+  u_core/u_ex1c/add_208_58_g2914__7410/A1 (sky130_fd_sc_hd__a21boi_1)
+                                                0.0665     0.0045     8.8122 f
+  u_core/u_ex1c/add_208_58_g2914__7410/Y (sky130_fd_sc_hd__a21boi_1)
+                                                0.1793     0.2033     9.0155 r
+  u_core/u_ex1c/add_208_58_g2911__2883/A2 (sky130_fd_sc_hd__o21ai_1)
+                                                0.1793     0.0051     9.0205 r
+  u_core/u_ex1c/add_208_58_g2911__2883/Y (sky130_fd_sc_hd__o21ai_1)
+                                                0.1622     0.2039     9.2245 f
+  u_core/u_ex1c/add_208_58_g2909__9315/A (sky130_fd_sc_hd__nand2_1)
+                                                0.1622     0.0030     9.2274 f
+  u_core/u_ex1c/add_208_58_g2909__9315/Y (sky130_fd_sc_hd__nand2_1)
+                                                0.1467     0.1854     9.4129 r
+  u_core/u_ex1c/add_208_58_g2905__5115/B2 (sky130_fd_sc_hd__o221a_2)
+                                                0.1467     0.0032     9.4161 r
+  u_core/u_ex1c/add_208_58_g2905__5115/X (sky130_fd_sc_hd__o221a_2)
+                                                0.1023     0.4274     9.8436 r
+  u_core/u_ex1c/g7519/CIN (sky130_fd_sc_hd__fahcin_1)
+                                                0.1023     0.0091     9.8527 r
+  u_core/u_ex1c/g7519/COUT (sky130_fd_sc_hd__fahcin_1)
+                                                0.1648     0.1764    10.0291 f
+  u_core/u_ex1c/add_208_58_g2898__2802/CIN (sky130_fd_sc_hd__fa_1)
+                                                0.1648     0.0081    10.0372 f
+  u_core/u_ex1c/add_208_58_g2898__2802/COUT (sky130_fd_sc_hd__fa_1)
+                                                0.1605     0.8659    10.9031 f
+  u_core/u_ex1c/add_208_58_g2897__1617/CIN (sky130_fd_sc_hd__fa_1)
+                                                0.1605     0.0081    10.9112 f
+  u_core/u_ex1c/add_208_58_g2897__1617/COUT (sky130_fd_sc_hd__fa_1)
+                                                0.1610     0.8649    11.7761 f
+  u_core/u_ex1c/add_208_58_g2896__3680/B (sky130_fd_sc_hd__xnor2_1)
+                                                0.1610     0.0082    11.7843 f
+  u_core/u_ex1c/add_208_58_g2896__3680/Y (sky130_fd_sc_hd__xnor2_1)
+                                                0.0952     0.2426    12.0269 f
+  u_core/u_ex1c/g7299__4319/A1 (sky130_fd_sc_hd__a221o_1)
+                                                0.0952     0.0046    12.0315 f
+  u_core/u_ex1c/g7299__4319/X (sky130_fd_sc_hd__a221o_1)
+                                                0.0910     0.5783    12.6098 f
+  u_core/g432731/A0 (sky130_fd_sc_hd__mux2i_1)
+                                                0.0910     0.0043    12.6140 f
+  u_core/g432731/Y (sky130_fd_sc_hd__mux2i_1)   0.1970     0.2055    12.8196 r
+  u_core/g431415/B (sky130_fd_sc_hd__nor2_1)    0.1970     0.0049    12.8244 r
+  u_core/g431415/Y (sky130_fd_sc_hd__nor2_1)    0.0734     0.1097    12.9342 f
+  u_core/ex1c_ex1b_reg_q_reg[dec_redirect_target][31]/D (sky130_fd_sc_hd__dfxtp_1)
+                                                0.0734     0.0034    12.9376 f
+  data arrival time                                                  12.9376
+
+  clock clk_i (rise edge)                       0.0000    13.3330    13.3330
+  clock network delay (ideal)                              1.0000    14.3330
+  u_core/ex1c_ex1b_reg_q_reg[dec_redirect_target][31]/CLK (sky130_fd_sc_hd__dfxtp_1)
+                                                                     14.3330 r
+  clock reconvergence pessimism                            0.0000    14.3330
+  clock uncertainty                                       -0.5000    13.8330
+  library setup time                                      -0.2893    13.5437
+  data required time                                                 13.5437
+  -----------------------------------------------------------------------------
+  data required time                                                 13.5437
+  data arrival time                                                 -12.9376
+  -----------------------------------------------------------------------------
+  slack (MET)                                                         0.6062
+
+
+1

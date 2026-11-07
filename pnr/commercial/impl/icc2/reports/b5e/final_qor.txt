@@ -1,0 +1,177 @@
+****************************************
+Report : qor
+        -summary
+Design : rv32i_cpu_top
+Version: X-2025.06-SP1
+Date   : Thu Oct 29 20:34:32 2026
+****************************************
+
+Timing
+---------------------------------------------------------------------------
+Context                                 WNS            TNS            NVE
+---------------------------------------------------------------------------
+Design             (Setup)             0.07           0.00              0
+
+Design             (Hold)              0.00           0.00              0
+---------------------------------------------------------------------------
+
+Miscellaneous
+---------------------------------------------------------------------------
+Cell Area (netlist):                        2220222.03
+Cell Area (netlist and physical only):      2315146.82
+Nets with DRC Violations:      280
+****************************************
+Report : qor
+Design : rv32i_cpu_top
+Version: X-2025.06-SP1
+Date   : Thu Oct 29 20:34:33 2026
+****************************************
+
+
+Scenario           'default'
+Timing Path Group  'PIPELINE'
+----------------------------------------
+Levels of Logic:                     36
+Critical Path Length:             12.29
+Critical Path Slack:               0.07
+Critical Path Clk Period:         13.33
+Total Negative Slack:              0.00
+No. of Violating Paths:               0
+Worst Hold Violation:              0.00
+Total Hold Violation:              0.00
+No. of Hold Violations:               0
+----------------------------------------
+
+
+Cell Count
+----------------------------------------
+Hierarchical Cell Count:              0
+Hierarchical Port Count:              0
+Leaf Cell Count:                  34731
+Buf/Inv Cell Count:                9610
+Buf Cell Count:                    5187
+Inv Cell Count:                    4423
+Combinational Cell Count:         29437
+   Single-bit Isolation Cell Count:                        0
+   Multi-bit Isolation Cell Count:                         0
+   Isolation Cell Banking Ratio:                           0.00%
+   Single-bit Level Shifter Cell Count:                    0
+   Multi-bit Level Shifter Cell Count:                     0
+   Level Shifter Cell Banking Ratio:                       0.00%
+   Single-bit ELS Cell Count:                              0
+   Multi-bit ELS Cell Count:                               0
+   ELS Cell Banking Ratio:                                 0.00%
+Sequential Cell Count:             5294
+   Integrated Clock-Gating Cell Count:                     0
+   Sequential Macro Cell Count:                            10
+   Single-bit Sequential Cell Count:                       5284
+   Multi-bit Sequential Cell Count:                        0
+   Sequential Cell Banking Ratio:                          0.00%
+   BitsPerflop:                                            1.00
+Macro Count:                         10
+----------------------------------------
+
+
+Area
+----------------------------------------
+Combinational Area:           187897.71
+Noncombinational Area:        125198.83
+Buf/Inv Area:                  57747.88
+Total Buffer Area:             37868.82
+Total Inverter Area:           19879.07
+Macro/Black Box Area:        1907125.50
+Net Area:                             0
+Net XLength:                 2381105.94
+Net YLength:                 2121051.68
+----------------------------------------
+Cell Area (netlist):                        2220222.03
+Cell Area (netlist and physical only):      2315146.82
+Net Length:                  4502157.62
+
+
+Design Rules
+----------------------------------------
+Total Number of Nets:             35090
+Nets with Violations:               280
+Max Trans Violations:               121
+Max Cap Violations:                 170
+----------------------------------------
+
+****************************************
+Report : qor
+Design : rv32i_cpu_top
+Version: X-2025.06-SP1
+Date   : Thu Oct 29 20:34:33 2026
+****************************************
+
+
+Scenario           'default'
+Timing Path Group  'PIPELINE'
+----------------------------------------
+Levels of Logic:                     36
+Critical Path Length:             12.29
+Critical Path Slack:               0.07
+Critical Path Clk Period:         13.33
+Total Negative Slack:              0.00
+No. of Violating Paths:               0
+Worst Hold Violation:              0.00
+Total Hold Violation:              0.00
+No. of Hold Violations:               0
+----------------------------------------
+
+
+Cell Count
+----------------------------------------
+Hierarchical Cell Count:              0
+Hierarchical Port Count:              0
+Leaf Cell Count:                  34731
+Buf/Inv Cell Count:                9610
+Buf Cell Count:                    5187
+Inv Cell Count:                    4423
+Combinational Cell Count:         29437
+   Single-bit Isolation Cell Count:                        0
+   Multi-bit Isolation Cell Count:                         0
+   Isolation Cell Banking Ratio:                           0.00%
+   Single-bit Level Shifter Cell Count:                    0
+   Multi-bit Level Shifter Cell Count:                     0
+   Level Shifter Cell Banking Ratio:                       0.00%
+   Single-bit ELS Cell Count:                              0
+   Multi-bit ELS Cell Count:                               0
+   ELS Cell Banking Ratio:                                 0.00%
+Sequential Cell Count:             5294
+   Integrated Clock-Gating Cell Count:                     0
+   Sequential Macro Cell Count:                            10
+   Single-bit Sequential Cell Count:                       5284
+   Multi-bit Sequential Cell Count:                        0
+   Sequential Cell Banking Ratio:                          0.00%
+   BitsPerflop:                                            1.00
+Macro Count:                         10
+----------------------------------------
+
+
+Area
+----------------------------------------
+Combinational Area:           187897.71
+Noncombinational Area:        125198.83
+Buf/Inv Area:                  57747.88
+Total Buffer Area:             37868.82
+Total Inverter Area:           19879.07
+Macro/Black Box Area:        1907125.50
+Net Area:                             0
+Net XLength:                 2381105.94
+Net YLength:                 2121051.68
+----------------------------------------
+Cell Area (netlist):                        2220222.03
+Cell Area (netlist and physical only):      2315146.82
+Net Length:                  4502157.62
+
+
+Design Rules
+----------------------------------------
+Total Number of Nets:             35090
+Nets with Violations:               280
+Max Trans Violations:               121
+Max Cap Violations:                 170
+----------------------------------------
+
+1

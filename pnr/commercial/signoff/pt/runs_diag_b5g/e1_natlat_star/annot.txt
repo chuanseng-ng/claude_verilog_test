@@ -1,0 +1,32 @@
+Error: Load pin 'axi_awlen_o[1]' is missing in the RC annotation for net 'axi_awlen_o[0]'.  Ignoring the incomplete RC annotation. (PARA-006)
+Error: Load pin 'axi_arsize_o[1]' is missing in the RC annotation for net 'axi_arburst_o[0]'.  Ignoring the incomplete RC annotation. (PARA-006)
+Error: Load pin 'debug_take_branch_jump_o' is missing in the RC annotation for net 'debug_pc_src_o'.  Ignoring the incomplete RC annotation. (PARA-006)
+****************************************
+Report : annotated_parasitics
+	-check
+	-internal_nets
+	-boundary_nets
+	-driverless_nets
+	-loadless_nets
+	-pin_to_pin_nets
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 09:42:14 2026
+****************************************
+
+                    |         |         |         |   RC    |   Not   |
+Net Type            |  Total  | Lumped  |  RC pi  | network |Annotated|
+--------------------+---------+---------+---------+---------+---------+
+Internal nets       |         |         |         |         |         |
+  - Pin to pin nets |   35071 |       0 |       0 |   35071 |       0 |
+  - Driverless nets |    1752 |       0 |       0 |       0 |    1752 |
+  - Loadless nets   |     322 |       0 |       0 |     322 |       0 |
+--------------------+---------+---------+---------+---------+---------+
+Boundary/port nets  |         |         |         |         |         |
+  - Pin to pin nets |     492 |       0 |       0 |     492 |       0 |
+  - Driverless nets |       0 |       0 |       0 |       0 |       0 |
+  - Loadless nets   |       8 |       0 |       0 |       8 |       0 |
+--------------------+---------+---------+---------+---------+---------+
+                    |   37645 |       0 |       0 |   35893 |    1752 |
+
+1

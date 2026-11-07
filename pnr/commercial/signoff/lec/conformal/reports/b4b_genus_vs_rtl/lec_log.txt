@@ -1,0 +1,2644 @@
+                          CONFORMAL (R)
+                   Version 24.10-p100 (30-May-2024) (64 bit executable)
+   Copyright (c) Cadence Design Systems, Inc., 1997-2024. All Rights Reserved
+
+
+This program is proprietary and confidential information belonging to
+Cadence Design Systems, Inc., and may be used and disclosed only as authorized
+in a license agreement controlling such use and disclosure.
+
+// Warning: This version is 878 days old. You can download the latest version from http://downloads.cadence.com.
+
+0
+// Command: usage -auto -elapse
+CPU time     : 0.14    seconds
+Elapse time  : 0       seconds
+Memory usage : 88.61   M bytes
+0
+// Command: set_mapping_method -sensitive
+0
+// Command: set_verification_information fv_map_rv32i_cpu_topnlv_db
+// Note: Verification information fv_map_rv32i_cpu_topnlv_db does not exist. New directory created.
+// Verification information is set to /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/fv_map_rv32i_cpu_topnlv_db.
+0
+// Command: read_implementation_information fv/rv32i_cpu_top -golden fv_map -revised rv32i_cpu_topnlv -use_rtl_names
+// Reading implementation information from fv/rv32i_cpu_top ...
+// Note: Implementation information 'fv_map.fv.json' will be used
+// Note: Implementation information 'rv32i_cpu_topnlv.fv.json' will be used
+================================================================================
+          Information Category                         Count
+--------------------------------------------------------------------------------
+     Sequential instance phase                         10436
+       Sequential optimization                             0
+        Sequential duplication                             0
+         Boundary optimization                           194
+            Synthesis equation                            14
+    Combinational loop breaker                             0
+                       Mapping                             0
+================================================================================
+// Note: Read implementation information successfully.
+0
+CPU time     : 0.90    seconds
+Elapse time  : 0       seconds
+Memory usage : 109.32  M bytes
+// Command: set_parallel_option -threads 1,2 -norelease_license
+// Number of threads is set to 1,2.
+0
+// Command: set_compare_options -threads 1,2
+Set computing threads of compare to 1,2.
+0
+// Command: set env(RC_VERSION)     "23.14-s090_1"
+23.14-s090_1
+// Command: set env(CDN_SYNTH_ROOT) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set CDN_SYNTH_ROOT      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set env(CW_DIR) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set CW_DIR      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set lec_version_required "21.20249"
+21.20249
+// Command: if { ($lec_version < $lec_version_required) &&
+//              [file exists /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim]} {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//          } else {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//          }
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim
+// Command: set_multiplier_implementation boothrca -both
+0
+// Command: set_undefined_cell black_box -noascend -both
+0
+// Command: add_notranslate_modules -library -both sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: add_search_path . /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/tech -library -both
+0
+// Command: read_library -liberty -both \
+//              /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib \
+//              /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib ...
+// Parsing file /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:12)
+// Warning: (RTL9.21) Liberty cell with interface_timing attribute set to true was not an empty cell (occurrence:1)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:6)
+// Note: (HRC1.2) Module/entity is not translated (blackboxed) (occurrence:1)
+// Note: Read Liberty library successfully
+0
+CPU time     : 1.19    seconds
+Elapse time  : 0       seconds
+Memory usage : 126.16  M bytes
+// Command: read_design -verilog95   -golden -lastmod -noelab fv/rv32i_cpu_top/fv_map.v.gz
+// Parsing file fv/rv32i_cpu_top/fv_map.v.gz ...
+0
+CPU time     : 1.75    seconds
+Elapse time  : 1       seconds
+Memory usage : 164.79  M bytes
+// Command: elaborate_design -golden -root {rv32i_cpu_top}
+// Golden root module is set to 'rv32i_cpu_top'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:951)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:27)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:398)
+// Warning: Total black box modules referenced in Golden = 1
+0
+CPU time     : 2.03    seconds
+Elapse time  : 1       seconds
+Memory usage : 161.53  M bytes
+// Command: read_design -verilog95   -revised -lastmod -noelab $env(IMPL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/syn/genus/runs/b3b_genus_tt_r2/out/rv32i_cpu_top.nl.v ...
+0
+CPU time     : 2.47    seconds
+Elapse time  : 2       seconds
+Memory usage : 190.29  M bytes
+// Command: elaborate_design -revised -root {rv32i_cpu_top}
+// Revised root module is set to 'rv32i_cpu_top'
+// Warning: (RTL2.5) Net is referenced without an assignment. Design verification will be based on set_undriven_signal setting (occurrence:272)
+// Warning: (RTL2.13) Undriven pin is detected (occurrence:607)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:901)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:28)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:280)
+// Warning: Total black box modules referenced in Revised = 1
+// Warning: There are 607 undriven nets in Revised
+// Warning: There are 607 undriven pins in Revised
+0
+CPU time     : 2.79    seconds
+Elapse time  : 2       seconds
+Memory usage : 185.08  M bytes
+// Command: write_design -golden fv_map_rv32i_cpu_topnlv_db/elab.v -replace
+// Note: Wrote VERILOG design successfully
+0
+CPU time     : 4.24    seconds
+Elapse time  : 3       seconds
+Memory usage : 187.52  M bytes
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules        29               4
+Library-cells      26875           26347
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+AND        *     33714                33812
+BUF        *       286                  228
+DFF               5208                 5208
+INV        *     62370                62847
+OR         *     16189                16163
+WIRE       *         4                    0
+------ word-level --------------------------
+BBOX                10                   10
+--------------------------------------------
+Total           117781               118268
+
+0
+// Command: report_black_box
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: report_modules
+Golden:
+   rv32i_cpu_top 
+      rv32i_core_RESET_PC0 
+         add_signed_1021 
+         sub_signed_1608 
+         csa_tree_ADD_TC_OP_269_group_1828 
+         increment_unsigned_1759_1816 
+         increment_unsigned_1760_1817_8104 
+         increment_unsigned_1578_1818 
+         increment_unsigned_1760_1817 
+         increment_unsigned_1760_1817_8105 
+         cdec 
+         cmux 
+         cmux_2949 
+         rv32i_pipeline_ex1c 
+         add_unsigned_1046_7985 
+         add_unsigned_1046_7986 
+         add_unsigned_1046_7987 
+         add_unsigned_1046 
+         cdec_2955 
+         cmux_2953 
+         rv32i_decode 
+         add_unsigned_346_2665_1 
+         cdec_2959 
+         cdec_2963 
+         cdec_2967 
+         cmux_2957 
+         cmux_2961 
+         cmux_2965 
+Revised:
+   rv32i_cpu_top 
+      rv32i_core_RESET_PC0 
+         rv32i_pipeline_ex1c 
+         rv32i_decode 
+0
+// Command: set_flatten_model -seq_constant
+0
+// Command: set_flatten_model -seq_constant_x_to 0
+0
+// Command: set_flatten_model -hier_seq_merge
+0
+// Command: analyze_extended_mapping fv/rv32i_cpu_top/fv_map.map.do fv/rv32i_cpu_top/rv32i_cpu_topnlv.map.do -output fv_map_rv32i_cpu_topnlv_1.map.do -input_specification rtl-n1 rtl-n2 -output_specification n1-n2 -replace -verbose
+// Information in fv/rv32i_cpu_top/fv_map.map.do
+================================================================================
+          Information Category                         Count
+--------------------------------------------------------------------------------
+           Sequential Constant                             0
+              Sequential Merge                             0
+                       Mapping                          5721
+================================================================================
+// Note: File 'fv/rv32i_cpu_top/fv_map.map.do' is a simplified mapping file; not an extended mapping file.
+// Information in fv/rv32i_cpu_top/rv32i_cpu_topnlv.map.do
+================================================================================
+          Information Category                         Count
+--------------------------------------------------------------------------------
+           Sequential Constant                             0
+              Sequential Merge                             0
+                       Mapping                          5721
+================================================================================
+// Note: File 'fv/rv32i_cpu_top/rv32i_cpu_topnlv.map.do' is a simplified mapping file; not an extended mapping file.
+// Analyzing extended mapping files...
+// Successfully processed 5721 mapped points.
+// Note: Detected simplified mapping file format in the input files.
+//       Output file 'fv_map_rv32i_cpu_topnlv_1.map.do' will also be a simplified mapping file.
+// 5721 extended mapping information records were written out.
+
+0
+// Command: set lec_version_required "21.10142"
+21.10142
+// Command: if {$lec_version >= $lec_version_required} {
+//              puts "For safety of verification, PIs and POs should be mapped by name."
+//              set_mapping_method -mapping_file_nopipo
+//          }
+For safety of verification, PIs and POs should be mapped by name.
+// Command: set_mapping_method -mapping_file_nopipo
+0
+// Command: set_mapping_method -search_in_mapping_file
+0
+// Command: set_analyze_option -mapping_file fv_map_rv32i_cpu_topnlv_1.map.do
+// Reading mapping information file fv_map_rv32i_cpu_topnlv_1.map.do ...
+// 5721 mapping information records are added
+0
+CPU time     : 4.39    seconds
+Elapse time  : 4       seconds
+Memory usage : 190.20  M bytes
+// Command: check_mapping_setup -mapping_file_quality -summary
+// Note: PI and PO are ignored due to set_mapping_method -MAPPING_FILE_NOPIPO
+===============================================
+        Mapping File Quality Summary
+===============================================
+                     Golden      Revised
+-----------------------------------------------
+Valid                  5218         5218
+Mapped by File         5208         5208
+===============================================
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//              check_verification_information
+//          }
+// Command: check_verification_information
+Checking Sequential constant...
+Checking Sequential merge...
+Checking Synthesis equation...
+================================================================================
+Implementation Information Check Summary: 
+--------------------------------------------------------------------------------
+Total Sequential Constants:     0
+  Name Collision:               0
+  Name Ambiguous:               0
+  Name not Found:               0
+--------------------------------------------------------------------------------
+Total Sequential Merges:        0
+  Name Collision:               0
+  Name Ambiguous:               0
+  Name not Found:               0
+  Merge Target:
+    Name Ambiguous:             0
+    Name not Found:             0
+--------------------------------------------------------------------------------
+Total Synthesis Equations:      14
+  Module not Found:             0
+  Equation Conflict:            0
+  Equation Syntax Error:        0
+No Equation Modules:            0
+================================================================================
+0
+CPU time     : 4.79    seconds
+Elapse time  : 8       seconds
+Memory usage : 194.97  M bytes
+// Command: set_analyze_option -auto -report_map
+0
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling (auto) mapped 10416 out of 10416 DFF/DLATs
+// 5208 are from mapping setup information.
+// (F28) Converted 607 internal output port(s) to inout port(s)
+CPU time     : 11.10   seconds
+Elapse time  : 15      seconds
+Memory usage : 284.19  M bytes
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 5218 key point(s) by mapping information
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            5208   10        5218    
+--------------------------------------------------------------------------------
+Revised           5208   10        5218    
+================================================================================
+CPU time     : 11.42   seconds
+Elapse time  : 15      seconds
+Memory usage : 289.04  M bytes
+// Running automatic setup...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            5208   10        5218    
+--------------------------------------------------------------------------------
+Revised           5208   10        5218    
+================================================================================
+// Automatic setup finished.
+0
+CPU time     : 14.98   seconds
+Elapse time  : 19      seconds
+Memory usage : 289.73  M bytes
+// Command: report_unmapped_points -summary
+There is no unmapped point
+0
+// Command: report_unmapped_points -notmapped
+There is no unmapped point
+0
+// Command: add_compared_points -all
+// 5597 compared points added to compare list
+0
+// Command: compare
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5208   10        5597    
+================================================================================
+0
+CPU time     : 19.90   seconds
+Elapse time  : 26      seconds
+Memory usage : 307.12  M bytes
+// Command: report_compare_data -class nonequivalent -class abort -class notcompared
+0 Non-equivalent point(s) reported
+0 Abort point(s) reported
+0 Not-compared point(s) reported
+0 compared point(s) reported
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5208   10        5597    
+================================================================================
+0
+// Command: report_verification -verbose
+================================================================================
+                            Verification Report
+--------------------------------------------------------------------------------
+Category                                                                  Count
+--------------------------------------------------------------------------------
+1. Non-standard modeling options used:                                      0
+     Tri-stated output:                                        checked
+     Revised X signals set to E:                               yes
+     Floating signals tied to Z:                               yes
+     Command "add clock" for clock-gating:                     not used
+--------------------------------------------------------------------------------
+2. Incomplete verification:                                                 0
+     All primary outputs are mapped:                           yes
+     Not-mapped DFF/DLAT is detected:                          no
+     All mapped points are added as compare points:            yes
+     All compared points are compared:                         yes
+     User added black box:                                     no
+     Black box mapped with different module name:              no
+     Empty module is not black boxed:                          no
+     Command "add ignore outputs" used:                        no
+     Always false constraints detected:                        no
+--------------------------------------------------------------------------------
+3. User modification to design:                                             0
+     Change gate type:                                         no
+     Change wire:                                              no
+     Primary input added by user:                              no
+--------------------------------------------------------------------------------
+4. Conformal Constraint Designer clock domain crossing checks recommended:  0
+     Multiple clocks in the design:                            no
+--------------------------------------------------------------------------------
+5. Design ambiguity:                                                        0
+     Duplicate module definition:                              no
+     Black box due to undefined cells:                         no
+     Golden design has abnormal ratio of unreachable gates:    no
+     Ratio of golden unreachable gates:                        0%
+     Revised design has abnormal ratio of unreachable gates:   no
+     Ratio of revised unreachable gates:                       0%
+     All primary input bus ordering is consistent:             yes
+     All primary output bus ordering is consistent:            yes
+     DFF/DLAT not compared due to disabled clock port(s):        0
+     Always X compared point is detected:                      not checked
+--------------------------------------------------------------------------------
+6. Compare Results:                                                        PASS
+     Number of EQ compare points:                              5597
+     Number of NON-EQ compare points:                          0
+     Number of Aborted compare points:                         0
+     Number of Uncompared compare points :                     0
+================================================================================
+pass
+// Command: report_statistics
+Mapping and compare statistics
+================================================================================
+                     Compare Result       Golden            Revised
+--------------------------------------------------------------------------------
+Root module name                          rv32i_cpu_top     rv32i_cpu_top     
+
+Primary inputs                               124                124
+   Mapped                                    124                124
+
+Primary outputs                              379                379
+   Mapped                                    379                379
+      Equivalent                379
+
+Black-box key points                          10                 10
+   Mapped                                     10                 10
+      Equivalent                 10
+
+State key points                            5208               5208
+   Mapped                                   5208               5208
+      Equivalent               5208
+================================================================================
+0
+// Command: write_compared_points noneq.compared_points.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.tcl -class noneq -tclmode -replace
+0
+// Command: set lec_version_required "21.10100"
+21.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//              analyze_nonequivalent -source_diagnosis
+//              report_nonequivalent_analysis > noneq.source_diag.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.rpt
+//          }
+// Command: analyze_nonequivalent -source_diagnosis
+// Warning: Non-equivalent points do not exist.
+// Command: report_nonequivalent_analysis > noneq.source_diag.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.rpt
+0
+// Command: report_test_vector -noneq > noneq.test_vector.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.rpt
+0
+// Command: if {![is_pass]} {
+//              puts "B4B_LEG1_VERDICT: NOT_EQUIVALENT"
+//              error "// ERROR: Compare was not equivalent."
+//          }
+// Command: puts "B4B_LEG1_VERDICT: EQUIVALENT"
+B4B_LEG1_VERDICT: EQUIVALENT
+// Command: write_verification_information
+// Verification information is written to fv_map_rv32i_cpu_topnlv_db.
+0
+// Command: report_verification_information
+// Generating reports on verification information at /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/fv_map_rv32i_cpu_topnlv_db...
+LEC run scores:
+================================================================================
+Step                Score     Range          
+--------------------------------------------------------------------------------
+result_status       10        10             
+runtime             10        10             
+mapping             10        10             
+sequential_constant 5         10             
+sequential_merge    5         10             
+sequential_phase    10        10             
+datapath_analysis   5         10             
+combinational_loop  5         10             
+mismatch_detection  5         10             
+overall             65        90             
+================================================================================
+LEC results versus attributes:
+================================================================================
+Attribute           Total     Inconsistency  Combined Table                
+--------------------------------------------------------------------------------
+sequential_constant 0         0                                            
+sequential_merge    0         0                                            
+sequential_phase    5208      0              sequential_phase.json         
+================================================================================
+The tables can be viewed directly using web interface.
+// Done with reporting verification information.
+0
+// Command: report_implementation_information
+// Reporting implementation information...
+// Information summary:
+================================================================================
+        Information Category     Total      Used    Unused  Rejected     Abort
+--------------------------------------------------------------------------------
+   Sequential instance phase     10436         0     10436         0         0
+               Phase mapping         0         0         0         0         0
+         Sequential constant         0         0         0         0         0
+            Sequential merge         0         0         0         0         0
+      Sequential unreachable         0         0         0         0         0
+      Sequential duplication         0         0         0         0         0
+       Boundary optimization       194         0       194         0         0
+          Synthesis equation        14        14         0         0         0
+  Combinational loop breaker         0         0         0         0         0
+================================================================================
+0
+// Command: reset
+// Warning: Reset the system and deleting all design data
+// Warning: Existing golden design has been deleted
+// Warning: Existing golden library has been deleted
+// Warning: Existing revised design has been deleted
+// Warning: Existing revised library has been deleted
+0
+CPU time     : 20.18   seconds
+Elapse time  : 27      seconds
+Memory usage : 264.66  M bytes
+// Command: set_mapping_method -sensitive
+0
+// Command: set_verification_information rtl_fv_map_db
+// Note: Verification information rtl_fv_map_db does not exist. New directory created.
+// Verification information is set to /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/rtl_fv_map_db.
+0
+// Command: read_implementation_information fv/rv32i_cpu_top -revised fv_map -use_rtl_names
+// Reading implementation information from fv/rv32i_cpu_top ...
+// Note: Implementation information 'fv_map.fv.json' will be used
+================================================================================
+          Information Category                         Count
+--------------------------------------------------------------------------------
+     Sequential instance phase                          5218
+       Sequential optimization                          1042
+        Sequential duplication                             0
+         Boundary optimization                          1017
+            Synthesis equation                            14
+    Combinational loop breaker                             0
+                       Mapping                             0
+================================================================================
+// Note: Read implementation information successfully.
+0
+CPU time     : 20.31   seconds
+Elapse time  : 28      seconds
+Memory usage : 264.71  M bytes
+// Command: set_parallel_option -threads 1,2 -norelease_license
+// Number of threads is set to 1,2.
+0
+// Command: set_compare_options -threads 1,2
+Set computing threads of compare to 1,2.
+0
+// Command: set env(RC_VERSION)     "23.14-s090_1"
+23.14-s090_1
+// Command: set env(CDN_SYNTH_ROOT) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set CDN_SYNTH_ROOT      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set env(CW_DIR) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set CW_DIR      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set lec_version_required "21.20249"
+21.20249
+// Command: if { ($lec_version < $lec_version_required) &&
+//              [file exists /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim]} {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//          } else {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//          }
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim
+// Command: set_multiplier_implementation boothrca -both
+0
+// Command: set_undefined_cell black_box -noascend -both
+0
+// Command: add_notranslate_modules -library -both sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: add_search_path . /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/tech -library -both
+0
+// Command: read_library -liberty -both \
+//              /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib \
+//              /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib ...
+// Parsing file /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:12)
+// Warning: (RTL9.21) Liberty cell with interface_timing attribute set to true was not an empty cell (occurrence:1)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:6)
+// Note: (HRC1.2) Module/entity is not translated (blackboxed) (occurrence:1)
+// Note: Read Liberty library successfully
+0
+CPU time     : 20.45   seconds
+Elapse time  : 28      seconds
+Memory usage : 264.73  M bytes
+// Command: set_undriven_signal 0 -golden
+0
+// Command: set_naming_style genus -golden
+0
+// Command: set_naming_rule "%s\[%d\]" -instance_array -golden
+0
+// Command: set_naming_rule "%s_reg" -register -golden
+0
+// Command: set_naming_rule "%L.%s" "%L\[%d\].%s" "%s" -instance -golden
+0
+// Command: set_naming_rule "%L.%s" "%L\[%d\].%s" "%s" -variable -golden
+0
+// Command: set_naming_rule -ungroup_separator {_} -golden
+0
+// Command: set_hdl_options -const_port_extend
+0
+// Command: set_hdl_options -unsigned_conversion_overflow on
+0
+// Command: set_hdl_option -v_to_vd on
+// Command: set_hdl_options -v_to_vd on
+// Note: '-v' to '-vd' option is 'ON'
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          set_hdl_option -extract_macro_constraint
+//          }
+// Command: set_hdl_options -extract_macro_constraint
+0
+// Command: set lec_version_required "20.20226"
+20.20226
+// Command: if {$lec_version >= $lec_version_required} {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src"
+//          } else {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src:cwd"
+//          }
+// Command: set_hdl_options -VERILOG_INCLUDE_DIR sep:src
+0
+// Command: read_design -enumconstraint -define PDK_sky130A -define SCL_sky130_fd_sc_hd -define __librelane__ -define __pnr__ -define SRAM_SKY130 -define SYNTHESIS  -merge bbox -golden -lastmod -noelab  -sv09 /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv ...
+0
+// Command: elaborate_design -golden -root {rv32i_cpu_top} -rootonly -rootonly  
+// Golden root module is set to 'rv32i_cpu_top'
+// Warning: (RTL1.2) Variable/signal is assigned by multiple non-blocking assignments (occurrence:1314)
+// Warning: (RTL1.5b) Potential loss of RHS msb or carry-out bit (occurrence:33)
+// Note: (RTL5.5a) Default case item with non-X assignment(s) (occurrence:43)
+// Note: (RTL5.7) Default case item with inconsistent assignment(s). (occurrence:18)
+// Warning: (RTL6.4) Enum value constraint is added (occurrence:49)
+// Warning: (RTL7.3) Array index in RHS might be out of range (occurrence:3)
+// Warning: (RTL7.4) Array index in LHS might be out of range (occurrence:2)
+// Warning: (RTL7.10) Comparison with signed and unsigned operands (occurrence:1)
+// Warning: (RTL7.10d) Comparison with positive constant of different signedness (occurrence:8)
+// Warning: (RTL8.3) Unreachable DFF/DLAT is removed (occurrence:14)
+// Warning: (RTL10) Both posedge and negedge are used in different always/process (occurrence:19)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:58)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:143)
+// Note: (VLG2.2b) Non-binary case item is used in casez statement (occurrence:6)
+// Note: (VLG6.4) Supported system datapath function call (occurrence:3)
+// Note: (VLG9.2) The `define macro is used (occurrence:6)
+// Note: (SV8.1) Package imported (occurrence:19)
+// Warning: (DIR6.2) Supported compiler directive is detected (occurrence:36)
+// Note: (DIR6.3) Conditional compiler directive clause is effective (occurrence:10)
+// Warning: (IGN1.1) Initial construct is not supported. The entire initial construct will be ignored (occurrence:4)
+// Warning: (IGN4) Attribute instance(s) are ignored (occurrence:2)
+// Note: (HRC3.5b) Open output port connection is detected (occurrence:11)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:1165)
+// Warning: (HRC3.16) A wire is declared, but not used in the module (occurrence:11)
+// Warning: Total black box modules referenced in Golden = 1
+// Warning: Total black box modules referenced in Golden = 1
+0
+CPU time     : 20.72   seconds
+Elapse time  : 28      seconds
+Memory usage : 265.30  M bytes
+// Command: read_design -verilog95   -revised -lastmod -noelab fv/rv32i_cpu_top/fv_map.v.gz
+// Parsing file fv/rv32i_cpu_top/fv_map.v.gz ...
+0
+CPU time     : 21.16   seconds
+Elapse time  : 28      seconds
+Memory usage : 292.44  M bytes
+// Command: elaborate_design -revised -root {rv32i_cpu_top}
+// Revised root module is set to 'rv32i_cpu_top'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:951)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:27)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:398)
+// Warning: Total black box modules referenced in Revised = 1
+0
+CPU time     : 21.49   seconds
+Elapse time  : 29      seconds
+Memory usage : 285.14  M bytes
+// Command: write_design -golden rtl_fv_map_db/elab.v -replace
+// Note: Wrote VERILOG design successfully
+0
+CPU time     : 22.61   seconds
+Elapse time  : 30      seconds
+Memory usage : 285.14  M bytes
+// Command: uniquify -all -nolib -golden
+Uniquified 0 module(s)
+0
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules        35              29
+Library-cells       1305           26875
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+$CNTRT     *         4                    0
+AND        *     20684                33714
+BUF        *       268                  286
+DFF        *      6236                 5208
+INV        *      2198                62370
+MUX        *     24419                    0
+NAND       *         3                    0
+NOR        *       840                    0
+OR         *      5229                16189
+WIRE       *      2711                    4
+XNOR       *       157                    0
+XOR        *      1781                    0
+------ word-level --------------------------
+ADD        *        30                    0
+EQ         *        30                    0
+GE         *         5                    0
+GT         *         2                    0
+LE         *         2                    0
+LT         *         5                    0
+NE         *         3                    0
+SLL        *         2                    0
+SRA        *         1                    0
+SRL        *         1                    0
+SUBTRACT   *         6                    0
+WAND       *        18                    0
+WINV       *         2                    0
+WMUX       *       931                    0
+WOR        *        21                    0
+WSEL       *       215                    0
+WXOR       *        23                    0
+BBOX                10                   10
+------ don't care --------------------------
+X-assignments      110                    0
+--------------------------------------------
+Total            64650               117781
+
+0
+// Command: report_black_box
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: report_modules
+Golden:
+   rv32i_cpu_top 
+      mbist_ctrl_N_MEM10_AW8_RD_LAT2_P1_MASK0_ASYNC_RST0_LOCAL_CMP1 
+      rv32i_core_RESET_PC0 
+         rv32i_pipeline_ex1c 
+            VDW_ADD_32_1_0 
+         rv32i_hazard_unit 
+         rv32i_forwarding_unit 
+         rv32i_csr_file 
+         rv32i_interrupt_ctrl 
+         rv32i_regfile 
+         rv32i_pipeline_if_RESET_PC0 
+         rv32i_pipeline_id 
+            VDW_ADD_32_1_0 
+            rv32i_decode 
+            rv32i_imm_gen 
+         rv32i_pipeline_ex 
+            rv32i_alu 
+            rv32i_branch_comp 
+         rv32i_pipeline_ex1b 
+         rv32i_pipeline_ex2 
+         rv32i_pipeline_mem 
+         rv32i_pipeline_wb 
+         rv32i_icache 
+            mem_collar_AW8_HAS_P10_LOCAL_CMP1 
+         rv32i_dcache 
+            mem_collar_AW8_HAS_P10_LOCAL_CMP1 
+         rv32i_cache_arbiter 
+Revised:
+   rv32i_cpu_top 
+      rv32i_core_RESET_PC0 
+         add_signed_1021 
+         sub_signed_1608 
+         csa_tree_ADD_TC_OP_269_group_1828 
+         increment_unsigned_1759_1816 
+         increment_unsigned_1760_1817_8104 
+         increment_unsigned_1578_1818 
+         increment_unsigned_1760_1817 
+         increment_unsigned_1760_1817_8105 
+         cdec 
+         cmux 
+         cmux_2949 
+         rv32i_pipeline_ex1c 
+         add_unsigned_1046_7985 
+         add_unsigned_1046_7986 
+         add_unsigned_1046_7987 
+         add_unsigned_1046 
+         cdec_2955 
+         cmux_2953 
+         rv32i_decode 
+         add_unsigned_346_2665_1 
+         cdec_2959 
+         cdec_2963 
+         cdec_2967 
+         cmux_2957 
+         cmux_2961 
+         cmux_2965 
+0
+// Command: set_flatten_model -seq_constant
+0
+// Command: set_flatten_model -seq_constant_x_to 0
+0
+// Command: set_flatten_model -hier_seq_merge
+0
+// Command: set_flatten_model -balanced_modeling
+0
+// Command: set lec_version_required "21.10142"
+21.10142
+// Command: if {$lec_version >= $lec_version_required} {
+//              puts "For safety of verification, PIs and POs should be mapped by name."
+//              set_mapping_method -mapping_file_nopipo
+//          }
+For safety of verification, PIs and POs should be mapped by name.
+// Command: set_mapping_method -mapping_file_nopipo
+0
+// Command: set_mapping_method -search_in_mapping_file
+0
+// Command: set_analyze_option -mapping_file fv/rv32i_cpu_top/fv_map.map.do
+// Reading mapping information file fv/rv32i_cpu_top/fv_map.map.do ...
+// Note: Genus pin mapping file detected. Using RTL names for mapping
+// Note: Converted 5218 name(s) from Genus pin mapping file to RTL name(s)
+// 5721 mapping information records are added
+0
+CPU time     : 23.10   seconds
+Elapse time  : 30      seconds
+Memory usage : 289.73  M bytes
+// Command: check_mapping_setup -mapping_file_quality -summary
+// Note: PI and PO are ignored due to set_mapping_method -MAPPING_FILE_NOPIPO
+===============================================
+        Mapping File Quality Summary
+===============================================
+                     Golden      Revised
+-----------------------------------------------
+Valid                  5218         5218
+Mapped by File         5208         5208
+Unmapped               1028            0
+===============================================
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//              check_verification_information
+//          }
+// Command: check_verification_information
+Checking Sequential constant...
+Checking Sequential merge...
+Checking Synthesis equation...
+================================================================================
+Implementation Information Check Summary: 
+--------------------------------------------------------------------------------
+Total Sequential Constants:     221
+  Name Collision:               0
+  Name Ambiguous:               0
+  Name not Found:               0
+--------------------------------------------------------------------------------
+Total Sequential Merges:        108
+  Name Collision:               0
+  Name Ambiguous:               0
+  Name not Found:               0
+  Merge Target:
+    Name Ambiguous:             0
+    Name not Found:             0
+--------------------------------------------------------------------------------
+Total Synthesis Equations:      14
+  Module not Found:             0
+  Equation Conflict:            0
+  Equation Syntax Error:        0
+No Equation Modules:            0
+================================================================================
+0
+// Command: set_analyze_option -auto -report_map
+0
+// Command: write_hier_compare_dofile hier_tmp2.lec.do -verbose -noexact_pin_match -replace -usage \
+//           -balanced_extraction -constraint -input_output_pin_equivalence \
+//          -prepend_string "report_design_data; report_unmapped_points -summary; report_unmapped_points -notmapped; analyze_datapath -module -verbose; eval analyze_datapath $DATAPATH_SOLVER_OPTION -verbose"
+// The following settings are used for hierarchical dofile generation:
+// Modeling Options:
+    Auto setup disabled
+    GATED_Clock modeling enabled
+// Mapping Method:
+    Name Only
+--------------------------------------------------------------------------------
+// Flattening Golden and Revised designs ...
+--------------------------------------------------------------------------------
+// Read in 108 merge group(s) from verification information.
+// Processing Golden ...
+// Modeling Golden ...
+// Warning: (F34) Converted 110 X assignment(s) as don't care(s)
+// (F21) Merged 108 DFF/DLAT(s) due to added instance equivalences (flatten)
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling mapped 10416 out of 11444 DFF/DLATs
+// 5208 are from mapping setup information.
+// Collected 221 sequential constant(s) via setup info for Golden
+// (F18) Converted 388 DFF/DLAT(s) in (G) to ZERO/ONE
+// Warning: Golden and Revised have different numbers of key points:
+// Golden  key points = 6749
+// Revised key points = 5721
+// Warning: Automatic key point mapping is skipped
+// Command: MAP KEy Points
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 5218 key point(s) by mapping information
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            5208   10        5218    
+--------------------------------------------------------------------------------
+Revised           5208   10        5218    
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 78 key point groups
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       922       922     
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 1 key point groups
+CPU time     : 31.68   seconds
+Elapse time  : 43      seconds
+Memory usage : 329.59  M bytes
+--------------------------------------------------------------------------------
+// Starting hierarchical dofile generation ...
+--------------------------------------------------------------------------------
+// Total Matching Module Instance Pairs =  4
+// Module Instantiation Ratio in Golden = 1.00
+// Module Instantiation Ratio in Revised = 1.00
+// Gathering Instance Boundary Information ...
+// Extracting Constraints in Golden ...
+// Extracting Constraints in Revised ...
+// Extracting logic-cone properties of pins ...
+// Balancing Constraints ...
+// Golden module 'rv32i_core_RESET_PC0' has input-output equivalent pins: dbg_csr_mip_o[11] ext_irq_i
+// Golden module 'rv32i_core_RESET_PC0' has input-output equivalent pins: dbg_csr_mip_o[7] timer_irq_i
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs1[4] instruction[19]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs1[3] instruction[18]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs1[2] instruction[17]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs1[1] instruction[16]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs1[0] instruction[15]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs2[4] instruction[24]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs2[3] instruction[23]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs2[2] instruction[22]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs2[1] instruction[21]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rs2[0] instruction[20]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rd[4] instruction[11]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rd[3] instruction[10]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rd[2] instruction[9]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rd[1] instruction[8]
+// Golden module 'rv32i_decode' has input-output equivalent pins: rd[0] instruction[7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][31] ex1a_i[alu_result][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][30] ex1a_i[alu_result][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][29] ex1a_i[alu_result][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][28] ex1a_i[alu_result][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][27] ex1a_i[alu_result][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][26] ex1a_i[alu_result][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][25] ex1a_i[alu_result][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][24] ex1a_i[alu_result][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][23] ex1a_i[alu_result][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][22] ex1a_i[alu_result][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][21] ex1a_i[alu_result][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][20] ex1a_i[alu_result][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][19] ex1a_i[alu_result][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][18] ex1a_i[alu_result][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][17] ex1a_i[alu_result][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][16] ex1a_i[alu_result][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][15] ex1a_i[alu_result][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][14] ex1a_i[alu_result][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][13] ex1a_i[alu_result][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][12] ex1a_i[alu_result][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][11] ex1a_i[alu_result][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][10] ex1a_i[alu_result][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][9] ex1a_i[alu_result][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][8] ex1a_i[alu_result][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][7] ex1a_i[alu_result][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][6] ex1a_i[alu_result][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][5] ex1a_i[alu_result][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][4] ex1a_i[alu_result][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][3] ex1a_i[alu_result][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][2] ex1a_i[alu_result][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][1] ex1a_i[alu_result][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[alu_result][0] ex1a_i[alu_result][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[branch_taken] ex1a_i[branch_taken]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][31] ex1a_i[fwd_store][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][30] ex1a_i[fwd_store][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][29] ex1a_i[fwd_store][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][28] ex1a_i[fwd_store][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][27] ex1a_i[fwd_store][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][26] ex1a_i[fwd_store][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][25] ex1a_i[fwd_store][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][24] ex1a_i[fwd_store][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][23] ex1a_i[fwd_store][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][22] ex1a_i[fwd_store][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][21] ex1a_i[fwd_store][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][20] ex1a_i[fwd_store][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][19] ex1a_i[fwd_store][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][18] ex1a_i[fwd_store][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][17] ex1a_i[fwd_store][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][16] ex1a_i[fwd_store][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][15] ex1a_i[fwd_store][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][14] ex1a_i[fwd_store][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][13] ex1a_i[fwd_store][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][12] ex1a_i[fwd_store][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][11] ex1a_i[fwd_store][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][10] ex1a_i[fwd_store][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][9] ex1a_i[fwd_store][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][8] ex1a_i[fwd_store][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][7] ex1a_i[fwd_store][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][6] ex1a_i[fwd_store][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][5] ex1a_i[fwd_store][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][4] ex1a_i[fwd_store][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][3] ex1a_i[fwd_store][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][2] ex1a_i[fwd_store][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][1] ex1a_i[fwd_store][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fwd_store][0] ex1a_i[fwd_store][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][31] ex1a_i[csr_wd][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][30] ex1a_i[csr_wd][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][29] ex1a_i[csr_wd][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][28] ex1a_i[csr_wd][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][27] ex1a_i[csr_wd][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][26] ex1a_i[csr_wd][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][25] ex1a_i[csr_wd][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][24] ex1a_i[csr_wd][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][23] ex1a_i[csr_wd][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][22] ex1a_i[csr_wd][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][21] ex1a_i[csr_wd][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][20] ex1a_i[csr_wd][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][19] ex1a_i[csr_wd][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][18] ex1a_i[csr_wd][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][17] ex1a_i[csr_wd][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][16] ex1a_i[csr_wd][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][15] ex1a_i[csr_wd][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][14] ex1a_i[csr_wd][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][13] ex1a_i[csr_wd][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][12] ex1a_i[csr_wd][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][11] ex1a_i[csr_wd][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][10] ex1a_i[csr_wd][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][9] ex1a_i[csr_wd][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][8] ex1a_i[csr_wd][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][7] ex1a_i[csr_wd][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][6] ex1a_i[csr_wd][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][5] ex1a_i[csr_wd][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][4] ex1a_i[csr_wd][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][3] ex1a_i[csr_wd][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][2] ex1a_i[csr_wd][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][1] ex1a_i[csr_wd][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_wd][0] ex1a_i[csr_wd][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][31] ex1a_i[pc][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][30] ex1a_i[pc][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][29] ex1a_i[pc][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][28] ex1a_i[pc][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][27] ex1a_i[pc][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][26] ex1a_i[pc][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][25] ex1a_i[pc][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][24] ex1a_i[pc][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][23] ex1a_i[pc][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][22] ex1a_i[pc][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][21] ex1a_i[pc][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][20] ex1a_i[pc][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][19] ex1a_i[pc][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][18] ex1a_i[pc][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][17] ex1a_i[pc][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][16] ex1a_i[pc][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][15] ex1a_i[pc][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][14] ex1a_i[pc][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][13] ex1a_i[pc][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][12] ex1a_i[pc][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][11] ex1a_i[pc][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][10] ex1a_i[pc][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][9] ex1a_i[pc][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][8] ex1a_i[pc][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][7] ex1a_i[pc][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][6] ex1a_i[pc][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][5] ex1a_i[pc][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][4] ex1a_i[pc][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][3] ex1a_i[pc][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][2] ex1a_i[pc][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][1] ex1a_i[pc][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[pc][0] ex1a_i[pc][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][31] ex1a_i[instruction][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][30] ex1a_i[instruction][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][29] ex1a_i[instruction][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][28] ex1a_i[instruction][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][27] ex1a_i[instruction][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][26] ex1a_i[instruction][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][25] ex1a_i[instruction][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][24] ex1a_i[instruction][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][23] ex1a_i[instruction][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][22] ex1a_i[instruction][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][21] ex1a_i[instruction][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][20] ex1a_i[instruction][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][19] ex1a_i[instruction][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][18] ex1a_i[instruction][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][17] ex1a_i[instruction][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][16] ex1a_i[instruction][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][15] ex1a_i[instruction][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][14] ex1a_i[instruction][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][13] ex1a_i[instruction][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][12] ex1a_i[instruction][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][11] ex1a_i[instruction][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][10] ex1a_i[instruction][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][9] ex1a_i[instruction][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][8] ex1a_i[instruction][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][7] ex1a_i[instruction][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][6] ex1a_i[instruction][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][5] ex1a_i[instruction][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][4] ex1a_i[instruction][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][3] ex1a_i[instruction][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][2] ex1a_i[instruction][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][1] ex1a_i[instruction][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[instruction][0] ex1a_i[instruction][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[reg_wr_en] ex1a_i[reg_wr_en]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mem_rd] ex1a_i[mem_rd]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mem_wr] ex1a_i[mem_wr]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mem_size][1] ex1a_i[mem_size][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mem_size][0] ex1a_i[mem_size][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mem_unsigned] ex1a_i[mem_unsigned]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_access] ex1a_i[csr_access]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][11] ex1a_i[csr_addr][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][10] ex1a_i[csr_addr][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][9] ex1a_i[csr_addr][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][8] ex1a_i[csr_addr][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][7] ex1a_i[csr_addr][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][6] ex1a_i[csr_addr][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][5] ex1a_i[csr_addr][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][4] ex1a_i[csr_addr][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][3] ex1a_i[csr_addr][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][2] ex1a_i[csr_addr][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][1] ex1a_i[csr_addr][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_addr][0] ex1a_i[csr_addr][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][31] ex1a_i[csr_rdata][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][30] ex1a_i[csr_rdata][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][29] ex1a_i[csr_rdata][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][28] ex1a_i[csr_rdata][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][27] ex1a_i[csr_rdata][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][26] ex1a_i[csr_rdata][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][25] ex1a_i[csr_rdata][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][24] ex1a_i[csr_rdata][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][23] ex1a_i[csr_rdata][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][22] ex1a_i[csr_rdata][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][21] ex1a_i[csr_rdata][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][20] ex1a_i[csr_rdata][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][19] ex1a_i[csr_rdata][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][18] ex1a_i[csr_rdata][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][17] ex1a_i[csr_rdata][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][16] ex1a_i[csr_rdata][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][15] ex1a_i[csr_rdata][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][14] ex1a_i[csr_rdata][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][13] ex1a_i[csr_rdata][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][12] ex1a_i[csr_rdata][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][11] ex1a_i[csr_rdata][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][10] ex1a_i[csr_rdata][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][9] ex1a_i[csr_rdata][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][8] ex1a_i[csr_rdata][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][7] ex1a_i[csr_rdata][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][6] ex1a_i[csr_rdata][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][5] ex1a_i[csr_rdata][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][4] ex1a_i[csr_rdata][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][3] ex1a_i[csr_rdata][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][2] ex1a_i[csr_rdata][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][1] ex1a_i[csr_rdata][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_rdata][0] ex1a_i[csr_rdata][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[jump] ex1a_i[jump]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[jalr] ex1a_i[jalr]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[branch] ex1a_i[branch]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][31] ex1a_i[immediate][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][30] ex1a_i[immediate][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][29] ex1a_i[immediate][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][28] ex1a_i[immediate][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][27] ex1a_i[immediate][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][26] ex1a_i[immediate][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][25] ex1a_i[immediate][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][24] ex1a_i[immediate][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][23] ex1a_i[immediate][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][22] ex1a_i[immediate][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][21] ex1a_i[immediate][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][20] ex1a_i[immediate][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][19] ex1a_i[immediate][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][18] ex1a_i[immediate][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][17] ex1a_i[immediate][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][16] ex1a_i[immediate][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][15] ex1a_i[immediate][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][14] ex1a_i[immediate][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][13] ex1a_i[immediate][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][12] ex1a_i[immediate][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][11] ex1a_i[immediate][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][10] ex1a_i[immediate][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][9] ex1a_i[immediate][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][8] ex1a_i[immediate][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][7] ex1a_i[immediate][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][6] ex1a_i[immediate][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][5] ex1a_i[immediate][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][4] ex1a_i[immediate][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][3] ex1a_i[immediate][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][2] ex1a_i[immediate][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][1] ex1a_i[immediate][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[immediate][0] ex1a_i[immediate][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[ebreak] ex1a_i[ebreak]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret] ex1a_i[mret]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[fence_i] ex1a_i[fence_i]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[illegal] ex1a_i[illegal]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[csr_illegal] ex1a_i[csr_illegal]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[valid] ex1a_i[valid]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[irq_valid_r] ex1a_i[irq_valid_r]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[irq_cause][31] ex1a_i[irq_cause][0]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[irq_cause][3] ex1a_i[irq_cause][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[irq_cause][2] ex1a_i[irq_cause][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][31] ex1a_i[mtvec][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][30] ex1a_i[mtvec][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][29] ex1a_i[mtvec][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][28] ex1a_i[mtvec][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][27] ex1a_i[mtvec][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][26] ex1a_i[mtvec][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][25] ex1a_i[mtvec][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][24] ex1a_i[mtvec][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][23] ex1a_i[mtvec][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][22] ex1a_i[mtvec][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][21] ex1a_i[mtvec][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][20] ex1a_i[mtvec][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][19] ex1a_i[mtvec][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][18] ex1a_i[mtvec][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][17] ex1a_i[mtvec][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][16] ex1a_i[mtvec][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][15] ex1a_i[mtvec][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][14] ex1a_i[mtvec][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][13] ex1a_i[mtvec][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][12] ex1a_i[mtvec][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][11] ex1a_i[mtvec][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][10] ex1a_i[mtvec][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][9] ex1a_i[mtvec][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][8] ex1a_i[mtvec][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][7] ex1a_i[mtvec][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][6] ex1a_i[mtvec][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][5] ex1a_i[mtvec][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][4] ex1a_i[mtvec][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][3] ex1a_i[mtvec][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mtvec][2] ex1a_i[mtvec][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][31] ex1a_i[mret_pc][31]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][30] ex1a_i[mret_pc][30]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][29] ex1a_i[mret_pc][29]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][28] ex1a_i[mret_pc][28]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][27] ex1a_i[mret_pc][27]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][26] ex1a_i[mret_pc][26]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][25] ex1a_i[mret_pc][25]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][24] ex1a_i[mret_pc][24]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][23] ex1a_i[mret_pc][23]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][22] ex1a_i[mret_pc][22]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][21] ex1a_i[mret_pc][21]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][20] ex1a_i[mret_pc][20]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][19] ex1a_i[mret_pc][19]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][18] ex1a_i[mret_pc][18]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][17] ex1a_i[mret_pc][17]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][16] ex1a_i[mret_pc][16]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][15] ex1a_i[mret_pc][15]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][14] ex1a_i[mret_pc][14]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][13] ex1a_i[mret_pc][13]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][12] ex1a_i[mret_pc][12]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][11] ex1a_i[mret_pc][11]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][10] ex1a_i[mret_pc][10]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][9] ex1a_i[mret_pc][9]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][8] ex1a_i[mret_pc][8]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][7] ex1a_i[mret_pc][7]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][6] ex1a_i[mret_pc][6]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][5] ex1a_i[mret_pc][5]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][4] ex1a_i[mret_pc][4]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][3] ex1a_i[mret_pc][3]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][2] ex1a_i[mret_pc][2]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][1] ex1a_i[mret_pc][1]
+// Golden module 'rv32i_pipeline_ex1c' has input-output equivalent pins: ex1c_o[mret_pc][0] ex1a_i[mret_pc][0]
+// Extracted 336 input-output pin equivalences
+// Extracted equivalences (Input-Output) using medium effort
+// Resolved EQ and IOEQ representative
+// boundary_change values use the revised names to match.
+// Checking constraints with verification information ...
+Module: rv32i_core_RESET_PC0
+    Instance u_core
+// Checking constraints with verification information ...
+Module: rv32i_decode
+    Instance u_core/u_id/u_decode
+// Checking constraints with verification information ...
+Module: rv32i_pipeline_ex1c
+    Instance u_core/u_ex1c
+ex1a_i[instruction][31]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][31] as unreachable by uvi.
+ex1a_i[instruction][30]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][30] as unreachable by uvi.
+ex1a_i[instruction][29]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][29] as unreachable by uvi.
+ex1a_i[instruction][28]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][28] as unreachable by uvi.
+ex1a_i[instruction][27]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][27] as unreachable by uvi.
+ex1a_i[instruction][26]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][26] as unreachable by uvi.
+ex1a_i[instruction][25]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][25] as unreachable by uvi.
+ex1a_i[instruction][24]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][24] as unreachable by uvi.
+ex1a_i[instruction][23]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][23] as unreachable by uvi.
+ex1a_i[instruction][22]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][22] as unreachable by uvi.
+ex1a_i[instruction][21]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][21] as unreachable by uvi.
+ex1a_i[instruction][20]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][20] as unreachable by uvi.
+ex1a_i[instruction][19]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][19] as unreachable by uvi.
+ex1a_i[instruction][18]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][18] as unreachable by uvi.
+ex1a_i[instruction][17]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][17] as unreachable by uvi.
+ex1a_i[instruction][16]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][16] as unreachable by uvi.
+ex1a_i[instruction][15]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][15] as unreachable by uvi.
+ex1a_i[instruction][14]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][14] as unreachable by uvi.
+ex1a_i[instruction][13]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][13] as unreachable by uvi.
+ex1a_i[instruction][12]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][12] as unreachable by uvi.
+ex1a_i[instruction][11]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][11] as unreachable by uvi.
+ex1a_i[instruction][10]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][10] as unreachable by uvi.
+ex1a_i[instruction][9]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][9] as unreachable by uvi.
+ex1a_i[instruction][8]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][8] as unreachable by uvi.
+ex1a_i[instruction][7]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][7] as unreachable by uvi.
+ex1a_i[instruction][6]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][6] as unreachable by uvi.
+ex1a_i[instruction][5]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][5] as unreachable by uvi.
+ex1a_i[instruction][4]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][4] as unreachable by uvi.
+ex1a_i[instruction][3]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][3] as unreachable by uvi.
+ex1a_i[instruction][2]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][2] as unreachable by uvi.
+ex1a_i[instruction][1]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][1] as unreachable by uvi.
+ex1a_i[instruction][0]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[instruction][0] as unreachable by uvi.
+ex1a_i[reg_wr_en]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[reg_wr_en] as unreachable by uvi.
+ex1a_i[mem_rd]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[mem_rd] as unreachable by uvi.
+ex1a_i[mem_wr]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[mem_wr] as unreachable by uvi.
+ex1a_i[mem_unsigned]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[mem_unsigned] as unreachable by uvi.
+ex1a_i[csr_access]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_access] as unreachable by uvi.
+ex1a_i[csr_rdata][31]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][31] as unreachable by uvi.
+ex1a_i[csr_rdata][30]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][30] as unreachable by uvi.
+ex1a_i[csr_rdata][29]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][29] as unreachable by uvi.
+ex1a_i[csr_rdata][28]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][28] as unreachable by uvi.
+ex1a_i[csr_rdata][27]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][27] as unreachable by uvi.
+ex1a_i[csr_rdata][26]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][26] as unreachable by uvi.
+ex1a_i[csr_rdata][25]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][25] as unreachable by uvi.
+ex1a_i[csr_rdata][24]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][24] as unreachable by uvi.
+ex1a_i[csr_rdata][23]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][23] as unreachable by uvi.
+ex1a_i[csr_rdata][22]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][22] as unreachable by uvi.
+ex1a_i[csr_rdata][21]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][21] as unreachable by uvi.
+ex1a_i[csr_rdata][20]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][20] as unreachable by uvi.
+ex1a_i[csr_rdata][19]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][19] as unreachable by uvi.
+ex1a_i[csr_rdata][18]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][18] as unreachable by uvi.
+ex1a_i[csr_rdata][17]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][17] as unreachable by uvi.
+ex1a_i[csr_rdata][16]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][16] as unreachable by uvi.
+ex1a_i[csr_rdata][15]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][15] as unreachable by uvi.
+ex1a_i[csr_rdata][14]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][14] as unreachable by uvi.
+ex1a_i[csr_rdata][13]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][13] as unreachable by uvi.
+ex1a_i[csr_rdata][12]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][12] as unreachable by uvi.
+ex1a_i[csr_rdata][11]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][11] as unreachable by uvi.
+ex1a_i[csr_rdata][10]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][10] as unreachable by uvi.
+ex1a_i[csr_rdata][9]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][9] as unreachable by uvi.
+ex1a_i[csr_rdata][8]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][8] as unreachable by uvi.
+ex1a_i[csr_rdata][7]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][7] as unreachable by uvi.
+ex1a_i[csr_rdata][6]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][6] as unreachable by uvi.
+ex1a_i[csr_rdata][5]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][5] as unreachable by uvi.
+ex1a_i[csr_rdata][4]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][4] as unreachable by uvi.
+ex1a_i[csr_rdata][3]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][3] as unreachable by uvi.
+ex1a_i[csr_rdata][2]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][2] as unreachable by uvi.
+ex1a_i[csr_rdata][1]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][1] as unreachable by uvi.
+ex1a_i[csr_rdata][0]  (KP<--)(REP)  UVI: U
+  label pin ex1a_i[csr_rdata][0] as unreachable by uvi.
+ex1c_o[rd_addr][4] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][11] UVI: IOEQ: +ex1a_i[rd_addr][4]
+ex1c_o[rd_addr][3] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][10] UVI: IOEQ: +ex1a_i[rd_addr][3]
+ex1c_o[rd_addr][2] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][9] UVI: IOEQ: +ex1a_i[rd_addr][2]
+ex1c_o[rd_addr][1] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][8] UVI: IOEQ: +ex1a_i[rd_addr][1]
+ex1c_o[rd_addr][0] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][7] UVI: IOEQ: +ex1a_i[rd_addr][0]
+ex1c_o[rs1_addr][4] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][19] UVI: IOEQ: +ex1a_i[rs1_addr][4]
+ex1c_o[rs1_addr][3] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][18] UVI: IOEQ: +ex1a_i[rs1_addr][3]
+ex1c_o[rs1_addr][2] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][17] UVI: IOEQ: +ex1a_i[rs1_addr][2]
+ex1c_o[rs1_addr][1] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][16] UVI: IOEQ: +ex1a_i[rs1_addr][1]
+ex1c_o[rs1_addr][0] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][15] UVI: IOEQ: +ex1a_i[rs1_addr][0]
+ex1c_o[rs2_addr][4] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][24] UVI: IOEQ: +ex1a_i[rs2_addr][4]
+ex1c_o[rs2_addr][3] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][23] UVI: IOEQ: +ex1a_i[rs2_addr][3]
+ex1c_o[rs2_addr][2] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][22] UVI: IOEQ: +ex1a_i[rs2_addr][2]
+ex1c_o[rs2_addr][1] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][21] UVI: IOEQ: +ex1a_i[rs2_addr][1]
+ex1c_o[rs2_addr][0] U (KP<--)(REP)  IOEQ: +ex1a_i[instruction][20] UVI: IOEQ: +ex1a_i[rs2_addr][0]
+// Checking 84 constraints in verification information.
+//   Extracted 84 constraints successfully.
+// Resolving Constraints ...
+// Writing hierarchical dofile ...
+# The following Golden modules are not written because of non-matching
+# instance names in Revised:
+# mem_collar_AW8_HAS_P10_LOCAL_CMP1 (Instance: u_core/u_dcache/u_tag_collar) (G)
+# rv32i_pipeline_wb (Instance: u_core/u_wb) (G)
+# rv32i_pipeline_mem (Instance: u_core/u_mem) (G)
+# rv32i_imm_gen (Instance: u_core/u_id/u_imm_gen) (G)
+# rv32i_pipeline_ex2 (Instance: u_core/u_ex2) (G)
+# rv32i_cache_arbiter (Instance: u_core/u_cache_arb) (G)
+# rv32i_pipeline_id (Instance: u_core/u_id) (G)
+# rv32i_icache (Instance: u_core/u_icache) (G)
+# rv32i_alu (Instance: u_core/u_ex/u_alu) (G)
+# rv32i_pipeline_if_RESET_PC0 (Instance: u_core/u_if) (G)
+# rv32i_forwarding_unit (Instance: u_core/u_fwd) (G)
+# rv32i_dcache (Instance: u_core/u_dcache) (G)
+# rv32i_branch_comp (Instance: u_core/u_ex/u_branch_comp) (G)
+# rv32i_pipeline_ex (Instance: u_core/u_ex) (G)
+# rv32i_hazard_unit (Instance: u_core/u_hazard) (G)
+# rv32i_pipeline_ex1b (Instance: u_core/u_ex1b) (G)
+# rv32i_regfile (Instance: u_core/u_regfile) (G)
+# rv32i_csr_file (Instance: u_core/u_csr) (G)
+# mbist_ctrl_N_MEM10_AW8_RD_LAT2_P1_MASK0_ASYNC_RST0_LOCAL_CMP1 (Instance: u_mbist_ctrl) (G)
+# The following Revised modules are not written because of non-matching
+# instance names in Golden:
+# add_signed_1021 (Instance: u_core/ADD_TC_OP_1_Y_ADD_TC_OP263) (R)
+# add_unsigned_1046 (Instance: u_core/u_fwd_add_143_40) (R)
+# add_unsigned_1046_7985 (Instance: u_core/u_fwd_add_97_36) (R)
+# add_unsigned_1046_7986 (Instance: u_core/u_fwd_add_112_36) (R)
+# add_unsigned_1046_7987 (Instance: u_core/u_fwd_add_128_38) (R)
+# add_unsigned_346_2665_1 (Instance: u_core/u_if_add_84_27_Y_u_id_add_149_44) (R)
+# cdec (Instance: u_core/u_dcache_g35862) (R)
+# cdec_2955 (Instance: u_core/u_icache_g3871) (R)
+# cdec_2959 (Instance: u_core/u_regfile_g3007) (R)
+# cdec_2963 (Instance: u_core/u_regfile_g3009) (R)
+# cdec_2967 (Instance: u_core/u_regfile_g3011) (R)
+# cmux (Instance: u_core/u_dcache_mux_dirty_array[latch_index]_461_29) (R)
+# cmux_2949 (Instance: u_core/u_dcache_mux_valid_array[latch_index]_460_29) (R)
+# cmux_2953 (Instance: u_core/u_icache_mux_valid_array[latch_index]_382_18) (R)
+# cmux_2957 (Instance: u_core/u_regfile_mux_regs[dbg_rd_addr]_94_21) (R)
+# cmux_2961 (Instance: u_core/u_regfile_mux_regs[rd_addr1]_73_18) (R)
+# cmux_2965 (Instance: u_core/u_regfile_mux_regs[rd_addr2]_84_18) (R)
+# csa_tree_ADD_TC_OP_269_group_1828 (Instance: u_core/csa_tree_ADD_TC_OP_269_groupi) (R)
+# increment_unsigned_1578_1818 (Instance: u_core/inc_u_csr_add_414_52) (R)
+# increment_unsigned_1759_1816 (Instance: u_core/inc_u_csr_add_407_34) (R)
+# increment_unsigned_1760_1817 (Instance: u_core/inc_u_csr_add_430_46) (R)
+# increment_unsigned_1760_1817_8104 (Instance: u_core/inc_u_csr_add_413_51) (R)
+# increment_unsigned_1760_1817_8105 (Instance: u_core/inc_u_csr_add_435_46) (R)
+# sub_signed_1608 (Instance: u_core/SUB_TC_OP_1_Y_SUB_TC_OP266) (R)
+4 module pairs are written for hierarchical comparison
+// Command: report mapped point -summary -method
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            5208   10        5218    
+--------------------------------------------------------------------------------
+Revised           5208   10        5218    
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 78 key point groups
+================================================================================
+Mapping method    PI     PO     DFF    BBOX   Total 
+--------------------------------------------------------------------------------
+Name              124    379    0      0      503   
+User              0      0      5208   10     5218  
+================================================================================
+CPU time     : 32.12   seconds
+Elapse time  : 44      seconds
+Memory usage : 336.45  M bytes
+// Command: report unmapped point -summary
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       922       922     
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 1 key point groups
+0
+// Command: run_hier_compare hier_tmp2.lec.do -dynamic_hierarchy
+// Command: vpxmode
+// Command: delete set_seq_merge
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.irq_cause[0]  /u_core/ex1a_ex1b_reg_q.irq_cause[1] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.irq_cause[0]  /u_core/ex1a_ex1b_reg_q.irq_cause[31] -Golden
+// Command: set_seq_merge /u_core/fwd_b_ex1b2_r  /u_core/fwd_store_ex1b2_r -Golden
+// Command: set_seq_merge /u_core/fwd_b_ex1c_r  /u_core/fwd_store_ex1c_r -Golden
+// Command: set_seq_merge /u_core/fwd_b_sel_r[0]  /u_core/fwd_store_sel_r[0] -Golden
+// Command: set_seq_merge /u_core/fwd_b_sel_r[1]  /u_core/fwd_store_sel_r[1] -Golden
+// Command: set_seq_merge /u_core/mem_trap_entry_r  /u_core/mem_trap_redirect_r -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.irq_cause[0]  /u_core/ex1c_ex1b_reg_q.irq_cause[1] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.irq_cause[0]  /u_core/ex1c_ex1b_reg_q.irq_cause[31] -Golden
+// Command: set_seq_merge /u_core/u_dcache/hit_bank_q[0]  /u_core/u_dcache/hit_bank_q[1] -Golden
+// Command: set_seq_merge /u_core/u_dcache/hit_bank_q[0]  /u_core/u_dcache/hit_bank_q[2] -Golden
+// Command: set_seq_merge /u_core/u_dcache/hit_bank_q[0]  /u_core/u_dcache/hit_bank_q[3] -Golden
+// Command: set_seq_merge /u_core/u_dcache/hit_bank_q[0]  /u_core/u_dcache/hit_q -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][4]  /u_core/u_icache/refill_addr_bank_q[1][4] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][4]  /u_core/u_icache/refill_addr_bank_q[2][4] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][4]  /u_core/u_icache/refill_addr_bank_q[3][4] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][4]  /u_core/u_icache/refill_line_addr_q[4] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][5]  /u_core/u_icache/refill_addr_bank_q[1][5] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][5]  /u_core/u_icache/refill_addr_bank_q[2][5] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][5]  /u_core/u_icache/refill_addr_bank_q[3][5] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][5]  /u_core/u_icache/refill_line_addr_q[5] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][6]  /u_core/u_icache/refill_addr_bank_q[1][6] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][6]  /u_core/u_icache/refill_addr_bank_q[2][6] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][6]  /u_core/u_icache/refill_addr_bank_q[3][6] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][6]  /u_core/u_icache/refill_line_addr_q[6] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][7]  /u_core/u_icache/refill_addr_bank_q[1][7] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][7]  /u_core/u_icache/refill_addr_bank_q[2][7] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][7]  /u_core/u_icache/refill_addr_bank_q[3][7] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][7]  /u_core/u_icache/refill_line_addr_q[7] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][8]  /u_core/u_icache/refill_addr_bank_q[1][8] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][8]  /u_core/u_icache/refill_addr_bank_q[2][8] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][8]  /u_core/u_icache/refill_addr_bank_q[3][8] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][8]  /u_core/u_icache/refill_line_addr_q[8] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][9]  /u_core/u_icache/refill_addr_bank_q[1][9] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][9]  /u_core/u_icache/refill_addr_bank_q[2][9] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][9]  /u_core/u_icache/refill_addr_bank_q[3][9] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][9]  /u_core/u_icache/refill_line_addr_q[9] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][10]  /u_core/u_icache/refill_addr_bank_q[1][10] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][10]  /u_core/u_icache/refill_addr_bank_q[2][10] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][10]  /u_core/u_icache/refill_addr_bank_q[3][10] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][10]  /u_core/u_icache/refill_line_addr_q[10] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][11]  /u_core/u_icache/refill_addr_bank_q[1][11] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][11]  /u_core/u_icache/refill_addr_bank_q[2][11] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][11]  /u_core/u_icache/refill_addr_bank_q[3][11] -Golden
+// Command: set_seq_merge /u_core/u_icache/refill_addr_bank_q[0][11]  /u_core/u_icache/refill_line_addr_q[11] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[7]  /u_core/u_id/id_ex_reg_o.rd_addr[0] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[8]  /u_core/u_id/id_ex_reg_o.rd_addr[1] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[9]  /u_core/u_id/id_ex_reg_o.rd_addr[2] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[10]  /u_core/u_id/id_ex_reg_o.rd_addr[3] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[11]  /u_core/u_id/id_ex_reg_o.rd_addr[4] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[15]  /u_core/u_id/id_ex_reg_o.rs1_addr[0] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[16]  /u_core/u_id/id_ex_reg_o.rs1_addr[1] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[17]  /u_core/u_id/id_ex_reg_o.rs1_addr[2] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[18]  /u_core/u_id/id_ex_reg_o.rs1_addr[3] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[19]  /u_core/u_id/id_ex_reg_o.rs1_addr[4] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[20]  /u_core/u_id/id_ex_reg_o.rs2_addr[0] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[21]  /u_core/u_id/id_ex_reg_o.rs2_addr[1] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[22]  /u_core/u_id/id_ex_reg_o.rs2_addr[2] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[23]  /u_core/u_id/id_ex_reg_o.rs2_addr[3] -Golden
+// Command: set_seq_merge /u_core/u_id/id_ex_reg_o.instruction[24]  /u_core/u_id/id_ex_reg_o.rs2_addr[4] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[7]  /u_core/ex1a_ex1b_reg_q.rd_addr[0] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[8]  /u_core/ex1a_ex1b_reg_q.rd_addr[1] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[9]  /u_core/ex1a_ex1b_reg_q.rd_addr[2] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[10]  /u_core/ex1a_ex1b_reg_q.rd_addr[3] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[11]  /u_core/ex1a_ex1b_reg_q.rd_addr[4] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[15]  /u_core/ex1a_ex1b_reg_q.rs1_addr[0] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[16]  /u_core/ex1a_ex1b_reg_q.rs1_addr[1] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[17]  /u_core/ex1a_ex1b_reg_q.rs1_addr[2] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[18]  /u_core/ex1a_ex1b_reg_q.rs1_addr[3] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[19]  /u_core/ex1a_ex1b_reg_q.rs1_addr[4] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[20]  /u_core/ex1a_ex1b_reg_q.rs2_addr[0] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[21]  /u_core/ex1a_ex1b_reg_q.rs2_addr[1] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[22]  /u_core/ex1a_ex1b_reg_q.rs2_addr[2] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[23]  /u_core/ex1a_ex1b_reg_q.rs2_addr[3] -Golden
+// Command: set_seq_merge /u_core/ex1a_ex1b_reg_q.instruction[24]  /u_core/ex1a_ex1b_reg_q.rs2_addr[4] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[7]  /u_core/ex1c_ex1b_reg_q.rd_addr[0] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[8]  /u_core/ex1c_ex1b_reg_q.rd_addr[1] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[9]  /u_core/ex1c_ex1b_reg_q.rd_addr[2] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[10]  /u_core/ex1c_ex1b_reg_q.rd_addr[3] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[11]  /u_core/ex1c_ex1b_reg_q.rd_addr[4] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[15]  /u_core/ex1c_ex1b_reg_q.rs1_addr[0] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[16]  /u_core/ex1c_ex1b_reg_q.rs1_addr[1] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[17]  /u_core/ex1c_ex1b_reg_q.rs1_addr[2] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[18]  /u_core/ex1c_ex1b_reg_q.rs1_addr[3] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[19]  /u_core/ex1c_ex1b_reg_q.rs1_addr[4] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[20]  /u_core/ex1c_ex1b_reg_q.rs2_addr[0] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[21]  /u_core/ex1c_ex1b_reg_q.rs2_addr[1] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[22]  /u_core/ex1c_ex1b_reg_q.rs2_addr[2] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[23]  /u_core/ex1c_ex1b_reg_q.rs2_addr[3] -Golden
+// Command: set_seq_merge /u_core/ex1c_ex1b_reg_q.instruction[24]  /u_core/ex1c_ex1b_reg_q.rs2_addr[4] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[0]  /u_core/u_icache/tag_idx_q[0] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[1]  /u_core/u_icache/tag_idx_q[1] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[2]  /u_core/u_icache/tag_idx_q[2] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[3]  /u_core/u_icache/tag_idx_q[3] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[4]  /u_core/u_icache/tag_idx_q[4] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[5]  /u_core/u_icache/tag_idx_q[5] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[6]  /u_core/u_icache/tag_idx_q[6] -Golden
+// Command: set_seq_merge /u_core/u_icache/data_idx_q[7]  /u_core/u_icache/tag_idx_q[7] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[0]  /u_mbist_ctrl/rec_port_q[0][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[1]  /u_mbist_ctrl/rec_port_q[1][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[2]  /u_mbist_ctrl/rec_port_q[2][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[3]  /u_mbist_ctrl/rec_port_q[3][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[4]  /u_mbist_ctrl/rec_port_q[4][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[5]  /u_mbist_ctrl/rec_port_q[5][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[6]  /u_mbist_ctrl/rec_port_q[6][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[7]  /u_mbist_ctrl/rec_port_q[7][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[8]  /u_mbist_ctrl/rec_port_q[8][0] -Golden
+// Command: set_seq_merge /u_mbist_ctrl/fail_q[9]  /u_mbist_ctrl/rec_port_q[9][0] -Golden
+// Command: tclmode
+// Running Module rv32i_pipeline_ex1c and rv32i_pipeline_ex1c
+// Command: set_root_module rv32i_pipeline_ex1c -Golden
+0
+// Command: set_root_module rv32i_pipeline_ex1c -Revised
+0
+// Command: set_module_property -instance /u_core/u_ex1c -Golden
+0
+// Command: set_module_property -instance /u_core/u_ex1c -Revised
+0
+// Command: report_black_box -NOHidden
+0
+// Applying constraints to module boundaries ...
+// 162 Golden and 882 Revised pins constrained to constant value
+// 681 Golden and 668 Revised pins marked as unreachable
+// 353 Golden and 0 Revised pin equivalences applied
+// Command: set_system_mode lec
+// Processing Golden ...
+// Input-output equivalent pin added: ex1a_i[instruction][24]
+// Input-output equivalent pin added: ex1a_i[instruction][23]
+// Input-output equivalent pin added: ex1a_i[instruction][22]
+// Input-output equivalent pin added: ex1a_i[instruction][21]
+// Input-output equivalent pin added: ex1a_i[instruction][20]
+// Input-output equivalent pin added: ex1a_i[instruction][19]
+// Input-output equivalent pin added: ex1a_i[instruction][18]
+// Input-output equivalent pin added: ex1a_i[instruction][17]
+// Input-output equivalent pin added: ex1a_i[instruction][16]
+// Input-output equivalent pin added: ex1a_i[instruction][15]
+// Input-output equivalent pin added: ex1a_i[instruction][11]
+// Input-output equivalent pin added: ex1a_i[instruction][10]
+// Input-output equivalent pin added: ex1a_i[instruction][9]
+// Input-output equivalent pin added: ex1a_i[instruction][8]
+// Input-output equivalent pin added: ex1a_i[instruction][7]
+// Input-output equivalent pin added: ex1a_i[irq_cause][0]
+// Modeling Golden ...
+// Processing Revised ...
+// Modeling Revised ...
+// Warning: Golden and Revised have different numbers of key points:
+// Golden  key points = 433
+// Revised key points = 284
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 0 key point(s) by mapping information
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            206    78        284     
+--------------------------------------------------------------------------------
+Revised           206    78        284     
+================================================================================
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   PI        Total   
+--------------------------------------------------------------------------------
+Unreachable       149       149     
+================================================================================
+// Running automatic setup...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            206    78        284     
+--------------------------------------------------------------------------------
+Revised           206    78        284     
+================================================================================
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   PI        Total   
+--------------------------------------------------------------------------------
+Unreachable       149       149     
+================================================================================
+// Automatic setup finished.
+0
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules         2               1
+Library-cells         24             418
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              476                  476
+OUTPUT             476                  476
+--------------------------------------------
+AND        *       457                  658
+BUF        *        69                    4
+INV        *        17                 1422
+MUX        *       287                    0
+NOR        *        11                    0
+OR         *       244                  363
+WIRE       *       416                    0
+XOR        *        92                    0
+------ word-level --------------------------
+ADD        *         2                    0
+WMUX       *        12                    0
+WOR        *         6                    0
+WSEL       *         5                    0
+--------------------------------------------
+Total             1593                 2447
+
+// Command: report_unmapped_points -summary
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   PI        Total   
+--------------------------------------------------------------------------------
+Unreachable       149       149     
+================================================================================
+// Command: report_unmapped_points -notmapped
+
+0 unmapped points reported
+// Command: analyze_datapath -module -verbose
+// Note: Multithreaded module datapath analysis (MDP) is enabled
+// Warning: No eligible datapath module in the design. Skip ...
+// Command: analyze_datapath -flowgraph -verbose
+0
+// Command: add_compared_points -all
+// 78 compared points added to compare list
+0
+// Command: compare -noneq_stop 1  -threads 1,2
+// Compare will stop on the 1st non-equivalent point
+================================================================================
+Compared points      PO        Total   
+--------------------------------------------------------------------------------
+Equivalent           78        78      
+================================================================================
+CPU time     : 32.93   seconds
+Elapse time  : 48      seconds
+Memory usage : 318.17  M bytes
+// Command: analyze abort -compare
+There is no abort/specified point to be analyzed.
+// Command: save_hier_compare_result
+0
+// Command: set_system_mode setup
+0
+// Command: add_black_box rv32i_pipeline_ex1c -module -hier -Golden
+0
+// Command: add_black_box rv32i_pipeline_ex1c -module -hier -Revised
+0
+// Command: usage
+CPU time     : 33.00   seconds
+Memory usage : 318.17  M bytes
+0
+Processed 1 out of 4 module pairs	EQ: 1	NEQ: 0	ABORT: 0
+// Running Module rv32i_decode and rv32i_decode
+// Command: set_root_module rv32i_decode -Golden
+0
+// Command: set_root_module rv32i_decode -Revised
+0
+// Command: set_module_property -instance /u_core/u_id/u_decode -Golden
+0
+// Command: set_module_property -instance /u_core/u_id_u_decode -Revised
+0
+// Command: report_black_box -NOHidden
+0
+// Applying constraints to module boundaries ...
+// 2 Golden and 22 Revised pins constrained to constant value
+// 17 Golden and 17 Revised pins marked as unreachable
+// 15 Golden and 0 Revised pin equivalences applied
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Processing Revised ...
+// Modeling Revised ...
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 0 key point(s) by mapping information
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            32     42        74      
+--------------------------------------------------------------------------------
+Revised           32     42        74      
+================================================================================
+// Running automatic setup...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            32     42        74      
+--------------------------------------------------------------------------------
+Revised           32     42        74      
+================================================================================
+// Automatic setup finished.
+0
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules         1               1
+Library-cells         48             149
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT               32                   32
+OUTPUT              59                   59
+--------------------------------------------
+AND        *       292                  107
+BUF        *        12                    0
+INV        *        22                  233
+MUX        *         4                    0
+NOR        *        15                    0
+OR         *       205                   62
+WIRE       *        32                    0
+------ word-level --------------------------
+WMUX       *         9                    0
+WSEL       *        39                    0
+--------------------------------------------
+Total              582                  402
+
+// Command: report_unmapped_points -summary
+There is no unmapped point
+// Command: report_unmapped_points -notmapped
+There is no unmapped point
+// Command: analyze_datapath -module -verbose
+// Note: Multithreaded module datapath analysis (MDP) is enabled
+// Note: No major datapath components in the Golden design. Skip ...
+// Command: analyze_datapath -flowgraph -verbose
+0
+// Command: add_compared_points -all
+// 42 compared points added to compare list
+0
+// Command: compare -noneq_stop 1  -threads 1,2
+// Compare will stop on the 1st non-equivalent point
+================================================================================
+Compared points      PO        Total   
+--------------------------------------------------------------------------------
+Equivalent           42        42      
+================================================================================
+CPU time     : 33.44   seconds
+Elapse time  : 52      seconds
+Memory usage : 318.31  M bytes
+// Command: analyze abort -compare
+There is no abort/specified point to be analyzed.
+// Command: save_hier_compare_result
+0
+// Command: set_system_mode setup
+0
+// Command: add_black_box rv32i_decode -module -hier -Golden
+0
+// Command: add_black_box rv32i_decode -module -hier -Revised
+0
+// Command: usage
+CPU time     : 33.46   seconds
+Memory usage : 318.31  M bytes
+0
+Processed 2 out of 4 module pairs	EQ: 2	NEQ: 0	ABORT: 0
+// Running Module rv32i_core_RESET_PC0 and rv32i_core_RESET_PC0
+// Command: set_root_module rv32i_core_RESET_PC0 -Golden
+// Warning: Total black box modules referenced in Golden = 3
+0
+// Command: set_root_module rv32i_core_RESET_PC0 -Revised
+// Warning: Total black box modules referenced in Revised = 3
+0
+// Command: set_module_property -instance /u_core -Golden
+0
+// Command: set_module_property -instance /u_core -Revised
+0
+// Command: report_black_box -NOHidden
+HIER: (G R) rv32i_decode
+HIER: (G R) rv32i_pipeline_ex1c
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+CPU time     : 33.61   seconds
+Elapse time  : 52      seconds
+Memory usage : 318.31  M bytes
+// Applying constraints to module boundaries ...
+// 186 Golden and 194 Revised pins constrained to constant value
+// 194 Golden and 194 Revised pins marked as unreachable
+// 6 Golden and 0 Revised pin equivalences applied
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Warning: (F34) Converted 104 X assignment(s) as don't care(s)
+// (F21) Merged 98 DFF/DLAT(s) due to added instance equivalences (flatten)
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling mapped 9044 out of 10032 DFF/DLATs
+// 4522 are from mapping setup information.
+// Collected 191 sequential constant(s) via setup info for Golden
+// (F18) Converted 358 DFF/DLAT(s) in (G) to ZERO/ONE
+// (F36) Added 4645 don't care(s) due to $constraints.
+CPU time     : 38.84   seconds
+Elapse time  : 58      seconds
+Memory usage : 332.15  M bytes
+// Warning: Golden and Revised have different numbers of key points:
+// Golden  key points = 6052
+// Revised key points = 5062
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 4532 key point(s) by mapping information
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            179    349    2         530     
+--------------------------------------------------------------------------------
+Revised           179    349    2         530     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            4522   10        4532    
+--------------------------------------------------------------------------------
+Revised           4522   10        4532    
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 68 key point groups
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   PI     DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       2      892       894     
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 1 key point groups
+CPU time     : 39.30   seconds
+Elapse time  : 58      seconds
+Memory usage : 332.15  M bytes
+// Running automatic setup...
+// Merged 36 DFF/DLAT(s) in (G)
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            179    349    2         530     
+--------------------------------------------------------------------------------
+Revised           179    349    2         530     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            4522   10        4532    
+--------------------------------------------------------------------------------
+Revised           4522   10        4532    
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 100 key point groups
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   PI     DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       2      856       858     
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 1 key point groups
+// Automatic setup finished.
+0
+CPU time     : 42.20   seconds
+Elapse time  : 61      seconds
+Memory usage : 339.41  M bytes
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules        32              28
+Library-cells        946           23874
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              181                  181
+OUTPUT             541                  541
+--------------------------------------------
+$CNTRT     *         2                    0
+AND        *     18337                30094
+BUF        *       170                  266
+DFF        *      5510                 4522
+INV        *      2085                56652
+MUX        *     22168                    0
+NAND       *         2                    0
+NOR        *       736                    0
+OR         *      4210                14313
+WIRE       *      2084                    0
+XNOR       *       126                    0
+XOR        *      1570                    0
+------ word-level --------------------------
+ADD        *        24                    0
+EQ         *        26                    0
+GE         *         3                    0
+LT         *         5                    0
+NE         *         3                    0
+SLL        *         1                    0
+SRA        *         1                    0
+SRL        *         1                    0
+SUBTRACT   *         2                    0
+WAND       *        18                    0
+WINV       *         1                    0
+WMUX       *       671                    0
+WOR        *        15                    0
+WSEL       *       144                    0
+WXOR       *        22                    0
+BBOX                12                   12
+------ don't care --------------------------
+X-assignments      104                    0
+--------------------------------------------
+Total            57116               105859
+
+// Command: report_unmapped_points -summary
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   PI     DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       2      856       858     
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 1 key point groups
+// Command: report_unmapped_points -notmapped
+
+0 unmapped points reported
+// Command: analyze_datapath -module -verbose
+// Note: Multithreaded module datapath analysis (MDP) is enabled
+// 14 datapath modules are detected based on verification information.
+// Note: SUB_TC_OP_1_Y_SUB_TC_OP266 : quality evaluated 100% success 
+// Note: csa_tree_ADD_TC_OP_269_groupi : quality evaluated 100% success 
+// Note: ADD_TC_OP_1_Y_ADD_TC_OP263 : quality evaluated 100% success 
+// Note: inc_u_csr_add_407_34 : quality evaluated 100% success 
+// Note: inc_u_csr_add_413_51 : quality evaluated 100% success 
+// Note: inc_u_csr_add_414_52 : quality evaluated 100% success 
+// Note: inc_u_csr_add_430_46 : quality evaluated 100% success 
+// Note: inc_u_csr_add_435_46 : quality evaluated 100% success 
+// Note: inc_u_csr_add_440_46 : quality evaluated 100% success 
+// Note: u_fwd_add_97_36 : quality evaluated 100% success 
+// Note: u_fwd_add_112_36 : quality evaluated 100% success 
+// Note: u_fwd_add_128_38 : quality evaluated 100% success 
+// Note: u_fwd_add_143_40 : quality evaluated 100% success 
+// Note: u_if_add_84_27_Y_u_id_add_149_44 : quality evaluated 100% success 
+// Command: analyze_datapath -flowgraph -verbose
+0
+CPU time     : 46.00   seconds
+Elapse time  : 89      seconds
+Memory usage : 389.62  M bytes
+// Command: add_compared_points -all
+// 4883 compared points added to compare list
+0
+// Command: compare -noneq_stop 1  -threads 1,2
+// Compare will stop on the 1st non-equivalent point
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           349    4522   12        4883    
+================================================================================
+Compare results of merged compare points                            
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           119       119     
+================================================================================
+Compare results of instance/output/pin equivalences and/or sequential merge      
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           204       204     
+================================================================================
+CPU time     : 73.93   seconds
+Elapse time  : 107     seconds
+Memory usage : 382.11  M bytes
+// Command: analyze abort -compare
+There is no abort/specified point to be analyzed.
+// Command: save_hier_compare_result
+0
+CPU time     : 75.08   seconds
+Elapse time  : 108     seconds
+Memory usage : 382.11  M bytes
+// Command: set_system_mode setup
+0
+// Command: add_black_box rv32i_core_RESET_PC0 -module -hier -Golden
+0
+// Command: add_black_box rv32i_core_RESET_PC0 -module -hier -Revised
+0
+// Command: usage
+CPU time     : 75.08   seconds
+Memory usage : 382.11  M bytes
+0
+Processed 3 out of 4 module pairs	EQ: 3	NEQ: 0	ABORT: 0
+// Running Module rv32i_cpu_top and rv32i_cpu_top
+// Command: set_root_module rv32i_cpu_top -Golden
+// Warning: Total black box modules referenced in Golden = 4
+0
+// Command: set_root_module rv32i_cpu_top -Revised
+// Warning: Total black box modules referenced in Revised = 4
+0
+// Command: set_module_property -instance / -Golden
+0
+// Command: set_module_property -instance / -Revised
+0
+// Command: report_black_box -NOHidden
+HIER: (G R) rv32i_core_RESET_PC0
+0
+// Applying constraints to module boundaries ...
+// 131 Golden and 131 Revised pins constrained to constant value
+// 8 Golden and 8 Revised pins marked as unreachable
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Warning: (F34) Converted 6 X assignment(s) as don't care(s)
+// (F21) Merged 10 DFF/DLAT(s) due to added instance equivalences (flatten)
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling mapped 1372 out of 1412 DFF/DLATs
+// 686 are from mapping setup information.
+// Collected 30 sequential constant(s) via setup info for Golden
+// (F18) Converted 30 DFF/DLAT(s) in (G) to ZERO/ONE
+// (F36) Added 686 don't care(s) due to $constraints.
+CPU time     : 75.88   seconds
+Elapse time  : 109     seconds
+Memory usage : 382.11  M bytes
+// Warning: Golden and Revised have different numbers of key points:
+// Golden  key points = 1230
+// Revised key points = 1190
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 687 key point(s) by mapping information
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            686    1         687     
+--------------------------------------------------------------------------------
+Revised           686    1         687     
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 10 key point groups
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       30        30      
+================================================================================
+// Warning: (MAP7) 1 Golden keypoints are already mapped when applying mapping information
+// Running automatic setup...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            686    1         687     
+--------------------------------------------------------------------------------
+Revised           686    1         687     
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 10 key point groups
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       30        30      
+================================================================================
+// Automatic setup finished.
+0
+CPU time     : 76.31   seconds
+Elapse time  : 109     seconds
+Memory usage : 382.11  M bytes
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules         3               2
+Library-cells        287            2434
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+$CNTRT     *         2                    0
+AND        *      1598                 2855
+BUF        *        17                   16
+DFF        *       726                  686
+INV        *        74                 4063
+MUX        *      1960                    0
+NAND       *         1                    0
+NOR        *        78                    0
+OR         *       570                 1451
+WIRE       *       179                    4
+XNOR       *        31                    0
+XOR        *       119                    0
+------ word-level --------------------------
+ADD        *         4                    0
+EQ         *         4                    0
+GE         *         2                    0
+GT         *         2                    0
+LE         *         2                    0
+SLL        *         1                    0
+SUBTRACT   *         4                    0
+WINV       *         1                    0
+WMUX       *       239                    0
+WSEL       *        27                    0
+WXOR       *         1                    0
+BBOX                 1                    1
+------ don't care --------------------------
+X-assignments        6                    0
+--------------------------------------------
+Total             5362                 9076
+
+// Command: report_unmapped_points -summary
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       30        30      
+================================================================================
+// Command: report_unmapped_points -notmapped
+
+0 unmapped points reported
+// Command: analyze_datapath -module -verbose
+// Note: Multithreaded module datapath analysis (MDP) is enabled
+// Warning: No eligible datapath module in the design. Skip ...
+// Command: analyze_datapath -flowgraph -verbose
+0
+// Command: add_compared_points -all
+// 1066 compared points added to compare list
+0
+// Command: compare -noneq_stop 1  -threads 1,2
+// Compare will stop on the 1st non-equivalent point
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    686    1         1066    
+================================================================================
+Compare results of instance/output/pin equivalences and/or sequential merge      
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           10        10      
+================================================================================
+CPU time     : 77.09   seconds
+Elapse time  : 114     seconds
+Memory usage : 382.11  M bytes
+// Command: analyze abort -compare
+There is no abort/specified point to be analyzed.
+// Command: save_hier_compare_result
+0
+CPU time     : 77.32   seconds
+Elapse time  : 115     seconds
+Memory usage : 382.11  M bytes
+// Command: set_system_mode setup
+0
+// Command: usage
+CPU time     : 77.32   seconds
+Memory usage : 382.11  M bytes
+0
+Processed 4 out of 4 module pairs	EQ: 4	NEQ: 0	ABORT: 0
+
+================================================================================
+Module Comparison Results
+--------------------------------------------------------------------------------
+Equivalent                     4
+--------------------------------------------------------------------------------
+Total                          4/4
+--------------------------------------------------------------------------------
+Hierarchical compare : Equivalent 
+================================================================================
+0
+CPU time     : 77.55   seconds
+Elapse time  : 115     seconds
+Memory usage : 382.11  M bytes
+// Command: report_hier_compare_result -dynamicflattened
+0
+// Command: report_verification -hier -verbose
+================================================================================
+                            Verification Report
+--------------------------------------------------------------------------------
+Category                                                                  Count
+--------------------------------------------------------------------------------
+1. Non-standard modeling options used:                                      1
+     Tri-stated output:                                        checked
+     Revised X signals set to E:                               yes
+     Floating signals tied to Z:                               no *
+     Command "add clock" for clock-gating:                     not used
+--------------------------------------------------------------------------------
+2. Incomplete verification:                                                 0
+     All primary outputs are mapped:                           yes
+     Not-mapped DFF/DLAT is detected:                          no
+     All mapped points are added as compare points:            yes
+     All compared points are compared:                         yes
+     User added black box:                                     no
+     Black box mapped with different module name:              no
+     Empty module is not black boxed:                          no
+     Command "add ignore outputs" used:                        no
+     Always false constraints detected:                        no
+     Verified pin-equivalent outputs are unmapped:             no
+--------------------------------------------------------------------------------
+3. User modification to design:                                             0
+     Change gate type:                                         no
+     Change wire:                                              no
+     Primary input added by user:                              no
+--------------------------------------------------------------------------------
+4. Conformal Constraint Designer clock domain crossing checks recommended:  0
+     Multiple clocks in the design:                            no
+--------------------------------------------------------------------------------
+5. Design ambiguity:                                                        0
+     Duplicate module definition:                              no
+     Black box due to undefined cells:                         no
+     Golden design has abnormal ratio of unreachable gates:    no
+     Ratio of golden unreachable gates:                        5%
+     Revised design has abnormal ratio of unreachable gates:   no
+     Ratio of revised unreachable gates:                       0%
+     All primary input bus ordering is consistent:             yes
+     All primary output bus ordering is consistent:            yes
+     DFF/DLAT not compared due to disabled clock port(s):        0
+     Always X compared point is detected:                      not checked
+--------------------------------------------------------------------------------
+6. Compare Results:                                                        PASS
+     Total Equivalent modules  = 4
+================================================================================
+pass
+// Command: set_system_mode lec
+0
+// Command: write_compared_points noneq.compared_points.rv32i_cpu_top.rtl.fv_map.tcl -class noneq -tclmode -replace
+0
+// Command: set lec_version_required "21.10100"
+21.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//              analyze_nonequivalent -source_diagnosis
+//              report_nonequivalent_analysis > noneq.source_diag.rv32i_cpu_top.rtl.fv_map.rpt
+//          }
+// Command: analyze_nonequivalent -source_diagnosis
+// Warning: Non-equivalent points do not exist.
+// Command: report_nonequivalent_analysis > noneq.source_diag.rv32i_cpu_top.rtl.fv_map.rpt
+0
+// Command: report_test_vector -noneq > noneq.test_vector.rv32i_cpu_top.rtl.fv_map.rpt
+0
+// Command: set_system_mode setup
+0
+// Command: write_verification_information
+// Verification information is written to rtl_fv_map_db.
+0
+// Command: report_verification_information
+// Generating reports on verification information at /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/rtl_fv_map_db...
+LEC run scores:
+================================================================================
+Step                Score     Range          
+--------------------------------------------------------------------------------
+result_status       10        10             
+runtime             10        10             
+mapping             10        10             
+sequential_constant 10        10             
+sequential_merge    5         10             
+sequential_phase    10        10             
+datapath_analysis   10        10             
+combinational_loop  5         10             
+mismatch_detection  5         10             
+overall             75        90             
+================================================================================
+LEC results versus attributes:
+================================================================================
+Attribute           Total     Inconsistency  Combined Table                
+--------------------------------------------------------------------------------
+sequential_constant 388       0              sequential_constant.json      
+sequential_merge    144       108            sequential_merge.json         
+sequential_phase    5208      0              sequential_phase.json         
+================================================================================
+The tables can be viewed directly using web interface.
+// Done with reporting verification information.
+0
+// Command: report_implementation_information
+// Reporting implementation information...
+// Information summary:
+================================================================================
+        Information Category     Total      Used    Unused  Rejected     Abort
+--------------------------------------------------------------------------------
+   Sequential instance phase      5218         0      5218         0         0
+               Phase mapping         0         0         0         0         0
+         Sequential constant       221       221         0         0         0
+            Sequential merge       108       108         0         0         0
+      Sequential unreachable       713         0       713         0         0
+      Sequential duplication         0         0         0         0         0
+       Boundary optimization      1017       871       146         0         0
+          Synthesis equation        14        14         0         0         0
+  Combinational loop breaker         0         0         0         0         0
+================================================================================
+0
+// Command: set_system_mode lec
+0
+// Command: puts "No of compare points = [get_compare_points -count]"
+// Command: get_compare_points -count
+No of compare points = 1076
+// Command: puts "No of diff points    = [get_compare_points -NONequivalent -count]"
+// Command: get_compare_points -NONequivalent -count
+No of diff points    = 0
+// Command: puts "No of abort points   = [get_compare_points -abort -count]"
+// Command: get_compare_points -abort -count
+No of abort points   = 0
+// Command: puts "No of unknown points = [get_compare_points -unknown -count]"
+// Command: get_compare_points -unknown -count
+No of unknown points = 0
+// Command: if {[get_compare_points -count] == 0} {
+//              puts "---------------------------------"
+//              puts "ERROR: No compare points detected"
+//              puts "---------------------------------"
+//          }
+// Command: get_compare_points -count
+// Command: if {[get_compare_points -NONequivalent -count] > 0} {
+//              puts "------------------------------------"
+//              puts "ERROR: Different Key Points detected"
+//              puts "------------------------------------"
+//          }
+// Command: get_compare_points -NONequivalent -count
+// Command: if {[get_compare_points -abort -count] > 0} {
+//              puts "-----------------------------"
+//              puts "ERROR: Abort Points detected "
+//              puts "-----------------------------"
+//          }
+// Command: get_compare_points -abort -count
+// Command: if {[get_compare_points -unknown -count] > 0} {
+//              puts "----------------------------------"
+//              puts "ERROR: Unknown Key Points detected"
+//              puts "----------------------------------"
+//          }
+// Command: get_compare_points -unknown -count
+// Command: analyze_results -logfiles $logfile
+// Analyzing logfile '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/lec.log'
+// Warning: Analyze results collects information from the log file but does not
+//          qualify the execution or completeness of the run.
+// Logfile Results
+================================================================================
+|                  Conformal Version |24.10-p100 
+|                        Root Module |rv32i_cpu_top 
+|                           CPU Time |77 sec
+|                       Elapsed Time |115 sec
+|                             Memory |389.62 MB
+|              Power Grid Comparison |N/A 
+|               Power Intent Compare |N/A 
+|           Supply Power Consistency |N/A 
+|        Retention Power Consistency |N/A 
+|             Compare Power Crossing |N/A 
+|                     LEC Comparison |PASS 
+|                 Flatten Comparison |PASS 
+|            Hierarchical Comparison |PASS 
+|                      Logfile Lines |2550 
+|                       Logfile Name |lec.log 
+|              Logfile Modified Time |Mon Oct 26 01:28:36 2026 
+|         Implementation Information |fv/rv32i_cpu_top, fv/rv32i_cpu_top 
+|       Set Verification Information |/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/fv_map_rv32i_cpu_topnlv_db, /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/rtl_fv_map_db 
+|      Read Verification Information |N/A 
+|                   Analysis Elapsed |0.1 sec
+|                    Runtime / #Gate |0.0 sec
+|Matched back-to-back isolation cell |N/A 
+|            Time-consuming commands | 1. compare: 38s(33.04%) (execute 5 time(s))
+|                                    | 2. analyze datapath: 28s(24.35%) (execute 8 time(s))
+|                                    | 3. set system mode: 21s(18.26%) (execute 12 time(s))
+================================================================================
+           
+// Usage Breakdown Summary
+================================================================================
+|Command                   |  Total Elapse Time|  Total CPU Time|    Peak Memory
+--------------------------------------------------------------------------------
+|read library              |                0 s|             1 s|      264.73 MB
+|read design -golden       |                1 s|             0 s|      164.79 MB
+|read design -revised      |                1 s|             1 s|      292.44 MB
+|write hier_compare dofile |               13 s|             8 s|      329.59 MB
+|run hier_compare          |               67 s|            45 s|      389.62 MB
+           
+// Critical Warnings
+================================================================================
+|Occurrence|Warning
+--------------------------------------------------------------------------------
+|3         |(RTL7.3) Array index in RHS might be out of range
+|2         |(RTL7.4) Array index in LHS might be out of range
+|1         |(RTL7.10) Comparison with signed and unsigned operands
+================================================================================
+           
+           
+// Flatten Comparison Summary:
+--------------------------------------------------------------------------------
+// Flatten Compare #1
+               
+// Compare result: Equivalent
+// Compare commands:
+  1. compare (line: 362)
+--------------------------------------------------------------------------------
+               
+           
+// Hierarchical Comparison Information
+--------------------------------------------------------------------------------
+// Hierarchical Run #1
+             
+// Write Dofile Command          : write_hier_compare_dofile hier_tmp2.lec.do -verbose -noexact_pin_match -replace -usage -balanced_extraction -constraint -input_output_pin_equivalence -prepend_string "report_design_data; report_unmapped_points -summary; report_unmapped_points -notmapped; analyze_datapath -module -verbose; eval analyze_datapath $DATAPATH_SOLVER_OPTION -verbose" (line: 918)
+  # module pair(s) are written for hierarchical comparison: 4
+// Run Hier_compare Command      : run_hier_compare hier_tmp2.lec.do -dynamic_hierarchy (line: 1586)
+// Hierarchical Compare Result   : Equivalent
+// Smart instance selection      : Disable
+           
+// Hierarchical Comparison Statistics
+================================================================================
+|     Modules|       Total|         Max|         Min|         Avg
+--------------------------------------------------------------------------------
+|           4|          71|          56|           4|          18
+================================================================================
+  Modules: Total number of modules.
+  Total: Sum of all module runtimes(sec).
+  Max: Runtime of module with longest runtime.
+  Min: Runtime of module with shortest runtime.
+  Avg: Average runtime of all modules.
+           
+// Bottleneck Modules: 
+// Note: Report skipped due to brief overall runtime
+ 
+// Smart LEC Parallel Hierarchical Comparison Analysis
+// Note: Analysis is skipped due to brief overall runtime
+--------------------------------------------------------------------------------
+               
+// Resource usages of analysis: Cpu=0.15s Mem=316MB
+0
+// Command: vpxmode
+// Command: exit -f

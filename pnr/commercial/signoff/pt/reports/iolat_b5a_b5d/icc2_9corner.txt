@@ -1,0 +1,40 @@
+## ICC2 (StarRC)  (9/9 corners)
+netlist md5 e9150655c154779119d823b4222358d5  sdc md5 e90bdba8b93f8f4e985c5fbaa6d4ab90  PT X-2025.06
+SPEF md5 per rc corner: nom=ce6cef3f40117e928fcb9a53144b0579, min=98351449020499f54f51921328095e16, max=4f3ca67b36f96f0939201eac5392fe85
+
+SETUP (ns).  Total = unique violating endpoints;  r2r = reg->reg;  I/O = in->reg + reg->out + in->out (PT report_global_timing categories; I/O NUM may double-count an endpoint)
+corner                  WNS       TNS  viol |   r2r WNS       TNS     n |   I/O WNS       TNS     n | worst setup path (start -> end)
+nom_tt_025C_1v80    +0.0396     0.000     0 |       met     0.000     0 |       met     0.000     0 | u_core/u_mem_mem_wb_reg_o_reg_mem_rd_/CLK -> u_core/ex1a_ex1b_reg_q_reg_alu_result__31_/D
+nom_ss_100C_1v60   -14.8826 -4434.190  1462 |  -14.8826 -4381.882  1410 |   -4.7540   -52.310    52 | u_core/ex1a_ex1b_reg_q_reg_pc__1_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D
+nom_ff_n40C_1v95    +2.6919     0.000     0 |       met     0.000     0 |       met     0.000     0 | u_core/u_icache_gen_data_sram_2__u_data_sram/clk0 -> u_core/u_icache_data_dout_r_reg_2__29_/D
+min_tt_025C_1v80    +0.2632     0.000     0 |       met     0.000     0 |       met     0.000     0 | u_core/ex1a_ex1b_reg_q_reg_pc__1_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D
+min_ss_100C_1v60   -14.6982 -3686.387  1169 |  -14.6982 -3650.679  1136 |   -4.3929   -35.710    33 | u_core/ex1a_ex1b_reg_q_reg_pc__1_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D
+min_ff_n40C_1v95    +2.9099     0.000     0 |       met     0.000     0 |       met     0.000     0 | u_core/u_icache_gen_data_sram_2__u_data_sram/clk0 -> u_core/u_icache_data_dout_r_reg_2__29_/D
+max_tt_025C_1v80    -0.5253    -1.739     7 |   -0.5253    -1.739     7 |       met     0.000     0 | u_core/u_icache_ic_addr_q_reg_7_/CLK -> u_core/u_if_pc_q_reg_31_/D
+max_ss_100C_1v60   -15.1176 -5710.267  1901 |  -15.1176 -5648.982  1869 |   -5.2034   -61.284    32 | u_core/ex1a_ex1b_reg_q_reg_pc__1_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D
+max_ff_n40C_1v95    +2.3932     0.000     0 |       met     0.000     0 |       met     0.000     0 | u_core/u_icache_gen_data_sram_2__u_data_sram/clk0 -> u_core/u_icache_data_dout_r_reg_2__29_/D
+
+HOLD (ns)
+corner                  WNS       TNS  viol |   r2r WNS       TNS     n |   I/O WNS       TNS     n | worst hold path (start -> end)
+nom_tt_025C_1v80    -0.0165    -0.032     5 |   -0.0165    -0.032     5 |       met     0.000     0 | u_core/ex1a_ex1b_reg_q_reg_mtvec__3_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__3_/D
+nom_ss_100C_1v60    -0.3063    -3.310    22 |       met     0.000     0 |   -0.3063    -3.310    22 | axi_rdata_i[10] -> u_core/u_dcache/uncached_rdata_q_reg_10_/D
+nom_ff_n40C_1v95    -0.0976    -4.014    99 |   -0.0976    -4.014    99 |       met     0.000     0 | u_core/ex1a_ex1b_reg_q_reg_mtvec__3_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__3_/D
+min_tt_025C_1v80    -0.0110    -0.016     2 |   -0.0110    -0.016     2 |       met     0.000     0 | u_core/ex1a_ex1b_reg_q_reg_mtvec__3_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__3_/D
+min_ss_100C_1v60    -0.1815    -0.954    11 |       met     0.000     0 |   -0.1815    -0.954    11 | axi_rdata_i[10] -> u_core/u_dcache/uncached_rdata_q_reg_10_/D
+min_ff_n40C_1v95    -0.0973    -3.872   100 |   -0.0973    -3.872   100 |       met     0.000     0 | u_core/ex1a_ex1b_reg_q_reg_mtvec__3_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__3_/D
+max_tt_025C_1v80    -0.0210    -0.047     8 |   -0.0210    -0.047     8 |       met     0.000     0 | u_core/ex1a_ex1b_reg_q_reg_mtvec__3_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__3_/D
+max_ss_100C_1v60    -0.4718    -7.872    31 |       met     0.000     0 |   -0.4718    -7.872    31 | axi_rdata_i[10] -> u_core/u_dcache/uncached_rdata_q_reg_10_/D
+max_ff_n40C_1v95    -0.1059    -4.355   101 |   -0.1059    -4.354   101 |       met     0.000     0 | u_core/ex1a_ex1b_reg_q_reg_mtvec__3_/CLK -> u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__3_/D
+
+DRV (violating pins) and ANNOTATION GATE (p2p = nets with a driver and load; gate: >1 % p2p unannotated or any clock net unannotated = FAIL)
+corner             max_tran  max_cap  max_fan |  p2p nets p2p unann clk nets clk unann loadless driverless | gate  | SPEF nets not in netlist | wall   rss
+nom_tt_025C_1v80        550      163      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:23.64 1.1G
+nom_ss_100C_1v60      39627      164      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:35.28 1.1G
+nom_ff_n40C_1v95         33      160      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:17.91 1.1G
+min_tt_025C_1v80         33      162      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:19.82 1.1G
+min_ss_100C_1v60      34069      163      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:19.95 1.1G
+min_ff_n40C_1v95         29      158      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:18.17 1.1G
+max_tt_025C_1v80       5933      166      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:19.98 1.1G
+max_ss_100C_1v60      45120      168      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:19.25 1.1G
+max_ff_n40C_1v95        248      164      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:16.55 1.1G
+

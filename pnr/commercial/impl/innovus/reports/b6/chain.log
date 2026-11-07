@@ -1,0 +1,47 @@
+04:00:47 start 01_floorplan
+04:01:52 end 01_floorplan rc=0 saved_ok=1
+04:01:52 start 02_pdn
+04:02:29 end 02_pdn rc=0 saved_ok=1
+runs/b6_innovus/logs/02_pdn.log:B6_NWELL(before): std cells 67731; n-well islands 63961; islands with NO tap: 767
+runs/b6_innovus/logs/02_pdn.log:B6_TAPFIX first: endcap ENDCAP_2 box {98.44 24.48 99.82 27.2} neighbour tap urx 97.98 orient MX
+runs/b6_innovus/logs/02_pdn.log:B6_TAPFIX: added 293 taps abutting row-segment endcaps; taps now 63814
+runs/b6_innovus/logs/02_pdn.log:B6_NWELL(after): std cells 68024; n-well islands 63668; islands with NO tap: 474
+runs/b6_innovus/logs/02_pdn.log:PDN_SELFCHECK VPWR: special-wire pieces = 1
+runs/b6_innovus/logs/02_pdn.log:PDN_SELFCHECK VGND: special-wire pieces = 1
+runs/b6_innovus/logs/02_pdn.log:PDN_SELFCHECK: PASS (one piece per PG net)
+runs/b6_innovus/logs/01_floorplan.log:PINS: 503 fixed: 503 on met2 met3
+runs/b6_innovus/logs/01_floorplan.log:MACROS placed: 10 of 10
+04:02:29 chain A done
+04:05:40 start 03_place
+04:16:52 end 03_place rc=0 saved_ok=1
+04:16:52 start 04_cts
+04:27:20 end 04_cts rc=0 saved_ok=1
+04:27:20 start 05a_route
+04:31:09 end 05a_route rc=0 saved_ok=1
+04:31:09 start 05m_post
+04:52:12 end 05m_post rc=0 saved_ok=1
+04:52:12 chain B done
+04:52:53 start 06_draft
+04:57:55 end 06_draft rc=0 saved_ok=1
+04:57:56 start draft_inspect
+04:58:08 end draft_inspect rc=0
+04:58:56 start draft_fixgds
+04:59:00 end draft_fixgds rc=0
+04:59:56 start draft_kdrc
+05:13:09 end draft_kdrc rc=0
+05:13:09 start draft_antenna
+05:13:58 end draft_antenna rc=0
+37 hits, 37 stubs, 0 unmatched
+13 violating pins -> runs/b6_innovus/b6_ant_list.tcl
+05:14:09 start 05m_eco
+05:16:38 end 05m_eco rc=0 saved_ok=1
+05:16:38 start 06_final
+05:21:33 end 06_final rc=0 saved_ok=1
+05:21:33 start 07_restream
+05:21:59 end 07_restream rc=0 saved_ok=1
+05:21:59 chain C done (final out/ written)
+05:48:14 start 06_final
+05:53:10 end 06_final rc=0 saved_ok=1
+05:53:10 start 07_restream
+05:53:36 end 07_restream rc=0 saved_ok=1
+05:53:36 chain D re-finish done

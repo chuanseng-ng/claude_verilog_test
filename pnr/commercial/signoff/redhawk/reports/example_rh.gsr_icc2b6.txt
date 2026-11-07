@@ -1,0 +1,50 @@
+TECH_FILE /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/redhawk/sky130A_nom.tech
+LEF_FILES {
+ /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/techlef/sky130_fd_sc_hd__nom.tlef
+ /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lef/sky130_fd_sc_hd.lef
+ /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lef/sky130_ef_sc_hd.lef
+ /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef
+}
+DEF_FILES {
+ /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b6_icc2/out/rv32i_cpu_top.def
+}
+LIB_FILES {
+ /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+ /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib
+ /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/redhawk/runs/icc2b6/rh/custom_pgarc.lib custom
+}
+IGNORE_DEF_ERROR 1
+VDD_NETS {
+ VPWR 1.8
+}
+GND_NETS {
+ VGND 0
+}
+PAD_FILES {
+ /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/redhawk/runs/icc2b6/rh/pg.ploc
+}
+FREQUENCY 75e6
+INSTANCE_POWER_FILES {
+ /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/redhawk/runs/icc2b6/rh/power.ipf
+}
+STA_FILE {
+ rv32i_cpu_top /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/redhawk/runs/icc2b6/pt/rv32i_cpu_top.timing.gz
+}
+CELL_RC_FILE {
+ EXTRACT_RC 1
+ rv32i_cpu_top /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/icc2b6_nom/rv32i_cpu_top.nom.spef
+}
+MULTI_THREADS 1 2
+ENABLE_AUTO_EM 1
+EM_REPORT_PERCENTAGE 50
+EM_REPORT_LINE_NUMBER 100000
+DECAP_CELL {
+ sky130_fd_sc_hd__decap_3 1.38 2.72 0.00705 1099 met1 0
+ sky130_fd_sc_hd__decap_4 1.84 2.72 0.01255 1956 met1 0
+ sky130_fd_sc_hd__decap_6 2.76 2.72 0.02355 3669 met1 0
+ sky130_fd_sc_hd__decap_8 3.68 2.72 0.03455 5382 met1 0
+ sky130_fd_sc_hd__decap_12 5.52 2.72 0.05655 8809 met1 0
+ sky130_ef_sc_hd__decap_12 5.52 2.72 0.05655 8809 met1 0
+}
+DYNAMIC_SIMULATION_TIME 2.8e-8
+DYNAMIC_TIME_STEP 20e-12

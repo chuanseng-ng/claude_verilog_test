@@ -1,0 +1,28 @@
+total markers parsed: 1579
+
+by type:
+    1507  SHORT Metal Short
+      69  SPACING ParallelRunLength Spacing
+       3  MAR Minimum Area
+
+by layer:
+     852  met2
+     377  met1
+     269  met3
+      81  met4
+
+by location:
+    1359  open core  (86.1 %)
+     198  within 10um of SRAM edge  (12.5 %)
+      13  I/D-cache channel (y 417.5-520)  (0.8 %)
+       9  inside SRAM footprint  (0.6 %)
+
+type x location:
+    1322  SHORT Metal Short @ open core
+     163  SHORT Metal Short @ within 10um of SRAM edge
+      35  SPACING ParallelRunLength Spacing @ open core
+      34  SPACING ParallelRunLength Spacing @ within 10um of SRAM edge
+      13  SHORT Metal Short @ I/D-cache channel (y 417.5-520)
+       9  SHORT Metal Short @ inside SRAM footprint
+       2  MAR Minimum Area @ open core
+       1  MAR Minimum Area @ within 10um of SRAM edge

@@ -1,0 +1,36 @@
+Information: Using 2 threads for LVS
+[Check Short] Stage 1	Elapsed =    0:00:00, CPU =    0:00:00
+[Check Net] Init	Elapsed =    0:00:00, CPU =    0:00:00
+Warning: Port VPWR have no valid pin shapes. Skip this port. (RT-203)
+[Check Short] Stage 1-2	Elapsed =    0:00:00, CPU =    0:00:00
+[Check Short] Stage 2	Elapsed =    0:00:01, CPU =    0:00:00
+[Check Short] Stage 2-2	Elapsed =    0:00:09, CPU =    0:00:10
+[Check Short] Stage 3	Elapsed =    0:00:09, CPU =    0:00:10
+[Check Short] End	Elapsed =    0:00:09, CPU =    0:00:10
+Warning: Port VGND have no valid pin shapes. Skip this port. (RT-203)
+[Check Net] 10% 	Elapsed =    0:00:11, CPU =    0:00:13
+[Check Net] 20% 	Elapsed =    0:00:11, CPU =    0:00:13
+[Check Net] 30% 	Elapsed =    0:00:11, CPU =    0:00:13
+[Check Net] 40% 	Elapsed =    0:00:11, CPU =    0:00:14
+[Check Net] 50% 	Elapsed =    0:00:12, CPU =    0:00:14
+[Check Net] 60% 	Elapsed =    0:00:12, CPU =    0:00:14
+[Check Net] 70% 	Elapsed =    0:00:12, CPU =    0:00:14
+[Check Net] 80% 	Elapsed =    0:00:12, CPU =    0:00:14
+[Check Net] 90% 	Elapsed =    0:00:12, CPU =    0:00:14
+[Check Net] All nets are submitted.
+[Check Net] 100% 	Elapsed =    0:00:12, CPU =    0:00:15
+[Check Net] 100%	Elapsed =    0:00:12, CPU =    0:00:15
+Information: Detected short violation. Net1: u_core/ex1c_comb[158]. Net2: u_core/ex1c_ex1b_reg_q[124]. BBox: (1918.130 882.910)(1918.270 883.050). Layer: met1. (RT-586)
+
+===============================================================
+    Maximum number of violations is set to 100000
+    Abort checking when more than 100000 violations are found
+    All violations might not be found.
+===============================================================
+Total number of input nets is 35090.
+Total number of short violations is 1.
+Total number of open nets is 0.
+Total number of floating route violations is 0.
+
+Elapsed =    0:00:13, CPU =    0:00:15
+1

@@ -1,0 +1,51 @@
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : rv32i_cpu_top
+Scenario(s): setup_tt
+Version: X-2025.06-SP3
+Date   : Sun Nov  1 23:28:16 2026
+****************************************
+
+ * Some/all delay information is back-annotated.
+
+ # A fanout number of 1000 was used for high fanout net computations.
+Wire Load Model Mode: Inactive.
+
+  Startpoint: u_core_u_icache_gen_data_sram_3__u_data_sram/clk0
+              (internal path startpoint clocked by clk_i)
+  Endpoint: u_core_u_icache_data_dout_r_reg_3__31_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Scenario: setup_tt
+  Path Group: PIPELINE
+  Path Type: max
+
+  Point                                                                                           Incr       Path      Voltage
+  ----------------------------------------------------------------------------------------------------------------------------
+  clock clk_i (fall edge)                                                                         6.67       6.67      
+  clock network delay (ideal)                                                                     1.00       7.67      
+  input external delay                                                                            0.00       7.67 f    
+  u_core_u_icache_gen_data_sram_3__u_data_sram/clk0 (sky130_sram_1kbyte_1rw1r_32x256_8)           0.00 #     7.67 f    1.80
+  u_core_u_icache_gen_data_sram_3__u_data_sram/dout0[31] (sky130_sram_1kbyte_1rw1r_32x256_8)      3.19      10.86 f    1.80
+  U2538/X (sky130_fd_sc_hd__clkbuf_1)                                                             0.29 *    11.15 f    1.80
+  U22394/X (sky130_fd_sc_hd__a22o_1)                                                              0.21 *    11.36 f    1.80
+  u_core_u_icache_data_dout_r_reg_3__31_/D (sky130_fd_sc_hd__dfxtp_1)                             0.00 *    11.36 f    1.80
+  data arrival time                                                                                         11.36      
+
+  clock clk_i (rise edge)                                                                        13.33      13.33      
+  clock network delay (ideal)                                                                     1.00      14.33      
+  clock uncertainty                                                                              -0.50      13.83      
+  u_core_u_icache_data_dout_r_reg_3__31_/CLK (sky130_fd_sc_hd__dfxtp_1)                           0.00      13.83 r    
+  library setup time                                                                             -0.12      13.71      
+  data required time                                                                                        13.71      
+  ----------------------------------------------------------------------------------------------------------------------------
+  data required time                                                                                        13.71      
+  data arrival time                                                                                        -11.36      
+  ----------------------------------------------------------------------------------------------------------------------------
+  slack (MET)                                                                                                2.35      
+
+
+1

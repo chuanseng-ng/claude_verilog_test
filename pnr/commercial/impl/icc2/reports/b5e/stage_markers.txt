@@ -1,0 +1,17 @@
+2026-10-28T20:07:46 01_floorplan rc=0 wall_s=52 peak_rss_mb=1904 saved_markers=1
+2026-10-28T20:08:05 02_pdn rc=0 wall_s=18 peak_rss_mb=2000 saved_markers=1
+2026-10-28T20:21:57 03_place rc=0 wall_s=832 peak_rss_mb=3009 saved_markers=1
+2026-10-28T20:34:41 04_cts rc=0 wall_s=763 peak_rss_mb=3941 saved_markers=1
+2026-10-28T20:39:22 05_route rc=0 wall_s=280 peak_rss_mb=3194 saved_markers=1
+2026-10-28T20:58:16 05b_repair rc=0 wall_s=1134 peak_rss_mb=2884 saved_markers=1
+2026-10-28T21:12:35 05c_repair rc=0 wall_s=859 peak_rss_mb=2587 saved_markers=1
+run_chain: done through 07_write_verilog
+marker: 2026-10-28T21:15:27 launched 05d experiment (allow_pin_connection, 3 passes)
+2026-10-28T21:23:23 launched 05e rip-up/reroute experiment from 05c_repair (hard mode)
+2026-10-28T21:43:05 05e rip-up REGRESSED (322 DRC/585 shorts vs 222/423 base) -> discarded; launched 05x_route variant (GR effort high, macro boundary util 60, partition opt) from 04_cts
+2026-10-29T19:13:34 RESUME after host power-off: dlib intact (labels through 05x_route); 05x_route first pass 231 DRC/347 shorts (base 05_route 291/439) -> repair 8 passes as 05y_repair (hard), then 06_finish from 05y
+2026-10-29T19:43:02 05y_repair done: 231->90->47->25->1->1->1->1 (stuck 1 short met1 ex1c_comb[158]/ex1c_ex1b_reg_q[124]); launching 05z targeted rip-up
+2026-10-29T20:34:12 finish_chain: 05z result '' -> 06_finish base 05y_repair
+2026-10-29T20:41:26 06_finish rc=0 wall_s=429 peak_rss_mb=3534
+2026-10-29T20:41:50 07_write_verilog rc=0 wall_s=24 peak_rss_mb=2170
+2026-10-29T20:41:50 finish_chain done

@@ -1,0 +1,164 @@
+ 
+****************************************
+Report : timing
+        -path full
+        -delay min
+        -max_paths 5
+Design : rv32i_cpu_top
+Version: X-2025.06-SP3
+Date   : Mon Oct 26 00:03:25 2026
+****************************************
+
+ * Some/all delay information is back-annotated.
+
+ # A fanout number of 1000 was used for high fanout net computations.
+
+Operating Conditions: tt_025C_1v80   Library: sky130_fd_sc_hd__tt_025C_1v80
+Wire Load Model Mode: Inactive.
+
+  Startpoint: u_mbist_ctrl_tg_addr_q_reg_1__4_
+              (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_tg_addr_q_reg_2__4_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                                                Incr       Path
+  ---------------------------------------------------------------------------------------
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  u_mbist_ctrl_tg_addr_q_reg_1__4_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00 #     1.00 r
+  u_mbist_ctrl_tg_addr_q_reg_1__4_/Q (sky130_fd_sc_hd__dfxtp_1)        0.28       1.28 r
+  u_mbist_ctrl_tg_addr_q_reg_2__4_/D (sky130_fd_sc_hd__dfxtp_1)        0.00 *     1.28 r
+  data arrival time                                                               1.28
+
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  clock uncertainty                                                    0.20       1.20
+  u_mbist_ctrl_tg_addr_q_reg_2__4_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00       1.20 r
+  library hold time                                                   -0.04       1.16
+  data required time                                                              1.16
+  ---------------------------------------------------------------------------------------
+  data required time                                                              1.16
+  data arrival time                                                              -1.28
+  ---------------------------------------------------------------------------------------
+  slack (MET)                                                                     0.12
+
+
+  Startpoint: u_mbist_ctrl_tg_addr_q_reg_0__7_
+              (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_tg_addr_q_reg_1__7_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                                                Incr       Path
+  ---------------------------------------------------------------------------------------
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  u_mbist_ctrl_tg_addr_q_reg_0__7_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00 #     1.00 r
+  u_mbist_ctrl_tg_addr_q_reg_0__7_/Q (sky130_fd_sc_hd__dfxtp_1)        0.28       1.28 r
+  u_mbist_ctrl_tg_addr_q_reg_1__7_/D (sky130_fd_sc_hd__dfxtp_1)        0.00 *     1.28 r
+  data arrival time                                                               1.28
+
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  clock uncertainty                                                    0.20       1.20
+  u_mbist_ctrl_tg_addr_q_reg_1__7_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00       1.20 r
+  library hold time                                                   -0.04       1.16
+  data required time                                                              1.16
+  ---------------------------------------------------------------------------------------
+  data required time                                                              1.16
+  data arrival time                                                              -1.28
+  ---------------------------------------------------------------------------------------
+  slack (MET)                                                                     0.12
+
+
+  Startpoint: u_mbist_ctrl_tg_slot_q_reg_0__2_
+              (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_tg_slot_q_reg_1__2_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                                                Incr       Path
+  ---------------------------------------------------------------------------------------
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  u_mbist_ctrl_tg_slot_q_reg_0__2_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00 #     1.00 r
+  u_mbist_ctrl_tg_slot_q_reg_0__2_/Q (sky130_fd_sc_hd__dfxtp_1)        0.28       1.28 r
+  u_mbist_ctrl_tg_slot_q_reg_1__2_/D (sky130_fd_sc_hd__dfxtp_1)        0.00 *     1.28 r
+  data arrival time                                                               1.28
+
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  clock uncertainty                                                    0.20       1.20
+  u_mbist_ctrl_tg_slot_q_reg_1__2_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00       1.20 r
+  library hold time                                                   -0.04       1.16
+  data required time                                                              1.16
+  ---------------------------------------------------------------------------------------
+  data required time                                                              1.16
+  data arrival time                                                              -1.28
+  ---------------------------------------------------------------------------------------
+  slack (MET)                                                                     0.12
+
+
+  Startpoint: u_mbist_ctrl_tg_addr_q_reg_1__3_
+              (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_tg_addr_q_reg_2__3_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                                                Incr       Path
+  ---------------------------------------------------------------------------------------
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  u_mbist_ctrl_tg_addr_q_reg_1__3_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00 #     1.00 r
+  u_mbist_ctrl_tg_addr_q_reg_1__3_/Q (sky130_fd_sc_hd__dfxtp_1)        0.28       1.28 r
+  u_mbist_ctrl_tg_addr_q_reg_2__3_/D (sky130_fd_sc_hd__dfxtp_1)        0.00 *     1.28 r
+  data arrival time                                                               1.28
+
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  clock uncertainty                                                    0.20       1.20
+  u_mbist_ctrl_tg_addr_q_reg_2__3_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00       1.20 r
+  library hold time                                                   -0.04       1.16
+  data required time                                                              1.16
+  ---------------------------------------------------------------------------------------
+  data required time                                                              1.16
+  data arrival time                                                              -1.28
+  ---------------------------------------------------------------------------------------
+  slack (MET)                                                                     0.12
+
+
+  Startpoint: u_mbist_ctrl_tg_addr_q_reg_1__0_
+              (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_tg_addr_q_reg_2__0_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                                                Incr       Path
+  ---------------------------------------------------------------------------------------
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  u_mbist_ctrl_tg_addr_q_reg_1__0_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00 #     1.00 r
+  u_mbist_ctrl_tg_addr_q_reg_1__0_/Q (sky130_fd_sc_hd__dfxtp_1)        0.29       1.29 r
+  u_mbist_ctrl_tg_addr_q_reg_2__0_/D (sky130_fd_sc_hd__dfxtp_1)        0.00 *     1.29 r
+  data arrival time                                                               1.29
+
+  clock clk_i (rise edge)                                              0.00       0.00
+  clock network delay (ideal)                                          1.00       1.00
+  clock uncertainty                                                    0.20       1.20
+  u_mbist_ctrl_tg_addr_q_reg_2__0_/CLK (sky130_fd_sc_hd__dfxtp_1)      0.00       1.20 r
+  library hold time                                                   -0.04       1.16
+  data required time                                                              1.16
+  ---------------------------------------------------------------------------------------
+  data required time                                                              1.16
+  data arrival time                                                              -1.29
+  ---------------------------------------------------------------------------------------
+  slack (MET)                                                                     0.12
+
+
+1

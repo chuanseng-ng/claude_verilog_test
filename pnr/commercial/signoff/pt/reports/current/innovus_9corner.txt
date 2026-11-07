@@ -1,0 +1,40 @@
+## Innovus (StarRC)  (9/9 corners)
+netlist md5 3c8d320e1df88c385b772ce6dd716344  sdc md5 3c69635042a9d65cb87e71a9db713e4e  PT X-2025.06
+SPEF md5 per rc corner: nom=4c99d1ce5ba4736901a0231d7a87cf2d, min=cbec913ccdb0219a9de481a9306042ff, max=b60102712d4d4d19e5fb7766d9d038aa
+
+SETUP (ns).  Total = unique violating endpoints;  r2r = reg->reg;  I/O = in->reg + reg->out + in->out (PT report_global_timing categories; I/O NUM may double-count an endpoint)
+corner                  WNS       TNS  viol |   r2r WNS       TNS     n |   I/O WNS       TNS     n | worst setup path (start -> end)
+nom_tt_025C_1v80    -0.3199    -0.320     1 |       met     0.000     0 |   -0.3199    -0.320     1 | apb_pslverr_o_reg/CLK -> apb_pslverr_o
+nom_ss_100C_1v60    -7.8723 -1227.623   840 |   -7.8723 -1012.798   741 |   -7.6494  -214.825    99 | u_core/u_if_if_id_reg_o_reg[instruction][1]/CLK -> u_core/u_if_pc_q_reg[31]/D
+nom_ff_n40C_1v95    +2.5403     0.000     0 |       met     0.000     0 |       met     0.000     0 | apb_pslverr_o_reg/CLK -> apb_pslverr_o
+min_tt_025C_1v80    +0.3163     0.000     0 |       met     0.000     0 |       met     0.000     0 | apb_pslverr_o_reg/CLK -> apb_pslverr_o
+min_ss_100C_1v60    -7.1466  -850.739   579 |   -7.1466  -689.561   497 |   -6.7684  -161.178    82 | u_core/u_if_if_id_reg_o_reg[instruction][1]/CLK -> u_core/u_if_pc_q_reg[31]/D
+min_ff_n40C_1v95    +3.0470     0.000     0 |       met     0.000     0 |       met     0.000     0 | apb_pslverr_o_reg/CLK -> apb_pslverr_o
+max_tt_025C_1v80    -1.2419    -2.583     3 |       met     0.000     0 |   -1.2419    -2.583     3 | apb_pslverr_o_reg/CLK -> apb_pslverr_o
+max_ss_100C_1v60    -8.8789 -1914.948  1174 |   -8.8230 -1614.557  1050 |   -8.8789  -300.391   124 | u_core/u_dcache_state_q_reg[2]/CLK -> axi_wdata_o[25]
+max_ff_n40C_1v95    +1.7899     0.000     0 |       met     0.000     0 |       met     0.000     0 | apb_pslverr_o_reg/CLK -> apb_pslverr_o
+
+HOLD (ns)
+corner                  WNS       TNS  viol |   r2r WNS       TNS     n |   I/O WNS       TNS     n | worst hold path (start -> end)
+nom_tt_025C_1v80    -2.0437  -112.242   430 |       met     0.000     0 |   -2.0437  -112.242   430 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+nom_ss_100C_1v60    -3.5229  -319.429   468 |       met     0.000     0 |   -3.5229  -319.429   468 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+nom_ff_n40C_1v95    -1.3494   -46.931   191 |       met     0.000     0 |   -1.3494   -46.931   191 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+min_tt_025C_1v80    -1.8973  -111.649   429 |       met     0.000     0 |   -1.8973  -111.649   429 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+min_ss_100C_1v60    -3.3258  -317.894   468 |       met     0.000     0 |   -3.3258  -317.894   468 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+min_ff_n40C_1v95    -1.2376   -41.848   188 |       met     0.000     0 |   -1.2376   -41.847   188 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+max_tt_025C_1v80    -2.2398  -115.322   401 |       met     0.000     0 |   -2.2398  -115.322   401 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+max_ss_100C_1v60    -3.8002  -324.055   478 |       met     0.000     0 |   -3.8002  -324.055   478 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+max_ff_n40C_1v95    -1.4893   -51.723   183 |       met     0.000     0 |   -1.4893   -51.723   183 | axi_rdata_i[13] -> u_core/u_icache_data_din_q_reg[13]/D
+
+DRV (violating pins) and ANNOTATION GATE (p2p = nets with a driver and load; gate: >1 % p2p unannotated or any clock net unannotated = FAIL)
+corner             max_tran  max_cap  max_fan |  p2p nets p2p unann clk nets clk unann loadless driverless | gate  | SPEF nets not in netlist | wall   rss
+nom_tt_025C_1v80        266      203      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:38.33 1.1G
+nom_ss_100C_1v60      19334      243      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:19.85 1.1G
+nom_ff_n40C_1v95        266      160      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:19.41 1.1G
+min_tt_025C_1v80        266      170      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:20.08 1.1G
+min_ss_100C_1v60      11921      240      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:11.52 1.1G
+min_ff_n40C_1v95        266      158      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:13.54 1.1G
+max_tt_025C_1v80        312      230      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:23.64 1.1G
+max_ss_100C_1v60      28958      243      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:17.36 1.1G
+max_ff_n40C_1v95        273      166      211 |     35563         0      253         0      330       1752 | PASS  |                        0 | 0:14.67 1.1G
+

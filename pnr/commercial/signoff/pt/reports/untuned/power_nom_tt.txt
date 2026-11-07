@@ -1,0 +1,20 @@
+# PrimePower, vectorless, nom_tt (tt lib + nom SPEF), mW
+
+Both variants: power_default_toggle_rate 0.1 (reference clock: related), power_default_static_probability 0.5, averaged mode, no SAIF/VCD,
+clock activity from the SDC clock (clk_i, 13.333 ns).  A = PT defaults (register-output activity propagated from D).  B = A plus 0.1/0.5 asserted on every
+register output pin (matches OpenSTA's behaviour; headline).  Totals are sums of the group rows (4 significant digits).
+
+B  matched to OpenSTA default (headline)
+arm                           total  internal switching  leakage |  clock_nw register    comb  memory
+OpenROAD (StarRC)            93.985    65.261    28.660   0.0954 |    43.300    2.985  18.600  29.100
+ICC2 (StarRC)                67.990    48.649    19.274   0.0953 |    23.500    3.090  12.400  29.000
+Innovus b5c (StarRC)        PENDING / not run
+OpenROAD (OpenRCX SPEF)      93.113    65.253    27.793   0.0954 |    42.700    2.913  18.400  29.100
+
+A  PrimePower defaults
+arm                           total  internal switching  leakage |  clock_nw register    comb  memory
+OpenROAD (StarRC)            77.080    59.998    17.021   0.0954 |    43.300    0.076   4.603  29.100
+ICC2 (StarRC)                55.724    45.479    10.208   0.0953 |    23.500    0.118   3.106  29.000
+Innovus b5c (StarRC)        PENDING / not run
+OpenROAD (OpenRCX SPEF)      76.499    59.998    16.445   0.0954 |    42.700    0.077   4.622  29.100
+

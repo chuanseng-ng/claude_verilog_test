@@ -1,0 +1,389 @@
+INFO: wire-opt feature for router enabled
+INFO: wire-opt feature for router enabled
+Cell Min-Routing-Layer = met1
+Cell Max-Routing-Layer = met4
+Found antenna rule mode 1, diode mode 1:
+	layer li1:  max ratio 75, diode ratio {75 0 75 0} 
+	layer met1:  max ratio 400, diode ratio {400 0 400 0} 
+	layer met2:  max ratio 400, diode ratio {400 0 400 0} 
+	layer met3:  max ratio 400, diode ratio {400 0 400 0} 
+	layer met4:  max ratio 400, diode ratio {400 0 400 0} 
+	layer met5:  max ratio 400, diode ratio {400 0 400 0} 
+	layer licon: , diode ratio {0 0 1 0 0} 
+	layer mcon:  max ratio 3, diode ratio {3 0 3 0} 
+	layer via:  max ratio 6, diode ratio {6 0 6 0} 
+	layer via2:  max ratio 6, diode ratio {6 0 6 0} 
+	layer via3:  max ratio 6, diode ratio {6 0 6 0} 
+	layer via4:  max ratio 6, diode ratio {6 0 6 0} 
+Information: Option route.detail.force_end_on_preferred_grid will be ignored since none of the layers have preferred grid. (ZRT-703)
+Warning: Cannot find a default contact code for layer licon. (ZRT-022)
+Warning: Net gre_mt_BUF_36_66 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_65_66 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_4_69 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_2440_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_14_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_343_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_12_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_4_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_405_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_128_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_4_71 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_36_71 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_4_72 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_4_73 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_135_73 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_146_73 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_4_74 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net n4685 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_BUF_4_75 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net n1519 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net n3617 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/n9531 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net copt_gre_net_2249 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/n11426 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net ZINV_13_90 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net ZBUF_7_120 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net ZBUF_11_126 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/n17790 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_icache_data_idx_q[3] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_icache_data_idx_q[0] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/n3665 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net HFSNET_1203 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net copt_gre_net_2700 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net copt_gre_net_2701 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/n1397 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/n1497 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/n1660 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/n2114 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net HFSNET_5971 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/gen_data_sram_0__d_din0_m[25] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/gen_data_sram_2__d_addr0_m[4] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/gen_data_sram_3__d_din0_m[23] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/gen_data_sram_3__d_din0_m[22] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/gen_data_sram_3__d_din0_m[20] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/data_dout_r[31] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/data_dout_r[28] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/refill_buf_q[29] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/refill_buf_q[25] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net u_core/u_dcache/refill_buf_q[22] has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net ZBUF_45_70 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net ZBUF_5_330 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_INV_366_75 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Net gre_mt_INV_380_75 has a min_layer and max_layer that are identical (met4). (ZRT-750)
+Warning: Port VGND of cell rv32i_cpu_top is unplaced.  This may impact routing result. (ZRT-740)
+Warning: Port VPWR of cell rv32i_cpu_top is unplaced.  This may impact routing result. (ZRT-740)
+Warning: Ignore 2 top cell ports with no pins. (ZRT-027)
+Info: number of net_type_blockage: 0 
+Information: Via ladder engine would be activated for pattern must join connection in certain commands. Please refer to man-page for the command list. (ZRT-619)
+Warning: Port  axi_araddr_o[31] at {{1174.010,0.000} {1174.290,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[30] at {{1137.210,0.000} {1137.490,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[29] at {{1100.410,0.000} {1100.690,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[28] at {{1063.610,0.000} {1063.890,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[27] at {{1026.810,0.000} {1027.090,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[26] at {{990.010,0.000} {990.290,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[25] at {{953.210,0.000} {953.490,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[24] at {{916.410,0.000} {916.690,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[23] at {{879.610,0.000} {879.890,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Warning: Port  axi_araddr_o[22] at {{842.810,0.000} {843.090,4.000}} is out of boundary. Cannot be routed. (ZRT-720)
+Skipping 97 ectangle_only route guides because they don't cover the design boundary in the layer's  preferred direction.
+Information: AutoNdr rule can't be found. Check the settings.
+Via on layer (via4) needs more than one tracks
+Warning: Layer met4 default pitch 0.920 may be too small to handle up/down via. Note, that minimum requirements are "wire/via-down 0.615" & "wire/via-up 1.040". (ZRT-026)
+Information: When applicable Min-max layer allow_pin_connection mode will allow paths of length 8.62 outside the layer range. (ZRT-707)
+Information: When applicable Min-max layer allow_pin_connection mode will allow paths of length 8.62 outside the layer range on clock nets. (ZRT-718)
+Information: When applicable layer based tapering will taper up to 0.00 in distance from the pin. (ZRT-706)
+5 masters (5 pins) have donut holes
+
+
+Start checking for open nets ... 
+
+Total number of nets = 35090, of which 0 are not extracted
+Total number of open nets = 0, of which 0 are frozen
+
+Check 35090 nets, 0 have Errors
+
+[CHECK OPEN NETS] Elapsed real time: 0:00:00 
+[CHECK OPEN NETS] Elapsed cpu  time: sys=0:00:00 usr=0:00:00 total=0:00:00
+[CHECK OPEN NETS] Stage (MB): Used    0  Alloctr    0  Proc    0 
+[CHECK OPEN NETS] Total (MB): Used    0  Alloctr    0  Proc 5238 
+Printing options for 'route.common.*'
+common.eco_route_fix_existing_drc                       :	 true                
+common.global_min_layer_mode                            :	 hard                
+common.verbose_level                                    :	 0                   
+
+Printing options for 'route.detail.*'
+detail.antenna                                          :	 true                
+detail.antenna_fixing_preference                        :	 use_diodes          
+detail.diode_libcell_names                              :	 sky130_fd_sc_hd__diode_2
+detail.drc_convergence_effort_level                     :	 high                
+detail.eco_route_use_soft_spacing_for_timing_optimization:	 true                
+detail.enable_auto_ndr_flow                             :	 true                
+detail.optimize_partition_size_for_drc                  :	 true                
+detail.optimize_wire_via_effort_level                   :	 medium              
+detail.repair_shorts_over_macros_effort_level           :	 high                
+detail.timing_driven                                    :	 false               
+
+Printing options for 'route.auto_via_ladder.*'
+
+There are 0 out of total 35090 nets with relaxed min layer from GR.
+*****Start reporting antenna related parameters*****
+  Antenna/diode mode:
+    Antenna mode 1; diode mode 1
+      Metal lay (li1)0; maxRatio 75.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (75.000 0.000 75.000 0.000 0.000)
+      Cut lay (mcon)1; maxRatio 3.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (3.000 0.000 3.000 0.000 0.000)
+      Metal lay (met1)1; maxRatio 400.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (400.000 0.000 400.000 0.000 0.000)
+      Cut lay (via)2; maxRatio 6.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (6.000 0.000 6.000 0.000 0.000)
+      Metal lay (met2)2; maxRatio 400.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (400.000 0.000 400.000 0.000 0.000)
+      Cut lay (via2)3; maxRatio 6.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (6.000 0.000 6.000 0.000 0.000)
+      Metal lay (met3)3; maxRatio 400.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (400.000 0.000 400.000 0.000 0.000)
+      Cut lay (via3)4; maxRatio 6.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (6.000 0.000 6.000 0.000 0.000)
+      Metal lay (met4)4; maxRatio 400.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (400.000 0.000 400.000 0.000 0.000)
+      Cut lay (via4)5; maxRatio 6.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (6.000 0.000 6.000 0.000 0.000)
+      Metal lay (met5)5; maxRatio 400.000 maxPRatio 2147483648.000 maxNRatio 2147483648.000; vector (400.000 0.000 400.000 0.000 0.000)
+  Top lay antenna ratio fix threshold == -1
+  Antenna max pin count threshold == -1
+  Check PG net == false
+  MergeGate == true
+  Break antenna to port mode == float
+  Break antenna to macro pin mode == normal
+*****End reporting antenna related parameters*****
+Warning: Skipping antenna analysis for net clk_i. The pin clk_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net rst_n_i. The pin rst_n_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_awready_i. The pin axi_awready_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_wready_i. The pin axi_wready_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_bresp_i[1]. The pin axi_bresp_i[1] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_bresp_i[0]. The pin axi_bresp_i[0] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_bvalid_i. The pin axi_bvalid_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net gre_a_INV_49_80. The pin din0[29] on cell sky130_sram_1kbyte_1rw1r_32x256_8 does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_arready_i. The pin axi_arready_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[31]. The pin axi_rdata_i[31] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[30]. The pin axi_rdata_i[30] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[29]. The pin axi_rdata_i[29] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[28]. The pin axi_rdata_i[28] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[27]. The pin axi_rdata_i[27] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[26]. The pin axi_rdata_i[26] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[25]. The pin axi_rdata_i[25] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[24]. The pin axi_rdata_i[24] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[23]. The pin axi_rdata_i[23] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[22]. The pin axi_rdata_i[22] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[21]. The pin axi_rdata_i[21] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[20]. The pin axi_rdata_i[20] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[19]. The pin axi_rdata_i[19] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[18]. The pin axi_rdata_i[18] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[17]. The pin axi_rdata_i[17] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[16]. The pin axi_rdata_i[16] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[15]. The pin axi_rdata_i[15] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[14]. The pin axi_rdata_i[14] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[13]. The pin axi_rdata_i[13] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[12]. The pin axi_rdata_i[12] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[11]. The pin axi_rdata_i[11] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[10]. The pin axi_rdata_i[10] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[9]. The pin axi_rdata_i[9] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[8]. The pin axi_rdata_i[8] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[7]. The pin axi_rdata_i[7] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[6]. The pin axi_rdata_i[6] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[5]. The pin axi_rdata_i[5] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[4]. The pin axi_rdata_i[4] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[3]. The pin axi_rdata_i[3] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[2]. The pin axi_rdata_i[2] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[1]. The pin axi_rdata_i[1] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rdata_i[0]. The pin axi_rdata_i[0] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rresp_i[1]. The pin axi_rresp_i[1] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rresp_i[0]. The pin axi_rresp_i[0] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rvalid_i. The pin axi_rvalid_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net axi_rlast_i. The pin axi_rlast_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[11]. The pin apb_paddr_i[11] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[10]. The pin apb_paddr_i[10] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[9]. The pin apb_paddr_i[9] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[8]. The pin apb_paddr_i[8] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[7]. The pin apb_paddr_i[7] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[6]. The pin apb_paddr_i[6] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[5]. The pin apb_paddr_i[5] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[4]. The pin apb_paddr_i[4] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[3]. The pin apb_paddr_i[3] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[2]. The pin apb_paddr_i[2] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[1]. The pin apb_paddr_i[1] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_paddr_i[0]. The pin apb_paddr_i[0] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_psel_i. The pin apb_psel_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_penable_i. The pin apb_penable_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwrite_i. The pin apb_pwrite_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[31]. The pin apb_pwdata_i[31] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[30]. The pin apb_pwdata_i[30] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[29]. The pin apb_pwdata_i[29] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[28]. The pin apb_pwdata_i[28] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[27]. The pin apb_pwdata_i[27] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[26]. The pin apb_pwdata_i[26] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[25]. The pin apb_pwdata_i[25] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[24]. The pin apb_pwdata_i[24] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[23]. The pin apb_pwdata_i[23] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[22]. The pin apb_pwdata_i[22] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[21]. The pin apb_pwdata_i[21] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[20]. The pin apb_pwdata_i[20] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[19]. The pin apb_pwdata_i[19] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[18]. The pin apb_pwdata_i[18] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[17]. The pin apb_pwdata_i[17] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[16]. The pin apb_pwdata_i[16] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[15]. The pin apb_pwdata_i[15] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[14]. The pin apb_pwdata_i[14] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[13]. The pin apb_pwdata_i[13] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[12]. The pin apb_pwdata_i[12] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[11]. The pin apb_pwdata_i[11] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[10]. The pin apb_pwdata_i[10] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[9]. The pin apb_pwdata_i[9] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[8]. The pin apb_pwdata_i[8] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[7]. The pin apb_pwdata_i[7] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[6]. The pin apb_pwdata_i[6] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[5]. The pin apb_pwdata_i[5] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[4]. The pin apb_pwdata_i[4] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[3]. The pin apb_pwdata_i[3] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[2]. The pin apb_pwdata_i[2] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[1]. The pin apb_pwdata_i[1] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net apb_pwdata_i[0]. The pin apb_pwdata_i[0] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net gre_a_INV_49_83. The pin din0[30] on cell sky130_sram_1kbyte_1rw1r_32x256_8 does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net ext_irq_i. The pin ext_irq_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net timer_irq_i. The pin timer_irq_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net mbist_run_i. The pin mbist_run_i on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net mbist_cfg_i[25]. The pin mbist_cfg_i[25] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net mbist_cfg_i[24]. The pin mbist_cfg_i[24] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net mbist_cfg_i[23]. The pin mbist_cfg_i[23] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Warning: Skipping antenna analysis for net mbist_cfg_i[22]. The pin mbist_cfg_i[22] on cell rv32i_cpu_top does not have enough gate area information. (ZRT-311)
+Skipping antenna analysis for 597 nets as they don't have enough gate area info.
+
+Begin full DRC check ...
+
+Information: Using 2 threads for routing. (ZRT-444)
+Checked	21/288 Partitions, Violations =	0
+Checked	22/288 Partitions, Violations =	0
+Checked	23/288 Partitions, Violations =	0
+Checked	33/288 Partitions, Violations =	0
+Checked	44/288 Partitions, Violations =	0
+Checked	55/288 Partitions, Violations =	0
+Checked	66/288 Partitions, Violations =	0
+Checked	77/288 Partitions, Violations =	0
+Checked	88/288 Partitions, Violations =	0
+Checked	99/288 Partitions, Violations =	0
+Checked	110/288 Partitions, Violations =	1
+Checked	121/288 Partitions, Violations =	1
+Checked	132/288 Partitions, Violations =	1
+Checked	143/288 Partitions, Violations =	1
+Checked	154/288 Partitions, Violations =	1
+Checked	165/288 Partitions, Violations =	1
+Checked	176/288 Partitions, Violations =	1
+Checked	187/288 Partitions, Violations =	1
+Checked	198/288 Partitions, Violations =	1
+Checked	209/288 Partitions, Violations =	1
+Checked	220/288 Partitions, Violations =	1
+Checked	231/288 Partitions, Violations =	1
+Checked	242/288 Partitions, Violations =	1
+Checked	253/288 Partitions, Violations =	1
+Checked	264/288 Partitions, Violations =	1
+Checked	275/288 Partitions, Violations =	1
+Checked	286/288 Partitions, Violations =	1
+[DRC CHECK] Elapsed real time: 0:00:09 
+[DRC CHECK] Elapsed cpu  time: sys=0:00:00 usr=0:00:08 total=0:00:08
+[DRC CHECK] Stage (MB): Used    0  Alloctr    0  Proc    0 
+[DRC CHECK] Total (MB): Used    0  Alloctr    0  Proc 5238 
+Start net based rule analysis
+Found 0 antenna instance ports
+End net based rule analysis
+[Antenna analysis] Elapsed real time: 0:00:00 
+[Antenna analysis] Elapsed cpu  time: sys=0:00:00 usr=0:00:00 total=0:00:00
+[Antenna analysis] Stage (MB): Used    0  Alloctr    0  Proc    0 
+[Antenna analysis] Total (MB): Used    0  Alloctr    0  Proc 5238 
+
+DRC-SUMMARY:
+	@@@@@@@ TOTAL VIOLATIONS =	1
+	Short : 1
+
+Information: The app option "route.detail.report_soft_drc_separately" will be on-by-default in future release. (ZRT-807)
+	@@@@@@@ TOTAL SOFT VIOLATIONS =	0
+
+
+Total Wire Length =                    4500627 micron
+Total Number of Contacts =             390255
+Total Number of Wires =                376425
+Total Number of PtConns =              1937
+Total Number of Routed Wires =       373833
+Total Routed Wire Length =           4499456 micron
+Total Number of Routed Contacts =       390255
+	Layer          li1 :          0 micron
+	Layer         met1 :    1098495 micron
+	Layer         met2 :    1473650 micron
+	Layer         met3 :    1284802 micron
+	Layer         met4 :     641933 micron
+	Layer         met5 :        576 micron
+	Via        via4_cc :         18
+	Via        via3_cc :      18855
+	Via   via3_cc(rot) :          1
+	Via        via2_cc :      61778
+	Via   via2_cc(rot) :          3
+	Via         via_cc :     188182
+	Via    via_cc(rot) :         76
+	Via        mcon_cc :     102719
+	Via   mcon_cc(rot) :      18623
+
+ 
+Redundant via conversion report:
+--------------------------------
+
+  Total optimized via conversion rate =  0.00% (0 / 390255 vias)
+ 
+    Layer mcon       =  0.00% (0      / 121342  vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (121342  vias)
+    Layer via        =  0.00% (0      / 188258  vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (188258  vias)
+    Layer via2       =  0.00% (0      / 61781   vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (61781   vias)
+    Layer via3       =  0.00% (0      / 18856   vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (18856   vias)
+    Layer via4       =  0.00% (0      / 18      vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (18      vias)
+ 
+  Total double via conversion rate    =  0.00% (0 / 390255 vias)
+ 
+    Layer mcon       =  0.00% (0      / 121342  vias)
+    Layer via        =  0.00% (0      / 188258  vias)
+    Layer via2       =  0.00% (0      / 61781   vias)
+    Layer via3       =  0.00% (0      / 18856   vias)
+    Layer via4       =  0.00% (0      / 18      vias)
+ 
+  The optimized via conversion rate based on total routed via count =  0.00% (0 / 390255 vias)
+ 
+    Layer mcon       =  0.00% (0      / 121342  vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (121342  vias)
+    Layer via        =  0.00% (0      / 188258  vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (188258  vias)
+    Layer via2       =  0.00% (0      / 61781   vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (61781   vias)
+    Layer via3       =  0.00% (0      / 18856   vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (18856   vias)
+    Layer via4       =  0.00% (0      / 18      vias)
+        Un-optimized =  0.00% (0       vias)
+        Un-mapped    = 100.00% (18      vias)
+ 
+
+
+Verify Summary:
+
+Total number of nets = 35090, of which 0 are not extracted
+Total number of open nets = 0, of which 0 are frozen
+Total number of excluded ports = 0 ports of 0 unplaced cells connected to 0 nets
+                                 0 ports without pins of 0 cells connected to 0 nets
+                                 0 ports of 0 cover cells connected to 0 non-pg nets
+
+Total number of DRCs = 1
+Total number of antenna violations = 0
+Total number of tie to rail violations = not checked
+Total number of tie to rail directly violations = not checked
+
+Total number of DRCs on met2 and below = 1
+

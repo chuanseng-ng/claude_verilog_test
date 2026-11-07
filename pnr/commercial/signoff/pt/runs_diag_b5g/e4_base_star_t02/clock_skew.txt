@@ -1,0 +1,19 @@
+****************************************
+Report : clock timing
+	-type skew
+	-nworst 1
+	-setup
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 09:50:50 2026
+****************************************
+
+  Clock: clk_i
+
+  Clock Pin                                 Latency   CRP     Skew
+----------------------------------------------------------------------------
+  u_mbist_ctrl_tg_rd_q_reg[1]/CLK           3.9217                     rp-+
+  u_mbist_ctrl_g_xtag.x_rd_n_q_reg/CLK_N    3.6395   -0.0144  0.2678   fp-+
+----------------------------------------------------------------------------
+
+1

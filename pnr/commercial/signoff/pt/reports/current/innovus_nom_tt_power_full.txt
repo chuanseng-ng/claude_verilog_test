@@ -1,0 +1,69 @@
+## variant B (matched)
+****************************************
+Report : Averaged Power
+	-nosplit
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 08:53:30 2026
+****************************************
+
+
+
+  Attributes
+  ----------
+      i  -  Including register clock pin internal power
+      u  -  User defined power group
+
+                        Internal  Switching  Leakage    Total
+Power Group             Power     Power      Power      Power   (     %)  Attrs
+--------------------------------------------------------------------------------
+clock_network              0.0175 6.241e-03 1.983e-09    0.0238 (33.70%)  i
+register                8.734e-04 1.116e-03 4.406e-08 1.989e-03 ( 2.82%)  
+combinational           3.640e-03    0.0122 1.144e-07    0.0158 (22.40%)  
+sequential                 0.0000    0.0000    0.0000    0.0000 ( 0.00%)  
+memory                     0.0288 1.290e-04 9.516e-05    0.0290 (41.08%)  
+io_pad                     0.0000    0.0000    0.0000    0.0000 ( 0.00%)  
+black_box               -7.512e-09    0.0000 1.586e-12 -7.510e-09 (-0.00%)
+
+  Net Switching Power  =    0.0197   (27.85%)
+  Cell Internal Power  =    0.0508   (72.02%)
+  Cell Leakage Power   = 9.532e-05   ( 0.14%)
+                         ---------
+Total Power            =    0.0706  (100.00%)
+
+1
+
+## variant A (PT defaults)
+****************************************
+Report : Averaged Power
+	-nosplit
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 08:53:26 2026
+****************************************
+
+
+
+  Attributes
+  ----------
+      i  -  Including register clock pin internal power
+      u  -  User defined power group
+
+                        Internal  Switching  Leakage    Total
+Power Group             Power     Power      Power      Power   (     %)  Attrs
+--------------------------------------------------------------------------------
+clock_network              0.0175 6.241e-03 1.983e-09    0.0238 (41.52%)  i
+register                3.232e-05 3.834e-05 4.256e-08 7.070e-05 ( 0.12%)  
+combinational           9.324e-04 3.493e-03 1.129e-07 4.425e-03 ( 7.73%)  
+sequential                 0.0000    0.0000    0.0000    0.0000 ( 0.00%)  
+memory                     0.0288 1.290e-04 9.516e-05    0.0290 (50.63%)  
+io_pad                     0.0000    0.0000    0.0000    0.0000 ( 0.00%)  
+black_box               -7.525e-09    0.0000 1.549e-12 -7.524e-09 (-0.00%)
+
+  Net Switching Power  = 9.901e-03   (17.29%)
+  Cell Internal Power  =    0.0473   (82.55%)
+  Cell Leakage Power   = 9.532e-05   ( 0.17%)
+                         ---------
+Total Power            =    0.0573  (100.00%)
+
+1

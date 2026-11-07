@@ -1,0 +1,1407 @@
+**************************************************
+Report         : black_boxes
+                 -all 
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Sat Nov  7 02:59:53 2026
+**************************************************
+Information: Reporting black boxes for current reference and implementation designs. (FM-184)
+
+ ___________________________________________________
+|                                                   |
+|  Legend:                                          |
+|           Black Box Attributes                    |
+|              s = Set with set_black_box command   |
+|              i = Module read with -interface_only |
+|              u = Unresolved design module         |
+|              e = Empty design module              |
+|              * = Unlinked design module           |
+|             ut = Unread tech cells pins           |
+|              L = Linked to non-black box design   |
+|             cp = Cutpoint blackbox                |
+|             ir = Internal rounded blackbox        |
+|              f = Formality Power Model            |
+|              m = Technology Macro cell (.db)      |
+|___________________________________________________|
+
+
+##################################################################
+####    TECH LIBRARY - i:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB
+##################################################################
+Type  Design Name
+----  ----------
+m      sky130_sram_1kbyte_1rw1r_32x256_8
+
+       Instances : 10 of 10
+       ------------------------
+       i:/WORK/rv32i_cpu_top/u_core_u_icache_u_tag_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_0__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_1__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_2__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_3__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_dcache/u_tag_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_0__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_1__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_2__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_3__u_data_sram
+
+m *    sky130_sram_1kbyte_1rw1r_32x256_8#PWR
+
+       Instances : 0
+
+
+
+##################################################################
+####    TECH LIBRARY - i:/SKY130_FD_SC_HD__TT_025C_1V80
+##################################################################
+Type  Design Name
+----  ----------
+ut     SNPS_UNREAD_TECH_INPUT_PIN_BBOX
+
+       Instances : 422 of 422
+       ------------------------
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21bo_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21bo_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a222oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a222oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a311o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a311o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a311oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a311oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a311oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a311oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a41oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a41oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4bb_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4bb_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_12#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_12#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_6#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_6#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufbuf_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufbuf_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufinv_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufinv_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufinv_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufinv_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s25_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s25_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s50_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s50_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__conb_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__conb_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfrtn_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfrtn_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlygate4sd1_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlygate4sd1_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlymetal6s2s_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlymetal6s2s_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__fa_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__fa_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_12#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_12#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_6#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_6#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__maj3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__maj3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2i_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2i_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2i_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2i_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4bb_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4bb_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4bb_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4bb_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o311a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o311a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o41ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o41ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4bb_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4bb_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_4#PWR/VPB*unread*
+
+m *    sky130_fd_sc_hd__decap_12
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_12#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_3
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_3#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_4
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_4#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_6
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_6#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_8
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_8#PWR
+
+       Instances : 0
+
+m      sky130_fd_sc_hd__diode_2
+
+       Instances : 760 of 760
+       ------------------------
+       i:/WORK/rv32i_cpu_top/ANTDIO_0
+       i:/WORK/rv32i_cpu_top/ANTDIO_1
+       i:/WORK/rv32i_cpu_top/ANTDIO_2
+       i:/WORK/rv32i_cpu_top/ANTDIO_3
+       i:/WORK/rv32i_cpu_top/ANTDIO_4
+       i:/WORK/rv32i_cpu_top/ANTDIO_5
+       i:/WORK/rv32i_cpu_top/ANTDIO_6
+       i:/WORK/rv32i_cpu_top/ANTDIO_7
+       i:/WORK/rv32i_cpu_top/ANTDIO_8
+       i:/WORK/rv32i_cpu_top/ANTDIO_9
+       i:/WORK/rv32i_cpu_top/ANTDIO_10
+       i:/WORK/rv32i_cpu_top/ANTDIO_11
+       i:/WORK/rv32i_cpu_top/ANTDIO_12
+       i:/WORK/rv32i_cpu_top/ANTDIO_13
+       i:/WORK/rv32i_cpu_top/ANTDIO_14
+       i:/WORK/rv32i_cpu_top/ANTDIO_15
+       i:/WORK/rv32i_cpu_top/ANTDIO_16
+       i:/WORK/rv32i_cpu_top/ANTDIO_17
+       i:/WORK/rv32i_cpu_top/ANTDIO_18
+       i:/WORK/rv32i_cpu_top/ANTDIO_19
+       i:/WORK/rv32i_cpu_top/ANTDIO_20
+       i:/WORK/rv32i_cpu_top/ANTDIO_21
+       i:/WORK/rv32i_cpu_top/ANTDIO_22
+       i:/WORK/rv32i_cpu_top/ANTDIO_23
+       i:/WORK/rv32i_cpu_top/ANTDIO_24
+       i:/WORK/rv32i_cpu_top/ANTDIO_25
+       i:/WORK/rv32i_cpu_top/ANTDIO_26
+       i:/WORK/rv32i_cpu_top/ANTDIO_27
+       i:/WORK/rv32i_cpu_top/ANTDIO_28
+       i:/WORK/rv32i_cpu_top/ANTDIO_29
+       i:/WORK/rv32i_cpu_top/ANTDIO_30
+       i:/WORK/rv32i_cpu_top/ANTDIO_31
+       i:/WORK/rv32i_cpu_top/ANTDIO_32
+       i:/WORK/rv32i_cpu_top/ANTDIO_33
+       i:/WORK/rv32i_cpu_top/ANTDIO_34
+       i:/WORK/rv32i_cpu_top/ANTDIO_35
+       i:/WORK/rv32i_cpu_top/ANTDIO_36
+       i:/WORK/rv32i_cpu_top/ANTDIO_37
+       i:/WORK/rv32i_cpu_top/ANTDIO_38
+       i:/WORK/rv32i_cpu_top/ANTDIO_39
+       i:/WORK/rv32i_cpu_top/ANTDIO_40
+       i:/WORK/rv32i_cpu_top/ANTDIO_41
+       i:/WORK/rv32i_cpu_top/ANTDIO_42
+       i:/WORK/rv32i_cpu_top/ANTDIO_43
+       i:/WORK/rv32i_cpu_top/ANTDIO_44
+       i:/WORK/rv32i_cpu_top/ANTDIO_45
+       i:/WORK/rv32i_cpu_top/ANTDIO_46
+       i:/WORK/rv32i_cpu_top/ANTDIO_47
+       i:/WORK/rv32i_cpu_top/ANTDIO_48
+       i:/WORK/rv32i_cpu_top/ANTDIO_49
+       i:/WORK/rv32i_cpu_top/ANTDIO_50
+       i:/WORK/rv32i_cpu_top/ANTDIO_51
+       i:/WORK/rv32i_cpu_top/ANTDIO_52
+       i:/WORK/rv32i_cpu_top/ANTDIO_53
+       i:/WORK/rv32i_cpu_top/ANTDIO_54
+       i:/WORK/rv32i_cpu_top/ANTDIO_55
+       i:/WORK/rv32i_cpu_top/ANTDIO_56
+       i:/WORK/rv32i_cpu_top/ANTDIO_57
+       i:/WORK/rv32i_cpu_top/ANTDIO_58
+       i:/WORK/rv32i_cpu_top/ANTDIO_59
+       i:/WORK/rv32i_cpu_top/ANTDIO_60
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31002
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31003
+       i:/WORK/rv32i_cpu_top/ANTDIO_61
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31004
+       i:/WORK/rv32i_cpu_top/ANTDIO_62
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31005
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31006
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31007
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31008
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31009
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31010
+       i:/WORK/rv32i_cpu_top/ANTDIO_63
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31011
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31012
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31013
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31014
+       i:/WORK/rv32i_cpu_top/ANTDIO_64
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31015
+       i:/WORK/rv32i_cpu_top/ANTDIO_65
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31016
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31017
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31018
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31019
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31020
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31021
+       i:/WORK/rv32i_cpu_top/ANTDIO_66
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31022
+       i:/WORK/rv32i_cpu_top/ANTDIO_67
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31023
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31024
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31025
+       i:/WORK/rv32i_cpu_top/ANTDIO_68
+       i:/WORK/rv32i_cpu_top/ANTDIO_69
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31026
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31027
+       i:/WORK/rv32i_cpu_top/ANTDIO_70
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31028
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31029
+       i:/WORK/rv32i_cpu_top/ANTDIO_71
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31030
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31031
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31032
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31033
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31034
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31035
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31036
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31037
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31038
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31039
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31040
+       i:/WORK/rv32i_cpu_top/ANTDIO_72
+       i:/WORK/rv32i_cpu_top/ANTDIO_73
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31041
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31042
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31043
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31044
+       i:/WORK/rv32i_cpu_top/ANTDIO_74
+       i:/WORK/rv32i_cpu_top/ANTDIO_75
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31045
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31046
+       i:/WORK/rv32i_cpu_top/ANTDIO_76
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31047
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31048
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31049
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31050
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31051
+       i:/WORK/rv32i_cpu_top/ANTDIO_77
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31052
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31053
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31054
+       i:/WORK/rv32i_cpu_top/ANTDIO_78
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31055
+       i:/WORK/rv32i_cpu_top/ANTDIO_79
+       i:/WORK/rv32i_cpu_top/ANTDIO_80
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31056
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31057
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31058
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31059
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31060
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31061
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31062
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31063
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31064
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31065
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31066
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31067
+       i:/WORK/rv32i_cpu_top/ANTDIO_81
+       i:/WORK/rv32i_cpu_top/ANTDIO_82
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31068
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31069
+       i:/WORK/rv32i_cpu_top/ANTDIO_83
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31070
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31071
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31072
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31073
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31074
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31075
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31076
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31077
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31078
+       i:/WORK/rv32i_cpu_top/ANTDIO_84
+       i:/WORK/rv32i_cpu_top/ANTDIO_85
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31079
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31080
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31081
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31082
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31083
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31084
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31085
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31086
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31087
+       i:/WORK/rv32i_cpu_top/ANTDIO_86
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31088
+       i:/WORK/rv32i_cpu_top/ANTDIO_87
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31089
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31090
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31091
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31092
+       i:/WORK/rv32i_cpu_top/ANTDIO_88
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31093
+       i:/WORK/rv32i_cpu_top/ANTDIO_89
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31094
+       i:/WORK/rv32i_cpu_top/ANTDIO_90
+       i:/WORK/rv32i_cpu_top/ANTDIO_91
+       i:/WORK/rv32i_cpu_top/ANTDIO_92
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31095
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31096
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31097
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31098
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31099
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31100
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31101
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31102
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31103
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31104
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31105
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31106
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31107
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31108
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31109
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31110
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31111
+       i:/WORK/rv32i_cpu_top/ANTDIO_93
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31112
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31113
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31114
+       i:/WORK/rv32i_cpu_top/ANTDIO_94
+       i:/WORK/rv32i_cpu_top/ANTDIO_95
+       i:/WORK/rv32i_cpu_top/ANTDIO_96
+       i:/WORK/rv32i_cpu_top/ANTDIO_97
+       i:/WORK/rv32i_cpu_top/ANTDIO_98
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31115
+       i:/WORK/rv32i_cpu_top/PORTDIODE__31116
+       i:/WORK/rv32i_cpu_top/ANTDIO_99
+       i:/WORK/rv32i_cpu_top/ANTDIO_100
+       i:/WORK/rv32i_cpu_top/ANTDIO_101
+       i:/WORK/rv32i_cpu_top/ANTDIO_102
+       i:/WORK/rv32i_cpu_top/ANTDIO_103
+       i:/WORK/rv32i_cpu_top/ANTDIO_104
+       i:/WORK/rv32i_cpu_top/ANTDIO_105
+       i:/WORK/rv32i_cpu_top/ANTDIO_106
+       i:/WORK/rv32i_cpu_top/ANTDIO_107
+       i:/WORK/rv32i_cpu_top/ANTDIO_108
+       i:/WORK/rv32i_cpu_top/ANTDIO_109
+       i:/WORK/rv32i_cpu_top/ANTDIO_110
+       i:/WORK/rv32i_cpu_top/ANTDIO_111
+       i:/WORK/rv32i_cpu_top/ANTDIO_112
+       i:/WORK/rv32i_cpu_top/ANTDIO_113
+       i:/WORK/rv32i_cpu_top/ANTDIO_114
+       i:/WORK/rv32i_cpu_top/ANTDIO_115
+       i:/WORK/rv32i_cpu_top/ANTDIO_116
+       i:/WORK/rv32i_cpu_top/ANTDIO_117
+       i:/WORK/rv32i_cpu_top/ANTDIO_118
+       i:/WORK/rv32i_cpu_top/ANTDIO_119
+       i:/WORK/rv32i_cpu_top/ANTDIO_120
+       i:/WORK/rv32i_cpu_top/ANTDIO_121
+       i:/WORK/rv32i_cpu_top/ANTDIO_122
+       i:/WORK/rv32i_cpu_top/ANTDIO_123
+       i:/WORK/rv32i_cpu_top/ANTDIO_124
+       i:/WORK/rv32i_cpu_top/ANTDIO_125
+       i:/WORK/rv32i_cpu_top/ANTDIO_126
+       i:/WORK/rv32i_cpu_top/ANTDIO_127
+       i:/WORK/rv32i_cpu_top/ANTDIO_128
+       i:/WORK/rv32i_cpu_top/ANTDIO_129
+       i:/WORK/rv32i_cpu_top/ANTDIO_130
+       i:/WORK/rv32i_cpu_top/ANTDIO_131
+       i:/WORK/rv32i_cpu_top/ANTDIO_132
+       i:/WORK/rv32i_cpu_top/ANTDIO_133
+       i:/WORK/rv32i_cpu_top/ANTDIO_134
+       i:/WORK/rv32i_cpu_top/ANTDIO_135
+       i:/WORK/rv32i_cpu_top/ANTDIO_136
+       i:/WORK/rv32i_cpu_top/ANTDIO_137
+       i:/WORK/rv32i_cpu_top/ANTDIO_138
+       i:/WORK/rv32i_cpu_top/ANTDIO_139
+       i:/WORK/rv32i_cpu_top/ANTDIO_140
+       i:/WORK/rv32i_cpu_top/ANTDIO_141
+       i:/WORK/rv32i_cpu_top/ANTDIO_142
+       i:/WORK/rv32i_cpu_top/ANTDIO_143
+       i:/WORK/rv32i_cpu_top/ANTDIO_144
+       i:/WORK/rv32i_cpu_top/ANTDIO_145
+       i:/WORK/rv32i_cpu_top/ANTDIO_146
+       i:/WORK/rv32i_cpu_top/ANTDIO_147
+       i:/WORK/rv32i_cpu_top/ANTDIO_148
+       i:/WORK/rv32i_cpu_top/ANTDIO_149
+       i:/WORK/rv32i_cpu_top/ANTDIO_150
+       i:/WORK/rv32i_cpu_top/ANTDIO_151
+       i:/WORK/rv32i_cpu_top/ANTDIO_152
+       i:/WORK/rv32i_cpu_top/ANTDIO_153
+       i:/WORK/rv32i_cpu_top/ANTDIO_154
+       i:/WORK/rv32i_cpu_top/ANTDIO_155
+       i:/WORK/rv32i_cpu_top/ANTDIO_156
+       i:/WORK/rv32i_cpu_top/ANTDIO_157
+       i:/WORK/rv32i_cpu_top/ANTDIO_158
+       i:/WORK/rv32i_cpu_top/ANTDIO_159
+       i:/WORK/rv32i_cpu_top/ANTDIO_160
+       i:/WORK/rv32i_cpu_top/ANTDIO_161
+       i:/WORK/rv32i_cpu_top/ANTDIO_162
+       i:/WORK/rv32i_cpu_top/ANTDIO_163
+       i:/WORK/rv32i_cpu_top/ANTDIO_164
+       i:/WORK/rv32i_cpu_top/ANTDIO_165
+       i:/WORK/rv32i_cpu_top/ANTDIO_166
+       i:/WORK/rv32i_cpu_top/ANTDIO_167
+       i:/WORK/rv32i_cpu_top/ANTDIO_168
+       i:/WORK/rv32i_cpu_top/ANTDIO_169
+       i:/WORK/rv32i_cpu_top/ANTDIO_170
+       i:/WORK/rv32i_cpu_top/ANTDIO_171
+       i:/WORK/rv32i_cpu_top/ANTDIO_172
+       i:/WORK/rv32i_cpu_top/ANTDIO_173
+       i:/WORK/rv32i_cpu_top/ANTDIO_174
+       i:/WORK/rv32i_cpu_top/ANTDIO_175
+       i:/WORK/rv32i_cpu_top/ANTDIO_176
+       i:/WORK/rv32i_cpu_top/ANTDIO_177
+       i:/WORK/rv32i_cpu_top/ANTDIO_178
+       i:/WORK/rv32i_cpu_top/ANTDIO_179
+       i:/WORK/rv32i_cpu_top/ANTDIO_180
+       i:/WORK/rv32i_cpu_top/ANTDIO_181
+       i:/WORK/rv32i_cpu_top/ANTDIO_182
+       i:/WORK/rv32i_cpu_top/ANTDIO_183
+       i:/WORK/rv32i_cpu_top/ANTDIO_184
+       i:/WORK/rv32i_cpu_top/ANTDIO_185
+       i:/WORK/rv32i_cpu_top/ANTDIO_186
+       i:/WORK/rv32i_cpu_top/ANTDIO_187
+       i:/WORK/rv32i_cpu_top/ANTDIO_188
+       i:/WORK/rv32i_cpu_top/ANTDIO_189
+       i:/WORK/rv32i_cpu_top/ANTDIO_190
+       i:/WORK/rv32i_cpu_top/ANTDIO_191
+       i:/WORK/rv32i_cpu_top/ANTDIO_192
+       i:/WORK/rv32i_cpu_top/ANTDIO_193
+       i:/WORK/rv32i_cpu_top/ANTDIO_194
+       i:/WORK/rv32i_cpu_top/ANTDIO_195
+       i:/WORK/rv32i_cpu_top/ANTDIO_196
+       i:/WORK/rv32i_cpu_top/ANTDIO_197
+       i:/WORK/rv32i_cpu_top/ANTDIO_198
+       i:/WORK/rv32i_cpu_top/ANTDIO_199
+       i:/WORK/rv32i_cpu_top/ANTDIO_200
+       i:/WORK/rv32i_cpu_top/ANTDIO_201
+       i:/WORK/rv32i_cpu_top/ANTDIO_202
+       i:/WORK/rv32i_cpu_top/ANTDIO_203
+       i:/WORK/rv32i_cpu_top/ANTDIO_204
+       i:/WORK/rv32i_cpu_top/ANTDIO_205
+       i:/WORK/rv32i_cpu_top/ANTDIO_206
+       i:/WORK/rv32i_cpu_top/ANTDIO_207
+       i:/WORK/rv32i_cpu_top/ANTDIO_208
+       i:/WORK/rv32i_cpu_top/ANTDIO_209
+       i:/WORK/rv32i_cpu_top/ANTDIO_210
+       i:/WORK/rv32i_cpu_top/ANTDIO_211
+       i:/WORK/rv32i_cpu_top/ANTDIO_212
+       i:/WORK/rv32i_cpu_top/ANTDIO_213
+       i:/WORK/rv32i_cpu_top/ANTDIO_214
+       i:/WORK/rv32i_cpu_top/ANTDIO_215
+       i:/WORK/rv32i_cpu_top/ANTDIO_216
+       i:/WORK/rv32i_cpu_top/ANTDIO_217
+       i:/WORK/rv32i_cpu_top/ANTDIO_218
+       i:/WORK/rv32i_cpu_top/ANTDIO_219
+       i:/WORK/rv32i_cpu_top/ANTDIO_220
+       i:/WORK/rv32i_cpu_top/ANTDIO_221
+       i:/WORK/rv32i_cpu_top/ANTDIO_222
+       i:/WORK/rv32i_cpu_top/ANTDIO_223
+       i:/WORK/rv32i_cpu_top/ANTDIO_224
+       i:/WORK/rv32i_cpu_top/ANTDIO_225
+       i:/WORK/rv32i_cpu_top/ANTDIO_226
+       i:/WORK/rv32i_cpu_top/ANTDIO_227
+       i:/WORK/rv32i_cpu_top/ANTDIO_228
+       i:/WORK/rv32i_cpu_top/ANTDIO_229
+       i:/WORK/rv32i_cpu_top/ANTDIO_230
+       i:/WORK/rv32i_cpu_top/ANTDIO_231
+       i:/WORK/rv32i_cpu_top/ANTDIO_232
+       i:/WORK/rv32i_cpu_top/ANTDIO_233
+       i:/WORK/rv32i_cpu_top/ANTDIO_234
+       i:/WORK/rv32i_cpu_top/ANTDIO_235
+       i:/WORK/rv32i_cpu_top/ANTDIO_236
+       i:/WORK/rv32i_cpu_top/ANTDIO_237
+       i:/WORK/rv32i_cpu_top/ANTDIO_238
+       i:/WORK/rv32i_cpu_top/ANTDIO_239
+       i:/WORK/rv32i_cpu_top/ANTDIO_240
+       i:/WORK/rv32i_cpu_top/ANTDIO_241
+       i:/WORK/rv32i_cpu_top/ANTDIO_242
+       i:/WORK/rv32i_cpu_top/ANTDIO_243
+       i:/WORK/rv32i_cpu_top/ANTDIO_244
+       i:/WORK/rv32i_cpu_top/ANTDIO_245
+       i:/WORK/rv32i_cpu_top/ANTDIO_246
+       i:/WORK/rv32i_cpu_top/ANTDIO_247
+       i:/WORK/rv32i_cpu_top/ANTDIO_248
+       i:/WORK/rv32i_cpu_top/ANTDIO_249
+       i:/WORK/rv32i_cpu_top/ANTDIO_250
+       i:/WORK/rv32i_cpu_top/ANTDIO_251
+       i:/WORK/rv32i_cpu_top/ANTDIO_252
+       i:/WORK/rv32i_cpu_top/ANTDIO_253
+       i:/WORK/rv32i_cpu_top/ANTDIO_254
+       i:/WORK/rv32i_cpu_top/ANTDIO_255
+       i:/WORK/rv32i_cpu_top/ANTDIO_256
+       i:/WORK/rv32i_cpu_top/ANTDIO_257
+       i:/WORK/rv32i_cpu_top/ANTDIO_258
+       i:/WORK/rv32i_cpu_top/ANTDIO_259
+       i:/WORK/rv32i_cpu_top/ANTDIO_260
+       i:/WORK/rv32i_cpu_top/ANTDIO_261
+       i:/WORK/rv32i_cpu_top/ANTDIO_262
+       i:/WORK/rv32i_cpu_top/ANTDIO_263
+       i:/WORK/rv32i_cpu_top/ANTDIO_264
+       i:/WORK/rv32i_cpu_top/ANTDIO_265
+       i:/WORK/rv32i_cpu_top/ANTDIO_266
+       i:/WORK/rv32i_cpu_top/ANTDIO_267
+       i:/WORK/rv32i_cpu_top/ANTDIO_268
+       i:/WORK/rv32i_cpu_top/ANTDIO_269
+       i:/WORK/rv32i_cpu_top/ANTDIO_270
+       i:/WORK/rv32i_cpu_top/ANTDIO_271
+       i:/WORK/rv32i_cpu_top/ANTDIO_272
+       i:/WORK/rv32i_cpu_top/ANTDIO_273
+       i:/WORK/rv32i_cpu_top/ANTDIO_274
+       i:/WORK/rv32i_cpu_top/ANTDIO_275
+       i:/WORK/rv32i_cpu_top/ANTDIO_276
+       i:/WORK/rv32i_cpu_top/ANTDIO_277
+       i:/WORK/rv32i_cpu_top/ANTDIO_278
+       i:/WORK/rv32i_cpu_top/ANTDIO_279
+       i:/WORK/rv32i_cpu_top/ANTDIO_280
+       i:/WORK/rv32i_cpu_top/ANTDIO_281
+       i:/WORK/rv32i_cpu_top/ANTDIO_282
+       i:/WORK/rv32i_cpu_top/ANTDIO_283
+       i:/WORK/rv32i_cpu_top/ANTDIO_284
+       i:/WORK/rv32i_cpu_top/ANTDIO_285
+       i:/WORK/rv32i_cpu_top/ANTDIO_286
+       i:/WORK/rv32i_cpu_top/ANTDIO_287
+       i:/WORK/rv32i_cpu_top/ANTDIO_288
+       i:/WORK/rv32i_cpu_top/ANTDIO_289
+       i:/WORK/rv32i_cpu_top/ANTDIO_290
+       i:/WORK/rv32i_cpu_top/ANTDIO_291
+       i:/WORK/rv32i_cpu_top/ANTDIO_292
+       i:/WORK/rv32i_cpu_top/ANTDIO_293
+       i:/WORK/rv32i_cpu_top/ANTDIO_294
+       i:/WORK/rv32i_cpu_top/ANTDIO_295
+       i:/WORK/rv32i_cpu_top/ANTDIO_296
+       i:/WORK/rv32i_cpu_top/ANTDIO_297
+       i:/WORK/rv32i_cpu_top/ANTDIO_298
+       i:/WORK/rv32i_cpu_top/ANTDIO_299
+       i:/WORK/rv32i_cpu_top/ANTDIO_300
+       i:/WORK/rv32i_cpu_top/ANTDIO_301
+       i:/WORK/rv32i_cpu_top/ANTDIO_302
+       i:/WORK/rv32i_cpu_top/ANTDIO_303
+       i:/WORK/rv32i_cpu_top/ANTDIO_304
+       i:/WORK/rv32i_cpu_top/ANTDIO_305
+       i:/WORK/rv32i_cpu_top/ANTDIO_306
+       i:/WORK/rv32i_cpu_top/ANTDIO_307
+       i:/WORK/rv32i_cpu_top/ANTDIO_308
+       i:/WORK/rv32i_cpu_top/ANTDIO_309
+       i:/WORK/rv32i_cpu_top/ANTDIO_310
+       i:/WORK/rv32i_cpu_top/ANTDIO_311
+       i:/WORK/rv32i_cpu_top/ANTDIO_312
+       i:/WORK/rv32i_cpu_top/ANTDIO_313
+       i:/WORK/rv32i_cpu_top/ANTDIO_314
+       i:/WORK/rv32i_cpu_top/ANTDIO_315
+       i:/WORK/rv32i_cpu_top/ANTDIO_316
+       i:/WORK/rv32i_cpu_top/ANTDIO_317
+       i:/WORK/rv32i_cpu_top/ANTDIO_318
+       i:/WORK/rv32i_cpu_top/ANTDIO_319
+       i:/WORK/rv32i_cpu_top/ANTDIO_320
+       i:/WORK/rv32i_cpu_top/ANTDIO_321
+       i:/WORK/rv32i_cpu_top/ANTDIO_322
+       i:/WORK/rv32i_cpu_top/ANTDIO_323
+       i:/WORK/rv32i_cpu_top/ANTDIO_324
+       i:/WORK/rv32i_cpu_top/ANTDIO_325
+       i:/WORK/rv32i_cpu_top/ANTDIO_326
+       i:/WORK/rv32i_cpu_top/ANTDIO_327
+       i:/WORK/rv32i_cpu_top/ANTDIO_328
+       i:/WORK/rv32i_cpu_top/ANTDIO_329
+       i:/WORK/rv32i_cpu_top/ANTDIO_330
+       i:/WORK/rv32i_cpu_top/ANTDIO_331
+       i:/WORK/rv32i_cpu_top/ANTDIO_332
+       i:/WORK/rv32i_cpu_top/ANTDIO_333
+       i:/WORK/rv32i_cpu_top/ANTDIO_334
+       i:/WORK/rv32i_cpu_top/ANTDIO_335
+       i:/WORK/rv32i_cpu_top/ANTDIO_336
+       i:/WORK/rv32i_cpu_top/ANTDIO_337
+       i:/WORK/rv32i_cpu_top/ANTDIO_338
+       i:/WORK/rv32i_cpu_top/ANTDIO_339
+       i:/WORK/rv32i_cpu_top/ANTDIO_340
+       i:/WORK/rv32i_cpu_top/ANTDIO_341
+       i:/WORK/rv32i_cpu_top/ANTDIO_342
+       i:/WORK/rv32i_cpu_top/ANTDIO_343
+       i:/WORK/rv32i_cpu_top/ANTDIO_344
+       i:/WORK/rv32i_cpu_top/ANTDIO_345
+       i:/WORK/rv32i_cpu_top/ANTDIO_346
+       i:/WORK/rv32i_cpu_top/ANTDIO_347
+       i:/WORK/rv32i_cpu_top/ANTDIO_348
+       i:/WORK/rv32i_cpu_top/ANTDIO_349
+       i:/WORK/rv32i_cpu_top/ANTDIO_350
+       i:/WORK/rv32i_cpu_top/ANTDIO_351
+       i:/WORK/rv32i_cpu_top/ANTDIO_352
+       i:/WORK/rv32i_cpu_top/ANTDIO_353
+       i:/WORK/rv32i_cpu_top/ANTDIO_354
+       i:/WORK/rv32i_cpu_top/ANTDIO_355
+       i:/WORK/rv32i_cpu_top/ANTDIO_356
+       i:/WORK/rv32i_cpu_top/ANTDIO_357
+       i:/WORK/rv32i_cpu_top/ANTDIO_358
+       i:/WORK/rv32i_cpu_top/ANTDIO_359
+       i:/WORK/rv32i_cpu_top/ANTDIO_360
+       i:/WORK/rv32i_cpu_top/ANTDIO_361
+       i:/WORK/rv32i_cpu_top/ANTDIO_362
+       i:/WORK/rv32i_cpu_top/ANTDIO_363
+       i:/WORK/rv32i_cpu_top/ANTDIO_364
+       i:/WORK/rv32i_cpu_top/ANTDIO_365
+       i:/WORK/rv32i_cpu_top/ANTDIO_366
+       i:/WORK/rv32i_cpu_top/ANTDIO_367
+       i:/WORK/rv32i_cpu_top/ANTDIO_368
+       i:/WORK/rv32i_cpu_top/ANTDIO_369
+       i:/WORK/rv32i_cpu_top/ANTDIO_370
+       i:/WORK/rv32i_cpu_top/ANTDIO_371
+       i:/WORK/rv32i_cpu_top/ANTDIO_372
+       i:/WORK/rv32i_cpu_top/ANTDIO_373
+       i:/WORK/rv32i_cpu_top/ANTDIO_374
+       i:/WORK/rv32i_cpu_top/ANTDIO_375
+       i:/WORK/rv32i_cpu_top/ANTDIO_376
+       i:/WORK/rv32i_cpu_top/ANTDIO_377
+       i:/WORK/rv32i_cpu_top/ANTDIO_378
+       i:/WORK/rv32i_cpu_top/ANTDIO_379
+       i:/WORK/rv32i_cpu_top/ANTDIO_380
+       i:/WORK/rv32i_cpu_top/ANTDIO_381
+       i:/WORK/rv32i_cpu_top/ANTDIO_382
+       i:/WORK/rv32i_cpu_top/ANTDIO_383
+       i:/WORK/rv32i_cpu_top/ANTDIO_384
+       i:/WORK/rv32i_cpu_top/ANTDIO_385
+       i:/WORK/rv32i_cpu_top/ANTDIO_386
+       i:/WORK/rv32i_cpu_top/ANTDIO_387
+       i:/WORK/rv32i_cpu_top/ANTDIO_388
+       i:/WORK/rv32i_cpu_top/ANTDIO_389
+       i:/WORK/rv32i_cpu_top/ANTDIO_390
+       i:/WORK/rv32i_cpu_top/ANTDIO_391
+       i:/WORK/rv32i_cpu_top/ANTDIO_392
+       i:/WORK/rv32i_cpu_top/ANTDIO_393
+       i:/WORK/rv32i_cpu_top/ANTDIO_394
+       i:/WORK/rv32i_cpu_top/ANTDIO_395
+       i:/WORK/rv32i_cpu_top/ANTDIO_396
+       i:/WORK/rv32i_cpu_top/ANTDIO_397
+       i:/WORK/rv32i_cpu_top/ANTDIO_398
+       i:/WORK/rv32i_cpu_top/ANTDIO_399
+       i:/WORK/rv32i_cpu_top/ANTDIO_400
+       i:/WORK/rv32i_cpu_top/ANTDIO_401
+       i:/WORK/rv32i_cpu_top/ANTDIO_402
+       i:/WORK/rv32i_cpu_top/ANTDIO_403
+       i:/WORK/rv32i_cpu_top/ANTDIO_404
+       i:/WORK/rv32i_cpu_top/ANTDIO_405
+       i:/WORK/rv32i_cpu_top/ANTDIO_406
+       i:/WORK/rv32i_cpu_top/ANTDIO_407
+       i:/WORK/rv32i_cpu_top/ANTDIO_408
+       i:/WORK/rv32i_cpu_top/ANTDIO_409
+       i:/WORK/rv32i_cpu_top/ANTDIO_410
+       i:/WORK/rv32i_cpu_top/ANTDIO_411
+       i:/WORK/rv32i_cpu_top/ANTDIO_412
+       i:/WORK/rv32i_cpu_top/ANTDIO_413
+       i:/WORK/rv32i_cpu_top/ANTDIO_414
+       i:/WORK/rv32i_cpu_top/ANTDIO_415
+       i:/WORK/rv32i_cpu_top/ANTDIO_416
+       i:/WORK/rv32i_cpu_top/ANTDIO_417
+       i:/WORK/rv32i_cpu_top/ANTDIO_418
+       i:/WORK/rv32i_cpu_top/ANTDIO_419
+       i:/WORK/rv32i_cpu_top/ANTDIO_420
+       i:/WORK/rv32i_cpu_top/ANTDIO_421
+       i:/WORK/rv32i_cpu_top/ANTDIO_422
+       i:/WORK/rv32i_cpu_top/ANTDIO_423
+       i:/WORK/rv32i_cpu_top/ANTDIO_424
+       i:/WORK/rv32i_cpu_top/ANTDIO_425
+       i:/WORK/rv32i_cpu_top/ANTDIO_426
+       i:/WORK/rv32i_cpu_top/ANTDIO_427
+       i:/WORK/rv32i_cpu_top/ANTDIO_428
+       i:/WORK/rv32i_cpu_top/ANTDIO_429
+       i:/WORK/rv32i_cpu_top/ANTDIO_430
+       i:/WORK/rv32i_cpu_top/ANTDIO_431
+       i:/WORK/rv32i_cpu_top/ANTDIO_432
+       i:/WORK/rv32i_cpu_top/ANTDIO_433
+       i:/WORK/rv32i_cpu_top/ANTDIO_434
+       i:/WORK/rv32i_cpu_top/ANTDIO_435
+       i:/WORK/rv32i_cpu_top/ANTDIO_436
+       i:/WORK/rv32i_cpu_top/ANTDIO_437
+       i:/WORK/rv32i_cpu_top/ANTDIO_438
+       i:/WORK/rv32i_cpu_top/ANTDIO_439
+       i:/WORK/rv32i_cpu_top/ANTDIO_440
+       i:/WORK/rv32i_cpu_top/ANTDIO_441
+       i:/WORK/rv32i_cpu_top/ANTDIO_442
+       i:/WORK/rv32i_cpu_top/ANTDIO_443
+       i:/WORK/rv32i_cpu_top/ANTDIO_444
+       i:/WORK/rv32i_cpu_top/ANTDIO_445
+       i:/WORK/rv32i_cpu_top/ANTDIO_446
+       i:/WORK/rv32i_cpu_top/ANTDIO_447
+       i:/WORK/rv32i_cpu_top/ANTDIO_448
+       i:/WORK/rv32i_cpu_top/ANTDIO_449
+       i:/WORK/rv32i_cpu_top/ANTDIO_450
+       i:/WORK/rv32i_cpu_top/ANTDIO_451
+       i:/WORK/rv32i_cpu_top/ANTDIO_452
+       i:/WORK/rv32i_cpu_top/ANTDIO_453
+       i:/WORK/rv32i_cpu_top/ANTDIO_454
+       i:/WORK/rv32i_cpu_top/ANTDIO_455
+       i:/WORK/rv32i_cpu_top/ANTDIO_456
+       i:/WORK/rv32i_cpu_top/ANTDIO_457
+       i:/WORK/rv32i_cpu_top/ANTDIO_458
+       i:/WORK/rv32i_cpu_top/ANTDIO_459
+       i:/WORK/rv32i_cpu_top/ANTDIO_460
+       i:/WORK/rv32i_cpu_top/ANTDIO_461
+       i:/WORK/rv32i_cpu_top/ANTDIO_462
+       i:/WORK/rv32i_cpu_top/ANTDIO_463
+       i:/WORK/rv32i_cpu_top/ANTDIO_464
+       i:/WORK/rv32i_cpu_top/ANTDIO_465
+       i:/WORK/rv32i_cpu_top/ANTDIO_466
+       i:/WORK/rv32i_cpu_top/ANTDIO_467
+       i:/WORK/rv32i_cpu_top/ANTDIO_468
+       i:/WORK/rv32i_cpu_top/ANTDIO_469
+       i:/WORK/rv32i_cpu_top/ANTDIO_470
+       i:/WORK/rv32i_cpu_top/ANTDIO_471
+       i:/WORK/rv32i_cpu_top/ANTDIO_472
+       i:/WORK/rv32i_cpu_top/ANTDIO_473
+       i:/WORK/rv32i_cpu_top/ANTDIO_474
+       i:/WORK/rv32i_cpu_top/ANTDIO_475
+       i:/WORK/rv32i_cpu_top/ANTDIO_476
+       i:/WORK/rv32i_cpu_top/ANTDIO_477
+       i:/WORK/rv32i_cpu_top/ANTDIO_478
+       i:/WORK/rv32i_cpu_top/ANTDIO_479
+       i:/WORK/rv32i_cpu_top/ANTDIO_480
+       i:/WORK/rv32i_cpu_top/ANTDIO_481
+       i:/WORK/rv32i_cpu_top/ANTDIO_482
+       i:/WORK/rv32i_cpu_top/ANTDIO_483
+       i:/WORK/rv32i_cpu_top/ANTDIO_484
+       i:/WORK/rv32i_cpu_top/ANTDIO_485
+       i:/WORK/rv32i_cpu_top/ANTDIO_486
+       i:/WORK/rv32i_cpu_top/ANTDIO_487
+       i:/WORK/rv32i_cpu_top/ANTDIO_488
+       i:/WORK/rv32i_cpu_top/ANTDIO_489
+       i:/WORK/rv32i_cpu_top/ANTDIO_490
+       i:/WORK/rv32i_cpu_top/ANTDIO_491
+       i:/WORK/rv32i_cpu_top/ANTDIO_492
+       i:/WORK/rv32i_cpu_top/ANTDIO_493
+       i:/WORK/rv32i_cpu_top/ANTDIO_494
+       i:/WORK/rv32i_cpu_top/ANTDIO_495
+       i:/WORK/rv32i_cpu_top/ANTDIO_496
+       i:/WORK/rv32i_cpu_top/ANTDIO_497
+       i:/WORK/rv32i_cpu_top/ANTDIO_498
+       i:/WORK/rv32i_cpu_top/ANTDIO_499
+       i:/WORK/rv32i_cpu_top/ANTDIO_500
+       i:/WORK/rv32i_cpu_top/ANTDIO_501
+       i:/WORK/rv32i_cpu_top/ANTDIO_502
+       i:/WORK/rv32i_cpu_top/ANTDIO_503
+       i:/WORK/rv32i_cpu_top/ANTDIO_504
+       i:/WORK/rv32i_cpu_top/ANTDIO_505
+       i:/WORK/rv32i_cpu_top/ANTDIO_506
+       i:/WORK/rv32i_cpu_top/ANTDIO_507
+       i:/WORK/rv32i_cpu_top/ANTDIO_508
+       i:/WORK/rv32i_cpu_top/ANTDIO_509
+       i:/WORK/rv32i_cpu_top/ANTDIO_510
+       i:/WORK/rv32i_cpu_top/ANTDIO_511
+       i:/WORK/rv32i_cpu_top/ANTDIO_512
+       i:/WORK/rv32i_cpu_top/ANTDIO_513
+       i:/WORK/rv32i_cpu_top/ANTDIO_514
+       i:/WORK/rv32i_cpu_top/ANTDIO_515
+       i:/WORK/rv32i_cpu_top/ANTDIO_516
+       i:/WORK/rv32i_cpu_top/ANTDIO_517
+       i:/WORK/rv32i_cpu_top/ANTDIO_518
+       i:/WORK/rv32i_cpu_top/ANTDIO_519
+       i:/WORK/rv32i_cpu_top/ANTDIO_520
+       i:/WORK/rv32i_cpu_top/ANTDIO_521
+       i:/WORK/rv32i_cpu_top/ANTDIO_522
+       i:/WORK/rv32i_cpu_top/ANTDIO_523
+       i:/WORK/rv32i_cpu_top/ANTDIO_524
+       i:/WORK/rv32i_cpu_top/ANTDIO_525
+       i:/WORK/rv32i_cpu_top/ANTDIO_526
+       i:/WORK/rv32i_cpu_top/ANTDIO_527
+       i:/WORK/rv32i_cpu_top/ANTDIO_528
+       i:/WORK/rv32i_cpu_top/ANTDIO_529
+       i:/WORK/rv32i_cpu_top/ANTDIO_530
+       i:/WORK/rv32i_cpu_top/ANTDIO_531
+       i:/WORK/rv32i_cpu_top/ANTDIO_532
+       i:/WORK/rv32i_cpu_top/ANTDIO_533
+       i:/WORK/rv32i_cpu_top/ANTDIO_534
+       i:/WORK/rv32i_cpu_top/ANTDIO_535
+       i:/WORK/rv32i_cpu_top/ANTDIO_536
+       i:/WORK/rv32i_cpu_top/ANTDIO_537
+       i:/WORK/rv32i_cpu_top/ANTDIO_538
+       i:/WORK/rv32i_cpu_top/ANTDIO_539
+       i:/WORK/rv32i_cpu_top/ANTDIO_540
+       i:/WORK/rv32i_cpu_top/ANTDIO_541
+       i:/WORK/rv32i_cpu_top/ANTDIO_542
+       i:/WORK/rv32i_cpu_top/ANTDIO_543
+       i:/WORK/rv32i_cpu_top/ANTDIO_544
+       i:/WORK/rv32i_cpu_top/ANTDIO_545
+       i:/WORK/rv32i_cpu_top/ANTDIO_546
+       i:/WORK/rv32i_cpu_top/ANTDIO_547
+       i:/WORK/rv32i_cpu_top/ANTDIO_548
+       i:/WORK/rv32i_cpu_top/ANTDIO_549
+       i:/WORK/rv32i_cpu_top/ANTDIO_550
+       i:/WORK/rv32i_cpu_top/ANTDIO_551
+       i:/WORK/rv32i_cpu_top/ANTDIO_552
+       i:/WORK/rv32i_cpu_top/ANTDIO_553
+       i:/WORK/rv32i_cpu_top/ANTDIO_554
+       i:/WORK/rv32i_cpu_top/ANTDIO_555
+       i:/WORK/rv32i_cpu_top/ANTDIO_556
+       i:/WORK/rv32i_cpu_top/ANTDIO_557
+       i:/WORK/rv32i_cpu_top/ANTDIO_558
+       i:/WORK/rv32i_cpu_top/ANTDIO_559
+       i:/WORK/rv32i_cpu_top/ANTDIO_560
+       i:/WORK/rv32i_cpu_top/ANTDIO_561
+       i:/WORK/rv32i_cpu_top/ANTDIO_562
+       i:/WORK/rv32i_cpu_top/ANTDIO_563
+       i:/WORK/rv32i_cpu_top/ANTDIO_564
+       i:/WORK/rv32i_cpu_top/ANTDIO_565
+       i:/WORK/rv32i_cpu_top/ANTDIO_566
+       i:/WORK/rv32i_cpu_top/ANTDIO_567
+       i:/WORK/rv32i_cpu_top/ANTDIO_568
+       i:/WORK/rv32i_cpu_top/ANTDIO_569
+       i:/WORK/rv32i_cpu_top/ANTDIO_570
+       i:/WORK/rv32i_cpu_top/ANTDIO_571
+       i:/WORK/rv32i_cpu_top/ANTDIO_572
+       i:/WORK/rv32i_cpu_top/ANTDIO_573
+       i:/WORK/rv32i_cpu_top/ANTDIO_574
+       i:/WORK/rv32i_cpu_top/ANTDIO_575
+       i:/WORK/rv32i_cpu_top/ANTDIO_576
+       i:/WORK/rv32i_cpu_top/ANTDIO_577
+       i:/WORK/rv32i_cpu_top/ANTDIO_578
+       i:/WORK/rv32i_cpu_top/ANTDIO_579
+       i:/WORK/rv32i_cpu_top/ANTDIO_580
+       i:/WORK/rv32i_cpu_top/ANTDIO_581
+       i:/WORK/rv32i_cpu_top/ANTDIO_582
+       i:/WORK/rv32i_cpu_top/ANTDIO_583
+       i:/WORK/rv32i_cpu_top/ANTDIO_584
+       i:/WORK/rv32i_cpu_top/ANTDIO_585
+       i:/WORK/rv32i_cpu_top/ANTDIO_586
+       i:/WORK/rv32i_cpu_top/ANTDIO_587
+       i:/WORK/rv32i_cpu_top/ANTDIO_588
+       i:/WORK/rv32i_cpu_top/ANTDIO_589
+       i:/WORK/rv32i_cpu_top/ANTDIO_590
+       i:/WORK/rv32i_cpu_top/ANTDIO_591
+       i:/WORK/rv32i_cpu_top/ANTDIO_592
+       i:/WORK/rv32i_cpu_top/ANTDIO_593
+       i:/WORK/rv32i_cpu_top/ANTDIO_594
+       i:/WORK/rv32i_cpu_top/ANTDIO_595
+       i:/WORK/rv32i_cpu_top/ANTDIO_596
+       i:/WORK/rv32i_cpu_top/ANTDIO_597
+       i:/WORK/rv32i_cpu_top/ANTDIO_598
+       i:/WORK/rv32i_cpu_top/ANTDIO_599
+       i:/WORK/rv32i_cpu_top/ANTDIO_600
+       i:/WORK/rv32i_cpu_top/ANTDIO_601
+       i:/WORK/rv32i_cpu_top/ANTDIO_602
+       i:/WORK/rv32i_cpu_top/ANTDIO_603
+       i:/WORK/rv32i_cpu_top/ANTDIO_604
+       i:/WORK/rv32i_cpu_top/ANTDIO_605
+       i:/WORK/rv32i_cpu_top/ANTDIO_606
+       i:/WORK/rv32i_cpu_top/ANTDIO_607
+       i:/WORK/rv32i_cpu_top/ANTDIO_608
+       i:/WORK/rv32i_cpu_top/ANTDIO_609
+       i:/WORK/rv32i_cpu_top/ANTDIO_610
+       i:/WORK/rv32i_cpu_top/ANTDIO_611
+       i:/WORK/rv32i_cpu_top/ANTDIO_612
+       i:/WORK/rv32i_cpu_top/ANTDIO_613
+       i:/WORK/rv32i_cpu_top/ANTDIO_614
+       i:/WORK/rv32i_cpu_top/ANTDIO_615
+       i:/WORK/rv32i_cpu_top/ANTDIO_616
+       i:/WORK/rv32i_cpu_top/ANTDIO_617
+       i:/WORK/rv32i_cpu_top/ANTDIO_618
+       i:/WORK/rv32i_cpu_top/ANTDIO_619
+       i:/WORK/rv32i_cpu_top/ANTDIO_620
+       i:/WORK/rv32i_cpu_top/ANTDIO_621
+       i:/WORK/rv32i_cpu_top/ANTDIO_622
+       i:/WORK/rv32i_cpu_top/ANTDIO_623
+       i:/WORK/rv32i_cpu_top/ANTDIO_624
+       i:/WORK/rv32i_cpu_top/ANTDIO_625
+       i:/WORK/rv32i_cpu_top/ANTDIO_626
+       i:/WORK/rv32i_cpu_top/ANTDIO_627
+       i:/WORK/rv32i_cpu_top/ANTDIO_628
+       i:/WORK/rv32i_cpu_top/ANTDIO_629
+       i:/WORK/rv32i_cpu_top/ANTDIO2_0
+       i:/WORK/rv32i_cpu_top/ANTDIO2_1
+       i:/WORK/rv32i_cpu_top/ANTDIO2_2
+       i:/WORK/rv32i_cpu_top/ANTDIO2_3
+       i:/WORK/rv32i_cpu_top/ANTDIO2_4
+       i:/WORK/rv32i_cpu_top/ANTDIO2_5
+       i:/WORK/rv32i_cpu_top/ANTDIO2_6
+       i:/WORK/rv32i_cpu_top/ANTDIO2_7
+       i:/WORK/rv32i_cpu_top/ANTDIO2_8
+       i:/WORK/rv32i_cpu_top/ANTDIO2_9
+       i:/WORK/rv32i_cpu_top/ANTDIO2_10
+       i:/WORK/rv32i_cpu_top/ANTDIO3_0
+       i:/WORK/rv32i_cpu_top/ANTDIO3_1
+       i:/WORK/rv32i_cpu_top/ANTDIO3_2
+       i:/WORK/rv32i_cpu_top/ANTDIO3_3
+
+m      sky130_fd_sc_hd__diode_2#PWR_FM_BBOX
+
+       Instances : 1 of 1
+       ------------------------
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__diode_2#PWR/pwrBB
+
+m *    sky130_fd_sc_hd__lpflow_bleeder_1
+
+       Instances : 0
+
+m      sky130_fd_sc_hd__lpflow_bleeder_1#PWR_FM_BBOX
+
+       Instances : 1 of 1
+       ------------------------
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__lpflow_bleeder_1#PWR/pwrBB
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_12
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_12#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_3
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_3#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_4
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_4#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_6
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_6#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_8
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_8#PWR
+
+       Instances : 0
+
+
+
+##################################################################
+####    DESIGN LIBRARY - r:/WORK
+##################################################################
+Type  Design Name
+----  ----------
+e *    M_RTL_ARSHIFT_32_6_1_1
+
+       Instances : 0
+
+e *    M_RTL_ARSHIFT_33_6_2_2
+
+       Instances : 0
+
+e *    mbist_ctrl
+
+       Instances : 0
+
+e *    mem_collar
+
+       Instances : 0
+
+e *    rv32i_core
+
+       Instances : 0
+
+e *    rv32i_pipeline_if
+
+       Instances : 0
+
+
+
+##################################################################
+####    TECH LIBRARY - r:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB
+##################################################################
+Type  Design Name
+----  ----------
+m      sky130_sram_1kbyte_1rw1r_32x256_8
+
+       Instances : 10 of 10
+       ------------------------
+       r:/WORK/rv32i_cpu_top/u_core_u_dcache/u_tag_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_3__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_2__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_1__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_dcache/gen_data_sram_0__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_icache_u_tag_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_3__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_2__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_1__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core_u_icache_gen_data_sram_0__u_data_sram
+
+m *    sky130_sram_1kbyte_1rw1r_32x256_8#PWR
+
+       Instances : 0
+
+
+1

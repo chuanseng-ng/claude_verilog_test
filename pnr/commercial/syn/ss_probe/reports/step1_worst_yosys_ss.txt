@@ -1,0 +1,57 @@
+****************************************
+Report : timing
+	-path_type full_clock_expanded
+	-delay_type max
+	-input_pins
+	-max_paths 1
+	-transition_time
+	-sort_by slack
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sun Nov  1 21:52:35 2026
+****************************************
+
+
+  Startpoint: _53323_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: _51698_ (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: max
+
+  Point                                          Trans       Incr       Path
+  -----------------------------------------------------------------------------
+  clock clk_i (rise edge)                       0.0000     0.0000     0.0000
+  clock network delay (ideal)                              1.0000     1.0000
+  _53323_/CLK (sky130_fd_sc_hd__dfxtp_2)        0.0000     0.0000     1.0000 r
+  _53323_/Q (sky130_fd_sc_hd__dfxtp_2)         11.2654     8.5709     9.5709 r
+  _39749_/S0 (sky130_fd_sc_hd__mux4_2)         11.2654     0.0036     9.5745 r
+  _39749_/X (sky130_fd_sc_hd__mux4_2)           0.1986     2.7634    12.3379 f
+  _39750_/A3 (sky130_fd_sc_hd__mux4_2)          0.1986     0.0034    12.3413 f
+  _39750_/X (sky130_fd_sc_hd__mux4_2)           0.1439     1.0604    13.4017 f
+  _39751_/A1 (sky130_fd_sc_hd__mux2_2)          0.1439     0.0034    13.4051 f
+  _39751_/X (sky130_fd_sc_hd__mux2_2)           0.0865     0.5595    13.9646 f
+  _39752_/A0 (sky130_fd_sc_hd__mux2_2)          0.0865     0.0037    13.9683 f
+  _39752_/X (sky130_fd_sc_hd__mux2_2)           0.0901     0.5346    14.5029 f
+  _39753_/B2 (sky130_fd_sc_hd__a32o_2)          0.0901     0.0046    14.5075 f
+  _39753_/X (sky130_fd_sc_hd__a32o_2)           0.0615     0.4112    14.9187 f
+  _39754_/B (sky130_fd_sc_hd__and3_2)           0.0615     0.0030    14.9218 f
+  _39754_/X (sky130_fd_sc_hd__and3_2)           0.0701     0.3888    15.3105 f
+  _39755_/A (sky130_fd_sc_hd__buf_1)            0.0701     0.0040    15.3146 f
+  _39755_/X (sky130_fd_sc_hd__buf_1)            0.0430     0.1516    15.4662 f
+  _51698_/D (sky130_fd_sc_hd__dfxtp_2)          0.0430     0.0033    15.4695 f
+  data arrival time                                                  15.4695
+
+  clock clk_i (rise edge)                       0.0000    13.3330    13.3330
+  clock network delay (ideal)                              1.0000    14.3330
+  _51698_/CLK (sky130_fd_sc_hd__dfxtp_2)                             14.3330 r
+  clock reconvergence pessimism                            0.0000    14.3330
+  clock uncertainty                                       -0.5000    13.8330
+  library setup time                                      -0.2821    13.5509
+  data required time                                                 13.5509
+  -----------------------------------------------------------------------------
+  data required time                                                 13.5509
+  data arrival time                                                 -15.4695
+  -----------------------------------------------------------------------------
+  slack (VIOLATED)                                                   -1.9186
+
+
+1

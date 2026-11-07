@@ -1,0 +1,19 @@
+== drclvs summary: arm=innovus_b5j
+-- LVS (Magic DEF+LEF, LibreLane mode)
+   Final result: Top level cell failed pin matching.
+   Number of devices: 34255                   |Number of devices: 34255
+   Number of nets: 35214                      |Number of nets: 35214
+-- LVS (Magic from GDS, cells as LEF abstracts)
+   Final result: Top level cell failed pin matching.
+   Number of devices: 34255                   |Number of devices: 34255
+   Number of nets: 35214                      |Number of nets: 35214
+-- KLayout DRC
+   # KLayout DRC report /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/innovus_b5j/kdrc/drc_violations.klayout.xml
+   TOTAL_VIOLATION_ITEMS 60  RULES_VIOLATED 2
+           54  m3.6
+            6  npc.2
+-- Magic DRC by rule (inside/straddle/outside SRAM)
+   NOT RUN / no report
+-- Antenna (OpenROAD check_antennas)
+   [INFO ANT-0002] Found 10 net violations.
+   [INFO ANT-0001] Found 10 pin violations.

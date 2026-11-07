@@ -1,0 +1,7 @@
+spef_src=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/icc2_nom/rv32i_cpu_top.nom.spef
+spef_md5=6a08de3b3370cf02219381c86de11ccc
+netlist_src=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.nl.v
+netlist_md5=1ee342edb00e6da7cb9ef040dc64241a
+sdc_md5=3c69635042a9d65cb87e71a9db713e4e
+scripts_md5=eb3794200e303bbf668d387449e4683b
+power=0

@@ -1,0 +1,113 @@
+****************************************
+Report : timing
+	-path_type full_clock_expanded
+	-delay_type min
+	-input_pins
+	-nets
+	-max_paths 1
+	-transition_time
+	-sort_by slack
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 09:52:03 2026
+****************************************
+
+
+  Startpoint: u_core/u_dcache_wb_tag_q_reg[13]
+               (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: axi_awaddr_o[25]
+               (output port clocked by clk_io)
+  Path Group: IO
+  Path Type: min
+
+  Point                                  Fanout  Trans       Incr       Path
+  -----------------------------------------------------------------------------
+  clock clk_i (rise edge)                                  0.0000     0.0000
+  clock source latency                                     1.0000     1.0000
+  clk_i (in)                                    0.1602     0.1020 &   1.1020 r
+  clk_i (net)                               1
+  CTS_cpc_drv_buf_00277/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1618     0.0141 &   1.1162 r
+  CTS_cpc_drv_buf_00277/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1655     0.2193 &   1.3354 r
+  CTS_88 (net)                              1
+  CTS_cpc_drv_buf_00271/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1655     0.0706 &   1.4061 r
+  CTS_cpc_drv_buf_00271/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2387     0.2887 &   1.6947 r
+  CTS_87 (net)                              1
+  CTS_cpc_drv_buf_00263/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2416     0.0275 &   1.7223 r
+  CTS_cpc_drv_buf_00263/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2625     0.3275 &   2.0497 r
+  CTS_86 (net)                              1
+  CTS_ccl_buf_00251/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2649     0.0312 &   2.0810 r
+  CTS_ccl_buf_00251/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1546     0.2701 &   2.3511 r
+  CTS_85 (net)                              1
+  CTS_ccl_a_buf_00250/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1564     0.0212 &   2.3723 r
+  CTS_ccl_a_buf_00250/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1436     0.2237 &   2.5960 r
+  CTS_84 (net)                              2
+  CTS_ccl_buf_00248/A (sky130_fd_sc_hd__clkbuf_4)
+                                                0.1436     0.0289 &   2.6249 r
+  CTS_ccl_buf_00248/X (sky130_fd_sc_hd__clkbuf_4)
+                                                0.1349     0.2314 &   2.8563 r
+  CTS_83 (net)                              2
+  CTS_ccl_buf_00246/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1352     0.0046 &   2.8609 r
+  CTS_ccl_buf_00246/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.0714     0.1819 &   3.0428 r
+  CTS_82 (net)                              2
+  CTS_ccl_buf_00243/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.0715     0.0014 &   3.0442 r
+  CTS_ccl_buf_00243/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1629     0.2206 &   3.2647 r
+  CTS_81 (net)                              6
+  CTS_ccl_a_buf_00238/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1634     0.0071 &   3.2719 r
+  CTS_ccl_a_buf_00238/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2056     0.2696 &   3.5415 r
+  CTS_80 (net)                             12
+  CTS_ccl_a_buf_00027/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2076     0.0207 &   3.5621 r
+  CTS_ccl_a_buf_00027/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1387     0.2493 &   3.8114 r
+  CTS_77 (net)                             25
+  u_core/u_dcache_wb_tag_q_reg[13]/CLK (sky130_fd_sc_hd__dfxtp_1)
+                                                0.1392     0.0055 &   3.8169 r
+  u_core/u_dcache_wb_tag_q_reg[13]/Q (sky130_fd_sc_hd__dfxtp_1)
+                                                0.1230     0.3936 &   4.2105 r
+  u_core/u_dcache_wb_tag_q[13] (net)        2
+  u_core/g373719/A0 (sky130_fd_sc_hd__mux2_2)   0.1230     0.0003 &   4.2108 r
+  u_core/g373719/X (sky130_fd_sc_hd__mux2_2)    0.0763     0.1982 &   4.4090 r
+  FE_OFN18440_axi_awaddr_o_25 (net)         1
+  FE_OFC9143_axi_awaddr_o_25/A (sky130_fd_sc_hd__inv_4)
+                                                0.0763     0.0002 &   4.4093 r
+  FE_OFC9143_axi_awaddr_o_25/Y (sky130_fd_sc_hd__inv_4)
+                                                0.1080     0.0983 &   4.5076 f
+  FE_OFN20126_axi_awaddr_o_25 (net)         1
+  FE_OFC2322_axi_awaddr_o_25/A (sky130_fd_sc_hd__clkinv_16)
+                                                0.1080     0.0179 &   4.5256 f
+  FE_OFC2322_axi_awaddr_o_25/Y (sky130_fd_sc_hd__clkinv_16)
+                                                0.1309     0.1070 &   4.6325 r
+  axi_awaddr_o[25] (net)                    1
+  axi_awaddr_o[25] (out)                        0.1309     0.0906 &   4.7232 r
+  data arrival time                                                   4.7232
+
+  clock clk_io (rise edge)                      0.0000     0.0000     0.0000
+  clock network delay (ideal)                              1.0000     1.0000
+  clock reconvergence pessimism                            0.0000     1.0000
+  clock uncertainty                                        0.2000     1.2000
+  output external delay                                   -0.5000     0.7000
+  data required time                                                  0.7000
+  -----------------------------------------------------------------------------
+  data required time                                                  0.7000
+  data arrival time                                                  -4.7232
+  -----------------------------------------------------------------------------
+  slack (MET)                                                         4.0232
+
+
+1

@@ -1,0 +1,106 @@
+GDS /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.gds  dbu=0.0009999999999999998  cells=614  layers=52
+top cell rv32i_cpu_top: found=True  bbox um=(2,2;3598,1798)
+top cells in file: ['sky130_sram_1kbyte_1rw1r_32x256_8', 'sky130_fd_sc_hd__or4bb_4', 'sky130_fd_sc_hd__probe_p_8', 'sky130_fd_sc_hd__probec_p_8', 'sky130_fd_sc_hd__sdfbbn_1', 'sky130_fd_sc_hd__sdfsbp_2', 'sky130_fd_sc_hd__sdfsbp_1', 'sky130_fd_sc_hd__sdfrtp_4', 'sky130_fd_sc_hd__sdfrtp_2', 'sky130_fd_sc_hd__sdfrtp_1', 'sky130_fd_sc_hd__sdfrtn_1', 'sky130_fd_sc_hd__sdfrbp_2', 'sky130_fd_sc_hd__sdfrbp_1', 'sky130_fd_sc_hd__sdfbbp_1', 'sky130_fd_sc_hd__sdfbbn_2', 'sky130_fd_sc_hd__sdfstp_1', 'sky130_fd_sc_hd__sdfstp_2', 'sky130_fd_sc_hd__sdfstp_4', 'sky130_fd_sc_hd__sdfxbp_1', 'sky130_fd_sc_hd__sdfxbp_2', 'sky130_fd_sc_hd__sdfxtp_1', 'sky130_fd_sc_hd__sdfxtp_2', 'sky130_fd_sc_hd__sdfxtp_4', 'sky130_fd_sc_hd__sdlclkp_1', 'sky130_fd_sc_hd__sdlclkp_2', 'sky130_fd_sc_hd__sdlclkp_4', 'sky130_fd_sc_hd__sedfxbp_1', 'sky130_fd_sc_hd__sedfxbp_2', 'sky130_fd_sc_hd__sedfxtp_1', 'sky130_fd_sc_hd__sedfxtp_2', 'sky130_fd_sc_hd__sedfxtp_4', 'sky130_fd_sc_hd__tap_1', 'sky130_fd_sc_hd__tap_2', 'sky130_fd_sc_hd__xnor3_4', 'sky130_fd_sc_hd__xnor3_2', 'sky130_fd_sc_hd__xnor3_1', 'sky130_fd_sc_hd__xnor2_4', 'sky130_fd_sc_hd__tapvgnd_1', 'sky130_fd_sc_hd__tapvgnd2_1', 'sky130_fd_sc_hd__xor2_4', 'sky130_fd_sc_hd__xor3_1', 'sky130_fd_sc_hd__xor3_2', 'sky130_fd_sc_hd__xor3_4', 'sky130_fd_sc_hd__o41a_4', 'sky130_fd_sc_hd__o41ai_2', 'sky130_fd_sc_hd__o41ai_4', 'sky130_fd_sc_hd__o221a_4', 'sky130_fd_sc_hd__o221ai_4', 'sky130_fd_sc_hd__o2111a_4', 'sky130_fd_sc_hd__o2111a_2', 'sky130_fd_sc_hd__o311ai_4', 'sky130_fd_sc_hd__o311ai_2', 'sky130_fd_sc_hd__o311ai_0', 'sky130_fd_sc_hd__o311a_4', 'sky130_fd_sc_hd__o311a_2', 'sky130_fd_sc_hd__o311a_1', 'sky130_fd_sc_hd__o2111ai_4', 'sky130_fd_sc_hd__or2_0', 'sky130_fd_sc_hd__or3b_4', 'sky130_fd_sc_hd__or4b_2', 'sky130_fd_sc_hd__or4b_4', 'sky130_fd_sc_hd__or4bb_1', 'sky130_fd_sc_hd__or4bb_2', 'sky130_fd_sc_hd__nor3b_2', 'sky130_fd_sc_hd__nor3b_4', 'sky130_fd_sc_hd__nor4b_2', 'sky130_fd_sc_hd__nor4b_4', 'sky130_fd_sc_hd__nor4bb_2', 'sky130_fd_sc_hd__nor4bb_4', 'sky130_fd_sc_hd__o2bb2ai_4', 'sky130_fd_sc_hd__o21ai_0', 'sky130_fd_sc_hd__o21ba_1', 'sky130_fd_sc_hd__o21bai_4', 'sky130_fd_sc_hd__o31ai_4', 'sky130_fd_sc_hd__o32a_1', 'sky130_fd_sc_hd__o32a_2', 'sky130_fd_sc_hd__o32a_4', 'sky130_fd_sc_hd__o32ai_4', 'sky130_fd_sc_hd__o41a_1', 'sky130_fd_sc_hd__o41a_2', 'sky130_fd_sc_hd__lpflow_lsbuf_lh_hl_isowell_tap_1', 'sky130_fd_sc_hd__lpflow_lsbuf_lh_hl_isowell_tap_2', 'sky130_fd_sc_hd__lpflow_lsbuf_lh_hl_isowell_tap_4', 'sky130_fd_sc_hd__lpflow_lsbuf_lh_isowell_4', 'sky130_fd_sc_hd__lpflow_lsbuf_lh_isowell_tap_1', 'sky130_fd_sc_hd__lpflow_lsbuf_lh_isowell_tap_2', 'sky130_fd_sc_hd__lpflow_lsbuf_lh_isowell_tap_4', 'sky130_fd_sc_hd__macro_sparecell', 'sky130_fd_sc_hd__maj3_4', 'sky130_fd_sc_hd__mux2_1', 'sky130_fd_sc_hd__mux2_2', 'sky130_fd_sc_hd__mux2_4', 'sky130_fd_sc_hd__mux2_8', 'sky130_fd_sc_hd__mux2i_2', 'sky130_fd_sc_hd__mux2i_4', 'sky130_fd_sc_hd__mux4_1', 'sky130_fd_sc_hd__mux4_2', 'sky130_fd_sc_hd__mux4_4', 'sky130_fd_sc_hd__nand2b_4', 'sky130_fd_sc_hd__nand3b_4', 'sky130_fd_sc_hd__nand4b_4', 'sky130_fd_sc_hd__nand4bb_1', 'sky130_fd_sc_hd__nand4bb_2', 'sky130_fd_sc_hd__nand4bb_4', 'sky130_fd_sc_hd__nor2b_4', 'sky130_fd_sc_hd__nor3_4', 'sky130_fd_sc_hd__einvp_1', 'sky130_fd_sc_hd__einvp_2', 'sky130_fd_sc_hd__einvp_4', 'sky130_fd_sc_hd__einvp_8', 'sky130_fd_sc_hd__fa_2', 'sky130_fd_sc_hd__fa_4', 'sky130_fd_sc_hd__fahcin_1', 'sky130_fd_sc_hd__fahcon_1', 'sky130_fd_sc_hd__ha_2', 'sky130_fd_sc_hd__ha_4', 'sky130_fd_sc_hd__lpflow_clkbufkapwr_4', 'sky130_fd_sc_hd__lpflow_clkbufkapwr_2', 'sky130_fd_sc_hd__lpflow_clkbufkapwr_1', 'sky130_fd_sc_hd__lpflow_bleeder_1', 'sky130_fd_sc_hd__lpflow_clkbufkapwr_8', 'sky130_fd_sc_hd__lpflow_clkbufkapwr_16', 'sky130_fd_sc_hd__lpflow_clkinvkapwr_1', 'sky130_fd_sc_hd__lpflow_clkinvkapwr_2', 'sky130_fd_sc_hd__lpflow_clkinvkapwr_4', 'sky130_fd_sc_hd__lpflow_clkinvkapwr_8', 'sky130_fd_sc_hd__lpflow_clkinvkapwr_16', 'sky130_fd_sc_hd__lpflow_decapkapwr_3', 'sky130_fd_sc_hd__lpflow_decapkapwr_4', 'sky130_fd_sc_hd__lpflow_decapkapwr_6', 'sky130_fd_sc_hd__lpflow_inputiso0n_1', 'sky130_fd_sc_hd__lpflow_decapkapwr_12', 'sky130_fd_sc_hd__lpflow_decapkapwr_8', 'sky130_fd_sc_hd__lpflow_inputisolatch_1', 'sky130_fd_sc_hd__lpflow_inputiso1p_1', 'sky130_fd_sc_hd__lpflow_inputiso1n_1', 'sky130_fd_sc_hd__lpflow_inputiso0p_1', 'sky130_fd_sc_hd__lpflow_isobufsrc_4', 'sky130_fd_sc_hd__lpflow_isobufsrc_2', 'sky130_fd_sc_hd__lpflow_isobufsrc_1', 'sky130_fd_sc_hd__lpflow_isobufsrc_8', 'sky130_fd_sc_hd__lpflow_isobufsrc_16', 'sky130_fd_sc_hd__lpflow_isobufsrckapwr_16', 'sky130_fd_sc_hd__dfrtp_2', 'sky130_fd_sc_hd__dfrtp_4', 'sky130_fd_sc_hd__dfsbp_1', 'sky130_fd_sc_hd__dfsbp_2', 'sky130_fd_sc_hd__dfstp_1', 'sky130_fd_sc_hd__dfstp_2', 'sky130_fd_sc_hd__dfstp_4', 'sky130_fd_sc_hd__dfxbp_1', 'sky130_fd_sc_hd__dfxbp_2', 'sky130_fd_sc_hd__dlclkp_1', 'sky130_fd_sc_hd__dlclkp_2', 'sky130_fd_sc_hd__dlclkp_4', 'sky130_fd_sc_hd__dlrbn_1', 'sky130_fd_sc_hd__dlrbp_1', 'sky130_fd_sc_hd__dlrtn_1', 'sky130_fd_sc_hd__dlrtn_2', 'sky130_fd_sc_hd__dlrbn_2', 'sky130_fd_sc_hd__dlrbp_2', 'sky130_fd_sc_hd__dlrtn_4', 'sky130_fd_sc_hd__dlrtp_1', 'sky130_fd_sc_hd__dlrtp_2', 'sky130_fd_sc_hd__dlrtp_4', 'sky130_fd_sc_hd__dlxbn_1', 'sky130_fd_sc_hd__dlxbn_2', 'sky130_fd_sc_hd__dlxbp_1', 'sky130_fd_sc_hd__dlxtn_1', 'sky130_fd_sc_hd__dlxtn_2', 'sky130_fd_sc_hd__dlxtn_4', 'sky130_fd_sc_hd__dlxtp_1', 'sky130_fd_sc_hd__dlygate4sd2_1', 'sky130_fd_sc_hd__dlygate4sd3_1', 'sky130_fd_sc_hd__dlymetal6s4s_1', 'sky130_fd_sc_hd__dlymetal6s6s_1', 'sky130_fd_sc_hd__ebufn_1', 'sky130_fd_sc_hd__ebufn_2', 'sky130_fd_sc_hd__ebufn_4', 'sky130_fd_sc_hd__einvn_0', 'sky130_fd_sc_hd__einvn_1', 'sky130_fd_sc_hd__einvn_2', 'sky130_fd_sc_hd__einvn_4', 'sky130_fd_sc_hd__ebufn_8', 'sky130_fd_sc_hd__edfxbp_1', 'sky130_fd_sc_hd__edfxtp_1', 'sky130_fd_sc_hd__einvn_8', 'sky130_fd_sc_hd__and4_4', 'sky130_fd_sc_hd__and4b_2', 'sky130_fd_sc_hd__and4b_4', 'sky130_fd_sc_hd__and4bb_1', 'sky130_fd_sc_hd__and4bb_2', 'sky130_fd_sc_hd__and4bb_4', 'sky130_fd_sc_hd__buf_16', 'sky130_fd_sc_hd__clkdlybuf4s15_2', 'sky130_fd_sc_hd__clkdlybuf4s15_1', 'sky130_fd_sc_hd__bufinv_16', 'sky130_fd_sc_hd__bufinv_8', 'sky130_fd_sc_hd__clkdlybuf4s18_1', 'sky130_fd_sc_hd__clkdlybuf4s18_2', 'sky130_fd_sc_hd__clkdlybuf4s25_2', 'sky130_fd_sc_hd__clkdlybuf4s50_2', 'sky130_fd_sc_hd__dfbbn_1', 'sky130_fd_sc_hd__decap_12', 'sky130_fd_sc_hd__decap_8', 'sky130_fd_sc_hd__decap_6', 'sky130_fd_sc_hd__decap_4', 'sky130_fd_sc_hd__dfbbn_2', 'sky130_fd_sc_hd__dfbbp_1', 'sky130_fd_sc_hd__dfrbp_1', 'sky130_fd_sc_hd__dfrbp_2', 'sky130_fd_sc_hd__dfrtp_1', 'sky130_fd_sc_hd__a32oi_2', 'sky130_fd_sc_hd__a32oi_4', 'sky130_fd_sc_hd__a41o_1', 'sky130_fd_sc_hd__a41o_2', 'sky130_fd_sc_hd__a41o_4', 'sky130_fd_sc_hd__a41oi_2', 'sky130_fd_sc_hd__a41oi_4', 'sky130_fd_sc_hd__a221o_4', 'sky130_fd_sc_hd__a211oi_4', 'sky130_fd_sc_hd__a221oi_4', 'sky130_fd_sc_hd__a311o_1', 'sky130_fd_sc_hd__a311o_2', 'sky130_fd_sc_hd__a311o_4', 'sky130_fd_sc_hd__a311oi_1', 'sky130_fd_sc_hd__a311oi_2', 'sky130_fd_sc_hd__a311oi_4', 'sky130_fd_sc_hd__a2111o_4', 'sky130_fd_sc_hd__a2111oi_2', 'sky130_fd_sc_hd__a2111oi_4', 'sky130_fd_sc_hd__and2_0', 'sky130_ef_sc_hd__decap_12', 'sky130_ef_sc_hd__fill_4', 'sky130_ef_sc_hd__fill_8', 'sky130_ef_sc_hd__fill_12', 'sky130_fd_sc_hd__a2bb2oi_2', 'sky130_fd_sc_hd__a2bb2oi_4', 'sky130_fd_sc_hd__a21bo_4', 'sky130_fd_sc_hd__a21boi_0', 'sky130_fd_sc_hd__a21boi_4', 'sky130_fd_sc_hd__a22oi_4', 'sky130_fd_sc_hd__a31o_4', 'sky130_fd_sc_hd__a31oi_4', 'sky130_fd_sc_hd__a32o_2', 'sky130_fd_sc_hd__a32o_4', 'rv32i_cpu_top']
+std-cell structures: 441; with zero shapes: 0
+sram-related structures: 162; with zero shapes+zero instances: 1
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_bitcell_array: own shapes=63170 child instances=8192
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8: own shapes=20516 child instances=6085
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_bank: own shapes=10540 child instances=570
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_replica_bitcell_array: own shapes=5090 child instances=17
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_hierarchical_decoder: own shapes=3885 child instances=1847
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_port_address_0: own shapes=3247 child instances=20
+completely empty structures (0 shapes, 0 instances): 1  e.g. ['sky130_sram_1kbyte_1rw1r_32x25_0']
+cells reachable from top: 207; std 196; sram ['sky130_sram_1kbyte_1rw1r_32x25_0']...
+reachable cells with EMPTY geometry (would be reference-only): 1 ['sky130_sram_1kbyte_1rw1r_32x25_0']
+
+layer:datatype | top-cell own shapes | all-cells own shapes
+  22:21  |          0 |           35
+  22:22  |          0 |           12
+  33:42  |          0 |          155
+  33:43  |          0 |          192
+  64:5   |          0 |          490
+  64:16  |          0 |          486
+  64:18  |          0 |            1
+  64:20  |          0 |          528
+  64:59  |          0 |          491
+  65:5   |          0 |            4
+  65:20  |          0 |         1890
+  65:44  |          0 |           78
+  66:5   |          0 |           42
+  66:15  |          0 |            2
+  66:20  |          0 |         3801
+  66:44  |          0 |        18363
+  66:83  |          0 |           50
+  67:5   |          0 |         4730
+  67:16  |          0 |         3813
+  67:20  |       2944 |        12728
+  67:44  |          0 |        11910
+  68:5   |          0 |        23983
+  68:16  |          0 |         1005
+  68:20  |     175448 |       193582
+  68:44  |          0 |           73
+  69:5   |        294 |        30242
+  69:16  |          0 |           30
+  69:20  |     145513 |       163600
+  69:44  |          0 |           22
+  70:5   |        209 |        14140
+  70:16  |          0 |            1
+  70:20  |      48281 |        71560
+  70:44  |          0 |           20
+  71:5   |          0 |          224
+  71:20  |      12187 |        15616
+  71:44  |          0 |           13
+  72:5   |          0 |            1
+  72:15  |          0 |            4
+  72:16  |          0 |            1
+  72:20  |         39 |           51
+  78:44  |          0 |          462
+  81:2   |          0 |            4
+  81:4   |          0 |          634
+  81:23  |          0 |            1
+  83:44  |          0 |          647
+  93:44  |          0 |          577
+  94:20  |          0 |          561
+  95:20  |          0 |          539
+ 122:16  |          0 |          481
+ 235:0   |          0 |           18
+ 235:4   |          0 |          200
+ 236:0   |          0 |          429
+
+spot-check (Sky130 layer map): name  l:d  top-shapes  all-shapes
+   nwell   64:20  top=0  all=528
+   diff    65:20  top=0  all=1890
+   tap     65:44  top=0  all=78
+   poly    66:20  top=0  all=3801
+   licon1  66:44  top=0  all=18363
+   li1     67:20  top=2944  all=12728
+   mcon    67:44  top=0  all=11910
+   met1    68:20  top=175448  all=193582
+   via     68:44  top=0  all=73
+   met2    69:20  top=145513  all=163600
+   via2    69:44  top=0  all=22
+   met3    70:20  top=48281  all=71560
+   via3    70:44  top=0  all=20
+   met4    71:20  top=12187  all=15616
+   via4    71:44  top=0  all=13
+   met5    72:20  top=39  all=51
+   npc     95:20  top=0  all=539
+   nsdm    93:44  top=0  all=577
+   psdm    94:20  top=0  all=561
+text labels in top cell: 503; layers: ['69/5', '70/5']
+sample labels: [('70/5', 'apb_prdata_o[31]'), ('70/5', 'apb_prdata_o[30]'), ('70/5', 'apb_prdata_o[29]'), ('70/5', 'apb_prdata_o[28]'), ('70/5', 'apb_prdata_o[27]'), ('70/5', 'apb_prdata_o[26]')]
+  label VPWR: []
+  label VGND: []
+  label clk_i: ['69/5']
+  label rst_n_i: ['69/5']
+top-level SRAM instances: 10
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()
+   sky130_sram_1kbyte_1rw1r_32x25_0 bbox um ()

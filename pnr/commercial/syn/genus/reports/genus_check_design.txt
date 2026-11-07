@@ -1,0 +1,795 @@
+
+
+ 	 Check Design Report (c)
+	 ------------------- 
+No subdesign's name is greater than 1.5k in length.
+
+ Feedthrough Module(s)
+ -------------------------
+No feed through module in 'rv32i_cpu_top'
+
+  Unresolved References & Empty Modules
+  ------------------------------------- 
+No unresolved references in design 'rv32i_cpu_top'
+
+No empty modules in design 'rv32i_cpu_top'
+
+ Unloaded Pin(s), Port(s)
+ -------------------------
+No unloaded sequential element in 'rv32i_cpu_top'
+
+design 'rv32i_cpu_top' has the following unloaded port(s)
+port:rv32i_cpu_top/scan_mode_i
+port:rv32i_cpu_top/scan_en_i
+port:rv32i_cpu_top/scan_in_i[1]
+port:rv32i_cpu_top/scan_in_i[0]
+port:rv32i_cpu_top/mbist_cfg_i[21]
+port:rv32i_cpu_top/mbist_cfg_i[20]
+port:rv32i_cpu_top/mbist_cfg_i[19]
+port:rv32i_cpu_top/mbist_cfg_i[18]
+Total number of unloaded ports in design 'rv32i_cpu_top' : 8
+
+ Unloaded Combinational Pin(s)
+ -------------------------------
+No unloaded combinational element in 'rv32i_cpu_top'
+
+ Assigns
+ ------- 
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awaddr_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awaddr_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awlen_o[7]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awlen_o[6]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awlen_o[5]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awlen_o[4]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awlen_o[3]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awlen_o[2]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awsize_o[2]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awsize_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awsize_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awburst_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_awburst_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_araddr_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_araddr_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arlen_o[7]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arlen_o[6]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arlen_o[5]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arlen_o[4]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arlen_o[3]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arlen_o[2]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arsize_o[2]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arsize_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_arburst_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/axi_rready_o' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[31]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[30]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[29]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[28]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[27]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[26]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[25]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[24]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[23]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[22]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[21]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[20]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[19]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[18]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[17]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[16]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[15]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[14]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[13]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[12]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[11]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[10]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[9]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[8]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[7]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[6]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[5]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[4]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[3]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[2]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs1_data_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[31]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[30]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[29]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[28]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[27]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[26]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[25]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[24]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[23]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[22]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[21]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[20]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[19]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[18]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[17]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[16]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[15]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[14]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[13]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[12]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[11]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[10]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[9]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[8]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[7]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[6]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[5]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[4]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[3]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[2]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_rs2_data_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_branch_taken_o' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_state_o[3]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_state_o[2]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_state_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/debug_state_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/scan_out_o[1]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/scan_out_o[0]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[68]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[67]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[66]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[65]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[64]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[63]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[62]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[61]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[60]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[59]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[58]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[57]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[56]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[55]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[54]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[53]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[52]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[51]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[50]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[49]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[48]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[47]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[46]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[45]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[44]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[43]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[42]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[41]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[40]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[39]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[38]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[37]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[36]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[23]' in design rv32i_cpu_top
+Encountered an assign statement at port 'port:rv32i_cpu_top/mbist_status_o[22]' in design rv32i_cpu_top
+Total number of assign statements in design 'rv32i_cpu_top' : 131
+
+ Undriven Port(s)/Pin(s)
+ ------------------------
+No undriven combinational pin in 'rv32i_cpu_top'
+
+No undriven sequential pin in 'rv32i_cpu_top'
+
+The following hierarchical pin(s) in design 'rv32i_cpu_top' are undriven
+hpin:rv32i_cpu_top/u_core/test_en_i 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/dbg_resume_req 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_fence_i] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_dbg_halt] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_mret] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_is_irq] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][31] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][30] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][29] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][28] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][27] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][26] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][25] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][24] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][23] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][22] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][21] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][20] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][19] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][18] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][17] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][16] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][15] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][14] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][13] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][12] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_cause][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][31] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][30] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][29] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][28] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][27] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][26] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][25] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][24] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][23] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][22] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][21] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][20] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][19] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][18] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][17] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][16] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][15] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][14] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][13] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][12] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_redirect_target][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_do_redirect] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[dec_trap_valid] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wstrb][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wstrb][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wstrb][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wstrb][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][31] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][30] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][29] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][28] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][27] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][26] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][25] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][24] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][23] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][22] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][21] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][20] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][19] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][18] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][17] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][16] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][15] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][14] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][13] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][12] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[pre_wdata_aligned][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[trap_type][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[trap_type][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[trap_type][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs2_addr][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs2_addr][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs2_addr][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs2_addr][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs2_addr][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs1_addr][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs1_addr][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs1_addr][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs1_addr][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rs1_addr][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[flush_ex_mem] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[mtvec][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[mtvec][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][31] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][30] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][29] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][28] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][27] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][26] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][25] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][24] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][23] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][22] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][21] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][20] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][19] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][18] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][17] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][16] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][15] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][14] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][13] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][12] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[irq_cause][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][31] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][30] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][29] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][28] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][27] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][26] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][25] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][24] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][23] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][22] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][21] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][20] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][19] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][18] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][17] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][16] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][15] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][14] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][13] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][12] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_rdata][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_addr][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_access] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[mem_unsigned] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[mem_size][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[mem_wr] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[mem_rd] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[reg_wr_en] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rd_addr][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rd_addr][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rd_addr][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rd_addr][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[rd_addr][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][31] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][30] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][29] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][28] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][27] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][26] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][25] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][24] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][23] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][22] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][21] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][20] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][19] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][18] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][17] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][16] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][15] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][14] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][13] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][12] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[instruction][0] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][31] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][30] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][29] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][28] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][27] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][26] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][25] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][24] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][23] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][22] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][21] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][20] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][19] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][18] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][17] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][16] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][15] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][14] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][13] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][12] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][11] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][10] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][9] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][8] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][7] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][6] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][5] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][4] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][3] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][2] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][1] 	 (fanout : 0)
+hpin:rv32i_cpu_top/u_core/u_ex1c/ex1a_i[csr_wd][0] 	 (fanout : 0)
+Total number of hierarchical undriven pins in design 'rv32i_cpu_top' : 272
+
+No undriven port in 'rv32i_cpu_top'
+
+ Multidriven Port(s)/Pin(s)
+--------------------------
+
+No multidriven combinational pin in 'rv32i_cpu_top'
+
+No multidriven sequential pin in 'rv32i_cpu_top'
+
+No multidriven hierarchical pin in 'rv32i_cpu_top'
+
+No multidriven ports in 'rv32i_cpu_top'
+
+No multidriven unloaded nets in 'rv32i_cpu_top'
+
+  Constant Pin(s)
+  ----------------
+No constant combinational pin(s) in design 'rv32i_cpu_top'
+
+design 'rv32i_cpu_top' has the following constant input sequential pin(s)
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_bg_n_q_reg[1]/RESET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_bg_n_q_reg[2]/RESET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_xm_n_q_reg[0]/RESET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_xm_n_q_reg[2]/RESET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_xm_n_q_reg[2]/SET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_xm_n_q_reg[3]/RESET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_xm_n_q_reg[1]/RESET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_rd_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_mbist_ctrl_g_xtag.x_bg_n_q_reg[0]/RESET_B
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_sram/csb1
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram/csb1
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[7]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[6]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[5]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[4]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[3]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[2]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[1]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/addr1[0]
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_sram/csb1
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_dcache_u_tag_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_icache_u_tag_collar_g_cmp.fail0_n_q_reg/RESET_B
+pin:rv32i_cpu_top/u_core/u_dcache_dc_addr_q_reg[4]/SET_B
+pin:rv32i_cpu_top/u_core/u_dcache_maint_idx_q_reg[5]/SET_B
+pin:rv32i_cpu_top/u_core/u_dcache_dc_addr_q_reg[9]/SET_B
+pin:rv32i_cpu_top/u_core/u_mem_mem_wb_reg_o_reg[rd_addr][4]/SET_B
+Total number of constant sequential pins in design 'rv32i_cpu_top' : 113
+
+No constant hierarchical pin(s) in design 'rv32i_cpu_top'
+
+design 'rv32i_cpu_top' has the following constant port(s)
+port:rv32i_cpu_top/axi_awaddr_o[1]
+port:rv32i_cpu_top/axi_awaddr_o[0]
+port:rv32i_cpu_top/axi_awlen_o[7]
+port:rv32i_cpu_top/axi_awlen_o[6]
+port:rv32i_cpu_top/axi_awlen_o[5]
+port:rv32i_cpu_top/axi_awlen_o[4]
+port:rv32i_cpu_top/axi_awlen_o[3]
+port:rv32i_cpu_top/axi_awlen_o[2]
+port:rv32i_cpu_top/axi_awsize_o[2]
+port:rv32i_cpu_top/axi_awsize_o[1]
+port:rv32i_cpu_top/axi_awsize_o[0]
+port:rv32i_cpu_top/axi_awburst_o[1]
+port:rv32i_cpu_top/axi_awburst_o[0]
+port:rv32i_cpu_top/axi_araddr_o[1]
+port:rv32i_cpu_top/axi_araddr_o[0]
+port:rv32i_cpu_top/axi_arlen_o[7]
+port:rv32i_cpu_top/axi_arlen_o[6]
+port:rv32i_cpu_top/axi_arlen_o[5]
+port:rv32i_cpu_top/axi_arlen_o[4]
+port:rv32i_cpu_top/axi_arlen_o[3]
+port:rv32i_cpu_top/axi_arlen_o[2]
+port:rv32i_cpu_top/axi_arsize_o[2]
+port:rv32i_cpu_top/axi_arsize_o[0]
+port:rv32i_cpu_top/axi_arburst_o[1]
+port:rv32i_cpu_top/axi_rready_o
+port:rv32i_cpu_top/debug_rs1_data_o[31]
+port:rv32i_cpu_top/debug_rs1_data_o[30]
+port:rv32i_cpu_top/debug_rs1_data_o[29]
+port:rv32i_cpu_top/debug_rs1_data_o[28]
+port:rv32i_cpu_top/debug_rs1_data_o[27]
+port:rv32i_cpu_top/debug_rs1_data_o[26]
+port:rv32i_cpu_top/debug_rs1_data_o[25]
+port:rv32i_cpu_top/debug_rs1_data_o[24]
+port:rv32i_cpu_top/debug_rs1_data_o[23]
+port:rv32i_cpu_top/debug_rs1_data_o[22]
+port:rv32i_cpu_top/debug_rs1_data_o[21]
+port:rv32i_cpu_top/debug_rs1_data_o[20]
+port:rv32i_cpu_top/debug_rs1_data_o[19]
+port:rv32i_cpu_top/debug_rs1_data_o[18]
+port:rv32i_cpu_top/debug_rs1_data_o[17]
+port:rv32i_cpu_top/debug_rs1_data_o[16]
+port:rv32i_cpu_top/debug_rs1_data_o[15]
+port:rv32i_cpu_top/debug_rs1_data_o[14]
+port:rv32i_cpu_top/debug_rs1_data_o[13]
+port:rv32i_cpu_top/debug_rs1_data_o[12]
+port:rv32i_cpu_top/debug_rs1_data_o[11]
+port:rv32i_cpu_top/debug_rs1_data_o[10]
+port:rv32i_cpu_top/debug_rs1_data_o[9]
+port:rv32i_cpu_top/debug_rs1_data_o[8]
+port:rv32i_cpu_top/debug_rs1_data_o[7]
+port:rv32i_cpu_top/debug_rs1_data_o[6]
+port:rv32i_cpu_top/debug_rs1_data_o[5]
+port:rv32i_cpu_top/debug_rs1_data_o[4]
+port:rv32i_cpu_top/debug_rs1_data_o[3]
+port:rv32i_cpu_top/debug_rs1_data_o[2]
+port:rv32i_cpu_top/debug_rs1_data_o[1]
+port:rv32i_cpu_top/debug_rs1_data_o[0]
+port:rv32i_cpu_top/debug_rs2_data_o[31]
+port:rv32i_cpu_top/debug_rs2_data_o[30]
+port:rv32i_cpu_top/debug_rs2_data_o[29]
+port:rv32i_cpu_top/debug_rs2_data_o[28]
+port:rv32i_cpu_top/debug_rs2_data_o[27]
+port:rv32i_cpu_top/debug_rs2_data_o[26]
+port:rv32i_cpu_top/debug_rs2_data_o[25]
+port:rv32i_cpu_top/debug_rs2_data_o[24]
+port:rv32i_cpu_top/debug_rs2_data_o[23]
+port:rv32i_cpu_top/debug_rs2_data_o[22]
+port:rv32i_cpu_top/debug_rs2_data_o[21]
+port:rv32i_cpu_top/debug_rs2_data_o[20]
+port:rv32i_cpu_top/debug_rs2_data_o[19]
+port:rv32i_cpu_top/debug_rs2_data_o[18]
+port:rv32i_cpu_top/debug_rs2_data_o[17]
+port:rv32i_cpu_top/debug_rs2_data_o[16]
+port:rv32i_cpu_top/debug_rs2_data_o[15]
+port:rv32i_cpu_top/debug_rs2_data_o[14]
+port:rv32i_cpu_top/debug_rs2_data_o[13]
+port:rv32i_cpu_top/debug_rs2_data_o[12]
+port:rv32i_cpu_top/debug_rs2_data_o[11]
+port:rv32i_cpu_top/debug_rs2_data_o[10]
+port:rv32i_cpu_top/debug_rs2_data_o[9]
+port:rv32i_cpu_top/debug_rs2_data_o[8]
+port:rv32i_cpu_top/debug_rs2_data_o[7]
+port:rv32i_cpu_top/debug_rs2_data_o[6]
+port:rv32i_cpu_top/debug_rs2_data_o[5]
+port:rv32i_cpu_top/debug_rs2_data_o[4]
+port:rv32i_cpu_top/debug_rs2_data_o[3]
+port:rv32i_cpu_top/debug_rs2_data_o[2]
+port:rv32i_cpu_top/debug_rs2_data_o[1]
+port:rv32i_cpu_top/debug_rs2_data_o[0]
+port:rv32i_cpu_top/debug_branch_taken_o
+port:rv32i_cpu_top/debug_state_o[3]
+port:rv32i_cpu_top/debug_state_o[2]
+port:rv32i_cpu_top/debug_state_o[1]
+port:rv32i_cpu_top/debug_state_o[0]
+port:rv32i_cpu_top/scan_out_o[1]
+port:rv32i_cpu_top/scan_out_o[0]
+port:rv32i_cpu_top/mbist_status_o[68]
+port:rv32i_cpu_top/mbist_status_o[67]
+port:rv32i_cpu_top/mbist_status_o[66]
+port:rv32i_cpu_top/mbist_status_o[65]
+port:rv32i_cpu_top/mbist_status_o[64]
+port:rv32i_cpu_top/mbist_status_o[63]
+port:rv32i_cpu_top/mbist_status_o[62]
+port:rv32i_cpu_top/mbist_status_o[61]
+port:rv32i_cpu_top/mbist_status_o[60]
+port:rv32i_cpu_top/mbist_status_o[59]
+port:rv32i_cpu_top/mbist_status_o[58]
+port:rv32i_cpu_top/mbist_status_o[57]
+port:rv32i_cpu_top/mbist_status_o[56]
+port:rv32i_cpu_top/mbist_status_o[55]
+port:rv32i_cpu_top/mbist_status_o[54]
+port:rv32i_cpu_top/mbist_status_o[53]
+port:rv32i_cpu_top/mbist_status_o[52]
+port:rv32i_cpu_top/mbist_status_o[51]
+port:rv32i_cpu_top/mbist_status_o[50]
+port:rv32i_cpu_top/mbist_status_o[49]
+port:rv32i_cpu_top/mbist_status_o[48]
+port:rv32i_cpu_top/mbist_status_o[47]
+port:rv32i_cpu_top/mbist_status_o[46]
+port:rv32i_cpu_top/mbist_status_o[45]
+port:rv32i_cpu_top/mbist_status_o[44]
+port:rv32i_cpu_top/mbist_status_o[43]
+port:rv32i_cpu_top/mbist_status_o[42]
+port:rv32i_cpu_top/mbist_status_o[41]
+port:rv32i_cpu_top/mbist_status_o[40]
+port:rv32i_cpu_top/mbist_status_o[39]
+port:rv32i_cpu_top/mbist_status_o[38]
+port:rv32i_cpu_top/mbist_status_o[37]
+port:rv32i_cpu_top/mbist_status_o[36]
+port:rv32i_cpu_top/mbist_status_o[23]
+port:rv32i_cpu_top/mbist_status_o[22]
+Total number of constant port(s) in design 'rv32i_cpu_top' : 131
+
+  Preserved instances(s)
+  ----------------
+No preserved combinational instance(s) in design 'rv32i_cpu_top'
+design 'rv32i_cpu_top' has the following preserved sequential instance(s)
+inst:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[0].u_data_sram
+inst:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[1].u_data_sram
+inst:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[2].u_data_sram
+inst:rv32i_cpu_top/u_core/u_dcache_gen_data_sram[3].u_data_sram
+inst:rv32i_cpu_top/u_core/u_dcache_u_tag_sram
+inst:rv32i_cpu_top/u_core/u_icache_gen_data_sram[0].u_data_sram
+inst:rv32i_cpu_top/u_core/u_icache_gen_data_sram[1].u_data_sram
+inst:rv32i_cpu_top/u_core/u_icache_gen_data_sram[2].u_data_sram
+inst:rv32i_cpu_top/u_core/u_icache_gen_data_sram[3].u_data_sram
+inst:rv32i_cpu_top/u_core/u_icache_u_tag_sram
+Total number of preserved sequential instances in design 'rv32i_cpu_top' : 10
+No preserved hierarchical instance(s) in design 'rv32i_cpu_top'
+
+  Physical only instances(s)
+  ----------------
+No physical only instance(s) in design 'rv32i_cpu_top'
+
+  Logical only instance(s) and linked libcells
+    -----------------------------------------
+No logical only instance(s) in design 'rv32i_cpu_top'
+
+Libcells with no corresponding LEF
+----------------------------------
+No libcell(s) found.
+
+LEF cells with no corresponding libcell
+---------------------------------------
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__fill_1
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__fill_2
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__fill_4
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__fill_8
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__tap_1
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__tap_2
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__tapvgnd2_1
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__tapvgnd_1
+lib_cell:lib_ss/physical_cells/sky130_fd_sc_hd__tapvpwrvgnd_1
+Total number cell(s) with only physical (LEF) Info : 9
+
+ Summary
+ ------- 
+
+              Name                       Total
+----------------------------------------------
+Unresolved References                        0
+Empty Modules                                0
+Unloaded Port(s)                             8
+Unloaded Sequential Pin(s)                   0
+Unloaded Combinational Pin(s)                0
+Assigns                                    131
+Undriven Port(s)                             0
+Undriven Leaf Pin(s)                         0
+Undriven hierarchical pin(s)               272
+Multidriven Port(s)                          0
+Multidriven Leaf Pin(s)                      0
+Multidriven hierarchical Pin(s)              0
+Multidriven unloaded net(s)                  0
+Constant Port(s)                           131
+Constant Leaf Pin(s)                       113
+Constant hierarchical Pin(s)                 0
+Preserved leaf instance(s)                  10
+Preserved hierarchical instance(s)           0
+Feedthrough Modules(s)                       0
+Libcells with no LEF cell                    0
+Physical (LEF) cells with no libcell         9
+Subdesigns with long module name             0
+Physical only instance(s)                    0
+Logical only instance(s)                     0
+
+  Done Checking the design.

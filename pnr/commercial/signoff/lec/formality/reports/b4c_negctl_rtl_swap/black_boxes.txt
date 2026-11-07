@@ -1,0 +1,718 @@
+**************************************************
+Report         : black_boxes
+                 -all 
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Mon Oct 26 02:04:42 2026
+**************************************************
+Information: Reporting black boxes for current reference and implementation designs. (FM-184)
+
+ ___________________________________________________
+|                                                   |
+|  Legend:                                          |
+|           Black Box Attributes                    |
+|              s = Set with set_black_box command   |
+|              i = Module read with -interface_only |
+|              u = Unresolved design module         |
+|              e = Empty design module              |
+|              * = Unlinked design module           |
+|             ut = Unread tech cells pins           |
+|              L = Linked to non-black box design   |
+|             cp = Cutpoint blackbox                |
+|             ir = Internal rounded blackbox        |
+|              f = Formality Power Model            |
+|              m = Technology Macro cell (.db)      |
+|___________________________________________________|
+
+
+##################################################################
+####    TECH LIBRARY - i:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB
+##################################################################
+Type  Design Name
+----  ----------
+m      sky130_sram_1kbyte_1rw1r_32x256_8
+
+       Instances : 10 of 10
+       ------------------------
+       i:/WORK/rv32i_cpu_top/u_core/u_dcache/u_tag_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_3__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_2__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_1__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_0__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_icache_u_tag_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_0__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_1__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_2__u_data_sram
+       i:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_3__u_data_sram
+
+m *    sky130_sram_1kbyte_1rw1r_32x256_8#PWR
+
+       Instances : 0
+
+
+
+##################################################################
+####    TECH LIBRARY - i:/SKY130_FD_SC_HD__TT_025C_1V80
+##################################################################
+Type  Design Name
+----  ----------
+ut     SNPS_UNREAD_TECH_INPUT_PIN_BBOX
+
+       Instances : 378 of 378
+       ------------------------
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111oi_0#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111oi_0#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2111oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a211oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21bo_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21bo_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21bo_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21bo_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21boi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a21oi_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a221oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a222oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a222oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a22oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2o_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a2bb2oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31o_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a31oi_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32o_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32o_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a32oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a41oi_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__a41oi_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and2b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and3b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__and4b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_12#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_12#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_6#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_6#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__buf_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufbuf_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufbuf_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufbuf_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__bufbuf_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkbuf_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s25_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s25_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s50_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkdlybuf4s50_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinv_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__clkinvlp_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__conb_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__conb_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfrtn_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfrtn_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dfxtp_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlygate4sd1_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlygate4sd1_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlymetal6s2s_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__dlymetal6s2s_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__fa_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__fa_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__fah_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__fah_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__ha_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_12#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_12#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_16#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_16#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_6#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_6#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__inv_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__maj3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__maj3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__maj3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__maj3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2i_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__mux2i_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand3b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nand4b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_8#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2_8#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor3b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4bb_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__nor4bb_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2111ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o211ai_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ai_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21ba_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o21bai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o221ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o22ai_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o2bb2ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o311ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o311ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31a_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31a_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31a_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31a_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31a_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31a_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o31ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o32ai_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o41ai_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__o41ai_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or2b_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3b_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or3b_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_4#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4_4#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4b_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__or4b_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xnor2_2#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_1#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_1#PWR/VPB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_2#PWR/VNB*unread*
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__xor2_2#PWR/VPB*unread*
+
+m *    sky130_fd_sc_hd__decap_12
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_12#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_3
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_3#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_4
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_4#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_6
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_6#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_8
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__decap_8#PWR
+
+       Instances : 0
+
+m      sky130_fd_sc_hd__diode_2
+
+       Instances : 115 of 115
+       ------------------------
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16384
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16385
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16386
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16387
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16388
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16389
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16390
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16391
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16392
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16393
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16394
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16395
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16396
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16397
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16398
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16399
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16400
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16401
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16402
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16403
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16404
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16405
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16406
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16407
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16408
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16409
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16410
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16411
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16412
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16413
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16414
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16415
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16416
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16417
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16418
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16419
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16420
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16421
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16422
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16423
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16424
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16425
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16426
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16427
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16428
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16429
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16430
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16431
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16432
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16433
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16434
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16435
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16436
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16437
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16438
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16439
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16440
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16441
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16442
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16443
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16444
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16445
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16446
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16447
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16448
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16449
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16450
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16451
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16452
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16453
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16454
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16455
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16456
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16457
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16458
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16459
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16460
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16461
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16462
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16463
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16464
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16465
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16466
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16467
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16468
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16469
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16470
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16471
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16472
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16473
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16474
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16475
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16476
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16477
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16478
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16479
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16480
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16481
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16482
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16483
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16484
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16485
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16486
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16487
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16488
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16489
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16490
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16491
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16492
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16493
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16494
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16495
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16496
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16497
+       i:/WORK/rv32i_cpu_top/PORTDIODE__16498
+
+m      sky130_fd_sc_hd__diode_2#PWR_FM_BBOX
+
+       Instances : 1 of 1
+       ------------------------
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__diode_2#PWR/pwrBB
+
+m *    sky130_fd_sc_hd__lpflow_bleeder_1
+
+       Instances : 0
+
+m      sky130_fd_sc_hd__lpflow_bleeder_1#PWR_FM_BBOX
+
+       Instances : 1 of 1
+       ------------------------
+       i:/SKY130_FD_SC_HD__TT_025C_1V80/sky130_fd_sc_hd__lpflow_bleeder_1#PWR/pwrBB
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_12
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_12#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_3
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_3#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_4
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_4#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_6
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_6#PWR
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_8
+
+       Instances : 0
+
+m *    sky130_fd_sc_hd__lpflow_decapkapwr_8#PWR
+
+       Instances : 0
+
+
+
+##################################################################
+####    DESIGN LIBRARY - r:/WORK
+##################################################################
+Type  Design Name
+----  ----------
+e *    M_RTL_ARSHIFT_32_6_1_1
+
+       Instances : 0
+
+e *    M_RTL_ARSHIFT_33_6_2_2
+
+       Instances : 0
+
+e *    mbist_ctrl
+
+       Instances : 0
+
+e *    mem_collar
+
+       Instances : 0
+
+e *    rv32i_core
+
+       Instances : 0
+
+e *    rv32i_pipeline_if
+
+       Instances : 0
+
+
+
+##################################################################
+####    TECH LIBRARY - r:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB
+##################################################################
+Type  Design Name
+----  ----------
+m      sky130_sram_1kbyte_1rw1r_32x256_8
+
+       Instances : 10 of 10
+       ------------------------
+       r:/WORK/rv32i_cpu_top/u_core/u_icache_u_tag_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_3__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_2__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_1__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_icache_gen_data_sram_0__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_dcache/u_tag_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_3__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_2__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_1__u_data_sram
+       r:/WORK/rv32i_cpu_top/u_core/u_dcache/gen_data_sram_0__u_data_sram
+
+m *    sky130_sram_1kbyte_1rw1r_32x256_8#PWR
+
+       Instances : 0
+
+
+1

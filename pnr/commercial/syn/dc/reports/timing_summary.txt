@@ -1,0 +1,122 @@
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : rv32i_cpu_top
+Version: X-2025.06-SP3
+Date   : Mon Oct 26 00:03:25 2026
+****************************************
+
+ * Some/all delay information is back-annotated.
+
+ # A fanout number of 1000 was used for high fanout net computations.
+
+Operating Conditions: tt_025C_1v80   Library: sky130_fd_sc_hd__tt_025C_1v80
+Wire Load Model Mode: Inactive.
+
+  Startpoint: u_core/fwd_b_ex1c_r_reg
+              (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex1a_ex1b_reg_q_reg_alu_result__0_
+            (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: max
+
+  Point                                                                       Incr       Path
+  ----------------------------------------------------------------------------------------------
+  clock clk_i (rise edge)                                                     0.00       0.00
+  clock network delay (ideal)                                                 1.00       1.00
+  u_core/fwd_b_ex1c_r_reg/CLK (sky130_fd_sc_hd__dfxtp_1)                      0.00 #     1.00 r
+  u_core/fwd_b_ex1c_r_reg/Q (sky130_fd_sc_hd__dfxtp_1)                        0.50       1.50 r
+  u_core/U1449/Y (sky130_fd_sc_hd__nand2_1)                                   0.30 *     1.80 f
+  u_core/U17904/Y (sky130_fd_sc_hd__nor3_1)                                   1.19 *     2.99 r
+  u_core/U1805/Y (sky130_fd_sc_hd__a22oi_1)                                   0.30 *     3.29 f
+  u_core/U1806/Y (sky130_fd_sc_hd__nand4_1)                                   0.55 *     3.84 r
+  u_core/U1807/Y (sky130_fd_sc_hd__nand2_1)                                   0.21 *     4.05 f
+  u_core/U1809/Y (sky130_fd_sc_hd__nand2_2)                                   0.36 *     4.41 r
+  u_core/U9475/Y (sky130_fd_sc_hd__inv_2)                                     0.12 *     4.52 f
+  u_core/U2394/Y (sky130_fd_sc_hd__o22ai_1)                                   0.23 *     4.75 r
+  u_core/U2395/Y (sky130_fd_sc_hd__nor2_1)                                    0.10 *     4.86 f
+  u_core/U2415/Y (sky130_fd_sc_hd__nor2_1)                                    0.21 *     5.06 r
+  u_core/U2436/Y (sky130_fd_sc_hd__a21boi_1)                                  0.10 *     5.16 f
+  u_core/U2438/Y (sky130_fd_sc_hd__nor2_1)                                    0.19 *     5.35 r
+  u_core/U2457/Y (sky130_fd_sc_hd__nor2_1)                                    0.09 *     5.44 f
+  u_core/U2458/Y (sky130_fd_sc_hd__a21oi_1)                                   0.20 *     5.64 r
+  u_core/U2461/Y (sky130_fd_sc_hd__nand2_1)                                   0.10 *     5.74 f
+  u_core/U2463/Y (sky130_fd_sc_hd__a21oi_1)                                   0.24 *     5.99 r
+  u_core/U2464/Y (sky130_fd_sc_hd__nor2_1)                                    0.10 *     6.08 f
+  u_core/U3086/Y (sky130_fd_sc_hd__a21oi_1)                                   0.21 *     6.29 r
+  u_core/U3107/Y (sky130_fd_sc_hd__nor2_1)                                    0.10 *     6.39 f
+  u_core/U3108/Y (sky130_fd_sc_hd__a21oi_1)                                   0.22 *     6.61 r
+  u_core/U3129/Y (sky130_fd_sc_hd__nor2_1)                                    0.10 *     6.72 f
+  u_core/U3130/Y (sky130_fd_sc_hd__a21oi_1)                                   0.20 *     6.91 r
+  u_core/U3147/Y (sky130_fd_sc_hd__nand2_1)                                   0.08 *     6.99 f
+  u_core/U3149/Y (sky130_fd_sc_hd__a21oi_1)                                   0.22 *     7.21 r
+  u_core/U3167/Y (sky130_fd_sc_hd__nor2_1)                                    0.10 *     7.31 f
+  u_core/U3168/Y (sky130_fd_sc_hd__a21oi_1)                                   0.20 *     7.51 r
+  u_core/U3184/Y (sky130_fd_sc_hd__nand2_1)                                   0.08 *     7.59 f
+  u_core/U3186/Y (sky130_fd_sc_hd__a21oi_1)                                   0.22 *     7.81 r
+  u_core/U3205/Y (sky130_fd_sc_hd__nand2_1)                                   0.07 *     7.88 f
+  u_core/U3207/Y (sky130_fd_sc_hd__a21oi_1)                                   0.23 *     8.11 r
+  u_core/U3223/Y (sky130_fd_sc_hd__nand2_1)                                   0.08 *     8.19 f
+  u_core/U3225/Y (sky130_fd_sc_hd__a21oi_1)                                   0.23 *     8.42 r
+  u_core/U3244/Y (sky130_fd_sc_hd__nand2_1)                                   0.11 *     8.52 f
+  u_core/U3246/Y (sky130_fd_sc_hd__a21oi_1)                                   0.23 *     8.75 r
+  u_core/U3263/Y (sky130_fd_sc_hd__nor2_1)                                    0.10 *     8.85 f
+  u_core/U3829/Y (sky130_fd_sc_hd__a21oi_1)                                   0.17 *     9.02 r
+  u_core/U3283/Y (sky130_fd_sc_hd__nand2_1)                                   0.11 *     9.13 f
+  u_core/U3285/Y (sky130_fd_sc_hd__a21oi_2)                                   0.18 *     9.31 r
+  u_core/U3303/Y (sky130_fd_sc_hd__xnor2_1)                                   0.18 *     9.49 r
+  u_core/U3304/Y (sky130_fd_sc_hd__o22ai_1)                                   0.18 *     9.66 f
+  u_core/U3323/X (sky130_fd_sc_hd__a21o_1)                                    0.21 *     9.87 f
+  u_core/U3324/Y (sky130_fd_sc_hd__o21ai_2)                                   0.07 *     9.94 r
+  u_core/U3325/Y (sky130_fd_sc_hd__nand2_1)                                   0.09 *    10.03 f
+  u_core/U3342/Y (sky130_fd_sc_hd__a21oi_1)                                   0.22 *    10.25 r
+  u_core/U3343/Y (sky130_fd_sc_hd__nand2_1)                                   0.10 *    10.35 f
+  u_core/U3363/Y (sky130_fd_sc_hd__a21oi_2)                                   0.17 *    10.53 r
+  u_core/U3364/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    10.59 f
+  u_core/U3366/Y (sky130_fd_sc_hd__o21ai_2)                                   0.16 *    10.76 r
+  u_core/U3367/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    10.83 f
+  u_core/U3369/Y (sky130_fd_sc_hd__o21ai_2)                                   0.16 *    10.98 r
+  u_core/U3370/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    11.05 f
+  u_core/U3372/Y (sky130_fd_sc_hd__o21ai_2)                                   0.15 *    11.20 r
+  u_core/U3373/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    11.27 f
+  u_core/U3375/Y (sky130_fd_sc_hd__o21ai_2)                                   0.15 *    11.42 r
+  u_core/U3376/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    11.49 f
+  u_core/U3378/Y (sky130_fd_sc_hd__o21ai_2)                                   0.15 *    11.64 r
+  u_core/U3379/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    11.71 f
+  u_core/U3381/Y (sky130_fd_sc_hd__o21ai_2)                                   0.15 *    11.86 r
+  u_core/U3382/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    11.93 f
+  u_core/U3384/Y (sky130_fd_sc_hd__o21ai_2)                                   0.15 *    12.08 r
+  u_core/U3793/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    12.15 f
+  u_core/U3794/Y (sky130_fd_sc_hd__o21ai_2)                                   0.15 *    12.30 r
+  u_core/U3795/Y (sky130_fd_sc_hd__nor2_1)                                    0.07 *    12.37 f
+  u_core/U3797/Y (sky130_fd_sc_hd__o21ai_2)                                   0.16 *    12.52 r
+  u_core/U3818/Y (sky130_fd_sc_hd__nand2_1)                                   0.09 *    12.61 f
+  u_core/U3821/Y (sky130_fd_sc_hd__nand2_1)                                   0.11 *    12.72 r
+  u_core/U3823/Y (sky130_fd_sc_hd__nand2_1)                                   0.07 *    12.80 f
+  u_core/U6448/Y (sky130_fd_sc_hd__nor2b_1)                                   0.15 *    12.95 f
+  u_core/U3825/Y (sky130_fd_sc_hd__nor2_1)                                    0.11 *    13.06 r
+  u_core/U3842/Y (sky130_fd_sc_hd__o21ai_1)                                   0.10 *    13.16 f
+  u_core/U3844/Y (sky130_fd_sc_hd__a31oi_1)                                   0.18 *    13.34 r
+  u_core/U3845/Y (sky130_fd_sc_hd__o22ai_1)                                   0.09 *    13.44 f
+  u_core/U3846/Y (sky130_fd_sc_hd__a211oi_1)                                  0.17 *    13.61 r
+  u_core/U3847/Y (sky130_fd_sc_hd__o21ai_1)                                   0.09 *    13.70 f
+  u_core/ex1a_ex1b_reg_q_reg_alu_result__0_/D (sky130_fd_sc_hd__dfxtp_4)      0.00 *    13.70 f
+  data arrival time                                                                     13.70
+
+  clock clk_i (rise edge)                                                    13.33      13.33
+  clock network delay (ideal)                                                 1.00      14.33
+  clock uncertainty                                                          -0.50      13.83
+  u_core/ex1a_ex1b_reg_q_reg_alu_result__0_/CLK (sky130_fd_sc_hd__dfxtp_4)     0.00     13.83 r
+  library setup time                                                         -0.14      13.70
+  data required time                                                                    13.70
+  ----------------------------------------------------------------------------------------------
+  data required time                                                                    13.70
+  data arrival time                                                                    -13.70
+  ----------------------------------------------------------------------------------------------
+  slack (MET)                                                                            0.00
+
+
+1

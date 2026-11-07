@@ -1,0 +1,7 @@
+arm	lib	leaf_cells	setup_wns	setup_tns	setup_viol	r2r_wns	r2r_tns	r2r_viol	r2r_endpoints	hold_wns	worst_start	worst_end
+yosys	tt	30369	4.759313	0.0	0	1e9	0.0	0	0	0.120618	_53323_/CLK	_51696_/D
+yosys	ss	30369	-1.918641	-130.076704	152	-1.918641	-130.076704	152	152	0.454520	_53323_/CLK	_51698_/D
+dc_v1	tt	32881	1.714677	0.0	0	1e9	0.0	0	0	0.116040	u_core/mem_trap_entry_r_reg/CLK	u_core/u_if_pc_q_reg_31_/D
+dc_v1	ss	32881	-10.456917	-957.388073	303	-10.456917	-957.388073	303	303	0.449340	u_core/ex1a_ex1b_reg_q_reg_immediate__0_/CLK	u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D
+genus_v1	tt	26347	5.498289	0.0	0	1e9	0.0	0	0	0.115974	u_core/u_icache_gen_data_sram[2].u_data_sram/clk0	u_core/u_icache_data_dout_r_reg[2][12]/D
+genus_v1	ss	26347	0.606187	0.0	0	1e9	0.0	0	0	0.433779	u_core/ex1a_ex1b_reg_q_reg[pc][1]/CLK	u_core/ex1c_ex1b_reg_q_reg[dec_redirect_target][31]/D

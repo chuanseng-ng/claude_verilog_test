@@ -1,0 +1,8 @@
+net | StarRC b5h C fF | Innovus b5h C fF (ratio) | StarRC R | Innovus R (ratio) | [b5g Innovus C / StarRC-b5g C]
+axi_rdata_i[11] | 842.9 | 974.1 (1.156) | 2174 | 2183 (1.004) | 1.359
+axi_rdata_i[21] | 794.6 | 895.6 (1.127) | 2802 | 2819 (1.006) | 1.181
+axi_rdata_i[18] | 770.8 | 894.5 (1.161) | 4233 | 4245 (1.003) | 1.449
+FE_OFN19617_mbist_status_o_24 | 97.2 | 114.7 (1.180) | 213 | 215 (1.005) | n/a
+u_core/FE_OFN2157_ex1a_ex1b_reg_q_csr_rdata__24 | 97.2 | 108.1 (1.113) | 465 | 469 (1.007) | n/a
+axi_rdata_i[11] | 842.9 | 974.1 (1.156) | 2174 | 2183 (1.004) | 1.359
+axi_rdata_i[21] | 794.6 | 895.6 (1.127) | 2802 | 2819 (1.006) | 1.181

@@ -1,0 +1,13 @@
+Non-equivalent compared points:
+  (G) + 682    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]/U$1
+  (R) + 682    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]/U$1
+  The compared point and all supports are fully name mapped to each other, suspect true Non-equivalent.
+
+================================================================================
+       Non-equivalent category|Caused #NEQ|
+================================================================================
+              SuspectTrueNoneq|          1|
+================================================================================
+SuspectTrueNoneq:
+  The compared point and all supports are fully name mapped to each other, suspect true Non-equivalent.
+

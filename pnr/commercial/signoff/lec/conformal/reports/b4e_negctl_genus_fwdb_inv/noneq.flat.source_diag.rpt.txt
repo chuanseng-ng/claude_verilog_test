@@ -1,0 +1,20 @@
+Non-equivalent compared points:
+  (G) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+  (R) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+  Phase mapping is needed for
+  (G) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+  (R) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+  Use "set_mapping_method -phase" to turn on phase mapping.
+
+================================================================================
+       Non-equivalent category|Caused #NEQ|
+================================================================================
+                         Phase|          1|
+================================================================================
+Phase:
+  Phase mapping is needed for the following mapped point(s):
+  (G) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+  (R) + 509    DFF  /u_core/fwd_b_ex1c_r_reg/U$1
+
+  Use "set_mapping_method -phase" to turn on phase mapping.
+

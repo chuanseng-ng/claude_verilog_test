@@ -1,0 +1,270 @@
+**************************************************
+Report         : unmatched_points
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Thu Oct 29 20:51:39 2026
+**************************************************
+
+115 Unmatched points (0 reference, 115 implementation):
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16186/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16187/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16188/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16189/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16190/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16191/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16192/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16193/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16194/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16195/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16196/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16197/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16198/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16199/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16200/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16201/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16202/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16203/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16204/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16205/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16206/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16207/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16208/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16209/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16210/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16211/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16212/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16213/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16214/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16215/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16216/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16217/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16218/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16219/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16220/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16221/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16222/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16223/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16224/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16225/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16226/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16227/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16228/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16229/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16230/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16231/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16232/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16233/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16234/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16235/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16236/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16237/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16238/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16239/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16240/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16241/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16242/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16243/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16244/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16245/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16246/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16247/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16248/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16249/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16250/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16251/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16252/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16253/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16254/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16255/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16256/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16257/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16258/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16259/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16260/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16261/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16262/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16263/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16264/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16265/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16266/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16267/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16268/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16269/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16270/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16271/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16272/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16273/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16274/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16275/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16276/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16277/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16278/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16279/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16280/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16281/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16282/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16283/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16284/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16285/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16286/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16287/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16288/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16289/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16290/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16291/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16292/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16293/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16294/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16295/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16296/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16297/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16298/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16299/DIODE
+
+  Impl BBPin      i:/WORK/rv32i_cpu_top/PORTDIODE__16300/DIODE
+
+ [BBNet: multiply-driven net
+  BBox:  black-box
+  BBPin: black-box pin
+  Block: hierarchical block
+  BlPin: hierarchical block pin
+  Cut:   cut-point
+  DFF:   non-constant DFF register
+  DFF0:  constant 0 DFF register
+  DFF1:  constant 1 DFF register
+  DFFX:  constant X DFF register
+  DFF0X: constrained 0X DFF register
+  DFF1X: constrained 1X DFF register
+  LAT:   non-constant latch register
+  LAT0:  constant 0 latch register
+  LAT1:  constant 1 latch register
+  LATX:  constant X latch register
+  LAT0X: constrained 0X latch register
+  LAT1X: constrained 1X latch register
+  LATCG: clock-gating latch register
+  TLA:   transparent latch register
+  TLA0X: transparent constrained 0X latch register
+  TLA1X: transparent constrained 1X latch register
+  Loop:  cycle break point
+  Net:   matchable net
+  Port:  primary (top-level) port
+  Und:   undriven signal cut-point
+  Unk:   unknown signal cut-point]
+
+1

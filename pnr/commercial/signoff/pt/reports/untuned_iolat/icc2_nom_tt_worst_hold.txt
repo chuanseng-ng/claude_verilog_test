@@ -1,0 +1,105 @@
+****************************************
+Report : timing
+	-path_type full_clock_expanded
+	-delay_type min
+	-input_pins
+	-nets
+	-max_paths 1
+	-transition_time
+	-capacitance
+	-sort_by slack
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Mon Oct 26 21:40:41 2026
+****************************************
+  Startpoint: u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__16_
+               (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex_pc_target_r_reg_16_
+               (rising edge-triggered flip-flop clocked by clk_i)
+  Last common pin: ZCTSBUF_463210_11229/X
+  Path Group: PIPELINE
+  Path Type: min
+  Point                       Fanout    Cap      Trans       Incr       Path
+  -----------------------------------------------------------------------------
+  clock clk_i (rise edge)                                  0.0000     0.0000
+  clock source latency                                     1.0000     1.0000
+  clk_i (in)                                    0.0446     0.0269 &   1.0269 r
+  clk_i (net)                    1   0.0108
+  ZCTSBUF_806458_11435/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.0446     0.0003 &   1.0273 r
+  ZCTSBUF_806458_11435/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3063     0.2793 &   1.3066 r
+  ZCTSNET_509 (net)              3   0.2732
+  ZCTSBUF_463210_11229/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3063     0.0592 &   1.3658 r
+  ZCTSBUF_463210_11229/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2507     0.3476 &   1.7134 r
+  ZCTSNET_303 (net)              4   0.2257
+  ZCTSBUF_314328_11228/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2517     0.0099 &   1.7234 r
+  ZCTSBUF_314328_11228/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3367     0.3747 &   2.0980 r
+  ZCTSNET_302 (net)             21   0.3070
+  ZCTSBUF_244813_11145/A (sky130_fd_sc_hd__clkbuf_8)
+                                                0.3367     0.0481 &   2.1462 r
+  ZCTSBUF_244813_11145/X (sky130_fd_sc_hd__clkbuf_8)
+                                                0.2512     0.3501 &   2.4962 r
+  ZCTSNET_219 (net)             25   0.1352
+  u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__16_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                0.2531     0.0148 &   2.5110 r
+  u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__16_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                0.0606     0.4332 &   2.9443 f
+  u_core/ex1c_ex1b_reg_q[24] (net)
+                                 2   0.0294
+  u_core/U8724/B_N (sky130_fd_sc_hd__nor2b_1)   0.0607     0.0013 &   2.9456 f
+  u_core/U8724/Y (sky130_fd_sc_hd__nor2b_1)     0.0423     0.1417 &   3.0872 f
+  u_core/N136 (net)              1   0.0049
+  u_core/ex_pc_target_r_reg_16_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                0.0423     0.0001 &   3.0873 f
+  data arrival time                                                   3.0873
+  clock clk_i (rise edge)                                  0.0000     0.0000
+  clock source latency                                     1.0000     1.0000
+  clk_i (in)                                    0.0446     0.0269 &   1.0269 r
+  clk_i (net)                    1   0.0108
+  ZCTSBUF_806458_11435/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.0446     0.0003 &   1.0273 r
+  ZCTSBUF_806458_11435/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3063     0.2793 &   1.3066 r
+  ZCTSNET_509 (net)              3   0.2732
+  ZCTSBUF_463210_11229/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3200     0.0592 &   1.3658 r
+  ZCTSBUF_463210_11229/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2508     0.3502 &   1.7160 r
+  ZCTSNET_303 (net)              4   0.2257
+  ZCTSBUF_459797_11127/A (sky130_fd_sc_hd__clkbuf_8)
+                                                0.2519     0.0099 &   1.7258 r
+  ZCTSBUF_459797_11127/X (sky130_fd_sc_hd__clkbuf_8)
+                                                0.2608     0.3451 &   2.0709 r
+  ZCTSNET_201 (net)             11   0.1428
+  ctsctobgt_ht1_inst_11483/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2610     0.0035 &   2.0744 r
+  ctsctobgt_ht1_inst_11483/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1190     0.2529 &   2.3273 r
+  ctsctobgt_ht1_0 (net)          6   0.0950
+  ZCTSBUF_453233_11103/A (sky130_fd_sc_hd__clkbuf_8)
+                                                0.1191     0.0019 &   2.3292 r
+  ZCTSBUF_453233_11103/X (sky130_fd_sc_hd__clkbuf_8)
+                                                0.2657     0.3015 &   2.6307 r
+  ZCTSNET_177 (net)             25   0.1456
+  ZCTSBUF_437060_11095/A (sky130_fd_sc_hd__clkbuf_2)
+                                                0.2670     0.0163 &   2.6470 r
+  ZCTSBUF_437060_11095/X (sky130_fd_sc_hd__clkbuf_2)
+                                                0.1897     0.2703 &   2.9173 r
+  ZCTSNET_169 (net)              7   0.0333
+  u_core/ex_pc_target_r_reg_16_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                0.1898     0.0009 &   2.9182 r
+  clock reconvergence pessimism                           -0.0026     2.9157
+  clock uncertainty                                        0.2000     3.1157
+  library hold time                                       -0.0136     3.1021
+  data required time                                                  3.1021
+  -----------------------------------------------------------------------------
+  data required time                                                  3.1021
+  data arrival time                                                  -3.0873
+  -----------------------------------------------------------------------------
+  slack (VIOLATED)                                                   -0.0147
+1

@@ -1,0 +1,3 @@
+total    C_test = 0.9949 * C_ref + 0.1525 fF/pin +0.0693
+ground   C_test = 0.8900 * C_ref + 0.0291 fF/pin +0.0663
+coupling C_test = 1.1014 * C_ref + 0.1315 fF/pin -0.0311

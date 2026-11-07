@@ -1,0 +1,60 @@
+
+Rule name		
+Antenna mode		Diode-mode value	Area Threshold	 Layer Area Threshold	 Via Layer Area Threshold	 Gate Area Threshold
+------------		----------------	--------------	----------------------	----------------------		----------------------
+  1			  1			  0		                     	                     		0
+
+
+Antenna mode		Diode-mode value	Layer Ratio Threshold		Diode Ratio Vector
+------------		----------------	---------------------		------------------
+
+Antenna mode		Diode-mode value	Via Layer Ratio Threshold	Diode Ratio Vector
+------------		----------------	-------------------------	------------------
+
+Antenna mode		Diode-mode value	Connected TSV Ratio Threshold	Diode Ratio Vector
+------------		----------------	-----------------------------	------------------
+
+
+Column information:
+-------------------
+    A - Layer name
+    B - Layer type
+    C - Antenna mode
+    D - Ratio
+    E - P Ratio
+    F - N Ratio
+    G - Gate diffusion length
+    H - P Gate diffusion length
+    I - N Gate diffusion length
+    J - Layer scale
+    K - Accumulate scale
+    L - Protected scale
+    M - Diode ratio
+    N - Scale factor
+
+     A           B       C       D          E          F          G          H          I          J          K          L            M                 N      
+---------- ------------ --- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------- ---------------- ---------------
+       li1 INTERCONNECT   1      75.00        --         --        0.00       0.00       0.00        --         --         --  {75.0 0.0 75.0 0.0}              -- 
+
+      mcon      VIA_CUT   1       3.00        --         --        0.00       0.00       0.00        --         --         --  {3.0 0.0 3.0 0.0}              -- 
+
+      met1 INTERCONNECT   1     400.00        --         --        0.00       0.00       0.00        --         --         --  {400.0 0.0 400.0 0.0}              -- 
+
+       via      VIA_CUT   1       6.00        --         --        0.00       0.00       0.00        --         --         --  {6.0 0.0 6.0 0.0}              -- 
+
+      met2 INTERCONNECT   1     400.00        --         --        0.00       0.00       0.00        --         --         --  {400.0 0.0 400.0 0.0}              -- 
+
+      via2      VIA_CUT   1       6.00        --         --        0.00       0.00       0.00        --         --         --  {6.0 0.0 6.0 0.0}              -- 
+
+      met3 INTERCONNECT   1     400.00        --         --        0.00       0.00       0.00        --         --         --  {400.0 0.0 400.0 0.0}              -- 
+
+      via3      VIA_CUT   1       6.00        --         --        0.00       0.00       0.00        --         --         --  {6.0 0.0 6.0 0.0}              -- 
+
+      met4 INTERCONNECT   1     400.00        --         --        0.00       0.00       0.00        --         --         --  {400.0 0.0 400.0 0.0}              -- 
+
+      via4      VIA_CUT   1       6.00        --         --        0.00       0.00       0.00        --         --         --  {6.0 0.0 6.0 0.0}              -- 
+
+      met5 INTERCONNECT   1     400.00        --         --        0.00       0.00       0.00        --         --         --  {400.0 0.0 400.0 0.0}              -- 
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+1

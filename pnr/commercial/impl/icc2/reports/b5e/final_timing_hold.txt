@@ -1,0 +1,771 @@
+****************************************
+Report : timing
+        -path_type full
+        -delay_type min
+        -nworst 1
+        -max_paths 20
+        -report_by design
+Design : rv32i_cpu_top
+Version: X-2025.06-SP1
+Date   : Thu Oct 29 20:34:32 2026
+****************************************
+
+  Startpoint: u_core/u_ex2_ex_mem_reg_o_reg_csr_rdata__13_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_mem_mem_wb_reg_o_reg_csr_rdata__13_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.47      2.47
+
+  u_core/u_ex2_ex_mem_reg_o_reg_csr_rdata__13_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.47 r
+  u_core/u_ex2_ex_mem_reg_o_reg_csr_rdata__13_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.41      2.88 f
+  u_core/U8387/Y (sky130_fd_sc_hd__clkinv_1)       0.10      2.97 r
+  u_core/U8388/Y (sky130_fd_sc_hd__nor2_1)         0.06      3.04 f
+  copt_h_inst_14190/X (sky130_fd_sc_hd__buf_1)     0.09      3.12 f
+  u_core/u_mem_mem_wb_reg_o_reg_csr_rdata__13_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.12 f
+  data arrival time                                          3.12
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.91      2.91
+  u_core/u_mem_mem_wb_reg_o_reg_csr_rdata__13_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.91 r
+  clock uncertainty                                0.20      3.11
+  library hold time                                0.01      3.12
+  data required time                                         3.12
+  ------------------------------------------------------------------------
+  data required time                                         3.12
+  data arrival time                                         -3.12
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.00
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__16_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__16_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.51      2.51
+
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__16_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.51 r
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__16_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.43      2.94 r
+  u_core/U12614/X (sky130_fd_sc_hd__a22o_1)        0.14      3.09 r
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__16_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 r
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.89      2.89
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__16_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.89 r
+  clock uncertainty                                0.20      3.09
+  library hold time                               -0.01      3.08
+  data required time                                         3.08
+  ------------------------------------------------------------------------
+  data required time                                         3.08
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.01
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_mem_wstrb__2_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_mem_wstrb__2_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.52      2.52
+
+  u_core/ex1b_ex2_reg_q_reg_mem_wstrb__2_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.52 r
+  u_core/ex1b_ex2_reg_q_reg_mem_wstrb__2_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.42      2.94 r
+  u_core/U12636/X (sky130_fd_sc_hd__a22o_1)        0.14      3.09 r
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wstrb__2_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 r
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.89      2.89
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wstrb__2_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.89 r
+  clock uncertainty                                0.20      3.09
+  library hold time                               -0.01      3.08
+  data required time                                         3.08
+  ------------------------------------------------------------------------
+  data required time                                         3.08
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.01
+
+
+
+  Startpoint: u_core/u_dcache/data_dout_r_reg_2__2_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_dcache/wb_buf_q_reg_2__2_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.51      2.51
+
+  u_core/u_dcache/data_dout_r_reg_2__2_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.51 r
+  u_core/u_dcache/data_dout_r_reg_2__2_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.43      2.95 r
+  u_core/u_dcache/U2818/X (sky130_fd_sc_hd__a22o_1)
+                                                   0.14      3.09 r
+  u_core/u_dcache/wb_buf_q_reg_2__2_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 r
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.88      2.88
+  u_core/u_dcache/wb_buf_q_reg_2__2_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.88 r
+  clock uncertainty                                0.20      3.08
+  library hold time                               -0.01      3.08
+  data required time                                         3.08
+  ------------------------------------------------------------------------
+  data required time                                         3.08
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.01
+
+
+
+  Startpoint: u_core/ex1c_ex1b_reg_q_reg_pre_wdata_aligned__19_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__19_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.51      2.51
+
+  u_core/ex1c_ex1b_reg_q_reg_pre_wdata_aligned__19_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.51 r
+  u_core/ex1c_ex1b_reg_q_reg_pre_wdata_aligned__19_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.44      2.95 r
+  u_core/U12354/X (sky130_fd_sc_hd__a22o_1)        0.14      3.09 r
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__19_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 r
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.89      2.89
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__19_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.89 r
+  clock uncertainty                                0.20      3.09
+  library hold time                               -0.01      3.08
+  data required time                                         3.08
+  ------------------------------------------------------------------------
+  data required time                                         3.08
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.01
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__28_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__28_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.51      2.51
+
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__28_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.51 r
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__28_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.44      2.95 r
+  u_core/U12600/X (sky130_fd_sc_hd__a22o_1)        0.14      3.09 r
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__28_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 r
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.89      2.89
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__28_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.89 r
+  clock uncertainty                                0.20      3.09
+  library hold time                               -0.01      3.08
+  data required time                                         3.08
+  ------------------------------------------------------------------------
+  data required time                                         3.08
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.01
+
+
+
+  Startpoint: u_core/u_ex2_ex_mem_reg_o_reg_csr_rdata__8_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex1a_ex1b_reg_q_reg_fwd_store__8_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.52      2.52
+
+  u_core/u_ex2_ex_mem_reg_o_reg_csr_rdata__8_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.52 r
+  u_core/u_ex2_ex_mem_reg_o_reg_csr_rdata__8_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.43      2.95 r
+  u_core/U13072/Y (sky130_fd_sc_hd__a22oi_1)       0.09      3.04 f
+  u_core/U13082/Y (sky130_fd_sc_hd__nand4_1)       0.12      3.16 r
+  u_core/ex1a_ex1b_reg_q_reg_fwd_store__8_/D (sky130_fd_sc_hd__dfxtp_2)
+                                                   0.00      3.16 r
+  data arrival time                                          3.16
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.96      2.96
+  u_core/ex1a_ex1b_reg_q_reg_fwd_store__8_/CLK (sky130_fd_sc_hd__dfxtp_2)
+                                                   0.00      2.96 r
+  clock uncertainty                                0.20      3.16
+  library hold time                               -0.01      3.15
+  data required time                                         3.15
+  ------------------------------------------------------------------------
+  data required time                                         3.15
+  data arrival time                                         -3.16
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.01
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__17_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__17_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.52      2.52
+
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__17_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.52 r
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__17_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.43      2.95 r
+  u_core/U12613/X (sky130_fd_sc_hd__a22o_1)        0.15      3.09 r
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__17_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 r
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.89      2.89
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__17_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.89 r
+  clock uncertainty                                0.20      3.09
+  library hold time                               -0.01      3.08
+  data required time                                         3.08
+  ------------------------------------------------------------------------
+  data required time                                         3.08
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.02
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_alu_result__29_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_alu_result__29_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.47      2.47
+
+  u_core/ex1b_ex2_reg_q_reg_alu_result__29_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.47 r
+  u_core/ex1b_ex2_reg_q_reg_alu_result__29_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.41      2.88 f
+  u_core/U12253/Y (sky130_fd_sc_hd__inv_1)         0.08      2.96 r
+  copt_gre_h_inst_15818/X (sky130_fd_sc_hd__clkbuf_1)
+                                                   0.09      3.05 r
+  u_core/U12554/Y (sky130_fd_sc_hd__o22ai_1)       0.07      3.13 f
+  u_core/u_ex2_ex_mem_reg_o_reg_alu_result__29_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.13 f
+  data arrival time                                          3.13
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.91      2.91
+  u_core/u_ex2_ex_mem_reg_o_reg_alu_result__29_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.91 r
+  clock uncertainty                                0.20      3.11
+  library hold time                                0.00      3.11
+  data required time                                         3.11
+  ------------------------------------------------------------------------
+  data required time                                         3.11
+  data arrival time                                         -3.13
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.02
+
+
+
+  Startpoint: u_core/ex1c_ex1b_reg_q_reg_pre_wdata_aligned__18_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__18_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.51      2.51
+
+  u_core/ex1c_ex1b_reg_q_reg_pre_wdata_aligned__18_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.51 r
+  u_core/ex1c_ex1b_reg_q_reg_pre_wdata_aligned__18_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.43      2.94 r
+  u_core/U12355/X (sky130_fd_sc_hd__a22o_1)        0.13      3.07 r
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__18_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.07 r
+  data arrival time                                          3.07
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.85      2.85
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__18_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.85 r
+  clock uncertainty                                0.20      3.05
+  library hold time                               -0.01      3.05
+  data required time                                         3.05
+  ------------------------------------------------------------------------
+  data required time                                         3.05
+  data arrival time                                         -3.07
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.02
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__8_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__8_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.52      2.52
+
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__8_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.52 r
+  u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__8_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.43      2.95 r
+  u_core/U12623/X (sky130_fd_sc_hd__a22o_1)        0.15      3.10 r
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__8_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.10 r
+  data arrival time                                          3.10
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.89      2.89
+  u_core/u_ex2_ex_mem_reg_o_reg_mem_wdata_aligned__8_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.89 r
+  clock uncertainty                                0.20      3.09
+  library hold time                               -0.01      3.08
+  data required time                                         3.08
+  ------------------------------------------------------------------------
+  data required time                                         3.08
+  data arrival time                                         -3.10
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.02
+
+
+
+  Startpoint: u_core/u_ex2_ex_mem_reg_o_reg_pc__0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_mem_mem_wb_reg_o_reg_pc__0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.44      2.44
+
+  u_core/u_ex2_ex_mem_reg_o_reg_pc__0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.44 r
+  u_core/u_ex2_ex_mem_reg_o_reg_pc__0_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.39      2.82 f
+  u_core/U1764/Y (sky130_fd_sc_hd__clkinv_1)       0.18      3.00 r
+  u_core/U8591/Y (sky130_fd_sc_hd__nor2_1)         0.09      3.09 f
+  u_core/u_mem_mem_wb_reg_o_reg_pc__0_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 f
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.87      2.87
+  u_core/u_mem_mem_wb_reg_o_reg_pc__0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.87 r
+  clock uncertainty                                0.20      3.07
+  library hold time                                0.00      3.07
+  data required time                                         3.07
+  ------------------------------------------------------------------------
+  data required time                                         3.07
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.02
+
+
+
+  Startpoint: u_mbist_ctrl_pause_cycles_q_reg_20_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_pcnt_q_reg_20_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.58      2.58
+
+  u_mbist_ctrl_pause_cycles_q_reg_20_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.58 r
+  u_mbist_ctrl_pause_cycles_q_reg_20_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.43      3.01 r
+  U2898/Y (sky130_fd_sc_hd__a32oi_1)               0.06      3.07 f
+  U2899/Y (sky130_fd_sc_hd__nand2_1)               0.07      3.14 r
+  u_mbist_ctrl_pcnt_q_reg_20_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.14 r
+  data arrival time                                          3.14
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.91      2.91
+  u_mbist_ctrl_pcnt_q_reg_20_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.91 r
+  clock uncertainty                                0.20      3.11
+  library hold time                                0.01      3.12
+  data required time                                         3.12
+  ------------------------------------------------------------------------
+  data required time                                         3.12
+  data arrival time                                         -3.14
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.02
+
+
+
+  Startpoint: u_mbist_ctrl_tg_addr_q_reg_1__0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_mbist_ctrl_tg_addr_q_reg_2__0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.79      2.79
+
+  u_mbist_ctrl_tg_addr_q_reg_1__0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.79 r
+  u_mbist_ctrl_tg_addr_q_reg_1__0_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.38      3.17 f
+  u_mbist_ctrl_tg_addr_q_reg_2__0_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.17 f
+  data arrival time                                          3.17
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.91      2.91
+  u_mbist_ctrl_tg_addr_q_reg_2__0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.91 r
+  clock uncertainty                                0.20      3.11
+  library hold time                                0.03      3.14
+  data required time                                         3.14
+  ------------------------------------------------------------------------
+  data required time                                         3.14
+  data arrival time                                         -3.17
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.03
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_alu_result__19_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_alu_result__19_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.47      2.47
+
+  u_core/ex1b_ex2_reg_q_reg_alu_result__19_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.47 r
+  u_core/ex1b_ex2_reg_q_reg_alu_result__19_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.41      2.88 f
+  u_core/U12286/Y (sky130_fd_sc_hd__inv_1)         0.08      2.96 r
+  u_core/U12566/Y (sky130_fd_sc_hd__o22ai_1)       0.09      3.05 f
+  copt_gre_h_inst_15817/X (sky130_fd_sc_hd__clkbuf_1)
+                                                   0.10      3.15 f
+  u_core/u_ex2_ex_mem_reg_o_reg_alu_result__19_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.15 f
+  data arrival time                                          3.15
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.91      2.91
+  u_core/u_ex2_ex_mem_reg_o_reg_alu_result__19_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.91 r
+  clock uncertainty                                0.20      3.11
+  library hold time                                0.01      3.12
+  data required time                                         3.12
+  ------------------------------------------------------------------------
+  data required time                                         3.12
+  data arrival time                                         -3.15
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.03
+
+
+
+  Startpoint: u_core/ex1a_ex1b_reg_q_reg_mtvec__27_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__27_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.51      2.51
+
+  u_core/ex1a_ex1b_reg_q_reg_mtvec__27_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.51 r
+  u_core/ex1a_ex1b_reg_q_reg_mtvec__27_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.41      2.92 r
+  u_core/U14167/Y (sky130_fd_sc_hd__a22oi_1)       0.09      3.00 f
+  u_core/U14168/Y (sky130_fd_sc_hd__nand3_1)       0.11      3.11 r
+  ropt_h_inst_17052/X (sky130_fd_sc_hd__buf_1)     0.09      3.20 r
+  u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__27_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.20 r
+  data arrival time                                          3.20
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.95      2.95
+  u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__27_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.95 r
+  clock uncertainty                                0.20      3.15
+  library hold time                                0.02      3.17
+  data required time                                         3.17
+  ------------------------------------------------------------------------
+  data required time                                         3.17
+  data arrival time                                         -3.20
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.03
+
+
+
+  Startpoint: u_core/ex1b_ex2_reg_q_reg_rd_addr__0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_ex2_ex_mem_reg_o_reg_rd_addr__0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.49      2.49
+
+  u_core/ex1b_ex2_reg_q_reg_rd_addr__0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.49 r
+  u_core/ex1b_ex2_reg_q_reg_rd_addr__0_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.41      2.90 f
+  u_core/U471/Y (sky130_fd_sc_hd__inv_2)           0.09      2.98 r
+  u_core/U12679/Y (sky130_fd_sc_hd__o22ai_1)       0.11      3.09 f
+  u_core/u_ex2_ex_mem_reg_o_reg_rd_addr__0_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.09 f
+  data arrival time                                          3.09
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.87      2.87
+  u_core/u_ex2_ex_mem_reg_o_reg_rd_addr__0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.87 r
+  clock uncertainty                                0.20      3.07
+  library hold time                               -0.01      3.06
+  data required time                                         3.06
+  ------------------------------------------------------------------------
+  data required time                                         3.06
+  data arrival time                                         -3.09
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.03
+
+
+
+  Startpoint: u_core/u_icache_refill_word_q_reg_0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_icache_data_bank_q_reg_0_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.55      2.55
+
+  u_core/u_icache_refill_word_q_reg_0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.55 r
+  u_core/u_icache_refill_word_q_reg_0_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.41      2.96 f
+  u_core/U8785/Y (sky130_fd_sc_hd__clkinv_1)       0.12      3.08 r
+  u_core/U8786/Y (sky130_fd_sc_hd__nor2_1)         0.09      3.17 f
+  u_core/u_icache_data_bank_q_reg_0_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.18 f
+  data arrival time                                          3.18
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.95      2.95
+  u_core/u_icache_data_bank_q_reg_0_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.95 r
+  clock uncertainty                                0.20      3.15
+  library hold time                               -0.01      3.14
+  data required time                                         3.14
+  ------------------------------------------------------------------------
+  data required time                                         3.14
+  data arrival time                                         -3.18
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.03
+
+
+
+  Startpoint: u_core/u_ex2_ex_mem_reg_o_reg_pc__1_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/u_mem_mem_wb_reg_o_reg_pc__1_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.44      2.44
+
+  u_core/u_ex2_ex_mem_reg_o_reg_pc__1_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.44 r
+  u_core/u_ex2_ex_mem_reg_o_reg_pc__1_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.40      2.83 f
+  u_core/U1797/Y (sky130_fd_sc_hd__inv_2)          0.18      3.01 r
+  u_core/U8593/Y (sky130_fd_sc_hd__nor2_1)         0.09      3.10 f
+  u_core/u_mem_mem_wb_reg_o_reg_pc__1_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.10 f
+  data arrival time                                          3.10
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.86      2.86
+  u_core/u_mem_mem_wb_reg_o_reg_pc__1_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.86 r
+  clock uncertainty                                0.20      3.06
+  library hold time                                0.00      3.07
+  data required time                                         3.07
+  ------------------------------------------------------------------------
+  data required time                                         3.07
+  data arrival time                                         -3.10
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.04
+
+
+
+  Startpoint: u_core/ex1a_ex1b_reg_q_reg_mtvec__7_ (rising edge-triggered flip-flop clocked by clk_i)
+  Endpoint: u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__7_ (rising edge-triggered flip-flop clocked by clk_i)
+  Mode: default
+  Corner: default
+  Scenario: default
+  Path Group: PIPELINE
+  Path Type: min
+
+  Point                                            Incr      Path  
+  ------------------------------------------------------------------------
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 2.51      2.51
+
+  u_core/ex1a_ex1b_reg_q_reg_mtvec__7_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      2.51 r
+  u_core/ex1a_ex1b_reg_q_reg_mtvec__7_/Q (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.40      2.91 r
+  u_core/U14270/Y (sky130_fd_sc_hd__a22oi_1)       0.14      3.05 f
+  u_core/U14271/Y (sky130_fd_sc_hd__nand3_1)       0.14      3.19 r
+  copt_gre_h_inst_15819/X (sky130_fd_sc_hd__buf_1)
+                                                   0.08      3.27 r
+  u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__7_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.27 r
+  data arrival time                                          3.27
+
+  clock clk_i (rise edge)                          0.00      0.00
+  clock network delay (propagated)                 3.01      3.01
+  u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__7_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                   0.00      3.01 r
+  clock uncertainty                                0.20      3.21
+  library hold time                                0.02      3.23
+  data required time                                         3.23
+  ------------------------------------------------------------------------
+  data required time                                         3.23
+  data arrival time                                         -3.27
+  ------------------------------------------------------------------------
+  slack (MET)                                                0.04
+
+
+1

@@ -1,0 +1,9 @@
+Command check_pg_drc started  at Thu Oct 29 20:39:12 2026
+Command check_pg_drc finished at Thu Oct 29 20:39:20 2026
+CPU usage for check_pg_drc: 10.57 seconds ( 0.00 hours)
+Elapsed time for check_pg_drc: 7.27 seconds ( 0.00 hours)
+Total number of errors found: 181
+   181 shorts on pwell
+------------
+Description of the errors can be seen in gui error set "DRC_report_by_check_pg_drc"
+------------

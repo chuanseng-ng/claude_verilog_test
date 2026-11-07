@@ -1,0 +1,45 @@
+ 
+****************************************
+Report : area
+Design : rv32i_cpu_top
+Version: X-2025.06-SP3
+Date   : Sun Nov  1 23:28:18 2026
+****************************************
+
+Library(s) Used:
+
+    sky130_fd_sc_hd__tt_025C_1v80 (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_fd_sc_hd__tt_025C_1v80.db)
+    sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C_lib (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db)
+
+Number of ports:                          856
+Number of nets:                         36453
+Number of cells:                        35645
+Number of combinational cells:          30350
+Number of sequential cells:              5284
+Number of macros/black boxes:              10
+Number of buf/inv:                       8490
+Number of references:                     147
+
+Combinational area:             178796.476638
+Buf/Inv area:                    37048.030980
+Noncombinational area:          107281.638353
+Macro/Black Box area:          1907125.468750
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:               2193203.583741
+Total area:                 undefined
+
+Hierarchical area distribution
+------------------------------
+
+                                  Global cell area                  Local cell area
+                                  ---------------------  -------------------------------------- 
+Hierarchical cell                 Absolute      Percent  Combi-       Noncombi-    Black-
+                                  Total         Total    national     national     boxes         Design
+--------------------------------  ------------  -------  -----------  -----------  ------------  ------------
+rv32i_cpu_top                     2193203.5837    100.0  138984.5446   85358.1126   953562.7344  rv32i_cpu_top
+u_core_u_dcache                   1015298.1921     46.3   39811.9320   21923.5257   953562.7344  rv32i_dcache
+--------------------------------  ------------  -------  -----------  -----------  ------------  ------------
+Total                                                    178796.4766  107281.6384  1907125.4688
+
+1

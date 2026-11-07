@@ -1,0 +1,1014 @@
+                          CONFORMAL (R)
+                   Version 24.10-p100 (30-May-2024) (64 bit executable)
+   Copyright (c) Cadence Design Systems, Inc., 1997-2024. All Rights Reserved
+
+
+This program is proprietary and confidential information belonging to
+Cadence Design Systems, Inc., and may be used and disclosed only as authorized
+in a license agreement controlling such use and disclosure.
+
+// Warning: This version is 878 days old. You can download the latest version from http://downloads.cadence.com.
+
+0
+// Command: usage -auto -elapse
+CPU time     : 0.14    seconds
+Elapse time  : 0       seconds
+Memory usage : 88.62   M bytes
+0
+// Command: set_mapping_method -sensitive
+0
+// Command: set_verification_information fv_map_rv32i_cpu_topnlv_db
+// Note: Verification information fv_map_rv32i_cpu_topnlv_db does not exist. New directory created.
+// Verification information is set to /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_negctl_swap/fv_map_rv32i_cpu_topnlv_db.
+0
+// Command: read_implementation_information fv/rv32i_cpu_top -golden fv_map -revised rv32i_cpu_topnlv -use_rtl_names
+// Reading implementation information from fv/rv32i_cpu_top ...
+// Note: Implementation information 'fv_map.fv.json' will be used
+// Note: Implementation information 'rv32i_cpu_topnlv.fv.json' will be used
+================================================================================
+          Information Category                         Count
+--------------------------------------------------------------------------------
+     Sequential instance phase                         10436
+       Sequential optimization                             0
+        Sequential duplication                             0
+         Boundary optimization                           194
+            Synthesis equation                            14
+    Combinational loop breaker                             0
+                       Mapping                             0
+================================================================================
+// Note: Read implementation information successfully.
+0
+CPU time     : 0.90    seconds
+Elapse time  : 0       seconds
+Memory usage : 109.34  M bytes
+// Command: set_parallel_option -threads 1,2 -norelease_license
+// Number of threads is set to 1,2.
+0
+// Command: set_compare_options -threads 1,2
+Set computing threads of compare to 1,2.
+0
+// Command: set env(RC_VERSION)     "23.14-s090_1"
+23.14-s090_1
+// Command: set env(CDN_SYNTH_ROOT) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set CDN_SYNTH_ROOT      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set env(CW_DIR) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set CW_DIR      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set lec_version_required "21.20249"
+21.20249
+// Command: if { ($lec_version < $lec_version_required) &&
+//              [file exists /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim]} {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//          } else {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//          }
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim
+// Command: set_multiplier_implementation boothrca -both
+0
+// Command: set_undefined_cell black_box -noascend -both
+0
+// Command: add_notranslate_modules -library -both sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: add_search_path . /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/tech -library -both
+0
+// Command: read_library -liberty -both \
+//              /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib \
+//              /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib ...
+// Parsing file /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:12)
+// Warning: (RTL9.21) Liberty cell with interface_timing attribute set to true was not an empty cell (occurrence:1)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:6)
+// Note: (HRC1.2) Module/entity is not translated (blackboxed) (occurrence:1)
+// Note: Read Liberty library successfully
+0
+CPU time     : 1.20    seconds
+Elapse time  : 1       seconds
+Memory usage : 126.07  M bytes
+// Command: read_design -verilog95   -golden -lastmod -noelab fv/rv32i_cpu_top/fv_map.v.gz
+// Parsing file fv/rv32i_cpu_top/fv_map.v.gz ...
+0
+CPU time     : 1.76    seconds
+Elapse time  : 1       seconds
+Memory usage : 164.81  M bytes
+// Command: elaborate_design -golden -root {rv32i_cpu_top}
+// Golden root module is set to 'rv32i_cpu_top'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:951)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:27)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:398)
+// Warning: Total black box modules referenced in Golden = 1
+0
+CPU time     : 2.03    seconds
+Elapse time  : 1       seconds
+Memory usage : 160.73  M bytes
+// Command: read_design -verilog95   -revised -lastmod -noelab $env(IMPL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/mutant_swap.nl.v ...
+0
+CPU time     : 2.46    seconds
+Elapse time  : 2       seconds
+Memory usage : 189.23  M bytes
+// Command: elaborate_design -revised -root {rv32i_cpu_top}
+// Revised root module is set to 'rv32i_cpu_top'
+// Warning: (RTL2.5) Net is referenced without an assignment. Design verification will be based on set_undriven_signal setting (occurrence:272)
+// Warning: (RTL2.13) Undriven pin is detected (occurrence:607)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:901)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:28)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:280)
+// Warning: Total black box modules referenced in Revised = 1
+// Warning: There are 607 undriven nets in Revised
+// Warning: There are 607 undriven pins in Revised
+0
+CPU time     : 2.79    seconds
+Elapse time  : 2       seconds
+Memory usage : 184.97  M bytes
+// Command: write_design -golden fv_map_rv32i_cpu_topnlv_db/elab.v -replace
+// Note: Wrote VERILOG design successfully
+0
+CPU time     : 4.24    seconds
+Elapse time  : 4       seconds
+Memory usage : 187.15  M bytes
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules        29               4
+Library-cells      26875           26347
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+AND        *     33714                33812
+BUF        *       286                  228
+DFF               5208                 5208
+INV        *     62370                62847
+OR         *     16189                16163
+WIRE       *         4                    0
+------ word-level --------------------------
+BBOX                10                   10
+--------------------------------------------
+Total           117781               118268
+
+0
+// Command: report_black_box
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: report_modules
+Golden:
+   rv32i_cpu_top 
+      rv32i_core_RESET_PC0 
+         add_signed_1021 
+         sub_signed_1608 
+         csa_tree_ADD_TC_OP_269_group_1828 
+         increment_unsigned_1759_1816 
+         increment_unsigned_1760_1817_8104 
+         increment_unsigned_1578_1818 
+         increment_unsigned_1760_1817 
+         increment_unsigned_1760_1817_8105 
+         cdec 
+         cmux 
+         cmux_2949 
+         rv32i_pipeline_ex1c 
+         add_unsigned_1046_7985 
+         add_unsigned_1046_7986 
+         add_unsigned_1046_7987 
+         add_unsigned_1046 
+         cdec_2955 
+         cmux_2953 
+         rv32i_decode 
+         add_unsigned_346_2665_1 
+         cdec_2959 
+         cdec_2963 
+         cdec_2967 
+         cmux_2957 
+         cmux_2961 
+         cmux_2965 
+Revised:
+   rv32i_cpu_top 
+      rv32i_core_RESET_PC0 
+         rv32i_pipeline_ex1c 
+         rv32i_decode 
+0
+// Command: set_flatten_model -seq_constant
+0
+// Command: set_flatten_model -seq_constant_x_to 0
+0
+// Command: set_flatten_model -hier_seq_merge
+0
+// Command: analyze_extended_mapping fv/rv32i_cpu_top/fv_map.map.do fv/rv32i_cpu_top/rv32i_cpu_topnlv.map.do -output fv_map_rv32i_cpu_topnlv_1.map.do -input_specification rtl-n1 rtl-n2 -output_specification n1-n2 -replace -verbose
+// Information in fv/rv32i_cpu_top/fv_map.map.do
+================================================================================
+          Information Category                         Count
+--------------------------------------------------------------------------------
+           Sequential Constant                             0
+              Sequential Merge                             0
+                       Mapping                          5721
+================================================================================
+// Note: File 'fv/rv32i_cpu_top/fv_map.map.do' is a simplified mapping file; not an extended mapping file.
+// Information in fv/rv32i_cpu_top/rv32i_cpu_topnlv.map.do
+================================================================================
+          Information Category                         Count
+--------------------------------------------------------------------------------
+           Sequential Constant                             0
+              Sequential Merge                             0
+                       Mapping                          5721
+================================================================================
+// Note: File 'fv/rv32i_cpu_top/rv32i_cpu_topnlv.map.do' is a simplified mapping file; not an extended mapping file.
+// Analyzing extended mapping files...
+// Successfully processed 5721 mapped points.
+// Note: Detected simplified mapping file format in the input files.
+//       Output file 'fv_map_rv32i_cpu_topnlv_1.map.do' will also be a simplified mapping file.
+// 5721 extended mapping information records were written out.
+
+0
+// Command: set lec_version_required "21.10142"
+21.10142
+// Command: if {$lec_version >= $lec_version_required} {
+//              puts "For safety of verification, PIs and POs should be mapped by name."
+//              set_mapping_method -mapping_file_nopipo
+//          }
+For safety of verification, PIs and POs should be mapped by name.
+// Command: set_mapping_method -mapping_file_nopipo
+0
+// Command: set_mapping_method -search_in_mapping_file
+0
+// Command: set_analyze_option -mapping_file fv_map_rv32i_cpu_topnlv_1.map.do
+// Reading mapping information file fv_map_rv32i_cpu_topnlv_1.map.do ...
+// 5721 mapping information records are added
+0
+CPU time     : 4.39    seconds
+Elapse time  : 4       seconds
+Memory usage : 189.95  M bytes
+// Command: check_mapping_setup -mapping_file_quality -summary
+// Note: PI and PO are ignored due to set_mapping_method -MAPPING_FILE_NOPIPO
+===============================================
+        Mapping File Quality Summary
+===============================================
+                     Golden      Revised
+-----------------------------------------------
+Valid                  5218         5218
+Mapped by File         5208         5208
+===============================================
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//              check_verification_information
+//          }
+// Command: check_verification_information
+Checking Sequential constant...
+Checking Sequential merge...
+Checking Synthesis equation...
+================================================================================
+Implementation Information Check Summary: 
+--------------------------------------------------------------------------------
+Total Sequential Constants:     0
+  Name Collision:               0
+  Name Ambiguous:               0
+  Name not Found:               0
+--------------------------------------------------------------------------------
+Total Sequential Merges:        0
+  Name Collision:               0
+  Name Ambiguous:               0
+  Name not Found:               0
+  Merge Target:
+    Name Ambiguous:             0
+    Name not Found:             0
+--------------------------------------------------------------------------------
+Total Synthesis Equations:      14
+  Module not Found:             0
+  Equation Conflict:            0
+  Equation Syntax Error:        0
+No Equation Modules:            0
+================================================================================
+0
+CPU time     : 4.79    seconds
+Elapse time  : 8       seconds
+Memory usage : 194.84  M bytes
+// Command: set_analyze_option -auto -report_map
+0
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling (auto) mapped 10416 out of 10416 DFF/DLATs
+// 5208 are from mapping setup information.
+// (F28) Converted 607 internal output port(s) to inout port(s)
+CPU time     : 11.17   seconds
+Elapse time  : 15      seconds
+Memory usage : 284.04  M bytes
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 5218 key point(s) by mapping information
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            5208   10        5218    
+--------------------------------------------------------------------------------
+Revised           5208   10        5218    
+================================================================================
+CPU time     : 11.53   seconds
+Elapse time  : 15      seconds
+Memory usage : 288.90  M bytes
+// Running automatic setup...
+// Remodeling sequential constants...
+// Remodeling Golden ...
+// Remodeling Revised ...
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO        Total   
+--------------------------------------------------------------------------------
+Golden            124    379       503     
+--------------------------------------------------------------------------------
+Revised           124    379       503     
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            5208   10        5218    
+--------------------------------------------------------------------------------
+Revised           5208   10        5218    
+================================================================================
+// Automatic setup finished.
+0
+CPU time     : 19.63   seconds
+Elapse time  : 24      seconds
+Memory usage : 309.95  M bytes
+// Command: report_unmapped_points -summary
+There is no unmapped point
+0
+// Command: report_unmapped_points -notmapped
+There is no unmapped point
+0
+// Command: add_compared_points -all
+// 5597 compared points added to compare list
+0
+// Command: compare
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5143   10        5532    
+--------------------------------------------------------------------------------
+Non-equivalent       0      65     0         65      
+================================================================================
+0
+CPU time     : 24.41   seconds
+Elapse time  : 31      seconds
+Memory usage : 318.30  M bytes
+// Command: report_compare_data -class nonequivalent -class abort -class notcompared
+Compared points are: Non-equivalent (reachable)
+  (G) + 677    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][0]/U$1
+  (R) + 677    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][0]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 73378  OR   /u_core/g419798/U$1
+  (R) + 58522  OR   /u_core/g419798/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 678    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][1]/U$1
+  (R) + 678    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][1]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 83721  OR   /u_core/g420968/U$1
+  (R) + 70184  OR   /u_core/g420968/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 679    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][2]/U$1
+  (R) + 679    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][2]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 80971  OR   /u_core/g420858/U$1
+  (R) + 67087  OR   /u_core/g420858/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 680    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][3]/U$1
+  (R) + 680    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][3]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 82608  OR   /u_core/g420901/U$1
+  (R) + 68775  OR   /u_core/g420901/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 681    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][4]/U$1
+  (R) + 681    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][4]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 80870  OR   /u_core/g420856/U$1
+  (R) + 66972  OR   /u_core/g420856/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 682    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]/U$1
+  (R) + 682    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 77175  OR   /u_core/g419910/U$1
+  (R) + 62786  OR   /u_core/g419910/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 683    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][6]/U$1
+  (R) + 683    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][6]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 72634  OR   /u_core/g419785/U$1
+  (R) + 57574  OR   /u_core/g419785/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 684    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][7]/U$1
+  (R) + 684    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][7]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 81038  OR   /u_core/g420860/U$1
+  (R) + 67167  OR   /u_core/g420860/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 685    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][8]/U$1
+  (R) + 685    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][8]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 73085  OR   /u_core/g419795/U$1
+  (R) + 58123  OR   /u_core/g419795/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 686    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][9]/U$1
+  (R) + 686    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][9]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 77249  OR   /u_core/g419916/U$1
+  (R) + 62885  OR   /u_core/g419916/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 687    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][10]/U$1
+  (R) + 687    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][10]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 76993  OR   /u_core/g419906/U$1
+  (R) + 62577  OR   /u_core/g419906/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 688    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][11]/U$1
+  (R) + 688    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][11]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 76898  OR   /u_core/g419903/U$1
+  (R) + 62469  OR   /u_core/g419903/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 689    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][12]/U$1
+  (R) + 689    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][12]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 77056  OR   /u_core/g419908/U$1
+  (R) + 62653  OR   /u_core/g419908/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 690    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][13]/U$1
+  (R) + 690    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][13]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 83146  OR   /u_core/g420942/U$1
+  (R) + 69593  OR   /u_core/g420942/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 691    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][14]/U$1
+  (R) + 691    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][14]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 77554  OR   /u_core/g420075/U$1
+  (R) + 63245  OR   /u_core/g420075/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 692    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][15]/U$1
+  (R) + 692    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][15]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 82464  OR   /u_core/g420898/U$1
+  (R) + 68605  OR   /u_core/g420898/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 693    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][16]/U$1
+  (R) + 693    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][16]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 73581  OR   /u_core/g419800/U$1
+  (R) + 58750  OR   /u_core/g419800/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 694    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][17]/U$1
+  (R) + 694    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][17]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 72740  OR   /u_core/g419792/U$1
+  (R) + 57705  OR   /u_core/g419792/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 695    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][18]/U$1
+  (R) + 695    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][18]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 73162  OR   /u_core/g419796/U$1
+  (R) + 58213  OR   /u_core/g419796/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 696    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][19]/U$1
+  (R) + 696    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][19]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 72863  OR   /u_core/g419793/U$1
+  (R) + 57861  OR   /u_core/g419793/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 697    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][20]/U$1
+  (R) + 697    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][20]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 72981  OR   /u_core/g419794/U$1
+  (R) + 58006  OR   /u_core/g419794/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 698    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][21]/U$1
+  (R) + 698    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][21]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 73726  OR   /u_core/g419827/U$1
+  (R) + 58917  OR   /u_core/g419827/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 699    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][22]/U$1
+  (R) + 699    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][22]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 73254  OR   /u_core/g419797/U$1
+  (R) + 58329  OR   /u_core/g419797/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 700    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][23]/U$1
+  (R) + 700    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][23]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 77475  OR   /u_core/g420074/U$1
+  (R) + 63153  OR   /u_core/g420074/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 701    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][24]/U$1
+  (R) + 701    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][24]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 66486  OR   /u_core/g419158/U$1
+  (R) + 50624  OR   /u_core/g419158/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 702    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][25]/U$1
+  (R) + 702    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][25]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 68801  OR   /u_core/g419365/U$1
+  (R) + 53638  OR   /u_core/g419365/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 703    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][26]/U$1
+  (R) + 703    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][26]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 68515  OR   /u_core/g419364/U$1
+  (R) + 53330  OR   /u_core/g419364/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 704    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][27]/U$1
+  (R) + 704    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][27]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 69539  OR   /u_core/g419388/U$1
+  (R) + 54466  OR   /u_core/g419388/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 705    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][28]/U$1
+  (R) + 705    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][28]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 68935  OR   /u_core/g419367/U$1
+  (R) + 53841  OR   /u_core/g419367/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 706    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][29]/U$1
+  (R) + 706    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][29]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 79272  OR   /u_core/g420135/U$1
+  (R) + 65356  OR   /u_core/g420135/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 707    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][30]/U$1
+  (R) + 707    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][30]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 73500  OR   /u_core/g419799/U$1
+  (R) + 58656  OR   /u_core/g419799/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 708    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][31]/U$1
+  (R) + 708    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][31]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 78457  OR   /u_core/g420110/U$1
+  (R) + 64388  OR   /u_core/g420110/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 710    DFF  /u_core/ex1a_ex1b_reg_q_reg[branch_taken]/U$1
+  (R) + 710    DFF  /u_core/ex1a_ex1b_reg_q_reg[branch_taken]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 65709  OR   /u_core/g419099/U$1
+  (R) + 45651  OR   /u_core/g419099/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 747    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][0]/U$1
+  (R) + 746    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][0]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119699 OR   /u_core/g431927/U$1
+  (R) + 118084 OR   /u_core/g431927/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 748    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][1]/U$1
+  (R) + 747    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][1]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119690 OR   /u_core/g431924/U$1
+  (R) + 118075 OR   /u_core/g431924/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 749    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][2]/U$1
+  (R) + 748    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][2]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119696 OR   /u_core/g431926/U$1
+  (R) + 118081 OR   /u_core/g431926/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 750    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][3]/U$1
+  (R) + 749    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][3]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119693 OR   /u_core/g431925/U$1
+  (R) + 118078 OR   /u_core/g431925/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 751    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][4]/U$1
+  (R) + 750    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][4]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119687 OR   /u_core/g431922/U$1
+  (R) + 118072 OR   /u_core/g431922/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 752    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][5]/U$1
+  (R) + 751    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][5]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119759 OR   /u_core/g431947/U$1
+  (R) + 118144 OR   /u_core/g431947/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 753    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][6]/U$1
+  (R) + 752    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][6]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119681 OR   /u_core/g431920/U$1
+  (R) + 118066 OR   /u_core/g431920/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 754    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][7]/U$1
+  (R) + 753    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][7]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119735 OR   /u_core/g431939/U$1
+  (R) + 118120 OR   /u_core/g431939/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 755    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][8]/U$1
+  (R) + 754    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][8]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119726 OR   /u_core/g431936/U$1
+  (R) + 118111 OR   /u_core/g431936/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 756    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][9]/U$1
+  (R) + 755    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][9]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119744 OR   /u_core/g431942/U$1
+  (R) + 118129 OR   /u_core/g431942/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 757    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][10]/U$1
+  (R) + 756    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][10]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119714 OR   /u_core/g431932/U$1
+  (R) + 118099 OR   /u_core/g431932/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 758    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][11]/U$1
+  (R) + 757    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][11]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119708 OR   /u_core/g431930/U$1
+  (R) + 118093 OR   /u_core/g431930/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 759    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][12]/U$1
+  (R) + 758    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][12]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119747 OR   /u_core/g431943/U$1
+  (R) + 118132 OR   /u_core/g431943/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 760    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][13]/U$1
+  (R) + 759    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][13]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119684 OR   /u_core/g431921/U$1
+  (R) + 118069 OR   /u_core/g431921/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 761    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][14]/U$1
+  (R) + 760    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][14]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119732 OR   /u_core/g431938/U$1
+  (R) + 118117 OR   /u_core/g431938/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 762    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][15]/U$1
+  (R) + 761    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][15]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119741 OR   /u_core/g431941/U$1
+  (R) + 118126 OR   /u_core/g431941/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 763    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][16]/U$1
+  (R) + 762    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][16]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119678 OR   /u_core/g431919/U$1
+  (R) + 118063 OR   /u_core/g431919/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 764    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]/U$1
+  (R) + 763    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119717 OR   /u_core/g431933/U$1
+  (R) + 118102 OR   /u_core/g431933/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 765    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][18]/U$1
+  (R) + 764    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][18]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119729 OR   /u_core/g431937/U$1
+  (R) + 118114 OR   /u_core/g431937/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 766    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][19]/U$1
+  (R) + 765    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][19]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119711 OR   /u_core/g431931/U$1
+  (R) + 118096 OR   /u_core/g431931/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 767    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][20]/U$1
+  (R) + 766    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][20]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119705 OR   /u_core/g431929/U$1
+  (R) + 118090 OR   /u_core/g431929/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 768    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][21]/U$1
+  (R) + 767    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][21]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119756 OR   /u_core/g431946/U$1
+  (R) + 118141 OR   /u_core/g431946/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 769    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][22]/U$1
+  (R) + 768    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][22]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119753 OR   /u_core/g431945/U$1
+  (R) + 118138 OR   /u_core/g431945/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 770    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][23]/U$1
+  (R) + 769    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][23]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119750 OR   /u_core/g431944/U$1
+  (R) + 118135 OR   /u_core/g431944/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 771    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][24]/U$1
+  (R) + 770    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][24]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119675 OR   /u_core/g431916/U$1
+  (R) + 118060 OR   /u_core/g431916/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 772    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][25]/U$1
+  (R) + 771    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][25]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119762 OR   /u_core/g431948/U$1
+  (R) + 118147 OR   /u_core/g431948/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 773    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][26]/U$1
+  (R) + 772    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][26]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119738 OR   /u_core/g431940/U$1
+  (R) + 118123 OR   /u_core/g431940/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 774    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][27]/U$1
+  (R) + 773    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][27]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119666 OR   /u_core/g431914/U$1
+  (R) + 118051 OR   /u_core/g431914/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 775    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][28]/U$1
+  (R) + 774    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][28]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119720 OR   /u_core/g431934/U$1
+  (R) + 118105 OR   /u_core/g431934/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 776    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][29]/U$1
+  (R) + 775    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][29]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119723 OR   /u_core/g431935/U$1
+  (R) + 118108 OR   /u_core/g431935/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 777    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][30]/U$1
+  (R) + 776    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][30]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119670 OR   /u_core/g431915/U$1
+  (R) + 118055 OR   /u_core/g431915/U$1
+
+Compared points are: Non-equivalent (reachable)
+  (G) + 778    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][31]/U$1
+  (R) + 777    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][31]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 119702 OR   /u_core/g431928/U$1
+  (R) + 118087 OR   /u_core/g431928/U$1
+
+65 Non-equivalent point(s) reported
+0 Abort point(s) reported
+0 Not-compared point(s) reported
+65 compared point(s) reported
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5143   10        5532    
+--------------------------------------------------------------------------------
+Non-equivalent       0      65     0         65      
+================================================================================
+0
+// Command: report_verification -verbose
+================================================================================
+                            Verification Report
+--------------------------------------------------------------------------------
+Category                                                                  Count
+--------------------------------------------------------------------------------
+1. Non-standard modeling options used:                                      0
+     Tri-stated output:                                        checked
+     Revised X signals set to E:                               yes
+     Floating signals tied to Z:                               yes
+     Command "add clock" for clock-gating:                     not used
+--------------------------------------------------------------------------------
+2. Incomplete verification:                                                 0
+     All primary outputs are mapped:                           yes
+     Not-mapped DFF/DLAT is detected:                          no
+     All mapped points are added as compare points:            yes
+     All compared points are compared:                         yes
+     User added black box:                                     no
+     Black box mapped with different module name:              no
+     Empty module is not black boxed:                          no
+     Command "add ignore outputs" used:                        no
+     Always false constraints detected:                        no
+--------------------------------------------------------------------------------
+3. User modification to design:                                             0
+     Change gate type:                                         no
+     Change wire:                                              no
+     Primary input added by user:                              no
+--------------------------------------------------------------------------------
+4. Conformal Constraint Designer clock domain crossing checks recommended:  0
+     Multiple clocks in the design:                            no
+--------------------------------------------------------------------------------
+5. Design ambiguity:                                                        0
+     Duplicate module definition:                              no
+     Black box due to undefined cells:                         no
+     Golden design has abnormal ratio of unreachable gates:    no
+     Ratio of golden unreachable gates:                        0%
+     Revised design has abnormal ratio of unreachable gates:   no
+     Ratio of revised unreachable gates:                       0%
+     All primary input bus ordering is consistent:             yes
+     All primary output bus ordering is consistent:            yes
+     DFF/DLAT not compared due to disabled clock port(s):        0
+     Always X compared point is detected:                      not checked
+--------------------------------------------------------------------------------
+6. Compare Results:                                                  FAIL:NONEQ
+     Number of EQ compare points:                              5532
+     Number of NON-EQ compare points:                          65
+     Number of Aborted compare points:                         0
+     Number of Uncompared compare points :                     0
+================================================================================
+non-equivalence
+// Command: report_statistics
+Mapping and compare statistics
+================================================================================
+                     Compare Result       Golden            Revised
+--------------------------------------------------------------------------------
+Root module name                          rv32i_cpu_top     rv32i_cpu_top     
+
+Primary inputs                               124                124
+   Mapped                                    124                124
+
+Primary outputs                              379                379
+   Mapped                                    379                379
+      Equivalent                379
+
+Black-box key points                          10                 10
+   Mapped                                     10                 10
+      Equivalent                 10
+
+State key points                            5208               5208
+   Mapped                                   5208               5208
+      Equivalent               5143
+      Non-equivalent             65
+================================================================================
+0
+// Command: write_compared_points noneq.compared_points.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.tcl -class noneq -tclmode -replace
+0
+// Command: set lec_version_required "21.10100"
+21.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//              analyze_nonequivalent -source_diagnosis
+//              report_nonequivalent_analysis > noneq.source_diag.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.rpt
+//          }
+// Command: analyze_nonequivalent -source_diagnosis
+Analyzed 65 out of 65 non-equivalent compared point(s)
+No root cause.
+// Command: report_nonequivalent_analysis > noneq.source_diag.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.rpt
+0
+CPU time     : 27.12   seconds
+Elapse time  : 34      seconds
+Memory usage : 336.79  M bytes
+// Command: report_test_vector -noneq > noneq.test_vector.rv32i_cpu_top.fv_map.rv32i_cpu_topnlv.rpt
+0
+CPU time     : 27.32   seconds
+Elapse time  : 34      seconds
+Memory usage : 336.79  M bytes
+// Command: if {![is_pass]} {
+//              puts "B4B_LEG1_VERDICT: NOT_EQUIVALENT"
+//              error "// ERROR: Compare was not equivalent."
+//          }
+B4B_LEG1_VERDICT: NOT_EQUIVALENT
+// ERROR: Compare was not equivalent.
+    while executing
+"error "// ERROR: Compare was not equivalent.""
+// 'dofile /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/scripts/lec_genus.do' is aborted at line 158
+// Warning: Error exit from dofile '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/scripts/lec_genus.do' due to 'set dofile abort exit' command

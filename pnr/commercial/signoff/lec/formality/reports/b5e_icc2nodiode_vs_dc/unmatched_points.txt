@@ -1,0 +1,12 @@
+**************************************************
+Report         : unmatched_points
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Thu Oct 29 20:56:48 2026
+**************************************************
+
+No unmatched points.
+
+1

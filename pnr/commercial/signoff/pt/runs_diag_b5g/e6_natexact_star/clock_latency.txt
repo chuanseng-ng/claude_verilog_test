@@ -1,0 +1,67 @@
+****************************************
+Report : clock timing
+	-type latency
+	-verbose
+	-launch
+	-nworst 1
+	-setup
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Sat Oct 31 09:51:59 2026
+****************************************
+
+  Clock: clk_i
+
+  Endpoint: u_core/u_icache_tag_dout_r_reg[18]
+               (rising edge-triggered flip-flop clocked by clk_i)
+
+  Point                                          Trans       Incr       Path
+  -----------------------------------------------------------------------------
+  clock clk_i (rise edge)
+  clock source latency                                    -1.9088    -1.9088
+  clk_i (in)                                    0.1602     0.1020 &  -1.8068 r
+  CTS_cpc_drv_buf_00277/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1618     0.0141 &  -1.7926 r
+  CTS_cpc_drv_buf_00277/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1655     0.2193 &  -1.5733 r
+  CTS_cpc_drv_buf_00271/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2050     0.0706 &  -1.5027 r
+  CTS_cpc_drv_buf_00271/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2390     0.3009 &  -1.2018 r
+  CTS_cpc_drv_buf_00263/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2419     0.0275 &  -1.1743 r
+  CTS_cpc_drv_buf_00263/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2625     0.3276 &  -0.8467 r
+  CTS_ccl_buf_00251/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2649     0.0312 &  -0.8155 r
+  CTS_ccl_buf_00251/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1546     0.2701 &  -0.5454 r
+  CTS_ccl_a_buf_00250/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1564     0.0212 &  -0.5242 r
+  CTS_ccl_a_buf_00250/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1436     0.2237 &  -0.3005 r
+  CTS_ccl_buf_00248/A (sky130_fd_sc_hd__clkbuf_4)
+                                                0.1499     0.0289 &  -0.2715 r
+  CTS_ccl_buf_00248/X (sky130_fd_sc_hd__clkbuf_4)
+                                                0.1350     0.2335 &  -0.0381 r
+  CTS_ccl_buf_00244/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1352     0.0044 &  -0.0337 r
+  CTS_ccl_buf_00244/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1561     0.2259 &   0.1922 r
+  CTS_ccl_buf_00241/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1688     0.0407 &   0.2329 r
+  CTS_ccl_buf_00241/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.1242     0.2164 &   0.4493 r
+  CTS_ccl_a_buf_00236/A (sky130_fd_sc_hd__clkbuf_8)
+                                                0.1263     0.0155 &   0.4648 r
+  CTS_ccl_a_buf_00236/X (sky130_fd_sc_hd__clkbuf_8)
+                                                0.1828     0.2561 &   0.7209 r
+  u_core/CTS_ccl_a_buf_00160/A (sky130_fd_sc_hd__clkbuf_8)
+                                                0.1830     0.0050 &   0.7259 r
+  u_core/CTS_ccl_a_buf_00160/X (sky130_fd_sc_hd__clkbuf_8)
+                                                0.2422     0.3011 &   1.0270 r
+  u_core/u_icache_tag_dout_r_reg[18]/CLK (sky130_fd_sc_hd__dfxtp_1)
+                                                0.2442     0.0178 &   1.0448 r
+  total clock latency                                                 1.0448
+
+1

@@ -1,0 +1,1877 @@
+[10/31 10:14:21      0s] 
+[10/31 10:14:21      0s] Cadence Innovus(TM) Implementation System.
+[10/31 10:14:21      0s] Copyright 2024 Cadence Design Systems, Inc. All rights reserved worldwide.
+[10/31 10:14:21      0s] 
+[10/31 10:14:21      0s] Version:	v23.14-s088_1, built Fri Feb 28 12:25:44 PST 2025
+[10/31 10:14:21      0s] Options:	-nowin -files /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/scripts/inn_gap.tcl -log /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/inn.innovus.log -overwrite 
+[10/31 10:14:21      0s] Date:		Sat Oct 31 10:14:21 2026
+[10/31 10:14:21      0s] Host:		eda.ic (x86_64 w/Linux 4.18.0-553.78.1.el8_10.x86_64) (6cores*6cpus*AMD Ryzen 7 7800X3D 8-Core Processor 1024KB)
+[10/31 10:14:21      0s] OS:		Red Hat Enterprise Linux 8.10 (Ootpa)
+[10/31 10:14:21      0s] 
+[10/31 10:14:21      0s] License:
+[10/31 10:14:21      1s] 		[10:14:21.280393] Configured Lic search path (23.02-s006): 5280@eda.ic
+
+[10/31 10:14:21      1s] 		invs	Innovus Implementation System	23.1	checkout succeeded
+[10/31 10:14:21      1s] 		8 CPU jobs allowed with the current license(s). Use setMultiCpuUsage to set your required CPU count.
+[10/31 10:14:32     19s] Memory management switch to non-aggressive memory release mode.
+[10/31 10:14:32     19s] 
+[10/31 10:14:32     19s] OS Mmap count monitoring thread starts. Limit of OS Mmap count is 65530
+[10/31 10:14:32     19s] 
+[10/31 10:14:33     21s] Reset Parastics called with the command setExtractRCMode -reset@(#)CDS: Innovus v23.14-s088_1 (64bit) 02/28/2025 12:25 (Linux 3.10.0-693.el7.x86_64)
+[10/31 10:14:35     23s] @(#)CDS: NanoRoute 23.14-s088_1 NR250219-0822/23_14-UB (database version 18.20.661) {superthreading v2.20}
+[10/31 10:14:35     23s] @(#)CDS: AAE 23.14-s018 (64bit) 02/28/2025 (Linux 3.10.0-693.el7.x86_64)
+[10/31 10:14:35     23s] @(#)CDS: CTE 23.14-s036_1 () Feb 22 2025 01:17:26 ( )
+[10/31 10:14:35     23s] @(#)CDS: SYNTECH 23.14-s010_1 () Feb 19 2025 23:56:49 ( )
+[10/31 10:14:35     23s] @(#)CDS: CPE v23.14-s082
+[10/31 10:14:35     23s] @(#)CDS: IQuantus/TQuantus 23.1.1-s336 (64bit) Mon Jan 20 22:11:00 PST 2025 (Linux 3.10.0-693.el7.x86_64)
+[10/31 10:14:35     23s] @(#)CDS: OA 22.61-p020 Fri Nov  1 12:14:48 2024
+[10/31 10:14:35     23s] @(#)CDS: SGN 23.10-d005 (03-Oct-2023) (64 bit executable, TkQt5.15.9)
+[10/31 10:14:35     23s] @(#)CDS: RCDB 11.15.0
+[10/31 10:14:35     23s] @(#)CDS: STYLUS 23.16-e002_1 (01/09/2025 16:47 PST)
+[10/31 10:14:35     23s] @(#)CDS: IntegrityPlanner-23.14-17034 (23.14) (2025-02-20 15:50:05+0800)
+[10/31 10:14:35     23s] @(#)CDS: SYNTHESIS_ENGINE 23.14-s090
+[10/31 10:14:35     23s] Create and set the environment variable TMPDIR to /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3.
+
+[10/31 10:14:42     24s] Change the soft stacksize limit to 0.2%RAM (31 mbytes). Set global soft_stack_size_limit to change the value.
+[10/31 10:14:43     25s] Info: Process UID = 57123 / e6a28762-2b9a-46d4-90df-c0ff342149ea / PAZk1OafsF
+[10/31 10:14:44     25s] 
+[10/31 10:14:44     25s] **INFO:  MMMC transition support version v31-84 
+[10/31 10:14:44     25s] 
+[10/31 10:14:44     25s] <CMD> set_global _enable_mmmc_by_default_flow      $CTE::mmmc_default
+[10/31 10:14:44     25s] <CMD> suppressMessage ENCEXT-2799
+[10/31 10:14:44     26s] <CMD> getVersion
+[10/31 10:14:46     26s] [INFO] Loading PVS 24.12 fill procedures
+[10/31 10:14:46     26s] **WARN: Tk package not loaded. The PVS fill DRC monitor is disabled.
+[10/31 10:14:46     27s] Sourcing file "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/scripts/inn_gap.tcl" ...
+[10/31 10:14:46     27s] source /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/scripts/inn_gap.tcl
+[10/31 10:14:46     27s] <CMD> setMultiCpuUsage -localCpu 2
+[10/31 10:14:46     27s] <CMD> restoreDesign /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat rv32i_cpu_top
+[10/31 10:14:46     27s] #% Begin load design ... (date=10/31 10:14:46, mem=1811.2M)
+[10/31 10:14:47     28s] Loading design 'rv32i_cpu_top' saved by 'Innovus' '23.14-s088_1' on 'Thu Oct 29 21:11:57 2026'.
+[10/31 10:14:47     28s] % Begin Load MMMC data ... (date=10/31 10:14:47, mem=1814.1M)
+[10/31 10:14:47     28s] % End Load MMMC data ... (date=10/31 10:14:47, total cpu=0:00:00.0, real=0:00:00.0, peak res=1814.6M, current mem=1814.6M)
+[10/31 10:14:47     28s] 
+[10/31 10:14:47     28s] Loading LEF file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/libs/lef/sky130_fd_sc_hd__nom.tlef ...
+[10/31 10:14:47     28s] 
+[10/31 10:14:47     28s] Loading LEF file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/libs/lef/sky130_fd_sc_hd.lef ...
+[10/31 10:14:47     28s] WARNING (LEFPARS-2008): NOWIREEXTENSIONATPIN statement is obsolete in version 5.6 or later.
+[10/31 10:14:47     28s] The NOWIREEXTENSIONATPIN statement will be ignored. See file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/libs/lef/sky130_fd_sc_hd.lef at line 2.
+[10/31 10:14:47     28s] **WARN: (IMPLF-108):	There is no overlap layer defined in any LEF file
+[10/31 10:14:47     28s] so you are unable to create rectilinear partition in a hierarchical flow.
+[10/31 10:14:47     28s] Set DBUPerIGU to M1 pitch 460.
+[10/31 10:14:47     28s] 
+[10/31 10:14:47     28s] Loading LEF file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/libs/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef ...
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[0]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[1]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[2]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[3]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[4]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[5]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[6]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[7]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[8]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[9]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[10]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[11]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[12]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[13]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[14]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[15]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[16]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[17]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[18]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-200):	Pin 'din0[19]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNAGATEAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-200' for more detail.
+[10/31 10:14:47     28s] **WARN: (EMS-27):	Message (IMPLF-200) has exceeded the current message display limit of 20.
+[10/31 10:14:47     28s] To increase the message display limit, refer to the product command reference manual.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[0]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[1]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[2]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[3]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[4]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[5]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[6]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[7]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[8]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[9]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[10]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[11]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[12]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[13]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[14]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[15]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[16]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[17]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[18]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (IMPLF-201):	Pin 'dout0[19]' in macro 'sky130_sram_1kbyte_1rw1r_32x256_8' has no ANTENNADIFFAREA value defined. The library data is incomplete and some process antenna rules will not be checked correctly.
+[10/31 10:14:47     28s] Type 'man IMPLF-201' for more detail.
+[10/31 10:14:47     28s] **WARN: (EMS-27):	Message (IMPLF-201) has exceeded the current message display limit of 20.
+[10/31 10:14:47     28s] To increase the message display limit, refer to the product command reference manual.
+[10/31 10:14:47     28s] 
+##  Check design process and node:  
+##  Both design process and tech node are not set.
+
+[10/31 10:14:47     28s] Loading view definition file from /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/viewDefinition.tcl
+[10/31 10:14:47     28s] Starting library reading in 'Multi-threaded flow' (with '2' threads)
+[10/31 10:14:48     28s] Reading lib_tt timing library /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib.
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__lpflow_decapkapwr_8'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__lpflow_decapkapwr_6'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__lpflow_decapkapwr_4'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__lpflow_decapkapwr_3'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__lpflow_decapkapwr_12'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__lpflow_bleeder_1'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__diode_2'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__decap_8'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__decap_6'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__decap_4'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__decap_3'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] **WARN: (TECHLIB-302):	No function defined for cell 'sky130_fd_sc_hd__decap_12'. The cell will only be used for analysis. (File /home/RD/ryan/pdk/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib)
+[10/31 10:14:48     28s] Read 428 cells in library sky130_fd_sc_hd__tt_025C_1v80.
+[10/31 10:14:48     28s] Reading lib_tt timing library /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib.
+[10/31 10:14:48     28s] Read 1 cells in library sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C_lib.
+[10/31 10:14:48     28s] Library reading multithread flow ended.
+[10/31 10:14:48     29s] Ending "PreSetAnalysisView" (total cpu=0:00:00.8, real=0:00:01.0, peak res=1920.3M, current mem=1839.2M)
+[10/31 10:14:48     29s] *** End library_loading (cpu=0.01min, real=0.02min, mem=224.1M, fe_cpu=0.49min, fe_real=0.45min, fe_mem=1944.4M) ***
+[10/31 10:14:48     29s] % Begin Load netlist data ... (date=10/31 10:14:48, mem=1839.2M)
+[10/31 10:14:48     29s] *** Begin netlist parsing (mem=1944.4M) ***
+[10/31 10:14:48     29s] Created 429 new cells from 2 timing libraries.
+[10/31 10:14:48     29s] Reading netlist ...
+[10/31 10:14:48     29s] Backslashed names will retain backslash and a trailing blank character.
+[10/31 10:14:48     29s] Reading verilogBinary netlist '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/vbin/rv32i_cpu_top.v.bin'
+[10/31 10:14:48     29s] Reading binary database version 2 in multi-threaded mode
+[10/31 10:14:48     29s] 
+[10/31 10:14:48     29s] *** Memory Usage v#2 (Current mem = 1944.355M, initial mem = 839.766M) ***
+[10/31 10:14:48     29s] *** End netlist parsing (cpu=0:00:00.1, real=0:00:00.0, mem=1944.4M) ***
+[10/31 10:14:48     29s] % End Load netlist data ... (date=10/31 10:14:48, total cpu=0:00:00.1, real=0:00:00.0, peak res=1857.8M, current mem=1857.8M)
+[10/31 10:14:48     29s] Set top cell to rv32i_cpu_top.
+[10/31 10:14:48     29s] Hooked 429 DB cells to tlib cells.
+[10/31 10:14:48     29s] Ending "BindLib:" (total cpu=0:00:00.0, real=0:00:00.0, peak res=1861.5M, current mem=1861.5M)
+[10/31 10:14:48     29s] Starting recursive module instantiation check.
+[10/31 10:14:48     29s] No recursion found.
+[10/31 10:14:48     29s] Building hierarchical netlist for Cell rv32i_cpu_top ...
+[10/31 10:14:48     29s] ***** UseNewTieNetMode *****.
+[10/31 10:14:48     29s] *** Netlist is unique.
+[10/31 10:14:48     29s] Setting Std. cell height to 2720 DBU (smallest netlist inst).
+[10/31 10:14:48     29s] ** info: there are 442 modules.
+[10/31 10:14:48     29s] ** info: there are 35076 stdCell insts.
+[10/31 10:14:48     29s] ** info: there are 35076 stdCell insts with at least one signal pin.
+[10/31 10:14:48     29s] ** info: there are 10 macros.
+[10/31 10:14:48     29s] 
+[10/31 10:14:48     29s] *** Memory Usage v#2 (Current mem = 1944.355M, initial mem = 839.766M) ***
+[10/31 10:14:48     29s] *info: set bottom ioPad orient R0
+[10/31 10:14:48     29s] Adjust met3 preferred direction offset from 0.34 to 0.17.
+[10/31 10:14:48     29s] Adjust met4 preferred direction offset from 0.46 to 0.23.
+[10/31 10:14:48     29s] Adjust met5 preferred direction offset from 1.7 to 0.17.
+[10/31 10:14:48     29s] Start create_tracks
+[10/31 10:14:48     29s] Generated pitch 3.66 in met5 is different from 3.4 defined in technology file in preferred direction.
+[10/31 10:14:48     29s] Generated pitch 0.69 in met4 is different from 0.92 defined in technology file in preferred direction.
+[10/31 10:14:48     29s] Generated pitch 0.61 in met3 is different from 0.68 defined in technology file in preferred direction.
+[10/31 10:14:48     29s] ##  Process: 130           (User Set)               
+[10/31 10:14:48     29s] ##     Node: (not set)                           
+[10/31 10:14:48     29s] 
+##  Check design process and node:  
+##  Design tech node is not set.
+
+[10/31 10:14:48     29s] Applying the recommended capacitance filtering threshold values for 130nm process node: total_c_th=0, relative_c_th=1 and coupling_c_th=0.4.
+[10/31 10:14:48     29s] 	These values will be used by all post-route extraction engines, including TQuantus, IQuantus and Quantus QRC extraction.
+[10/31 10:14:48     29s] 	Capacitance filtering mode(-capFilterMode option of the setExtractRCMode) is 'relAndCoup' for all engines.
+[10/31 10:14:48     29s] 	The accuracy mode for postRoute effortLevel low extraction will be set to 'standard'.
+[10/31 10:14:48     29s] 	Default value for EffortLevel(-effortLevel option of the setExtractRCMode) in postRoute extraction mode is 'low'.
+[10/31 10:14:48     29s] **WARN: (IMPOPT-3602):	The specified path group name tdgp_reg2reg_default is not defined.
+[10/31 10:14:48     29s] Type 'man IMPOPT-3602' for more detail.
+[10/31 10:14:48     29s] Effort level <high> specified for tdgp_reg2reg_default path_group
+[10/31 10:14:48     29s] Slack adjustment of -0 applied on tdgp_reg2reg_default path_group
+[10/31 10:14:48     29s] **WARN: (IMPTCM-77):	Option "-drouteStartIteration" for command setNanoRouteMode is obsolete and will be removed in a future release. The obsolete option still works in this release but to avoid this warning and to ensure compatibility with future releases, remove the obsolete option from your script.
+[10/31 10:14:48     29s] #WARNING (NRIF-90) Option setNanoRouteMode -route_bottom_routing_layer is obsolete. It will continue to work for the current release. To ensure compatibility with future releases, use option setDesignMode -bottomRoutingLayer instead.
+[10/31 10:14:48     29s] #WARNING (NRIF-91) Option setNanoRouteMode -route_top_routing_layer is obsolete. It will continue to work for the current release. To ensure compatibility with future releases, use option setDesignMode -topRoutingLayer instead.
+[10/31 10:14:48     29s] AAE_INFO: switching setDelayCal -siAware from false to true ...
+[10/31 10:14:48     29s] AAE_INFO: The setting is changed from false to true in setDelayCalMode -SIAware
+[10/31 10:14:48     29s] addStripe will not break automatically at non-default domains when generating global stripes over the core area or default domain.
+[10/31 10:14:48     29s] Extraction setup Delayed 
+[10/31 10:14:48     29s] *Info: initialize multi-corner CTS.
+[10/31 10:14:49     30s] Ending "SetAnalysisView" (total cpu=0:00:00.1, real=0:00:01.0, peak res=2170.2M, current mem=1928.7M)
+[10/31 10:14:49     30s] Tech dependent Parameter, Build TLibAnalyzer for: cellAreaConsiderPadding
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Creating Cell Server ...(0, 1, 1, 1) in restoreDesign Begin ...
+[10/31 10:14:49     30s] Summary for sequential cells identification: 
+[10/31 10:14:49     30s]   Identified SBFF number: 45
+[10/31 10:14:49     30s]   Identified MBFF number: 0
+[10/31 10:14:49     30s]   Identified SB Latch number: 17
+[10/31 10:14:49     30s]   Identified MB Latch number: 0
+[10/31 10:14:49     30s]   Not identified SBFF number: 0
+[10/31 10:14:49     30s]   Not identified MBFF number: 0
+[10/31 10:14:49     30s]   Not identified SB Latch number: 0
+[10/31 10:14:49     30s]   Not identified MB Latch number: 0
+[10/31 10:14:49     30s]   Number of sequential cells which are not FFs: 6
+[10/31 10:14:49     30s] Total number of combinational cells: 319
+[10/31 10:14:49     30s] Total number of sequential cells: 68
+[10/31 10:14:49     30s] Total number of tristate cells: 13
+[10/31 10:14:49     30s] Total number of level shifter cells: 7
+[10/31 10:14:49     30s] Total number of power gating cells: 0
+[10/31 10:14:49     30s] Total number of isolation cells: 11
+[10/31 10:14:49     30s] Total number of power switch cells: 0
+[10/31 10:14:49     30s] Total number of pulse generator cells: 0
+[10/31 10:14:49     30s] Total number of always on buffers: 0
+[10/31 10:14:49     30s] Total number of retention cells: 0
+[10/31 10:14:49     30s] Total number of physical cells: 10
+[10/31 10:14:49     30s] List of usable buffers: sky130_fd_sc_hd__buf_1 sky130_fd_sc_hd__buf_12 sky130_fd_sc_hd__buf_16 sky130_fd_sc_hd__buf_2 sky130_fd_sc_hd__buf_4 sky130_fd_sc_hd__buf_6 sky130_fd_sc_hd__buf_8 sky130_fd_sc_hd__clkbuf_1 sky130_fd_sc_hd__clkbuf_16 sky130_fd_sc_hd__clkbuf_2 sky130_fd_sc_hd__clkbuf_4 sky130_fd_sc_hd__clkbuf_8 sky130_fd_sc_hd__dlymetal6s2s_1 sky130_fd_sc_hd__probec_p_8 sky130_fd_sc_hd__probe_p_8
+[10/31 10:14:49     30s] Total number of usable buffers: 15
+[10/31 10:14:49     30s] List of unusable buffers:
+[10/31 10:14:49     30s] Total number of unusable buffers: 0
+[10/31 10:14:49     30s] List of usable inverters: sky130_fd_sc_hd__bufinv_16 sky130_fd_sc_hd__clkinv_1 sky130_fd_sc_hd__bufinv_8 sky130_fd_sc_hd__clkinv_16 sky130_fd_sc_hd__clkinv_2 sky130_fd_sc_hd__clkinv_4 sky130_fd_sc_hd__clkinv_8 sky130_fd_sc_hd__inv_1 sky130_fd_sc_hd__clkinvlp_2 sky130_fd_sc_hd__clkinvlp_4 sky130_fd_sc_hd__inv_12 sky130_fd_sc_hd__inv_16 sky130_fd_sc_hd__inv_2 sky130_fd_sc_hd__inv_4 sky130_fd_sc_hd__inv_6 sky130_fd_sc_hd__inv_8
+[10/31 10:14:49     30s] Total number of usable inverters: 16
+[10/31 10:14:49     30s] List of unusable inverters:
+[10/31 10:14:49     30s] Total number of unusable inverters: 0
+[10/31 10:14:49     30s] List of identified usable delay cells: sky130_fd_sc_hd__bufbuf_16 sky130_fd_sc_hd__bufbuf_8 sky130_fd_sc_hd__clkdlybuf4s15_1 sky130_fd_sc_hd__clkdlybuf4s15_2 sky130_fd_sc_hd__clkdlybuf4s18_1 sky130_fd_sc_hd__clkdlybuf4s18_2 sky130_fd_sc_hd__clkdlybuf4s25_1 sky130_fd_sc_hd__clkdlybuf4s50_1 sky130_fd_sc_hd__clkdlybuf4s25_2 sky130_fd_sc_hd__clkdlybuf4s50_2 sky130_fd_sc_hd__dlygate4sd2_1 sky130_fd_sc_hd__dlygate4sd1_1 sky130_fd_sc_hd__dlygate4sd3_1 sky130_fd_sc_hd__dlymetal6s6s_1 sky130_fd_sc_hd__dlymetal6s4s_1
+[10/31 10:14:49     30s] Total number of identified usable delay cells: 15
+[10/31 10:14:49     30s] List of identified unusable delay cells:
+[10/31 10:14:49     30s] Total number of identified unusable delay cells: 0
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Creating Cell Server ...(0, 1, 1, 1) in restoreDesign End ...
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Deleting Cell Server Begin ...
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Deleting Cell Server End ...
+[10/31 10:14:49     30s] Ending "Cell type marking" (total cpu=0:00:00.0, real=0:00:00.0, peak res=2185.7M, current mem=2185.6M)
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Creating Cell Server ...(0, 0, 0, 0) in restoreDesign Begin ...
+[10/31 10:14:49     30s] Summary for sequential cells identification: 
+[10/31 10:14:49     30s]   Identified SBFF number: 45
+[10/31 10:14:49     30s]   Identified MBFF number: 0
+[10/31 10:14:49     30s]   Identified SB Latch number: 17
+[10/31 10:14:49     30s]   Identified MB Latch number: 0
+[10/31 10:14:49     30s]   Not identified SBFF number: 0
+[10/31 10:14:49     30s]   Not identified MBFF number: 0
+[10/31 10:14:49     30s]   Not identified SB Latch number: 0
+[10/31 10:14:49     30s]   Not identified MB Latch number: 0
+[10/31 10:14:49     30s]   Number of sequential cells which are not FFs: 6
+[10/31 10:14:49     30s]  Visiting view : av_tt
+[10/31 10:14:49     30s]    : PowerDomain = none : Weighted F : unweighted  = 42.50 (1.000) with rcCorner = 0
+[10/31 10:14:49     30s]    : PowerDomain = none : Weighted F : unweighted  = 32.60 (1.000) with rcCorner = -1
+[10/31 10:14:49     30s]  Visiting view : av_tt
+[10/31 10:14:49     30s]    : PowerDomain = none : Weighted F : unweighted  = 42.50 (1.000) with rcCorner = 0
+[10/31 10:14:49     30s]    : PowerDomain = none : Weighted F : unweighted  = 32.60 (1.000) with rcCorner = -1
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Creating Cell Server ...(0, 0, 0, 0) in restoreDesign End ...
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Deleting Cell Server Begin ...
+[10/31 10:14:49     30s] 
+[10/31 10:14:49     30s] TimeStamp Deleting Cell Server End ...
+[10/31 10:14:49     30s] Reading floorplan file - /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.fp.gz (mem = 2136.9M).
+[10/31 10:14:49     30s] % Begin Load floorplan data ... (date=10/31 10:14:49, mem=2187.4M)
+[10/31 10:14:49     30s] *info: reset 37650 existing net BottomPreferredLayer and AvoidDetour
+[10/31 10:14:49     30s] Deleting old partition specification.
+[10/31 10:14:49     30s] Set FPlanBox to (0 0 3600000 1800000)
+[10/31 10:14:49     30s]  ... processed partition successfully.
+[10/31 10:14:49     30s] Reading binary special route file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.fp.spr.gz (Created by Innovus v23.14-s088_1 on Thu Oct 29 21:11:56 2026, version: 1)
+[10/31 10:14:49     30s] Ending "Read special route file" (total cpu=0:00:00.0, real=0:00:00.0, peak res=2188.0M, current mem=2188.0M)
+[10/31 10:14:49     30s] There are 253 nets with weight being set
+[10/31 10:14:49     30s] There are 287 nets with bottomPreferredRoutingLayer being set
+[10/31 10:14:49     30s] There are 253 nets with avoidDetour being set
+[10/31 10:14:49     30s] Extracting standard cell pins and blockage ...... 
+[10/31 10:14:49     30s] Pin and blockage extraction finished
+[10/31 10:14:49     30s] % End Load floorplan data ... (date=10/31 10:14:49, total cpu=0:00:00.1, real=0:00:00.0, peak res=2190.3M, current mem=2190.2M)
+[10/31 10:14:49     30s] Reading congestion map file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.route.congmap.gz ...
+[10/31 10:14:49     30s] % Begin Load SymbolTable ... (date=10/31 10:14:49, mem=2190.2M)
+[10/31 10:14:49     30s] Suppress "**WARN ..." messages.
+[10/31 10:14:49     30s] routingBox: (230 170) (3599730 1799790)
+[10/31 10:14:49     30s] coreBox:    (20240 24480) (3579720 1778880)
+[10/31 10:14:49     30s] Un-suppress "**WARN ..." messages.
+[10/31 10:14:49     30s] % End Load SymbolTable ... (date=10/31 10:14:49, total cpu=0:00:00.3, real=0:00:00.0, peak res=2231.1M, current mem=2231.1M)
+[10/31 10:14:49     30s] Loading place ...
+[10/31 10:14:49     30s] % Begin Load placement data ... (date=10/31 10:14:49, mem=2231.1M)
+[10/31 10:14:49     30s] Reading placement file - /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.place.gz.
+[10/31 10:14:49     30s] ** Reading stdCellPlacement_binary (Created by Innovus v23.14-s088_1 on Thu Oct 29 21:11:56 2026, version# 2) ...
+[10/31 10:14:51     31s] Read Views for adaptive view pruning ...
+[10/31 10:14:51     31s] Read 0 views from Binary DB for adaptive view pruning
+[10/31 10:14:51     31s] *** applyConnectGlobalNets disabled.
+[10/31 10:14:51     31s] *** Completed restorePlace (cpu=0:00:01.2 real=0:00:02.0 mem=2271.4M) ***
+[10/31 10:14:51     31s] Total net length = 6.281e+06 (3.781e+06 2.500e+06) (ext = 1.084e+06)
+[10/31 10:14:51     31s] % End Load placement data ... (date=10/31 10:14:51, total cpu=0:00:01.2, real=0:00:02.0, peak res=2331.4M, current mem=2328.6M)
+[10/31 10:14:51     31s] Reading PG file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.pg.gz, version#2, (Created by Innovus v23.14-s088_1 on       Thu Oct 29 21:11:56 2026)
+[10/31 10:14:51     32s] *** Completed restorePGFile (cpu=0:00:00.1 real=0:00:00.0 mem=2281.4M) ***
+[10/31 10:14:51     32s] % Begin Load routing data ... (date=10/31 10:14:51, mem=2342.3M)
+[10/31 10:14:51     32s] Reading routing file - /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.route.gz.
+[10/31 10:14:51     32s] Reading Innovus routing data (Created by Innovus v23.14-s088_1 on Thu Oct 29 21:11:56 2026 Format: 23.1) ...
+[10/31 10:14:51     32s] *** Total 35895 nets are successfully restored.
+[10/31 10:14:51     32s] *** Completed restoreRoute (cpu=0:00:00.3 real=0:00:00.0 mem=2364.4M) ***
+[10/31 10:14:51     32s] % End Load routing data ... (date=10/31 10:14:51, total cpu=0:00:00.3, real=0:00:00.0, peak res=2427.5M, current mem=2427.2M)
+[10/31 10:14:51     32s] Loading Drc markers ...
+[10/31 10:14:51     32s] ... 35 markers are loaded ...
+[10/31 10:14:51     32s] ... 0 geometry drc markers are loaded ...
+[10/31 10:14:51     32s] ... 4 antenna drc markers are loaded ...
+[10/31 10:14:51     32s] TAT_INFO: ::restoreCongMap REAL = 0 : CPU = 0 : MEM = 0.
+[10/31 10:14:51     32s] Reading property file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.prop
+[10/31 10:14:51     32s] *** Completed restoreProperty (cpu=0:00:00.0 real=0:00:00.0 mem=2369.4M) ***
+[10/31 10:14:51     32s] Reading dirtyarea snapshot file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/rv32i_cpu_top.db.da.gz (Create by Innovus v23.14-s088_1 on Thu Oct 29 21:11:57 2026, version: 7).
+[10/31 10:14:52     33s] eee: Design meta data file: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b5g_innovus/dbs/06_finish.enc.dat/extraction/extractionMetaData.gz doesn't exist
+[10/31 10:14:52     33s] Extraction setup Started for TopCell rv32i_cpu_top 
+[10/31 10:14:52     33s] Initializing multi-corner RC extraction with 1 active RC Corners ...
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2773):	The via resistance between layers POLY and M1 could not be determined from the LEF technology file because the via resistance specification is missing. A default of 4 Ohms will be used as via resistance between these layers.
+[10/31 10:14:52     33s] Type 'man IMPEXT-2773' for more detail.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2773):	The via resistance between layers M1 and M2 could not be determined from the LEF technology file because the via resistance specification is missing. A default of 4 Ohms will be used as via resistance between these layers.
+[10/31 10:14:52     33s] Type 'man IMPEXT-2773' for more detail.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2773):	The via resistance between layers M2 and M3 could not be determined from the LEF technology file because the via resistance specification is missing. A default of 4 Ohms will be used as via resistance between these layers.
+[10/31 10:14:52     33s] Type 'man IMPEXT-2773' for more detail.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2773):	The via resistance between layers M3 and M4 could not be determined from the LEF technology file because the via resistance specification is missing. A default of 4 Ohms will be used as via resistance between these layers.
+[10/31 10:14:52     33s] Type 'man IMPEXT-2773' for more detail.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2773):	The via resistance between layers M4 and M5 could not be determined from the LEF technology file because the via resistance specification is missing. A default of 4 Ohms will be used as via resistance between these layers.
+[10/31 10:14:52     33s] Type 'man IMPEXT-2773' for more detail.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2773):	The via resistance between layers M5 and M6 could not be determined from the LEF technology file because the via resistance specification is missing. A default of 4 Ohms will be used as via resistance between these layers.
+[10/31 10:14:52     33s] Type 'man IMPEXT-2773' for more detail.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2766):	The sheet resistance for layer M1 is not defined in the cap table. Therefore, the LEF value 12.8 will be used instead. To avoid this message, update the relevant cap table to include the sheet resistance for the specified layer and read it back in.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2766):	The sheet resistance for layer M2 is not defined in the cap table. Therefore, the LEF value 0.125 will be used instead. To avoid this message, update the relevant cap table to include the sheet resistance for the specified layer and read it back in.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2766):	The sheet resistance for layer M3 is not defined in the cap table. Therefore, the LEF value 0.125 will be used instead. To avoid this message, update the relevant cap table to include the sheet resistance for the specified layer and read it back in.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2766):	The sheet resistance for layer M4 is not defined in the cap table. Therefore, the LEF value 0.047 will be used instead. To avoid this message, update the relevant cap table to include the sheet resistance for the specified layer and read it back in.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2766):	The sheet resistance for layer M5 is not defined in the cap table. Therefore, the LEF value 0.047 will be used instead. To avoid this message, update the relevant cap table to include the sheet resistance for the specified layer and read it back in.
+[10/31 10:14:52     33s] **WARN: (IMPEXT-2766):	The sheet resistance for layer M6 is not defined in the cap table. Therefore, the LEF value 0.0285 will be used instead. To avoid this message, update the relevant cap table to include the sheet resistance for the specified layer and read it back in.
+[10/31 10:14:52     33s] Summary of Active RC-Corners : 
+[10/31 10:14:52     33s]  
+[10/31 10:14:52     33s]  Analysis View: av_tt
+[10/31 10:14:52     33s]     RC-Corner Name        : rc_nom
+[10/31 10:14:52     33s]     RC-Corner Index       : 0
+[10/31 10:14:52     33s]     RC-Corner Temperature : 25 Celsius
+[10/31 10:14:52     33s]     RC-Corner Cap Table   : ''
+[10/31 10:14:52     33s]     RC-Corner PreRoute Res Factor         : 1
+[10/31 10:14:52     33s]     RC-Corner PreRoute Cap Factor         : 1
+[10/31 10:14:52     33s]     RC-Corner PostRoute Res Factor        : 1 {1 1 1}
+[10/31 10:14:52     33s]     RC-Corner PostRoute Cap Factor        : 1 {1 1 1}
+[10/31 10:14:52     33s]     RC-Corner PostRoute XCap Factor       : 1 {1 1 1}
+[10/31 10:14:52     33s]     RC-Corner PreRoute Clock Res Factor   : 1	[Derived from Cap Table]
+[10/31 10:14:52     33s]     RC-Corner PreRoute Clock Cap Factor   : 1	[Derived from Cap Table]
+[10/31 10:14:52     33s]     RC-Corner PostRoute Clock Cap Factor  : 1 {1 1 1} 	[Derived from postRoute_cap (effortLevel low)]
+[10/31 10:14:52     33s]     RC-Corner PostRoute Clock Res Factor  : 1 {1 1 1} 	[Derived from postRoute_res (effortLevel low)]
+[10/31 10:14:52     33s]     RC-Corner PostRoute Clock coupling capacitance Factor : 1 {1 1 1} 
+[10/31 10:14:52     33s] eee: RC Grid memory allocated = 656064 (134 X 68 X 6 X 12b)
+[10/31 10:14:53     33s] eee: pegSigSF=1.070000
+[10/31 10:14:53     33s] Initializing multi-corner resistance tables ...
+[10/31 10:14:53     33s] eee: Grid unit RC data computation started
+[10/31 10:14:53     33s] eee: Grid unit RC data computation completed
+[10/31 10:14:53     33s] eee: l=1 avDens=0.000000 usedTrk=0.000000 availTrk=0.000000 sigTrk=0.000000
+[10/31 10:14:53     33s] eee: l=2 avDens=0.293269 usedTrk=147909.651770 availTrk=504348.242278 sigTrk=147909.651770
+[10/31 10:14:53     33s] eee: l=3 avDens=0.237314 usedTrk=79554.156933 availTrk=335226.918061 sigTrk=79554.156933
+[10/31 10:14:53     33s] eee: l=4 avDens=0.338030 usedTrk=64006.643541 availTrk=189351.737654 sigTrk=64006.643541
+[10/31 10:14:53     33s] eee: l=5 avDens=0.187735 usedTrk=23589.319462 availTrk=125652.388312 sigTrk=23590.883729
+[10/31 10:14:53     33s] eee: l=6 avDens=0.085418 usedTrk=5235.810305 availTrk=61296.000000 sigTrk=5235.810305
+[10/31 10:14:53     33s] eee: LAM-FP: thresh=1 ; dimX=10588.235294 ; dimY=5294.117647 ; multX=1.000000 ; multY=1.000000 ; minP=340 ; fpMult=1.000000 ;
+[10/31 10:14:53     33s] eee: LAM: n=40 LLS=2-3 HLS=3-5 rDens=0.460178 uaWl=0.998744 uaWlH=0.339400 aWlH=0.001200 lMod=0 pMax=0.891000 pMod=79 pModAss=50 wcR=0.333300 crit=0.003600 siPrev=0 newSi=0.001600 wHLS=1.000000 viaL=0.000000 shortMod=0.018002 fModUnas=0.000900 fModAs=0.000900 pDens=0.500000 
+[10/31 10:14:53     33s] eee: uR 0.000764 of RC Grid (0 0 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000764 of RC Grid (0 1 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (0 3 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (0 6 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000770 of RC Grid (0 20 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000800 of RC Grid (0 41 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000803 of RC Grid (0 43 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (0 44 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000793 of RC Grid (0 46 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000780 of RC Grid (0 51 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000768 of RC Grid (0 54 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (0 55 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000771 of RC Grid (0 57 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000798 of RC Grid (0 59 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000777 of RC Grid (0 61 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000785 of RC Grid (0 62 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000781 of RC Grid (0 64 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (0 65 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (0 66 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000803 of RC Grid (1 0 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 1 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 3 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 4 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 5 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 6 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 7 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 8 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 9 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000786 of RC Grid (1 10 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 11 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 12 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000799 of RC Grid (1 23 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000766 of RC Grid (1 29 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000801 of RC Grid (1 31 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 41 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000786 of RC Grid (1 42 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 43 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000764 of RC Grid (1 44 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000794 of RC Grid (1 45 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 46 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 47 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000765 of RC Grid (1 48 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000768 of RC Grid (1 49 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000788 of RC Grid (1 50 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 51 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 52 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 53 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 54 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000784 of RC Grid (1 55 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 56 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000796 of RC Grid (1 57 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000791 of RC Grid (1 58 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000779 of RC Grid (1 60 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 61 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 62 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000769 of RC Grid (1 63 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000787 of RC Grid (1 64 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (1 66 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 1 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000801 of RC Grid (2 2 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 3 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 4 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000783 of RC Grid (2 5 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 6 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000781 of RC Grid (2 7 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000765 of RC Grid (2 8 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 9 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 10 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 11 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000785 of RC Grid (2 12 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000780 of RC Grid (2 23 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000789 of RC Grid (2 26 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000772 of RC Grid (2 27 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000769 of RC Grid (2 28 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 29 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000776 of RC Grid (2 31 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000767 of RC Grid (2 32 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000782 of RC Grid (2 40 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000771 of RC Grid (2 41 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000766 of RC Grid (2 43 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000764 of RC Grid (2 44 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000777 of RC Grid (2 45 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 46 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 47 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000774 of RC Grid (2 48 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000796 of RC Grid (2 49 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000797 of RC Grid (2 51 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000798 of RC Grid (2 53 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000777 of RC Grid (2 54 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000790 of RC Grid (2 55 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000802 of RC Grid (2 56 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000794 of RC Grid (2 58 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000793 of RC Grid (2 60 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 61 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000798 of RC Grid (2 63 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000790 of RC Grid (2 64 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (2 66 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000767 of RC Grid (3 1 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000766 of RC Grid (3 2 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000763 of RC Grid (3 3 2) is < min uR 0.000804 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000175 of RC Grid (0 2 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000175 of RC Grid (0 13 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000179 of RC Grid (0 15 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000189 of RC Grid (0 18 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000220 of RC Grid (0 21 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000183 of RC Grid (0 22 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000201 of RC Grid (0 23 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000245 of RC Grid (0 24 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000219 of RC Grid (0 25 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000239 of RC Grid (0 26 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000227 of RC Grid (0 27 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000190 of RC Grid (0 28 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000191 of RC Grid (0 29 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000243 of RC Grid (0 30 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000225 of RC Grid (0 32 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000187 of RC Grid (0 34 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000190 of RC Grid (0 36 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000184 of RC Grid (0 37 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000200 of RC Grid (0 45 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000173 of RC Grid (1 21 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000179 of RC Grid (2 16 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000183 of RC Grid (2 17 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000186 of RC Grid (2 21 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000175 of RC Grid (3 16 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (3 34 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000186 of RC Grid (3 36 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000173 of RC Grid (4 18 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000189 of RC Grid (4 36 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (4 37 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000179 of RC Grid (5 36 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000176 of RC Grid (5 37 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (5 38 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000172 of RC Grid (5 66 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (6 35 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000182 of RC Grid (6 36 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000173 of RC Grid (6 44 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000178 of RC Grid (6 45 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000175 of RC Grid (6 66 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000177 of RC Grid (7 35 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (7 44 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (7 45 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000178 of RC Grid (7 46 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000181 of RC Grid (7 52 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000172 of RC Grid (8 43 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (9 18 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000189 of RC Grid (9 43 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000185 of RC Grid (9 44 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000178 of RC Grid (9 47 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000176 of RC Grid (9 60 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000179 of RC Grid (9 61 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (10 18 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (10 34 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000177 of RC Grid (10 43 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000192 of RC Grid (10 44 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000190 of RC Grid (10 47 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000179 of RC Grid (10 49 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000182 of RC Grid (10 50 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000178 of RC Grid (10 57 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000173 of RC Grid (10 63 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000189 of RC Grid (10 64 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000186 of RC Grid (11 18 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (11 34 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000193 of RC Grid (11 41 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000188 of RC Grid (11 42 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000184 of RC Grid (11 43 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000188 of RC Grid (11 44 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000184 of RC Grid (11 46 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000209 of RC Grid (11 47 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000197 of RC Grid (11 48 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000184 of RC Grid (11 49 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000179 of RC Grid (11 50 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000190 of RC Grid (11 57 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000177 of RC Grid (11 62 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (11 63 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000178 of RC Grid (12 18 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000177 of RC Grid (12 36 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000175 of RC Grid (12 40 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (12 41 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (12 42 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (12 43 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000181 of RC Grid (12 44 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000192 of RC Grid (12 45 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000198 of RC Grid (12 47 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000199 of RC Grid (12 48 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (12 49 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000181 of RC Grid (12 51 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000194 of RC Grid (12 53 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (12 59 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000186 of RC Grid (12 62 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000180 of RC Grid (12 64 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000173 of RC Grid (13 18 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000181 of RC Grid (13 36 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000182 of RC Grid (13 37 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000189 of RC Grid (13 38 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000192 of RC Grid (13 39 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000187 of RC Grid (13 40 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000183 of RC Grid (13 41 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000195 of RC Grid (13 42 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000174 of RC Grid (13 43 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uR 0.000183 of RC Grid (13 44 4) is > max uR 0.000172 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 2 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 3 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 4 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 5 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 7 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 8 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 9 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 10 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 11 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000120 of RC Grid (132 12 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 13 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 14 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 15 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 17 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 18 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 19 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 20 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 21 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 22 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 23 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 24 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 25 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 26 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 27 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 28 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 29 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 30 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000130 of RC Grid (132 31 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 32 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 35 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 36 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000123 of RC Grid (132 38 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (132 39 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 41 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (132 43 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000121 of RC Grid (132 44 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000127 of RC Grid (132 45 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000125 of RC Grid (132 46 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000122 of RC Grid (132 48 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000128 of RC Grid (132 50 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000130 of RC Grid (132 54 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (132 55 4) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000118 of RC Grid (4 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000121 of RC Grid (4 66 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000123 of RC Grid (6 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000127 of RC Grid (6 66 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000119 of RC Grid (8 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000124 of RC Grid (8 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000125 of RC Grid (9 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000127 of RC Grid (9 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (9 65 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000127 of RC Grid (10 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000121 of RC Grid (11 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000129 of RC Grid (11 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000132 of RC Grid (12 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000132 of RC Grid (12 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000129 of RC Grid (13 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000122 of RC Grid (14 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000128 of RC Grid (14 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000125 of RC Grid (16 33 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000126 of RC Grid (26 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000123 of RC Grid (27 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000122 of RC Grid (28 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (28 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000121 of RC Grid (29 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000132 of RC Grid (29 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000124 of RC Grid (30 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (30 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000128 of RC Grid (30 33 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000126 of RC Grid (30 65 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000129 of RC Grid (31 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000130 of RC Grid (31 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000126 of RC Grid (32 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000127 of RC Grid (32 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000128 of RC Grid (33 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000132 of RC Grid (33 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000128 of RC Grid (34 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (34 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000129 of RC Grid (35 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000124 of RC Grid (36 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000126 of RC Grid (36 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (37 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000132 of RC Grid (37 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000124 of RC Grid (38 33 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (38 65 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000127 of RC Grid (40 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000124 of RC Grid (40 66 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000124 of RC Grid (41 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000128 of RC Grid (52 66 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000125 of RC Grid (53 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000127 of RC Grid (54 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000126 of RC Grid (56 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000125 of RC Grid (56 15 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000129 of RC Grid (56 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000133 of RC Grid (57 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000128 of RC Grid (57 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000130 of RC Grid (58 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000131 of RC Grid (58 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000125 of RC Grid (59 0 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: uC 0.000129 of RC Grid (59 19 5) is <  min uC 0.000133 of layer.
+[10/31 10:14:53     33s] eee: dbu = 1000, Design = [ll(0.000000, 0.000000) ur(3600.000000, 1800.000000)], Layers = [f(6) b(0)], Grid size = 27.200000 um, Grid Dim = (133 X 67)
+[10/31 10:14:53     33s] eee: Metal Layers Info:
+[10/31 10:14:53     33s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:14:53     33s] eee: |   Layer  |  Id |    W    |    S    |    P    |   uC   |   uR   | D | T | wS |
+[10/31 10:14:53     33s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:14:53     33s] eee: |      li1 |   1 |   0.170 |   0.170 |   0.460 |  0.000 |  75.29 | V | 0 |  1 |
+[10/31 10:14:53     33s] eee: |     met1 |   2 |   0.140 |   0.140 |   0.340 |  0.000 |   0.89 | H | 0 |  1 |
+[10/31 10:14:53     33s] eee: |     met2 |   3 |   0.140 |   0.140 |   0.460 |  0.000 |   0.89 | V | 0 |  1 |
+[10/31 10:14:53     33s] eee: |     met3 |   4 |   0.300 |   0.300 |   0.680 |  0.000 |   0.16 | H | 0 |  1 |
+[10/31 10:14:53     33s] eee: |     met4 |   5 |   0.300 |   0.300 |   0.920 |  0.000 |   0.16 | V | 0 |  1 |
+[10/31 10:14:53     33s] eee: |     met5 |   6 |   1.600 |   1.600 |   3.400 |  0.000 |   0.02 | H | 0 |  1 |
+[10/31 10:14:53     33s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:14:53     33s] eee: uC/uR for corner rc_nom, min-width/min-spacing, 30 perc over/under densities.
+[10/31 10:14:53     33s] eee: +-----------------------NDR Info-----------------------+
+[10/31 10:14:53     33s] eee: NDR Count = 0, Fake NDR = 0
+[10/31 10:14:53     33s] Start generating vias ..
+[10/31 10:14:53     33s] ### import design signature (1): route=1 fixed_route=1 flt_obj=0 vio=1905142130 swire=1 shield_wire=1 net_attr=1 dirty_area=0 del_dirty_area=0 cell=0 placement=0 pin_access=1 inst_pattern=1 inst_orient=1 via=1482772860 routing_via=1 timing=1 sns=1 ppa_info=1
+[10/31 10:14:53     33s] #Skip building auto via since it is not turned on.
+[10/31 10:14:53     33s] Extracting standard cell pins and blockage ...... 
+[10/31 10:14:53     33s] Pin and blockage extraction finished
+[10/31 10:14:53     33s] Via generation completed.
+[10/31 10:14:53     33s] % Begin Load power constraints ... (date=10/31 10:14:53, mem=2456.5M)
+[10/31 10:14:53     33s] % End Load power constraints ... (date=10/31 10:14:53, total cpu=0:00:00.0, real=0:00:00.0, peak res=2462.6M, current mem=2462.6M)
+[10/31 10:14:53     33s] % Begin load AAE data ... (date=10/31 10:14:53, mem=2500.8M)
+[10/31 10:14:53     34s] **WARN: (IMPESI-3505):	setDelayCalMode -eng_enablePrePlacedFlow false (default=false) will be obsoleted along with its sgs2set equivalent.  This parameter will continue to be supported in the current release, but will be removed in the next major release of the software.
+[10/31 10:14:53     34s] AAE DB initialization (MEM=2511.785156 CPU=0:00:00.0 REAL=0:00:00.0) 
+[10/31 10:14:53     34s] % End load AAE data ... (date=10/31 10:14:53, total cpu=0:00:00.3, real=0:00:00.0, peak res=2511.8M, current mem=2511.8M)
+[10/31 10:14:53     34s] Restoring CCOpt config...
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Creating Cell Server ...(0, 0, 0, 0) in restoreDesign Begin ...
+[10/31 10:14:53     34s] Summary for sequential cells identification: 
+[10/31 10:14:53     34s]   Identified SBFF number: 45
+[10/31 10:14:53     34s]   Identified MBFF number: 0
+[10/31 10:14:53     34s]   Identified SB Latch number: 17
+[10/31 10:14:53     34s]   Identified MB Latch number: 0
+[10/31 10:14:53     34s]   Not identified SBFF number: 0
+[10/31 10:14:53     34s]   Not identified MBFF number: 0
+[10/31 10:14:53     34s]   Not identified SB Latch number: 0
+[10/31 10:14:53     34s]   Not identified MB Latch number: 0
+[10/31 10:14:53     34s]   Number of sequential cells which are not FFs: 6
+[10/31 10:14:53     34s]  Visiting view : av_tt
+[10/31 10:14:53     34s]    : PowerDomain = none : Weighted F : unweighted  = 42.50 (1.000) with rcCorner = 0
+[10/31 10:14:53     34s]    : PowerDomain = none : Weighted F : unweighted  = 32.60 (1.000) with rcCorner = -1
+[10/31 10:14:53     34s]  Visiting view : av_tt
+[10/31 10:14:53     34s]    : PowerDomain = none : Weighted F : unweighted  = 42.50 (1.000) with rcCorner = 0
+[10/31 10:14:53     34s]    : PowerDomain = none : Weighted F : unweighted  = 32.60 (1.000) with rcCorner = -1
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Creating Cell Server ...(0, 0, 0, 0) in restoreDesign End ...
+[10/31 10:14:53     34s]   Extracting original clock gating for clk_i...
+[10/31 10:14:53     34s]     clock_tree clk_i contains 5228 sinks and 0 clock gates.
+[10/31 10:14:53     34s]   Extracting original clock gating for clk_i done.
+[10/31 10:14:53     34s]   The skew group clk_i/func was created. It contains 5228 sinks and 1 sources.
+[10/31 10:14:53     34s]   The skew group clk_i/func was created. It contains 5228 sinks and 1 sources.
+[10/31 10:14:53     34s] Restoring CCOpt config done.
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Deleting Cell Server Begin ...
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Deleting Cell Server End ...
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Creating Cell Server ...(0, 1, 1, 1) in restoreDesign Begin ...
+[10/31 10:14:53     34s] Summary for sequential cells identification: 
+[10/31 10:14:53     34s]   Identified SBFF number: 45
+[10/31 10:14:53     34s]   Identified MBFF number: 0
+[10/31 10:14:53     34s]   Identified SB Latch number: 17
+[10/31 10:14:53     34s]   Identified MB Latch number: 0
+[10/31 10:14:53     34s]   Not identified SBFF number: 0
+[10/31 10:14:53     34s]   Not identified MBFF number: 0
+[10/31 10:14:53     34s]   Not identified SB Latch number: 0
+[10/31 10:14:53     34s]   Not identified MB Latch number: 0
+[10/31 10:14:53     34s]   Number of sequential cells which are not FFs: 6
+[10/31 10:14:53     34s] Total number of combinational cells: 319
+[10/31 10:14:53     34s] Total number of sequential cells: 68
+[10/31 10:14:53     34s] Total number of tristate cells: 13
+[10/31 10:14:53     34s] Total number of level shifter cells: 7
+[10/31 10:14:53     34s] Total number of power gating cells: 0
+[10/31 10:14:53     34s] Total number of isolation cells: 11
+[10/31 10:14:53     34s] Total number of power switch cells: 0
+[10/31 10:14:53     34s] Total number of pulse generator cells: 0
+[10/31 10:14:53     34s] Total number of always on buffers: 0
+[10/31 10:14:53     34s] Total number of retention cells: 0
+[10/31 10:14:53     34s] Total number of physical cells: 10
+[10/31 10:14:53     34s] List of usable buffers: sky130_fd_sc_hd__buf_1 sky130_fd_sc_hd__buf_12 sky130_fd_sc_hd__buf_2 sky130_fd_sc_hd__buf_4 sky130_fd_sc_hd__buf_6 sky130_fd_sc_hd__buf_8 sky130_fd_sc_hd__clkbuf_1 sky130_fd_sc_hd__clkbuf_16 sky130_fd_sc_hd__clkbuf_2 sky130_fd_sc_hd__clkbuf_4 sky130_fd_sc_hd__clkbuf_8 sky130_fd_sc_hd__dlymetal6s2s_1
+[10/31 10:14:53     34s] Total number of usable buffers: 12
+[10/31 10:14:53     34s] List of unusable buffers: sky130_fd_sc_hd__buf_16 sky130_fd_sc_hd__probec_p_8 sky130_fd_sc_hd__probe_p_8
+[10/31 10:14:53     34s] Total number of unusable buffers: 3
+[10/31 10:14:53     34s] List of usable inverters: sky130_fd_sc_hd__bufinv_16 sky130_fd_sc_hd__clkinv_1 sky130_fd_sc_hd__bufinv_8 sky130_fd_sc_hd__clkinv_16 sky130_fd_sc_hd__clkinv_2 sky130_fd_sc_hd__clkinv_4 sky130_fd_sc_hd__clkinv_8 sky130_fd_sc_hd__inv_1 sky130_fd_sc_hd__clkinvlp_2 sky130_fd_sc_hd__clkinvlp_4 sky130_fd_sc_hd__inv_12 sky130_fd_sc_hd__inv_16 sky130_fd_sc_hd__inv_2 sky130_fd_sc_hd__inv_4 sky130_fd_sc_hd__inv_6 sky130_fd_sc_hd__inv_8
+[10/31 10:14:53     34s] Total number of usable inverters: 16
+[10/31 10:14:53     34s] List of unusable inverters:
+[10/31 10:14:53     34s] Total number of unusable inverters: 0
+[10/31 10:14:53     34s] List of identified usable delay cells: sky130_fd_sc_hd__bufbuf_16 sky130_fd_sc_hd__bufbuf_8 sky130_fd_sc_hd__clkdlybuf4s15_2 sky130_fd_sc_hd__clkdlybuf4s18_2 sky130_fd_sc_hd__clkdlybuf4s25_1 sky130_fd_sc_hd__clkdlybuf4s50_1 sky130_fd_sc_hd__clkdlybuf4s25_2 sky130_fd_sc_hd__clkdlybuf4s50_2 sky130_fd_sc_hd__dlygate4sd2_1 sky130_fd_sc_hd__dlygate4sd1_1 sky130_fd_sc_hd__dlygate4sd3_1 sky130_fd_sc_hd__dlymetal6s6s_1 sky130_fd_sc_hd__dlymetal6s4s_1
+[10/31 10:14:53     34s] Total number of identified usable delay cells: 13
+[10/31 10:14:53     34s] List of identified unusable delay cells: sky130_fd_sc_hd__clkdlybuf4s15_1 sky130_fd_sc_hd__clkdlybuf4s18_1
+[10/31 10:14:53     34s] Total number of identified unusable delay cells: 2
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Creating Cell Server ...(0, 1, 1, 1) in restoreDesign End ...
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Deleting Cell Server Begin ...
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] TimeStamp Deleting Cell Server End ...
+[10/31 10:14:53     34s] **WARN: (IMPCTE-107):	The following globals have been obsoleted since version (null). They will be removed in the next release. 
+[10/31 10:14:53     34s] timing_aocv_enable_gba_combine_launch_capture
+[10/31 10:14:53     34s] timing_enable_backward_compatible_latch_thru_mt_mode
+[10/31 10:14:53     34s] timing_enable_separate_device_slew_effect_sensitivities
+[10/31 10:14:53     34s] #% End load design ... (date=10/31 10:14:53, total cpu=0:00:07.2, real=0:00:07.0, peak res=2533.2M, current mem=2511.2M)
+[10/31 10:14:53     34s] 
+[10/31 10:14:53     34s] *** Summary of all messages that are not suppressed in this session:
+[10/31 10:14:53     34s] Severity  ID               Count  Summary                                  
+[10/31 10:14:53     34s] WARNING   IMPLF-108            1  There is no overlap layer defined in any...
+[10/31 10:14:53     34s] WARNING   IMPLF-200           57  Pin '%s' in macro '%s' has no ANTENNAGAT...
+[10/31 10:14:53     34s] WARNING   IMPLF-201           69  Pin '%s' in macro '%s' has no ANTENNADIF...
+[10/31 10:14:53     34s] WARNING   IMPEXT-2766          6  The sheet resistance for layer %s is not...
+[10/31 10:14:53     34s] WARNING   IMPEXT-2773          6  The via resistance between layers %s and...
+[10/31 10:14:53     34s] WARNING   IMPESI-3505          1  setDelayCalMode -eng_%s (default=%s) wil...
+[10/31 10:14:53     34s] WARNING   IMPOPT-3602          1  The specified path group name %s is not ...
+[10/31 10:14:53     34s] WARNING   NRIF-90              1  Option setNanoRouteMode -route_bottom_ro...
+[10/31 10:14:53     34s] WARNING   NRIF-91              1  Option setNanoRouteMode -route_top_routi...
+[10/31 10:14:53     34s] WARNING   IMPCTE-107           1  The following globals have been obsolete...
+[10/31 10:14:53     34s] WARNING   IMPTCM-77            1  Option "%s" for command %s is obsolete a...
+[10/31 10:14:53     34s] WARNING   TECHLIB-302         12  No function defined for cell '%s'. The c...
+[10/31 10:14:53     34s] *** Message Summary: 157 warning(s), 0 error(s)
+[10/31 10:14:53     34s] 
+[10/31 10:14:54     34s] <CMD> setMultiCpuUsage -localCpu 2
+[10/31 10:14:54     34s] <CMD> setDesignMode -process 130 -bottomRoutingLayer met1 -topRoutingLayer met4
+[10/31 10:14:54     34s] ##  Process: 130           (User Set)               
+[10/31 10:14:54     34s] ##     Node: (not set)                           
+[10/31 10:14:54     34s] 
+##  Check design process and node:  
+##  Design tech node is not set.
+
+[10/31 10:14:54     34s] Applying the recommended capacitance filtering threshold values for 130nm process node: total_c_th=0, relative_c_th=1 and coupling_c_th=0.4.
+[10/31 10:14:54     34s] 	These values will be used by all post-route extraction engines, including TQuantus, IQuantus and Quantus QRC extraction.
+[10/31 10:14:54     34s] 	Capacitance filtering mode(-capFilterMode option of the setExtractRCMode) is 'relAndCoup' for all engines.
+[10/31 10:14:54     34s] 	The accuracy mode for postRoute effortLevel low extraction will be set to 'standard'.
+[10/31 10:14:54     34s] 	Default value for EffortLevel(-effortLevel option of the setExtractRCMode) in postRoute extraction mode is 'low'.
+[10/31 10:14:54     34s] <CMD> setAnalysisMode -analysisType onChipVariation -cppr both
+[10/31 10:14:54     34s] <CMD> setExtractRCMode -engine postRoute -effortLevel low
+[10/31 10:14:54     34s] <CMD> extractRC
+[10/31 10:14:54     34s] Extraction called for design 'rv32i_cpu_top' of instances=461943 and nets=37650 using extraction engine 'postRoute' at effort level 'low' .
+[10/31 10:14:54     34s] PostRoute (effortLevel low) RC Extraction called for design rv32i_cpu_top.
+[10/31 10:14:54     34s] RC Extraction called in multi-corner(1) mode.
+[10/31 10:14:54     34s] **WARN: (IMPEXT-6197):	The Cap table file is not specified. This will result in lower parasitic accuracy when using preRoute extraction or postRoute extraction with effort level 'low'. It is recommended to generate the Cap table file using the 'generateCapTbl' command and specify it before extraction using 'create_rc_corner/update_rc_corner -cap_table'.
+[10/31 10:14:54     34s] Type 'man IMPEXT-6197' for more detail.
+[10/31 10:14:54     34s] **WARN: (IMPEXT-3032):	Because the cap table file was not provided, it will be created internally with the following process info:
+[10/31 10:14:54     34s] * Layer Id             : 1 - M1
+[10/31 10:14:54     34s]       Thickness        : 0.1
+[10/31 10:14:54     34s]       Min Width        : 0.17
+[10/31 10:14:54     34s]       Layer Dielectric : 4.1
+[10/31 10:14:54     34s] * Layer Id             : 2 - M2
+[10/31 10:14:54     34s]       Thickness        : 0.35
+[10/31 10:14:54     34s]       Min Width        : 0.14
+[10/31 10:14:54     34s]       Layer Dielectric : 4.1
+[10/31 10:14:54     34s] * Layer Id             : 3 - M3
+[10/31 10:14:54     34s]       Thickness        : 0.35
+[10/31 10:14:54     34s]       Min Width        : 0.14
+[10/31 10:14:54     34s]       Layer Dielectric : 4.1
+[10/31 10:14:54     34s] * Layer Id             : 4 - M4
+[10/31 10:14:54     34s]       Thickness        : 0.8
+[10/31 10:14:54     34s]       Min Width        : 0.3
+[10/31 10:14:54     34s]       Layer Dielectric : 4.1
+[10/31 10:14:54     34s] * Layer Id             : 5 - M5
+[10/31 10:14:54     34s]       Thickness        : 0.8
+[10/31 10:14:54     34s]       Min Width        : 0.3
+[10/31 10:14:54     34s]       Layer Dielectric : 4.1
+[10/31 10:14:54     34s] * Layer Id             : 6 - M6
+[10/31 10:14:54     34s]       Thickness        : 1.2
+[10/31 10:14:54     34s]       Min Width        : 1.6
+[10/31 10:14:54     34s]       Layer Dielectric : 4.1
+[10/31 10:14:54     34s] extractDetailRC Option : -outfile /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d  -basic
+[10/31 10:14:54     34s] RC Mode: PostRoute -effortLevel low [Basic CapTable, LEF Resistances]
+[10/31 10:14:54     34s]       RC Corner Indexes            0   
+[10/31 10:14:54     34s] Capacitance Scaling Factor   : 1.00000 
+[10/31 10:14:54     34s] Coupling Cap. Scaling Factor : 1.00000 
+[10/31 10:14:54     34s] Resistance Scaling Factor    : 1.00000 
+[10/31 10:14:54     34s] Clock Cap. Scaling Factor    : 1.00000 
+[10/31 10:14:54     34s] Clock Res. Scaling Factor    : 1.00000 
+[10/31 10:14:54     34s] Shrink Factor                : 1.00000
+[10/31 10:14:54     34s] eee: RC Grid memory freed = 656064 (134 X 68 X 6 X 12b)
+[10/31 10:14:54     34s] eee: RC Grid memory allocated = 656064 (134 X 68 X 6 X 12b)
+[10/31 10:14:54     34s] eee: pegSigSF=1.070000
+[10/31 10:14:54     34s] Initializing multi-corner resistance tables ...
+[10/31 10:14:54     34s] eee: Grid unit RC data computation started
+[10/31 10:14:54     34s] eee: Grid unit RC data computation completed
+[10/31 10:14:54     34s] eee: l=1 avDens=0.000000 usedTrk=0.000000 availTrk=0.000000 sigTrk=0.000000
+[10/31 10:14:54     34s] eee: l=2 avDens=0.293269 usedTrk=147909.651770 availTrk=504348.242278 sigTrk=147909.651770
+[10/31 10:14:54     34s] eee: l=3 avDens=0.237314 usedTrk=79554.156933 availTrk=335226.918061 sigTrk=79554.156933
+[10/31 10:14:54     34s] eee: l=4 avDens=0.338030 usedTrk=64006.643541 availTrk=189351.737654 sigTrk=64006.643541
+[10/31 10:14:54     34s] eee: l=5 avDens=0.187735 usedTrk=23589.319462 availTrk=125652.388312 sigTrk=23590.883729
+[10/31 10:14:54     34s] eee: l=6 avDens=0.085418 usedTrk=5235.810305 availTrk=61296.000000 sigTrk=5235.810305
+[10/31 10:14:54     34s] eee: LAM-FP: thresh=1 ; dimX=10588.235294 ; dimY=5294.117647 ; multX=1.000000 ; multY=1.000000 ; minP=340 ; fpMult=1.000000 ;
+[10/31 10:14:54     34s] eee: LAM: n=40 LLS=2-3 HLS=3-5 rDens=0.460178 uaWl=0.998744 uaWlH=0.339400 aWlH=0.001200 lMod=0 pMax=0.891000 pMod=79 pModAss=50 wcR=0.333300 crit=0.003600 siPrev=0 newSi=0.001600 wHLS=1.000000 viaL=0.000000 shortMod=0.018002 fModUnas=0.000900 fModAs=0.000900 pDens=0.500000 
+[10/31 10:14:54     34s] eee: NetCapCache creation started. (Current Mem: 2508.223M) 
+[10/31 10:14:54     34s] eee: NetCapCache completed. (CPU Time: 0:00:00.1  Real Time: 0:00:00.0  Curr Mem: 2508.223M) 
+[10/31 10:14:54     34s] eee: dbu = 1000, Design = [ll(0.000000, 0.000000) ur(3600.000000, 1800.000000)], Layers = [f(6) b(0)], Grid size = 27.200000 um, Grid Dim = (133 X 67)
+[10/31 10:14:54     34s] eee: Metal Layers Info:
+[10/31 10:14:54     34s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:14:54     34s] eee: |   Layer  |  Id |    W    |    S    |    P    |   uC   |   uR   | D | T | wS |
+[10/31 10:14:54     34s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:14:54     34s] eee: |      li1 |   1 |   0.170 |   0.170 |   0.460 |  0.000 |  75.29 | V | 0 |  1 |
+[10/31 10:14:54     34s] eee: |     met1 |   2 |   0.140 |   0.140 |   0.340 |  0.000 |   0.89 | H | 0 |  1 |
+[10/31 10:14:54     34s] eee: |     met2 |   3 |   0.140 |   0.140 |   0.460 |  0.000 |   0.89 | V | 0 |  1 |
+[10/31 10:14:54     34s] eee: |     met3 |   4 |   0.300 |   0.300 |   0.680 |  0.000 |   0.16 | H | 0 |  1 |
+[10/31 10:14:54     34s] eee: |     met4 |   5 |   0.300 |   0.300 |   0.920 |  0.000 |   0.16 | V | 0 |  1 |
+[10/31 10:14:54     34s] eee: |     met5 |   6 |   1.600 |   1.600 |   3.400 |  0.000 |   0.02 | H | 0 |  1 |
+[10/31 10:14:54     34s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:14:54     34s] eee: uC/uR for corner rc_nom, min-width/min-spacing, 30 perc over/under densities.
+[10/31 10:14:54     34s] eee: +-----------------------NDR Info-----------------------+
+[10/31 10:14:54     34s] eee: NDR Count = 0, Fake NDR = 0
+[10/31 10:14:54     34s] Checking LVS Completed (CPU Time= 0:00:00.1  MEM= 2508.2M)
+[10/31 10:14:54     34s] Creating parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d' for storing RC.
+[10/31 10:14:54     35s] **WARN: (IMPEXT-2882):	Unable to find the resistance for via 'L1M1_PR' in Cap table or LEF or OA files. The default value of 4.0 ohms is being assigned. To avoid this, check the Cap table and LEF and OA files, provide the resistance and read the files again.
+[10/31 10:14:54     35s] **WARN: (IMPEXT-2882):	Unable to find the resistance for via 'M2M3_PR' in Cap table or LEF or OA files. The default value of 4.0 ohms is being assigned. To avoid this, check the Cap table and LEF and OA files, provide the resistance and read the files again.
+[10/31 10:14:54     35s] **WARN: (IMPEXT-2882):	Unable to find the resistance for via 'M1M2_PR' in Cap table or LEF or OA files. The default value of 4.0 ohms is being assigned. To avoid this, check the Cap table and LEF and OA files, provide the resistance and read the files again.
+[10/31 10:14:54     35s] Extracted 10.0002% (CPU Time= 0:00:00.7  MEM= 2543.2M)
+[10/31 10:14:54     35s] **WARN: (IMPEXT-2882):	Unable to find the resistance for via 'M3M4_PR' in Cap table or LEF or OA files. The default value of 4.0 ohms is being assigned. To avoid this, check the Cap table and LEF and OA files, provide the resistance and read the files again.
+[10/31 10:14:54     35s] Extracted 20.0002% (CPU Time= 0:00:00.9  MEM= 2557.2M)
+[10/31 10:14:55     35s] Extracted 30.0001% (CPU Time= 0:00:01.2  MEM= 2568.2M)
+[10/31 10:14:55     36s] Extracted 40.0002% (CPU Time= 0:00:01.5  MEM= 2573.2M)
+[10/31 10:14:55     36s] Extracted 50.0002% (CPU Time= 0:00:01.8  MEM= 2578.2M)
+[10/31 10:14:56     36s] Extracted 60.0002% (CPU Time= 0:00:02.1  MEM= 2584.2M)
+[10/31 10:14:56     37s] Extracted 70.0002% (CPU Time= 0:00:02.4  MEM= 2590.2M)
+[10/31 10:14:57     37s] Extracted 80.0001% (CPU Time= 0:00:03.0  MEM= 2604.2M)
+[10/31 10:14:57     37s] Extracted 90.0002% (CPU Time= 0:00:03.3  MEM= 2607.2M)
+[10/31 10:14:58     38s] Extracted 100% (CPU Time= 0:00:03.9  MEM= 2615.2M)
+[10/31 10:14:58     38s] eee: RC Grid memory freed = 656064 (134 X 68 X 6 X 12b)
+[10/31 10:14:58     38s] Number of Extracted Resistors     : 1221964
+[10/31 10:14:58     38s] Number of Extracted Ground Cap.   : 1254665
+[10/31 10:14:58     38s] Number of Extracted Coupling Cap. : 2724624
+[10/31 10:14:58     38s] Opening parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d' for reading (mem: 2599.223M)
+[10/31 10:14:58     38s] Filtering XCap in 'relativeAndCoupling' mode using values coupling_c_threshold=0.4fF, relative_c_threshold=1, and total_c_threshold=0fF.
+[10/31 10:14:58     38s] Checking LVS Completed (CPU Time= 0:00:00.1  MEM= 2599.2M)
+[10/31 10:14:58     38s] Creating parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb_Filter.rcdb.d' for storing RC.
+[10/31 10:14:58     39s] Closing parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d': 35563 access done (mem: 2599.223M)
+[10/31 10:14:58     39s] Lumped Parasitic Loading Started (total cpu=0:00:00.0, real=0:00:00.0, current mem=2599.223M)
+[10/31 10:14:58     39s] Opening parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d' for reading (mem: 2599.223M)
+[10/31 10:14:58     39s] processing rcdb (/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d) for hinst (top) of cell (rv32i_cpu_top);
+[10/31 10:14:58     39s] Lumped Parasitic Loading Completed (total cpu=0:00:00.3, real=0:00:00.0, current mem=2599.223M)
+[10/31 10:14:58     39s] Closing parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d': 0 access done (mem: 2599.223M)
+[10/31 10:14:58     39s] PostRoute (effortLevel low) RC Extraction DONE (CPU Time: 0:00:05.1  Real Time: 0:00:04.0  MEM: 2599.223M)
+[10/31 10:14:58     39s] Multithreaded Timing Analysis is initialized with 2 threads
+[10/31 10:14:58     39s] 
+[10/31 10:14:58     39s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:14:58     39s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:14:58     39s] AAE_INFO: resetNetProps viewIdx 0 
+[10/31 10:14:58     39s] Starting SI iteration 1 using Infinite Timing Windows
+[10/31 10:14:59     40s] #################################################################################
+[10/31 10:14:59     40s] # Design Stage: PostRoute
+[10/31 10:14:59     40s] # Design Name: rv32i_cpu_top
+[10/31 10:14:59     40s] # Design Mode: 130nm
+[10/31 10:14:59     40s] # Analysis Mode: MMMC OCV 
+[10/31 10:14:59     40s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:14:59     40s] # Signoff Settings: SI On 
+[10/31 10:14:59     40s] #################################################################################
+[10/31 10:14:59     40s] Setting infinite Tws ...
+[10/31 10:14:59     40s] First Iteration Infinite Tw... 
+[10/31 10:14:59     40s] Calculate early delays in OCV mode...
+[10/31 10:14:59     40s] Calculate late delays in OCV mode...
+[10/31 10:14:59     40s] Topological Sorting (REAL = 0:00:00.0, MEM = 2810.9M, InitMEM = 2807.4M)
+[10/31 10:14:59     40s] Start delay calculation (fullDC) (2 T). (MEM=2689.8)
+[10/31 10:14:59     40s] eee: RC Grid memory allocated = 656064 (134 X 68 X 6 X 12b)
+[10/31 10:14:59     41s] eee: pegSigSF=1.070000
+[10/31 10:14:59     41s] Initializing multi-corner resistance tables ...
+[10/31 10:14:59     41s] eee: Grid unit RC data computation started
+[10/31 10:15:00     41s] eee: Grid unit RC data computation completed
+[10/31 10:15:00     41s] eee: l=1 avDens=0.000000 usedTrk=0.000000 availTrk=0.000000 sigTrk=0.000000
+[10/31 10:15:00     41s] eee: l=2 avDens=0.293269 usedTrk=147909.651770 availTrk=504348.242278 sigTrk=147909.651770
+[10/31 10:15:00     41s] eee: l=3 avDens=0.237314 usedTrk=79554.156933 availTrk=335226.918061 sigTrk=79554.156933
+[10/31 10:15:00     41s] eee: l=4 avDens=0.338030 usedTrk=64006.643541 availTrk=189351.737654 sigTrk=64006.643541
+[10/31 10:15:00     41s] eee: l=5 avDens=0.187735 usedTrk=23589.319462 availTrk=125652.388312 sigTrk=23590.883729
+[10/31 10:15:00     41s] eee: l=6 avDens=0.085418 usedTrk=5235.810305 availTrk=61296.000000 sigTrk=5235.810305
+[10/31 10:15:00     41s] eee: LAM-FP: thresh=1 ; dimX=10588.235294 ; dimY=5294.117647 ; multX=1.000000 ; multY=1.000000 ; minP=340 ; fpMult=1.000000 ;
+[10/31 10:15:00     41s] eee: LAM: n=40 LLS=2-3 HLS=3-5 rDens=0.460178 uaWl=0.998744 uaWlH=0.339400 aWlH=0.001200 lMod=0 pMax=0.891000 pMod=79 pModAss=50 wcR=0.333300 crit=0.003600 siPrev=0 newSi=0.001600 wHLS=1.000000 viaL=0.000000 shortMod=0.018002 fModUnas=0.000900 fModAs=0.000900 pDens=0.500000 
+[10/31 10:15:00     41s] eee: NetCapCache creation started. (Current Mem: 2810.879M) 
+[10/31 10:15:00     41s] eee: NetCapCache completed. (CPU Time: 0:00:00.2  Real Time: 0:00:00.0  Curr Mem: 2810.879M) 
+[10/31 10:15:00     41s] eee: dbu = 1000, Design = [ll(0.000000, 0.000000) ur(3600.000000, 1800.000000)], Layers = [f(6) b(0)], Grid size = 27.200000 um, Grid Dim = (133 X 67)
+[10/31 10:15:00     41s] eee: Metal Layers Info:
+[10/31 10:15:00     41s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:15:00     41s] eee: |   Layer  |  Id |    W    |    S    |    P    |   uC   |   uR   | D | T | wS |
+[10/31 10:15:00     41s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:15:00     41s] eee: |      li1 |   1 |   0.170 |   0.170 |   0.460 |  0.000 |  75.29 | V | 0 |  1 |
+[10/31 10:15:00     41s] eee: |     met1 |   2 |   0.140 |   0.140 |   0.340 |  0.000 |   0.89 | H | 0 |  1 |
+[10/31 10:15:00     41s] eee: |     met2 |   3 |   0.140 |   0.140 |   0.460 |  0.000 |   0.89 | V | 0 |  1 |
+[10/31 10:15:00     41s] eee: |     met3 |   4 |   0.300 |   0.300 |   0.680 |  0.000 |   0.16 | H | 0 |  1 |
+[10/31 10:15:00     41s] eee: |     met4 |   5 |   0.300 |   0.300 |   0.920 |  0.000 |   0.16 | V | 0 |  1 |
+[10/31 10:15:00     41s] eee: |     met5 |   6 |   1.600 |   1.600 |   3.400 |  0.000 |   0.02 | H | 0 |  1 |
+[10/31 10:15:00     41s] eee: +----------+-----+---------+---------+---------+--------+--------+---+---+----+
+[10/31 10:15:00     41s] eee: uC/uR for corner rc_nom, min-width/min-spacing, 30 perc over/under densities.
+[10/31 10:15:00     41s] eee: +-----------------------NDR Info-----------------------+
+[10/31 10:15:00     41s] eee: NDR Count = 0, Fake NDR = 0
+[10/31 10:15:00     41s] Start AAE Lib Loading. (MEM=2699.835938)
+[10/31 10:15:00     41s] End AAE Lib Loading. (MEM=2705.289062 CPU=0:00:00.0 Real=0:00:00.0)
+[10/31 10:15:00     41s] End AAE Lib Interpolated Model. (MEM=2705.289062 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:00     41s] Opening parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d' for reading (mem: 3091.184M)
+[10/31 10:15:00     41s] RC Database In Completed (CPU Time= 0:00:00.0  Real Time=0:00:00.0  MEM= 3117.2M)
+[10/31 10:15:09     58s] Total number of fetched objects 36017
+[10/31 10:15:09     58s] AAE_INFO-618: Total number of nets in the design is 37650,  98.5 percent of the nets selected for SI analysis
+[10/31 10:15:09     58s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:15:09     58s] End delay calculation. (MEM=2890.7 CPU=0:00:16.5 REAL=0:00:09.0)
+[10/31 10:15:09     58s] End delay calculation (fullDC). (MEM=2876.63 CPU=0:00:17.7 REAL=0:00:10.0)
+[10/31 10:15:09     58s] Save waveform /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/.AAE_4o9YAG/.AAE_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea/waveform.data...
+[10/31 10:15:09     58s] *** CDM Built up (cpu=0:00:18.6  real=0:00:10.0  mem= 3573.9M) ***
+[10/31 10:15:10     59s] Loading CTE timing window with TwFlowType 0...(CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2905.0M)
+[10/31 10:15:10     59s] Add other clocks and setupCteToAAEClockMapping during iter 1
+[10/31 10:15:10     59s] Loading CTE timing window is completed (CPU = 0:00:00.2, REAL = 0:00:00.0, MEM = 2905.9M)
+[10/31 10:15:10     59s] Starting SI iteration 2
+[10/31 10:15:10     60s] Calculate early delays in OCV mode...
+[10/31 10:15:10     60s] Calculate late delays in OCV mode...
+[10/31 10:15:10     60s] Start delay calculation (fullDC) (2 T). (MEM=2916.05)
+[10/31 10:15:10     60s] End AAE Lib Interpolated Model. (MEM=2916.050781 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:12     63s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 561. 
+[10/31 10:15:12     63s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:15:12     63s] Total number of fetched objects 36017
+[10/31 10:15:12     63s] AAE_INFO-618: Total number of nets in the design is 37650,  7.3 percent of the nets selected for SI analysis
+[10/31 10:15:12     63s] End delay calculation. (MEM=2966.05 CPU=0:00:03.5 REAL=0:00:01.0)
+[10/31 10:15:12     63s] End delay calculation (fullDC). (MEM=2966.05 CPU=0:00:03.5 REAL=0:00:02.0)
+[10/31 10:15:12     63s] *** CDM Built up (cpu=0:00:03.5  real=0:00:02.0  mem= 3458.0M) ***
+[10/31 10:15:13     64s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:15:13     64s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:15:13     64s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:15:13     64s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:15:13     64s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:15:13     64s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:15:13     64s] AAE_INFO: resetNetProps viewIdx 0 
+[10/31 10:15:13     64s] Starting SI iteration 1 using Infinite Timing Windows
+[10/31 10:15:13     64s] #################################################################################
+[10/31 10:15:13     64s] # Design Stage: PostRoute
+[10/31 10:15:13     64s] # Design Name: rv32i_cpu_top
+[10/31 10:15:13     64s] # Design Mode: 130nm
+[10/31 10:15:13     64s] # Analysis Mode: MMMC OCV 
+[10/31 10:15:13     64s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:15:13     64s] # Signoff Settings: SI On 
+[10/31 10:15:13     64s] #################################################################################
+[10/31 10:15:14     65s] Setting infinite Tws ...
+[10/31 10:15:14     65s] First Iteration Infinite Tw... 
+[10/31 10:15:14     65s] Calculate late delays in OCV mode...
+[10/31 10:15:14     65s] Calculate early delays in OCV mode...
+[10/31 10:15:14     65s] Topological Sorting (REAL = 0:00:00.0, MEM = 3577.2M, InitMEM = 3577.2M)
+[10/31 10:15:14     65s] Start delay calculation (fullDC) (2 T). (MEM=2931.23)
+[10/31 10:15:14     65s] End AAE Lib Interpolated Model. (MEM=2940.820312 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:20     78s] Total number of fetched objects 36017
+[10/31 10:15:20     78s] AAE_INFO-618: Total number of nets in the design is 37650,  98.5 percent of the nets selected for SI analysis
+[10/31 10:15:21     78s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:01.0)
+[10/31 10:15:21     78s] End delay calculation. (MEM=2979.99 CPU=0:00:12.4 REAL=0:00:07.0)
+[10/31 10:15:21     78s] End delay calculation (fullDC). (MEM=2979.99 CPU=0:00:12.8 REAL=0:00:07.0)
+[10/31 10:15:21     78s] Save waveform /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/.AAE_4o9YAG/.AAE_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea/waveform.data...
+[10/31 10:15:21     78s] *** CDM Built up (cpu=0:00:13.4  real=0:00:08.0  mem= 3576.9M) ***
+[10/31 10:15:21     79s] Loading CTE timing window with TwFlowType 0...(CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2980.6M)
+[10/31 10:15:21     79s] Add other clocks and setupCteToAAEClockMapping during iter 1
+[10/31 10:15:21     79s] Loading CTE timing window is completed (CPU = 0:00:00.2, REAL = 0:00:00.0, MEM = 2980.6M)
+[10/31 10:15:21     79s] Starting SI iteration 2
+[10/31 10:15:22     79s] Calculate late delays in OCV mode...
+[10/31 10:15:22     79s] Calculate early delays in OCV mode...
+[10/31 10:15:22     79s] Start delay calculation (fullDC) (2 T). (MEM=2950.1)
+[10/31 10:15:22     79s] End AAE Lib Interpolated Model. (MEM=2950.101562 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:23     82s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 561. 
+[10/31 10:15:23     82s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:15:23     82s] Total number of fetched objects 36017
+[10/31 10:15:23     82s] AAE_INFO-618: Total number of nets in the design is 37650,  6.5 percent of the nets selected for SI analysis
+[10/31 10:15:23     82s] End delay calculation. (MEM=2986.97 CPU=0:00:02.6 REAL=0:00:01.0)
+[10/31 10:15:23     82s] End delay calculation (fullDC). (MEM=2986.97 CPU=0:00:02.6 REAL=0:00:01.0)
+[10/31 10:15:23     82s] *** CDM Built up (cpu=0:00:02.7  real=0:00:01.0  mem= 3477.1M) ***
+[10/31 10:15:23     83s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:15:23     83s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:15:24     83s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:15:24     83s] <CMD> report_timing -early -from {axi_rdata_i[13]} -to {u_core/u_icache_data_din_q_reg[13]/D} -path_type full_clock > $d/path_hold_axi13.txt
+[10/31 10:15:24     83s] <CMD> report_timing -from {axi_rdata_i[11]} -to {u_core/u_dcache_gen_data_sram[0].u_data_sram/din0[11]} -path_type full_clock > $d/path_setup_axi11.txt
+[10/31 10:15:24     83s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:15:24     83s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:15:24     83s] AAE_INFO: resetNetProps viewIdx 0 
+[10/31 10:15:24     83s] Starting SI iteration 1 using Infinite Timing Windows
+[10/31 10:15:24     83s] #################################################################################
+[10/31 10:15:24     83s] # Design Stage: PostRoute
+[10/31 10:15:24     83s] # Design Name: rv32i_cpu_top
+[10/31 10:15:24     83s] # Design Mode: 130nm
+[10/31 10:15:24     83s] # Analysis Mode: MMMC OCV 
+[10/31 10:15:24     83s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:15:24     83s] # Signoff Settings: SI On 
+[10/31 10:15:24     83s] #################################################################################
+[10/31 10:15:24     84s] Setting infinite Tws ...
+[10/31 10:15:24     84s] First Iteration Infinite Tw... 
+[10/31 10:15:24     84s] Calculate early delays in OCV mode...
+[10/31 10:15:24     84s] Calculate late delays in OCV mode...
+[10/31 10:15:24     84s] Topological Sorting (REAL = 0:00:00.0, MEM = 3596.3M, InitMEM = 3596.3M)
+[10/31 10:15:24     84s] Start delay calculation (fullDC) (2 T). (MEM=2958.73)
+[10/31 10:15:25     84s] End AAE Lib Interpolated Model. (MEM=2968.066406 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:31     96s] Total number of fetched objects 36017
+[10/31 10:15:31     96s] AAE_INFO-618: Total number of nets in the design is 37650,  98.5 percent of the nets selected for SI analysis
+[10/31 10:15:31     96s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:15:31     96s] End delay calculation. (MEM=2989.5 CPU=0:00:12.3 REAL=0:00:06.0)
+[10/31 10:15:31     96s] End delay calculation (fullDC). (MEM=2989.5 CPU=0:00:12.6 REAL=0:00:07.0)
+[10/31 10:15:31     96s] Save waveform /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/.AAE_4o9YAG/.AAE_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea/waveform.data...
+[10/31 10:15:31     96s] *** CDM Built up (cpu=0:00:13.3  real=0:00:07.0  mem= 3596.0M) ***
+[10/31 10:15:32     98s] Loading CTE timing window with TwFlowType 0...(CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2992.5M)
+[10/31 10:15:32     98s] Add other clocks and setupCteToAAEClockMapping during iter 1
+[10/31 10:15:32     98s] Loading CTE timing window is completed (CPU = 0:00:00.2, REAL = 0:00:00.0, MEM = 2992.5M)
+[10/31 10:15:32     98s] Starting SI iteration 2
+[10/31 10:15:32     98s] Calculate early delays in OCV mode...
+[10/31 10:15:32     98s] Calculate late delays in OCV mode...
+[10/31 10:15:32     98s] Start delay calculation (fullDC) (2 T). (MEM=2956.05)
+[10/31 10:15:32     98s] End AAE Lib Interpolated Model. (MEM=2956.050781 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:34    102s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 561. 
+[10/31 10:15:34    102s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:15:34    102s] Total number of fetched objects 36017
+[10/31 10:15:34    102s] AAE_INFO-618: Total number of nets in the design is 37650,  7.3 percent of the nets selected for SI analysis
+[10/31 10:15:34    102s] End delay calculation. (MEM=2998.56 CPU=0:00:03.4 REAL=0:00:02.0)
+[10/31 10:15:34    102s] End delay calculation (fullDC). (MEM=2998.56 CPU=0:00:03.5 REAL=0:00:02.0)
+[10/31 10:15:34    102s] *** CDM Built up (cpu=0:00:03.5  real=0:00:02.0  mem= 3496.1M) ***
+[10/31 10:15:34    102s] <CMD> report_timing -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_setup_r2r.txt
+[10/31 10:15:35    102s] <CMD> report_timing -early -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_hold_r2r.txt
+[10/31 10:15:35    103s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:15:35    103s] AAE_INFO: resetNetProps viewIdx 0 
+[10/31 10:15:35    103s] Starting SI iteration 1 using Infinite Timing Windows
+[10/31 10:15:35    103s] #################################################################################
+[10/31 10:15:35    103s] # Design Stage: PostRoute
+[10/31 10:15:35    103s] # Design Name: rv32i_cpu_top
+[10/31 10:15:35    103s] # Design Mode: 130nm
+[10/31 10:15:35    103s] # Analysis Mode: MMMC OCV 
+[10/31 10:15:35    103s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:15:35    103s] # Signoff Settings: SI On 
+[10/31 10:15:35    103s] #################################################################################
+[10/31 10:15:36    104s] Setting infinite Tws ...
+[10/31 10:15:36    104s] First Iteration Infinite Tw... 
+[10/31 10:15:36    104s] Calculate late delays in OCV mode...
+[10/31 10:15:36    104s] Calculate early delays in OCV mode...
+[10/31 10:15:36    104s] Topological Sorting (REAL = 0:00:00.0, MEM = 3615.4M, InitMEM = 3615.4M)
+[10/31 10:15:36    104s] Start delay calculation (fullDC) (2 T). (MEM=2954.14)
+[10/31 10:15:36    104s] End AAE Lib Interpolated Model. (MEM=2963.472656 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:42    116s] Total number of fetched objects 36017
+[10/31 10:15:42    116s] AAE_INFO-618: Total number of nets in the design is 37650,  98.5 percent of the nets selected for SI analysis
+[10/31 10:15:42    116s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:15:42    116s] End delay calculation. (MEM=2990.06 CPU=0:00:12.4 REAL=0:00:06.0)
+[10/31 10:15:42    116s] End delay calculation (fullDC). (MEM=2990.06 CPU=0:00:12.8 REAL=0:00:06.0)
+[10/31 10:15:42    116s] Save waveform /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/.AAE_4o9YAG/.AAE_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea/waveform.data...
+[10/31 10:15:42    116s] *** CDM Built up (cpu=0:00:13.4  real=0:00:07.0  mem= 3615.1M) ***
+[10/31 10:15:43    117s] Loading CTE timing window with TwFlowType 0...(CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2994.1M)
+[10/31 10:15:43    117s] Add other clocks and setupCteToAAEClockMapping during iter 1
+[10/31 10:15:43    118s] Loading CTE timing window is completed (CPU = 0:00:00.2, REAL = 0:00:00.0, MEM = 2994.1M)
+[10/31 10:15:43    118s] Starting SI iteration 2
+[10/31 10:15:44    118s] Calculate late delays in OCV mode...
+[10/31 10:15:44    118s] Calculate early delays in OCV mode...
+[10/31 10:15:44    118s] Start delay calculation (fullDC) (2 T). (MEM=2956.4)
+[10/31 10:15:44    118s] End AAE Lib Interpolated Model. (MEM=2956.402344 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:45    121s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 561. 
+[10/31 10:15:45    121s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:15:45    121s] Total number of fetched objects 36017
+[10/31 10:15:45    121s] AAE_INFO-618: Total number of nets in the design is 37650,  6.5 percent of the nets selected for SI analysis
+[10/31 10:15:45    121s] End delay calculation. (MEM=2979.2 CPU=0:00:02.5 REAL=0:00:01.0)
+[10/31 10:15:45    121s] End delay calculation (fullDC). (MEM=2979.2 CPU=0:00:02.6 REAL=0:00:01.0)
+[10/31 10:15:45    121s] *** CDM Built up (cpu=0:00:02.6  real=0:00:01.0  mem= 3515.2M) ***
+[10/31 10:15:46    121s] <CMD> report_timing -to {apb_pslverr_o} -path_type full_clock > $d/path_setup_pslverr.txt
+[10/31 10:15:46    122s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:15:46    122s] AAE_INFO: resetNetProps viewIdx 0 
+[10/31 10:15:46    122s] Starting SI iteration 1 using Infinite Timing Windows
+[10/31 10:15:46    122s] #################################################################################
+[10/31 10:15:46    122s] # Design Stage: PostRoute
+[10/31 10:15:46    122s] # Design Name: rv32i_cpu_top
+[10/31 10:15:46    122s] # Design Mode: 130nm
+[10/31 10:15:46    122s] # Analysis Mode: MMMC OCV 
+[10/31 10:15:46    122s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:15:46    122s] # Signoff Settings: SI On 
+[10/31 10:15:46    122s] #################################################################################
+[10/31 10:15:46    122s] Setting infinite Tws ...
+[10/31 10:15:46    122s] First Iteration Infinite Tw... 
+[10/31 10:15:46    122s] Calculate early delays in OCV mode...
+[10/31 10:15:46    122s] Calculate late delays in OCV mode...
+[10/31 10:15:46    122s] Topological Sorting (REAL = 0:00:00.0, MEM = 3634.5M, InitMEM = 3634.5M)
+[10/31 10:15:46    122s] Start delay calculation (fullDC) (2 T). (MEM=2940.22)
+[10/31 10:15:47    122s] End AAE Lib Interpolated Model. (MEM=2949.558594 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:54    136s] Total number of fetched objects 36017
+[10/31 10:15:54    136s] AAE_INFO-618: Total number of nets in the design is 37650,  98.5 percent of the nets selected for SI analysis
+[10/31 10:15:54    136s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:15:54    136s] End delay calculation. (MEM=2975.64 CPU=0:00:13.7 REAL=0:00:07.0)
+[10/31 10:15:54    136s] End delay calculation (fullDC). (MEM=2975.64 CPU=0:00:14.0 REAL=0:00:08.0)
+[10/31 10:15:54    136s] Save waveform /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/.AAE_4o9YAG/.AAE_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea/waveform.data...
+[10/31 10:15:54    136s] *** CDM Built up (cpu=0:00:14.7  real=0:00:08.0  mem= 3615.1M) ***
+[10/31 10:15:55    138s] Loading CTE timing window with TwFlowType 0...(CPU = 0:00:00.0, REAL = 0:00:00.0, MEM = 2979.1M)
+[10/31 10:15:55    138s] Add other clocks and setupCteToAAEClockMapping during iter 1
+[10/31 10:15:55    138s] Loading CTE timing window is completed (CPU = 0:00:00.3, REAL = 0:00:00.0, MEM = 2979.1M)
+[10/31 10:15:55    138s] Starting SI iteration 2
+[10/31 10:15:55    138s] Calculate early delays in OCV mode...
+[10/31 10:15:55    138s] Calculate late delays in OCV mode...
+[10/31 10:15:55    138s] Start delay calculation (fullDC) (2 T). (MEM=2949.55)
+[10/31 10:15:55    138s] End AAE Lib Interpolated Model. (MEM=2949.550781 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:15:57    142s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 561. 
+[10/31 10:15:57    142s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:15:57    142s] Total number of fetched objects 36017
+[10/31 10:15:57    142s] AAE_INFO-618: Total number of nets in the design is 37650,  7.3 percent of the nets selected for SI analysis
+[10/31 10:15:57    142s] End delay calculation. (MEM=2992.07 CPU=0:00:03.9 REAL=0:00:02.0)
+[10/31 10:15:57    142s] End delay calculation (fullDC). (MEM=2992.07 CPU=0:00:03.9 REAL=0:00:02.0)
+[10/31 10:15:57    142s] *** CDM Built up (cpu=0:00:04.0  real=0:00:02.0  mem= 3515.2M) ***
+[10/31 10:15:58    143s] <CMD> getDelayCalMode
+[10/31 10:15:58    143s] -accuracy_level 0                         # int, default=0, min=0, max=4
+[10/31 10:15:58    143s] -advanced_accuracy_mode medium            # enums={medium high ultra}, default=medium
+[10/31 10:15:58    143s] -advanced_calculation_mode medium         # enums={medium high}, default=medium
+[10/31 10:15:58    143s] -advanced_node_pin_cap_settings false     # bool, default=false
+[10/31 10:15:58    143s] -advanced_pincap_mode 0                   # enums={0 1 2}, default=0
+[10/31 10:15:58    143s] -combine_mmmc early_late_corner           # enums={none early_late early_late_corner}, default=early_late_corner
+[10/31 10:15:58    143s] -early_irdrop_data_type worst             # enums={best_average worst best average worst_average}, default=worst
+[10/31 10:15:58    143s] -enable_corner_based_beol false           # bool, default=false
+[10/31 10:15:58    143s] -enable_hier_save_restore_flow false      # bool, default=false, user setting, private
+[10/31 10:15:58    143s] -enable_high_fanout true                  # bool, default=false, user setting
+[10/31 10:15:58    143s] -enable_ideal_seq_async_pins false        # bool, default=false, user setting, private
+[10/31 10:15:58    143s] -enable_input_slew_sensitivity_on_constraint false
+[10/31 10:15:58    143s]                                           # bool, default=false
+[10/31 10:15:58    143s] -enable_quiet_receivers_for_hold false    # bool, default=false
+[10/31 10:15:58    143s] -engine aae                               # enums={aae}, default=aae, user setting, private
+[10/31 10:15:58    143s] -equivalent_waveform_model none           # enums={none no_propagation propagation}, default=none
+[10/31 10:15:58    143s] -equivalent_waveform_model_for_timing_check false
+[10/31 10:15:58    143s]                                           # bool, default=false
+[10/31 10:15:58    143s] -ewm_type simulation                      # enums={moments simulation}, default=simulation
+[10/31 10:15:58    143s] -honorSlewPropConstraint true             # bool, default=true
+[10/31 10:15:58    143s] -ignoreNetLoad false                      # bool, default=false, user setting
+[10/31 10:15:58    143s] -irdrop_data_type worst                   # enums={best_average worst best average worst_average}, default=worst
+[10/31 10:15:58    143s] -irDrop_window_based both                 # enums={none late early both}, default=both
+[10/31 10:15:58    143s] -late_irdrop_data_type worst              # enums={best_average worst best average worst_average}, default=worst
+[10/31 10:15:58    143s] -library_interpolation_mode linear        # enums={linear non_linear non_linear_advanced}, default=linear
+[10/31 10:15:58    143s] -nonlinear_voltage_scaling_improvements false
+[10/31 10:15:58    143s]                                           # bool, default=false
+[10/31 10:15:58    143s] -reportOutBound false                     # bool, default=false
+[10/31 10:15:58    143s] -save_set_inst_voltage_cmd false          # bool, default=false
+[10/31 10:15:58    143s] -SIAware true                             # enums={true false}, default=false, user setting
+[10/31 10:15:58    143s] -signoff_alignment_settings false         # bool, default=false
+[10/31 10:15:58    143s] -skip_slew_merge_from_disabled_path false
+[10/31 10:15:58    143s]                                           # bool, default=false
+[10/31 10:15:58    143s] -slewOutBoundLimitHigh 3.40282346638529e+38
+[10/31 10:15:58    143s]                                           # float, default=3.40282346638529e+38, min=1, max=3.40282346638529e+38
+[10/31 10:15:58    143s] -slewOutBoundLimitLow 0.5                 # float, default=0.5, min=0.001, max=1
+[10/31 10:15:58    143s] -socv_accuracy_mode low                   # enums={low medium high ultra}, default=low, user setting
+[10/31 10:15:58    143s] -socv_lvf_mode early_late                 # enums={moments early_late}, default=early_late
+[10/31 10:15:58    143s] -socv_machine_learning_level 0            # int, default=0
+[10/31 10:15:58    143s] -socv_use_lvf_tables all                  # string, default=all
+[10/31 10:15:58    143s] -use_top_interface_delay_in_context false
+[10/31 10:15:58    143s]                                           # bool, default=false
+[10/31 10:15:58    143s] -voltage_scaling_compatibility_mode false
+[10/31 10:15:58    143s]                                           # bool, default=false
+[10/31 10:15:58    143s] -wire_variation_correlation_mode statistical
+[10/31 10:15:58    143s]                                           # enums={statistical binomial}, default=statistical
+[10/31 10:15:58    143s] -wire_variation_rc_correlation 1          # float, default=1
+[10/31 10:15:58    143s] 
+[10/31 10:15:58    143s] <CMD> setDelayCalMode -siAware false
+[10/31 10:15:58    143s] AAE_INFO: switching setDelayCal -siAware from true to false ...
+[10/31 10:15:58    143s] AAE_INFO: The setting is changed from true to false in setDelayCalMode -SIAware
+[10/31 10:15:58    143s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:15:58    143s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:15:58    143s] #################################################################################
+[10/31 10:15:58    143s] # Design Stage: PostRoute
+[10/31 10:15:58    143s] # Design Name: rv32i_cpu_top
+[10/31 10:15:58    143s] # Design Mode: 130nm
+[10/31 10:15:58    143s] # Analysis Mode: MMMC OCV 
+[10/31 10:15:58    143s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:15:58    143s] # Signoff Settings: SI Off 
+[10/31 10:15:58    143s] #################################################################################
+[10/31 10:15:59    144s] Calculate early delays in OCV mode...
+[10/31 10:15:59    144s] Calculate late delays in OCV mode...
+[10/31 10:15:59    145s] Topological Sorting (REAL = 0:00:00.0, MEM = 3506.5M, InitMEM = 3506.5M)
+[10/31 10:15:59    145s] Start delay calculation (fullDC) (2 T). (MEM=2931.67)
+[10/31 10:15:59    145s] End AAE Lib Interpolated Model. (MEM=2949.312500 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:01    151s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:01    151s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:01    151s] Total number of fetched objects 36017
+[10/31 10:16:01    151s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:01    151s] End delay calculation. (MEM=3006.2 CPU=0:00:06.2 REAL=0:00:01.0)
+[10/31 10:16:01    151s] End delay calculation (fullDC). (MEM=3006.2 CPU=0:00:06.7 REAL=0:00:02.0)
+[10/31 10:16:01    151s] *** CDM Built up (cpu=0:00:08.1  real=0:00:03.0  mem= 3667.8M) ***
+[10/31 10:16:02    152s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:02    152s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:02    152s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:16:02    152s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:02    152s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:16:03    153s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:03    153s] #################################################################################
+[10/31 10:16:03    153s] # Design Stage: PostRoute
+[10/31 10:16:03    153s] # Design Name: rv32i_cpu_top
+[10/31 10:16:03    153s] # Design Mode: 130nm
+[10/31 10:16:03    153s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:03    153s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:03    153s] # Signoff Settings: SI Off 
+[10/31 10:16:03    153s] #################################################################################
+[10/31 10:16:03    153s] Calculate late delays in OCV mode...
+[10/31 10:16:03    153s] Calculate early delays in OCV mode...
+[10/31 10:16:03    153s] Topological Sorting (REAL = 0:00:00.0, MEM = 3679.1M, InitMEM = 3679.1M)
+[10/31 10:16:03    153s] Start delay calculation (fullDC) (2 T). (MEM=2966.89)
+[10/31 10:16:03    153s] End AAE Lib Interpolated Model. (MEM=2984.535156 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:04    159s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:04    159s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:16:04    159s] Total number of fetched objects 36017
+[10/31 10:16:05    159s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:01.0)
+[10/31 10:16:05    159s] End delay calculation. (MEM=3018.78 CPU=0:00:05.3 REAL=0:00:02.0)
+[10/31 10:16:05    159s] End delay calculation (fullDC). (MEM=3018.78 CPU=0:00:05.6 REAL=0:00:02.0)
+[10/31 10:16:05    159s] *** CDM Built up (cpu=0:00:06.4  real=0:00:02.0  mem= 3686.9M) ***
+[10/31 10:16:05    160s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:05    160s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:05    160s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:16:05    160s] <CMD> report_timing -early -from {axi_rdata_i[13]} -to {u_core/u_icache_data_din_q_reg[13]/D} -path_type full_clock > $d/path_hold_axi13.txt
+[10/31 10:16:05    160s] <CMD> report_timing -from {axi_rdata_i[11]} -to {u_core/u_dcache_gen_data_sram[0].u_data_sram/din0[11]} -path_type full_clock > $d/path_setup_axi11.txt
+[10/31 10:16:05    160s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:16:05    160s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:06    160s] #################################################################################
+[10/31 10:16:06    160s] # Design Stage: PostRoute
+[10/31 10:16:06    160s] # Design Name: rv32i_cpu_top
+[10/31 10:16:06    160s] # Design Mode: 130nm
+[10/31 10:16:06    160s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:06    160s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:06    160s] # Signoff Settings: SI Off 
+[10/31 10:16:06    160s] #################################################################################
+[10/31 10:16:06    161s] Calculate early delays in OCV mode...
+[10/31 10:16:06    161s] Calculate late delays in OCV mode...
+[10/31 10:16:06    161s] Topological Sorting (REAL = 0:00:00.0, MEM = 3698.2M, InitMEM = 3698.2M)
+[10/31 10:16:06    161s] Start delay calculation (fullDC) (2 T). (MEM=2962.14)
+[10/31 10:16:06    161s] End AAE Lib Interpolated Model. (MEM=2979.781250 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:08    167s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:08    167s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:08    167s] Total number of fetched objects 36017
+[10/31 10:16:08    168s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:08    168s] End delay calculation. (MEM=3012.71 CPU=0:00:06.5 REAL=0:00:02.0)
+[10/31 10:16:08    168s] End delay calculation (fullDC). (MEM=3012.71 CPU=0:00:06.8 REAL=0:00:02.0)
+[10/31 10:16:08    168s] *** CDM Built up (cpu=0:00:07.6  real=0:00:03.0  mem= 3744.1M) ***
+[10/31 10:16:09    168s] <CMD> report_timing -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_setup_r2r.txt
+[10/31 10:16:09    169s] <CMD> report_timing -early -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_hold_r2r.txt
+[10/31 10:16:09    169s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:09    169s] #################################################################################
+[10/31 10:16:09    169s] # Design Stage: PostRoute
+[10/31 10:16:09    169s] # Design Name: rv32i_cpu_top
+[10/31 10:16:09    169s] # Design Mode: 130nm
+[10/31 10:16:09    169s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:09    169s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:09    169s] # Signoff Settings: SI Off 
+[10/31 10:16:09    169s] #################################################################################
+[10/31 10:16:10    169s] Calculate late delays in OCV mode...
+[10/31 10:16:10    169s] Calculate early delays in OCV mode...
+[10/31 10:16:10    169s] Topological Sorting (REAL = 0:00:00.0, MEM = 3755.4M, InitMEM = 3755.4M)
+[10/31 10:16:10    169s] Start delay calculation (fullDC) (2 T). (MEM=2975.78)
+[10/31 10:16:10    170s] End AAE Lib Interpolated Model. (MEM=2993.421875 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:11    175s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:11    175s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:16:11    175s] Total number of fetched objects 36017
+[10/31 10:16:11    175s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:11    175s] End delay calculation. (MEM=3018.8 CPU=0:00:05.2 REAL=0:00:01.0)
+[10/31 10:16:11    175s] End delay calculation (fullDC). (MEM=3018.8 CPU=0:00:05.6 REAL=0:00:01.0)
+[10/31 10:16:11    175s] *** CDM Built up (cpu=0:00:06.3  real=0:00:02.0  mem= 3744.1M) ***
+[10/31 10:16:12    176s] <CMD> report_timing -to {apb_pslverr_o} -path_type full_clock > $d/path_setup_pslverr.txt
+[10/31 10:16:12    176s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:12    176s] #################################################################################
+[10/31 10:16:12    176s] # Design Stage: PostRoute
+[10/31 10:16:12    176s] # Design Name: rv32i_cpu_top
+[10/31 10:16:12    176s] # Design Mode: 130nm
+[10/31 10:16:12    176s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:12    176s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:12    176s] # Signoff Settings: SI Off 
+[10/31 10:16:12    176s] #################################################################################
+[10/31 10:16:13    177s] Calculate early delays in OCV mode...
+[10/31 10:16:13    177s] Calculate late delays in OCV mode...
+[10/31 10:16:13    177s] Topological Sorting (REAL = 0:00:00.0, MEM = 3755.4M, InitMEM = 3755.4M)
+[10/31 10:16:13    177s] Start delay calculation (fullDC) (2 T). (MEM=2985.29)
+[10/31 10:16:13    177s] End AAE Lib Interpolated Model. (MEM=3002.933594 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:14    183s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:14    183s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:14    183s] Total number of fetched objects 36017
+[10/31 10:16:14    183s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:14    183s] End delay calculation. (MEM=3030.94 CPU=0:00:05.5 REAL=0:00:01.0)
+[10/31 10:16:14    183s] End delay calculation (fullDC). (MEM=3030.94 CPU=0:00:05.8 REAL=0:00:01.0)
+[10/31 10:16:14    183s] *** CDM Built up (cpu=0:00:06.6  real=0:00:02.0  mem= 3744.1M) ***
+[10/31 10:16:15    183s] <CMD> all_constraint_modes -active
+[10/31 10:16:15    183s] <CMD> set_interactive_constraint_modes [all_constraint_modes -active]
+[10/31 10:16:15    183s] <CMD> set_clock_latency -source -early -max -rise $late_rise [get_ports clk_i] -clock clk_i
+[10/31 10:16:15    183s] <CMD> set_clock_latency -source -early -max -fall $late_fall [get_ports clk_i] -clock clk_i
+[10/31 10:16:15    183s] <CMD> set_clock_latency -source -late  -max -rise $late_rise [get_ports clk_i] -clock clk_i
+[10/31 10:16:15    183s] <CMD> set_clock_latency -source -late  -max -fall $late_fall [get_ports clk_i] -clock clk_i
+[10/31 10:16:15    183s] <CMD> set_interactive_constraint_modes {}
+[10/31 10:16:15    183s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:15    184s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:15    184s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:15    184s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:16:16    184s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:16    184s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:16:16    184s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:16    184s] #################################################################################
+[10/31 10:16:16    184s] # Design Stage: PostRoute
+[10/31 10:16:16    184s] # Design Name: rv32i_cpu_top
+[10/31 10:16:16    184s] # Design Mode: 130nm
+[10/31 10:16:16    184s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:16    184s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:16    184s] # Signoff Settings: SI Off 
+[10/31 10:16:16    184s] #################################################################################
+[10/31 10:16:16    185s] Calculate late delays in OCV mode...
+[10/31 10:16:16    185s] Calculate early delays in OCV mode...
+[10/31 10:16:16    185s] Topological Sorting (REAL = 0:00:00.0, MEM = 3755.4M, InitMEM = 3755.4M)
+[10/31 10:16:16    185s] Start delay calculation (fullDC) (2 T). (MEM=2997.57)
+[10/31 10:16:16    185s] End AAE Lib Interpolated Model. (MEM=3015.218750 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:18    190s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:18    190s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:16:18    190s] Total number of fetched objects 36017
+[10/31 10:16:18    190s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:18    190s] End delay calculation. (MEM=3037.93 CPU=0:00:05.0 REAL=0:00:02.0)
+[10/31 10:16:18    190s] End delay calculation (fullDC). (MEM=3037.93 CPU=0:00:05.3 REAL=0:00:02.0)
+[10/31 10:16:18    190s] *** CDM Built up (cpu=0:00:06.0  real=0:00:02.0  mem= 3744.1M) ***
+[10/31 10:16:18    191s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:18    191s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:18    191s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:16:18    191s] <CMD> report_timing -early -from {axi_rdata_i[13]} -to {u_core/u_icache_data_din_q_reg[13]/D} -path_type full_clock > $d/path_hold_axi13.txt
+[10/31 10:16:18    191s] <CMD> report_timing -from {axi_rdata_i[11]} -to {u_core/u_dcache_gen_data_sram[0].u_data_sram/din0[11]} -path_type full_clock > $d/path_setup_axi11.txt
+[10/31 10:16:18    191s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:16:18    191s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:18    191s] #################################################################################
+[10/31 10:16:18    191s] # Design Stage: PostRoute
+[10/31 10:16:18    191s] # Design Name: rv32i_cpu_top
+[10/31 10:16:18    191s] # Design Mode: 130nm
+[10/31 10:16:18    191s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:18    191s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:18    191s] # Signoff Settings: SI Off 
+[10/31 10:16:18    191s] #################################################################################
+[10/31 10:16:19    192s] Calculate early delays in OCV mode...
+[10/31 10:16:19    192s] Calculate late delays in OCV mode...
+[10/31 10:16:19    192s] Topological Sorting (REAL = 0:00:00.0, MEM = 3755.4M, InitMEM = 3755.4M)
+[10/31 10:16:19    192s] Start delay calculation (fullDC) (2 T). (MEM=3009.09)
+[10/31 10:16:19    192s] End AAE Lib Interpolated Model. (MEM=3026.734375 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:20    198s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:20    198s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:20    198s] Total number of fetched objects 36017
+[10/31 10:16:20    198s] End Timing Check Calculation. (CPU Time=0:00:00.2, Real Time=0:00:00.0)
+[10/31 10:16:20    198s] End delay calculation. (MEM=3049.91 CPU=0:00:05.4 REAL=0:00:01.0)
+[10/31 10:16:20    198s] End delay calculation (fullDC). (MEM=3049.91 CPU=0:00:05.7 REAL=0:00:01.0)
+[10/31 10:16:20    198s] *** CDM Built up (cpu=0:00:06.4  real=0:00:02.0  mem= 3744.1M) ***
+[10/31 10:16:21    198s] <CMD> report_timing -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_setup_r2r.txt
+[10/31 10:16:21    199s] <CMD> report_timing -early -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_hold_r2r.txt
+[10/31 10:16:22    199s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:22    199s] #################################################################################
+[10/31 10:16:22    199s] # Design Stage: PostRoute
+[10/31 10:16:22    199s] # Design Name: rv32i_cpu_top
+[10/31 10:16:22    199s] # Design Mode: 130nm
+[10/31 10:16:22    199s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:22    199s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:22    199s] # Signoff Settings: SI Off 
+[10/31 10:16:22    199s] #################################################################################
+[10/31 10:16:22    200s] Calculate late delays in OCV mode...
+[10/31 10:16:22    200s] Calculate early delays in OCV mode...
+[10/31 10:16:22    200s] Topological Sorting (REAL = 0:00:00.0, MEM = 3755.4M, InitMEM = 3755.4M)
+[10/31 10:16:22    200s] Start delay calculation (fullDC) (2 T). (MEM=3014.62)
+[10/31 10:16:22    200s] End AAE Lib Interpolated Model. (MEM=3032.265625 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:24    206s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:24    206s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:16:24    206s] Total number of fetched objects 36017
+[10/31 10:16:24    206s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:24    206s] End delay calculation. (MEM=3052.38 CPU=0:00:05.6 REAL=0:00:02.0)
+[10/31 10:16:24    206s] End delay calculation (fullDC). (MEM=3052.38 CPU=0:00:05.9 REAL=0:00:02.0)
+[10/31 10:16:24    206s] *** CDM Built up (cpu=0:00:06.7  real=0:00:02.0  mem= 3763.2M) ***
+[10/31 10:16:24    206s] <CMD> report_timing -to {apb_pslverr_o} -path_type full_clock > $d/path_setup_pslverr.txt
+[10/31 10:16:25    207s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:25    207s] #################################################################################
+[10/31 10:16:25    207s] # Design Stage: PostRoute
+[10/31 10:16:25    207s] # Design Name: rv32i_cpu_top
+[10/31 10:16:25    207s] # Design Mode: 130nm
+[10/31 10:16:25    207s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:25    207s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:25    207s] # Signoff Settings: SI Off 
+[10/31 10:16:25    207s] #################################################################################
+[10/31 10:16:25    207s] Calculate early delays in OCV mode...
+[10/31 10:16:25    207s] Calculate late delays in OCV mode...
+[10/31 10:16:25    207s] Topological Sorting (REAL = 0:00:00.0, MEM = 3774.5M, InitMEM = 3774.5M)
+[10/31 10:16:25    207s] Start delay calculation (fullDC) (2 T). (MEM=3025.1)
+[10/31 10:16:25    207s] End AAE Lib Interpolated Model. (MEM=3042.746094 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:26    213s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:26    213s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:26    213s] Total number of fetched objects 36017
+[10/31 10:16:26    213s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:26    213s] End delay calculation. (MEM=3061.71 CPU=0:00:05.1 REAL=0:00:01.0)
+[10/31 10:16:26    213s] End delay calculation (fullDC). (MEM=3061.71 CPU=0:00:05.4 REAL=0:00:01.0)
+[10/31 10:16:26    213s] *** CDM Built up (cpu=0:00:06.1  real=0:00:01.0  mem= 3763.2M) ***
+[10/31 10:16:27    213s] <CMD> spefIn -rc_corner rc_nom /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/innovus_nom/rv32i_cpu_top.nom.spef
+[10/31 10:16:27    213s] spefIn Option :  -rc_corner rc_nom /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/innovus_nom/rv32i_cpu_top.nom.spef 
+[10/31 10:16:27    214s] Closing parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_fOxS3s.rcdb.d': 35563 access done (mem: 3776.496M)
+[10/31 10:16:27    214s] 
+[10/31 10:16:27    214s] SPEF files for RC Corner rc_nom:
+[10/31 10:16:27    214s] Top-level spef file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/innovus_nom/rv32i_cpu_top.nom.spef'.
+[10/31 10:16:27    214s] Start spef parsing (MEM=3776.5).
+[10/31 10:16:27    214s] Number of corners: 1
+[10/31 10:16:27    214s] Number of parallel threads processing the nets is: 2
+[10/31 10:16:27    214s] Maximum backlog used in parser: 50.
+[10/31 10:16:27    214s] Reading multiple SPEF files in parallel.
+[10/31 10:16:27    214s] RCDB /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_pxZnum.rcdb.d/rv32i_cpu_top.rcdb.d Creation Started (CPU Time= 0:00:00.0  MEM= 3776.5M)
+[10/31 10:16:27    214s] Creating parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_pxZnum.rcdb.d/rv32i_cpu_top.rcdb.d' for storing RC.
+[10/31 10:16:29    218s] The SPEF file, '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/innovus_nom/rv32i_cpu_top.nom.spef', has encountered the error/warning message(s) during its reading.
+[10/31 10:16:29    218s] **WARN: (SPEF-1152):	Net 'axi_awlen_o[0] ( having pins axi_awlen_o[1] FE_PDC349_axi_awlen_o_0/X axi_awlen_o[0] )' is not fully specified as per its connectivity in design netlist. Missing ports have been added to the net using low RC values. The timing accuracy is not reliable for such nets.
+[10/31 10:16:29    218s] Type 'man SPEF-1152' for more detail.
+[10/31 10:16:29    218s] **WARN: (SPEF-1152):	Net 'debug_pc_src_o ( having pins debug_take_branch_jump_o FE_OFC3927_debug_pc_src_o/X debug_pc_src_o )' is not fully specified as per its connectivity in design netlist. Missing ports have been added to the net using low RC values. The timing accuracy is not reliable for such nets.
+[10/31 10:16:29    218s] Type 'man SPEF-1152' for more detail.
+[10/31 10:16:29    218s] **WARN: (SPEF-1152):	Net 'axi_arburst_o[0] ( having pins axi_arsize_o[1] FE_OFC5062_axi_arburst_o_0/X axi_arburst_o[0] )' is not fully specified as per its connectivity in design netlist. Missing ports have been added to the net using low RC values. The timing accuracy is not reliable for such nets.
+[10/31 10:16:29    218s] Type 'man SPEF-1152' for more detail.
+[10/31 10:16:29    218s] SPEF file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/innovus_nom/rv32i_cpu_top.nom.spef.
+[10/31 10:16:29    218s] Number of Resistors     : 344149
+[10/31 10:16:29    218s] Number of Ground Caps   : 209883
+[10/31 10:16:29    218s] Number of Coupling Caps : 2748068
+[10/31 10:16:29    218s] 
+[10/31 10:16:29    218s] RCDB /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_pxZnum.rcdb.d/rv32i_cpu_top.rcdb.d Creation Completed (CPU Time= 0:00:04.8  MEM= 3777.5M)
+[10/31 10:16:29    218s] End spef parsing (MEM=3769.5 CPU=0:00:04.8 REAL=0:00:02.0).
+[10/31 10:16:29    218s] Spef for RC Corner 'rc_nom' was previously specified. Dropping the previous specification.
+[10/31 10:16:29    218s] Lumped Parasitic Loading Started (total cpu=0:00:00.0, real=0:00:00.0, current mem=3769.496M)
+[10/31 10:16:29    218s] Opening parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_pxZnum.rcdb.d/rv32i_cpu_top.rcdb.d' for reading (mem: 3769.496M)
+[10/31 10:16:29    218s] Lumped Parasitic Loading Completed (total cpu=0:00:00.0, real=0:00:00.0, current mem=3769.496M)
+[10/31 10:16:29    218s] Closing parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_pxZnum.rcdb.d/rv32i_cpu_top.rcdb.d': 0 access done (mem: 3769.496M)
+[10/31 10:16:29    218s] **WARN: (IMPEXT-3423):	Detected 3 nets with incomplete RC network. Low-value resistances have been added by the software to complete the RC network of these nets. Review the list of affected nets in the './rv32i_cpu_top.rc_nom.incomplete_res.net' file to ensure they are not along the critical path because results of timing analysis performed on nets with incomplete RC network can be inaccurate.
+[10/31 10:16:29    218s] Type 'man IMPEXT-3423' for more detail.
+[10/31 10:16:29    218s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:29    219s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:29    219s] #################################################################################
+[10/31 10:16:29    219s] # Design Stage: PostRoute
+[10/31 10:16:29    219s] # Design Name: rv32i_cpu_top
+[10/31 10:16:29    219s] # Design Mode: 130nm
+[10/31 10:16:29    219s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:29    219s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:29    219s] # Signoff Settings: SI Off 
+[10/31 10:16:29    219s] #################################################################################
+[10/31 10:16:29    219s] Calculate early delays in OCV mode...
+[10/31 10:16:29    219s] Calculate late delays in OCV mode...
+[10/31 10:16:29    219s] Topological Sorting (REAL = 0:00:00.0, MEM = 3767.5M, InitMEM = 3767.5M)
+[10/31 10:16:29    219s] Start delay calculation (fullDC) (2 T). (MEM=2975.57)
+[10/31 10:16:29    219s] End AAE Lib Interpolated Model. (MEM=2993.218750 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:29    219s] Opening parasitic data file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/innovus_temp_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_eda.ic_ryan_FnJ5T3/rv32i_cpu_top_57123_e6a28762-2b9a-46d4-90df-c0ff342149ea_pxZnum.rcdb.d/rv32i_cpu_top.rcdb.d' for reading (mem: 3787.223M)
+[10/31 10:16:29    219s] RC Database In Completed (CPU Time= 0:00:00.0  Real Time=0:00:00.0  MEM= 3787.2M)
+[10/31 10:16:32    225s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:32    225s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:32    225s] Total number of fetched objects 36017
+[10/31 10:16:32    225s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:32    225s] End delay calculation. (MEM=3055.79 CPU=0:00:05.7 REAL=0:00:03.0)
+[10/31 10:16:32    225s] End delay calculation (fullDC). (MEM=3055.79 CPU=0:00:06.1 REAL=0:00:03.0)
+[10/31 10:16:32    225s] *** CDM Built up (cpu=0:00:06.8  real=0:00:03.0  mem= 3763.2M) ***
+[10/31 10:16:33    226s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:33    226s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:33    226s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:16:33    226s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:33    226s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:16:33    226s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:33    226s] #################################################################################
+[10/31 10:16:33    226s] # Design Stage: PostRoute
+[10/31 10:16:33    226s] # Design Name: rv32i_cpu_top
+[10/31 10:16:33    226s] # Design Mode: 130nm
+[10/31 10:16:33    226s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:33    226s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:33    226s] # Signoff Settings: SI Off 
+[10/31 10:16:33    226s] #################################################################################
+[10/31 10:16:34    227s] Calculate late delays in OCV mode...
+[10/31 10:16:34    227s] Calculate early delays in OCV mode...
+[10/31 10:16:34    227s] Topological Sorting (REAL = 0:00:00.0, MEM = 3774.5M, InitMEM = 3774.5M)
+[10/31 10:16:34    227s] Start delay calculation (fullDC) (2 T). (MEM=3037.07)
+[10/31 10:16:34    227s] End AAE Lib Interpolated Model. (MEM=3054.710938 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:35    232s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:35    232s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:16:35    232s] Total number of fetched objects 36017
+[10/31 10:16:35    232s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:35    232s] End delay calculation. (MEM=3070.49 CPU=0:00:04.9 REAL=0:00:01.0)
+[10/31 10:16:35    232s] End delay calculation (fullDC). (MEM=3070.49 CPU=0:00:05.3 REAL=0:00:01.0)
+[10/31 10:16:35    232s] *** CDM Built up (cpu=0:00:06.0  real=0:00:02.0  mem= 3782.3M) ***
+[10/31 10:16:36    233s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:36    233s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:16:36    233s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:16:36    233s] <CMD> report_timing -early -from {axi_rdata_i[13]} -to {u_core/u_icache_data_din_q_reg[13]/D} -path_type full_clock > $d/path_hold_axi13.txt
+[10/31 10:16:36    233s] <CMD> report_timing -from {axi_rdata_i[11]} -to {u_core/u_dcache_gen_data_sram[0].u_data_sram/din0[11]} -path_type full_clock > $d/path_setup_axi11.txt
+[10/31 10:16:36    233s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:16:36    234s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:36    234s] #################################################################################
+[10/31 10:16:36    234s] # Design Stage: PostRoute
+[10/31 10:16:36    234s] # Design Name: rv32i_cpu_top
+[10/31 10:16:36    234s] # Design Mode: 130nm
+[10/31 10:16:36    234s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:36    234s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:36    234s] # Signoff Settings: SI Off 
+[10/31 10:16:36    234s] #################################################################################
+[10/31 10:16:37    234s] Calculate early delays in OCV mode...
+[10/31 10:16:37    234s] Calculate late delays in OCV mode...
+[10/31 10:16:37    234s] Topological Sorting (REAL = 0:00:00.0, MEM = 3793.6M, InitMEM = 3793.6M)
+[10/31 10:16:37    234s] Start delay calculation (fullDC) (2 T). (MEM=3045.92)
+[10/31 10:16:37    234s] End AAE Lib Interpolated Model. (MEM=3063.562500 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:38    239s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:38    239s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:38    239s] Total number of fetched objects 36017
+[10/31 10:16:38    239s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:38    239s] End delay calculation. (MEM=3083.36 CPU=0:00:04.5 REAL=0:00:01.0)
+[10/31 10:16:38    239s] End delay calculation (fullDC). (MEM=3083.36 CPU=0:00:04.8 REAL=0:00:01.0)
+[10/31 10:16:38    239s] *** CDM Built up (cpu=0:00:05.5  real=0:00:02.0  mem= 3782.3M) ***
+[10/31 10:16:38    240s] <CMD> report_timing -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_setup_r2r.txt
+[10/31 10:16:39    240s] <CMD> report_timing -early -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_hold_r2r.txt
+[10/31 10:16:39    240s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:39    240s] #################################################################################
+[10/31 10:16:39    240s] # Design Stage: PostRoute
+[10/31 10:16:39    240s] # Design Name: rv32i_cpu_top
+[10/31 10:16:39    240s] # Design Mode: 130nm
+[10/31 10:16:39    240s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:39    240s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:39    240s] # Signoff Settings: SI Off 
+[10/31 10:16:39    240s] #################################################################################
+[10/31 10:16:39    241s] Calculate late delays in OCV mode...
+[10/31 10:16:39    241s] Calculate early delays in OCV mode...
+[10/31 10:16:39    241s] Topological Sorting (REAL = 0:00:00.0, MEM = 3793.6M, InitMEM = 3793.6M)
+[10/31 10:16:39    241s] Start delay calculation (fullDC) (2 T). (MEM=3044.63)
+[10/31 10:16:39    241s] End AAE Lib Interpolated Model. (MEM=3062.273438 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:41    246s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:41    246s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:16:41    246s] Total number of fetched objects 36017
+[10/31 10:16:41    246s] End Timing Check Calculation. (CPU Time=0:00:00.2, Real Time=0:00:00.0)
+[10/31 10:16:41    246s] End delay calculation. (MEM=3083.5 CPU=0:00:04.9 REAL=0:00:01.0)
+[10/31 10:16:41    246s] End delay calculation (fullDC). (MEM=3083.5 CPU=0:00:05.2 REAL=0:00:02.0)
+[10/31 10:16:41    246s] *** CDM Built up (cpu=0:00:05.9  real=0:00:02.0  mem= 3782.3M) ***
+[10/31 10:16:42    247s] <CMD> report_timing -to {apb_pslverr_o} -path_type full_clock > $d/path_setup_pslverr.txt
+[10/31 10:16:42    247s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:16:42    247s] #################################################################################
+[10/31 10:16:42    247s] # Design Stage: PostRoute
+[10/31 10:16:42    247s] # Design Name: rv32i_cpu_top
+[10/31 10:16:42    247s] # Design Mode: 130nm
+[10/31 10:16:42    247s] # Analysis Mode: MMMC OCV 
+[10/31 10:16:42    247s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:16:42    247s] # Signoff Settings: SI Off 
+[10/31 10:16:42    247s] #################################################################################
+[10/31 10:16:42    248s] Calculate early delays in OCV mode...
+[10/31 10:16:42    248s] Calculate late delays in OCV mode...
+[10/31 10:16:42    248s] Topological Sorting (REAL = 0:00:00.0, MEM = 3793.6M, InitMEM = 3793.6M)
+[10/31 10:16:42    248s] Start delay calculation (fullDC) (2 T). (MEM=3051.71)
+[10/31 10:16:42    248s] End AAE Lib Interpolated Model. (MEM=3069.359375 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:16:44    253s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:16:44    253s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:16:44    253s] Total number of fetched objects 36017
+[10/31 10:16:44    253s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:16:44    253s] End delay calculation. (MEM=3089.51 CPU=0:00:04.6 REAL=0:00:01.0)
+[10/31 10:16:44    253s] End delay calculation (fullDC). (MEM=3089.51 CPU=0:00:05.0 REAL=0:00:02.0)
+[10/31 10:16:44    253s] *** CDM Built up (cpu=0:00:05.6  real=0:00:02.0  mem= 3782.3M) ***
+[10/31 10:16:44    253s] <CMD> set_default_switching_activity -input_activity 0.1 -seq_activity 0.1
+[10/31 10:16:44    253s] <CMD> report_power -outfile /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/n2_star_latOFF_siOff/power_act01.txt
+[10/31 10:16:44    253s] env CDS_WORKAREA is set to /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b
+[10/31 10:16:44    253s] 
+[10/31 10:16:44    253s] Power Net Detected:
+[10/31 10:16:44    253s]         Voltage	    Name
+[10/31 10:16:44    253s]              0V	    VGND
+[10/31 10:16:44    253s]            1.8V	    VPWR
+[10/31 10:16:44    253s] 
+[10/31 10:16:44    253s] Begin Power Analysis
+[10/31 10:16:44    253s] 
+[10/31 10:16:44    253s]              0V	    VGND
+[10/31 10:16:44    253s]            1.8V	    VPWR
+[10/31 10:20:14    384s] Begin Processing Timing Library for Power Calculation
+[10/31 10:20:14    384s] 
+[10/31 10:20:15    384s] Ended Processing Timing Library for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3462.50MB/5726.13MB/3462.50MB)
+[10/31 10:20:15    384s] 
+[10/31 10:20:15    384s] 
+[10/31 10:20:15    384s] 
+[10/31 10:20:15    384s] Begin Processing Power Net/Grid for Power Calculation
+[10/31 10:20:15    384s] 
+[10/31 10:20:15    384s] Ended Processing Power Net/Grid for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3462.50MB/5726.13MB/3462.50MB)
+[10/31 10:20:15    384s] 
+[10/31 10:20:15    384s] Begin Processing Timing Window Data for Power Calculation
+[10/31 10:20:15    384s] 
+[10/31 10:20:15    384s] clk_i(75.0019MHz) Ended Processing Timing Window Data for Power Calculation: (cpu=0:00:01, real=0:00:01, mem(process/total/peak)=3469.31MB/5730.13MB/3469.31MB)
+[10/31 10:20:16    386s] 
+[10/31 10:20:16    386s] Begin Processing User Attributes
+[10/31 10:20:16    386s] 
+[10/31 10:20:16    386s] Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3471.16MB/5732.13MB/3471.16MB)
+[10/31 10:20:16    386s] 
+[10/31 10:20:16    386s] Begin Processing Signal Activity
+[10/31 10:20:16    386s] 
+[10/31 10:20:23    389s] Ended Processing Signal Activity: (cpu=0:00:02, real=0:00:06, mem(process/total/peak)=3475.48MB/5736.13MB/3475.48MB)
+[10/31 10:20:23    389s] 
+[10/31 10:20:23    389s] Begin Power Computation
+[10/31 10:20:23    389s] 
+[10/31 10:20:23    389s]       ----------------------------------------------------------
+[10/31 10:20:23    389s]       # of cell(s) missing both power/leakage table: 0
+[10/31 10:20:23    389s]       # of cell(s) missing power table: 1
+[10/31 10:20:23    389s]       # of cell(s) missing leakage table: 0
+[10/31 10:20:23    389s]       ----------------------------------------------------------
+[10/31 10:20:23    389s] CellName                                  Missing Table(s)
+[10/31 10:20:23    389s] sky130_fd_sc_hd__conb_1                   internal power, 
+[10/31 10:20:23    389s] 
+[10/31 10:20:23    389s] 
+[10/31 10:20:24    391s]       # of MSMV cell(s) missing power_level: 0
+[10/31 10:20:24    391s] Ended Power Computation: (cpu=0:00:02, real=0:00:01, mem(process/total/peak)=3484.09MB/5762.14MB/3484.09MB)
+[10/31 10:20:24    391s] 
+[10/31 10:20:24    391s] Begin Processing User Attributes
+[10/31 10:20:24    391s] 
+[10/31 10:20:24    391s] Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3484.09MB/5762.14MB/3484.09MB)
+[10/31 10:20:24    391s] 
+[10/31 10:20:24    391s] Ended Power Analysis: (cpu=0:02:17, real=0:03:39, mem(process/total/peak)=3484.09MB/5762.14MB/3484.09MB)
+[10/31 10:20:24    391s] 
+[10/31 10:23:07    513s] *
+
+
+
+[10/31 10:23:07    513s] Total Power
+[10/31 10:23:07    513s] -----------------------------------------------------------------------------------------
+[10/31 10:23:07    513s] Total Internal Power:       50.84513605 	   72.3760%
+[10/31 10:23:07    513s] Total Switching Power:      19.30978695 	   27.4867%
+[10/31 10:23:07    513s] Total Leakage Power:         0.09648844 	    0.1373%
+[10/31 10:23:07    513s] Total Power:                70.25141144
+[10/31 10:23:07    513s] -----------------------------------------------------------------------------------------
+[10/31 10:23:07    514s] <CMD> set_default_switching_activity -input_activity 0.2 -seq_activity 0.2
+[10/31 10:23:07    514s] <CMD> report_power -outfile /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b/n2_star_latOFF_siOff/power_act02.txt
+[10/31 10:23:07    514s] env CDS_WORKAREA is set to /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_diag_b5g/innovus_b
+[10/31 10:23:07    514s] 
+[10/31 10:23:07    514s] Begin Power Analysis
+[10/31 10:23:07    514s] 
+[10/31 10:23:07    514s]              0V	    VGND
+[10/31 10:23:07    514s]            1.8V	    VPWR
+[10/31 10:23:08    515s] Begin Processing Timing Library for Power Calculation
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Ended Processing Timing Library for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3828.95MB/6212.14MB/3831.39MB)
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Begin Processing Power Net/Grid for Power Calculation
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Ended Processing Power Net/Grid for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3828.95MB/6212.14MB/3831.39MB)
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Begin Processing Timing Window Data for Power Calculation
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Ended Processing Timing Window Data for Power Calculation: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3828.95MB/6212.14MB/3831.39MB)
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Begin Processing User Attributes
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3828.95MB/6212.14MB/3831.39MB)
+[10/31 10:23:08    515s] 
+[10/31 10:23:08    515s] Begin Processing Signal Activity
+[10/31 10:23:08    515s] 
+[10/31 10:23:10    516s] Ended Processing Signal Activity: (cpu=0:00:01, real=0:00:01, mem(process/total/peak)=3828.95MB/6212.14MB/3831.39MB)
+[10/31 10:23:10    516s] 
+[10/31 10:23:10    516s] Begin Power Computation
+[10/31 10:23:10    516s] 
+[10/31 10:23:10    516s]       ----------------------------------------------------------
+[10/31 10:23:10    516s]       # of cell(s) missing both power/leakage table: 0
+[10/31 10:23:10    516s]       # of cell(s) missing power table: 1
+[10/31 10:23:10    516s]       # of cell(s) missing leakage table: 0
+[10/31 10:23:10    516s]       ----------------------------------------------------------
+[10/31 10:23:10    516s] CellName                                  Missing Table(s)
+[10/31 10:23:10    516s] sky130_fd_sc_hd__conb_1                   internal power, 
+[10/31 10:23:10    516s] 
+[10/31 10:23:10    516s] 
+[10/31 10:23:11    518s]       # of MSMV cell(s) missing power_level: 0
+[10/31 10:23:11    518s] Ended Power Computation: (cpu=0:00:01, real=0:00:01, mem(process/total/peak)=3829.20MB/6212.14MB/3831.39MB)
+[10/31 10:23:11    518s] 
+[10/31 10:23:11    518s] Begin Processing User Attributes
+[10/31 10:23:11    518s] 
+[10/31 10:23:11    518s] Ended Processing User Attributes: (cpu=0:00:00, real=0:00:00, mem(process/total/peak)=3829.20MB/6212.14MB/3831.39MB)
+[10/31 10:23:11    518s] 
+[10/31 10:23:11    518s] Ended Power Analysis: (cpu=0:00:04, real=0:00:03, mem(process/total/peak)=3829.20MB/6212.14MB/3831.39MB)
+[10/31 10:23:11    518s] 
+[10/31 10:24:45    600s] *
+
+
+
+[10/31 10:24:45    600s] Total Power
+[10/31 10:24:45    600s] -----------------------------------------------------------------------------------------
+[10/31 10:24:45    600s] Total Internal Power:       55.22509721 	   63.3009%
+[10/31 10:24:45    600s] Total Switching Power:      31.92058358 	   36.5885%
+[10/31 10:24:45    600s] Total Leakage Power:         0.09648844 	    0.1106%
+[10/31 10:24:45    600s] Total Power:                87.24216923
+[10/31 10:24:45    600s] -----------------------------------------------------------------------------------------
+[10/31 10:24:45    601s] <CMD> all_constraint_modes -active
+[10/31 10:24:45    601s] <CMD> set_interactive_constraint_modes [all_constraint_modes -active]
+[10/31 10:24:45    601s] <CMD> set_clock_latency -source -early -max -rise $late_rise [get_ports clk_i] -clock clk_i
+[10/31 10:24:47    602s] <CMD> set_clock_latency -source -early -max -fall $late_fall [get_ports clk_i] -clock clk_i
+[10/31 10:24:47    602s] <CMD> set_clock_latency -source -late  -max -rise $late_rise [get_ports clk_i] -clock clk_i
+[10/31 10:24:47    602s] <CMD> set_clock_latency -source -late  -max -fall $late_fall [get_ports clk_i] -clock clk_i
+[10/31 10:24:47    602s] <CMD> set_interactive_constraint_modes {}
+[10/31 10:24:47    602s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:24:47    603s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:24:47    603s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:24:47    603s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:24:47    603s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:24:47    603s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:24:49    605s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:24:49    605s] #################################################################################
+[10/31 10:24:49    605s] # Design Stage: PostRoute
+[10/31 10:24:49    605s] # Design Name: rv32i_cpu_top
+[10/31 10:24:49    605s] # Design Mode: 130nm
+[10/31 10:24:49    605s] # Analysis Mode: MMMC OCV 
+[10/31 10:24:49    605s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:24:49    605s] # Signoff Settings: SI Off 
+[10/31 10:24:49    605s] #################################################################################
+[10/31 10:24:50    606s] Calculate late delays in OCV mode...
+[10/31 10:24:50    606s] Calculate early delays in OCV mode...
+[10/31 10:24:50    606s] Topological Sorting (REAL = 0:00:00.0, MEM = 4682.3M, InitMEM = 4682.3M)
+[10/31 10:24:50    606s] Start delay calculation (fullDC) (2 T). (MEM=3979.46)
+[10/31 10:24:51    607s] End AAE Lib Interpolated Model. (MEM=3997.105469 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:24:53    611s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:24:53    611s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:24:53    611s] Total number of fetched objects 36017
+[10/31 10:24:53    611s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:24:53    611s] End delay calculation. (MEM=3993.25 CPU=0:00:04.0 REAL=0:00:02.0)
+[10/31 10:24:53    611s] End delay calculation (fullDC). (MEM=3993.25 CPU=0:00:05.2 REAL=0:00:03.0)
+[10/31 10:24:53    611s] *** CDM Built up (cpu=0:00:06.1  real=0:00:04.0  mem= 4539.1M) ***
+[10/31 10:24:54    612s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:24:54    612s] <CMD> report_timing -collection {*}$flag {*}$args -max_paths 1 
+[10/31 10:24:54    612s] <CMD> report_timing -collection {*}$flag -max_paths 1
+[10/31 10:24:54    612s] <CMD> report_timing -early -from {axi_rdata_i[13]} -to {u_core/u_icache_data_din_q_reg[13]/D} -path_type full_clock > $d/path_hold_axi13.txt
+[10/31 10:24:54    612s] <CMD> report_timing -from {axi_rdata_i[11]} -to {u_core/u_dcache_gen_data_sram[0].u_data_sram/din0[11]} -path_type full_clock > $d/path_setup_axi11.txt
+[10/31 10:24:54    612s] **WARN: (TCLCMD-1681):	The software has performed a full/partial timing reset. All existing timing path and timing point collection references have been invalidated and may no longer be referenced.
+[10/31 10:24:54    612s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:24:54    612s] #################################################################################
+[10/31 10:24:54    612s] # Design Stage: PostRoute
+[10/31 10:24:54    612s] # Design Name: rv32i_cpu_top
+[10/31 10:24:54    612s] # Design Mode: 130nm
+[10/31 10:24:54    612s] # Analysis Mode: MMMC OCV 
+[10/31 10:24:54    612s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:24:54    612s] # Signoff Settings: SI Off 
+[10/31 10:24:54    612s] #################################################################################
+[10/31 10:24:55    613s] Calculate early delays in OCV mode...
+[10/31 10:24:55    613s] Calculate late delays in OCV mode...
+[10/31 10:24:55    613s] Topological Sorting (REAL = 0:00:00.0, MEM = 4550.3M, InitMEM = 4550.3M)
+[10/31 10:24:55    613s] Start delay calculation (fullDC) (2 T). (MEM=3509.62)
+[10/31 10:24:55    613s] End AAE Lib Interpolated Model. (MEM=3527.269531 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:24:56    617s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:24:56    617s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:24:56    617s] Total number of fetched objects 36017
+[10/31 10:24:56    617s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:24:56    617s] End delay calculation. (MEM=3569.43 CPU=0:00:04.2 REAL=0:00:01.0)
+[10/31 10:24:56    617s] End delay calculation (fullDC). (MEM=3569.43 CPU=0:00:04.5 REAL=0:00:01.0)
+[10/31 10:24:56    617s] *** CDM Built up (cpu=0:00:05.2  real=0:00:02.0  mem= 4539.1M) ***
+[10/31 10:24:56    618s] <CMD> report_timing -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_setup_r2r.txt
+[10/31 10:24:57    618s] <CMD> report_timing -early -from [all_registers -clock_pins] -to [all_registers -data_pins] -max_paths 1 -path_type full_clock > $d/path_hold_r2r.txt
+[10/31 10:24:57    619s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:24:57    619s] #################################################################################
+[10/31 10:24:57    619s] # Design Stage: PostRoute
+[10/31 10:24:57    619s] # Design Name: rv32i_cpu_top
+[10/31 10:24:57    619s] # Design Mode: 130nm
+[10/31 10:24:57    619s] # Analysis Mode: MMMC OCV 
+[10/31 10:24:57    619s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:24:57    619s] # Signoff Settings: SI Off 
+[10/31 10:24:57    619s] #################################################################################
+[10/31 10:24:57    619s] Calculate late delays in OCV mode...
+[10/31 10:24:57    619s] Calculate early delays in OCV mode...
+[10/31 10:24:57    619s] Topological Sorting (REAL = 0:00:00.0, MEM = 4550.3M, InitMEM = 4550.3M)
+[10/31 10:24:57    619s] Start delay calculation (fullDC) (2 T). (MEM=3512.66)
+[10/31 10:24:57    619s] End AAE Lib Interpolated Model. (MEM=3530.308594 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:24:58    624s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:24:58    624s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 36017. 
+[10/31 10:24:58    624s] Total number of fetched objects 36017
+[10/31 10:24:59    624s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:01.0)
+[10/31 10:24:59    624s] End delay calculation. (MEM=3573.82 CPU=0:00:04.2 REAL=0:00:01.0)
+[10/31 10:24:59    624s] End delay calculation (fullDC). (MEM=3573.82 CPU=0:00:04.5 REAL=0:00:02.0)
+[10/31 10:24:59    624s] *** CDM Built up (cpu=0:00:05.1  real=0:00:02.0  mem= 4539.1M) ***
+[10/31 10:24:59    625s] <CMD> report_timing -to {apb_pslverr_o} -path_type full_clock > $d/path_setup_pslverr.txt
+[10/31 10:24:59    625s] AAE_INFO: opIsDesignInPostRouteState() is 1
+[10/31 10:24:59    625s] #################################################################################
+[10/31 10:24:59    625s] # Design Stage: PostRoute
+[10/31 10:24:59    625s] # Design Name: rv32i_cpu_top
+[10/31 10:24:59    625s] # Design Mode: 130nm
+[10/31 10:24:59    625s] # Analysis Mode: MMMC OCV 
+[10/31 10:24:59    625s] # Parasitics Mode: SPEF/RCDB 
+[10/31 10:24:59    625s] # Signoff Settings: SI Off 
+[10/31 10:24:59    625s] #################################################################################
+[10/31 10:25:00    625s] Calculate early delays in OCV mode...
+[10/31 10:25:00    625s] Calculate late delays in OCV mode...
+[10/31 10:25:00    625s] Topological Sorting (REAL = 0:00:00.0, MEM = 4550.3M, InitMEM = 4550.3M)
+[10/31 10:25:00    625s] Start delay calculation (fullDC) (2 T). (MEM=3516.39)
+[10/31 10:25:00    625s] End AAE Lib Interpolated Model. (MEM=3534.039062 CPU Time=0:00:00.0, Real Time=0:00:00.0)
+[10/31 10:25:01    630s] Glitch Analysis: View av_tt -- Total Number of Nets Skipped = 0. 
+[10/31 10:25:01    630s] Glitch Analysis: View av_tt -- Total Number of Nets Analyzed = 253. 
+[10/31 10:25:01    630s] Total number of fetched objects 36017
+[10/31 10:25:01    630s] End Timing Check Calculation. (CPU Time=0:00:00.1, Real Time=0:00:00.0)
+[10/31 10:25:01    630s] End delay calculation. (MEM=3574.74 CPU=0:00:04.2 REAL=0:00:01.0)
+[10/31 10:25:01    630s] End delay calculation (fullDC). (MEM=3574.74 CPU=0:00:04.5 REAL=0:00:01.0)
+[10/31 10:25:01    630s] *** CDM Built up (cpu=0:00:05.2  real=0:00:02.0  mem= 4539.1M) ***
+[10/31 10:25:01    631s] 
+[10/31 10:25:01    631s] *** Memory Usage v#2 (Current mem = 4586.051M, initial mem = 839.766M) ***
+[10/31 10:25:01    631s] 
+[10/31 10:25:01    631s] *** Summary of all messages that are not suppressed in this session:
+[10/31 10:25:01    631s] Severity  ID               Count  Summary                                  
+[10/31 10:25:01    631s] WARNING   IMPLF-108            1  There is no overlap layer defined in any...
+[10/31 10:25:01    631s] WARNING   IMPLF-200           57  Pin '%s' in macro '%s' has no ANTENNAGAT...
+[10/31 10:25:01    631s] WARNING   IMPLF-201           69  Pin '%s' in macro '%s' has no ANTENNADIF...
+[10/31 10:25:01    631s] WARNING   IMPEXT-6197          1  The Cap table file is not specified. Thi...
+[10/31 10:25:01    631s] WARNING   IMPEXT-2766          6  The sheet resistance for layer %s is not...
+[10/31 10:25:01    631s] WARNING   IMPEXT-2773          6  The via resistance between layers %s and...
+[10/31 10:25:01    631s] WARNING   IMPEXT-2882          4  Unable to find the resistance for via '%...
+[10/31 10:25:01    631s] WARNING   IMPEXT-3423          1  Detected %d nets with incomplete RC netw...
+[10/31 10:25:01    631s] WARNING   IMPEXT-3032          1  Because the cap table file was not provi...
+[10/31 10:25:01    631s] WARNING   IMPESI-3505          1  setDelayCalMode -eng_%s (default=%s) wil...
+[10/31 10:25:01    631s] WARNING   IMPOPT-3602          1  The specified path group name %s is not ...
+[10/31 10:25:01    631s] WARNING   NRIF-90              1  Option setNanoRouteMode -route_bottom_ro...
+[10/31 10:25:01    631s] WARNING   NRIF-91              1  Option setNanoRouteMode -route_top_routi...
+[10/31 10:25:01    631s] WARNING   IMPCTE-107           1  The following globals have been obsolete...
+[10/31 10:25:01    631s] WARNING   IMPTCM-77            1  Option "%s" for command %s is obsolete a...
+[10/31 10:25:01    631s] WARNING   SPEF-1152            3  Net '%s' is not fully specified as per i...
+[10/31 10:25:01    631s] WARNING   TCLCMD-1681         10  The software has performed a full/partia...
+[10/31 10:25:01    631s] WARNING   TECHLIB-302         12  No function defined for cell '%s'. The c...
+[10/31 10:25:01    631s] *** Message Summary: 177 warning(s), 0 error(s)
+[10/31 10:25:01    631s] 
+[10/31 10:25:01    631s] --- Ending "Innovus" (totcpu=0:10:31, real=0:10:40, mem=4586.1M) ---

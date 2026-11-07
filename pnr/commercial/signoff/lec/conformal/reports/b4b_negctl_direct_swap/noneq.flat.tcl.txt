@@ -1,0 +1,326 @@
+# Compared points are: Non-equivalent
+#  (G) + 1996   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][31]
+#  (R) + 708    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][31]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][31]}
+
+# Compared points are: Non-equivalent
+#  (G) + 1997   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][30]
+#  (R) + 707    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][30]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][30]}
+
+# Compared points are: Non-equivalent
+#  (G) + 1998   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][29]
+#  (R) + 706    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][29]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][29]}
+
+# Compared points are: Non-equivalent
+#  (G) + 1999   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][28]
+#  (R) + 705    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][28]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][28]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2000   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][27]
+#  (R) + 704    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][27]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][27]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2001   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][26]
+#  (R) + 703    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][26]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][26]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2002   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][25]
+#  (R) + 702    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][25]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][25]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2003   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][24]
+#  (R) + 701    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][24]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][24]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2004   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][23]
+#  (R) + 700    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][23]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][23]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2005   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][22]
+#  (R) + 699    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][22]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][22]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2006   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][21]
+#  (R) + 698    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][21]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][21]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2007   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][20]
+#  (R) + 697    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][20]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][20]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2008   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][19]
+#  (R) + 696    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][19]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][19]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2009   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][18]
+#  (R) + 695    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][18]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][18]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2010   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][17]
+#  (R) + 694    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][17]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][17]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2011   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][16]
+#  (R) + 693    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][16]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][16]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2012   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][15]
+#  (R) + 692    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][15]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][15]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2013   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][14]
+#  (R) + 691    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][14]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][14]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2014   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][13]
+#  (R) + 690    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][13]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][13]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2015   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][12]
+#  (R) + 689    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][12]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][12]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2016   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][11]
+#  (R) + 688    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][11]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][11]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2017   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][10]
+#  (R) + 687    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][10]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][10]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2018   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][9]
+#  (R) + 686    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][9]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][9]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2019   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][8]
+#  (R) + 685    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][8]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][8]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2020   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][7]
+#  (R) + 684    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][7]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][7]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2021   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][6]
+#  (R) + 683    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][6]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][6]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2022   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]
+#  (R) + 682    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][5]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2023   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][4]
+#  (R) + 681    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][4]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][4]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2024   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][3]
+#  (R) + 680    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][3]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][3]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2025   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][2]
+#  (R) + 679    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][2]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][2]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2026   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][1]
+#  (R) + 678    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][1]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][1]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2027   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][0]
+#  (R) + 677    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][0]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[alu_result][0]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2028   DFF  /u_core/ex1a_ex1b_reg_q_reg[branch_taken]
+#  (R) + 710    DFF  /u_core/ex1a_ex1b_reg_q_reg[branch_taken]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[branch_taken]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2029   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][31]
+#  (R) + 777    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][31]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][31]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2030   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][30]
+#  (R) + 776    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][30]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][30]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2031   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][29]
+#  (R) + 775    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][29]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][29]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2032   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][28]
+#  (R) + 774    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][28]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][28]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2033   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][27]
+#  (R) + 773    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][27]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][27]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2034   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][26]
+#  (R) + 772    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][26]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][26]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2035   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][25]
+#  (R) + 771    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][25]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][25]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2036   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][24]
+#  (R) + 770    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][24]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][24]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2037   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][23]
+#  (R) + 769    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][23]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][23]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2038   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][22]
+#  (R) + 768    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][22]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][22]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2039   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][21]
+#  (R) + 767    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][21]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][21]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2040   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][20]
+#  (R) + 766    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][20]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][20]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2041   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][19]
+#  (R) + 765    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][19]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][19]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2042   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][18]
+#  (R) + 764    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][18]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][18]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2043   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]
+#  (R) + 763    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2044   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][16]
+#  (R) + 762    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][16]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][16]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2045   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][15]
+#  (R) + 761    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][15]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][15]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2046   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][14]
+#  (R) + 760    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][14]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][14]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2047   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][13]
+#  (R) + 759    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][13]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][13]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2048   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][12]
+#  (R) + 758    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][12]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][12]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2049   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][11]
+#  (R) + 757    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][11]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][11]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2050   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][10]
+#  (R) + 756    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][10]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][10]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2051   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][9]
+#  (R) + 755    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][9]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][9]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2052   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][8]
+#  (R) + 754    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][8]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][8]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2053   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][7]
+#  (R) + 753    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][7]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][7]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2054   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][6]
+#  (R) + 752    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][6]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][6]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2055   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][5]
+#  (R) + 751    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][5]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][5]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2056   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][4]
+#  (R) + 750    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][4]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][4]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2057   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][3]
+#  (R) + 749    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][3]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][3]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2058   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][2]
+#  (R) + 748    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][2]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][2]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2059   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][1]
+#  (R) + 747    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][1]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][1]}
+
+# Compared points are: Non-equivalent
+#  (G) + 2060   DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][0]
+#  (R) + 746    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][0]/U$1
+add_compared_points {u_core/ex1a_ex1b_reg_q_reg[fwd_store][0]}
+
+# 65 compared points written

@@ -1,0 +1,91 @@
+Information: Updating design information... (UID-85)
+Warning: Design 'rv32i_cpu_top' contains 1 high-fanout nets. A fanout number of 1000 will be used for delay calculations involving these nets. (TIM-134)
+ 
+****************************************
+Report : qor
+Design : rv32i_cpu_top
+Version: X-2025.06-SP3
+Date   : Mon Oct 26 00:03:24 2026
+****************************************
+
+
+  Timing Path Group 'PIPELINE'
+  -----------------------------------
+  Levels of Logic:              74.00
+  Critical Path Length:         12.70
+  Critical Path Slack:           0.00
+  Critical Path Clk Period:     13.33
+  Total Negative Slack:          0.00
+  No. of Violating Paths:        0.00
+  Worst Hold Violation:          0.00
+  Total Hold Violation:          0.00
+  No. of Hold Violations:        0.00
+  -----------------------------------
+
+
+  Cell Count
+  -----------------------------------
+  Hierarchical Cell Count:          2
+  Hierarchical Port Count:       1147
+  Leaf Cell Count:              32881
+  Buf/Inv Cell Count:            7734
+  Buf Cell Count:                2754
+  Inv Cell Count:                4980
+  CT Buf/Inv Cell Count:            0
+  Combinational Cell Count:     27587
+  Sequential Cell Count:         5294
+  Macro Count:                      0
+  -----------------------------------
+
+
+  Area
+  -----------------------------------
+  Combinational Area:   152846.589233
+  Noncombinational Area:
+                        107002.620871
+  Buf/Inv Area:          29589.627886
+  Total Buffer Area:         10794.10
+  Total Inverter Area:       18795.53
+  Macro/Black Box Area:
+                       1907125.468750
+  Net Area:                  0.000000
+  Net XLength        :     2123170.75
+  Net YLength        :     1652697.25
+  -----------------------------------
+  Cell Area:           2166974.678854
+  Design Area:         2166974.678854
+  Net Length        :      3775868.00
+
+
+  Design Rules
+  -----------------------------------
+  Total Number of Nets:         33373
+  Nets With Violations:          5049
+  Max Trans Violations:          4754
+  Max Cap Violations:            1094
+  Max Fanout Violations:           97
+  -----------------------------------
+
+
+  Hostname: eda.ic
+
+  Compile CPU Statistics
+  -----------------------------------------
+  Resource Sharing:                    8.66
+  Logic Optimization:                  5.59
+  Mapping Optimization:               38.08
+  -----------------------------------------
+  Overall Compile Time:              257.86
+  Overall Compile Wall Clock Time:   177.29
+
+  --------------------------------------------------------------------
+
+  Design  WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+
+
+  Design (Hold)  WNS: 0.00  TNS: 0.00  Number of Violating Paths: 0
+
+  --------------------------------------------------------------------
+
+
+1

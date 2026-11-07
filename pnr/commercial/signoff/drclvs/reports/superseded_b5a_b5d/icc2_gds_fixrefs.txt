@@ -1,0 +1,6 @@
+empty structures reachable from rv32i_cpu_top: ['sky130_sram_1kbyte_1rw1r_32x25_0']
+  sky130_sram_1kbyte_1rw1r_32x25_0: stem='sky130_sram_1kbyte_1rw1r_32x25' candidates=['sky130_sram_1kbyte_1rw1r_32x256_8']
+  -> 10 instances re-pointed to sky130_sram_1kbyte_1rw1r_32x256_8 (bbox um (0,0;479.78,397.5))
+orphan root structures pruned: 245 (cells in file before: 614)
+cells after prune: 614; top cells: ['rv32i_cpu_top']
+wrote /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/icc2/gds/rv32i_cpu_top.fixed.gds; instances repaired=10

@@ -1,0 +1,80 @@
+ 
+****************************************
+check_design summary:
+Version:     X-2025.06-SP3
+Date:        Sun Oct 25 23:59:40 2026
+****************************************
+
+                   Name                                            Total
+--------------------------------------------------------------------------------
+Inputs/Outputs                                                   3278
+    Unconnected ports (LINT-28)                                  1167
+    Feedthrough (LINT-29)                                        1202
+    Shorted outputs (LINT-31)                                     528
+    Constant outputs (LINT-52)                                    381
+
+Cells                                                            1180
+    Connected to power or ground (LINT-32)                       1113
+    Nets connected to multiple pins on same cell (LINT-33)         21
+
+Nets                                                               27
+--------------------------------------------------------------------------------
+
+Warning: In design 'rv32i_cpu_top', port 'scan_en_i' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'scan_in_i[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'scan_in_i[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'rst_n_i' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'cfg_i[21]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'cfg_i[20]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'cfg_i[19]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'cfg_i[18]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[319]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[318]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[317]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[316]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[315]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[314]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[313]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[312]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[311]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[310]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[309]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[308]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[307]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[306]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[305]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[304]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[303]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[302]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[301]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[300]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[299]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[298]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[297]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[296]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[295]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[294]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[293]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[292]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[291]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[290]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[289]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[288]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[287]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[286]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[285]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[284]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[283]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[282]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[281]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[280]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[279]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[278]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[277]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[276]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[275]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[274]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[273]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[272]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[271]' is not connected to any nets. (LINT-28)
+Warning: In design 'mbist_ctrl_10_8_2_0_0_1', port 'dout0_i[270]' is not connected to any nets. (LINT-28)
