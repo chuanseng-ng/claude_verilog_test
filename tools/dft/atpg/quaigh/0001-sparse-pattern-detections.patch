@@ -1,0 +1,168 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -12,7 +12,7 @@
+ [package]
+ edition = "2021"
+ name = "quaigh"
+-version = "0.0.6"
++version = "0.0.6+cvt1"
+ authors = ["Gabriel Gouvine <gabriel.gouvine_cargo@m4x.org>"]
+ description = "Logic optimization library"
+ homepage = "https://github.com/Coloquinte/quaigh"
+--- a/src/atpg.rs
++++ b/src/atpg.rs
+@@ -120,7 +120,9 @@
+     aig: &'a Network,
+     faults: Vec<Fault>,
+     patterns: Vec<Vec<bool>>,
+-    pattern_detections: Vec<Vec<bool>>,
++    /// For each pattern, the ascending indices of the faults it detects (sparse: most
++    /// deterministic patterns are graded against the few still-undetected faults only)
++    pattern_detections: Vec<Vec<u32>>,
+     detection: Vec<bool>,
+     rng: SmallRng,
+ }
+@@ -142,6 +144,7 @@
+     pub fn from(aig: &'a Network, faults: Vec<Fault>, seed: u64) -> TestPatternGenerator {
+         assert!(aig.is_topo_sorted());
+         let nb_faults = faults.len();
++        assert!(nb_faults <= u32::MAX as usize);
+         TestPatternGenerator {
+             aig,
+             faults: faults,
+@@ -159,6 +162,19 @@
+         }
+     }
+ 
++    /// Extend the sparse detections with 64 patterns at once, from (fault index, detection word) pairs
++    fn extend_detections(v: &mut Vec<Vec<u32>>, added: &[(usize, u64)]) {
++        for i in 0..64 {
++            v.push(
++                added
++                    .iter()
++                    .filter(|(_, d)| (d >> i) & 1 != 0)
++                    .map(|(f, _)| *f as u32)
++                    .collect(),
++            );
++        }
++    }
++
+     /// Obtain all faults, or only the ones that are not yet detected, and their index
+     pub fn get_faults(&self, check_already_detected: bool) -> (Vec<Fault>, Vec<usize>) {
+         let mut faults = Vec::new();
+@@ -177,10 +193,12 @@
+     pub fn add_single_pattern(&mut self, pattern: Vec<bool>, check_already_detected: bool) {
+         let (faults, indices) = self.get_faults(check_already_detected);
+         let detected = detects_faults(self.aig, &pattern, &faults);
+-        let mut det = vec![false; self.nb_faults()];
++        let mut det = Vec::new();
+         for (i, d) in zip(indices, detected) {
+             self.detection[i] |= d;
+-            det[i] = d;
++            if d {
++                det.push(i as u32);
++            }
+         }
+         self.patterns.push(pattern);
+         self.pattern_detections.push(det);
+@@ -207,13 +225,15 @@
+     pub fn add_patterns(&mut self, patterns: Vec<u64>, check_already_detected: bool) {
+         let (faults, indices) = self.get_faults(check_already_detected);
+         let detected = detects_faults_multi(self.aig, &patterns, &faults);
+-        let mut det = vec![0; self.nb_faults()];
++        let mut det = Vec::new();
+         for (i, d) in zip(indices, detected) {
+             self.detection[i] |= d != 0;
+-            det[i] = d;
++            if d != 0 {
++                det.push((i, d));
++            }
+         }
+         Self::extend_vec(&mut self.patterns, patterns);
+-        Self::extend_vec(&mut self.pattern_detections, det);
++        Self::extend_detections(&mut self.pattern_detections, &det);
+     }
+ 
+     /// Generate a random pattern and add it to the current set
+@@ -231,7 +251,8 @@
+             assert_eq!(p.len(), self.aig.nb_inputs());
+         }
+         for p in &self.pattern_detections {
+-            assert_eq!(p.len(), self.nb_faults());
++            assert!(p.windows(2).all(|w| w[0] < w[1]));
++            assert!(p.iter().all(|f| (*f as usize) < self.nb_faults()));
+         }
+         assert_eq!(self.detection.len(), self.nb_faults());
+     }
+@@ -241,8 +262,8 @@
+     /// At the moment we solve it with a simple greedy algorithm,
+     /// taking the pattern that detects the most new faults each time.
+     pub fn compress_patterns(&mut self) {
+-        let mut progress =
+-            tqdm!(total = 2 * self.nb_faults() * self.nb_patterns() + self.nb_detected());
++        let nb_entries: usize = self.pattern_detections.iter().map(|v| v.len()).sum();
++        let mut progress = tqdm!(total = 2 * nb_entries + self.nb_detected());
+         progress.set_description("Compression progress");
+         progress
+             .set_bar_format("{desc}{percentage:3.0}%|{animation}| [{elapsed}<{remaining}{postfix}]")
+@@ -251,37 +272,21 @@
+         let mut remaining_to_detect = self.nb_detected();
+         let mut it = 0;
+ 
+-        // Which patterns detect a given fault
+-        let mut fault_to_patterns = Vec::new();
+-        for f in 0..self.nb_faults() {
+-            let mut patterns = Vec::new();
+-            for p in 0..self.nb_patterns() {
+-                if self.pattern_detections[p][f] {
+-                    patterns.push(p);
+-                }
++        // Which patterns detect a given fault (ascending pattern order, as the dense scan gave)
++        let mut fault_to_patterns: Vec<Vec<u32>> = vec![Vec::new(); self.nb_faults()];
++        for (p, faults) in self.pattern_detections.iter().enumerate() {
++            for f in faults {
++                fault_to_patterns[*f as usize].push(p as u32);
+                 it += 1;
+                 if it % 256 == 0 {
+                     progress.update_to(it).unwrap();
+                 }
+             }
+-            fault_to_patterns.push(patterns);
+         }
+ 
+-        // Which faults are detected by a given pattern
+-        let mut pattern_to_faults = Vec::new();
+-        for p in 0..self.nb_patterns() {
+-            let mut faults = Vec::new();
+-            for f in 0..self.nb_faults() {
+-                if self.pattern_detections[p][f] {
+-                    faults.push(f);
+-                }
+-                it += 1;
+-                if it % 256 == 0 {
+-                    progress.update_to(it).unwrap();
+-                }
+-            }
+-            pattern_to_faults.push(faults);
+-        }
++        // Which faults are detected by a given pattern: the sparse rows themselves
++        let pattern_to_faults = &self.pattern_detections;
++        it += nb_entries;
+ 
+         // How many new faults each pattern detects
+         let mut nb_detected_by_pattern: Vec<_> =
+@@ -309,11 +314,11 @@
+             // Remove the faults detected by the pattern from consideration
+             assert!(nb_detected_by_pattern[best_pattern] > 0);
+             for f in &pattern_to_faults[best_pattern] {
+-                for p in &fault_to_patterns[*f] {
+-                    nb_detected_by_pattern[*p] -= 1;
++                for p in &fault_to_patterns[*f as usize] {
++                    nb_detected_by_pattern[*p as usize] -= 1;
+                 }
+                 // So we don't remove a fault twice
+-                fault_to_patterns[*f].clear();
++                fault_to_patterns[*f as usize].clear();
+             }
+             assert_eq!(nb_detected_by_pattern[best_pattern], 0);
+         }

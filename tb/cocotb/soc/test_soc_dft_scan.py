@@ -262,10 +262,20 @@ async def test_cpu_macro_scan_boundary(dut):
         )
     dut.scan_in_i.value = 0
     # Control: macro mirrors the dft_ctrl nets (pin leg here; TAP leg is dft_ctrl's own suite).
+    # j41m.17: scan_en is withheld until the crypto scan-entry wipe is applied, so the scan-entry
+    # protocol (DFT_ARCHITECTURE.md 14.14) is followed: scan_mode with scan_en low, three test
+    # clock edges plus one spare, THEN scan_en. Before this change the test raised both at once
+    # and passed only because the previous test left the wipe pipeline settled in scan mode
+    # (run alone it failed on HEAD with dft_scan_en = 0).
     dut.scan_mode_i.value = 1
-    dut.scan_en_i.value = 1
     await Timer(2, units="ns")
     assert int(soc.dft_scan_mode.value) == 1 and int(cpu.scan_mode_i.value) == 1
+    dut.scan_en_i.value = 1
+    await _toggle(dut.scan_clk_i, 3)  # edges 1..3 of the wipe, scan_en requested all the time
+    assert int(cpu.scan_en_i.value) == int(soc.dft_scan_en.value)
+    await _toggle(dut.scan_clk_i, 1)  # the spare edge
+    await Timer(2, units="ns")
+    assert int(soc.dft_scan_en_req.value) == 1
     assert int(soc.dft_scan_en.value) == 1 and int(cpu.scan_en_i.value) == 1
     assert int(cpu.test_en_w.value) == 1, "cache clock-gate test_en must follow scan_mode"
     assert (int(dut.scan_out_o.value) >> 6) == 0, (
@@ -301,6 +311,13 @@ async def test_cpu_macro_scan_boundary_tap_leg(dut):
     await drv.start()
     # Scan reset asserted (SCAN_RST=1) so the leg is independent of the PMU/reset history.
     await drv.enter_scan(sel=0, rst=1)
+    await drv.goto("RTI")
+    # j41m.17: the shift enable is withheld until the crypto wipe is applied: three Capture-DR
+    # passes (one test edge each) plus one spare before Shift-DR (DFT_ARCHITECTURE.md 14.14).
+    # Without them this test depended on the previous test's wipe-pipeline history.
+    for _ in range(4):
+        await drv.goto("CAPDR")
+        await drv.tick(1, 0)
     await drv.goto("RTI")
     assert int(soc.dft_scan_mode.value) == 1 and int(cpu.scan_mode_i.value) == 1, (
         "macro scan_mode_i must follow dft_scan_mode (TAP), not the scan_mode_i pin"

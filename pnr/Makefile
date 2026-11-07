@@ -790,7 +790,7 @@ librelane-sky130-cpu: sky130-cpu-sv2v
 	@if [ ! -f "$(LIBRELANE_SKY130_CPU_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_CPU_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
+		"$(OR_PATH_PREFIX) CVT_SCAN_OPENROAD=$(ASAP7_OPENROAD_BIN) PYTHONPATH=$(SYNTH_GATE_PLUGIN_DIR):$(SKY130_SOC_PLUGIN_DIR):\$$PYTHONPATH python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
 
 # Bead lu09: pin-coordinate lock for the Sky130 CPU macro. pnr/sky130/cpu/pin_template.def is derived from the
@@ -1162,7 +1162,7 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@[ -L $(LIBRELANE_SKY130_SOC_DIR)/runs ] || \
 		ln -sfn /nobackup/sky130_soc_runs $(LIBRELANE_SKY130_SOC_DIR)/runs
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"PYTHONPATH=$(LIBRELANE_DIR):$(SKY130_SOC_PLUGIN_DIR):$(SYNTH_GATE_PLUGIN_DIR) \
+		"CVT_SCAN_OPENROAD=$(ASAP7_OPENROAD_BIN) PYTHONPATH=$(LIBRELANE_DIR):$(SKY130_SOC_PLUGIN_DIR):$(SYNTH_GATE_PLUGIN_DIR) \
 		 python3 -m librelane \
 		 --skip Checker.LintTimingConstructs \
 		 --skip Checker.LintErrors \
@@ -1178,10 +1178,10 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/$(SKY130_SOC_CONFIG)"
 
 # e45j: kept as an alias of the (now rccal-default) -noklayout target for existing notes and scripts.
-# Unlike the pre-adoption recipe it honours SKY130_SOC_CONFIG, e.g. for the wire-length arm of
-# docs/SKY130_SLEW_CAP_E45J.md section 6:
-#   make librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=config_rccal_wl1500.json
-# and confirm the key in <run>/resolved.json.
+# Unlike the pre-adoption recipe it honours SKY130_SOC_CONFIG, e.g. for an A/B arm:
+#   make librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=<arm>.json
+# and confirm the key in <run>/resolved.json. (The wire-length arm config_rccal_wl1500.json was removed
+# 2026-10-28: GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500 is now in config_rccal.json, docs/SKY130_SLEW_CAP_E45J.md section 9.)
 librelane-sky130-soc-rccal-noklayout:
 	@$(MAKE) librelane-sky130-soc-noklayout
 

@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 DEFAULT_NETS = [r"fwd_b_sel_r\[", r"fwd_b_ex1c_r", r"fwd_b_ex1b2_r"]
-DEFAULT_FLOP = r"^\s*sky130_fd_sc_hd__(?:dfxtp|dfrtp|dfstp|dfbbp|dfxbp|dfrbp|dfsbp)\w*\s"
+DEFAULT_FLOP = r"^\s*sky130_fd_sc_hd__(?:s?df(?:xtp|rtp|stp|bbp|xbp|rbp|sbp))\w*\s"
 
 
 def census(text: str, nets: list[str], flop_regex: str) -> dict:

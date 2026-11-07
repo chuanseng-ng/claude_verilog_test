@@ -72,6 +72,9 @@ module tb_crypto (
     output logic              pslverr,
     output logic              irq_o,
 
+    // DFT wipe handshake (bead j41m.17): main instance only (the others see scan_mode_i = 0).
+    output logic              scan_wipe_done_o,
+
     // -- u_dut_v4: SBOX_PARALLEL = 4 ----------------------------------------
     input  logic        v4_psel,
     input  logic        v4_penable,
@@ -109,6 +112,14 @@ module tb_crypto (
     output logic        nosha_irq_o
 );
 
+    // The three fixed-configuration instances never see scan_mode_i = 1: their wipe-done outputs
+    // are constant 1 after 3 clocks and intentionally unobserved.
+    logic v4_wd, na_wd, ns_wd;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic unused_wd_w;
+    /* verilator lint_on UNUSEDSIGNAL */
+    assign unused_wd_w = &{1'b0, v4_wd, na_wd, ns_wd};
+
     crypto_accel #(
         .ADDR_W       (12),
         .EN_AES       (1'b1),
@@ -118,6 +129,7 @@ module tb_crypto (
         .clk    (clk),
         .rst_n  (rst_n),
         .scan_mode_i (scan_mode_i),
+        .scan_wipe_done_o (scan_wipe_done_o),
         .psel   (psel),
         .penable(penable),
         .pwrite (pwrite),
@@ -139,6 +151,7 @@ module tb_crypto (
         .clk    (clk),
         .rst_n  (rst_n),
         .scan_mode_i (1'b0),
+        .scan_wipe_done_o (v4_wd),
         .psel   (v4_psel),
         .penable(v4_penable),
         .pwrite (v4_pwrite),
@@ -160,6 +173,7 @@ module tb_crypto (
         .clk    (clk),
         .rst_n  (rst_n),
         .scan_mode_i (1'b0),
+        .scan_wipe_done_o (na_wd),
         .psel   (noaes_psel),
         .penable(noaes_penable),
         .pwrite (noaes_pwrite),
@@ -181,6 +195,7 @@ module tb_crypto (
         .clk    (clk),
         .rst_n  (rst_n),
         .scan_mode_i (1'b0),
+        .scan_wipe_done_o (ns_wd),
         .psel   (nosha_psel),
         .penable(nosha_penable),
         .pwrite (nosha_pwrite),

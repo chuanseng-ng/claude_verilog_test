@@ -21,7 +21,7 @@ These are **DECIDED** by the project owner and are not open questions. The rest 
 | 5 | **Test access is an IEEE 1149.1 JTAG TAP** controlling both scan and MBIST. | The TAP is a Stage 1 deliverable, not an optional last stage (sections 9, 10). |
 | 6 | **Pad ring / chip top is NOT in scope now.** | The core macro exposes the TAP and any unavoidable raw ports. Section 9.5 lists what a future chip-top epic needs. |
 | 7 | **Scan access = JTAG TAP for control and MBIST, PLUS parallel scan ports** (direct scan-in / scan-out / scan-enable / test clock for several chains). *(2026-10-10, follow-up)* | Resolves the old N3 in favour of parallel ports. Pin plan, chain proposal, test time and the at-speed statement are rewritten in sections 8, 9.5, 9.6, 10. Zero delay-fault coverage is **not** accepted as a goal; section 2.4 says what would be needed and that it is out of reach of the current tools. |
-| 8 | **99 % test / 98 % fault coverage is a GOAL, not a commitment.** *(2026-10-10, follow-up)* | Stage 3 begins with a time-boxed ATPG tool spike on the real netlist. The sign-off number is fixed only after a tool is shown to complete at scale (section 2.1, 10). |
+| 8 | **99 % test / 98 % fault coverage is a GOAL, not a commitment.** *(2026-10-10, follow-up)* | Stage 3 begins with a time-boxed ATPG tool spike on the real netlist. The sign-off number is fixed only after a tool is shown to complete at scale (section 2.1, 10). **2026-10-30 (bead `j41m.23`): adopted as the Stage 3 target, provisionally** (patched Quaigh completed the fabric; sign-off waits on the cell-pin re-grade). Section 2.1, 18.8. |
 | 9 | **Sky130 CPU macro Synlig exposure is bead `dud4` (P1): test first, then the user decides on re-hardening.** *(2026-10-10, follow-up)* | The test is the `ma7` branch-dependent differential on the Sky130 CPU macro gate netlist against RTL, **no PD run**. Stage 2's CPU re-harden depends on its outcome (sections 4, 5, 10). |
 
 **Schedule decisions (2026-10-10).** Stage 1 is approved to start now that PR #250 has merged. FPGA Stage 0 (GH #245) follows Stage 1, not before it.
@@ -134,6 +134,8 @@ What breaks downstream [A, except where noted]:
 
 **Goal: stuck-at test coverage >= 99.0 % of the scanned-domain fault list, and stuck-at fault coverage >= 98.0 % of the whole-SoC fault list,
 with every exclusion itemised.** Test coverage = detected / (total - proven untestable); fault coverage = detected / total.
+
+**Adopted 2026-10-30 (owner decision, bead `j41m.23`), PROVISIONAL.** After the patched Quaigh completed the fabric rung (18.9), the 99.0 % / 98.0 % numbers above are the Stage 3 **target**, not only a goal. Status: **met provisionally** on this flow's universe (generic-gate faults, collapsed list, no X): fabric test coverage 99.95 %, fault coverage 99.16 % on the excluded list, about 98.26 % counting every excluded fault as undetected (18.9). Scope: the "whole-SoC fault list" is the **fabric** list. The CPU macro (5,299 scan flops, a black box in the fabric cut) gets **its own rung with the same 99.0 / 98.0 target**, reported next to the fabric and never merged into one number. The target counts as met for sign-off only after (1) the cell-pin re-grade (bead `j41m.20`) still shows >= 99.0 % / >= 98.0 %, (2) the CPU-macro rung meets it, and (3) the coverage around the black boxes (CPU macro, SRAMs), an upper bound here because the flow has no X, is restated with X-aware handling or shadowing (`j41m.21`). The per-block fallback of 2.4 / 18.8 item 2 is **dropped**.
 
 Why 99.0 %: the DFT orchestrator's own sign-off criterion in this repo is `saf_coverage_pct >= 99.0` [R: dft-orchestrator contract], and the
 standard Williams-Brown estimate shows what lower numbers cost. Defect level DL = 1 - Y^(1-T) for yield Y and coverage T
@@ -506,7 +508,7 @@ The CPU macro boundary (403 pins today [R]) gains `scan_in[2]/scan_out[2]`, `sca
 |---|---|---|
 | 1 | **GO, approved to start** | RTL-only, reversible, regression-checkable with the TAP idle; every item read from source. Stage 1 now includes the TAP, so it is larger than the issue's original estimate. |
 | 2 | **CONDITIONAL GO** (CPU-macro half also waits on `dud4`) | Tool works at SoC scale in 5 s [M] and honours `dont_touch` [M]; Sky130 build has defects (SET_B, `report_dft_config`), no lock-up/clock-gate/scan-enable handling; the CPU macro setup margin is +0.174 ns and now also pays for a clock mux. |
-| 3 | **CONDITIONAL**: GO for a time-boxed spike; NO-GO for a promised number (99 % / 98 % is a goal, decision 8) | Quaigh works on a 2.9 k-gate cut [M]; SoC scale unproven; Fault unbuilt; Atalanta/PODEM non-commercial. Fallback is itemised per-block coverage. |
+| 3 | **CONDITIONAL**: GO for a time-boxed spike; NO-GO for a promised number (99 % / 98 % is a goal, decision 8) | Quaigh works on a 2.9 k-gate cut [M]; SoC scale unproven; Fault unbuilt; Atalanta/PODEM non-commercial. Fallback is itemised per-block coverage. **Spike run 2026-10-28 (section 18): Quaigh completes npu, crypto and dma (up to 9,088 flops, 11.4 GiB peak) and is OOM-killed at the 12 GiB cap on the real fabric netlist (412,472 faults, 29,376 patterns, 679 s). The spike did NOT demonstrate the SoC-level goal; the per-block fallback applies unless the owner chooses a commercial or patched engine (18.8, not adopted).** **Update 2026-10-29/30 (beads `j41m.18`, `j41m.23`): the patched Quaigh completes the fabric (99.95 % TC / 99.16 % FC, 18.9). The 99 / 98 target is adopted provisionally (2.1); the per-block fallback is dropped.** |
 | 4 MBIST | **GO** | independent of ATPG; memory is 88 % of placed area; cheap; known SRAM-pin timing risk. Depends on the Stage 1 TAP. |
 | 5 | **N/A now** | pad ring out of scope. |
 
@@ -525,19 +527,19 @@ IDs are kept stable because other sections cite them. Resolved items move to the
 | N8 | Atalanta use if the tape-out turns commercial (2.2) | drop / license | keep the flow licence-clean (Quaigh/Fault engine) |
 | N10 | **Route to delay-fault coverage** (new; follows from decision 7 rejecting zero delay coverage, section 2.4) | commercial ATPG licence or pattern-generation service for the tape-out / build transition ATPG on Quaigh/Fault / accept incidental detection only | scope as its own bead after the Stage 3 spike; a commercial service for pattern generation is the only option that meets the goal at tape-out scale |
 | N11 | Parallel chain count N (section 8: 8 pairs, 23-24 raw pins) | 4 (10+TAP pins) / 8 / 16 (34+TAP) | 8; revisit when the chip-top pad budget is known |
-| N12 | Spike box for Stage 3 (section 10) | as proposed / different box | as proposed; owner to confirm before Stage 3 starts |
 
 **Resolved** (2026-10-10):
 
 | # | Was | Resolution |
 |---|---|---|
 | N3 | Serial TAP scan vs parallel scan ports | **Decision 7:** TAP for control and MBIST plus parallel scan ports. Sections 8, 9.5, 9.6. |
-| N5 | Confirm coverage target 99.0 % test / 98.0 % fault | **Decision 8:** a goal, not a commitment; fixed after the Stage 3 tool spike. Section 2.1. |
+| N5 | Confirm coverage target 99.0 % test / 98.0 % fault | **Decision 8:** a goal, not a commitment; fixed after the Stage 3 tool spike. Section 2.1. **Resolved 2026-10-30 (owner, `j41m.23`): adopted provisionally as the target; fabric and CPU macro are reported separately; sign-off after the cell-pin re-grade `j41m.20`.** |
+| N12 | Spike box for Stage 3 (section 10) | **Resolved 2026-10-28 (user): box confirmed as proposed**: about 5 working days, 12 GB RAM and 24 h wall per run, Quaigh only (Fault only as a fallback), stop at the first rung that breaks a limit. The box was used; the fabric rung broke the 12 GiB limit. Record in section 18. |
 | N6 | `ma7`: Sky130 CPU macro built with `USE_SYNLIG: true` | **Decision 9:** bead `dud4`, test first (no PD run), then the user decides on re-hardening. Section 4. |
 | N9 | Delay-fault coverage: accept none from scan | **Not accepted** (decision 7). Replaced by N10. |
 
 ## 13. Not done or not verified
-- Fault was not built; Quaigh was not run beyond the `timer` cut; **no SoC-scale ATPG number exists**. No change to `flake.nix` was made.
+- Fault was not built. Quaigh now ran the `npu`, `crypto` and `dma` rungs (section 18) but was OOM-killed at 12 GiB on the real fabric netlist: **still no SoC-scale deterministic ATPG number exists** (only a 69.59 % random-pattern floor). A `dft` devshell was added to `flake.nix` (yosys, sv2v, python; Quaigh stays an external pinned binary). Section 18.7 lists what the spike did not cover (cell-pin faults, pattern-to-chain mapping and SVF replay, SRAM shadowing, delay faults, the CPU macro as a rung, the whole-SoC fault count including the excluded cones).
 - No functional-mode equivalence or shift/flush simulation of any scan netlist (structural chain walk only). Scan netlists were not run through OpenSTA with a real SDC.
 - DEF `SCANCHAINS`, lock-up latch behaviour beyond the toy, and 26Q2 `-max_length` splitting were not tested. The `dont_touch` experiment used `edf00dff` only.
 - Whether `sdf*` cells are in the PDK `DONT_USE_CELLS` list was not verified.
@@ -592,7 +594,7 @@ TAP-driven `dft_ctrl` of identical port list, so nothing in `soc_top` is re-plum
    them. The original answer was a protocol requirement on the TAP/ATE (reset the block first). The user decision of 2026-10-15/17 replaced
    it with a **hardware zeroize on every `scan_mode` edge**: `crypto_accel` clears its key, round-key, AES state, SHA state, message shadow
    and result/IV words in one cycle, on entry and on exit. Limit: the clear is functional D logic that a shift edge overrides, so it protects
-   against software and a cooperating tester, not an adversarial one (14.10 item 5).
+   against software and a cooperating tester, not an adversarial one (14.10 item 5). **Closed for scan_en by `j41m.17` (14.14): the shift enable is now withheld in hardware until the wipe is applied.**
 2. The unmasked `msg_q`/IV/`DOUT` are scanned and are not secret by themselves.
 3. A reset is not enough for *DOUT* if a prior ciphertext is sensitive; it is ciphertext, which is already an output.
 
@@ -638,7 +640,7 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
 | `soc_top` test ports + `dft_ctrl_ports` seam (TAP-ready); `scan_clk_i` shared test clock | CPU macro scan ports, its internal clock gates/resets, `pin_order.cfg`, re-harden (CPU-boundary bead) |
 | `rv32i_clock_gate.test_en`, live on `u_cpu_cg`/`u_gpu_cg`; SRAM-only gates tied 0 | `create_clock cpu_clk_i` in `sky130_soc.sdc` (SDC bead) |
 | `cdc_reset_sync` output-side scan select; PLL/GPU-domain reset overrides; PLL test-clock bypass | Scan-mode SDC, scan insertion, lock-up latches (Stage 2) |
-| Crypto `key_q`/`rk_q` read masks, tested | ~~Scan-entry scrub protocol for crypto residue~~ done in hardware by `j41m.6` (14.10); open: scan_en withholding (14.10 item 5) |
+| Crypto `key_q`/`rk_q` read masks, tested | ~~Scan-entry scrub protocol for crypto residue~~ done in hardware by `j41m.6` (14.10); scan_en withholding done by `j41m.17` (14.14) |
 | `check_scan_clk_rst.py` netlist proof + negative controls; both sv2v netlists regenerate | Re-run `make soc_coverage` and prune waivers that the new suite makes stale (coverage bead) |
 
 ### 14.9 Gap-closure results (2026-10-10, after the implementing agent ran out of turns)
@@ -751,6 +753,167 @@ max_delay across `-asynchronous` clocks (bead k07), so the budgets are in `sky13
 **Scan checkers [M]**: `dft-scan-check` (SoC, sv2v netlist of the same RTL): 1,694 sequential cells, 295 async pins, 28 scan-mode muxes, 0 violations;
 `dft-scan-check-cpu-macro`: 944 sequential cells, 0 async pins, 0 violations. They run on the sv2v netlists, not on the placed netlist (which has Sky130 cells the checker has no models for).
 
+### 14.12 Stage 2 scan insertion: method, port reuse, CPU macro result (bead `j41m.8`, 2026-10-26)
+
+Labels as above. Code: `pnr/sky130/soc/plugin/cvt_scan_step.py` (step `CVT.ScanInsert`, flow `CVTClassicScan` = Classic plus the step right after `Checker.NetlistAssignStatements`), `.../tcl/scan_insert.tcl`, `tools/dft/check_scan_chains.py`, `tools/dft/run_scan_step_isolated.sh`. No shared LibreLane file is edited.
+
+**Port reuse [M].** OpenROAD 26Q2 `insert_dft` does **not** reuse existing ports (answers 14.4). It always creates `scan_enable_0`, `scan_in_<k>`, `scan_out_<k>`; `-scan_*_name_pattern` only renames them (no `%d` expansion, a pattern without an index collides, `scan_in_i[%d]` aborts with `stoi`). The step therefore (1) lets the tool insert, (2) merges its nets into the existing `scan_in_i[n]`, the existing enable net (`dft_scan_en` on the SoC, `scan_en_i` on the macro, not the raw `scan_en_i` port, per 14.10), (3) destroys the `conb` placeholder tie on `scan_out_o[n]` and drives it through a `buf_2` from the chain's last Q, (4) strips the tool's own ports from the written netlist header (they otherwise reach IO placement as `scan_in_0 not found in config but found in design`). The netlist has no `assign`.
+
+**Chains [M, synthesis netlists of RUN_2026-10-25_08-28-45 / RUN_2026-10-24_19-19-02].** `-max_length` (not `-max_chains`) splits per clock domain. SoC, 3700: 5 `core_clk` chains (3565 x4, 3562) plus 1 CPU-domain chain (981) = `scan_in_i/out_o[5:0]`; 18,803 scan flops, 922 left unscanned on purpose = 666 flops clocked by `tck_i` (TAP, MBIST TDRs, incl. the negedge-tck ones behind an inverter) or `scan_clk_i` (clock switch) + the 256 crypto key registers (decision 3). The 3 latches are not scanned. The MBIST TDR flops on `tck` are therefore **not** scan-tested (no port is left for a `tck` chain): a decision for Stage 3. CPU macro, 2660: 2 chains (2650, 2649) on `scan_in_i/out_o[1:0]`, 5,299 flops (4,880 before the MBIST controller), 0 unscanned.
+
+**CPU macro harden `RUN_2026-10-26_05-39-04` vs run 6 `RUN_2026-10-24_19-19-02` [M].** LVS 0 errors, KLayout DRC 0, routing DRC 0. Magic DRC 27,733,913: the report is **byte-identical** to run 6 (`cmp`), so the 45a waiver basis is unchanged. LEF: 503 signal pins, 503 identical, 0 moved (`tools/verif/pin_lock.py check`); die 3600 x 1800. Setup: all six tt/ff corners clean (nom_tt +3.008 ns, was +3.031); ss still fails (max_ss -4.584 ns, 1,005 violators, was -3.996 / 1,149): reg-to-reg 910 (worst -4.584), reg-to-out 74, **new: 16 `apb_paddr_i` input-to-reg** (worst -0.756) at max_ss. Hold: every violator is input-port-to-register in both runs, no reg-to-reg violation (nom_tt 11, worst -0.091 ns, was 156 / -0.458; max_ss 136 / -0.491, was 217 / -1.296). Area: stdcell 775,983 um2 (707,819), util 42.90 % (41.81 %), power 115.8 mW (103.4), wirelength 6.23 M (5.59 M), antenna 88 pins / 87 nets (119 / 116). Netlist proof on the post-fill netlist (`run_netlist_proof.sh ... negctl`): census 5,299 flops with `fwd_b_*` present, 6/6 programs IDENTICAL, 124/124 port-matrix cells, negative control detected (4/6 diverge, 90 cells fail). `check_scan_chains.py` on the final netlist: 2 chains 2650/2649, 5,299 scan flops, 0 unscanned, every SCE traces through the repair buffer tree to `scan_en_i`.
+
+**Limits [A].** The proof runs the macro in functional mode (scan ports tied 0): chain shift is verified structurally, not by simulation. The macro Liberty has **no timing arcs on `scan_en_i` / `scan_in_i`** (unconstrained inputs, `sky130_cpu.sdc` unchanged), so the SoC does not time them: a scan-mode macro SDC is still a Stage 2/3 deliverable. SoC-level numbers: see 14.13.
+
+### 14.13 Stage 2 SoC harden with scan: `RUN_2026-10-26_09-59-03` vs `RUN_2026-10-25_08-28-45` (bead `j41m.8`, 2026-10-26)
+
+Labels as above. Command: `make -C pnr librelane-sky130-soc-noklayout` (rccal default, `CVT_SYNTH_GATE=warn`, KLayout DRC skipped as in the baseline), flow `CVTClassicScan`, CPU macro = the scan macro of 14.12. Not a single-variable comparison with the baseline: 18,803 SoC flops became scan flops and the CPU macro was re-hardened with scan. Runtime 5.21 h (baseline 4.28 h, sum of step runtimes). Final exit: deferred errors Magic DRC and max-cap only.
+
+**Scan structure [M, `check_scan_chains.py` on the post-fill netlist].** 6 fabric chains (3565 x4, 3562, 981), 18,803 scan flops, 922 unscanned, every one accounted for: 664 on `tck_i` (TAP and MBIST TDR flops, incl. the negedge ones), 2 on `scan_clk_i`, 256 crypto key registers. All 18,803 SCE pins trace through the repair buffer tree to `dft_scan_en` (root driver: the TAP/pin `mux2_8`). Chains [7:6] are inside the CPU macro (14.12). The Tcl insertion, the strip of the tool's own ports and the State output are exercised alone by `tools/dft/run_scan_step_isolated.sh`.
+
+**Delta table [M].**
+
+| | scan run | baseline |
+|---|---|---|
+| LVS errors / routing DRC | 0 / 0 | 0 / 0 |
+| Magic DRC | 11,003 | 8,952 |
+| setup / hold violators, 9 corners (flow) | 0 / 0 | 0 / 0 |
+| hold worst slack nom_tt / max_ss / max_ff (ns) | +0.415 / +0.223 / +0.258 | +0.444 / +0.534 / +0.166 |
+| setup worst, `core_clk` nom_tt / nom_ss / max_ss (ns) | +5.671 / +0.156 / +0.002 | +5.668 / n.m. / +0.134 |
+| setup worst, `cpu_clk` nom_tt / max_ss (ns) | +15.92 / +7.76 | +14.73 / +5.50 |
+| CPU macro input pins, hold worst nom_tt / max_ss / max_ff (ns) | +0.568 / +1.457 / +0.274 | +0.338 / +1.108 / n.m. |
+| max-slew violators, worst corner (max_ss) | 525 | 795 |
+| max-cap violators, worst corner (max_ss) | 5 | 5 |
+| antenna pins / nets | 368 / 286 | 313 / 225 |
+| power (mW) / util (all) / stdcell area (um2) | 119.0 / 46.55 % / 2,052,900 | 104.8 / 45.82 % / 1,904,520 |
+| instances / timing repair bufs / hold bufs / diodes | 328,829 / 28,045 / 111 / 17,642 | 326,231 / 27,140 / 135 / 16,243 |
+| wirelength | 9.21 M | 8.25 M |
+
+Flow setup slack is a literal 0.000 at every corner (the TAP latch time-borrow artifact of 14.11); the `core_clk`/`cpu_clk` rows are replica STA with the run's SPEF and propagated clocks (`pnr/scripts/sta_load_sky130_soc.tcl` + `sta_scan_queries_sky130_soc.tcl`; the worst `core_clk` endpoint at max_ss is `_167843_/D`, an `sdfrtp_1` in `u_mbist.u_stsync_core`, +2.4 ps, against +134 ps on the same class in the baseline). Setup per clock at all 9 corners, nom_tt/min_tt/max_tt: core +5.67/+5.89/+5.47, cpu +15.9/+16.3/+15.6; ss: core +0.156/+0.359/+0.002, cpu +8.20/+8.68/+7.76; ff: core +7.86/+8.03/+7.68, cpu +18.7/+19.0/+18.4. Hold per clock: core +0.223 (max_ss) to +0.486 (min_ss), cpu +0.270 (max_ff) to +1.126 (max_ss).
+
+**Magic DRC +2,051 root cause [M].** Two rules only: `nwell.4` ("all nwells must contain metal-connected N+ taps") 10,971 vs 8,920 (+2,051) and `met4.4a` 32 vs 32. The macro-footprint counts are identical to the baseline (84 CPU + 32 NPU-SRAM); **none** of the 2,051 is inside an SRAM or macro footprint: all of them are in the standard-cell rows, and the rule is the same one that already accounts for 8,836 standard-cell rectangles of the baseline. 2,666 rectangles are at positions not in the baseline (615 baseline rectangles went away): placement changed. Cell attribution under the rectangles (DEF of the post-fill stage): 743 sit under the new scan flops (`sdfxtp_1` 486, `sdfrtp_4` 88, `sdfrtp_1` 57, `sdfxtp_4` 46, `sdfxtp_2` 38, `sdfrtp_2` 27), +183 under `dlygate4sd3_1`, the rest in gaps between cells. There is no new rule, no metal or routing rule, and routing DRC is 0. **Accepted under 45a by user decision 2026-10-26.** It is still not proven benign by the foundry deck: Magic's `nwell.4` is the tap-connectivity check on an abstract view, and KLayout DRC, which would settle it, is skipped on this host (8.5 GB, bead `00ef`).
+
+**`dft_scan_en` timing [M, all 9 corners].** The TAP/pin enable is launched by a TAP flop on the **falling** edge of `tck` (`tck'`), so against the rising-edge capture inside the `tck` image of the trees the worst hold through `dft_scan_en` is **+43.961 ns** (nom_tt; +39.4 to +46.0 ns over the 9 corners) and setup **+42.157 ns** (+35.2 to +44.7). The exposure raised in the bead notes (a tck-to-tck hold race on 18,803 SCE pins) is not there; the repair step built a 28-buffer chain (about 10 ns from the root to the farthest SCE), which matters for the scan-mode clock period, not for the functional view. The same mechanism explains the baseline's +47 ns removal slack on the TAP reset flops.
+
+**Clock-mux insertion delay and skew [M].** Cell delays on the capture clock path: `u_pll_sub.u_ref_cm` mux + root buffer 0.470 ns nom_tt (0.474 baseline) and 0.840 ns max_ss (0.848); `u_cpu_pll_sub.u_ref_cm` 1.334 ns (1.460) and 2.511 ns (2.727). `core_clk` latency/skew nom_tt 2.350-2.897 / 0.547 ns (baseline 2.326-2.822 / 0.495), max_ss 4.183-5.163 / 0.980 (4.117-5.022 / 0.905). `cpu_clk` latency/skew nom_tt 2.067-3.424 / 1.357 ns (baseline 2.215-6.724 / 4.509), max_ss 3.782-6.272 / 2.489 (4.056-11.897 / 7.841): the CPU domain tree is much better balanced, not attributed.
+
+**Scan-view hold on the CDC capture pins [M, nom_tt, final netlist + SPEF, `CVT_SDC_SCAN_VIEW=1`].** 94 pins exempt in the functional view (34 gray-pointer stage-0 D pins + 60 MBIST tck-to-destination rows). Gray-pointer pins: **17 of 34 violate, worst -3.083 ns** (j41m.5 measured 17/34 at -3.086..-3.240 on the earlier netlist): unchanged by scan insertion. MBIST rows: **60 of 60 violate, -2.74 to -3.52 ns**, which is the worst scan-view hold of the whole design. The masking of these flops in capture (user decision 2026-10-18) is **not implemented** and moves to bead `j41m.15` (user decision 2026-10-26): no ATPG exists yet and no hardware or constraint change was made in this step. **Stage 2 is not scan-hold-safe; no scan-hold-safe claim is made.**
+
+**Max-cap [M, `make sky130-soc-maxcap-check`].** With the waiver file as it stood after PR #328: 8 unwaived, 0 waived, 4 stale. User decisions of 2026-10-26 (PR #330), applied to `pnr/sky130/soc/constraints/max_cap_waivers.json` and the plugin:
+- Schema: a `driver` waiver may set `"stable": true` instead of `run_id` for a **hand-instantiated** driver whose name survives re-synthesis; the loader rejects `stable` on a tool-generated name (`_123_`, `netNNN`, `max_capNNN`, `wireNNN`, `clkbuf_...`), the ceiling, corner list and justification still bind, and a stable waiver whose driver does not violate is reported STALE. The run-pinned path for synthesis names is unchanged. 22 new unit tests (`tb/tests/test_cvt_maxcap_waiver.py`, 81 pass).
+- `u-ref-cm-mux-clk-cpu-pll-sub` re-issued without `run_id` (stable driver `u_cpu_pll_sub.u_ref_cm.u_mux/X`, ceiling 0.45 pF): scan run min/nom/max_ss 0.3659/0.3811/0.3912 pF vs limit 0.3397.
+- `sram-din0-22`: ceiling 0.35 -> 0.37 pF and `nom_ss` added (max_ss 0.3617, nom_ss 0.3395); new `sram-din0-23` (0.36 pF, max_ss, measured 0.3478) and `sram-din0-26` (0.355 pF, max_ss, measured 0.3426); the stale `sram-din0-29/30/31` deleted.
+- `_047147_/Y` (0.1388 pF vs 0.1383, +0.4 %, synthesis-generated name, no macro load) stays **unwaived** and goes to bead `e45j`.
+- Result on `RUN_2026-10-26_09-59-03` with `--strict-stale`: 7 waived, **1 unwaived (`_047147_/Y`)**, 0 stale. The previously shipped `RUN_2026-10-25_08-28-45` no longer passes the updated file (4 waived, 4 unwaived: `din0[29/30/31]` whose waivers were deleted, 2 stale `din0[23/26]`); the file now describes the scan configuration, the old run's waivers are in git history.
+
+**CDC budget check (j41m.5/y5mn) [M].** `check_cdc_timing_sky130.tcl` PASS at all 9 corners (22 groups, every exception bound). max_ss: `fifo_rd2wr` +9.891 and `fifo_wr2rd` +9.875 ns of 12.5, MBIST groups +10.8 to +20.4 ns. Negative control (every budget forced to 1 ps in a copy of the check SDC): FAIL at nom_tt and max_ss, 22 of 22 groups violated.
+
+### 14.14 `scan_en` is withheld until the crypto scan-entry wipe is applied (bead `j41m.17`, user decision 2026-10-26)
+Closes the limit stated in 14.10 item 5 (crypto wipe section): the wipe clear is functional D logic, the scan mux sits after it, so an edge with `scan_en = 1` loads `scan_in` instead of the cleared value. Labels: **[R]** read from source, **[M]** measured, **[A]** assumed.
+
+**Design [R].**
+* `crypto_accel` has a new output `scan_wipe_done_o` (`rtl/periph/crypto_accel.sv`): `~((scan_mode_i ^ scan_prev_q) | (scan_s1_q ^ scan_prev_q) | wipe_w)` with `wipe_w = scan_s2_q ^ scan_prev_q`. It is 0 from the moment `scan_mode_i` differs from the settled value (the raw level is in the term, so it falls before any clock edge), stays 0 while the change walks `s1 -> s2 -> prev`, and rises just after edge 3, the same edge at which the `wipe_w`-qualified clears take effect. In functional mode it is a constant 1. It also drops for 3 `core_clk` edges after scan **exit** (the exit wipe), when `scan_en` is 0 anyway.
+* `soc_top` (`rtl/soc/soc_top.sv`, next to the `dft_scan_en` declaration): `dft_scan_en = dft_scan_en_req & crypto_wipe_done`, where `dft_scan_en_req` is `dft_ctrl`'s `scan_en_o`. The **net named `dft_scan_en` is kept** for every consumer (the CPU macro's `scan_en_i`, the Stage 2 SE pins through `CVT_SCAN_EN_NET`, the STA queries, the existing tests); only its driver changed. `dft_ctrl`, `dft_ctrl_ports` and `jtag_tap` are untouched. The gate covers pin mode and TAP-serial mode alike, because it sits after the `dft_ctrl` combiner.
+* Functional mode: `dft_scan_en` equals `dft_scan_en_req` once `scan_mode` has been 0 for 3 `core_clk` edges (the three edge-detect flops are unreset and track the level through reset). `scan_en` is 0 in functional mode, so the net stays 0.
+
+**CDC / clocking rationale [R, A].** No synchroniser was added, deliberately.
+1. The gate matters only in scan mode, and in scan mode `core_clk`, `cpu_core_clk` and every SE-pin flop run on the **one** test clock (`dft_clk_mux` on both PLL references, 14.2). The path `scan_prev_q` -> done -> SE is therefore a single-clock, single-cycle path launched at edge 3 and captured at the first shift edge, not a clock crossing. In functional mode the ANDed value is constant 0 and no scan flop reads it.
+2. The only asynchronous ingredient is the raw `scan_mode_i` in the combinational term, the same quasi-static level that already drives the 256 key masks and that `tools/cdc/cdc_config.yml` lists under `reset_domains` (set before the first test-clock edge, not toggled while a clock runs). It is needed: with flops only, `done` would still be 1 at edge 1 and a tester that raised `scan_en` together with `scan_mode` could shift at edge 1. It can only move `done` 1 -> 0 (withholding), and `done` rises only through the synchronous `scan_prev_q` edge.
+3. `cdc_sync` would add latency and a flop but fix nothing: its job is metastability from an asynchronous launch, and the launching flops here are on the test clock. A synchroniser per destination domain would also have to exist at 18,803 SE pins. Rejected.
+4. Glitch behaviour: the three XOR terms share `scan_prev_q`, so when it toggles at edge 3 they all fall together and the NOR rises once, monotonically. Each of `scan_en_req`, `scan_mode`, `scan_prev_q` changes alone in the protocol, and an AND with one changing input cannot glitch. The one ordering that is NOT protected: raising `scan_en` **before** `scan_mode` in pin mode (`scan_en = 1` outside scan mode is outside the 14.1 contract) can produce a runt on the way down.
+5. The netlist checks (`dft-scan-check`, the CDC gate) see no new register data input: `dft_scan_en` has no RTL sequential consumer before Stage 2 insertion (the macro's `scan_en_i` is unused inside `rv32i_cpu_top`). [A until the checks are run, see the PR.]
+
+**Scan-entry protocol for the tester [R].** Edge counts are test-clock edges counted from the first edge after the mode change.
+* **Pin mode (parallel).** Set `scan_mode_i = 1` with `scan_en_i = 0` and the test clock stopped. Apply `scan_clk_i` edges 1, 2, 3 (any `scan_en_i`; the gate forces the flops into capture). Edge 3 clears the key and state. Keep `scan_en_i = 0` through **edge 4** (one spare edge so the SE tree has settled for the first shift; recommended, not enforced by hardware), then raise `scan_en_i`. Hardware guarantee: a shift can never occur at edges 1 to 3, whatever the tester drives.
+* **TAP (serial).** After the `SCAN` instruction is updated, the test clock exists only in Capture-DR and Shift-DR. Do **three Capture-DR passes** (Select-DR, Capture-DR, Exit1-DR, Update-DR) before the first payload shift, then one more as the spare. Shift-DR edges taken earlier are accepted but are **capture** edges, not shifts: the gate holds `scan_en` low, so payload bits sent in those edges are lost. A tester that shifts at once is not harmed, it just has to send the data again.
+* **Not observable:** the wipe state is not readable over JTAG; the tester counts edges. A `scan_wipe_done` TDR bit is a possible follow-up, not part of this change.
+* **Exit** needs no rule: 3 functional `core_clk` edges after `scan_mode` falls wipe again, and the gate holds `scan_en` low meanwhile.
+
+**Limits [R].**
+* `scan_out` shows each chain's **last flop Q before any edge**. **Closed by gating (user decision 5a, 2026-10-27)**: every SoC `scan_out_o[n]` is an `and2_2` of the chain's last Q and the wipe-done net (`crypto_wipe_done`), built by `CVT.ScanInsert` (`CVT_SCAN_OUT_GATE_NET`) instead of the `buf_2`, so no chain end shows un-wiped crypto state before edge 3 whatever the chain order. Why gating and not "empty by chain order": chain 3 does end in a crypto flop (`u_crypto.g_sha.u_sha.block_i[182]`, i.e. `msg_q[182]`, in the fresh synthesis; `block_i[246]` in `RUN_2026-10-26_09-59-03`), so the gap was real and the end flop moves between insertions [M]. Chain ends of the fresh synthesis: 0 `u_dma.linebuf[57][19]`, 1 `u_dma.linebuf[168][6]`, 2 `u_bus.periph_axil_wdata[30]`, 3 crypto (above), 4 `u_uart.baud_cnt_q[0]`, 5 `u_apb_pll2_cdc.u_req_sync.sync_q[1]`; the two CPU-macro chains end in `u_core.u_csr.minstret_q[57]` and `u_mbist_ctrl.pause_cycles_q[21]` (no crypto in the macro, so they are not gated). The step fails, with no buffer fallback, if the net is absent or not singly driven; `check_scan_chains.py --out-gate-net crypto_wipe_done` makes a missing gate an error (a buffer in its place is a tested mutant). **The net does not survive synthesis by itself** (it feeds only the `dft_scan_en` AND and is merged into anonymous logic: zero occurrences of the name in the netlist), so `soc_top.sv` carries `(* keep *)` on `crypto_wipe_done` (attribute only; with it the net survives with one driver) [M].
+* A clock that never arrives (a stopped `scan_clk_i`, no Capture-DR) keeps `scan_en` low forever: the failure mode is "cannot shift", not "shifts early".
+* The key and `rk_q` are masked in scan mode and excluded from the chains regardless (14.2). The gate protects the **scanned** crypto flops (`s_q`, `msg_q`, SHA state, DOUT/DIGEST/IV).
+
+**PD notes for the re-harden.** Measured in 14.14.1 below (the `[A]` text that stood here is superseded). `dft_scan_en_net_found` = 1 and the net `crypto_wipe_done` survives with `(* keep *)`.
+
+**Verification [M, 2026-10-26, local, Verilator].** `test_soc_scan_en_gate` 12/12 (new), `test_crypto` 53/53 (2 new), `soc_dft_scan` 13/13 and `soc_jtag` 13/13 after two tests were changed to follow the protocol (they passed in the full suite only because an earlier test left the wipe pipeline settled; each failed alone). Mutants: gate removed, flops-only done, `wipe_w` term dropped, done one edge early / late, gate tied 0 / tied 1 / inverted: all killed, none equivalent; the 25-mutant `j41m.6` campaign still 25/25. `soc_all_ci` from clean: 911 passed, 0 failed, 54 skipped. `dft-scan-check` Sky130 and ASAP7: 0 violations. CDC gate (`make -C sim cdc CDC_STRICT=1`): PASS, counts identical to `f12c600`. Struct-select checker: 0 sites. Verilator zero-delay simulation cannot show analog glitches; the glitch claim in the CDC rationale is by construction, and the tests check that each signal changes once per phase. The "no residue" test samples the scanned crypto flops at the first cycle `dft_scan_en` is 1 (what a scan flop would shift out); the post-fill netlist was not simulated.
+
+### 14.14.1 Re-harden with the crypto `scan_en` withhold and `scan_out_o` gating: `RUN_2026-10-27_05-40-27` vs `RUN_2026-10-26_09-59-03` (bead `j41m.17`, 2026-10-27)
+
+Labels as above. Command: `make -C pnr librelane-sky130-soc-noklayout` (rccal default, flow `CVTClassicScan`, `CVT_SYNTH_GATE=warn`, KLayout DRC skipped as in the baseline), CPU macro = the committed scan macro of 14.12 (not re-hardened; GDS/spice byte-identical to `RUN_2026-10-26_05-39-04`). Wall time about 5.6 h (baseline 5.2 h). **Result: flow exit with deferred errors Magic DRC, setup at max_ss (NPU, accepted, bead `7dhp`) and max-cap (10 unwaived; resolved by the waiver set below, user decision 2026-10-27). The post-route CDC budget check failed at the three ss corners on the new path and is fixed by a functional-view case analysis in the CDC-check SDC (below).** Not a single-variable comparison: the RTL (wipe-done output, AND into `dft_scan_en`, `(* keep *)`), the gated `scan_out_o`, and the placement all changed.
+
+| | this run | baseline |
+|---|---|---|
+| LVS errors / routing DRC | 0 / 0 | 0 / 0 |
+| Magic DRC (nwell.4 + met4.4a) | 10,959 (10,927 + 32) | 11,003 (10,971 + 32) |
+| setup violators in the flow STA, max_ss (other 8 corners) | **6**, WNS -0.153 ns, TNS -0.603 ns (0) | 0 (0) |
+| hold violators, 9 corners | 0 | 0 |
+| `core_clk` setup worst nom_tt / nom_ss / max_ss (ns), replica | +5.588 / +0.132 / **-0.153** | +5.671 / +0.156 / +0.002 |
+| `cpu_clk` setup worst nom_tt / max_ss (ns), replica | +14.70 / +5.19 | +15.92 / +7.76 |
+| hold worst `core_clk` nom_tt / max_ss / max_ff (ns) | +0.405 / +0.231 / +0.268 | +0.415 / +0.223 / +0.258 |
+| CPU macro input pins hold nom_tt / max_ss / max_ff (ns) | +0.394 / +1.272 / +0.169 | +0.568 / +1.457 / +0.274 |
+| max-slew violators, max_ss / nom_tt (checker skipped in the flow) | 1,067 / 145 | 525 / 84 |
+| max-cap violators in the flow STA, max_ss | 6 | 5 |
+| max-cap with the waiver file, `--strict-stale` | 10 unwaived, 3 stale | 1 unwaived, 0 stale |
+| antenna pins / nets (diodes) | 382 / 290 (20,500) | 368 / 286 (17,642) |
+| power / util / stdcell area | 119.10 mW / 46.64 % / 2,070,340 um2 | 119.01 mW / 46.55 % / 2,052,900 um2 |
+| instances / timing-repair bufs / hold bufs | 332,973 / 28,726 / 213 | 328,829 / 28,045 / 111 |
+| wirelength | 9.364 M | 9.214 M |
+
+The flow's own setup figure is still the literal 0.000 latch artifact (14.11) at the other eight corners; the per-corner replica STA (`pnr/scripts/sta_load_sky130_soc.tcl` with the run's SPEF, analysis SDC below) is the measurement. Replica setup per corner, `core_clk` / `cpu_clk` (ns): nom_tt +5.588/+14.70, min_tt +5.796/+15.18, max_tt +5.365/+14.24, nom_ss +0.132/+5.87, min_ss +0.390/+6.60, max_ss **-0.153**/+5.19, nom_ff +7.73/+17.89, min_ff +7.91/+18.29, max_ff +7.55/+17.53.
+
+**The 6 max_ss setup violators [M]** are 6 endpoints (`_169097_/D` -0.153, `_169104_/D` -0.132, `_169095_/D` -0.110, `_169106_/D` -0.095, `_169111_/D` -0.079, `_169116_/D` -0.033), all launched by the NPU weight-memory SRAM macro outputs (`u_npu.g_on.u_wmem.u_sram_macro/dout0[12]`, `[8]`, a falling-edge half-cycle launch at 12.5 ns) into `npu_weight_mem` pipeline flops (`sdfrtp_1`). They are **not** the new crypto paths: the worst SCE endpoint at max_ss is +0.671 ns. User decision 2026-10-27: accepted, tracked in bead `7dhp`. The same class was seen in `RUN_2026-10-25_15-59-23` (dout0[9], -0.036 ns). The mid-flow resizer table (WNS -1.006 ns on `_156429_/SCE`, seen in the log by the coordinator, not re-read here) is a pre-route estimate [A]; the post-route SCE slack is positive at all nine corners [M].
+
+**5(b) the two new paths, setup and hold, all nine corners [M, replica STA, launch `core_clk` from the crypto edge-detect flops].** Analysis-only SDC (`tools/dft/make_scan_analysis_sdc.py` writes it; queries in `pnr/scripts/sta_scan_gate_paths_sky130_soc.tcl`; = the repo SDC without the `set_false_path -to scan_out_o` line, plus `set_output_delay 0 -clock core_clk scan_out_o`; the repo SDC is unchanged and still false-paths `scan_out_o`, so the flow STA does not time that path).
+
+| corner | done -> `dft_scan_en` -> SE setup | done -> AND -> `scan_out_o` setup (worst of 6) | done -> SE hold |
+|---|---|---|---|
+| nom_tt / min_tt / max_tt | +11.82 / +12.16 / +11.40 | +17.72 / +17.98 / +17.47 | +1.665 / +1.863 / +1.531 |
+| nom_ss / min_ss / max_ss | +1.389 / +1.997 / **+0.671** | +11.93 / +12.37 / +11.54 | +4.421 / +4.661 / +4.298 |
+| nom_ff / min_ff / max_ff | +16.01 / +16.25 / +15.69 | +19.97 / +20.15 / +19.79 | +0.983 / +1.148 / +0.871 |
+
+Both pass as `core_clk`-to-`core_clk` paths. The max_ss done -> SE path has 23.2 ns of data delay in a 25 ns cycle: 3 hold-repair `dlygate4sd3_1` (4.2 ns) after the launch flop, then the 28-buffer `max_cap` tree. The resizer cloned the enable AND (`and2_2 clone13` drives 13 SCE pins from the same inputs as `and2_4 _090536_`); `check_scan_chains.py` now treats a gate with the same function and input nets as the same root.
+
+**CDC budget check: failed at the ss corners, fixed in the check SDC [M].** First result of `make -C pnr check-cdc-timing-sky130-soc CDC_CORNERS=all` on this run: PASS at the six tt/ff corners, FAIL at nom_ss, min_ss and max_ss, one finding each: the domain-wide fallback `core_clk -> cpu_clk` (budget 0.9 x 25 ns = 22.5 ns). The path is the same done chain: `_154808_` (crypto edge-detect flop, `core_clk`) -> 3 hold dlygates -> ... -> `max_cap3478` -> `_156258_/SCE`, a scan flop of chain 5 (the 981 `cpu_core_clk` flops): arrival 23.159 ns against 21.578 ns required, **-1.581 ns at max_ss**. In the functional clocking those 981 SE pins are a `core_clk -> cpu_core_clk` crossing, but `dft_scan_en` is constant 0 in functional mode and in scan mode both domains run on one test clock, so it is not a functional crossing (the baseline had no such path: the enable came only from the TAP and the pin).
+
+User decision 2026-10-27: fix it in the CDC-check SDC with a functional-view case analysis, not in RTL and not with an `*/SCE` exemption. `sky130_soc_cdc_check.sdc` section 2b pins `scan_mode_i = 0`, `scan_en_i = 0` and the driver pin of the TAP serial-select flop `u_dft_ctrl.tap_serial` = 0. **`scan_mode_i = 0` alone does not work [M]**: it leaves the same finding (`dft_scan_en` is `(tap_serial ? tap_scan_en : pin_scan_en) & crypto_wipe_done`; `scan_en_o` is not gated by scan_mode and the TAP can raise scan_mode itself, so the request is not constant until the select and the pin enable are pinned too). With the three, the request is a constant 0, so the AND and its resizer clone are constant and the SE tree drops out. Results on `RUN_2026-10-27_05-40-27` (no new PD run; SDC-only change):
+* **All nine corners PASS** (22 groups plus 2 domain-wide fallbacks, 36 rows per corner including the 4 skew rows).
+* **Before/after row comparison, 9 corners x 36 rows [M]**: the only status change is `domain_wide_core2cpu` VIOLATED -> MET at nom_ss, min_ss and max_ss. Nothing else changes status; the one other numeric change is `apb_dbg_rst_status` slack up by 0.003 to 0.021 ns (the case analysis simplifies the reset mux in its cone), e.g. 17.155 -> 17.165 ns at max_ss. The domain-wide `core_clk -> cpu_clk` group is not emptied: its worst remaining path at max_ss is a `core_clk` flop into a CPU-macro input, +8.961 ns.
+* **Negative control with the new SDC** (every budget forced to 1 ps, nom_tt and max_ss): FAIL with **22 of 22 groups violated**, the same 22 as before the change, so no MBIST, FIFO, bridge or PMU group is hidden by the case analysis.
+* **Scan view unaffected [M]**: with `CVT_SDC_SCAN_VIEW=1` the section is skipped (log line `CDC-FUNCTIONAL-VIEW: ... NOT applied`) and the original finding returns at max_ss (-1.581 ns), i.e. the scan-view check still reports this path rather than suppressing it. `sky130_soc.sdc` is not modified.
+* **Recommendation for `sky130_soc.sdc` (not applied, a separate decision)**: do not add the `tap_serial` case analysis there yet. That SDC already pins `scan_mode_i`/`scan_en_i`, and it declares `core_clk`/`cpu_clk` asynchronous, so the flow STA does not time the 981 cpu-domain SE pins but does time the core-domain ones: done -> SE is **+0.671 ns at max_ss** and it is the flow's only look at the SE tree. A constant `dft_scan_en` would remove all of them from the flow STA and from the post-route repair, which sized the tree and inserted its hold dlygates against exactly these paths. The proper home is the scan-mode SDC (`j41m.8` deliverable), which will time `dft_scan_en` on the test clock.
+
+**CDC negative control, before the SDC change [M].** Every per-crossing and domain-wide budget forced to 1 ps in a copy of the check SDC (`CDC_CHECK_MBIST_BUDGET_NS=0.001` for the MBIST rows): FAIL with 22 findings at nom_tt and at max_ss, so all 22 groups are bound and violated; the check is not vacuous. After the SDC change the same control still gives 22 of 22 (above).
+
+**Chain-gate check on the final netlist [M].** `check_scan_chains.py ... --out-gate-net crypto_wipe_done --expect-chains 6 --expect-unscanned 922 --expect-length 3565,3565,3565,3565,3562,981` on `49-openroad-fillinsertion/soc_top.nl.v`: exit 0, all six `scan_out_o[n]` are an AND2 of the chain's last flop and `crypto_wipe_done`, 18,803 SCE pins trace to one root (`dft_scan_en`, counting the resizer clone), the 922 unscanned flops are explained (664 `tck_i`, 2 `scan_clk_i`, 256 crypto keys).
+
+**Max-cap, `--strict-stale` [M]: 10 unwaived, 3 stale; investigation (user request 2026-10-27, nothing edited).**
+
+| net (driver) | cap vs limit (pF) | what is on it [M] |
+|---|---|---|
+| `u_cpu_pll_sub.u_ref_cm.mux_clk` (`u_mux/X`, hand-instantiated mux2_4) | 0.4750 / 0.5077 / 0.5186 (min/nom/max_ss) vs ceiling 0.45 (limit 0.3397) | mux2_4 -> buf_16 + 11 antenna diodes: **identical loads in both runs**; coupling, see below |
+| `_107570_/Y` (a21oi_4) | 0.1580 (max_ss), 0.1459 (nom_ss) vs 0.1383 | 15 loads, 13 are antenna diodes |
+| `hold19396/X`, `hold19401/X`, `hold19961/X` (dlygate4sd3_1) | 0.1113, 0.1046, 0.1020 vs 0.1007 | hold dlygates on scan links: 1 SCD pin + 13, 6, 12 diodes |
+| `_076179_/X` (or4_4) | 0.3371 vs 0.3360 (+0.3 %) | 7 functional loads, no diodes (wire only) |
+
+**Why `mux_clk` grew 33 % [M, SPEF, nom RC corner].** Not loads, not diodes: the net still drives one buf_16 and 11 diodes. Routed length grew only 6 % (2,620 -> 2,775 um; met4 2,492 -> 2,441, met3 95 -> 303; the mux moved from (3852, 2557) to (3646, 2505) while the root buffer stayed at (3954, 49), 2.5 mm away). The SPEF total went 0.356 -> 0.483 pF (max RC 0.366 -> 0.494): ground cap fell 0.290 -> 0.222 but **coupling rose 0.066 -> 0.261 pF, of which 0.158 pF is to `cpu_core_clk`**, the CPU domain's clock net, now routed alongside it for a long run (baseline's largest aggressor: 0.012 pF). So it is a routing-adjacency accident between two clock nets, not an RTL or config effect, and a cap-margin knob cannot reach it (hand-instantiated clock driver, as 14.13 and `e45j` already found). A ceiling is exposed to the next placement.
+
+**Why max-slew doubled, 525 -> 1,067 violating pins at max_ss [M].** 930 of the 1,067 are antenna-diode pins (baseline 419), i.e. +511 of the +542. They sit on few nets: 31 violating nets (baseline 24), the worst driven by a `wire`-repair clkbuf_16 with 48 to 55 diodes plus 4 `mux2_1.A1` loads. Nets carrying at least 30 diodes: **75 (baseline 45)**; by root signal: `cpu_bridge_s_awaddr[]` 22 (10), `cpu_bridge_s_araddr[]` 8 (5), `cpu_bridge_s_awburst[]`/`awlen[]`/`arlen[]` 6 (9), `mbist_rst_tck_n` 7 (7), `u_apb_pll_cdc.m_rst_sync_n` 2, `core_rst_n` 2, plus 12 anonymous functional nets (4). The AXI address/control bus leaving the CPU macro is the main contributor. The cause is the diode count: antenna repair (step 40) inserted **20,500 diodes (baseline 17,642, +16 %)** against 1,411 violating nets before repair (1,358, +3.9 %) and left 243 (219); by net class the +2,858 is functional-logic nets +2,907, scan-link nets +180, nets that also feed an SCD +4, single-flop-D nets -231, diode-only nets -2. Other violating pins: `mux2.A1` 72, `sdfrtp.RESET_B` 16, `o21ai.A1` 5, `or4.C` 4.
+
+**Are the hold dlygates on scan links with 6 to 13 diodes the common cause? [M] No.** They are the cause of those three max-cap nets only (a dlygate4sd3_1 has the lowest limit, 0.1007 pF). They are not new: the baseline has 98 scan-link nets driven by a hold dlygate with diodes, up to 17 diodes (this run: 90, up to 13); total scan-link diodes 637 -> 817. They are not the slew driver (the slew nets are the AXI bus and reset nets above). The common factor across the table is the antenna-diode pin capacitance on long nets (`_107570_` and the three dlygates: 6 to 13 diodes each; the 14 % excess of `_107570_` is diode pin cap), with two exceptions that have a different cause: `mux_clk` (coupling) and `_076179_` (plain wire, +0.3 %).
+
+**Applied (user decision 2026-10-27) [M].** `make -C pnr sky130-soc-maxcap-check SKY130_SOC_MAXCAP_RUN=.../RUN_2026-10-27_05-40-27 STRICT_STALE=1` now reports **10 waived, 0 unwaived, 0 stale: PASS**. The wire-length arm (`GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH = 1500`, proposal 1 below) is **not** run here; it is a follow-up under `e45j` after the merge. The waiver file `max_cap_waivers.json` is now:
+* `u-ref-cm-mux-clk-cpu-pll-sub` (stable driver): ceiling 0.45 -> **0.55 pF**, justification extended with the coupling finding (0.158 pF to `cpu_core_clk`).
+* `sram-din0-22/23/26-collar-mux`: **deleted** (stale).
+* `hold-dlygate-scd-link` (new, **load-class**): `cvt_maxcap_waiver.py` gains a `driver_class` key, "driver cell type starts with `sky130_fd_sc_hd__dlygate4sd3_` and its only non-antenna-diode load is one `sky130_fd_sc_hd__sdf*` `SCD` pin", ceiling **0.115 pF**, corners min/nom/max_ss. The class is proven from the final netlist per violation (a second pass over the netlist collects every load of the violating nets); another cell type, any other functional load or a macro leaves the violation unwaived, and a class waiver that matches nothing is STALE. Covers `hold19396`, `hold19401`, `hold19961`.
+* `gen-a21oi-107570-run-2026-10-27` (run-pinned to `RUN_2026-10-27_05-40-27`, `_107570_/Y`): ceiling 0.160 pF (measured 0.1580 max_ss, 0.1459 nom_ss), corners nom_ss and max_ss.
+* `gen-or4-076179-run-2026-10-27` (run-pinned, `_076179_/X`): ceiling 0.338 pF (measured 0.3371), corner max_ss.
+The two run-pinned entries go stale on the next re-synthesis by design. `tb/tests/test_cvt_maxcap_waiver.py` 100 pass: the class waiver is covered for accept, reject on a second non-diode load of another kind or a second SCD load or a non-SCD pin, reject on a macro load, reject on a different cell type, ceiling and corner binding, stale reporting (also when the class does not match), malformed entries, and the empty list staying strict; a mutant that makes the class test always true is killed by 5 tests.
+
+**Proposals as made before the decision (proposal 1 deferred to `e45j`).**
+1. *Config, single variable:* `GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH = 1500` (existing `config_rccal_wl1500.json`) on this RTL vintage. Expected [A, from the `e45j` section 6 arm on `RUN_2026-10-08_23-12-19`: max_ss slew 423 -> 102, antenna 205/273 -> 212/253, setup/hold/LVS/DRC unchanged, max-cap unchanged]: fewer long single-driver wires, so fewer diode-heavy nets and a lower slew count. It will not move `mux_clk`, and by `e45j` it did not change max-cap; confidence medium for slew, low for the cap list. A second candidate is `GRT_ANTENNA_MARGIN` 50 -> 35 (bead `58q` data: 25 / 8 iterations gave 263 antenna pins vs 182 at 50 / 20, with max-slew 2,380 vs 3,199), a Pareto trade that gives up antenna count; try it after the wire-length arm.
+2. *Waivers, user's call:* (a) `u-ref-cm-mux-clk-cpu-pll-sub` ceiling 0.45 -> 0.55 pF (observed 0.5186; one neighbour added 0.13 pF this run, so a 2 % margin would be fragile); (b) delete `sram-din0-22-collar-mux`, `sram-din0-23-collar-mux`, `sram-din0-26-collar-mux` (stale); (c) the five tool-named nets cannot take `stable` waivers (the schema rejects generated names), so they would need run-pinned waivers that go stale on the next run. A stable alternative is a **load-class key** in `cvt_maxcap_waiver.py`: "driver is a hold dlygate whose only non-diode load is an `sdf*/SCD` pin, ceiling 0.115 pF" (covers `hold19396/19401/19961`, max observed 0.1113), roughly 40 lines plus tests. `_107570_` (+14 %) and `_076179_` (+0.3 %) have no stable key.
+
 ## 15. Stage 1b specification and implementation record (bead `j41m.3`): JTAG TAP
 
 Scope: the TAP, its registers, the TAP-driven `dft_ctrl`, `soc_top` integration, checks. **No** scan insertion, ATPG, MBIST or CPU-macro change. Decisions already taken: section 0 (decisions 5-7) and the user decisions of 2026-10-11 (N1 non-JEDEC placeholder IDCODE, N2 compliant-minus-boundary-register, N4 TAP flops unscanned). Labels as before. This section was written **before** the RTL as its specification; the status table at its end is updated as each step lands.
@@ -818,7 +981,7 @@ Selecting SCAN (IR = `4'h4`) is the **only** thing that enters TAP scan mode; TD
 5. MBIST_CTRL/MBIST_STATUS opcodes are reserved and decode to BYPASS (MBIST is Stage 4).
 6. Sections 8/9 said the direct scan pins are "ANDed with the TAP-held scan_mode" so a floating pin cannot disturb functional mode. **Not implemented**: the 1a contract (pins work alone) and the standing decision that the TAP must not gate the parallel path take precedence; the pins are OR-ed. A floating `scan_mode_i` is therefore not protected by the TAP. Decision (2026-10-11, Q-PIN): keep OR; floating-pin protection is a pad pull-down at pad-ring time (section 9.5).
 7. SCAN_RST is a level bit; the tester pulses it by writing 1 then 0.
-8. The crypto scan-entry scrub (14.3 item 1) is now done in `crypto_accel` hardware (`j41m.6`, 14.10); the TAP still offers no scrub of its own and does not withhold `scan_en` until the wipe completes.
+8. The crypto scan-entry scrub (14.3 item 1) is now done in `crypto_accel` hardware (`j41m.6`, 14.10); the TAP still offers no scrub of its own; `scan_en` is withheld in `soc_top` until the wipe completes (`j41m.17`, 14.14).
 
 ### 15.7 Tests and checks required of this stage
 Unit suite `test_jtag_tap` (module `jtag_tap` alone); DFT-controller suite on `dft_ctrl`; SoC suite on `tb_soc_pll`/`tb_soc_top`; mutation campaign on FSM transitions, IR capture, opcode decode, TDR decode, TDO/OE timing, gate enable, combiner; `check_scan_clk_rst.py` extended to cover TAP-domain flops (clock = `tck_i` only, reset = `trst_ni` through the sync only, unscanned by design) with a negative control; CDC gate declarations; coverage ratchet; sv2v source lists; SDC constraints text (TCK clock, asynchronous clock group, JTAG IO delays) in `sky130_soc.sdc` only. **PD is not run in this stage.**
@@ -916,7 +1079,7 @@ bank clear), `aes128_core.sv` and `sha256_core.sv` (new `wipe_i`). No port was a
    `wipe_w` is high a START takes that path, an in-flight AES/SHA operation is aborted to done with no data (`C_BUSY -> C_DONE`), and KEY
    writes are dropped and latch `key_write_rejected`; DIN pushes in that cycle are cleared by the wipe. Software must not rely on a key or
    operation surviving a `scan_mode` change.
-5. **What ATE must guarantee, and the limit.** The clear is functional D logic. Scan insertion puts its scan mux *after* that logic, so any
+5. **What ATE must guarantee, and the limit. SUPERSEDED by 14.14 (`j41m.17`): `soc_top` now ANDs `scan_en` with `crypto_accel`'s `scan_wipe_done_o`, so no shift is possible before edge 3 whatever the tester does; the text below is kept as history.** The clear is functional D logic. Scan insertion puts its scan mux *after* that logic, so any
    edge with `scan_en = 1` loads `scan_in` instead of the cleared value, and the last flop of a chain shows its Q at `scan_out` before
    the first edge. Therefore: after `scan_mode` rises, edges 1 to 3 must be capture-type (`scan_en = 0`) and `scan_out` must not be
    sampled before edge 3 (a spare edge is recommended). On exit the functional clock restarts on its own and no rule applies. **This
@@ -1077,7 +1240,7 @@ Go/no-go per memory = `fail[i]`; "good" requires `done = 1` and `fail_any = 0` a
 | 9 | Entering Test-Logic-Reset (any path) writes the default word (`run = 0`) once, so five TMS-high clocks abort a running MBIST. The FIFO is empty or holds at most one stale word at that time (DEPTH 2 is enough because the strobe is one per Update-DR and the tester pace is slower than the destination) |
 | 10 | `SYNC_STAGES` 2 |
 | 11 | `check_scan_clk_rst.py` gets a narrow extension (flops under a named prefix whose clock cone is exactly `tck_i` are TAP-domain), `--tap-allowed-nets` and `--expect-tap-flops` updated; `required_synchronisers` entries added for the two pointer synchronisers; `tck_i` stays in `reset_domains` |
-| 12 | `set_max_delay -datapath_only` is not implemented by OpenSTA (`phase5_soc_multiclock.sdc:112-123`); the FIFO crossings follow the form used there for the existing FIFOs. **Open: needs the STA owner**; no SDC edit in this PR |
+| 12 | `set_max_delay -datapath_only` is not implemented by OpenSTA (`phase5_soc_multiclock.sdc:112-123`); the FIFO crossings follow the form used there for the existing FIFOs. **Resolved by bead `y5mn` (2026-10-25):** budgets live in `pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc` section 14 (gray pointers 12.5 ns = 0.5 x the faster period, mem_q -> holding register 22.5 ns, 69 status bits per domain 25 ns, the CPU macro as launch cell with its 35 tied-0 status pins accounted for), checked by `make -C pnr check-cdc-timing-sky130-soc`, negative control `CDC_CHECK_MBIST_BUDGET_NS`; `sky130_soc.sdc` exempts the tck -> destination hold (pointer and payload) as it does for the AXI FIFOs. `mbist_force` -> `u_cpu_cg` stays an unsynchronised quasi-static control, not an SDC row |
 | 13 | Opcodes 6/7 leave BYPASS in this stage |
 | 14 | Sections 6 and 9.3 carry a pointer to this section |
 | 15 | `mem_q` (unreset, written on `tck_i`) is in the TCK domain beside the TAP flops: unscanned, covered by N4 (TDR readback: write `MBIST_CTRL`, read it back) |
@@ -1194,3 +1357,153 @@ cross-check): `docs/design/TESSENT_MBIST_EVALUATION.md`.
 A Siemens Tessent 2025.4 scan-insertion and ATPG evaluation of the Sky130 SoC fabric (6 chains of ~3,044, stuck-at 94.17 % test coverage / 1,574 patterns, transition
 81.28 % / 2,567 patterns, 20 patterns simulated clean on VCS with a negative control) is in `docs/design/TESSENT_ATPG_FLOW.md`, code in `dft/tessent/atpg/`. It follows
 sections 8, 14, 15 and decision N4 unchanged, is not back-annotated into PD, and does not modify the RTL.
+
+## 18. Stage 3 ATPG tool spike record (bead `j41m.15`, 2026-10-28)
+
+Labels: **[M]** measured (file or command named), **[R]** read from source, **[A]** assumed or inferred. Code: `tools/dft/atpg/` (README there); heavy outputs under `/nobackup/claude_sim_build/j41m15/`, none in git. **Evaluation only: no RTL and no PD config was touched.** Box (user decision 2026-10-28, N12): about 5 working days, **12 GB RAM and 24 h wall per run**, stop at the first rung that breaks a limit. Each Quaigh run is under `tools/dft/atpg/run_capped.sh` (`systemd-run --user --scope -p MemoryMax=12G -p MemorySwapMax=0`, `timeout 24h`, `/usr/bin/time -v`), which writes `metrics.json` (rc, wall, max RSS, cgroup peak, `oom_kill`).
+
+**Result in one paragraph.** Quaigh 0.0.6 completes the three module rungs (`npu`, `crypto`, `dma`) and **breaks the 12 GB box on the fabric rung**: the real Stage 2 post-fill netlist (`RUN_2026-10-28_05-14-30`, 412,472 collapsed faults) is OOM-killed at 12 GiB after 679 s with 29,376 patterns stored (78 % progress). No fabric-level deterministic coverage number exists. A random-pattern-only grade of the same cut gives 69.59 % (a lower bound, not an ATPG result). Per decision 8 and the strict list of 2.4, the 99.0 % / 98.0 % goal is therefore **not demonstrated at SoC scale**; a restated target is proposed in 18.8 and **not adopted** (superseded: 99 / 98 adopted provisionally 2026-10-30, 18.8). **Update (bead `j41m.18`, 18.9): with a sparse-row patch, Quaigh completes the fabric rung in the same box (5.12 GiB, 50 min): 99.16 % fault / 99.95 % test coverage on the collapsed, excluded universe.**
+
+### 18.1 What Quaigh 0.0.6 does (Step 0) [R: `quaigh-0.0.6/src/atpg.rs`, `sim/fault.rs`, `equiv.rs`, `cmd.rs`]
+
+- **"unobservable" is a proof.** `find_pattern_detecting_fault` builds the good-vs-faulty miter and calls `prove` (Kissat); `Unsat` returns `None` and the fault is counted `unobservable`; `Interrupted` panics, so a timeout can never be mistaken for a proof. Only these faults are subtracted in test coverage. The count is printed only in the tqdm progress line (`unobservable=N`), not in a summary line; `atpg_coverage_report.py` reads the last occurrence.
+- **Universe.** The collapsed list `Fault::all_unique` (equivalence collapsing of single-fanout and xor/buf/and-input faults) unless `--with-redundant-faults`. Not comparable one-to-one with Tessent's representative faults.
+- **Unresolved faults exist.** `detected + unobservable < total` is possible: the Stage 0 `timer` known answer is 4336 detected, 351 unobservable, 5 neither (4692). They stay undetected in both numbers.
+- **Sequential BLIF is accepted** (`.latch`); `atpg` exposes the flops itself (`expose_dff`: Q appended to the inputs, D to the outputs, in `.latch` order).
+- **`--num-random` / `--num-cycles` do not tune the combinational flow.** They switch to "random patterns only": no SAT, no grading, written to the file. The plan's "retry the fabric rung with a larger `--num-random`" therefore does not exist as an option. Also `--num-random` sizes patterns from the primary inputs only and does not expose flops (a patterns-vs-network width assertion fails on a `.latch` BLIF), so the random grade in 18.3 uses the explicit full-scan view.
+- **Memory is O(patterns x faults).** `TestPatternGenerator` keeps `pattern_detections: Vec<Vec<bool>>` (one byte per pattern-fault pair) and the compression step adds `fault_to_patterns` / `pattern_to_faults` index vectors. Each hard fault adds 64 patterns (`add_random_patterns_from`). [A: the per-phase peak was not measured; the fabric kill point matches the byte matrix, see 18.3.]
+- **`quaigh equiv` on a sequential BLIF is a 1-cycle check from the reset state, not a full-scan proof** (`check_equivalence_bounded`). An early version of `regrade.py` used it for the "provably untestable" reading of undetected samples; that was wrong and was corrected (the combinational view is used, and the proof is repeated with Yosys' SAT solver, 18.5).
+
+### 18.2 Method [R/M]
+
+| Step | What |
+|---|---|
+| Module rungs | `synth_module.sh`: `sv2v` with the Sky130 SoC define set and file list (`make -C pnr sky130-soc-sv2v-inputs`), then Yosys 0.46 `synth -flatten`, `dfflibmap`/`abc -liberty` with the Sky130 tt Liberty. Not the LibreLane recipe, so cell counts differ from the PD netlist. The Sky130 4 KB SRAM stays a black box. |
+| Fabric rung | the post-fill netlist `.../RUN_2026-10-28_05-14-30/49-openroad-fillinsertion/soc_top.nl.v` (6 fabric chains, 18,803 scan flops, 922 unscanned). `netlist_prep.py` deletes fill/decap/tap/diode cells (1,265,632) and applies the exclusions of 18.4. |
+| Cut (`mk_cut.py`) | `read_liberty` without `-lib` (every Sky130 cell becomes logic or a flop), a wrapper that ties the scan-mode capture constants, `flatten`, `async2sync` + `dffunmap` (no async flop is left), latches -> flops, **no `opt_dff`** (it deletes flops whose D folds to a constant; a scan flop stays loadable), `abc -g AND,NAND,OR,NOR,XOR,XNOR,ANDNOT,ORNOT,MUX`, `write_blif` with `.latch` for every flop, then a dead-logic drop. `opt -full` was found to delete every flop and is not used. |
+| Capture constants (fabric) | `scan_mode_i=1, scan_en_i=0, trst_ni=0, tck_i=0, scan_rst_ni=1`; `scan_clk_i` is the only clock. Module rungs: `rst_n=1` (and `scan_mode_i=1` for crypto). |
+| Black boxes | CPU macro `rv32i_cpu_top` and the SRAM macros: outputs become free pseudo-inputs, inputs become observed outputs (`expose -evert`). Quaigh has no X state, so coverage of the logic around them is an **upper bound**. A black-box clock pin has no data driver and is dropped from the outputs (1 on the fabric: `u_cpu.clk_i`). |
+| Clock logic | clock-network logic that only reaches flop clock pins is dropped (Quaigh ignores `.latch` clocks, and left in, its faults would inflate "proven untestable"); the one clock-gate cell without a Liberty function (`sdlclkp_4`) is dropped and counted. |
+
+Quaigh counts after its own `expose_dff` [M, logs]: fabric 19,409 inputs, 19,238 outputs, 262,016 gates, 1,346,520 faults, 412,472 collapsed; flops in the cut: 18,804.
+
+### 18.3 Ladder [M: each `metrics.json` and `q/report.json` under `/nobackup/claude_sim_build/j41m15/<rung>/`]
+
+| Rung | Flops in cut | Collapsed faults | Detected | Proven untestable (SAT) | Unresolved | Fault coverage | Test coverage | Patterns kept | Wall | Peak RAM (cgroup) | Completed |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `npu` (`npu_top`, SRAM black-boxed) | 1,169 | 81,126 | 80,905 | 220 | 1 | 99.728 % | 99.9988 % | 1,199 | 56 s | 1.21 GiB | yes |
+| `crypto` (`crypto_accel`, 256 key flops excluded) | 2,755 | 93,178 | 91,235 | 1,943 | 0 | 97.915 % | 100.000 % | 1,578 | 149 s | 1.68 GiB | yes |
+| `dma` (`dma_engine`) | 9,088 | 137,172 | 136,969 | 203 | 0 | 99.852 % | 100.000 % | 13,432 | 845 s | **11.42 GiB** (RSS 11.89 GB) | yes, 0.6 GiB under the cap |
+| `fabric` (Stage 2 post-fill netlist, CPU macro + SRAMs black-boxed) | 18,804 | 412,472 | n/a | 428 proven at the kill | n/a | n/a | n/a | n/a | 679 s to the kill | **12.0 GiB, `oom_kill=1`** | **NO: broke the box** |
+
+Fabric detail [M `fabric/q/run.log`, `metrics.json`]: after the random phase 274,941 of 412,472 faults (66.66 %) were detected; the deterministic phase had reached 78 % of its progress bar with 29,376 patterns stored when the kernel killed the run. 29,376 x 412,472 B = 12.1 GB, which is the cap: the byte matrix of 18.1 alone fills it, before the compression step that follows. [A: completion would need more than 12 GiB; the pattern count at completion is unknown. The 24 h limit was not the binding one.] The cap, not the wall time, is the failure.
+
+Fabric random-pattern-only grade [M `fabric/rand/grade_4096/`]: 4,096 random patterns (`quaigh atpg -r`, then `atpg-report` on the full-scan view, 377,138 faults in that view because `expose_dff` adds buffers): **262,454 detected = 69.59 %**, 169 s, 1.9 GB. This is a floor for a pattern set (no pattern targets a hard fault, nothing is proven), shown only to bound what the random phase alone buys; the universe differs from the 412,472 above, so the two percentages are not interchangeable.
+
+`dma` passing by 0.6 GiB means the module-rung method is also at its edge: a block of ~9 k flops is about the largest Quaigh can finish under this cap.
+
+### 18.4 Exclusion manifest [M `fabric/exclusions.json`, `hold_mask_1028.json`]
+
+State with every coverage number: the fault universe **excludes** the logic and flops below.
+
+| Exclusion | Count | Treatment in the cut |
+|---|---|---|
+| `tck_i`-clocked flops (TAP, MBIST TDRs, incl. negedge-behind-inverter) | **664** | not scanned, tested through JTAG (user decision 2026-10-26). Reset-type flops (554 of the 666 TAP + clock-switch flops) are removed and Q is tied to the reset value (`trst_ni=0`). |
+| `scan_clk_i`-clocked flops (clock switch) | **2** | same |
+| no-reset flops among the 666 (power-up unknown) | 112 | kept as flops whose D is their own Q (never observed); Yosys drops them (constant clock `tck_i=0`) so they enter the cut as constants, not as free inputs. [M: the cut holds 18,804 flops = 18,803 scan flops + 1; A: the constant value]. This differs from the plan's "flagged free inputs" wording. |
+| crypto key flops (`u_crypto.key_q` 128, `u_aes.rk_q` 128; decision 3) | **256** | removed, Q tied 0; scan-mode masks make their cone constant. Their exclusive D fan-in is unobserved and falls out of the universe. |
+| scan-view hold-masked capture flops | **94** | Q stays a pseudo-input (still shift-controllable), D tied 0 so the capture value is not observed |
+| black boxes | CPU macro (`u_cpu`), SRAM (`u_sram`, `u_npu...u_sram_macro`) | free outputs / observed inputs, upper bound (no X) |
+| physical cells (fill, decap, tap, antenna diode) | 1,265,632 | deleted (no logic) |
+
+Unscanned-flop accounting [M]: 19,725 flops = 18,803 scan cells + 922 unscanned; the 922 = 664 + 2 + 256 + 0 unexplained (`other_unscanned_flops: 0`).
+
+**Hold mask** (`derive_hold_mask.py`). The 94 flops are selected by **stable synchroniser Q-net names**, never by instance id: 34 `u_cpu_axi_cdc.u_{aw,w,ar,b,r}_fifo.u_{wr_ptr_to_rd,rd_ptr_to_wr}.sync_q[0][i]` (cdc_gray_axi), 4 `u_mbist.{g_cpu.u_xing_cpu|u_xing_core}.u_fifo.u_wr_ptr_to_rd.sync_q[0][i]` (mbist_ptr_sync), 4 `...ctl_w[i]` (mbist_ctl_hold), 26 `u_mbist.core_cfg_w[i]` (mbist_core_cfg), 26 `mb_cpu_cfg[i]` (mbist_cpu_cfg). Validated **94/94** against `/nobackup/claude_sim_build/j41m8_sta/new_nom_tt_exempt.d/exempt_pins.txt` on `RUN_2026-10-26_09-59-03` (the STA's own list: 0 missing, 0 extra) and re-derived on `RUN_2026-10-28_05-14-30` (94, same split). Negative control: dropping the `mbist_cpu_cfg` rule gives 26 missing and exit 1. Pytest: `tb/tests/test_dft_atpg_hold_mask.py`.
+
+### 18.5 Sanity checks
+
+| Check | Result |
+|---|---|
+| Stage 0 `timer` known answer [M `timer_s0`] | `quaigh atpg` on the committed Stage 0 BLIF: **4336/4692 = 92.41 %**, `unobservable=351`, 358 patterns, as in 2.2. Reproduced. The same `timer` through the new Sky130-cell pipeline gives a different universe (2,840 faults, 97.50 % fault coverage, 99.86 % test coverage): different netlist (mapped, pruned), not a contradiction. |
+| Independent re-grade, method | `regrade_vl.py`: the sampled faults are injected as select-controlled muxes into a copy of the cut, **Yosys** `read_blif`/`write_verilog` defines the logic, **Verilator** simulates every Quaigh pattern with each fault selected, a fault is detected when an output differs. For undetected faults **Yosys' SAT** (`miter -equiv` + `sat -prove`, a different solver from Quaigh's Kissat) decides untestable vs coverage hole. Negative controls: an all-zero pattern must detect clearly fewer of the same faults; an injected wrong verdict must fail the comparison (pytest). `regrade.py` additionally cross-checks with its own Python simulator and `quaigh simulate`. |
+| `npu` (250 faults, 241 modelled) | 199 detected + 42 undetected; all 42 undetected proven untestable by Yosys SAT; **0 disagreements** with the Python simulator; all-zero control 22 vs 199 detected |
+| `crypto` (250) | 200 detected + 50 undetected; all 50 proven untestable by Yosys SAT; **0 disagreements**; control 40 vs 200 |
+| `dma` (250, 249 modelled) | 200 detected + 49 undetected; **45 proven untestable by Yosys SAT, 4 testable but missed by the 13,432 patterns** (all four are sa0 on single-fanout AND-gate outputs feeding a NOR/ANDNOT); **0 disagreements** with the Python simulator on detection; control 37 vs 200. See the full-universe grade below. |
+| `dma` full uncollapsed universe [M `dma/full/`] | `quaigh atpg-report --with-redundant-faults` on the same 13,432 patterns: **451,725 / 452,588 = 99.81 %** (863 undetected), 165 s, 6.4 GB. The collapsed list gave 136,969 / 137,172 = 99.85 % with 203 proven. |
+| `timer` (80, 78 modelled) | 59 + 19, 19/19 proven untestable, 0 disagreements |
+| Quaigh `simulate` cross-check | `regrade.py` (npu) 200 detected + 50 undetected agree with `quaigh simulate` on fault-injected copies (16 min). Its "provably untestable" column predates the full-scan correction of 18.1 and is superseded by the Yosys SAT column above. |
+| Reading | A sample of 250 faults per rung is a spot check of the pattern-to-output simulation and of the untestable proofs, not a recount of Quaigh's fault list (Quaigh reports totals only). The unresolved fault and the `timer` 5 are not covered. The fabric has no pattern set to re-grade. |
+| **Finding: "test coverage 100 %" is a statement about Quaigh's collapsed list** | On `dma` 4 of 49 sampled undetected net faults are testable (Yosys SAT) yet missed. Whether those four are members of Quaigh's collapsed list was not established [A: the collapse rules in `fault.rs` treat input pins after signal inversion, and the mapping from a BLIF net fault to a Quaigh pin fault was not reconstructed]. Magnitude [A]: 863 uncollapsed faults are undetected (0.19 % of 452,588); at 4/49 of them testable that is roughly 70 faults, so test coverage on the uncollapsed list is about 99.98 %, not 100.00 %, with large sampling error. Reported numbers in 18.3 are Quaigh's own and keep the label "collapsed list". `npu` and `crypto` showed 0 holes in 42 and 50 sampled undetected faults. |
+
+### 18.6 Delta against Tessent (94.17 % test / 93.25 % fault, `TESSENT_ATPG_FLOW.md` 4.2, 4.3) [A]
+
+No like-for-like number exists (the fabric rung failed), so the comparison is by class, with nothing reclassified to close a gap:
+
+| Factor | Tessent run | This spike | Direction of the effect |
+|---|---|---|---|
+| Netlist | older pre-Stage-2 yosys-synthesised netlist (18,263 scan cells, `edfxtp` flops) | the real Stage 2 post-fill netlist | not comparable cell for cell |
+| Fault model | Sky130 cell pins, 661,690 representative faults | generic gates after `abc -g`, 412,472 collapsed faults | different universe; neither is the other's subset |
+| X handling | X-aware; black boxes and unscanned flops are X sources (AU.BB 1.05 %, 6,915 faults) | no X: black-box outputs are free inputs | spike is **optimistic** around the CPU macro, SRAMs and NPU |
+| TAP/MBIST flops (666) and cones | in the denominator, undetected (AU.TC 1.27 %, part of AU.PC) | excluded from the universe (user decision 2026-10-26) | spike **higher** by that share, which Tessent counts as loss |
+| Crypto key mask (AU.PC 2,598 representative faults) | undetected, in the denominator | key flops and exclusive cone removed. [A: the 1,943 SAT-proven untestable faults of the `crypto` rung (2.09 % of 93,178) are the masked legs and constant cones; their cause was not itemised per gate.] They are subtracted in test coverage and shown in fault coverage | test coverage hides it, fault coverage shows it |
+| Redundant / unclassified | RE 0.98 %, AU 1.11 %, PU/SEQ/UO 0.19 % | "proven untestable" (SAT) + "unresolved" | equivalent buckets |
+| Scan path faults | [A: whether Tessent's 661,690 include SI/SE/SCD pin faults was not checked] | scan muxes folded under `scan_en_i=0`; SI/SE faults not in the universe | spike **higher** if Tessent counts them |
+| Completion | 94.17 % in 4 min 55 s, 1.18 GB | no completed fabric result; 12 GiB exhausted at 679 s | Tessent scales; Quaigh's data structure does not |
+
+What follows [A]: nothing in the module rungs contradicts a high ceiling (97.9 to 99.9 % fault coverage on blocks, 100 % test coverage after SAT-proven untestable faults), and the Tessent shortfall is attributed to black boxes (not demonstrated here, since this spike cannot see X), TAP/MBIST tied cells (excluded here), and the crypto mask. The spike does **not** show that an open tool can reach 99.0 % test coverage on the SoC: that statement has no measurement behind it.
+
+### 18.7 Limits and what was not done [A unless noted]
+
+- Generic-gate faults, not Sky130 cell-pin faults; the final number must be re-simulated on cell pins (follow-up bead).
+- Stuck-at only. Delay faults (N10) are untouched; Quaigh has no transition model.
+- Patterns are not mapped to chain order, no SVF/TAP replay, no gate-level simulation of the patterns on the scan netlist (follow-up bead). Quaigh's scan-path faults (shift, flush, SI/SE) are not graded.
+- The SRAM macros are not shadowed (6.3): the largest recoverable class in the Tessent data.
+- The CPU macro (5,299 scan flops) is a black box; its own scan netlist as an extra rung was not run.
+- Fault (AUCOHL) was not built: the user allowed it only as a fallback when Quaigh fails a rung; it did fail the fabric rung, but Fault's own engine is random patterns plus an `iverilog` fault simulation (2.2) and Atalanta/PODEM are non-commercial, so a build was judged not worth the time-box without the owner's decision (listed in 18.8).
+- `quaigh` was not patched. The O(patterns x faults) byte matrix is a data-structure limit: bit-packing it (8x) or splitting the fault list is a change to the tool, not a parameter. **Superseded by 18.9 (bead `j41m.18`): a sparse-row patch fixed it and the fabric rung completes.**
+- Whole-SoC fault coverage (the 98 % of 2.1) needs the fault count inside the excluded cones. A/B estimate [M count, A reading]: the same fabric cut built with `netlist_prep.py --keep-unscanned` (the 922 unscanned flops kept as ordinary full-scan flops, `fabric_noexcl/`) has **416,278** collapsed faults against **412,472** with the exclusions applied, i.e. the exclusions remove about **3,806 faults (0.91 % of the larger list)**. If every one of them counted as undetected, the whole-SoC fault coverage could not exceed 412,472 / 416,278 = **99.09 %** even with perfect detection elsewhere; the 98 % goal leaves about 1.1 points for everything else. The two cuts are not a subset pair (Quaigh gate counts 262,016 vs 261,111), so this is an estimate of the order of magnitude, in line with the 0.7 % + 0.2-0.4 % budget of 2.1.
+
+### 18.8 Proposed restated target (NOT adopted: the owner decides)
+
+**ADOPTED 2026-10-30 (owner, bead `j41m.23`); supersedes items 1-3 below, which stay as history.** Item 1 no longer holds: the fabric now has a number (18.9). Item 2, the per-block fallback, is dropped. Item 3 was resolved by route (b). Item 4 changes: **99.0 % test / 98.0 % fault is adopted as the provisional Stage 3 target**, applied to the fabric list, with the CPU macro as a separate rung at the same target. The sign-off conditions are in 2.1.
+
+1. **Do not state one SoC stuck-at number.** The fabric rung failed in the 12 GB box; no deterministic fabric coverage was measured.
+2. **Per-block targets (the fallback of 2.4)**, measured with this flow: stuck-at test coverage >= 99.0 % and fault coverage >= 97.0 % per block on blocks of <= ~9 k flops (npu 100.00 / 99.73, crypto 100.00 / 97.92, dma 100.00 / 99.85 are the evidence), each with the exclusion statement of 18.4 and the SAT-proven untestable count itemised.
+3. **For the SoC number choose one of**: (a) a commercial or patched engine run (Tessent has a measured 94.17 % on an older netlist and finishes in minutes), (b) Quaigh patched to a bit-packed detection matrix, then re-run the fabric rung, (c) partition the fabric by hierarchy into cuts that fit the box and report per block. Options (b) and (c) keep the open-tool route; (a) is the only one with a measured SoC-scale result.
+4. Keep 99.0 / 98.0 as a goal (decision 8), not a commitment.
+
+**Owner decisions 2026-10-29 (bead `j41m.18`):** route **(b)** chosen and executed (result in 18.9); **Fault (AUCOHL) is dropped** as a fallback (random patterns plus an `iverilog` fault simulation add nothing over a completing Quaigh); the restated target above is still **not adopted**: the owner decides it with the 18.9 number in hand (follow-up bead). **Decided 2026-10-30 (bead `j41m.23`): adopted provisionally, see the note at the top of this section and 2.1.**
+
+### 18.9 Patched Quaigh: fabric result (bead `j41m.18`, 2026-10-29)
+
+**Patch [R/M].** `tools/dft/atpg/quaigh/0001-sparse-pattern-detections.patch` (Quaigh `0.0.6+cvt1`, built by `tools/dft/build_quaigh.sh patched` into `/nobackup/claude_sim_build/j41m18/qroot`; the stock binary is kept). `pattern_detections` becomes, per pattern, the ascending list of detected fault indices (`u32`) instead of one byte per (pattern, fault). Reason, read from `atpg.rs`: only the first 256 random patterns are graded against every fault; each later 64-pattern batch is graded against the still-undetected faults only, so its dense rows were almost all zeros. `compress_patterns` builds `fault_to_patterns` from the sparse rows in the same ascending order and keeps the `max_by` tie-break, so pattern selection is unchanged. `patterns` (one byte per input) is left dense. No other file changed.
+
+**Equivalence gate [M: `cmp -s` of the pattern files; each `metrics.json` under `/nobackup/claude_sim_build/{j41m15,j41m18}/`].** Same cuts (symlinked from j41m.15), same seed; only the binary differs.
+
+| Rung | Pattern file vs stock | Peak RAM stock -> patched (cgroup) | Wall stock -> patched |
+|---|---|---|---|
+| `timer` (Stage 0 known answer) | identical | 42 MiB -> 9 MiB | 1.5 s -> 1.4 s |
+| `npu` | identical | 1.21 GiB -> 0.08 GiB | 56 s -> 42 s |
+| `crypto` | identical | 1.68 GiB -> 0.12 GiB | 149 s -> 138 s |
+| `dma` | identical | 11.42 GiB -> 0.94 GiB | 845 s -> 269 s |
+
+**Fabric rung [M: `j41m18/fabric/q/metrics.json`, `report.json`, `run.log`].** Same cut as 18.3 (`RUN_2026-10-28_05-14-30`, exclusions of 18.4, CPU macro and SRAMs black-boxed), under `run_capped.sh` (12 GiB, 24 h): **completed**, 2,977 s, cgroup peak **5.12 GiB**, `oom_kill=0`.
+
+| Collapsed faults | Detected | Proven untestable (SAT) | Unresolved | Fault coverage | Test coverage | Patterns generated / kept |
+|---|---|---|---|---|---|---|
+| 412,472 | 409,022 | 3,230 | 220 | **99.16 %** | **99.95 %** | 218,944 / 23,627 |
+
+The random phase is the one 18.3 recorded (256 patterns, 274,941 detected). 218,944 generated patterns x 412,472 B would have been about 90 GB in the stock byte matrix, so the stock tool could not have finished this rung with any cap this host offers.
+
+**Independent re-grade [M: `j41m18/fabric/regrade_own.json`, `regrade_vl.json`; method of 18.5].** 250 sampled faults (200 detected, 50 undetected per Quaigh): Verilator confirms all 200 detected, **0 disagreements**; Yosys SAT proves **all 50 undetected untestable, 0 coverage holes**; all-zero control detects 27 vs 200. `regrade.py` (own simulator) agrees; `quaigh simulate` was skipped (too slow at this size). Wall 5 min + 51 min, peak 4.1 GB. The 220 unresolved faults are not in the sample.
+
+**Reading [A].** Every caveat of 18.6/18.7 still applies: generic-gate collapsed faults (not Sky130 cell pins), stuck-at only, no X (the coverage around the CPU macro, SRAMs and NPU macro is an upper bound), 922 unscanned flops and their exclusive cones outside the universe (whole-SoC fault coverage ceiling about 99.09 % from 18.7), patterns not mapped to chains or replayed on the scan netlist. The dma finding of 18.5 (testable faults missed outside Quaigh's collapsed list) was not repeated here: the uncollapsed `atpg-report --with-redundant-faults` grade of the fabric patterns was not run. Against decision 8: fabric test coverage 99.95 % >= 99.0 % on this flow's universe; fault coverage 99.16 % on the excluded universe, whose whole-SoC equivalent, counting every excluded fault as undetected against the `fabric_noexcl` list of 18.7, is about 409,022 / 416,278 = **98.26 %** [A: the two cuts are not a subset pair, so this is an estimate]. Neither is a sign-off number until the owner restates the target (18.8) and the cell-pin re-simulation is done.
+
+**Uncollapsed grade (bead `j41m.23`, 2026-10-30) [M: `/nobackup/claude_sim_build/j41m23/{dma_full,fabric_full}/metrics.json`, `run.log`].** `quaigh atpg-report --with-redundant-faults` (patched binary, under `run_capped.sh`) on the 23,627 kept fabric patterns. Calibration first: the same command on the j41m.15 `dma` patterns gives **451,725 / 452,588**, identical to the stock binary (18.5), with a cgroup peak of 0.61 GiB against stock's 6.1 GiB. Report mode grades every pattern against every fault, so the sparse rows hold every detection, but detection density is low enough that they still beat the byte matrix.
+
+| Universe | Faults | Detected | Undetected | Fault coverage | Wall | Peak RAM (cgroup) |
+|---|---|---|---|---|---|---|
+| fabric, collapsed (above) | 412,472 | 409,022 | 3,450 | 99.16 % | 2,977 s (ATPG) | 5.12 GiB |
+| fabric, **uncollapsed** | 1,346,520 | 1,332,673 | 13,847 | **98.97 %** | 919 s | 1.96 GiB |
+
+Test coverage on the uncollapsed list cannot be computed: Quaigh proves untestable faults only on the collapsed list, so the 13,847 mix redundant and missed faults (the dma reading of 18.5). The uncollapsed figure is 0.19 points below the collapsed one (dma: 0.04). [A] Scaling it by the exclusion ratio of 18.7 (412,472 / 416,278) gives about **98.07 %** whole-fabric fault coverage on the uncollapsed universe: above the adopted 98.0 % (2.1), with a margin of under 0.1 point, which a cell-pin re-grade (`j41m.20`) can erase. Both universes meet the 98.0 % fault coverage target only provisionally.

@@ -290,6 +290,30 @@
               fi
             '';
           };
+
+          # DFT shell (bead j41m.15, DFT_ARCHITECTURE 2.2 / 18): the open-tool ATPG spike. yosys + sv2v build the full-scan
+          # cut (tools/dft/atpg/), python3 runs the exclusion / coverage / re-grade scripts and their pytest files.
+          # Quaigh is deliberately NOT packaged here: it is a pinned external binary (0.0.6, built by tools/dft/build_quaigh.sh
+          # with a throwaway CARGO_HOME because its Kissat dependency needs OpenSSL headers at build time). Point
+          # tools/dft/atpg/Makefile at it with QUAIGH=<path>. systemd-run (host) provides the 12 GB cap in run_capped.sh.
+          dft = pkgs.mkShell {
+            name = "soc-dft";
+
+            packages = with pkgs; [
+              yosys
+              haskellPackages.sv2v
+              gnumake
+              python3
+              python3Packages.pytest
+            ];
+
+            shellHook = ''
+              if [[ $- == *i* ]]; then
+                echo "soc dft env ready. Quaigh is external: export QUAIGH=/nobackup/claude_sim_build/dft_stage0/qg/root/bin/quaigh"
+                echo "Spike: make -C tools/dft/atpg ladder   (12 GB / 24 h cap per run, tools/dft/atpg/README.md)"
+              fi
+            '';
+          };
         }
         # Bambu HLS shell (GH #119). Linux-only; see bambuFor above.
         // lib.optionalAttrs pkgs.stdenv.isLinux {

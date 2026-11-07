@@ -1947,12 +1947,13 @@ module tb_crypto_single #(
     output logic [31:0]       prdata,
     output logic              pready,
     output logic              pslverr,
-    output logic              irq_o
+    output logic              irq_o,
+    output logic              scan_wipe_done_o
 );
     crypto_accel #(
         .ADDR_W(ADDR_W), .EN_AES(EN_AES), .EN_SHA(EN_SHA), .SBOX_PARALLEL(SBOX_PARALLEL)
     ) u_dut (
-        .clk(clk), .rst_n(rst_n), .scan_mode_i(1'b0), .psel(psel), .penable(penable), .pwrite(pwrite),
+        .clk(clk), .rst_n(rst_n), .scan_mode_i(1'b0), .scan_wipe_done_o(scan_wipe_done_o), .psel(psel), .penable(penable), .pwrite(pwrite),
         .paddr(paddr), .pwdata(pwdata), .pstrb(pstrb), .prdata(prdata), .pready(pready),
         .pslverr(pslverr), .irq_o(irq_o)
     );
@@ -2455,3 +2456,91 @@ async def test_reset_neither_creates_nor_hides_a_scan_edge(dut):
     assert await d.status() & ST_KEYV
     await _scan_mode_edge(dut, 0)
     assert _val(dut.u_dut.key_q) == 0, "exit edge after a scan-mode reset must still wipe"
+
+
+# -- DFT scan-entry wipe handshake (bead j41m.17, docs/design/DFT_ARCHITECTURE.md sec.14.14) -----
+# scan_wipe_done_o is 1 iff scan_mode_i has been constant for the last three clock edges and still
+# equals that value now; it falls combinationally when scan_mode_i changes (no clock needed) and
+# rises right after the edge at which the wipe_w-qualified clears take effect. The model below
+# states that rule directly ("constant over the last three edges and now"), not the RTL's XOR form.
+class _DoneModel:
+    def __init__(self, level: int):
+        self.hist = [level] * 3  # scan_mode_i as sampled at the last three edges
+
+    def edge(self, level: int) -> None:
+        self.hist = [*self.hist[1:], level]
+
+    def done(self, raw: int) -> int:
+        return int(len({*self.hist, raw}) == 1)
+
+
+async def _done_now(dut) -> int:
+    await _settle()
+    return _val(dut.scan_wipe_done_o)
+
+
+@cocotb.test()
+async def test_scan_wipe_done_timing(dut):
+    """scan_wipe_done_o on the primary instance, edge by edge. Settled functional mode: 1. A
+    scan_mode_i rise drops it before any clock edge, it stays 0 after edges 1 and 2 and rises
+    after edge 3, at which the state is already cleared (wipe_w is the one-cycle pulse seen after
+    edge 2); steady scan mode keeps it 1; the exit mirrors the entry.
+    MUTATION TARGETS: done rising one edge early or late; the raw scan_mode_i term; constant 1."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await ClockCycles(dut.clk, 6)
+    assert await _done_now(dut) == 1, "settled functional mode: done must be 1"
+    await d.load_key(FIPS_B_KEY)
+    for direction in (1, 0, 1, 0):
+        dut.scan_mode_i.value = direction
+        assert await _done_now(dut) == 0, f"->{direction}: done must fall before any clock edge"
+        seq = []
+        for _k in range(1, 4):
+            await RisingEdge(dut.clk)
+            await _settle()
+            seq.append((_val(dut.scan_wipe_done_o), _val(dut.u_dut.wipe_w)))
+        assert seq == [(0, 0), (0, 1), (1, 0)], (
+            f"->{direction}: (done, wipe_w) after edges 1..3 = {seq}, "
+            f"expected [(0, 0), (0, 1), (1, 0)]"
+        )
+        if direction:
+            assert _val(dut.u_dut.key_q) == 0, "the clear must have taken effect with edge 3"
+        for _ in range(20):
+            await RisingEdge(dut.clk)
+            await _settle()
+            assert _val(dut.scan_wipe_done_o) == 1, f"->{direction}: done must stay 1 when settled"
+
+
+@cocotb.test()
+async def test_scan_wipe_done_matches_stable_for_three_edges_model(dut):
+    """Random scan_mode_i activity (seeded; holds of 1..8 clocks, so pulses shorter than three
+    clocks and reversals inside the pending window occur): after every drive and every edge,
+    done equals 'scan_mode_i constant over the last three edges and equal to its value now'.
+    MUTATION TARGETS: dropping the s1 term (pending change not yet visible in s2), the wipe_w
+    term, or the raw term; each makes done high while a clear is still to come."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    rng = random.Random(0x17D0)
+    model = _DoneModel(0)
+    await ClockCycles(dut.clk, 6)
+    level = 0
+    seen_pending = False
+    for _step in range(120):
+        level = 1 - level if rng.random() < 0.5 else level
+        dut.scan_mode_i.value = level
+        await _settle()
+        assert _val(dut.scan_wipe_done_o) == model.done(level), (
+            f"after driving {level}: done={_val(dut.scan_wipe_done_o)} "
+            f"model={model.done(level)} hist={model.hist}"
+        )
+        for _ in range(rng.randrange(1, 9)):
+            await RisingEdge(dut.clk)
+            model.edge(level)
+            await _settle()
+            got = _val(dut.scan_wipe_done_o)
+            assert got == model.done(level), (
+                f"scan_mode_i={level}: done={got} model={model.done(level)} hist={model.hist}"
+            )
+            seen_pending |= got == 0 and len(set(model.hist)) > 1
+    assert seen_pending, "the random walk never produced a pending change"

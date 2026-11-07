@@ -1,4 +1,39 @@
 {
     "version": 1,
-    "waivers": []
+    "waivers": [
+        {
+            "id": "u-ref-cm-mux-clk-cpu-pll-sub",
+            "driver": {
+                "instance": "u_cpu_pll_sub.u_ref_cm.u_mux",
+                "pin": "X",
+                "stable": true
+            },
+            "corners": [
+                "min_ss_100C_1v60",
+                "nom_ss_100C_1v60",
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.55,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "User decision 2026-10-26 (PR #330), re-issued WITHOUT run_id (original: user decision 2026-10-25, PR #328, pinned to RUN_2026-10-25_08-28-45). The driver u_cpu_pll_sub.u_ref_cm.u_mux is a hand-instantiated mux2_4 (sky130_clkcells_stub) driving the hand-instantiated buf_16 root buffer u_root_buf: a name that survives re-synthesis, hence driver.stable=true (the loader rejects a stable flag on a tool-generated name). Clock net u_cpu_pll_sub.u_ref_cm.mux_clk is in the CTS clock-net set and carries 7 antenna diodes inserted after the cap repair stage; neither the pre-route nor the post-GRT cap-repair margin reaches it (GRT_DESIGN_REPAIR_MAX_CAP_PCT 30 -> 40, RUN_2026-10-25_15-59-23, left it at 0.379-0.418 pF against the 0.3397 pF limit). Measured: RUN_2026-10-25_08-28-45 min_ss 0.3985, nom_ss 0.4210, max_ss 0.4356 pF; RUN_2026-10-26_09-59-03 (scan inserted) min_ss 0.3659, nom_ss 0.3811, max_ss 0.3912 pF (+8 to +15 percent over the limit). Only the three ss corners violate. User decision 2026-10-27 (PR #333): ceiling raised 0.45 -> 0.55 pF. RUN_2026-10-27_05-40-27 (scan_out gated, new placement) measured min_ss 0.4750, nom_ss 0.5077, max_ss 0.5186 pF (+40 to +53 percent over the 0.3397 pF limit; +33 percent over the previous run). Root cause (measured, SPEF nom): the loads are identical to the previous run (one buf_16 plus 11 antenna diodes) and the routed length grew only 6 percent (2620 -> 2775 um); the total went 0.356 -> 0.483 pF because coupling rose 0.066 -> 0.261 pF, of which 0.158 pF is to the CPU-domain clock net cpu_core_clk, now routed alongside it (the previous run's largest neighbour was 0.012 pF). It is a routing-adjacency effect between two clock nets, which varies with placement; no cap-margin knob reaches a hand-instantiated clock driver. The 0.55 pF ceiling (6 percent above the measured maximum) still fails a further regression. See DFT_ARCHITECTURE.md 14.14.1."
+        },
+        {
+            "id": "hold-dlygate-scd-link",
+            "driver_class": {
+                "cell_prefix": "sky130_fd_sc_hd__dlygate4sd3_",
+                "sole_non_diode_load": {
+                    "cell_prefix": "sky130_fd_sc_hd__sdf",
+                    "pin": "SCD"
+                }
+            },
+            "corners": [
+                "min_ss_100C_1v60",
+                "nom_ss_100C_1v60",
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.12,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "User decision 2026-10-27 (PR #333). Load-class waiver (cvt_maxcap_waiver.py driver_class): a hold-repair sky130_fd_sc_hd__dlygate4sd3_* whose only non-antenna-diode load is one SCD pin of a scan flop (sky130_fd_sc_hd__sdf*), i.e. the hold buffer on a scan-chain link. The dlygate4sd3_1 has the lowest max-cap limit of the cells used (0.1007 pF); antenna repair attaches 6 to 17 diodes to such links, each adding pin capacitance, so a few of them exceed the limit by a few percent. This is the antenna-diode versus cap trade of bead e45j, not a drive-strength error of a functional net. The class is not new: the previous run (RUN_2026-10-26_09-59-03) had 98 such nets with up to 17 diodes, this one 90 with up to 13. Measured in RUN_2026-10-27_05-40-27 at max_ss: hold19396 0.1113 pF (13 diodes), hold19401 0.1046 pF (6), hold19961 0.1020 pF (12) against 0.1007 pF; hold19396 also 0.1029 pF at nom_ss. The class is proven from the final netlist for every violation (driver cell type, exactly one non-diode load, that load an sdf*/SCD pin; a macro or functional load, or another cell type, is not covered). The 0.115 pF ceiling is 3 percent above the worst measured value, so a regression still fails; the waiver goes STALE (a failure under --strict-stale) on a run where no net of the class violates. User decision 2026-10-28 (PR for bead e45j wire-length adoption): ceiling raised 0.115 -> 0.120 pF. RUN_2026-10-28_05-14-30 (GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH 1500, same netlist through floorplan) measured hold18202 0.1151 pF at max_ss (0.1053 pF nom_ss), 0.1% above the old ceiling, same class and cause (diode pin capacitance on a scan-link hold buffer); the other class members were hold19028 0.1077, hold19396 0.1038 and hold18031 0.1031 pF. The new 0.120 pF ceiling is 4.2 percent above the worst measured value, so a regression still fails."
+        }
+    ]
 }
