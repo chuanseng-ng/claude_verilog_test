@@ -445,6 +445,7 @@ def drclvs(tag: str):
     for f in (f"{d}/{tag}_magic_drc_real_by_rule.tsv",):
         if tracked(f):
             out.update(magic(f))
+    out.update(nwell4_nsc(tag))
     return out
 
 
@@ -471,8 +472,31 @@ def magic(f: str):
             "items",
             "signoff",
             f,
-            note="[straddling, outside] nwell.4 items: open, not waived",
+            note=(
+                "[straddling, outside] nwell.4 items: LEF-abstract artefact "
+                "(reports/magic_nwell4_rootcause.md); waiver PROPOSED, needs user sign-off, "
+                "not waived"
+            ),
         ),
+    }
+
+
+def nwell4_nsc(tag: str):
+    """KLayout geometric re-check of Magic's nwell.4 definition on the real std-cell GDS."""
+    f = f"{COM}/signoff/drclvs/reports/{tag}_nwell4_nsc_check.txt"
+    if not tracked(f):
+        return {}
+    return {
+        "nwell_regions_without_nsc": E(
+            grab(f, r"nwell_regions_without_nsc: total=(\d+)", int),
+            "regions",
+            "signoff",
+            f,
+            note=(
+                "KLayout, flattened real GDS: merged nwell regions with no n-tap contact "
+                "(nsc = licon1 & tap & nsdm), all of the die incl. SRAMs; the nwell.4 definition"
+            ),
+        )
     }
 
 
@@ -633,6 +657,7 @@ def openroad():
         ),
     }
     out.update(magic(f"{COM}/signoff/drclvs/reports/openroad_magic_drc_by_rule.tsv"))
+    out.update(nwell4_nsc("openroad"))
     out["census"] = census(f"{SNAP}/openroad/cellcount.txt")
     rt = f"{SNAP}/openroad/step_runtime.tsv"
     rows = [line.split("\t") for line in text(rt).splitlines()[1:]]

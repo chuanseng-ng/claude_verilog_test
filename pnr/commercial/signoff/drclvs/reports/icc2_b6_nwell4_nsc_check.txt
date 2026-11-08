@@ -1,0 +1,5 @@
+gds=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/icc2_b6/gds/rv32i_cpu_top.fixed.gds
+nwell_shapes_merged_regions=2413
+nsc_polygons=233434
+nwell_regions_without_nsc: total=0 inside_sram=0 straddle=0 outside=0
+all_merged_nwell_regions: inside=1360 straddle=585 outside=468

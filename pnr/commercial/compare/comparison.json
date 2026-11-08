@@ -2161,7 +2161,14 @@
      "unit": "items",
      "label": "signoff",
      "source": "pnr/commercial/signoff/drclvs/reports/openroad_magic_drc_by_rule.tsv",
-     "note": "[straddling, outside] nwell.4 items: open, not waived"
+     "note": "[straddling, outside] nwell.4 items: LEF-abstract artefact (reports/magic_nwell4_rootcause.md); waiver PROPOSED, needs user sign-off, not waived"
+    },
+    "nwell_regions_without_nsc": {
+     "value": 0,
+     "unit": "regions",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/drclvs/reports/openroad_nwell4_nsc_check.txt",
+     "note": "KLayout, flattened real GDS: merged nwell regions with no n-tap contact (nsc = licon1 & tap & nsdm), all of the die incl. SRAMs; the nwell.4 definition"
     },
     "census": {
      "label": "derived",
@@ -2882,7 +2889,14 @@
      "unit": "items",
      "label": "signoff",
      "source": "pnr/commercial/signoff/drclvs/reports/icc2_b6_magic_drc_real_by_rule.tsv",
-     "note": "[straddling, outside] nwell.4 items: open, not waived"
+     "note": "[straddling, outside] nwell.4 items: LEF-abstract artefact (reports/magic_nwell4_rootcause.md); waiver PROPOSED, needs user sign-off, not waived"
+    },
+    "nwell_regions_without_nsc": {
+     "value": 0,
+     "unit": "regions",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/drclvs/reports/icc2_b6_nwell4_nsc_check.txt",
+     "note": "KLayout, flattened real GDS: merged nwell regions with no n-tap contact (nsc = licon1 & tap & nsdm), all of the die incl. SRAMs; the nwell.4 definition"
     },
     "lec_runs": {
      "b6_icc2_vs_dc": {
@@ -3387,7 +3401,14 @@
      "unit": "items",
      "label": "signoff",
      "source": "pnr/commercial/signoff/drclvs/reports/innovus_b6_magic_drc_real_by_rule.tsv",
-     "note": "[straddling, outside] nwell.4 items: open, not waived"
+     "note": "[straddling, outside] nwell.4 items: LEF-abstract artefact (reports/magic_nwell4_rootcause.md); waiver PROPOSED, needs user sign-off, not waived"
+    },
+    "nwell_regions_without_nsc": {
+     "value": 0,
+     "unit": "regions",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/drclvs/reports/innovus_b6_nwell4_nsc_check.txt",
+     "note": "KLayout, flattened real GDS: merged nwell regions with no n-tap contact (nsc = licon1 & tap & nsdm), all of the die incl. SRAMs; the nwell.4 definition"
     },
     "lec_runs": {
      "b4m_innovus_nodiode_vs_genus": {
@@ -3775,7 +3796,7 @@
      "unit": "items",
      "label": "signoff",
      "source": "pnr/commercial/signoff/drclvs/reports/icc2_magic_drc_real_by_rule.tsv",
-     "note": "[straddling, outside] nwell.4 items: open, not waived"
+     "note": "[straddling, outside] nwell.4 items: LEF-abstract artefact (reports/magic_nwell4_rootcause.md); waiver PROPOSED, needs user sign-off, not waived"
     }
    },
    "synthesis_metrics": {

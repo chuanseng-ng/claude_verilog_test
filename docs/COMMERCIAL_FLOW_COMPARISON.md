@@ -50,7 +50,7 @@ PDN pitch, max layer met4 and the CTS cell set. All three P&R flows are judged b
 | **signoff** KLayout DRC / deck antenna nets | 0 / 116 | 0 / **1** | 0 / 2 |
 | **signoff** Netgen LVS (GDS) | 0 errors (LibreLane) | match uniquely | nets/devices equal; top pin match fails (3 `assign` pairs) |
 | **signoff** LEC (post-route vs RTL, 4 neg. controls) | **EQUIVALENT** by chain: RTL==sv2v (Formality 6,302 / 0), sv2v==final (Yosys `equiv_induct` 6,156 / 0); Formality 6/6 and Yosys 4/4 controls caught; Formality/Conformal fail on the Yosys leg (unresolved), `reports/lec_openroad.md` | Formality 4/4, 4/4 caught | Conformal 4/4, 4/4 caught |
-| **signoff** Magic DRC outside SRAM (all `nwell.4`) | 3,626 | **3,035** (+592 straddle) | 4,226 (+737 straddle) |
+| **signoff** Magic DRC outside SRAM (all `nwell.4`, LEF-abstract artefact, waiver PROPOSED, caveat 6) | 3,626 | **3,035** (+592 straddle) | 4,226 (+737 straddle) |
 | **signoff** RedHawk static worst VDD+VSS (mV) | 24.7 | 23.9 | **18.0** |
 | **signoff** RedHawk dynamic worst avgTW (mV) | **79.1** | 192.6 | 163.2 |
 | **derived** P&R wall (s) / peak RSS (GB) | 3,249 / not recorded | 4,206 / 4.07 | 3,365 / 7.11 |
@@ -81,7 +81,7 @@ What the numbers say:
    and devices match but top-level pin matching fails on 3 netlist `assign` pairs. OpenROAD passes
    LibreLane's LVS. Deck antenna is 1 (ICC2), 2 (Innovus) and 116 (OpenROAD, whose LibreLane
    repair left those). The open sign-off deck is clean, but the Magic `nwell.4` items outside the
-   SRAMs remain open on every arm (caveat 6).
+   SRAMs are a root-caused LEF-abstract artefact with a PROPOSED waiver, not waived (caveat 6).
 5. **IR is grid-healthy everywhere but decap-sensitive.** Static drop is 18 to 25 mV
    (VDD+VSS, 1.0 to 1.4 %) on every arm. Dynamic worst-case drop ranks OpenROAD < Innovus < ICC2.
    That ranking follows the estimated decap (ICC2 has 4,210 decap cells against roughly 300k on the
@@ -119,13 +119,18 @@ What the numbers say:
 5. **IR is indicative.** The RedHawk tech is authored and uncorrelated. Cell currents are RedHawk
    defaults (no APL). Decap capacitance is estimated from spice W/L. The supply is an ideal edge
    feed (met5 stripe ends, no package). Power is PrimePower vectorless at 0.1 / 0.5.
-6. **The Magic `nwell.4` items are open.** Inside the SRAM footprints, Magic reports about 27.7 to
-   28.3 M items. These are the waived SRAM-abstract artefact (bead `45a`). Outside or straddling
-   the footprints, every arm has `nwell.4` items that are **not** waived: OpenROAD 3,626, ICC2 b6
-   3,035 + 592 straddling, Innovus b6 4,226 + 737 straddling. Of Innovus' 4,226, **1,191 are
-   Innovus-specific**: tap-sized wells in the left pocket (x < 125 um, y < 920 um) that are not in
-   the ICC2 class (`reports/innovus_b6_report.md` section 8). The island checker, KLayout and Netgen
-   are clean there. Not root-caused.
+6. **The Magic `nwell.4` items outside or straddling the SRAMs are a root-caused tool artefact, with a PROPOSED
+   waiver that needs user sign-off (not waived).** Inside the SRAM footprints, Magic reports about 27.7 to 28.3 M
+   items. These are the waived SRAM-abstract artefact (bead `45a`). Outside or straddling the footprints, every arm
+   has `nwell.4` items: OpenROAD 3,626, ICC2 b6 3,035 + 592 straddling, Innovus b6 4,226 + 737 straddling. Cause
+   (measured): the sign-off Magic DRC loads the std cells as LEF abstracts, which carry the n-well but no tap
+   contact (`nsc`), so every n-well strip is reported. The same layout with the std cells taken from the GDS gives 0
+   `nwell.4` in all 9 windows tried (3 arms x pocket / channel / logic), and a KLayout check on the real GDS finds 0 of
+   2,413 / 3,435 / 2,438 n-well regions without a contact (ICC2 / Innovus / OpenROAD). Innovus' 1,191 extra outside
+   items are isolated tap wells in its unfilled left pocket (ICC2 fills it, so the wells merge into strips); the +145
+   straddle difference is (292 tap wells + 1 strip) - 148 ICC2 pocket strips. No layout defect, no ECO, no re-run of
+   extraction or timing. Counts are unchanged. `reports/magic_nwell4_rootcause.md` has the classes, evidence and the
+   four proposed waiver texts. Limit: A/B is by window, not a full-die run with GDS std cells.
 7. One run per arm. Native tool numbers use each tool's own RC, SDC and engine, so they are not
    ranked against each other. Runtimes were measured on a shared 8-core / 15 GB host, often under
    load, so they are not a tool-speed benchmark.
@@ -383,7 +388,7 @@ the shared or iolat SDC instead of each tool's own SDC, and SI off. Section 5 of
 | Netgen LVS, layout / schematic nets | 0 errors (LibreLane, DEF/LEF mode) | 41,741 / 41,741, match uniquely (as delivered, clean, merged) | 47,113 / 47,113, devices 46,175 = 46,175; top-level pin matching fails on `axi_awlen_o[1]`, `axi_arlen_o[1]`, `axi_arburst_o[0]` (`assign` pairs) and the layout-only VPWR/VGND labels |
 | deck antenna nets / pins | 116 / 119 | 1 / 1 | 2 / 2 |
 | Magic total / inside SRAM | 27,733,913 / 27,730,287 | 27,737,113 / 27,733,486 | 28,320,055 / 28,315,092 |
-| Magic straddle / outside (all `nwell.4`) | 0 / 3,626 | 592 / 3,035 | 737 / 4,226 |
+| Magic straddle / outside (all `nwell.4`; LEF-abstract artefact, 0 n-well regions without tap contact in the real GDS; waiver PROPOSED, not waived) | 0 / 3,626 | 592 / 3,035 | 737 / 4,226 |
 | LEC post-route | **EQUIVALENT** by chain: RTL==sv2v SUCCEEDED (Formality 6,302 / 0); sv2v==final netlist (Yosys `equiv_induct`, 6,156 proven / 0 unproven, 4/4 controls); final==Yosys netlist SUCCEEDED (Formality 6,248 / 0, with and without 64,086 diodes); Formality (3,902 failing) and Conformal (NOT_EQUIVALENT) fail on the Yosys-netlist-vs-sv2v compare, unresolved | Formality: 4/4 SUCCEEDED, 6,233 passing / 0 failing; controls `fwdb_inv` 1 and `swap` 43 failing points (4/4 caught) | Conformal: 4/4 EQUIVALENT, 5,597 (Genus golden) / 5,791 (RTL golden, merged points) compare points; 4/4 controls NOT_EQUIVALENT |
 | LEC synthesis netlist vs RTL | not run | Formality DC v2: SUCCEEDED, 6,233 / 0 | Conformal Genus v1 (hierarchical): EQUIVALENT, 1,076 points |
 | RedHawk static VPWR / VGND worst (mV) | 12.4 / 12.3 | 12.1 / 11.8 | 9.0 / 9.0 |
@@ -504,9 +509,12 @@ Beads are not available on this host, so the follow-ups are tracked here.
    seen (the `synth -nofsm` independence check was not run). The Yosys log shows `fsm` re-encoded `fwd_a_sel_r`, `fwd_b_sel_r`
    and `grant_q` to one-hot; Formality (3,902 failing) and Conformal (4,335 non-equivalent) could not match that and fail on the
    Yosys-netlist-vs-sv2v compare. That is unresolved, not waived, and not contradicted by the Yosys result.
-2. **Magic `nwell.4` outside the SRAMs** is open on all arms (3,626 / 3,035 + 592 / 4,226 + 737).
-   Root-cause the 1,191 Innovus-specific pocket tap wells and the +145 straddle items
-   (`reports/innovus_b6_report.md` section 8). Then decide waiver vs fix per class with the owner.
+2. **Magic `nwell.4` outside the SRAMs**: root-caused 2026-11-08 (`reports/magic_nwell4_rootcause.md`). It is the
+   LEF-abstract artefact (std-cell abstracts have no tap contact) on all arms: 0 with GDS std cells in 9 windows, 0
+   n-well regions without contact in the real GDS (KLayout). The 1,191 Innovus pocket tap wells and the +145 straddle
+   items are explained (unfilled pocket). **Open, owner decision:** accept the four PROPOSED waivers W1 to W4 (counts
+   OpenROAD 3,626, ICC2 3,627, Innovus 4,963) or switch the sign-off Magic to GDS std cells (about 25 min per arm,
+   new baseline for other rules). Nothing is waived until the user signs off.
 3. **Per-view clk_io latency**: done for the iolat variant (sections 4.2b to 4.2e, per-arm and
    shared). Still open: the same correction for the **Innovus own SDC** (fixed 3.295 ns), which
    needs a per-view copy of `sky130_cpu_innovus_b6_own_pt.sdc` and 9 more PrimeTime runs, and a
