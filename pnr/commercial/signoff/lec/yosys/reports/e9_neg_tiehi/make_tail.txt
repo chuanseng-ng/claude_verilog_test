@@ -1,0 +1,60 @@
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237376: \axi_araddr_o_gold [16] \axi_araddr_o_gate [16]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237375: \axi_araddr_o_gold [15] \axi_araddr_o_gate [15]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237374: \axi_araddr_o_gold [14] \axi_araddr_o_gate [14]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237373: \axi_araddr_o_gold [13] \axi_araddr_o_gate [13]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237372: \axi_araddr_o_gold [12] \axi_araddr_o_gate [12]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237371: \axi_araddr_o_gold [11] \axi_araddr_o_gate [11]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237370: \axi_araddr_o_gold [10] \axi_araddr_o_gate [10]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237369: \axi_araddr_o_gold [9] \axi_araddr_o_gate [9]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237368: \axi_araddr_o_gold [8] \axi_araddr_o_gate [8]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237367: \axi_araddr_o_gold [7] \axi_araddr_o_gate [7]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237366: \axi_araddr_o_gold [6] \axi_araddr_o_gate [6]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237365: \axi_araddr_o_gold [5] \axi_araddr_o_gate [5]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237364: \axi_araddr_o_gold [4] \axi_araddr_o_gate [4]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237363: \axi_araddr_o_gold [3] \axi_araddr_o_gate [3]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237362: \axi_araddr_o_gold [2] \axi_araddr_o_gate [2]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237361: \axi_araddr_o_gold [1] \axi_araddr_o_gate [1]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237360: \axi_araddr_o_gold [0] \axi_araddr_o_gate [0]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237359: \apb_pslverr_o_gold \apb_pslverr_o_gate
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237358: \apb_pready_o_gold \apb_pready_o_gate
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237357: \apb_prdata_o_gold [31] \apb_prdata_o_gate [31]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237356: \apb_prdata_o_gold [30] \apb_prdata_o_gate [30]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237355: \apb_prdata_o_gold [29] \apb_prdata_o_gate [29]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237354: \apb_prdata_o_gold [28] \apb_prdata_o_gate [28]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237353: \apb_prdata_o_gold [27] \apb_prdata_o_gate [27]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237352: \apb_prdata_o_gold [26] \apb_prdata_o_gate [26]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237351: \apb_prdata_o_gold [25] \apb_prdata_o_gate [25]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237350: \apb_prdata_o_gold [24] \apb_prdata_o_gate [24]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237349: \apb_prdata_o_gold [23] \apb_prdata_o_gate [23]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237348: \apb_prdata_o_gold [22] \apb_prdata_o_gate [22]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237347: \apb_prdata_o_gold [21] \apb_prdata_o_gate [21]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237346: \apb_prdata_o_gold [20] \apb_prdata_o_gate [20]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237345: \apb_prdata_o_gold [19] \apb_prdata_o_gate [19]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237344: \apb_prdata_o_gold [18] \apb_prdata_o_gate [18]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237343: \apb_prdata_o_gold [17] \apb_prdata_o_gate [17]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237342: \apb_prdata_o_gold [16] \apb_prdata_o_gate [16]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237341: \apb_prdata_o_gold [15] \apb_prdata_o_gate [15]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237340: \apb_prdata_o_gold [14] \apb_prdata_o_gate [14]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237339: \apb_prdata_o_gold [13] \apb_prdata_o_gate [13]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237338: \apb_prdata_o_gold [12] \apb_prdata_o_gate [12]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237337: \apb_prdata_o_gold [11] \apb_prdata_o_gate [11]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237336: \apb_prdata_o_gold [10] \apb_prdata_o_gate [10]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237335: \apb_prdata_o_gold [9] \apb_prdata_o_gate [9]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237334: \apb_prdata_o_gold [8] \apb_prdata_o_gate [8]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237333: \apb_prdata_o_gold [7] \apb_prdata_o_gate [7]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237332: \apb_prdata_o_gold [6] \apb_prdata_o_gate [6]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237331: \apb_prdata_o_gold [5] \apb_prdata_o_gate [5]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237330: \apb_prdata_o_gold [4] \apb_prdata_o_gate [4]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237329: \apb_prdata_o_gold [3] \apb_prdata_o_gate [3]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237328: \apb_prdata_o_gold [2] \apb_prdata_o_gate [2]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237327: \apb_prdata_o_gold [1] \apb_prdata_o_gate [1]
+  Unproven $equiv $auto$equiv_make.cc:257:find_same_wires$237326: \apb_prdata_o_gold [0] \apb_prdata_o_gate [0]
+Found a total of 7016 unproven $equiv cells.
+
+25. Executing RTLIL backend.
+Output filename: equiv_made.il
+
+Warnings: 341 unique messages, 362 total
+End of script. Logfile hash: d99692a9c5, CPU: user 137.81s system 27.62s, MEM: 2970.82 MB peak
+Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)
+Time spent: 70% 1x equiv_make (113 sec), 13% 2x write_rtlil (21 sec), ...

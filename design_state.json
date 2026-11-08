@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-11-08T04:50:10.534515+08:00",
+  "updated_at": "2026-11-08T10:06:47.115260+08:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -2370,6 +2370,18 @@
       "retry_strategy": "refine",
       "suggested_next_step": "escalate",
       "reason": "OpenROAD B2 netlist (md5 a0f07319...) has no equivalent-to-RTL verdict: RTL==sv2v and final==Yosys netlist proven (Formality 6302/6248 pts, 6/6 negative controls caught) but Yosys netlist vs sv2v/RTL FAILED in Formality (3902 failing, unmatched merged/renamed regs) and NOT_EQUIVALENT in Conformal (4335, 164/139 unmapped); cause (matching cascade vs real Yosys difference) not established, nothing waived. failure_class 'functional' is taken from the lec_run unmatched-points loop-back row. User must supply Yosys register merge/constant/rename facts for verified guidance, or run Yosys equiv_make/equiv_induct, or re-synthesise without register merging. formal_signoff stays false; open_item: none of rtl.unverified[] evaluated (scoped LEC task).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-11-08T10:06:47.115260+08:00",
+      "agent": "formal-orchestrator",
+      "stage": "lec_run",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "OpenROAD B2 netlist (md5 a0f07319...) EQUIVALENT to RTL by chain: RTL==sv2v (Formality 6302/0), sv2v==final netlist (Yosys equiv_induct 6156/0, 4/4 negative controls caught), final==Yosys netlist (Formality 6248/0). Supersedes the earlier escalate entry. Limits: common-mode Yosys proc/fsm/opt/memory_map bug not excluded; Formality and Conformal fail on the Yosys-netlist-vs-sv2v compare (fsm one-hot re-encoding), unresolved, not waived. Scoped LEC task: formal_signoff not set; rtl.unverified[] not evaluated.",
       "constraint_ref": null
     }
   ],

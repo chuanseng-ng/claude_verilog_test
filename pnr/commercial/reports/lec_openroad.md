@@ -1,8 +1,7 @@
 # LEC of the OpenROAD / LibreLane B2 post-route netlist (Sky130 `rv32i_cpu_top`)
 
-Date 2026-11-08. Tools: Synopsys Formality X-2025.06, Cadence Conformal LEC 24.10-p100 (`lec -xl`). Closes **part** of open item 1 of
-`docs/COMMERCIAL_FLOW_COMPARISON.md` section 7. **The OpenROAD netlist is NOT proven equivalent to the RTL.** One leg (Yosys synthesis) is unproven
-because both tools fail on it; the failure is not root-caused. This is an escalation, not a waiver.
+Date 2026-11-08. Tools: Synopsys Formality X-2025.06, Cadence Conformal LEC 24.10-p100 (`lec -xl`), Yosys 0.46 `equiv_induct`. Closes open item 1 of
+`docs/COMMERCIAL_FLOW_COMPARISON.md` section 7. **Superseded by the final verdict at the end of this report**: the OpenROAD netlist is EQUIVALENT to the RTL (Yosys induction on the Yosys leg), with the stated limit. The sections below record how it was reached, including the Formality and Conformal failures, which are unresolved and not waived.
 
 ## Verdict
 
@@ -123,4 +122,20 @@ Limits of this proof, stated plainly:
 - Gold goes through the same Yosys front/coarse passes (`proc`, `fsm` recode, `opt`, `memory_map`) as the netlist did. A bug in those passes that affects both would not be seen; the proof covers what happens after them (abc, `dfflibmap`, hold/resizer buffering, CTS, diode insertion, OpenROAD edits) and shows nothing else differs. The FSM re-encoding of `fwd_a_sel_r`, `fwd_b_sel_r`, `grant_q` is Yosys proving its own transform. RTL == sv2v is independently proven by Formality (leg 1).
 - Induction is `-seq 2`; the proof is not a bounded check. Cut points are same-named wires; unmatched logic is covered by induction through the `$equiv` cells.
 - The Formality and Conformal runs of the same comparison still fail (matching problem). They are not contradicted by this result, but they are not confirmed either.
-- Negative controls for the Yosys proof (4 mutants of the final netlist, each must leave unproven `$equiv` cells): chain `chain_equiv.sh` tags `e6_neg_fwdb_inv`, `e7_neg_swap`, `e8_neg_bufinv`, `e9_neg_tiehi`. **Status at the time of writing: running; results are not in this report yet.** Until all four are caught, treat `e4`/`e5_final` as unvalidated.
+- Negative controls for the Yosys proof: 4 mutants of the final netlist (`chain_equiv.sh`), each required to leave unproven `$equiv` cells. **4 of 4 caught:**
+
+| Tag | Mutation | Proven / unproven |
+|---|---|---|
+| `e6_neg_fwdb_inv` | D of the `fwd_b_ex1c_r` flop inverted | 3 / 6,153 |
+| `e7_neg_swap` | A2/B2 of an a22oi in the operand-forwarding cone swapped | 5,810 / 346 |
+| `e8_neg_bufinv` | a hold buffer turned into an inverter | 3 / 6,153 |
+| `e9_neg_tiehi` | tie cell polarity flipped | 3 / 6,154 |
+
+  `e6`, `e8` and `e9` collapse the whole induction (a failing cell removes the induction hypothesis for nearly all others); `e7` leaves a partial unproven set of 346 points, not a collapse. Both patterns are detections. The proof is therefore sensitive to all four mutation classes.
+
+## Final verdict (2026-11-08)
+
+The OpenROAD B2 netlist (md5 a0f0731993ea3e6a5422e2579810f1e5) is **EQUIVALENT** to the RTL, by a chain of three proofs:
+RTL == `rv32i_cpu_top_sv2v.v` (Formality, 6,302 / 0, controls caught), sv2v == OpenROAD final netlist (Yosys `equiv_induct`, 6,156 / 0, 4/4 controls caught), and, as a cross-check of the P&R stages, final == Yosys synthesis netlist (Formality, 6,248 / 0).
+Stated limit: the Yosys gold goes through the same Yosys `proc`, `fsm`, `opt` and `memory_map` passes as the netlist did, so a common-mode Yosys bug in those passes would not be seen. The independent `synth -nofsm` check was not run.
+The Formality (3,902 failing) and Conformal (4,335 non-equivalent) compares of sv2v/RTL against the Yosys netlist are unresolved matching failures; they are reported above and are not waived, and they do not contradict the Yosys proof.

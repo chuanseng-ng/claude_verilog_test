@@ -1,0 +1,8 @@
+read_rtlil /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/yosys/runs/e6_neg_fwdb_inv/equiv_made.il
+hierarchy -top equiv
+equiv_struct
+tee -o equiv_after_struct.txt equiv_status
+equiv_induct -seq 2
+tee -o equiv_after_induct.txt equiv_status
+tee -o equiv_unproven.txt equiv_status
+write_rtlil equiv_done.il

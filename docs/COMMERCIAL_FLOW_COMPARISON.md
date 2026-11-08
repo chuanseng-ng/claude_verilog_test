@@ -49,7 +49,7 @@ PDN pitch, max layer met4 and the CTS cell set. All three P&R flows are judged b
 | **native** routed wirelength (um) / vias | 5,586,306 / 517,723 | **4,634,225** / 393,701 | 7,342,159 / **362,426** |
 | **signoff** KLayout DRC / deck antenna nets | 0 / 116 | 0 / **1** | 0 / 2 |
 | **signoff** Netgen LVS (GDS) | 0 errors (LibreLane) | match uniquely | nets/devices equal; top pin match fails (3 `assign` pairs) |
-| **signoff** LEC (post-route vs RTL, 4 neg. controls) | **not closed**: RTL==sv2v and final==Yosys netlist proven (Formality, 6,302 / 6,248 points, 6/6 controls caught); Yosys netlist vs RTL **not proven** (Formality and Conformal both fail), `reports/lec_openroad.md` | Formality 4/4, 4/4 caught | Conformal 4/4, 4/4 caught |
+| **signoff** LEC (post-route vs RTL, 4 neg. controls) | **EQUIVALENT** by chain: RTL==sv2v (Formality 6,302 / 0), sv2v==final (Yosys `equiv_induct` 6,156 / 0); Formality 6/6 and Yosys 4/4 controls caught; Formality/Conformal fail on the Yosys leg (unresolved), `reports/lec_openroad.md` | Formality 4/4, 4/4 caught | Conformal 4/4, 4/4 caught |
 | **signoff** Magic DRC outside SRAM (all `nwell.4`) | 3,626 | **3,035** (+592 straddle) | 4,226 (+737 straddle) |
 | **signoff** RedHawk static worst VDD+VSS (mV) | 24.7 | 23.9 | **18.0** |
 | **signoff** RedHawk dynamic worst avgTW (mV) | **79.1** | 192.6 | 163.2 |
@@ -384,7 +384,7 @@ the shared or iolat SDC instead of each tool's own SDC, and SI off. Section 5 of
 | deck antenna nets / pins | 116 / 119 | 1 / 1 | 2 / 2 |
 | Magic total / inside SRAM | 27,733,913 / 27,730,287 | 27,737,113 / 27,733,486 | 28,320,055 / 28,315,092 |
 | Magic straddle / outside (all `nwell.4`) | 0 / 3,626 | 592 / 3,035 | 737 / 4,226 |
-| LEC post-route | **not closed**: RTL==sv2v SUCCEEDED (6,302 / 0); final==Yosys netlist SUCCEEDED (6,248 / 0, with and without 64,086 diodes); Yosys netlist vs sv2v FAILED (3,902 failing, unmatched merged/renamed registers); Conformal RTL vs Yosys NOT_EQUIVALENT; 6/6 controls of the proven legs caught | Formality: 4/4 SUCCEEDED, 6,233 passing / 0 failing; controls `fwdb_inv` 1 and `swap` 43 failing points (4/4 caught) | Conformal: 4/4 EQUIVALENT, 5,597 (Genus golden) / 5,791 (RTL golden, merged points) compare points; 4/4 controls NOT_EQUIVALENT |
+| LEC post-route | **EQUIVALENT** by chain: RTL==sv2v SUCCEEDED (Formality 6,302 / 0); sv2v==final netlist (Yosys `equiv_induct`, 6,156 proven / 0 unproven, 4/4 controls); final==Yosys netlist SUCCEEDED (Formality 6,248 / 0, with and without 64,086 diodes); Formality (3,902 failing) and Conformal (NOT_EQUIVALENT) fail on the Yosys-netlist-vs-sv2v compare, unresolved | Formality: 4/4 SUCCEEDED, 6,233 passing / 0 failing; controls `fwdb_inv` 1 and `swap` 43 failing points (4/4 caught) | Conformal: 4/4 EQUIVALENT, 5,597 (Genus golden) / 5,791 (RTL golden, merged points) compare points; 4/4 controls NOT_EQUIVALENT |
 | LEC synthesis netlist vs RTL | not run | Formality DC v2: SUCCEEDED, 6,233 / 0 | Conformal Genus v1 (hierarchical): EQUIVALENT, 1,076 points |
 | RedHawk static VPWR / VGND worst (mV) | 12.4 / 12.3 | 12.1 / 11.8 | 9.0 / 9.0 |
 | RedHawk static EM violations | 0 | 0 | 0 |
@@ -495,21 +495,15 @@ corner. (c) b5j is identical to b5h in all 27 judge runs: the tap ECO changed no
 
 Beads are not available on this host, so the follow-ups are tracked here.
 
-1. **OpenROAD post-route LEC: partly closed, one leg open** (`reports/lec_openroad.md`, 2026-11-08).
-   Proven with Formality: RTL == `rv32i_cpu_top_sv2v.v` (6,302 points, 0 unmatched) and OpenROAD final netlist
-   (md5 `a0f07319...`, the judge's netlist) == Yosys synthesis netlist of the same run (6,248 points, with and without the 64,086
-   antenna diodes; fill/decap/tap stripped, all with empty port lists). 6/6 negative controls on those two legs were caught.
-   **Not proven**: Yosys netlist == sv2v/RTL. Formality fails (3,902 failing points, 242 reference / 113 implementation registers
-   unmatched: merged, renamed or constant flops) and Conformal reports NOT_EQUIVALENT after name-annotating the flops (4,335 points,
-   164 / 139 unmapped). Whether this is only the cascade of unmatched registers or a real Yosys difference is not established, and nothing
-   was waived. The OpenROAD netlist therefore has **no** EQUIVALENT-to-RTL verdict. Owner decision: derive the Yosys merge/constant/rename
-   facts and feed them to Formality as verified guidance, or prove that leg with Yosys `equiv_make`/`equiv_induct`, or re-synthesise
-   without register merging. Second session: the Yosys log shows `fsm` re-encoded `fwd_a_sel_r`, `fwd_b_sel_r`, `grant_q` to one-hot;
-   Formality knobs (merge duplicates, constants, net-name match, FSM commands, a one-hot reference copy) reduce the failures from 3,902 to
-   2,316 but do not close the leg (`reports/lec_openroad.md`, continuation section). Third session: Yosys `equiv_make`/`equiv_induct`
-   in the LibreLane container proves the sv2v design equal to both the Yosys netlist and the OpenROAD final netlist (6,156 / 0 unproven
-   `$equiv` cells each; limits in the report). **Its negative controls were still running when this was written**, so the OpenROAD netlist
-   is not yet recorded as EQUIVALENT.
+1. **OpenROAD post-route LEC: closed 2026-11-08** (`reports/lec_openroad.md`). The routed netlist (md5 `a0f07319...`, the judge's) is
+   EQUIVALENT to the RTL by three proofs: RTL == `rv32i_cpu_top_sv2v.v` (Formality, 6,302 / 0), sv2v == OpenROAD final netlist (Yosys
+   `equiv_induct` in the LibreLane 2.4.13 container, 6,156 `$equiv` cells, 0 unproven; fill/decap/tap and the 64,086 diodes stripped, all
+   without signal pins), and final == Yosys synthesis netlist (Formality, 6,248 / 0). Negative controls: Formality 6/6, Yosys 4/4
+   (`e6`/`e8`/`e9` collapse the induction, `e7` leaves a partial set of 346 unproven points; both are detections). **Limits:** the Yosys
+   gold goes through the same Yosys `proc`/`fsm`/`opt`/`memory_map` passes as the netlist, so a common-mode Yosys bug would not be
+   seen (the `synth -nofsm` independence check was not run). The Yosys log shows `fsm` re-encoded `fwd_a_sel_r`, `fwd_b_sel_r`
+   and `grant_q` to one-hot; Formality (3,902 failing) and Conformal (4,335 non-equivalent) could not match that and fail on the
+   Yosys-netlist-vs-sv2v compare. That is unresolved, not waived, and not contradicted by the Yosys result.
 2. **Magic `nwell.4` outside the SRAMs** is open on all arms (3,626 / 3,035 + 592 / 4,226 + 737).
    Root-cause the 1,191 Innovus-specific pocket tap wells and the +145 straddle items
    (`reports/innovus_b6_report.md` section 8). Then decide waiver vs fix per class with the owner.

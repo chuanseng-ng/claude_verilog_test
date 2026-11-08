@@ -2239,6 +2239,42 @@
       "proven": 6156,
       "unproven": 0,
       "equiv_cells": 6156
+     },
+     "e6_neg_fwdb_inv": {
+      "value": "NOT_PROVEN",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/e6_neg_fwdb_inv/equiv_after_induct.txt",
+      "proven": 3,
+      "unproven": 6153,
+      "equiv_cells": 6156
+     },
+     "e7_neg_swap": {
+      "value": "NOT_PROVEN",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/e7_neg_swap/equiv_after_induct.txt",
+      "proven": 5810,
+      "unproven": 346,
+      "equiv_cells": 6156
+     },
+     "e8_neg_bufinv": {
+      "value": "NOT_PROVEN",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/e8_neg_bufinv/equiv_after_induct.txt",
+      "proven": 3,
+      "unproven": 6153,
+      "equiv_cells": 6156
+     },
+     "e9_neg_tiehi": {
+      "value": "NOT_PROVEN",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/e9_neg_tiehi/equiv_after_induct.txt",
+      "proven": 3,
+      "unproven": 6154,
+      "equiv_cells": 6157
      }
     },
     "lec_runs": {
@@ -2410,7 +2446,7 @@
      }
     },
     "lec": {
-     "value": "NOT CLOSED: Formality RTL==sv2v SUCCEEDED; Formality final==Yosys netlist SUCCEEDED; Yosys equiv_induct sv2v vs Yosys netlist EQUIVALENT, sv2v vs final netlist EQUIVALENT; Formality sv2v/Yosys-netlist compare FAILED; Conformal RTL vs Yosys netlist NOT_EQUIVALENT; negative controls caught: Formality 6/6, Yosys 0/0",
+     "value": "EQUIVALENT (RTL==sv2v by Formality; sv2v==final netlist by Yosys equiv_induct): Formality RTL==sv2v SUCCEEDED; Formality final==Yosys netlist SUCCEEDED; Yosys equiv_induct sv2v vs Yosys netlist EQUIVALENT, sv2v vs final netlist EQUIVALENT; Formality sv2v/Yosys-netlist compare FAILED; Conformal RTL vs Yosys netlist NOT_EQUIVALENT; negative controls caught: Formality 6/6, Yosys 4/4",
      "unit": "verdict",
      "label": "derived",
      "source": [
@@ -2437,7 +2473,11 @@
       "pnr/commercial/signoff/lec/formality/reports/or_syn_vs_sv2v_netmatch/fm_log.txt",
       "pnr/commercial/signoff/lec/yosys/reports/e3/equiv_after_induct.txt",
       "pnr/commercial/signoff/lec/yosys/reports/e4/equiv_after_induct.txt",
-      "pnr/commercial/signoff/lec/yosys/reports/e5_final/equiv_after_induct.txt"
+      "pnr/commercial/signoff/lec/yosys/reports/e5_final/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/e6_neg_fwdb_inv/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/e7_neg_swap/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/e8_neg_bufinv/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/e9_neg_tiehi/equiv_after_induct.txt"
      ],
      "rule": "derived from lec_runs and lec_yosys_runs; closed only if RTL==sv2v, final==Yosys, Yosys end-to-end EQUIVALENT and >=4 Yosys mutants all NOT_PROVEN"
     },
