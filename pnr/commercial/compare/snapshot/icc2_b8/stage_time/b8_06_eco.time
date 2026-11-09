@@ -1,0 +1,23 @@
+	Command being timed: "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/scripts/safe_run.sh /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b8_icc2/logs/b8_06_eco.log icc2_shell -f /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/scripts/b8_06_eco.tcl"
+	User time (seconds): 992.53
+	System time (seconds): 363.12
+	Percent of CPU this job got: 94%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 23:56.24
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 3205676
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1493
+	Minor (reclaiming a frame) page faults: 669388
+	Voluntary context switches: 19336
+	Involuntary context switches: 7973
+	Swaps: 0
+	File system inputs: 4923936
+	File system outputs: 333976
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

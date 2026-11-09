@@ -1,0 +1,107 @@
+GDS /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.gds  dbu=0.001  cells=416  layers=53
+top cell rv32i_cpu_top: found=True  bbox um=(0,0;3600,1800)
+top cells in file: ['rv32i_cpu_top']
+std-cell structures: 254; with zero shapes: 0
+sram-related structures: 161; with zero shapes+zero instances: 0
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_bitcell_array: own shapes=63170 child instances=8192
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8: own shapes=20516 child instances=6085
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_bank: own shapes=10540 child instances=570
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_replica_bitcell_array: own shapes=5090 child instances=17
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_hierarchical_decoder: own shapes=3885 child instances=1847
+   sram struct sky130_sram_1kbyte_1rw1r_32x256_8_port_address_0: own shapes=3247 child instances=20
+completely empty structures (0 shapes, 0 instances): 0  e.g. []
+cells reachable from top: 415; std 254; sram ['sky130_fd_bd_sram__openram_dff', 'sky130_fd_bd_sram__openram_dp_cell', 'sky130_fd_bd_sram__openram_dp_cell_cap_col']...
+reachable cells with EMPTY geometry (would be reference-only): 0 []
+
+layer:datatype | top-cell own shapes | all-cells own shapes
+  22:21  |          0 |           35
+  22:22  |          0 |           12
+  33:42  |          0 |          155
+  33:43  |          0 |          192
+  64:5   |          0 |          259
+  64:16  |          0 |          259
+  64:18  |          0 |            1
+  64:20  |          0 |          328
+  64:59  |          0 |          261
+  65:5   |          0 |            4
+  65:20  |          0 |          857
+  65:44  |          0 |           31
+  66:5   |          0 |           42
+  66:15  |          0 |            2
+  66:20  |          0 |         2117
+  66:44  |          0 |         9576
+  66:83  |          0 |           50
+  67:5   |          0 |         3284
+  67:16  |          0 |         2284
+  67:20  |     210124 |       217336
+  67:44  |     210124 |       215462
+  68:5   |      26449 |        49990
+  68:16  |          0 |          568
+  68:20  |    1050923 |      1068310
+  68:44  |     419655 |       419710
+  69:5   |      15067 |        45015
+  69:16  |        294 |          324
+  69:20  |     537357 |       555432
+  69:44  |     134309 |       134314
+  70:5   |        954 |        14884
+  70:16  |        209 |          209
+  70:20  |      92656 |       115917
+  70:44  |     114942 |       114944
+  71:5   |        351 |          575
+  71:16  |        122 |          122
+  71:20  |       9341 |        12755
+  71:44  |       3904 |         3904
+  72:5   |         38 |           38
+  72:16  |         36 |           36
+  72:20  |         36 |           36
+  78:44  |          0 |          260
+  81:2   |          0 |            4
+  81:4   |          0 |          447
+  81:14  |          1 |            1
+  81:23  |          0 |            1
+  83:44  |          0 |          334
+  93:44  |          0 |          361
+  94:20  |          0 |          351
+  95:20  |          0 |          332
+ 122:16  |          0 |          261
+ 235:0   |          0 |           18
+ 235:4   |          1 |          201
+ 236:0   |          0 |          251
+
+spot-check (Sky130 layer map): name  l:d  top-shapes  all-shapes
+   nwell   64:20  top=0  all=328
+   diff    65:20  top=0  all=857
+   tap     65:44  top=0  all=31
+   poly    66:20  top=0  all=2117
+   licon1  66:44  top=0  all=9576
+   li1     67:20  top=210124  all=217336
+   mcon    67:44  top=210124  all=215462
+   met1    68:20  top=1050923  all=1068310
+   via     68:44  top=419655  all=419710
+   met2    69:20  top=537357  all=555432
+   via2    69:44  top=134309  all=134314
+   met3    70:20  top=92656  all=115917
+   via3    70:44  top=114942  all=114944
+   met4    71:20  top=9341  all=12755
+   via4    71:44  top=3904  all=3904
+   met5    72:20  top=36  all=36
+   npc     95:20  top=0  all=332
+   nsdm    93:44  top=0  all=361
+   psdm    94:20  top=0  all=351
+text labels in top cell: 42859; layers: ['68/5', '69/5', '70/5', '71/5', '72/5']
+sample labels: [('68/5', 'axi_bresp_i[1]'), ('68/5', 'axi_bvalid_i'), ('68/5', 'commit_valid_o'), ('68/5', 'ext_irq_i'), ('68/5', 'net115'), ('68/5', 'net4608')]
+  label VPWR: ['71/5', '71/5', '71/5', '71/5', '71/5', '71/5']
+  label VGND: ['71/5', '71/5', '71/5', '71/5', '71/5', '71/5']
+  label clk_i: ['69/5', '69/5']
+  label rst_n_i: ['69/5', '69/5']
+top-level SRAM instances: 10
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (1359.56,20;1839.34,417.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (100,520;579.78,917.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (679.78,520;1159.56,917.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (1359.56,520;1839.34,917.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (2039.34,520;2519.12,917.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (2719.12,520;3198.9,917.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (679.78,20;1159.56,417.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (100,20;579.78,417.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (2039.34,20;2519.12,417.5)
+   sky130_sram_1kbyte_1rw1r_32x256_8 bbox um (2719.12,20;3198.9,417.5)

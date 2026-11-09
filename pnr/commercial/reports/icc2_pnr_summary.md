@@ -440,3 +440,14 @@ Reading the judge:
 
 ### Magic DRC (b6, final layout `06c_eco3` -> `07_finish`)
 Run last and alone (no other heavy job; guard `GUARD_RSS_GB=11`, `MDRC_TIMEOUT`/`EXTRACT_TIMEOUT` knobs; `make ARM=icc2_b6 SRAM_MODE=real mdrc mdrc-class`, peak RSS about 10 GB, 21.5 min wall). Total 27,737,113 items; per `reports/icc2_b6_magic_drc_real_by_rule.tsv`: 27,733,486 inside the 10 SRAM macro footprints (the bead `45a` waived PDK-abstract artefact, same count as ICC2 b5e), 592 straddling and 3,035 outside, all of them `nwell.4` (all nwells must contain metal-connected N+ taps). Not a clean Magic DRC, and not claimed as one: it is the same artefact class as b5e/Innovus; the KLayout deck (the open sign-off deck used for the pass/fail comparison) is 0.
+
+## ICC2 b7 and b8 (2026-11-08/09)
+
+- **b7** (`runs/b7_icc2`, `scripts/b7_06_eco.tcl`, label `07_eco`, finish `b7_07_finish`): b6 + 21 `buf_1` on the ff reg-to-reg hold endpoints (judge hold slack < +12 ps at nom/min/max ff), 1 `buf_6` on the deck-antenna sink of `u_core_u_dcache/n3594`, 4 dcache dout0 buffers.
+  Native: check_routes DRC / shorts / opens 0 / 0 / 0, ff hold +0.0029 -> +0.0114 ns, ss setup -0.0223 -> -0.0222 ns, deck antenna 1 -> 0 nets. Judge: reg-to-reg hold violators 10 -> 0, the rest equal within 1 ps (`pt_judge_summary.md` section 16).
+  Not done and why: the 159 I-cache dout0 pins (macro bottom edge y = 20 um, outside the row lattice; first experiment with buffers on all 163 pins displaced them 100 to 283 um and took native ss setup to -0.97 ns, reverted).
+  Re-layering the antenna net with `hop_layers` reproduced the same 104 um met1 run; the fix is a larger sink gate.
+- **b8** (`runs/b8_icc2`, stages `b8_01..b8_08` + `b8_06b_eco`): flipped I-cache floorplan (`macro_placement_flipic.cfg`, MX), b6 flow, then the b7 ECO set derived from the pre-ECO route (StarRC + PrimeTime lists, `signoff/b8_lists.sh`) and a round 2.
+  Native final: setup +0.0067 ns at ss (b6 -0.0222), hold +0.0112 ns at ff, +0.128 ns tt; check_routes DRC 1 (b6 0, unlocated; deck 0), 0 shorts / opens, 0 antenna (tool rule), deck antenna 0. Judge per-view iolat: 0 violators at 9 corners.
+  Regressions against b6: see `docs/COMMERCIAL_FLOW_COMPARISON.md` section 4.9 (2 input-port max-cap pins, +13 max-fanout, more max-tran pins).
+- Host: the 15 GB guest thrashed when the page cache was full (finish stage 42 min instead of 3 min) and rebooted at 08:26 on 2026-11-09 after the OpenROAD std-cell Magic run; after the reboot the same finish took 3 min.

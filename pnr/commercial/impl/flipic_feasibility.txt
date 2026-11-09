@@ -1,0 +1,17 @@
+('dcache', 'clk0', 'bottom', 'rows_free') 5
+('dcache', 'din0', 'bottom', 'rows_free') 160
+('dcache', 'din0', 'bottom', 'strap_conflict') 15
+('dcache', 'dout0', 'bottom', 'rows_free') 160
+('dcache', 'dout0', 'bottom', 'strap_conflict') 11
+('dcache', 'wmask0', 'bottom', 'rows_free') 20
+('dcache', 'wmask0', 'bottom', 'strap_conflict') 2
+('icache', 'clk0', 'top', 'rows_free') 5
+('icache', 'din0', 'top', 'rows_free') 160
+('icache', 'din0', 'top', 'strap_conflict') 15
+('icache', 'dout0', 'top', 'rows_free') 160
+('icache', 'dout0', 'top', 'strap_conflict') 11
+('icache', 'wmask0', 'top', 'rows_free') 20
+('icache', 'wmask0', 'top', 'strap_conflict') 2
+dout0 pin -> nearest channel row, um: min 0.48 max 1.38 over 320 pins
+dout0 pin pitch (um): 6.8  buf_4 width 3.68-4.60 um -> fits one buffer per pin in a single row
+channel rows: 37 rows y 418.88..516.80, full die width (macros are outside the channel)

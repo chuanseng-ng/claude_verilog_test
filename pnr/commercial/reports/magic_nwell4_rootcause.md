@@ -240,6 +240,8 @@ reports `drclvs/reports/<arm>_magic_drc_real_stdgds_by_rule.tsv`, columns inside
 | ICC2 b7 | 27,733,502 | 0 | 0 | 30 | (not run in LEF mode) |
 | Innovus b6 | 28,315,303 | 0 | 0 | 30 | 28,315,092 / 737 / 4,226 (all `nwell.4`) |
 | Innovus b7 | 28,315,303 | 0 | 0 | 30 | (not run in LEF mode) |
+| ICC2 b8 (flipped I-cache) | 27,731,549 | 0 | 0 | 30 | (not run in LEF mode) |
+| Innovus b8 (flipped I-cache) | 28,317,685 | 0 | 0 | 30 | (not run in LEF mode) |
 | OpenROAD B2 | NOT RUN in GDS mode yet (first attempt read a missing GDS and reported 0 = invalid; second attempt coincided with a host hang and reboot, see `memory/pd/run_state.md`) | - | - | - | 27,730,287 / 0 / 3,626 (all `nwell.4`) |
 **`nwell.4` outside the SRAMs is 0 on every arm** (it was 3,626 / 3,627 / 4,963 incl. straddling), as the window A/B predicted. No item of any rule is outside or straddling a footprint.
 
@@ -256,4 +258,4 @@ reports `drclvs/reports/<arm>_magic_drc_real_stdgds_by_rule.tsv`, columns inside
 
 Everything else (the 24 other rules: SRAM-internal `licon`, `li`, `diff/tap`, `via.1a`, `psd.10b`, `nwell.*` overlap rules of the OpenRAM macro) is identical between the modes and lies inside the footprints.
 The inside-SRAM count stays under the bead `45a` SRAM-abstract waiver; its new values are in the table above.
-**Limits:** the GDS mode checks the std-cell internals too, so a real defect inside a standard cell would now appear: there is none (0 items outside the footprints). The b8 arms (flipped I-cache floorplan) and the OpenROAD B2 run are added when they finish; this section was written for the b6 and b7 arms.
+**Limits:** the GDS mode checks the std-cell internals too, so a real defect inside a standard cell would now appear: there is none (0 items outside the footprints). The b8 arms (flipped I-cache floorplan) are in the table; the inside-SRAM counts differ from b6 by -1,953 (ICC2) and +2,382 (Innovus) over the same 30 rules (mirrored SRAMs tile differently in Magic; every item is inside a footprint). The OpenROAD B2 run is reported in the last row.

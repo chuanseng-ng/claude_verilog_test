@@ -1,0 +1,9 @@
+variant=shared
+key=innovusb8_max_tt
+table=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/iolat_pv/iolat_pv_shared.tsv
+table_md5=3d28bcf0944c41f595bbb119a3d45378
+early_ns=2.8239
+late_ns=2.8467
+sdc=pnr/commercial/constraints/sky130_cpu_iolat_pv.sdc
+sdc_md5=57e67934c24b53f40489ad30eeb3c1cf
+echo=IOLAT_PV key=innovusb8_max_tt early=2.8239 late=2.8467

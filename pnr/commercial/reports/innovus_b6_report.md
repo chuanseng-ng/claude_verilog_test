@@ -85,3 +85,11 @@ Total outside-SRAM items: 4,963 against ICC2 b6's 3,627.
 - Deck antenna 2 nets; max_cap 369 nets (160 SRAM pins); max_fanout 209 (CTS buffers).
 - Magic nwell.4: 1,191 pocket tap wells (+145 straddle) root-caused to the LEF-abstract artefact (unfilled pocket; `reports/magic_nwell4_rootcause.md`); waiver PROPOSED, not waived.
 - Native-to-judge ff hold offset ~0.15..0.2 ns remains (Innovus max/min capTable vs StarRC).
+
+## 9. b7 and b8 (2026-11-08/09)
+
+- **b7** (`runs/b7_innovus`, `scripts/07m_eco.tcl`, label `07_eco`): b6 `05m_eco` + 2 `buf_6` on the RESET_B sinks of the two deck-antenna nets (`FE_OFN20491_n`, `FE_OFN21807_n`) + 1 dcache dout0 buffer (`dout0[28]`, 0.0295 pF). Deck antenna 2 -> 0, Innovus antenna clean, DRC 0, judge identical to b6 within 0.1 ps.
+  **Disclosure:** `verifyConnectivity -type all` in `06m_finish.tcl` ran for more than an hour (twice) on this database (b6: 6 s), so `06m_finish.tcl` skips it for the tags `b7_innovus` and `b8_innovus` (or `SKIP_VC=1`); the special-net PDN check and Netgen LVS still run.
+- **b8** (`runs/b8_innovus`, `scripts/chain_inn_b8.sh`, `08m_eco.tcl`, `chain_inn_b8r2.sh`): flipped I-cache floorplan (MX) with the b6 flow, a draft finish, deck KLayout + antenna on the draft, StarRC + PrimeTime lists, `08m_eco` (48 pin stubs, diodes, 1 dout0 buffer), round 2 (5 antenna-sink `buf_6`), final finish, restream.
+  Deck antenna 0, KLayout 0, LEC 4/4 + 4/4 controls (Conformal `b8m_*`), LVS nets / devices equal (same pin-match failure on 3 `assign` pairs, now `axi_awlen_o[1]`, `axi_arburst_o[0]`, `debug_pc_src_o`); per-view iolat setup violators 891 -> 96, own-SDC hold -0.254 -> -0.010 ns,
+  own-SDC max_ss setup -0.050 -> -0.112 ns; Innovus-native `verify_drc` 24 spacing items at the flipped pins (b6 0, deck 0). PDN `PDN_SELFCHECK` PASS, n-well islands without tap 474 (as b6).
