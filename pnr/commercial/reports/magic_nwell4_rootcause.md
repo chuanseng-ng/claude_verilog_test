@@ -242,8 +242,10 @@ reports `drclvs/reports/<arm>_magic_drc_real_stdgds_by_rule.tsv`, columns inside
 | Innovus b7 | 28,315,303 | 0 | 0 | 30 | (not run in LEF mode) |
 | ICC2 b8 (flipped I-cache) | 27,731,549 | 0 | 0 | 30 | (not run in LEF mode) |
 | Innovus b8 (flipped I-cache) | 28,317,685 | 0 | 0 | 30 | (not run in LEF mode) |
-| OpenROAD B2 | NOT RUN in GDS mode yet (first attempt read a missing GDS and reported 0 = invalid; second attempt coincided with a host hang and reboot, see `memory/pd/run_state.md`) | - | - | - | 27,730,287 / 0 / 3,626 (all `nwell.4`) |
-**`nwell.4` outside the SRAMs is 0 on every arm** (it was 3,626 / 3,627 / 4,963 incl. straddling), as the window A/B predicted. No item of any rule is outside or straddling a footprint.
+| OpenROAD B2 | **NOT RUN in GDS mode** (see below) | - | - | - | 27,730,287 / 0 / 3,626 (all `nwell.4`) |
+**OpenROAD B2 in GDS mode: NOT RUN.** Attempt 1 (04:57, 2026-11-09) read a GDS path that did not exist (the arm's `drclvs` inspect / fixgds steps had not been run) and reported 0 items: invalid, discarded. Attempt 2 (07:21) coincided with a host hang at about 07:36 and a reboot at 08:26 (no file written 07:36 to 08:26). After `inspect fixgds` (fixed GDS 236 MB) attempt 3 (13:12, alone, `GUARD_RSS_GB=10 GUARD_MIN_GB=3`) read the GDS at 7.3 GB, grew to 10.1 GB during the DRC and was killed by the watchdog at container RSS 10.18 GiB after 1,353 s (`runs/openroad/logs/mdrc_real_stdgds.log.guard`); host load stayed at 1.0, MemAvailable at least 3.7 GB. Not retried (it is the suspect of the earlier hang); the ICC2 and Innovus std-cell runs peaked at 10.0 and 11.4 GB and passed with `GUARD_RSS_GB=11`. A 32 GB host, or the window method of section 4 on the OpenROAD GDS, is the way to get this number.
+
+**`nwell.4` outside the SRAMs is 0 on every arm that was run (ICC2 b6/b7/b8, Innovus b6/b7/b8)** (it was 3,626 / 3,627 / 4,963 incl. straddling), as the window A/B predicted. No item of any rule is outside or straddling a footprint.
 
 ### Rules whose count changed between the two modes (per rule, real defect or not, mechanism)
 

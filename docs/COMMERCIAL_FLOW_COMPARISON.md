@@ -128,7 +128,7 @@ What the numbers say:
    every n-well strip outside the SRAMs was reported as `nwell.4` (OpenROAD 3,626; ICC2 b6 3,035 + 592 straddling; Innovus b6
    4,226 + 737 straddling) and the clipped A/B windows also showed LU.2, LU.3 and met1.7 items. With the real std-cell GDS
    (`make ARM=<arm> SRAM_MODE=real MDRC_STD=gds mdrc mdrc-class`, default since 2026-11-08; `MDRC_STD=lef` keeps the old mode) the full-die
-   result on the b6, b7 and b8 arms of both tools is **0 items outside or straddling the SRAM footprints**: all 30 reported rules sit inside the
+   result on the b6, b7 and b8 arms of both commercial tools is **0 items outside or straddling the SRAM footprints** (the OpenROAD B2 run in this mode is NOT RUN: attempt 3 was killed by the memory watchdog at container RSS 10.18 GiB, item 16; its LEF-mode numbers stay as measured): all 30 reported rules sit inside the
    SRAM footprints, `nwell.4`, LU.2, LU.3, `met1.7` and `can't overlap` have 0 items anywhere. The four proposed waivers W1 to W4
    in `reports/magic_nwell4_rootcause.md` are **WITHDRAWN by the user** (not needed). The inside-SRAM items stay under the bead `45a`
    SRAM-abstract waiver; the new inside counts are 27,733,502 (ICC2 b6 and b7), 28,315,303 (Innovus b6 and b7), 27,731,549 (ICC2 b8) and 28,317,685 (Innovus b8; the flipped macros tile differently), against 27,733,486 and
@@ -514,6 +514,10 @@ Measured read-path cost of the dout0 buffers (b6 -> b7, ICC2, the 4 buffered dca
 `signoff/pt/diag_dout/`): nom_ss slack 4.403 -> 4.146, 4.984 -> 4.764, 4.317 -> 4.094, 8.012 -> 7.789 ns (**-0.22 to -0.26 ns per buffered read path**, still 4 ns or more of slack); pin load
 0.026 -> 0.011, 0.027 -> 0.004, 0.025 -> 0.003, 0.026 -> 0.003 pF (limit 0.02756 pF).
 
+**Read-path cost of the b8 dout0 buffers, measured** (`reports/dout0_readpath_b6_b8.tsv`, PrimeTime base SDC, worst setup slack through any of the 320 SRAM dout0 pins): ICC2 nom_ss +1.586 -> +3.497 ns, max_ss +1.198 -> +3.372 ns, nom_tt +3.314 -> +4.495 ns;
+Innovus nom_ss +2.247 -> +3.351 ns, max_ss +2.069 -> +3.230 ns. The flip shortens the pin-to-logic wires (largest dout0 net load 0.096 -> 0.025 pF on ICC2, 0.117 -> 0.024 pF on Innovus), which more than pays for the 5 ICC2 / 1 Innovus buffers (each costs
+about 0.2 to 0.26 ns, section above). It is not better for every pin: 34 of the 163 ICC2 pins that violated in b6 (3 of 161 on Innovus) have a lower slack in b8, 14 of them by more than 0.3 ns (worst -1.15 ns ICC2, -0.68 ns Innovus), and all of them keep at least +3.4 / +3.3 ns of slack at nom_ss.
+
 **b8 ECO set and counts.** ICC2 b8: 30 hold `buf_1` (judge endpoints with hold slack below +12 ps at nom/min/max ff on the pre-ECO route), 576 antenna diodes (deck pins on the routed DEF), dout0 buffers on the 3 pins the judge flagged
 after routing (b6: 163 pins; the flip alone removed 160 of them) + 2 more in round 2 (two pins that crept to 0.0282 / 0.0279 pF at the max RC corner after round 1), 3 antenna-sink `buf_6` in round 2 (deck had 3 nets after round 1).
 Innovus b8: 48 KLayout pin stubs, the draft-deck antenna diodes, 1 dout0 buffer (`dout0[30]`, 0.0284 pF), 5 antenna-sink `buf_6` in round 2 (deck had 5 nets after round 1). Round 1 of both arms is superseded by round 2 (all numbers here are round 2).
@@ -704,7 +708,7 @@ Beads are not available on this host, so the follow-ups are tracked here.
 14. **ICC2 b8: 1 native `check_routes` DRC** (met3 or above, unlocated; KLayout 0, b6 0). Next: open the error browser (`zroute.err`) in an interactive `icc2_shell` and repair or document it.
 15. **b8 margins**: ICC2 nom_ss / min_ss setup margin of the per-view run fell from +0.417 / +0.715 to +0.300 / +0.500 ns, Innovus per-view setup is still 96 violators at the three ss corners (b6 891; the item 3 decision on the ss I/O endpoints stays open).
 16. **OpenROAD B2 Magic with std cells from the GDS: NOT RUN.** The first attempt read a missing GDS and reported 0 (invalid); the second coincided with a host hang at 07:36 and a reboot at 08:26 on 2026-11-09. It was
-    re-run last and alone with `GUARD_RSS_GB=10 GUARD_MIN_GB=3` (see `memory/pd/run_state.md` for the outcome). A 32 GB host, or splitting the die into windows, is the safe route.
+    re-run last and alone with `GUARD_RSS_GB=10 GUARD_MIN_GB=3` and was killed by the watchdog at container RSS 10.18 GiB after 22 min (host load 1.0, MemAvailable >= 3.7 GB, no hang); not retried. A 32 GB host, or the window method on the OpenROAD GDS, is the safe route.
 17. **Innovus `verifyConnectivity -type all` hang on the b7 / b8 databases** (> 1 h, b6: 6 s) is not understood; b7 and b8 skip it (caveat 8). Next: run it alone on the saved `07_eco` / `08b_eco` database with `-type regular` and `-limit 100` to see
     which net it stalls on, or ask Cadence; until then connectivity rests on the special-net check and Netgen LVS.
 18. **Not re-run for b7 / b8**: RedHawk static / dynamic IR (b8 has a different placement; the PG grid is unchanged), the Quantus cross-check (section 4.8) and the Innovus own-SDC per-view latency. They are open for b8 only if b8 is adopted.
