@@ -40,7 +40,7 @@ PT_DIRS = {
     "iolat_pvs": "runs_iolat_pvs",
 }
 PV_VARIANTS = ("iolat_pv", "iolat_pvs")
-PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9"]
+PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9", "innovusb9"]
 PT_ARMS = [
     "openroad",
     "icc2b6",
@@ -50,6 +50,7 @@ PT_ARMS = [
     "icc2b8",
     "innovusb8",
     "icc2b9",
+    "innovusb9",
     "icc2",
     "icc2b5i",
     "icc2b5m",

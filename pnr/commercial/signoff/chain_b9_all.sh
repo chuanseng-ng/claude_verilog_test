@@ -1,5 +1,5 @@
 #!/bin/bash
-# chain_b9_all.sh icc2 -- b9 (= b8 + ICC2 ECO round 3) re-sign-off of the ICC2 arm; copy of chain_b8_all.sh (see its header).  Resumable, one heavy tool at a time.
+# chain_b9_all.sh icc2|innovus -- b9 (= b8 + ECO round 3) re-sign-off of the ICC2 arm / the Innovus arm (Innovus b9, 2026-11-09); copy of chain_b8_all.sh (see its header).  Resumable, one heavy tool at a time.
 #   (before each job: load1 < 6 and MemAvailable > 6 GB, then >= 60 s since the previous job started).  A step with chain_b9_<arm>/<step>.done is skipped (delete the marker to redo); a FAIL is a result and does not stop the chain.
 #   Order: GDS integrity + fix -> Magic extraction + Netgen LVS -> KLayout DRC -> OpenROAD antenna deck -> LEC (Formality / Conformal + negative controls) -> StarRC nom/min/max
 #          -> PT judge base/own/iolat x 9 corners (PrimePower at nom_tt) -> clk_i latency measurement x 9 -> per-view iolat tables -> PT iolat_pv arm + shared x 9
@@ -27,7 +27,7 @@ step() { # step <name> <cmd...>
 }
 case $ARM in
   icc2)    A=icc2_b9; PA=icc2b9; OUT=../impl/icc2/runs/b9_icc2/out; DT="lvs-gds-netgen lvs-gds-variants kdrc antenna" ;;
-  innovus) echo "b9 is ICC2-only (Innovus keeps b8: no layout change)" >&2; exit 2 ;;
+  innovus) A=innovus_b9; PA=innovusb9; OUT=../impl/innovus/runs/b9_innovus/out; DT="lvs-gds-variants lvs-gds-netgen kdrc antenna" ;;
   *) echo "arm icc2|innovus" >&2; exit 2 ;;
 esac
 mkdir -p drclvs/runs/$A/logs
