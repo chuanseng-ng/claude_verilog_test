@@ -98,7 +98,8 @@ save_stage 06_finish
 # ---- checks
 verify_drc -limit 1000000 -report $R/final_drc.txt
 verifyProcessAntenna -reportfile $R/final_antenna.txt -error 1000000
-verifyConnectivity -type all -noAntenna -report $R/final_connectivity.txt -error 100000
+# b7/b8: SKIP_VC=1 (or TAG b7_innovus / b8_innovus) skips this check.  Measured on the b7 database (ecoAddRepeater buffers): the "regular" engine ran > 1 h (b6: 6 s) on the identical command; connectivity is covered by Netgen LVS + the special-net check below.
+if {([info exists ::env(SKIP_VC)] && $::env(SKIP_VC) == 1) || [lsearch {b7_innovus b8_innovus} $::env(TAG)] >= 0} { puts "SKIP_VC: verifyConnectivity -type all skipped" } else { verifyConnectivity -type all -noAntenna -report $R/final_connectivity.txt -error 100000 }
 verify_connectivity -type special -report $R/final_pg_connectivity.txt -error 100000
 verifyPowerVia -report $R/final_powervia.txt
 checkPlace $R/final_checkPlace.txt

@@ -26,7 +26,7 @@ puts "BOUNDARY: [get_attribute [current_block] boundary_bounding_box]  CORE: [ge
 foreach_in_collection t [get_tracks] { puts "trk [get_attribute $t layer_name] dir=[get_attribute $t direction] space=[get_attribute $t space] offset=[get_attribute $t offset]" }
 puts "PORTS placed: [sizeof_collection [get_ports -filter physical_status==fixed]] of [sizeof_collection [get_ports]]"
 # ---- macros
-set cfg [open $CFGDIR/macro_placement.cfg r]
+set cfg [open $CFGDIR/[expr {[info exists ::env(MACRO_CFG)] ? $::env(MACRO_CFG) : "macro_placement.cfg"}] r]
 set nplaced 0
 while {[gets $cfg l] >= 0} {
   regsub {#.*} $l {} l; set l [string trim $l]; if {$l eq ""} continue

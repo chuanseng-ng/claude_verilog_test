@@ -1,0 +1,2 @@
+# KLayout DRC report /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/runs/innovus_b7/kdrc/drc_violations.klayout.xml
+TOTAL_VIOLATION_ITEMS 0  RULES_VIOLATED 0

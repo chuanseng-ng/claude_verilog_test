@@ -1,0 +1,1 @@
+u_core/u_dcache_u_tag_sram/dout0[28]

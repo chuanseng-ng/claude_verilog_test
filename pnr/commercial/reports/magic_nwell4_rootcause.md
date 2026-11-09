@@ -1,5 +1,10 @@
 # Magic `nwell.4` outside / straddling the SRAM footprints: root cause (cleanup item 2)
 
+> **UPDATE 2026-11-09 (user decision of 2026-11-08): the proposed waivers W1 to W4 are WITHDRAWN.** The sign-off Magic DRC now loads the std cells from the layout GDS
+> (`MDRC_STD=gds`, the default of `drclvs/Makefile`; `MDRC_STD=lef` keeps the old mode). Section 10 has the full-die results (0 items outside or straddling the SRAM
+> footprints on every arm) and the per-rule analysis of every rule whose count changed between the two modes. Sections 1 to 9 are kept as the evidence of the
+> root cause; where they say "PROPOSED waiver" read "withdrawn, no longer needed", and the limit "A/B is by window" in section 9 is superseded by section 10.
+
 Scope: the three Sky130 `rv32i_cpu_top` arms (OpenROAD B2, ICC2 b6, Innovus b6). Date 2026-11-08.
 Status words: **MEASURED** = produced by a run listed in section 8; **INFERRED** = not isolated by an experiment.
 
@@ -155,7 +160,7 @@ every n-well region, including the 1,489 Innovus islands, contains a licon on an
 
 No class is a real layout defect, so no ECO, no re-extraction and no StarRC -> PrimeTime re-run was needed.
 
-## 7. PROPOSED waivers (needs user sign-off; nothing below is waived)
+## 7. PROPOSED waivers (WITHDRAWN by the user on 2026-11-08; kept as history, nothing below is waived or needed)
 
 Common conditions (all must hold or the waiver is void):
 
@@ -223,3 +228,32 @@ not evidence and was deleted.
 - The LEF-vs-GDS differences in other rules (`LU.2`, `LU.3`, `met1.7`) in the clipped runs are not analysed.
 - The independent check uses the GDS the DRC used; the n-tap definition (`licon1 & tap & nsdm`) is the Magic `nsc` as
   best read from the tech file, not an executed copy of the Magic CIF operation.
+
+## 10. Full-die Magic DRC with the std cells from the GDS (sign-off mode since 2026-11-08), per rule
+
+Runs (one at a time, `SRAM_MODE=real`, `MDRC_STD=gds`, ~25 to 35 min and 9 to 11 GB each; `make -C pnr/commercial/signoff/drclvs ARM=<arm> SRAM_MODE=real MDRC_STD=gds mdrc mdrc-class`,
+reports `drclvs/reports/<arm>_magic_drc_real_stdgds_by_rule.tsv`, columns inside / straddle / outside the SRAM footprints, classification by the bead `45a` logic):
+
+| arm | items inside SRAM | straddle | outside | rules reported | LEF-mode baseline inside / straddle / outside |
+|---|---:|---:|---:|---:|---|
+| ICC2 b6 | 27,733,502 | 0 | 0 | 30 | 27,733,486 / 592 / 3,035 (all `nwell.4`) |
+| ICC2 b7 | 27,733,502 | 0 | 0 | 30 | (not run in LEF mode) |
+| Innovus b6 | 28,315,303 | 0 | 0 | 30 | 28,315,092 / 737 / 4,226 (all `nwell.4`) |
+| Innovus b7 | 28,315,303 | 0 | 0 | 30 | (not run in LEF mode) |
+| OpenROAD B2 | NOT RUN in GDS mode yet (first attempt read a missing GDS and reported 0 = invalid; second attempt coincided with a host hang and reboot, see `memory/pd/run_state.md`) | - | - | - | 27,730,287 / 0 / 3,626 (all `nwell.4`) |
+**`nwell.4` outside the SRAMs is 0 on every arm** (it was 3,626 / 3,627 / 4,963 incl. straddling), as the window A/B predicted. No item of any rule is outside or straddling a footprint.
+
+### Rules whose count changed between the two modes (per rule, real defect or not, mechanism)
+
+| rule | LEF-mode full die | GDS-mode full die | verdict and mechanism |
+|---|---|---|---|
+| `nwell.4` "all nwells must contain metal-connected N+ taps" | 592 straddle + 3,035 outside (ICC2), 737 + 4,226 (Innovus), 3,626 (OpenROAD) | 0 | **not a defect.** LEF abstracts carry the n-well but no tap diffusion / licon (section 2); with the real cells every n-well region has a contact (KLayout check, section 5). |
+| `LU.2`, `LU.3` (N-diff must be within 15 um of a P-tap; P-diff within 15 um of an N-tap) | 6 / 4 (ICC2 channel window), 32 / 28 (Innovus), 18 / 18 (OpenROAD) in the clipped A/B windows | 0 in all windows and in the four full-die runs | **not a defect (abstract artefact).** The distance is measured to tap diffusion; the abstract tap cells have none, so every diffusion near them is "too far from a tap". With GDS cells the taps exist and the rule is met. Window evidence only for the LEF side (`nwell4/out/ab_summary_full.tsv`); the full-die LEF-mode reports had these inside the SRAM class. |
+| `met1.7` "min area of metal1 holes" (588 / 118 items in the OpenROAD windows only) | 588 (OpenROAD window C), 118 (window P) | 0 | **not a defect.** Only in the OpenROAD arm in LEF mode: the abstract's met1 OBS rectangles overlap the GDS routing and enclose small met1 holes that do not exist in the real cells. INFERRED from the pattern (OpenROAD-only, window-only); the real-GDS run has 0 and the KLayout deck (`met1.*`) is 0. |
+| "Can't overlap those layers" / "This layer can't abut or partially overlap between subcells" | 38 to 753 in the windows | 0 | **not a defect.** Cell-vs-cell overlap checks between an abstract's obstruction layers and neighbouring geometry; absent when both are real geometry. |
+| `licon.5a`, `licon.5c`, `poly.8` (inside SRAM) | 1,766,715 / 5,280 / 1,833,440 (ICC2) | 1,766,723 / 5,284 / 1,833,444 | **same SRAM-internal defects counted in more tiles** (+8 / +4 / +4, both arms; Innovus +8 / +4 / +4 on its own counts). Inside the footprints, under the `45a` waiver. Tiling of the new rows not inspected; same class as `poly.7` below (inferred). |
+| `poly.7` (inside SRAM, Innovus only) | 2,644 | 2,839 (+195) | **measured: same geometry, more tiles.** The 195 LEF-mode boxes (y 860.525 to 860.655 um, x 238 to 2,201 um, D-cache SRAMs) appear in GDS mode as 390 boxes split at y = 860.645 um; the set of x-extents at those y values is identical in the two modes (661 = 661), i.e. each old box is re-reported as two stacked boxes. Not a new defect; under `45a`. |
+
+Everything else (the 24 other rules: SRAM-internal `licon`, `li`, `diff/tap`, `via.1a`, `psd.10b`, `nwell.*` overlap rules of the OpenRAM macro) is identical between the modes and lies inside the footprints.
+The inside-SRAM count stays under the bead `45a` SRAM-abstract waiver; its new values are in the table above.
+**Limits:** the GDS mode checks the std-cell internals too, so a real defect inside a standard cell would now appear: there is none (0 items outside the footprints). The b8 arms (flipped I-cache floorplan) and the OpenROAD B2 run are added when they finish; this section was written for the b6 and b7 arms.

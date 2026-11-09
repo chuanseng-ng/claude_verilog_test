@@ -40,11 +40,15 @@ PT_DIRS = {
     "iolat_pvs": "runs_iolat_pvs",
 }
 PV_VARIANTS = ("iolat_pv", "iolat_pvs")
-PV_ARMS = ["openroad", "icc2b6", "innovusb6"]
+PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8"]
 PT_ARMS = [
     "openroad",
     "icc2b6",
     "innovusb6",
+    "icc2b7",
+    "innovusb7",
+    "icc2b8",
+    "innovusb8",
     "icc2",
     "icc2b5i",
     "icc2b5m",
@@ -188,6 +192,141 @@ def innovus() -> None:
         copy(t, dst / "stage_time" / t.name)
 
 
+def icc2_b7(b: str = "b7") -> None:
+    run = COM / f"impl/icc2/runs/{b}_icc2"
+    dst = SNAP / f"icc2_{b}"
+    for f in (
+        "final_qor.txt",
+        "final_utilization.txt",
+        "final_cellcount.txt",
+        "final_check_routes.txt",
+        "final_check_lvs.txt",
+        "final_power.txt",
+    ):
+        copy(run / "reports" / f, dst / f)
+    for t in sorted((run / "logs").glob(f"{b}_0*.time")):
+        copy(t, dst / "stage_time" / t.name)
+    copy(run / "out/rv32i_cpu_top.func_tt.sdc", COM / f"constraints/sky130_cpu_icc2_{b}_own_pt.sdc")
+
+
+def innovus_b7(b: str = "b7") -> None:
+    run = COM / f"impl/innovus/runs/{b}_innovus"
+    dst = SNAP / f"innovus_{b}"
+    for f in ("final_area.txt", "final_route_summary.txt", "final_antenna.txt"):
+        copy(run / "reports" / f, dst / f)
+    for t in sorted((run / "logs").glob("*.time")):
+        copy(t, dst / "stage_time" / t.name)
+    # native Innovus reports (committed convention: impl/innovus/reports/<tag>/)
+    rep = COM / f"impl/innovus/reports/{b}"
+    for f in (
+        "final_cellcount.txt",
+        "final_drc.txt",
+        "final_hold.summary.txt",
+        "final_hold_sioff.summary.txt",
+        "final_power_act01.txt",
+        "final_setup.summary.txt",
+        "final_setup_sioff.summary.txt",
+        "final_view_av_ff_hold.txt",
+        "final_view_av_ss_setup.txt",
+        "final_view_av_tt_hold.txt",
+        "final_view_av_tt_setup.txt",
+    ):
+        src = run / "reports" / f
+        if f.endswith(".summary.txt"):  # timeDesign writes <dir>/<design>_<mode>.summary.gz
+            gz = next(iter((run / "reports" / f.replace(".summary.txt", "")).glob("*.summary.gz")), None)
+            if gz is not None:
+                import gzip
+
+                derived(rep / f, rel(gz), gzip.open(gz, "rt").read())
+            continue
+        copy(src, rep / f)
+
+
+def lec_b7(b: str = "b7") -> None:
+    cr = COM / "signoff/lec/conformal"
+    for d in sorted((cr / "runs").glob(f"{b}m_*")):
+        if d.is_dir() and (d / "lec.log").is_file():
+            copy(d / "lec.log", cr / "reports" / d.name / "lec_log.txt")
+            copy(d / "time.txt", cr / "reports" / d.name / "time.txt", required=False)
+    fr = COM / "signoff/lec/formality"
+    for d in sorted((fr / "runs").glob(f"{b}_*")):
+        if not (d.is_dir() and (d / "fm.log").is_file()):
+            continue
+        copy(d / "fm.log", fr / "reports" / d.name / "fm_log.txt")
+        for f in ("time.txt", "failing_points.txt", "aborted_points.txt", "unverified_points.txt", "svf_operations.txt", "unmatched_points.txt", "black_boxes.txt"):
+            copy(d / f, fr / "reports" / d.name / f, required=False)
+
+
+def drv_counts() -> None:
+    """Derived: per arm and corner, the number of judge DRV violators (base SDC) by kind, split into SRAM dout0 max-cap pins and everything else.
+    Source: signoff/pt/runs/<arm>_<corner>/constraint_drv.txt (PrimeTime report_constraint -all_violators), only parsed here (the full reports are large)."""
+    rows = []
+    tags = os.environ.get("SNAP_TAGS", "b7 b8").split()
+    for arm in PT_ARMS:
+        if arm.endswith(("b7", "b8")) and arm[-2:] not in tags:
+            continue
+        for c in CORNERS:
+            f = COM / "signoff/pt/runs" / f"{arm}_{c}" / "constraint_drv.txt"
+            if not f.is_file():
+                continue
+            sec, cnt = None, Counter()
+            for line in f.read_text(errors="replace").splitlines():
+                m = re.match(r"^\s{3}(max_capacitance|max_transition|max_fanout)\s*$", line)
+                if m:
+                    sec = m.group(1)
+                    continue
+                if "VIOLATED" in line and sec:
+                    kind = sec + ("_dout0" if sec == "max_capacitance" and "/dout0[" in line else "")
+                    cnt[kind] += 1
+            rows.append(f"{arm}\t{c}\t{cnt['max_capacitance_dout0']}\t{cnt['max_capacitance']}\t{cnt['max_transition']}\t{cnt['max_fanout']}\n")
+    derived(SNAP / "drv_counts.tsv", "signoff/pt/runs/*/constraint_drv.txt (counted by snapshot_sources.drv_counts)",
+            "arm\tcorner\tmax_cap_dout0\tmax_cap_other\tmax_tran\tmax_fanout\n" + "".join(rows))
+
+
+def add_b7() -> None:
+    """Add ONLY the b7 / b8 parts (PT runs of those arms, clklat, per-view tables, native reports, LEC, DRV counts) and merge their MANIFEST rows; everything else stays."""
+    tags = [t for t in os.environ.get("SNAP_TAGS", "b7 b8").split() if (COM / f"impl/icc2/runs/{t}_icc2/reports/final_qor.txt").is_file() or (COM / f"impl/innovus/runs/{t}_innovus/reports/final_area.txt").is_file()]
+    arms = [a for t in tags for a in (f"icc2{t}", f"innovus{t}")]
+    for var, d in PT_DIRS.items():
+        for arm in arms:
+            for c in CORNERS:
+                src = COM / "signoff/pt" / d / f"{arm}_{c}"
+                if not (src / "metrics.tsv").is_file():
+                    continue
+                dst = SNAP / "pt" / var / f"{arm}_{c}"
+                for f in ("metrics.tsv", "inputs.txt", "global_timing.txt"):
+                    copy(src / f, dst / f)
+                if var in PV_VARIANTS:
+                    copy(src / "iolat_pv.txt", dst / "iolat_pv.txt")
+                    copy(src / "io_viol_summary.tsv", dst / "io_viol_summary.tsv", required=False)
+                    copy(src / "io_viol.tsv", dst / "io_viol.tsv", required=False)
+                if c == "nom_tt":
+                    copy(src / "power_B.txt", dst / "power_B.txt", required=False)
+                    copy(src / "time.txt", dst / "time.txt", required=False)
+                    if var == "base":
+                        copy(src / "constraint_drv.txt", dst / "constraint_drv.txt", required=False)
+    for arm in arms:
+        for c in CORNERS:
+            src = COM / "signoff/pt/runs_clklat" / f"{arm}_{c}"
+            if (src / "clk_latency.tsv").is_file():
+                for f in ("clk_latency.tsv", "inputs.txt", "annot_clock.txt"):
+                    copy(src / f, SNAP / "clklat" / f"{arm}_{c}" / f)
+    for f in sorted((COM / "signoff/pt/iolat_pv").glob("*.tsv")):
+        copy(f, SNAP / "iolat_pv" / f.name)
+    for t in tags:
+        if (COM / f"impl/icc2/runs/{t}_icc2/reports/final_qor.txt").is_file():
+            icc2_b7(t)
+        if (COM / f"impl/innovus/runs/{t}_innovus/reports/final_area.txt").is_file():
+            innovus_b7(t)
+        lec_b7(t)
+    drv_counts()
+    mf = SNAP / "MANIFEST.tsv"
+    new = {r[0] for r in manifest}
+    keep = [l for l in mf.read_text().splitlines(True) if l.split("\t")[0] not in new]
+    mf.write_text("".join(keep) + "".join("\t".join(map(str, r)) + "\n" for r in manifest))
+    print(f"{len(manifest)} {'/'.join(tags)} files merged into {rel(mf)}")
+
+
 def lec() -> None:
     cr = COM / "signoff/lec/conformal"
     for d in sorted((cr / "runs").glob("b4m_*")):
@@ -295,6 +434,9 @@ def merge_pv() -> None:
 
 
 def main() -> None:
+    if "--add-b7" in sys.argv:
+        add_b7()
+        return
     if "--only-pv" in sys.argv:
         merge_pv()
         return
@@ -307,6 +449,7 @@ def main() -> None:
     innovus()
     lec()
     lec_openroad()
+    drv_counts()
     cell_area()
     (SNAP / "MANIFEST.tsv").write_text(
         "snapshot\torigin\torigin_sha256\tbytes\n"

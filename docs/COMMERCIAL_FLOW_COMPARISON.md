@@ -119,21 +119,28 @@ What the numbers say:
 5. **IR is indicative.** The RedHawk tech is authored and uncorrelated. Cell currents are RedHawk
    defaults (no APL). Decap capacitance is estimated from spice W/L. The supply is an ideal edge
    feed (met5 stripe ends, no package). Power is PrimePower vectorless at 0.1 / 0.5.
-6. **The Magic `nwell.4` items outside or straddling the SRAMs are a root-caused tool artefact, with a PROPOSED
-   waiver that needs user sign-off (not waived).** Inside the SRAM footprints, Magic reports about 27.7 to 28.3 M
-   items. These are the waived SRAM-abstract artefact (bead `45a`). Outside or straddling the footprints, every arm
-   has `nwell.4` items: OpenROAD 3,626, ICC2 b6 3,035 + 592 straddling, Innovus b6 4,226 + 737 straddling. Cause
-   (measured): the sign-off Magic DRC loads the std cells as LEF abstracts, which carry the n-well but no tap
-   contact (`nsc`), so every n-well strip is reported. The same layout with the std cells taken from the GDS gives 0
-   `nwell.4` in all 9 windows tried (3 arms x pocket / channel / logic), and a KLayout check on the real GDS finds 0 of
-   2,413 / 3,435 / 2,438 n-well regions without a contact (ICC2 / Innovus / OpenROAD). Innovus' 1,191 extra outside
-   items are isolated tap wells in its unfilled left pocket (ICC2 fills it, so the wells merge into strips); the +145
-   straddle difference is (292 tap wells + 1 strip) - 148 ICC2 pocket strips. No layout defect, no ECO, no re-run of
-   extraction or timing. Counts are unchanged. `reports/magic_nwell4_rootcause.md` has the classes, evidence and the
-   four proposed waiver texts. Limit: A/B is by window, not a full-die run with GDS std cells.
+6. **Sign-off Magic DRC loads the std cells from the layout GDS (user decision 2026-11-08); the LEF-abstract mode is history.**
+   The earlier sign-off mode read the std cells as PDK LEF abstracts, which carry the n-well but no tap contact (`nsc`), so
+   every n-well strip outside the SRAMs was reported as `nwell.4` (OpenROAD 3,626; ICC2 b6 3,035 + 592 straddling; Innovus b6
+   4,226 + 737 straddling) and the clipped A/B windows also showed LU.2, LU.3 and met1.7 items. With the real std-cell GDS
+   (`make ARM=<arm> SRAM_MODE=real MDRC_STD=gds mdrc mdrc-class`, default since 2026-11-08; `MDRC_STD=lef` keeps the old mode) the full-die
+   result on both b6 arms and both b7 arms is **0 items outside or straddling the SRAM footprints**: all 30 reported rules sit inside the
+   SRAM footprints, `nwell.4`, LU.2, LU.3, `met1.7` and `can't overlap` have 0 items anywhere. The four proposed waivers W1 to W4
+   in `reports/magic_nwell4_rootcause.md` are **WITHDRAWN by the user** (not needed). The inside-SRAM items stay under the bead `45a`
+   SRAM-abstract waiver; the new inside counts are 27,733,502 (ICC2 b6 and b7) and 28,315,303 (Innovus b6 and b7), against 27,733,486 and
+   28,315,092 in LEF mode. The +16 (ICC2) and +211 (Innovus) come from four rules that are all inside the SRAM footprints: `licon.5a` +8,
+   `licon.5c` +4, `poly.8` +4 (both arms) and `poly.7` +195 (Innovus only). Measured for `poly.7`: the 195 LEF-mode boxes (y 860.525 to 860.655
+   um, D-cache SRAMs, x 238 to 2201 um) are each reported as two boxes in GDS mode (split at y 860.645 um), so it is the same SRAM-internal
+   geometry counted in more tiles, not new defects (the +8 / +4 / +4 were not inspected; same class, inferred). No change is a layout defect. The
+   LEF-mode figures stay in the JSON as `magic_lef_*` and the per-rule dictionary as `magic_drc_by_rule`.
 7. One run per arm. Native tool numbers use each tool's own RC, SDC and engine, so they are not
    ranked against each other. Runtimes were measured on a shared 8-core / 15 GB host, often under
    load, so they are not a tool-speed benchmark.
+
+8. **Innovus b7 and b8 skip `verifyConnectivity -type all`.** On the b7 database (after `ecoAddRepeater`) this check ran for more than an hour
+   (b6: 6 s) in two attempts, so `06m_finish.tcl` skips it when `TAG` is `b7_innovus` or `b8_innovus` (or `SKIP_VC=1`). Connectivity of
+   those arms rests on the `verify_connectivity -type special` PDN check (still run) and on Netgen LVS (nets and devices equal); the cause of the
+   hang is not understood. b6 and the ICC2 arms ran the full check.
 
 ## 3. Method and fairness rules
 
@@ -434,6 +441,75 @@ power at most 0.7 %, no verdict or ranking change. Quantus takes about 2.5 min a
 The nom qrcTechFile comes from the 2026-10 Techgen cell-level run plus `Techgen -migrate`. min and max are fresh `Techgen -cell` runs
 (`run_techgen_cell.sh`, 2 CPUs): 3 h 19 min / 440 MB and 3 h 17 min / 445 MB session RSS. Quantus extraction took 1 to 9 min and 1.0 to 1.25 GB per run (nine runs, 0 errors).
 
+### 4.9 Generations b6, b7, b8 of the two commercial arms (generated from `comparison.json` by `make_gen_table.py`)
+
+- **b6**: the arm of sections 1 to 4.8.
+- **b7** = b6 + ONE combined ECO pass (user task of 2026-11-08, scripts `impl/icc2/scripts/b7_06_eco.tcl`, `impl/innovus/scripts/07m_eco.tcl`):
+  ICC2 21 `buf_1` in front of the ff reg-to-reg hold endpoints (judge hold slack < +12 ps at nom/min/max ff) + one `buf_6` on the deck-antenna sink of
+  `u_core_u_dcache/n3594` + 4 dcache dout0 buffers; Innovus 2 `buf_6` on the two deck-antenna sinks + 1 dcache dout0 buffer. **b7 is an intermediate
+  generation and is not the final arm.** Why only the dcache dout0 pins: the five I-cache SRAMs have their port-0 pins on the macro's bottom edge (y = 20 um) outside the row
+  lattice (rows start at y = 24.48 um and the macro covers them), so the nearest legal site is 139 to 340 um away. A first b7 run that buffered all 163 ICC2 dout0
+  pins displaced the 159 I-cache buffers by 100 to 283 um (median 226 um) and took the ICC2 native ss setup from -0.022 to -0.97 ns; it was reverted
+  (`impl/icc2/runs/b7_icc2/logs/b7_06_eco.run1_icache_all.log`, not committed).
+- **b8** (build and re-sign-off in progress when b7 was committed; results are added by the b8 commit) = the b6 flow on the **flipped I-cache floorplan** (the five I-cache SRAMs mirrored about X, `pnr/sky130/cpu/macro_placement_flipic.cfg`, shared by ICC2, Innovus and, later,
+  OpenROAD; D-cache unchanged) + the b7 ECO set + dout0 buffers on every max-cap pin. Feasibility (`impl/check_flipic_feasibility.py`, `impl/flipic_feasibility.txt`): the flipped dout0
+  pins sit at y = 417.5 um, 0.48 to 1.38 um from the first of 37 channel rows (y 418.88 to 516.80 um, full die width) shared with the D-cache pins; pin pitch 6.8 um; the
+  met4 PG straps end flush at the macro edge exactly as at the D-cache pins (11 of 160 dout0 pins sit within 0.4 um of a strap, the same pins as the D-cache's).
+
+**ICC2** (b6 -> b7 -> b8)
+
+<!-- GEN-TABLE icc2 -->
+| metric | ICC2 b6 | ICC2 b7 |
+|---|---|---|
+| judge shared SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.268 / 45 | -2.267 / 45 |
+| judge shared SDC: worst hold WNS (ns) / hold violators, 9 corners | -2.412 / 4544 | -2.412 / 4532 |
+| judge per-view iolat SDC: worst setup WNS (ns) / setup violators, 9 corners | -0.059 / 3 | -0.060 / 3 |
+| judge per-view iolat SDC: worst hold WNS (ns) / hold violators, 9 corners | -0.027 / 10 | 0.013 / 0 |
+| judge own SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.268 / 45 | -2.267 / 45 |
+| judge own SDC: worst hold WNS (ns) / hold violators, 9 corners | -2.412 / 4544 | -2.412 / 4532 |
+| judge reg-to-reg setup / hold violators, 9 corners (shared SDC) | 3 / 10 | 3 / 0 |
+| judge SRAM dout0 max-cap pins, nom_tt / worst corner | 159 / 163 | 159 / 159 |
+| judge max-cap pins other than dout0, worst corner | 0 | 0 |
+| judge max-tran pins, nom_tt / worst corner | 4 / 1073 | 4 / 1083 |
+| judge PrimePower nom_tt (mW) | 70.80 | 70.80 |
+| native routed DRC / native antenna (tool rule) | 0 / 0 | 0 / 0 |
+| signoff KLayout DRC items | 0 | 0 |
+| signoff deck antenna nets | 1 | 0 |
+| signoff Netgen LVS (GDS, as delivered) | Circuits match uniquely | Circuits match uniquely |
+| signoff LEC (positive / negative controls) | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught |
+| signoff Magic (std cells from GDS): inside SRAM / straddle / outside | 27733502 / 0 / 0 | 27733502 / 0 / 0 |
+| derived logical cells | 40926 | 40952 |
+<!-- /GEN-TABLE -->
+
+**Innovus** (b6 -> b7 -> b8)
+
+<!-- GEN-TABLE innovus -->
+| metric | Innovus b6 | Innovus b7 |
+|---|---|---|
+| judge shared SDC: worst setup WNS (ns) / setup violators, 9 corners | -3.028 / 227 | -3.028 / 227 |
+| judge shared SDC: worst hold WNS (ns) / hold violators, 9 corners | -3.549 / 3873 | -3.549 / 3873 |
+| judge per-view iolat SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.435 / 891 | -2.435 / 891 |
+| judge per-view iolat SDC: worst hold WNS (ns) / hold violators, 9 corners | 0.190 / 0 | 0.190 / 0 |
+| judge own SDC: worst setup WNS (ns) / setup violators, 9 corners | -0.050 / 4 | -0.050 / 4 |
+| judge own SDC: worst hold WNS (ns) / hold violators, 9 corners | -0.254 / 4 | -0.254 / 4 |
+| judge reg-to-reg setup / hold violators, 9 corners (shared SDC) | 0 / 0 | 0 / 0 |
+| judge SRAM dout0 max-cap pins, nom_tt / worst corner | 160 / 161 | 160 / 160 |
+| judge max-cap pins other than dout0, worst corner | 0 | 0 |
+| judge max-tran pins, nom_tt / worst corner | 7 / 29 | 7 / 29 |
+| judge PrimePower nom_tt (mW) | 76.20 | 76.20 |
+| native routed DRC / native antenna (tool rule) | 0 / 0 | 0 / 0 |
+| signoff KLayout DRC items | 0 | 0 |
+| signoff deck antenna nets | 2 | 0 |
+| signoff Netgen LVS (GDS, as delivered) | Top level cell failed pin matching | Top level cell failed pin matching |
+| signoff LEC (positive / negative controls) | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught |
+| signoff Magic (std cells from GDS): inside SRAM / straddle / outside | 28315303 / 0 / 0 | 28315303 / 0 / 0 |
+| derived logical cells | 45895 | 45898 |
+<!-- /GEN-TABLE -->
+
+Measured read-path cost of the dout0 buffers (b6 -> b7, ICC2, the 4 buffered dcache pins, PrimeTime base SDC, worst setup slack through the pin, `diag_dout_paths.tcl`,
+`signoff/pt/diag_dout/`): nom_ss slack 4.403 -> 4.146, 4.984 -> 4.764, 4.317 -> 4.094, 8.012 -> 7.789 ns (**-0.22 to -0.26 ns per buffered read path**, still 4 ns or more of slack); pin load
+0.026 -> 0.011, 0.027 -> 0.004, 0.025 -> 0.003, 0.026 -> 0.003 pF (limit 0.02756 pF).
+
 ## 5. History arms (earlier commercial iterations, judge on the same chain)
 
 Source: `judge.<arm>` and `arms.<arm>.metrics` in the JSON. Figures marked (p) are prose-only
@@ -509,26 +585,30 @@ Beads are not available on this host, so the follow-ups are tracked here.
    seen (the `synth -nofsm` independence check was not run). The Yosys log shows `fsm` re-encoded `fwd_a_sel_r`, `fwd_b_sel_r`
    and `grant_q` to one-hot; Formality (3,902 failing) and Conformal (4,335 non-equivalent) could not match that and fail on the
    Yosys-netlist-vs-sv2v compare. That is unresolved, not waived, and not contradicted by the Yosys result.
-2. **Magic `nwell.4` outside the SRAMs**: root-caused 2026-11-08 (`reports/magic_nwell4_rootcause.md`). It is the
-   LEF-abstract artefact (std-cell abstracts have no tap contact) on all arms: 0 with GDS std cells in 9 windows, 0
-   n-well regions without contact in the real GDS (KLayout). The 1,191 Innovus pocket tap wells and the +145 straddle
-   items are explained (unfilled pocket). **Open, owner decision:** accept the four PROPOSED waivers W1 to W4 (counts
-   OpenROAD 3,626, ICC2 3,627, Innovus 4,963) or switch the sign-off Magic to GDS std cells (about 25 min per arm,
-   new baseline for other rules). Nothing is waived until the user signs off.
+2. **Magic `nwell.4` outside the SRAMs: closed 2026-11-09 by the sign-off mode change** (user decision 2026-11-08: sign-off Magic loads the std cells from the GDS;
+   waivers W1 to W4 WITHDRAWN). Full-die std-cell-GDS Magic on ICC2 b6/b7 and Innovus b6/b7: 0 items outside or straddling the SRAM footprints, all 30 rules inside
+   (caveat 6, `reports/magic_nwell4_rootcause.md` section 10). The inside-SRAM items remain under the bead `45a` waiver (new values in caveat 6).
 3. **Per-view clk_io latency**: done for the iolat variant (sections 4.2b to 4.2e, per-arm and
    shared). Still open: the same correction for the **Innovus own SDC** (fixed 3.295 ns), which
    needs a per-view copy of `sky130_cpu_innovus_b6_own_pt.sdc` and 9 more PrimeTime runs, and a
    decision on the 797 + 2,367 ss I/O setup endpoints of Innovus and OpenROAD that survive
    (4.2d): relax the input delays, add multicycle exceptions for the quasi-static APB inputs, or
    accept them as real.
-4. **ICC2 b6 ss hold** (42 / 31 / 66): **closed as an artefact**. With the per-view clk_io the ss
-   I/O hold violators are 0 and the hold WNS is +0.45 ns at all three ss corners. What remains of
-   this item is ICC2's **ff reg-to-reg hold** (2 at nom_ff, 8 at max_ff; -0.004 / -0.027 ns), which
-   no latency model changes. Close it with a PrimeTime ECO or by adding ff as a hold scenario.
-5. **Deck antenna**: ICC2 b6 1 net (`u_core_u_dcache/n3594`), Innovus b6 2 side-area nets,
-   OpenROAD 116.
-6. **Max-cap on the 160 SRAM `dout0` pins** (all arms) depends on the TT-only SRAM Liberty. It
-   needs per-corner SRAM characterisation (bead `o1i`).
+4. **ICC2 ff reg-to-reg hold: closed in b7 (2026-11-09).** b6 ss hold was closed as an artefact earlier; what remained was ICC2's ff reg-to-reg hold (2 violators at nom_ff, 8 at
+   max_ff, -0.004 / -0.027 ns). 21 `buf_1` in front of the capture D pins (endpoints with judge hold slack below +12 ps at nom/min/max ff, `impl/icc2/eco_b7/hold_endpoints.txt`) bring
+   the reg-to-reg hold violators to 0 at all 9 corners and the per-view iolat worst hold WNS from -0.027 to +0.013 ns (section 4.9). Cost: 21 `buf_1`; setup on those endpoints
+   has more than 7 ns of slack. Innovus b6 hold was already 0 and stays 0.
+5. **Deck antenna: closed on ICC2 and Innovus in b7 (2026-11-09).** ICC2 b6 `u_core_u_dcache/n3594` (met1 side-area ratio 592 vs 400 on the gate-attached met1 island; the four diodes of the
+   three b6 rounds are connected on upper layers, so the deck does not credit them) and Innovus b6 `FE_OFN20491_n` / `FE_OFN21807_n` (met3 / met2 side area 457 / 581 vs 400) are fixed by
+   one `buf_6` in front of each sink pin (gate area 0.495 um2 against 0.126 / 0.252 um2: the long wire then ends on a gate 3.9 / 2.0 times larger). Re-routing the ICC2 net with layer hopping
+   reproduced the same 104 um met1 run, so that alternative was dropped. Deck result (OpenROAD `check_antennas`): 0 nets / 0 pins on both b7 arms. OpenROAD's 116 nets move to item 9
+   (a separate agent folds its flip, dout0 buffers and antenna fix into the single-variable run).
+6. **Max-cap on the SRAM `dout0` pins (160 per commercial arm in b6).** **Correction of the earlier premise:** the limit is not a TT-only-Liberty artefact and needs no per-corner SRAM
+   characterisation (bead `o1i` is not the cause). The SRAM Liberty gives `dout0` `max_capacitance` 0.02756 pF, which is the top of its load table (`index_2`, 0.0017 / 0.0069 / 0.0276
+   pF); a load above it is extrapolated, and the limit is the same at every corner (the 163 / 161 violators are the same pins at all 9 corners). **Decision:** fix with a buffer ECO, not a
+   waiver (user, 2026-11-08). **Finding:** in b6 the violators are 159 of 163 (ICC2) and 160 of 161 (Innovus) on the five I-cache SRAMs, whose dout0 pins are on the bottom edge at
+   y = 20 um outside the row lattice, so no buffer can be placed within 139 um of them (section 4.9). b7 buffers only the dcache pins (4 ICC2, 1 Innovus: 163 -> 159 and 161 -> 160 violators).
+   The flip of the five I-cache SRAMs (user decision 2026-11-08, shared floorplan `macro_placement_flipic.cfg`) is b8; its result is in section 4.9.
 7. **Extraction calibration to silicon or a foundry deck** does not exist. Optionally recalibrate
    the corner multipliers on design total C (0.8988 / 1.0933) rather than on wire slope. The Quantus
    cross-check is done at nom, min and max (section 4.8).

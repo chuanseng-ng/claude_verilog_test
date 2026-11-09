@@ -21,6 +21,15 @@ PT = os.path.abspath(os.path.join(HERE, ".."))
 SRC = os.path.join(PT, "runs_clklat")
 OUT = os.path.join(PT, "iolat_pv")
 ARMS = ["openroad", "icc2b6", "innovusb6"]
+# b7 arms (b6 + ECO): their OWN measured tree goes into the 'arm' table; the 'shared' table keeps the per-corner mean of the three b6-era ARMS above,
+# so adding an arm never changes an existing row (the shared latency stays one value per corner, the same for every arm and for b6 vs b7).
+EXTRA_ARMS = [
+    a
+    for a in ("icc2b7", "innovusb7", "icc2b8", "innovusb8")
+    if a not in os.environ.get("IOLAT_EXCLUDE", "").split()  # IOLAT_EXCLUDE="icc2b8 innovusb8": leave arms out (e.g. while their layout is being re-run)
+    # only arms whose 9 corners are ALL measured: a half-measured arm made this script fail (b7/b8 chains ran it while the other arm was still measuring)
+    if all(os.path.isfile(os.path.join(PT, "runs_clklat", f"{a}_{rc}_{lib}", "clk_latency.tsv")) for rc in ("nom", "min", "max") for lib in ("tt", "ss", "ff"))
+]
 CORNERS = [(rc, lib) for rc in ("nom", "min", "max") for lib in ("tt", "ss", "ff")]
 SOURCE_LATENCY = 1.0  # set_clock_latency -source 1.0 [get_clocks clk_i] in the shared SDC
 STATS = ["min", "p05", "median", "mean", "p95", "max"]
@@ -37,7 +46,7 @@ def load(arm, rc, lib):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    meas = {(a, rc, lib): load(a, rc, lib) for a in ARMS for rc, lib in CORNERS}
+    meas = {(a, rc, lib): load(a, rc, lib) for a in ARMS + EXTRA_ARMS for rc, lib in CORNERS}
     cols = ["arm", "rc", "lib", "n_regs", "n_flops", "n_sram"]
     cols += [f"all_{s}" for s in STATS]
     cols += ["flop_mean", "sram_mean", "in_capture_mean", "out_launch_mean", "skew_all_max_minus_min"]
@@ -76,8 +85,11 @@ def main():
             e_l.append((e, l))
         se = sum(x[0] for x in e_l) / len(e_l)
         sl = sum(x[1] for x in e_l) / len(e_l)
-        for a in ARMS:
+        for a in ARMS + EXTRA_ARMS:
             sh_rows.append((a, rc, lib, se, sl))
+        for a in EXTRA_ARMS:
+            d = meas[(a, rc, lib)]
+            arm_rows.append((a, rc, lib, float(d["all_rise_early_mean"]) - SOURCE_LATENCY, float(d["all_rise_late_mean"]) - SOURCE_LATENCY))
     for name, rows, note in (
         ("iolat_pv_arm.tsv", arm_rows, "# variant 'arm': each arm's own measured tree."),
         ("iolat_pv_shared.tsv", sh_rows, "# variant 'shared': per corner, the mean of the three arms' values, the same row for every arm."),

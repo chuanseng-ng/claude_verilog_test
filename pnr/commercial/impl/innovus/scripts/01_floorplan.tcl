@@ -45,7 +45,7 @@ defIn $REPO/pnr/sky130/cpu/pin_template.def
 dbSet top.terms.pStatus fixed
 puts "PINS: [llength [dbGet top.terms]] fixed: [llength [dbGet -p top.terms.pStatus fixed]] on [dbGet top.terms.pins.allShapes.layer.name -u]"
 # ---- macros: map macro_placement.cfg yosys-style names onto the Genus-flattened instance names
-set cfg [open $CFGDIR/macro_placement.cfg r]
+set cfg [open $CFGDIR/[expr {[info exists ::env(MACRO_CFG)] ? $::env(MACRO_CFG) : "macro_placement.cfg"}] r]
 set nplaced 0
 set allsram [dbGet -p2 top.insts.cell.name $SRAM]
 foreach i $allsram { puts "SRAMINST [dbGet $i.name]" }

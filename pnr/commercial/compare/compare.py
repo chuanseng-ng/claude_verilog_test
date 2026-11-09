@@ -38,6 +38,16 @@ OUT = f"{COM}/compare/comparison.json"
 CORNERS = [f"{rc}_{lib}" for rc in ("nom", "min", "max") for lib in ("tt", "ss", "ff")]
 VARIANTS = ("own", "base", "iolat", "iolat_pv", "iolat_pvs")
 
+# b7 = b6 + one combined ECO pass (ff hold buffers, deck-antenna sink buffers, dcache dout0 buffers; docs/COMMERCIAL_FLOW_COMPARISON.md section 7 items 4-6).
+# ADOPT_B7 decides which generation is the FINAL arm of the comparison (the other becomes a history arm); set by the sign-off decision, never silently.
+# b8 = b6 flow on the FLIPPED I-cache floorplan (pnr/sky130/cpu/macro_placement_flipic.cfg) + the b7 ECO set with dout0 buffers on every max-cap pin (user decision 2026-11-08).
+# FINAL_GEN is the generation that is the FINAL arm of the comparison ("b6", "b7" or "b8"); the others are history arms.  Set by the sign-off decision, never silently.
+ADOPT_B7 = False
+FINAL_GEN = "b6"
+_R6 = "final" if FINAL_GEN == "b6" else "history"
+_R7 = "final" if FINAL_GEN == "b7" else "history"
+_R8 = "final" if FINAL_GEN == "b8" else "history"
+
 # arm id -> PT arm name, display name, role, synthesis, notes
 ARMS = {
     "openroad_b2": dict(
@@ -50,16 +60,44 @@ ARMS = {
     "icc2_b6": dict(
         pt="icc2b6",
         name="ICC2 b6",
-        role="final",
+        role=_R6,
         synthesis="DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
         pnr="ICC2 X-2025.06-SP1, MCMM func_ss/tt/ff, 3-pane NDM",
     ),
     "innovus_b6": dict(
         pt="innovusb6",
         name="Innovus b6",
-        role="final",
+        role=_R6,
         synthesis="Genus 23.14 v1 (tt only)",
         pnr="Innovus 23.14, full MMMC av_ss/av_tt/av_ff, captbl6",
+    ),
+    "icc2_b7": dict(
+        pt="icc2b7",
+        name="ICC2 b7",
+        role=_R7,
+        synthesis="DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
+        pnr="ICC2 X-2025.06-SP1, b6 + ECO: 21 ff-hold buf_1, 1 antenna-sink buf_6, 4 dcache dout0 buffers",
+    ),
+    "innovus_b7": dict(
+        pt="innovusb7",
+        name="Innovus b7",
+        role=_R7,
+        synthesis="Genus 23.14 v1 (tt only)",
+        pnr="Innovus 23.14, b6 + ECO: 2 antenna-sink buf_6, 1 dcache dout0 buffer",
+    ),
+    "icc2_b8": dict(
+        pt="icc2b8",
+        name="ICC2 b8",
+        role=_R8,
+        synthesis="DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
+        pnr="ICC2 X-2025.06-SP1, flipped I-cache floorplan (FS), b7 ECO set, dout0 buffers on every max-cap pin",
+    ),
+    "innovus_b8": dict(
+        pt="innovusb8",
+        name="Innovus b8",
+        role=_R8,
+        synthesis="Genus 23.14 v1 (tt only)",
+        pnr="Innovus 23.14, flipped I-cache floorplan (MX), b7 ECO set, dout0 buffers on every max-cap pin",
     ),
     "icc2_b5e": dict(
         pt="icc2",
@@ -111,6 +149,10 @@ SDC_FILES = {
     "iolat_pv": f"{COM}/constraints/sky130_cpu_iolat_pv.sdc",
     "iolat_pvs": f"{COM}/constraints/sky130_cpu_iolat_pv.sdc",
     "own:icc2_b6": f"{COM}/constraints/sky130_cpu_icc2_b6_own_pt.sdc",
+    "own:icc2_b7": f"{COM}/constraints/sky130_cpu_icc2_b7_own_pt.sdc",
+    "own:icc2_b8": f"{COM}/constraints/sky130_cpu_icc2_b8_own_pt.sdc",
+    "own:innovus_b8": f"{COM}/constraints/sky130_cpu_innovus_b8_own_pt.sdc",
+    "own:innovus_b7": f"{COM}/constraints/sky130_cpu_innovus_b7_own_pt.sdc",
     "own:innovus_b6": f"{COM}/constraints/sky130_cpu_innovus_b6_own_pt.sdc",
     "own:innovus_b5k": f"{COM}/constraints/sky130_cpu_innovus_b5k_own_pt.sdc",
     "own:innovus_b5h": f"{COM}/constraints/sky130_cpu_innovus_b5h_own_pt.sdc",
@@ -297,6 +339,27 @@ def judge_drv(ptarm: str):
     }
 
 
+def judge_drv_all(ptarm: str):
+    """DRV violators of the base-SDC judge at all 9 corners (snapshot/drv_counts.tsv, derived from PrimeTime report_constraint)."""
+    f = f"{SNAP}/drv_counts.tsv"
+    if not p(f).is_file():
+        return None
+    vals = {}
+    for line in text(f).splitlines()[1:]:
+        a, c, d0, co, tr, fo = line.split("\t")
+        if a == ptarm:
+            vals[c] = {"max_cap_dout0": int(d0), "max_cap_other": int(co), "max_tran": int(tr), "max_fanout": int(fo)}
+    if len(vals) != 9:
+        return None
+    return {
+        "label": "judge",
+        "unit": "pins",
+        "source": f,
+        "values": vals,
+        "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)",
+    }
+
+
 def judge_summary(arm: str, rec_by_corner: dict, var: str):
     """Aggregates over the 9 corners of one SDC variant (derived from the judge records)."""
     recs = [r for r in rec_by_corner.values() if r]
@@ -442,41 +505,49 @@ def drclvs(tag: str):
             out["antenna_deck_pins"] = E(
                 grab(f, r"ANT-0001\] Found (\d+) pin", int), "pins", "signoff", f
             )
-    for f in (f"{d}/{tag}_magic_drc_real_by_rule.tsv",):
-        if tracked(f):
-            out.update(magic(f))
+    fg, fl = f"{d}/{tag}_magic_drc_real_stdgds_by_rule.tsv", f"{d}/{tag}_magic_drc_real_by_rule.tsv"
+    if tracked(fg):
+        out.update(magic(fg))
+        if tracked(fl):
+            out.update(magic(fl, "magic_lef_"))
+    elif tracked(fl):
+        out.update(magic(fl))
     out.update(nwell4_nsc(tag))
     return out
 
 
-def magic(f: str):
+def magic(f: str, pre: str = "magic_"):
+    """Per-rule Magic DRC classification (inside / straddling / outside the SRAM footprints) of one run.
+    pre='magic_' is the sign-off figure (std cells from the GDS since 2026-11-08); pre='magic_lef_' the LEF-abstract history mode."""
     ins = st = outs = 0
     nw = [0, 0, 0]
+    rules = {}
     for line in text(f).splitlines()[1:]:
         r = line.split("\t")
         if line.startswith("#") or len(r) < 4:
             continue
         a, b, c = int(r[1]), int(r[2]), int(r[3])
         ins, st, outs = ins + a, st + b, outs + c
+        rules[r[0]] = [a, b, c]
         if "nwell.4" in r[0]:
             nw = [a, b, c]
+    mode = "std cells from the layout GDS" if pre == "magic_" else "std cells as PDK LEF abstracts (history; abstracts carry no tap contact)"
     return {
-        "magic_drc_total": E(ins + st + outs, "items", "signoff", f),
-        "magic_drc_inside_sram": E(
+        pre + "drc_total": E(ins + st + outs, "items", "signoff", f, note=mode),
+        pre + "drc_inside_sram": E(
             ins, "items", "signoff", f, note="bead 45a SRAM-abstract artefact"
         ),
-        "magic_drc_straddle_sram": E(st, "items", "signoff", f),
-        "magic_drc_outside_sram": E(outs, "items", "signoff", f),
-        "magic_nwell4_straddle_outside": E(
+        pre + "drc_straddle_sram": E(st, "items", "signoff", f),
+        pre + "drc_outside_sram": E(outs, "items", "signoff", f),
+        pre + "nwell4_straddle_outside": E(
             nw[1:],
             "items",
             "signoff",
             f,
-            note=(
-                "[straddling, outside] nwell.4 items: LEF-abstract artefact "
-                "(reports/magic_nwell4_rootcause.md); waiver PROPOSED, needs user sign-off, "
-                "not waived"
-            ),
+            note="[straddling, outside] nwell.4 items (reports/magic_nwell4_rootcause.md; waivers W1-W4 withdrawn by the user 2026-11-08)",
+        ),
+        pre + "drc_by_rule": E(
+            rules, "[inside, straddle, outside] per rule", "signoff", f, note=mode
         ),
     }
 
@@ -568,6 +639,8 @@ def redhawk(arm: str):
         f"{d}/{arm}_dynamic_summary.json",
         f"{d}/{arm}_dynamic_nodecap_summary.json",
     )
+    if not tracked(s):  # b7: not re-run (no PG / decap / clock change; see the doc), so no RedHawk figures are claimed for it
+        return {}
     S, D, N = (json.loads(text(x)) for x in (s, dy, nd))
     al = S["populations"]["all"]
     ls = D["populations"]["logic+sram"]
@@ -656,7 +729,13 @@ def openroad():
             note="Netgen LVS inside LibreLane (DEF/LEF-mode Magic extraction)",
         ),
     }
-    out.update(magic(f"{COM}/signoff/drclvs/reports/openroad_magic_drc_by_rule.tsv"))
+    fg = f"{COM}/signoff/drclvs/reports/openroad_magic_drc_real_stdgds_by_rule.tsv"
+    fl = f"{COM}/signoff/drclvs/reports/openroad_magic_drc_by_rule.tsv"
+    if tracked(fg):
+        out.update(magic(fg))
+        out.update(magic(fl, "magic_lef_"))
+    else:
+        out.update(magic(fl))
     out.update(nwell4_nsc("openroad"))
     out["census"] = census(f"{SNAP}/openroad/cellcount.txt")
     rt = f"{SNAP}/openroad/step_runtime.tsv"
@@ -749,8 +828,8 @@ def openroad():
     return out
 
 
-def icc2_b6():
-    d = f"{SNAP}/icc2_b6"
+def icc2_arm(b="b6"):
+    d = f"{SNAP}/icc2_{b}"
     q = f"{d}/final_qor.txt"
     out = {}
     for scen, kind in (
@@ -828,34 +907,50 @@ def icc2_b6():
         note="ICC2 vectorless, func_tt",
     )
     tot, peak, srcs = 0.0, 0, []
-    for t in sorted(p(f"{d}/stage_time").glob("b6_0*.time")):
-        if "mcmmtest" in t.name:
-            continue
-        rel = f"{d}/stage_time/{t.name}"
-        w, rss = time_v(rel)
-        tot += w
-        peak = max(peak, rss)
-        srcs.append(rel)
+    stage_dirs = [f"{SNAP}/icc2_b6"] + ([d] if b != "b6" else [])  # b7 = the b6 flow + the b7 ECO / finish stages
+    for sd in stage_dirs:
+        for t in sorted(p(f"{sd}/stage_time").glob("b[67]_0*.time")):
+            if "mcmmtest" in t.name:
+                continue
+            if b != "b6" and sd.endswith("icc2_b6") and t.name.startswith(("b6_07", "b6_08")):
+                continue  # superseded by the b7 finish / write stages
+            rel = f"{sd}/stage_time/{t.name}"
+            w, rss = time_v(rel)
+            tot += w
+            peak = max(peak, rss)
+            srcs.append(rel)
     out["runtime_pnr_s"] = E(
         round(tot),
         "s",
         "derived",
         srcs,
-        rule="sum of /usr/bin/time wall over stages 01..08 (excl. MCMM probe)",
+        rule="sum of /usr/bin/time wall over stages 01..08 (excl. MCMM probe); b7: b6 stages 01..06 + b7 ECO / finish / write stages",
     )
     out["peak_rss"] = E(round(peak / 1048576, 2), "GB", "derived", srcs, rule="max over stages")
     out["census"] = census(f"{d}/final_cellcount.txt")
-    out.update(drclvs("icc2_b6"))
-    runs = lec_formality("b6")
+    out.update(drclvs(f"icc2_{b}"))
+    runs = lec_formality(b)
     out["lec_runs"] = runs
     out["lec"] = lec_summary(runs, ["_vs_"], ["negctl"], "formality")
-    out.update(redhawk("icc2b6"))
+    out.update(redhawk(f"icc2{b}"))
     return out
 
 
-def innovus_b6():
-    d = f"{SNAP}/innovus_b6"
-    r6 = f"{COM}/impl/innovus/reports/b6"
+def icc2_b6():
+    return icc2_arm("b6")
+
+
+def icc2_b7():
+    return icc2_arm("b7")
+
+
+def icc2_b8():
+    return icc2_arm("b8")
+
+
+def innovus_arm(b="b6"):
+    d = f"{SNAP}/innovus_{b}"
+    r6 = f"{COM}/impl/innovus/reports/{b}"
     out = {}
     for kind, f in (
         ("setup", f"{r6}/final_setup.summary.txt"),
@@ -929,27 +1024,43 @@ def innovus_b6():
         note="power view av_ss (ss leakage), activity 0.1: not comparable with tt figures",
     )
     tot, peak, srcs = 0.0, 0, []
-    for t in sorted(p(f"{d}/stage_time").glob("0*.time")):
-        rel = f"{d}/stage_time/{t.name}"
-        w, rss = time_v(rel)
-        tot += w
-        peak = max(peak, rss)
-        srcs.append(rel)
+    stage_dirs = ([f"{SNAP}/innovus_b6"] if b in ("b6", "b7") else []) + ([d] if b != "b6" else [])  # b7 = the b6 flow + the b7 ECO / finish / restream stages; b8 has its own full chain
+    for sd in stage_dirs:
+        for t in sorted(p(f"{sd}/stage_time").glob("0*.time")):
+            if b != "b6" and sd.endswith("innovus_b6") and t.name.startswith(("06m_finish", "07_restream")):
+                continue  # superseded by the b7 finish / restream
+            rel = f"{sd}/stage_time/{t.name}"
+            w, rss = time_v(rel)
+            tot += w
+            peak = max(peak, rss)
+            srcs.append(rel)
     out["runtime_pnr_s"] = E(
         round(tot),
         "s",
         "derived",
         srcs,
-        rule="sum of /usr/bin/time wall over stages 01..07 (final chain; excl. probe)",
+        rule="sum of /usr/bin/time wall over stages 01..07 (final chain; excl. probe); b7: b6 stages up to 05m_eco + b7 ECO / finish / restream stages",
     )
     out["peak_rss"] = E(round(peak / 1048576, 2), "GB", "derived", srcs, rule="max over stages")
     out["census"] = census(f"{r6}/final_cellcount.txt")
-    out.update(drclvs("innovus_b6"))
-    runs = lec_conformal("b4m")
+    out.update(drclvs(f"innovus_{b}"))
+    runs = lec_conformal({"b6": "b4m", "b7": "b7m", "b8": "b8m"}[b])
     out["lec_runs"] = runs
     out["lec"] = lec_summary(runs, ["innovus_"], ["negctl"], "conformal")
-    out.update(redhawk("innovusb6"))
+    out.update(redhawk(f"innovus{b}"))
     return out
+
+
+def innovus_b6():
+    return innovus_arm("b6")
+
+
+def innovus_b7():
+    return innovus_arm("b7")
+
+
+def innovus_b8():
+    return innovus_arm("b8")
 
 
 def history():
@@ -1089,6 +1200,10 @@ def synthesis():
         ("openroad_b2", "yosys"),
         ("icc2_b6", "dc_v2"),
         ("innovus_b6", "genus_v1"),
+        ("icc2_b7", "dc_v2"),
+        ("innovus_b7", "genus_v1"),
+        ("icc2_b8", "dc_v2"),
+        ("innovus_b8", "genus_v1"),
         ("icc2_b5e", "dc_v1"),
     ):
         tt, f = rows[(key, "tt")]
@@ -1108,6 +1223,8 @@ def synthesis():
         }
     dcv2 = f"{COM}/reports/dc_synth_v2_summary.md"
     gen = f"{COM}/reports/genus_synth_summary.md"
+    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6")):
+        pass
     out["icc2_b6"]["synth_runtime"] = prose(
         333.6, "s", "native", dcv2, "Caveats: DC 'Overall Compile Wall Clock Time' (host contended)"
     )
@@ -1119,6 +1236,9 @@ def synthesis():
     fm = f"{COM}/signoff/lec/formality/reports/b4a2_dc_v2_vs_rtl/fm_log.txt"
     out["icc2_b6"]["synth_lec"] = lec_formality("b4a2")
     out["innovus_b6"]["synth_lec"] = lec_conformal("b4b_genus")
+    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("innovus_b8", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
+        for k in ("synth_runtime", "synth_peak_rss", "synth_lec"):
+            out[b7][k] = out[b6][k]
     _ = fm
     return out
 
@@ -1211,7 +1331,7 @@ def clock_latency():
     """Measured clk_i insertion latency (PrimeTime, StarRC SPEF) per arm and corner, and the per-view clk_io tables built from it."""
     out = {"measured": {}, "tables": {}, "io_violators": {}}
     for arm, meta in ARMS.items():
-        if meta["role"] != "final":
+        if meta["role"] not in ("final", "history") or not p(f"{SNAP}/clklat/{meta['pt']}_nom_tt/clk_latency.tsv").is_file():
             continue
         rows = {}
         for c in CORNERS:
@@ -1253,8 +1373,6 @@ def clock_latency():
         }
     for var in ("iolat_pv", "iolat_pvs"):
         for arm, meta in ARMS.items():
-            if meta["role"] != "final":
-                continue
             for c in CORNERS:
                 f = f"{SNAP}/pt/{var}/{meta['pt']}_{c}/io_viol_summary.tsv"
                 if not p(f).is_file():
@@ -1276,7 +1394,7 @@ def clock_latency():
 def sdc():
     out = {}
     for k, f in SDC_FILES.items():
-        if p(f).is_file():
+        if p(f).is_file() and tracked(f):
             out[k] = E(
                 hashlib.md5(p(f).read_bytes()).hexdigest(),
                 "md5",
@@ -1310,6 +1428,14 @@ def build():
     }
     syn = synthesis()
     natives = {"openroad_b2": openroad(), "icc2_b6": icc2_b6(), "innovus_b6": innovus_b6()}
+    if p(f"{SNAP}/icc2_b7").is_dir():
+        natives["icc2_b7"] = icc2_b7()
+    if p(f"{SNAP}/innovus_b7").is_dir():
+        natives["innovus_b7"] = innovus_b7()
+    if p(f"{SNAP}/icc2_b8").is_dir():
+        natives["icc2_b8"] = icc2_b8()
+    if p(f"{SNAP}/innovus_b8").is_dir():
+        natives["innovus_b8"] = innovus_b8()
     natives.update(history())
     core = json.loads(text(f"{SNAP}/openroad/metrics.json"))
     core_src = f"{SNAP}/openroad/metrics.json"
@@ -1347,6 +1473,7 @@ def build():
                         f"{arm} {var} {c}: sdc_md5 {r['values'].get('sdc_md5')} != {want['value']}"
                     )
         judge["drv_nom_tt_base"] = judge_drv(meta["pt"])
+        judge["drv_all_corners_base"] = judge_drv_all(meta["pt"])
         data["judge"][arm] = judge
         data["arms"][arm] = a
     data["warnings"] = warnings

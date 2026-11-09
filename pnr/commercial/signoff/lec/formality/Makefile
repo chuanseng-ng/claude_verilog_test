@@ -176,6 +176,30 @@ lec-icc2-b6-negctl:
 	$(MAKE) lec-icc2-negctl $(B6)
 lec-icc2-b6: lec-icc2-b6-real lec-icc2-b6-negctl
 
+# ---------------- B7 (b6 + one combined ECO pass: ff hold buffers, antenna sink buffer, dcache dout0 buffers): same recipe as b6, same reference (DC v2 + SVF); outputs tagged b7_* ----------------
+#   make lec-icc2-b7             (b) vs DC v2, (a) vs RTL+SVF v2, nodiode variants (port + antenna diodes stripped), 4 negative controls
+B7 := MUTSCRIPT=mk_mutant_b6.py DCTAG=b3c_dc_mcmm ICC2RUN=b7_icc2 PFX=b7 MUTP=$(HERE)/runs/mutant_b7_icc2 STRIPNL=$(HERE)/runs/b7_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+.PHONY: lec-icc2-b7 lec-icc2-b7-real lec-icc2-b7-negctl
+lec-icc2-b7-real:
+	-$(MAKE) lec-icc2-dc $(B7) TAG=b7_icc2_vs_dc
+	-$(MAKE) lec-icc2-rtl $(B7) TAG=b7_icc2_vs_rtl_svf
+	-$(MAKE) lec-icc2-nodiode $(B7)
+lec-icc2-b7-negctl:
+	$(MAKE) lec-icc2-negctl $(B7)
+lec-icc2-b7: lec-icc2-b7-real lec-icc2-b7-negctl
+
+# ---------------- B8 (b6 flow on the flipped I-cache floorplan + the b7 ECO set with dout0 buffers on every max-cap pin): same recipe as b6, same reference (DC v2 + SVF); outputs tagged b8_* ----------------
+#   make lec-icc2-b8             (b) vs DC v2, (a) vs RTL+SVF v2, nodiode variants (port + antenna diodes stripped), 4 negative controls
+B8 := MUTSCRIPT=mk_mutant_b6.py DCTAG=b3c_dc_mcmm ICC2RUN=b8_icc2 PFX=b8 MUTP=$(HERE)/runs/mutant_b8_icc2 STRIPNL=$(HERE)/runs/b8_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+.PHONY: lec-icc2-b8 lec-icc2-b8-real lec-icc2-b8-negctl
+lec-icc2-b8-real:
+	-$(MAKE) lec-icc2-dc $(B8) TAG=b8_icc2_vs_dc
+	-$(MAKE) lec-icc2-rtl $(B8) TAG=b8_icc2_vs_rtl_svf
+	-$(MAKE) lec-icc2-nodiode $(B8)
+lec-icc2-b8-negctl:
+	$(MAKE) lec-icc2-negctl $(B8)
+lec-icc2-b8: lec-icc2-b8-real lec-icc2-b8-negctl
+
 # RUNFM2 with the OpenROAD-specific script (scripts/fm_lec_openroad.tcl); fm_lec_icc2.tcl stays the ICC2 script
 define RUNFMOR
 	@$(PE); $(SAFE); mkdir -p $(RUN); cd $(RUN); \

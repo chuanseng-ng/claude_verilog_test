@@ -1,13 +1,20 @@
 # gds_abs_drc.tcl -- Magic DRC (drc style drc(full), same report format as librelane/scripts/magic/drc.tcl) on a layout GDS.
-# Std cells are the PDK LEF abstracts (exactly what LibreLane's DEF-mode Magic.DRC uses); routing, vias, PG come from the GDS.
+# Std-cell source is selected by ::env(MDRC_STD):
+#   gds (default, user decision 2026-11-08, the SIGN-OFF mode): the std cells exactly as stored in the layout GDS (full geometry incl. tap contacts); no PDK LEF abstracts are read.
+#   lef (history): the PDK LEF abstracts + 'gds noduplicates true' (exactly what LibreLane's DEF-mode Magic.DRC uses): the abstracts carry no tap contact => ~3.6 k nwell.4 artefacts
+#       outside the SRAMs on every arm (reports/magic_nwell4_rootcause.md).
+# Routing, vias, PG come from the GDS in both modes.
 # SRAM_MODE=real (default): the SRAM top structure is the GDS one => its OpenRAM internals are DRC'd flat (the 27.7 M-violation flood
 #   the OpenROAD arm shows, bead 45a; ~9-10 GB peak). SRAM_MODE=abstract: SRAM = its LEF abstract (no flood, ~3 GB): only
 #   routing-vs-macro-boundary rules remain.
 source $::env(SCRIPTS_DIR)/magic/common/read.tcl
 read_tech_lef
-read_pdk_lef
-if {[info exists ::env(SRAM_MODE)] && $::env(SRAM_MODE) eq "abstract"} { read_extra_lef }
-gds noduplicates true
+set _std gds
+if {[info exists ::env(MDRC_STD)]} { set _std $::env(MDRC_STD) }
+if {$_std eq "lef"} { read_pdk_lef }
+if {[info exists ::env(SRAM_MODE)] && $::env(SRAM_MODE) eq "abstract"} { if {$_std ne "lef"} { read_pdk_lef }; read_extra_lef }
+if {$_std eq "lef"} { gds noduplicates true }
+puts "> MDRC_STD = $_std"
 gds rescale true
 puts "> gds read $::env(CURRENT_GDS)"
 gds read $::env(CURRENT_GDS)

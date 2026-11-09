@@ -137,18 +137,21 @@ kdrc: dirs
 # names exist in the tech LEF: not the ICC2 DEF).
 SRAM_MODE ?= real
 MDRC_MODE ?= gds
-MDIR := $(RUN)/mdrc_$(SRAM_MODE)
+# std-cell source of the Magic DRC (GDS mode only): gds = real std-cell GDS (sign-off mode since 2026-11-08, user decision), lef = PDK LEF abstracts (history; ~3.6 k nwell.4 artefacts)
+MDRC_STD ?= gds
+MSUF := $(if $(filter lef,$(MDRC_STD)),,_stdgds)
+MDIR := $(RUN)/mdrc_$(SRAM_MODE)$(MSUF)
 $(MDIR)/env.tcl: dirs
 	@mkdir -p $(MDIR)
 	@{ cat $(S)/env/magic_drc.base.tcl; \
 	   echo 'set ::env(STEP_ID) Magic.DRC'; \
 	   echo 'set ::env(CURRENT_DEF) $(DEF_IN)'; echo 'set ::env(CURRENT_GDS) $(GDS_FIXED)'; \
-	   echo 'set ::env(SRAM_MODE) $(SRAM_MODE)'; } > $@
+	   echo 'set ::env(SRAM_MODE) $(SRAM_MODE)'; echo 'set ::env(MDRC_STD) $(MDRC_STD)'; } > $@
 mdrc: $(MDIR)/env.tcl
-	$(call guarded,mdrc_$(SRAM_MODE),$(if $(filter real,$(SRAM_MODE)),11,5),$(or $(MDRC_TIMEOUT),5400),bash $(S)/in_container/magic_step.sh $< $(MDIR) $(if $(filter gds,$(MDRC_MODE)),$(S)/magic/gds_abs_drc.tcl,drc.tcl))
+	$(call guarded,mdrc_$(SRAM_MODE)$(MSUF),$(if $(filter real,$(SRAM_MODE)),11,5),$(or $(MDRC_TIMEOUT),5400),bash $(S)/in_container/magic_step.sh $< $(MDIR) $(if $(filter gds,$(MDRC_MODE)),$(S)/magic/gds_abs_drc.tcl,drc.tcl))
 mdrc-class: dirs
 	python3 $(S)/sram_boxes.py $(DEF_IN) > $(RUN)/sram_boxes.txt
-	$(S)/magic_drc_classify.sh $(MDIR)/reports/drc_violations.magic.rpt $(RUN)/sram_boxes.txt $(REP)/$(ARM)_magic_drc_$(SRAM_MODE)_by_rule.tsv $(MDIR)/outside_sample.txt
+	$(S)/magic_drc_classify.sh $(MDIR)/reports/drc_violations.magic.rpt $(RUN)/sram_boxes.txt $(REP)/$(ARM)_magic_drc_$(SRAM_MODE)$(MSUF)_by_rule.tsv $(MDIR)/outside_sample.txt
 
 # ---- antenna: OpenROAD check_antennas on LEF+DEF -------------------------------------------------------------------------
 ANT_MAP ?= 1
