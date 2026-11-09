@@ -5,7 +5,7 @@ source [file join [file dirname [file normalize [info script]]] common.tcl]
 set t0 [clock seconds]
 set FL [expr {[info exists ::env(FROM_LABEL)] ? $::env(FROM_LABEL) : "08b_eco"}]
 set OL [expr {[info exists ::env(OUT_LABEL)] ? $::env(OUT_LABEL) : "09_eco"}]
-set TS [expr {[info exists ::env(SETUP_TS)] ? $::env(SETUP_TS) : 0.20}]
+set TS [expr {[info exists ::env(SETUP_TS)] ? $::env(SETUP_TS) : 0.20}]   ;# default 0.20; derived from the native apb slack below when SETUP_TS is not given
 set DRV [expr {[info exists ::env(DRV)] ? $::env(DRV) : 1}]
 set HOLD [expr {[info exists ::env(HOLD)] ? $::env(HOLD) : 1}]
 restore_stage $FL
@@ -19,6 +19,17 @@ proc count_drc {f} { set n -1; set fh [open $f r]; while {[gets $fh l] >= 0} { i
 verify_drc -limit 100000 -report $R/e9_drc_0.txt; puts "E9_DRC_0: [count_drc $R/e9_drc_0.txt]"
 timeDesign -postRoute -outDir $R/e9_setup0
 timeDesign -postRoute -hold -outDir $R/e9_hold0
+# ---- derive the native target slack from the apb path (PT own max_ss -0.112 ns on b8): TS = native_slack + 0.112 + 0.05 margin, clamped to [0.05, 0.6]; SETUP_TS in the env overrides
+catch { report_timing -view av_ss -from [get_ports {apb_paddr_i[*]}] -to [get_pins {apb_prdata_o_reg*/D}] -max_paths 1 > $R/e9_apb_native0.txt }
+set sn ""
+catch { set fh [open $R/e9_apb_native0.txt r]; set txt [read $fh]; close $fh; if {[regexp {Slack Time\s+(-?[0-9.]+)} $txt -> sn]} {} }
+puts "E9_APB_NATIVE_SLACK_AV_SS: $sn"
+if {![info exists ::env(SETUP_TS)] && $sn ne ""} {
+  set TS [expr {$sn + 0.162}]
+  if {$TS < 0.05} { set TS 0.05 }
+  if {$TS > 0.6} { set TS 0.6 }
+  puts "E9_TS_DERIVED: $TS"
+}
 set ncell0 [llength [dbGet top.insts]]
 puts "E9_INSTS_BEFORE: $ncell0"
 # ---- the clock tree and every ECO cell of b8 stay as they are

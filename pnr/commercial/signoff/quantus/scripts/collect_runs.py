@@ -58,7 +58,7 @@ def metrics(d):
             "hold_wns_ns": float(m["hold_wns"]), "hold_tns_ns": float(m["hold_tns"]), "hold_viol": int(m["hold_viol"]),
             "total_power_mW": float(pw.group(1)) * 1e3, "p2p_unannotated_nets": p2p_un}
 
-for arm in ("icc2b6", "innovusb6", "openroad"):
+for arm in ("icc2b6", "innovusb6", "openroad", "icc2b9"):
     dq = os.path.join(PT, "runs_quantus/%s_nom_tt" % arm); ds = os.path.join(PT, "runs/%s_nom_tt" % arm)
     if os.path.isfile(os.path.join(dq, "metrics.tsv")) and os.path.isfile(os.path.join(ds, "metrics.tsv")):
         mq, ms = metrics(dq), metrics(ds)
