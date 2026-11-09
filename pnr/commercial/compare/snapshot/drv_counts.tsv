@@ -62,6 +62,15 @@ innovusb8	min_ff	0	0	0	204
 innovusb8	max_tt	0	0	21	204
 innovusb8	max_ss	0	0	33	204
 innovusb8	max_ff	0	0	17	204
+icc2b9	nom_tt	0	0	2	153
+icc2b9	nom_ss	0	0	16	153
+icc2b9	nom_ff	0	0	0	153
+icc2b9	min_tt	0	0	0	153
+icc2b9	min_ss	0	0	12	153
+icc2b9	min_ff	0	0	0	153
+icc2b9	max_tt	0	0	59	153
+icc2b9	max_ss	0	0	696	153
+icc2b9	max_ff	0	0	0	153
 icc2	nom_tt	162	10	866	181
 icc2	nom_ss	162	17	39563	181
 icc2	nom_ff	162	3	110	181

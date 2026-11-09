@@ -1,12 +1,12 @@
 #!/usr/bin/env python3 -I
-"""make_gen_table.py [arm_b6 arm_b7 arm_b8 ...] -- markdown table of the key metrics of the b6 / b7 / b8 generations of one commercial arm, from comparison.json (never from run dirs).
+"""make_gen_table.py [arm_b6 arm_b7 arm_b8 ...] -- markdown table of the key metrics of the b6 / b7 / b8 / b9 generations of one commercial arm, from comparison.json (never from run dirs).
     python3 -I pnr/commercial/compare/make_gen_table.py icc2     |  ... innovus
 Rows are produced from the JSON only, so the doc section 4.9 can be regenerated after every compare.py run."""
 import json, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 d = json.load(open(os.path.join(HERE, "comparison.json")))
 tool = sys.argv[1] if len(sys.argv) > 1 else "icc2"
-arms = [f"{tool}_b6", f"{tool}_b7", f"{tool}_b8"]
+arms = [f"{tool}_b6", f"{tool}_b7", f"{tool}_b8", f"{tool}_b9"]
 arms = [a for a in arms if a in d["arms"] and "base" in (d["judge"].get(a) or {})]
 def S(a, var, k):
     try: return d["judge"][a][var]["summary"]["values"][k]

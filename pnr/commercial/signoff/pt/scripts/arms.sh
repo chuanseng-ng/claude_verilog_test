@@ -25,13 +25,14 @@ arm_netlist() {
     icc2b8pre) echo pnr/commercial/impl/icc2/runs/b8_icc2/out/pre/rv32i_cpu_top.nl.v ;;   # b8 post-route, pre-ECO (lists for the ECO)
     innovusb8draft) echo pnr/commercial/impl/innovus/runs/b8_innovus/out_draft/rv32i_cpu_top.nl.v ;;   # b8 draft finish (lists for the ECO)
     icc2b8) echo pnr/commercial/impl/icc2/runs/b8_icc2/out/rv32i_cpu_top.nl.v ;;
+    icc2b9) echo pnr/commercial/impl/icc2/runs/b9_icc2/out/rv32i_cpu_top.nl.v ;;   # b9 = b8 + ECO round 3
     innovusb8) echo pnr/commercial/impl/innovus/runs/b8_innovus/out/rv32i_cpu_top.nl.v ;;
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
 }
 arm_spef() {
   case "$1" in
-    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
+    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
     openroad_rcx)          echo pnr/commercial/runs/openroad/rv32i_cpu_top.$2.spef ;;
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
@@ -40,7 +41,7 @@ arm_spef() {
 arm_spef_marker() {
   [ -n "${PT_NO_MARKER:-}" ] && { echo ""; return; }   # non-StarRC SPEF set (e.g. Quantus, PT_STARRC_DIR=.../quantus/runs): no star/.starrc_complete exists
   case "$1" in
-    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8) echo $STARRC/$1_$2/star/.starrc_complete ;;
+    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9) echo $STARRC/$1_$2/star/.starrc_complete ;;
     *) echo "" ;;
   esac
 }

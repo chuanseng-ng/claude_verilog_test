@@ -89,7 +89,7 @@ What the numbers say:
 
 6. **Update 2026-11-09 (b7, b8; section 4.9).** The table above is still b6. Two further generations were built and judged: b7 (ECO pass: ICC2 ff hold, deck antenna, dcache dout0 buffers) and b8 (I-cache SRAMs
    flipped so every dout0 pin faces the channel, plus the b7 ECO set). b8 clears the SRAM dout0 max-cap pins (163 / 161 -> 0 at all 9 corners), the deck antenna (1 / 2 -> 0) and the ICC2 ff hold (10 -> 0) and makes the ICC2
-   per-view iolat judge fully clean, but it also regresses a few marginal checks (list in section 4.9), so **b6 stays the final arm**. The sign-off Magic now loads the std cells from the GDS (caveat 6).
+   per-view iolat judge fully clean, but it also regresses a few marginal checks (list in section 4.9), so **b6 stays the final arm**. Round 3 (ICC2 b9, section 4.9) removes every b8 regression of the ICC2 arm except a ss setup-margin shift (0.12 to 0.2 ns, still MET); b9 is not adopted either (strict rule, section 4.9). The sign-off Magic now loads the std cells from the GDS (caveat 6).
 
 ## 2. Caveats (apply to every number)
 
@@ -141,10 +141,10 @@ What the numbers say:
    ranked against each other. Runtimes were measured on a shared 8-core / 15 GB host, often under
    load, so they are not a tool-speed benchmark.
 
-8. **Innovus b7 and b8 skip `verifyConnectivity -type all`.** On the b7 database (after `ecoAddRepeater`) this check ran for more than an hour
-   (b6: 6 s) in two attempts, so `06m_finish.tcl` skips it when `TAG` is `b7_innovus` or `b8_innovus` (or `SKIP_VC=1`). Connectivity of
-   those arms rests on the `verify_connectivity -type special` PDN check (still run) and on Netgen LVS (nets and devices equal); the cause of the
-   hang is not understood. b6 and the ICC2 arms ran the full check.
+8. **Innovus b7 and b8 skip `verifyConnectivity -type all` (kept for b7 / b8 as built; diagnosis 2026-11-09, item 17).** `06m_finish.tcl` skips it when `TAG` is `b7_innovus` or `b8_innovus` (or `SKIP_VC=1`). The diagnosis shows the skip was
+   not needed and that the slow step was a different call: in the b7 finish log the skipped call is followed by `verify_connectivity -type special`, which ran 27 min (26:53 CPU, "Check specified nets", 146 dangling-VPWR-wire messages); on the saved databases and on a re-run of the original finish stage
+   (private copy of the b8 `08b_eco` database) `-type all` takes 4 to 14 s and `-type special` 6 s. The `-type all` report hits the 100000-error limit on the VNB bulk pins "has an unconnected terminal" in b6 as well, so it never was a clean/dirty signal;
+   `verifyConnectivity -type regular` is "Found no problems" on b6, b7 and b8. Connectivity of the b7 / b8 arms rests on that regular check, the special-net PDN check and Netgen LVS (nets and devices equal).
 
 ## 3. Method and fairness rules
 
@@ -445,7 +445,7 @@ power at most 0.7 %, no verdict or ranking change. Quantus takes about 2.5 min a
 The nom qrcTechFile comes from the 2026-10 Techgen cell-level run plus `Techgen -migrate`. min and max are fresh `Techgen -cell` runs
 (`run_techgen_cell.sh`, 2 CPUs): 3 h 19 min / 440 MB and 3 h 17 min / 445 MB session RSS. Quantus extraction took 1 to 9 min and 1.0 to 1.25 GB per run (nine runs, 0 errors).
 
-### 4.9 Generations b6, b7, b8 of the two commercial arms (generated from `comparison.json` by `make_gen_table.py`)
+### 4.9 Generations b6, b7, b8, b9 of the two commercial arms (generated from `comparison.json` by `make_gen_table.py`)
 
 - **b6**: the arm of sections 1 to 4.8.
 - **b7** = b6 + ONE combined ECO pass (user task of 2026-11-08, scripts `impl/icc2/scripts/b7_06_eco.tcl`, `impl/innovus/scripts/07m_eco.tcl`):
@@ -460,29 +460,39 @@ The nom qrcTechFile comes from the 2026-10 Techgen cell-level run plus `Techgen 
   pins sit at y = 417.5 um, 0.48 to 1.38 um from the first of 37 channel rows (y 418.88 to 516.80 um, full die width) shared with the D-cache pins; pin pitch 6.8 um; the
   met4 PG straps end flush at the macro edge exactly as at the D-cache pins (11 of 160 dout0 pins sit within 0.4 um of a strap, the same pins as the D-cache's).
 
-**ICC2** (b6 -> b7 -> b8)
+- **b9** (ICC2 only, 2026-11-09, step 4 round 3) = b8 + ICC2 ECO round 3 (scripts `impl/icc2/scripts/b9_06c_eco.tcl`, `b9_06e_eco.tcl`, `b9_06f_eco.tcl`, `b9_06g_eco.tcl`, run dir `impl/icc2/runs/b9_icc2`, a copy of the b8 database):
+  (1) **the two input-port max-cap nets were not a buffer problem.** `axi_rdata_i[15]` / `[16]` sit on the die's bottom edge under I-cache SRAM 2; their port diodes `PORTDIODE__29711` / `__29710` were legalised EAST of the macro (x = 2528 um, the nearest free sites)
+  while all other loads are WEST of it (x = 2000 um), so the router reached each diode through a 2 to 3 mm detour (met4 up to y = 412 / 1070 um): 571 / 368 fF against a 561 fF (nom_tt) / 353 fF (max_ss) limit. A buffer at the port cannot help (the nearest legal site to the port is the same far spot). Fix: move each diode next to the load pins (the port wire already runs along the bottom strip on met1) and re-route: **no cell added**;
+  (2) **the native `check_routes` "DRC = 1" is a soft violation**, not a hard DRC (`TOTAL VIOLATIONS = 0`, `TOTAL SOFT VIOLATIONS = 1`, class "Min-max layer"; `set_ignored_layers` met1..met4). Located by opening the error data (`open_drc_error_data -name zroute.err`, then `get_drc_errors`): a 0.17 um li1 jumper at (343.075, 433.89) on net `u_core_u_icache_tag_dout0[4]` that the router laid between the abutting li1 pins of `ANTDIO_292/DIODE` and `HFSBUF_112_1803/A` (the four li1 pin-access shapes of the design, only this one is flagged). A rip-up and re-route of the net (06d) reproduced it; moving the antenna diode 3.45 um away (06e) removed it: hard 0, soft 0, shorts 0, opens 0;
+  (3) **max-fanout**: the 177 (b6: 164) violators of `set_max_fanout 16` are CTS leaf buffers (176 `ZCTSBUF_*` + 1 `ZBUF`) driving 17 to 25 flop clock pins, i.e. a property of the clock tree, present in b6 as well. *Experiment 1 (rejected)*: one parallel clone per violator taking the excess sinks (177 clones) broke the CTS balance: native ff hold +0.0112 -> -0.1124 ns, ss setup +0.0067 -> -0.2142 ns (log `impl/icc2/runs/b9_icc2/logs/b9_06c_eco.fanout_exp.log`, not committed). *Adopted*: move only the single excess flop CLK sink of the 25 fanout-17 buffers to the nearest sibling leaf buffer that still has spare fanout (<= 80 um; 24 moved, 24 buffers now <= 16); the 3 reg-to-reg ff hold endpoints that this disturbed (native -0.009 ns, none of them a moved sink) got one `buf_1` each (06g). Violators 177 -> 153 at all 9 corners (b6 164); the other 153 stay (excess 2 to 9 sinks, not touched because every move shifts clock arrival).
+  **Magic with std cells from the GDS for b9: NOT RUN at the time of this commit** (started 2026-11-09 18:11, alone, `GUARD_RSS_GB=11`; still running after 92 min at 8.4 GB RSS, b8 needed 27 min; the table cell shows "-" until a result is read). KLayout DRC, Netgen LVS, deck antenna and LEC are measured (above).
+  Native result of b9: hard DRC 0, soft 0, shorts 0, opens 0, ff hold +0.0110 ns (b8 +0.0112), ss setup +0.0190 ns (b8 +0.0067), tt hold +0.136 ns.
+
+**Innovus has no b9.** Innovus b8 (database `08b_eco`) is unchanged and stays the Innovus b8 arm of any b9 final. Its two open b8 items are answered below the regression block (LEF-versus-GDS evidence; own-SDC re-time not done).
+
+**ICC2** (b6 -> b7 -> b8 -> b9)
 
 <!-- GEN-TABLE icc2 -->
-| metric | ICC2 b6 | ICC2 b7 | ICC2 b8 |
-|---|---|---|---|
-| judge shared SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.268 / 45 | -2.267 / 45 | -1.840 / 47 |
-| judge shared SDC: worst hold WNS (ns) / hold violators, 9 corners | -2.412 / 4544 | -2.412 / 4532 | -3.300 / 5761 |
-| judge per-view iolat SDC: worst setup WNS (ns) / setup violators, 9 corners | -0.059 / 3 | -0.060 / 3 | 0.022 / 0 |
-| judge per-view iolat SDC: worst hold WNS (ns) / hold violators, 9 corners | -0.027 / 10 | 0.013 / 0 | 0.011 / 0 |
-| judge own SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.268 / 45 | -2.267 / 45 | -1.840 / 47 |
-| judge own SDC: worst hold WNS (ns) / hold violators, 9 corners | -2.412 / 4544 | -2.412 / 4532 | -3.300 / 5761 |
-| judge reg-to-reg setup / hold violators, 9 corners (shared SDC) | 3 / 10 | 3 / 0 | 0 / 0 |
-| judge SRAM dout0 max-cap pins, nom_tt / worst corner | 159 / 163 | 159 / 159 | 0 / 0 |
-| judge max-cap pins other than dout0, worst corner | 0 | 0 | 2 |
-| judge max-tran pins, nom_tt / worst corner | 4 / 1073 | 4 / 1083 | 9 / 722 |
-| judge PrimePower nom_tt (mW) | 70.80 | 70.80 | 69.20 |
-| native routed DRC / native antenna (tool rule) | 0 / 0 | 0 / 0 | 1 / 0 |
-| signoff KLayout DRC items | 0 | 0 | 0 |
-| signoff deck antenna nets | 1 | 0 | 0 |
-| signoff Netgen LVS (GDS, as delivered) | Circuits match uniquely | Circuits match uniquely | Circuits match uniquely |
-| signoff LEC (positive / negative controls) | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught |
-| signoff Magic (std cells from GDS): inside SRAM / straddle / outside | 27733502 / 0 / 0 | 27733502 / 0 / 0 | 27731549 / 0 / 0 |
-| derived logical cells | 40926 | 40952 | 40331 |
+| metric | ICC2 b6 | ICC2 b7 | ICC2 b8 | ICC2 b9 |
+|---|---|---|---|---|
+| judge shared SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.268 / 45 | -2.267 / 45 | -1.840 / 47 | -1.834 / 47 |
+| judge shared SDC: worst hold WNS (ns) / hold violators, 9 corners | -2.412 / 4544 | -2.412 / 4532 | -3.300 / 5761 | -3.308 / 5812 |
+| judge per-view iolat SDC: worst setup WNS (ns) / setup violators, 9 corners | -0.059 / 3 | -0.060 / 3 | 0.022 / 0 | 0.035 / 0 |
+| judge per-view iolat SDC: worst hold WNS (ns) / hold violators, 9 corners | -0.027 / 10 | 0.013 / 0 | 0.011 / 0 | 0.011 / 0 |
+| judge own SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.268 / 45 | -2.267 / 45 | -1.840 / 47 | -1.834 / 47 |
+| judge own SDC: worst hold WNS (ns) / hold violators, 9 corners | -2.412 / 4544 | -2.412 / 4532 | -3.300 / 5761 | -3.308 / 5812 |
+| judge reg-to-reg setup / hold violators, 9 corners (shared SDC) | 3 / 10 | 3 / 0 | 0 / 0 | 0 / 0 |
+| judge SRAM dout0 max-cap pins, nom_tt / worst corner | 159 / 163 | 159 / 159 | 0 / 0 | 0 / 0 |
+| judge max-cap pins other than dout0, worst corner | 0 | 0 | 2 | 0 |
+| judge max-tran pins, nom_tt / worst corner | 4 / 1073 | 4 / 1083 | 9 / 722 | 2 / 696 |
+| judge PrimePower nom_tt (mW) | 70.80 | 70.80 | 69.20 | 69.30 |
+| native routed DRC / native antenna (tool rule) | 0 / 0 | 0 / 0 | 1 / 0 | 0 / 0 |
+| signoff KLayout DRC items | 0 | 0 | 0 | 0 |
+| signoff deck antenna nets | 1 | 0 | 0 | 0 |
+| signoff Netgen LVS (GDS, as delivered) | Circuits match uniquely | Circuits match uniquely | Circuits match uniquely | Circuits match uniquely |
+| signoff LEC (positive / negative controls) | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught |
+| signoff Magic (std cells from GDS): inside SRAM / straddle / outside | 27733502 / 0 / 0 | 27733502 / 0 / 0 | 27731549 / 0 / 0 | - / - / - |
+| derived logical cells | 40926 | 40952 | 40331 | 40334 |
 <!-- /GEN-TABLE -->
 
 **Innovus** (b6 -> b7 -> b8)
@@ -524,7 +534,7 @@ Innovus b8: 48 KLayout pin stubs, the draft-deck antenna diodes, 1 dout0 buffer 
 PDN check of the flipped macros: ICC2 `check_pg_connectivity` 0 floating wires / vias / std cells / hard macros at the PDN stage and at the end; `check_pg_drc` 95 errors at the PDN stage, identical to b6 (95), 302 at the end (b6 280; the 22 extra were not analysed, ICC2-native count, the KLayout deck is 0); Innovus `PDN_SELFCHECK` PASS (one special-wire piece per PG net), n-well islands without tap 767 -> 474 after the tap fix, both identical to b6.
 The flipped pins face the channel as planned: the five I-cache SRAMs are placed MX (the cfg's FS) in both tools, bounding boxes unchanged, KLayout DRC 0 on both arms (no met4-strap versus pin conflict).
 
-**b6 vs b7 vs b8 regression check** (generated by `compare/regress_check.py` from `comparison.json`; worse = a count that rose or a WNS that fell by more than 2 ps; the hold rows of the base, own and fixed-latency iolat SDC are the I/O-latency artefact of caveat 4 and are flagged):
+**b6 vs b7 vs b8 vs b9 regression check** (generated by `compare/regress_check.py` from `comparison.json`; worse = a count that rose or a WNS that fell by more than 2 ps; the hold rows of the base, own and fixed-latency iolat SDC are the I/O-latency artefact of caveat 4 and are flagged):
 
 *ICC2 b7 vs b6*
 
@@ -556,6 +566,23 @@ The flipped pins face the channel as planned: the five I-cache SRAMs are placed 
 - judge own hold_wns (fixed / missing I/O latency, caveat 4: not a layout measure): 9 item(s); own nom_tt: -1.230087 -> -1.747214; own nom_ss: -2.23379 -> -3.068645; own nom_ff: -0.780111 -> -1.116899; own min_tt: -1.145291 -> -1.62631; own min_ss: -2.107156 -> -2.897244; own min_ff: -0.722342 -> -1.037162; own max_tt: -1.345457 -> -1.904405; own max_ss: -2.412113 -> -3.299777; own max_ff: -0.865396 -> -1.233392
 - judge own setup_viol: 1 item(s); own nom_ss: 12 -> 15
 - signoff/native  : 1 item(s); native_route_drc: 0 -> 1
+<!-- /GEN-REGRESS -->
+
+*ICC2 b9 vs b6*
+
+<!-- GEN-REGRESS icc2 b9 -->
+### icc2_b9 vs icc2_b6: 50 worse, 122 better, 142 equal (WNS tolerance 2 ps)
+
+- judge base hold_viol (fixed / missing I/O latency, caveat 4: not a layout measure): 9 item(s); base nom_tt: 556 -> 673; base nom_ss: 577 -> 689; base nom_ff: 374 -> 570; base min_tt: 544 -> 663; base min_ss: 571 -> 687; base min_ff: 325 -> 549; base max_tt: 570 -> 683; base max_ss: 586 -> 695; base max_ff: 441 -> 603
+- judge base hold_wns (fixed / missing I/O latency, caveat 4: not a layout measure): 9 item(s); base nom_tt: -1.230087 -> -1.751041; base nom_ss: -2.23379 -> -3.075947; base nom_ff: -0.780111 -> -1.11943; base min_tt: -1.145291 -> -1.630103; base min_ss: -2.107156 -> -2.904179; base min_ff: -0.722342 -> -1.03963; base max_tt: -1.345457 -> -1.908306; base max_ss: -2.412113 -> -3.307576; base max_ff: -0.865396 -> -1.235846
+- judge base setup_viol: 1 item(s); base nom_ss: 12 -> 15
+- judge iolat hold_viol (fixed / missing I/O latency, caveat 4: not a layout measure): 4 item(s); iolat nom_ss: 42 -> 168; iolat min_ss: 31 -> 136; iolat max_tt: 0 -> 1; iolat max_ss: 66 -> 200
+- judge iolat hold_wns (fixed / missing I/O latency, caveat 4: not a layout measure): 5 item(s); iolat nom_tt: 0.113885 -> 0.026959; iolat nom_ss: -0.455791 -> -1.297947; iolat min_ss: -0.329156 -> -1.126179; iolat max_tt: 0.111586 -> -0.130306; iolat max_ss: -0.634113 -> -1.529576
+- judge iolat setup_wns: 1 item(s); iolat min_ss: 0.69887 -> 0.498999
+- judge iolat_pv setup_wns: 2 item(s); iolat_pv nom_ss: 0.416538 -> 0.298971; iolat_pv min_ss: 0.714773 -> 0.498999
+- judge own hold_viol (fixed / missing I/O latency, caveat 4: not a layout measure): 9 item(s); own nom_tt: 556 -> 673; own nom_ss: 577 -> 689; own nom_ff: 374 -> 570; own min_tt: 544 -> 663; own min_ss: 571 -> 687; own min_ff: 325 -> 549; own max_tt: 570 -> 683; own max_ss: 586 -> 695; own max_ff: 441 -> 603
+- judge own hold_wns (fixed / missing I/O latency, caveat 4: not a layout measure): 9 item(s); own nom_tt: -1.230087 -> -1.751041; own nom_ss: -2.23379 -> -3.075947; own nom_ff: -0.780111 -> -1.11943; own min_tt: -1.145291 -> -1.630103; own min_ss: -2.107156 -> -2.904179; own min_ff: -0.722342 -> -1.03963; own max_tt: -1.345457 -> -1.908306; own max_ss: -2.412113 -> -3.307576; own max_ff: -0.865396 -> -1.235846
+- judge own setup_viol: 1 item(s); own nom_ss: 12 -> 15
 <!-- /GEN-REGRESS -->
 
 *Innovus b7 vs b6*
@@ -590,6 +617,12 @@ Innovus LVS keeps the b6 pin-match failure on 3 `assign` pairs (`axi_awlen_o[1]`
 b8 is better on the targets (SRAM dout0 max-cap 163 / 161 -> 0 at all 9 corners, deck antenna 1 / 2 -> 0, ICC2 ff reg-to-reg hold 10 -> 0, ICC2 per-view iolat fully clean, Innovus per-view iolat setup violators 891 -> 96, Magic 0 outside the SRAMs, KLayout 0, LVS and LEC unchanged),
 but the regression lists above are not empty on either arm (ICC2: 2 new input-port max-cap pins, +13 max-fanout, +5 max-tran at nom_tt, 1 native DRC, setup margin at nom_ss / min_ss 0.12 to 0.2 ns lower; Innovus: 24 native DRC items, own-SDC max_ss setup -0.112 vs -0.050 ns,
 max-tran +4 to +10 at four corners), so the rule is not met and b8 is not adopted. Next actions are in section 7 (items 6, 12 and 13).
+
+**Round-3 decision (2026-11-09, ICC2 b9): b6 stays final; b9 is a history arm** (`FINAL_GEN = "b6"`). Rule: no check worse than b6 apart from the measured buffer cost; the table and the *ICC2 b9 vs b6* block above are the evidence.
+Cleared against b8 (and now not worse than b6): non-dout0 max-cap pins 2 -> 0, native `check_routes` 1 -> 0 (hard 0, soft 0), max-tran nom_tt 9 -> 2 (b6 4), max_ss 722 -> 696 (b6 1073), max-fanout 177 -> 153 (b6 164), KLayout 0, deck antenna 0, LVS match, LEC 4/4 + 4/4 negative controls caught, ff hold +0.011 ns (b6 -0.027 at the per-view SDC), dout0 max-cap 0.
+Still worse than b6: (a) the fixed-latency hold rows (base / own / iolat SDC) are the caveat 4 I/O-latency artefact, not a layout measure; (b) shared-SDC nom_ss setup violators 12 -> 15; (c) per-view iolat setup margin at nom_ss / min_ss +0.417 / +0.715 -> +0.299 / +0.499 ns (all MET; the limiting path is an internal `pc -> csr mepc` reg-to-reg path, placement-driven, not a buffer path).
+(b) and (c) are not buffer cost, so the rule is not met. Whether a MET margin shift of 0.12 to 0.2 ns at ss justifies adopting b9 is a user decision (item 15); no waiver is implied. Innovus b8 keeps its own regressions (items 13, 15) and has no b9.
+Because b9 is not adopted, the Quantus cross-check, RedHawk and the Innovus own-SDC per-view latency were not re-run (item 18).
 
 ## 5. History arms (earlier commercial iterations, judge on the same chain)
 
@@ -701,17 +734,22 @@ Beads are not available on this host, so the follow-ups are tracked here.
    or Genus netlist through OpenROAD) to separate synthesis from P&R.
 10. **OpenROAD peak RSS** is not recorded. Wrap the LibreLane run in `/usr/bin/time -v` next time.
 11. Phase D (FreePDK45, ASAP7, the Sky130 SoC) and the Phase C suite back-port, per the plan.
-12. **ICC2 b8: two input-port max-cap pins** (`axi_rdata_i[16]`: 0.5741 pF against 0.5612 at nom_tt and 0.6374 against 0.3534 at max_ss; `axi_rdata_i[15]`: 0.4194 against 0.3534 at max_ss; b6 has none). A b8 ECO round 3 should
-    buffer these two port nets (insert a buffer at the port) and then re-run the judge; the same round can look at the +13 max-fanout and +5 max-tran pins at nom_tt, which are marginal.
-13. **Innovus b8: 24 Innovus-native spacing items at the flipped I-cache pins** (wire to SRAM LEF blockage, y 416.88 to 417.03 um) while KLayout is 0, and the own-SDC max_ss setup WNS -0.112 ns (b6 -0.050).
-    Next: decide whether the LEF blockage check is pessimistic (compare with the SRAM GDS obstruction) or re-route those pin stubs with a halo; re-time the two max_ss paths.
-14. **ICC2 b8: 1 native `check_routes` DRC** (met3 or above, unlocated; KLayout 0, b6 0). Next: open the error browser (`zroute.err`) in an interactive `icc2_shell` and repair or document it.
-15. **b8 margins**: ICC2 nom_ss / min_ss setup margin of the per-view run fell from +0.417 / +0.715 to +0.300 / +0.500 ns, Innovus per-view setup is still 96 violators at the three ss corners (b6 891; the item 3 decision on the ss I/O endpoints stays open).
-16. **OpenROAD B2 Magic with std cells from the GDS: NOT RUN.** The first attempt read a missing GDS and reported 0 (invalid); the second coincided with a host hang at 07:36 and a reboot at 08:26 on 2026-11-09. It was
-    re-run last and alone with `GUARD_RSS_GB=10 GUARD_MIN_GB=3` and was killed by the watchdog at container RSS 10.18 GiB after 22 min (host load 1.0, MemAvailable >= 3.7 GB, no hang); not retried. A 32 GB host, or the window method on the OpenROAD GDS, is the safe route.
-17. **Innovus `verifyConnectivity -type all` hang on the b7 / b8 databases** (> 1 h, b6: 6 s) is not understood; b7 and b8 skip it (caveat 8). Next: run it alone on the saved `07_eco` / `08b_eco` database with `-type regular` and `-limit 100` to see
-    which net it stalls on, or ask Cadence; until then connectivity rests on the special-net check and Netgen LVS.
-18. **Not re-run for b7 / b8**: RedHawk static / dynamic IR (b8 has a different placement; the PG grid is unchanged), the Quantus cross-check (section 4.8) and the Innovus own-SDC per-view latency. They are open for b8 only if b8 is adopted.
+12. **ICC2 b8 input-port max-cap, max-fanout and max-tran regressions: closed in b9 (2026-11-09), root cause was not a buffer.** `axi_rdata_i[15]` / `[16]`: the port diodes sat east of I-cache SRAM 2, the loads west of it, a 2 to 3 mm routed detour; moving the two diodes next to the loads
+    removes both max-cap pins (b9: 0 non-dout0 max-cap pins at all 9 corners) and the 7 related max-tran pins (nom_tt max-tran 9 -> 2, b6 4; max_ss 722 -> 696, b6 1073). Max-fanout 177 -> 153 (b6 164; the class is CTS leaf buffers, 153 stay). Cloning the violators was tried and rejected (hold -0.112 ns). Details: section 4.9, b9.
+13. **Innovus b8: 24 native spacing items at the flipped I-cache pins: a LEF-abstract pessimism, evidenced; own-SDC max_ss re-time NOT done.** The 24 `ParallelRunLength Spacing` markers are wires at y = 416.88 to 417.03 um against the SRAM LEF met3 OBS rectangles at SRAM-local y = 0.62 to 0.76 um (marker box y_orig 0.48 to 0.62).
+    `signoff/drclvs/scripts/lef_vs_gds_obs.py` (KLayout, run 2026-11-09, log `signoff/drclvs/reports/lef_vs_gds_obs_innovus_b8.txt`) maps every marker into SRAM-local coordinates through the DEF origin and compares with the real met3 in the SRAM GDS: **no met3 conductor exists within 0.6 um of any of the 24 markers (24 of 24)**;
+    the first real met3 in the whole cell is at y = 1.36 um (LEF OBS starts at 0.62 um), i.e. at least 0.88 um from the wire edge against a 0.30 um rule. The KLayout deck (real GDS) is 0 on the same layout. So the Innovus-native count is an artefact of an over-sized LEF OBS, not a physical spacing violation; it is
+    reported, not waived (a waiver needs a user decision). The own-SDC max_ss setup (-0.112 ns, 2 violators, b6 -0.050 / 4) is the same APB read path in both generations (`apb_paddr_i[*]` -> `apb_prdata_o_reg[*]`, a daisy chain of 8 Innovus repeaters over long wires of 0.09 to 0.2 pF each, `or2_4` 0.475 ns in ss): b6 also fails it; it is placement-driven and needs
+    an `optDesign` re-run plus a full Innovus re-verification chain (about 3 h licensed), which was judged neither cheap nor safe in this round and not done. **Open**, only relevant if an Innovus arm with the flipped floorplan is ever adopted.
+14. **ICC2 b8 native DRC = 1: located and removed in b9.** It was a soft "Min-max layer" violation (hard DRC 0), a 0.17 um li1 jumper between two abutting li1 pins; moved the antenna diode and re-routed (section 4.9). b9: hard 0, soft 0, shorts 0, opens 0.
+15. **b8 / b9 margins (decision needed from the user).** ICC2 per-view iolat setup margin at nom_ss / min_ss is +0.299 / +0.499 ns in b9 (b8 +0.300 / +0.500, b6 +0.417 / +0.715), all MET; the limiting path moved from `dcache/state_q -> id_ex rs2_data` (b6) to `ex1b_ex2 pc -> csr mepc` (b9),
+    an internal reg-to-reg path that is not a dout0 or buffer path (the worst slack through any dout0 pin improved, section 4.9 b8 diagnostics), so it is placement-driven, not buffer cost, and the adoption rule (no check worse than b6 apart from measured buffer cost) is not met. Shared-SDC nom_ss setup violators 12 -> 15 (fixed-latency SDC). Innovus per-view setup is 96 violators at the three ss corners (b6 891), the item 3 decision on the ss I/O endpoints stays open.
+    **User decision: adopt b9 despite a MET margin shift, or keep b6.** Not implied, no waiver recorded.
+16. **OpenROAD B2 Magic with std cells from the GDS: NOT RUN** (deferred to step 9, not touched in step 4 round 3). The first attempt read a missing GDS and reported 0 (invalid); the second coincided with a host hang at 07:36 and a reboot at 08:26 on 2026-11-09; the third (alone, `GUARD_RSS_GB=10 GUARD_MIN_GB=3`) was killed by the watchdog at container RSS 10.18 GiB after 22 min
+    (host load 1.0, MemAvailable >= 3.7 GB, no hang). A 32 GB host, or the window method on the OpenROAD GDS, is the safe route.
+17. **Innovus `verifyConnectivity -type all` "hang": not reproducible, diagnosed (2026-11-09).** See caveat 8: the slow call in the b7 log is `verify_connectivity -type special` (27 min once, under load), `-type all` is 4 to 14 s on every saved database (b6, b7, b8) and on a re-run of the original `06m_finish` on a private copy of the b8 database (VC 10 s, special 6 s).
+    Probe `impl/innovus/scripts/b9_vc_probe.tcl`. The b7 slowness was not reproduced on the b7 database either (4 s), so it was host or session load, not the database. The b8 skip was unnecessary; no Innovus layout changes.
+18. **Not re-run for b7 / b8 / b9**: RedHawk static / dynamic IR (b9 moves 3 diodes, re-hooks 24 clock sinks and adds 3 buffers; the PG grid is unchanged), the Quantus cross-check (section 4.8) and the Innovus own-SDC per-view latency. They are open only if a generation other than b6 is adopted.
 
 ## 8. Files
 

@@ -41,12 +41,15 @@ VARIANTS = ("own", "base", "iolat", "iolat_pv", "iolat_pvs")
 # b7 = b6 + one combined ECO pass (ff hold buffers, deck-antenna sink buffers, dcache dout0 buffers; docs/COMMERCIAL_FLOW_COMPARISON.md section 7 items 4-6).
 # ADOPT_B7 decides which generation is the FINAL arm of the comparison (the other becomes a history arm); set by the sign-off decision, never silently.
 # b8 = b6 flow on the FLIPPED I-cache floorplan (pnr/sky130/cpu/macro_placement_flipic.cfg) + the b7 ECO set with dout0 buffers on every max-cap pin (user decision 2026-11-08).
-# FINAL_GEN is the generation that is the FINAL arm of the comparison ("b6", "b7" or "b8"); the others are history arms.  Set by the sign-off decision, never silently.
+# b9 = b8 + ICC2 ECO round 3 (ICC2 only): the two input-port diodes moved next to their loads, one antenna diode moved off an abutting li1 pin pair (docs section 4.9, items 12-14).  Innovus has no b9: its b8 stays the Innovus b8.
+# FINAL_GEN is the generation that is the FINAL arm of the comparison ("b6", "b7", "b8" or "b9"); the others are history arms.  Set by the sign-off decision, never silently.
 ADOPT_B7 = False
 FINAL_GEN = "b6"
 _R6 = "final" if FINAL_GEN == "b6" else "history"
 _R7 = "final" if FINAL_GEN == "b7" else "history"
 _R8 = "final" if FINAL_GEN == "b8" else "history"
+_R9 = "final" if FINAL_GEN == "b9" else "history"
+_R8_INN = "final" if FINAL_GEN in ("b8", "b9") else "history"  # Innovus has no b9 layout: its b8 is the Innovus arm of a b9 final
 
 # arm id -> PT arm name, display name, role, synthesis, notes
 ARMS = {
@@ -92,10 +95,17 @@ ARMS = {
         synthesis="DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
         pnr="ICC2 X-2025.06-SP1, flipped I-cache floorplan (FS), b7 ECO set, dout0 buffers on every max-cap pin",
     ),
+    "icc2_b9": dict(
+        pt="icc2b9",
+        name="ICC2 b9",
+        role=_R9,
+        synthesis="DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
+        pnr="ICC2 X-2025.06-SP1, b8 + ECO round 3: 2 port diodes moved next to the loads, 1 antenna diode moved (no cells added)",
+    ),
     "innovus_b8": dict(
         pt="innovusb8",
         name="Innovus b8",
-        role=_R8,
+        role=_R8_INN,
         synthesis="Genus 23.14 v1 (tt only)",
         pnr="Innovus 23.14, flipped I-cache floorplan (MX), b7 ECO set, dout0 buffers on every max-cap pin",
     ),
@@ -151,6 +161,7 @@ SDC_FILES = {
     "own:icc2_b6": f"{COM}/constraints/sky130_cpu_icc2_b6_own_pt.sdc",
     "own:icc2_b7": f"{COM}/constraints/sky130_cpu_icc2_b7_own_pt.sdc",
     "own:icc2_b8": f"{COM}/constraints/sky130_cpu_icc2_b8_own_pt.sdc",
+    "own:icc2_b9": f"{COM}/constraints/sky130_cpu_icc2_b9_own_pt.sdc",
     "own:innovus_b8": f"{COM}/constraints/sky130_cpu_innovus_b8_own_pt.sdc",
     "own:innovus_b7": f"{COM}/constraints/sky130_cpu_innovus_b7_own_pt.sdc",
     "own:innovus_b6": f"{COM}/constraints/sky130_cpu_innovus_b6_own_pt.sdc",
@@ -907,13 +918,20 @@ def icc2_arm(b="b6"):
         note="ICC2 vectorless, func_tt",
     )
     tot, peak, srcs = 0.0, 0, []
-    stage_dirs = [f"{SNAP}/icc2_b6"] + ([d] if b != "b6" else [])  # b7 = the b6 flow + the b7 ECO / finish stages
-    for sd in stage_dirs:
-        for t in sorted(p(f"{sd}/stage_time").glob("b[67]_0*.time")):
-            if "mcmmtest" in t.name:
+    # stage-time sources per generation (dir, glob, skip-prefixes).  b6 = its own stages 01..08; b7 = b6 01..06 + b7 ECO/finish/write; b8 = a full re-run on the flipped floorplan: ITS OWN b8_0* stages
+    # (before 2026-11-10 the glob b[67]_0* silently re-used the b6 stage times for b8 = a bug, corrected here); b9 = b8 stages 01..06b + the b9 ECO (06c, 06d, 06e) / finish / write stages.
+    if b == "b6":
+        stage_srcs = [(f"{SNAP}/icc2_b6", "b6_0*.time", ())]
+    elif b == "b7":
+        stage_srcs = [(f"{SNAP}/icc2_b6", "b6_0*.time", ("b6_07", "b6_08")), (d, "b7_0*.time", ())]
+    elif b == "b8":
+        stage_srcs = [(d, "b8_0*.time", ())]
+    else:
+        stage_srcs = [(f"{SNAP}/icc2_b8", "b8_0*.time", ("b8_07", "b8_08")), (d, f"{b}_0*.time", ())]
+    for sd, pat, skip in stage_srcs:
+        for t in sorted(p(f"{sd}/stage_time").glob(pat)):
+            if "mcmmtest" in t.name or t.name.startswith(skip):
                 continue
-            if b != "b6" and sd.endswith("icc2_b6") and t.name.startswith(("b6_07", "b6_08")):
-                continue  # superseded by the b7 finish / write stages
             rel = f"{sd}/stage_time/{t.name}"
             w, rss = time_v(rel)
             tot += w
@@ -924,7 +942,7 @@ def icc2_arm(b="b6"):
         "s",
         "derived",
         srcs,
-        rule="sum of /usr/bin/time wall over stages 01..08 (excl. MCMM probe); b7: b6 stages 01..06 + b7 ECO / finish / write stages",
+        rule="sum of /usr/bin/time wall over stages 01..08 (excl. MCMM probe); b7: b6 stages 01..06 + b7 ECO / finish / write stages; b8: its own stages; b9: b8 stages 01..06b + b9 ECO / finish / write stages",
     )
     out["peak_rss"] = E(round(peak / 1048576, 2), "GB", "derived", srcs, rule="max over stages")
     out["census"] = census(f"{d}/final_cellcount.txt")
@@ -946,6 +964,10 @@ def icc2_b7():
 
 def icc2_b8():
     return icc2_arm("b8")
+
+
+def icc2_b9():
+    return icc2_arm("b9")
 
 
 def innovus_arm(b="b6"):
@@ -1203,6 +1225,7 @@ def synthesis():
         ("icc2_b7", "dc_v2"),
         ("innovus_b7", "genus_v1"),
         ("icc2_b8", "dc_v2"),
+        ("icc2_b9", "dc_v2"),
         ("innovus_b8", "genus_v1"),
         ("icc2_b5e", "dc_v1"),
     ):
@@ -1236,7 +1259,7 @@ def synthesis():
     fm = f"{COM}/signoff/lec/formality/reports/b4a2_dc_v2_vs_rtl/fm_log.txt"
     out["icc2_b6"]["synth_lec"] = lec_formality("b4a2")
     out["innovus_b6"]["synth_lec"] = lec_conformal("b4b_genus")
-    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("innovus_b8", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
+    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("icc2_b9", "icc2_b6"), ("innovus_b8", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
         for k in ("synth_runtime", "synth_peak_rss", "synth_lec"):
             out[b7][k] = out[b6][k]
     _ = fm
@@ -1434,6 +1457,8 @@ def build():
         natives["innovus_b7"] = innovus_b7()
     if p(f"{SNAP}/icc2_b8").is_dir():
         natives["icc2_b8"] = icc2_b8()
+    if p(f"{SNAP}/icc2_b9").is_dir():
+        natives["icc2_b9"] = icc2_b9()
     if p(f"{SNAP}/innovus_b8").is_dir():
         natives["innovus_b8"] = innovus_b8()
     natives.update(history())

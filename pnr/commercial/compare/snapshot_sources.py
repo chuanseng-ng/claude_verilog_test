@@ -40,7 +40,7 @@ PT_DIRS = {
     "iolat_pvs": "runs_iolat_pvs",
 }
 PV_VARIANTS = ("iolat_pv", "iolat_pvs")
-PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8"]
+PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9"]
 PT_ARMS = [
     "openroad",
     "icc2b6",
@@ -49,6 +49,7 @@ PT_ARMS = [
     "innovusb7",
     "icc2b8",
     "innovusb8",
+    "icc2b9",
     "icc2",
     "icc2b5i",
     "icc2b5m",
@@ -261,9 +262,9 @@ def drv_counts() -> None:
     """Derived: per arm and corner, the number of judge DRV violators (base SDC) by kind, split into SRAM dout0 max-cap pins and everything else.
     Source: signoff/pt/runs/<arm>_<corner>/constraint_drv.txt (PrimeTime report_constraint -all_violators), only parsed here (the full reports are large)."""
     rows = []
-    tags = os.environ.get("SNAP_TAGS", "b7 b8").split()
+    tags = os.environ.get("SNAP_TAGS", "b7 b8 b9").split()
     for arm in PT_ARMS:
-        if arm.endswith(("b7", "b8")) and arm[-2:] not in tags:
+        if arm.endswith(("b7", "b8", "b9")) and arm[-2:] not in tags:
             continue
         for c in CORNERS:
             f = COM / "signoff/pt/runs" / f"{arm}_{c}" / "constraint_drv.txt"
@@ -285,7 +286,7 @@ def drv_counts() -> None:
 
 def add_b7() -> None:
     """Add ONLY the b7 / b8 parts (PT runs of those arms, clklat, per-view tables, native reports, LEC, DRV counts) and merge their MANIFEST rows; everything else stays."""
-    tags = [t for t in os.environ.get("SNAP_TAGS", "b7 b8").split() if (COM / f"impl/icc2/runs/{t}_icc2/reports/final_qor.txt").is_file() or (COM / f"impl/innovus/runs/{t}_innovus/reports/final_area.txt").is_file()]
+    tags = [t for t in os.environ.get("SNAP_TAGS", "b7 b8 b9").split() if (COM / f"impl/icc2/runs/{t}_icc2/reports/final_qor.txt").is_file() or (COM / f"impl/innovus/runs/{t}_innovus/reports/final_area.txt").is_file()]
     arms = [a for t in tags for a in (f"icc2{t}", f"innovus{t}")]
     for var, d in PT_DIRS.items():
         for arm in arms:
