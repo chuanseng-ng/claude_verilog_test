@@ -1,21 +1,20 @@
-#================================================================
-# Load a finished Sky130 SoC (or CPU macro) LibreLane run into OpenSTA for ad-hoc post-route timing queries.
+# sta_load_sky130_soc.tcl - Load a finished Sky130 SoC or CPU-macro LibreLane run into OpenSTA for ad-hoc post-route queries
+#
+# Scope: sta -no_init -exit pnr/scripts/sta_load_sky130_soc.tcl, inside the librelane nix-shell.
+#   sta_scan_queries_sky130_soc.tcl and sta_scan_gate_paths_sky130_soc.tcl are sourced through it, and tools/dft/make_scan_analysis_sdc.py uses it.
+# Contents: reads the run netlist, the Liberty of one corner, the SPEF and the SDC, and propagates the clocks. It adds no exception: the SDC is the project's own.
+# Inputs (environment variables):
+#   STA_RUN_DIR (required): run directory.
+#   STA_CORNER: default nom_tt_025C_1v80. One of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95}.
+#   STA_VIEW: func (default) or scan. Scan sets CVT_SDC_SCAN_VIEW=1 before it sources the SDC.
+#     Then sky130_soc.sdc does not apply the gray-pointer hold exemption.
+#   STA_DESIGN: default soc_top (rv32i_cpu_top for the CPU macro).
+#   STA_SDC: default pnr/sky130/soc/constraints/sky130_soc.sdc (macro: pnr/sky130/cpu/constraints/sky130_cpu.sdc).
+#   STA_MACRO_LIBS: Tcl list of macro Liberty files for the corner. Default: the committed SoC macro views.
+#   STA_NETLIST and STA_SPEF: default to the netlist and the SPEF found in the run directory.
+#   STA_PNR: the pnr/ directory. Override it when a symlink reaches the script. PDK_ROOT: the PDK location.
+#   STA_CMDS: Tcl file sourced after the load, for reports.
 # Doc: tm:pd:scripts-sta-load-sky130-soc-tcl
-#
-#   STA_RUN_DIR   (required) run directory
-#   STA_CORNER    default nom_tt_025C_1v80 (one of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95})
-#   STA_VIEW      func (default) | scan.  scan sets CVT_SDC_SCAN_VIEW=1 before sourcing the SDC, i.e. the gray-pointer
-#                 hold exemption is NOT applied (sky130_soc.sdc, bead j41m.5).
-#   STA_DESIGN    default soc_top  (rv32i_cpu_top for the CPU macro)
-#   STA_SDC       default pnr/sky130/soc/constraints/sky130_soc.sdc (macro: pnr/sky130/cpu/constraints/sky130_cpu.sdc)
-#   STA_MACRO_LIBS  Tcl list of macro Liberty files for the corner (default: the committed SoC macro views)
-#   STA_PNR       pnr/ directory (override if the script is reached through a symlink)
-#   STA_CMDS      Tcl file sourced after the design is loaded (reports)
-#
-#   sta -no_init -exit pnr/scripts/sta_load_sky130_soc.tcl      (inside the librelane nix-shell)
-#
-# Clocks are propagated. No exceptions are added here; the SDC is the project's own.
-#================================================================
 proc env_or {n d} { return [expr {[info exists ::env($n)] && $::env($n) ne "" ? $::env($n) : $d}] }
 
 set RUN_DIR [file normalize $::env(STA_RUN_DIR)]

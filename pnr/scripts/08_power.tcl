@@ -1,22 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 8: Power Analysis
-# Tool: OpenROAD power estimation
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), Sky130 HD
-#================================================================
+# 08_power.tcl - Stage 8 of the OpenROAD flow: power analysis (OpenROAD power estimation, Sky130 HD)
 #
-# Power estimation approach:
-#   1. Static (leakage) power — from liberty data, no activity needed.
-#   2. Dynamic (switching + internal) power — from switching activity.
-#
-# Activity source priority:
-#   a. VCD file pointed to by VCD_FILE env var (from cocotb simulation)
-#   b. Default toggle rate of 0.20 (20%) applied globally
-#
-# The 20% toggle rate is conservative for a running pipeline; it errs
-# on the side of overestimating dynamic power, which is safe for
-# thermal and IR-drop budgeting.
-#================================================================
+# Scope: make target power runs it from pnr/Makefile.
+# Contents: estimates static leakage power from the Liberty data and dynamic power from switching activity.
+# Inputs: environment variables TOP_MODULE and SDC_FILE. SKY130_ROOT overrides the PDK location. VCD_FILE (optional) points at a VCD file from a cocotb simulation.
+# User rules: The activity comes from the VCD_FILE file when set. Otherwise a default toggle rate of 0.20 applies globally. That rate is conservative for a running pipeline and overestimates dynamic power, which is safe for thermal and IR-drop budgeting.
+# Doc: tm:pd:scripts-08-power-tcl
 
 #----------------------------------------------------------------
 # Configuration

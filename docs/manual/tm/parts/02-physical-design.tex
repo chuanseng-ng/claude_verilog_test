@@ -6518,6 +6518,25 @@ Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
 
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+ALL TIME VALUES ARE PICOSECONDS. ASAP7 Liberty declares time_unit : "1ps",
+while config.json's CLOCK_PERIOD is in ns (0.705 ns = 705 ps). Getting this
+wrong silently constrains the design ~1000x loose (bead: ASAP7 SDC units).
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Deliberately minimal: the template SDC is 300 lines of CPU-specific AXI/APB/
+SRAM/ICG constraints whose get_ports/get_pins references do not exist here.
+
+set_input_delay/set_output_delay are 0 so the FULL period is available to the
+logic. That makes the I/O-bounded paths directly comparable between the
+hand-RTL and HLS arms, which is the whole point of this comparison.
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{asap7/coalescer\_rtl/constraints/asap7.sdc}}\label{tm:pd:asap7-coalescer-rtl-sdc}
@@ -6531,6 +6550,25 @@ This section holds comment text that was in the source file. The text is unchang
 \begin{textblock}
 Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
 
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+ALL TIME VALUES ARE PICOSECONDS. ASAP7 Liberty declares time_unit : "1ps",
+while config.json's CLOCK_PERIOD is in ns (0.705 ns = 705 ps). Getting this
+wrong silently constrains the design ~1000x loose (bead: ASAP7 SDC units).
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Deliberately minimal: the template SDC is 300 lines of CPU-specific AXI/APB/
+SRAM/ICG constraints whose get_ports/get_pins references do not exist here.
+
+set_input_delay/set_output_delay are 0 so the FULL period is available to the
+logic. That makes the I/O-bounded paths directly comparable between the
+hand-RTL and HLS arms, which is the whole point of this comparison.
 \end{textblock}
 
 \end{relocated}
@@ -6632,6 +6670,78 @@ Cell hierarchy (confirmed from Run-36 netlist, 10 instances):
 ##############################################################################
 \end{textblock}
 
+\subsection*{Trailing comment of: set\_clock\_uncertainty -setup 15 [get\_clocks clk]}
+
+\begin{textblock}
+Run 39: 20→15 ps; ASAP7 jitter ~10 ps, 15 defensible midpoint
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+asap7.sdc — Timing constraints for rv32i_cpu_top on ASAP7 7nm predictive
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+IMPORTANT: All time values are in PICOSECONDS.
+The ASAP7 stdcell Liberty declares  time_unit : "1ps".
+OpenROAD reads create_clock -period raw against the Liberty time unit, so
+the period and all IO delays must be expressed in ps, not ns.
+
+Target:  1282 MHz (780 ps period) — relaxed from 1418 MHz for flat M7 CSR-revert closure
+Fallback: 1408 MHz (710 ps period)
+
+ASAP7 timing characteristics (asap7sc7p5t_SIMPLE RVT TT 0.7V 25C):
+  INV delay:      ~15 ps
+  FF setup:       ~20 ps
+  FF hold:        ~10 ps
+  Clock jitter:   ~10 ps
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: set\_clock\_uncertainty -setup 15 [get\_clocks clk]}
+
+\begin{textblock}
+Previous: create_clock -name clk -period 705 [get_ports clk_i]  ;# flat M7 CSR-revert WNS -89 ps at 705 ps
+Fallback: create_clock -name clk -period 710 [get_ports clk_i]  ;# Run 42 closed at 710 ps with +9.08 ps slack (CTS clustering 8/10)
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay  -max 150 -clock clk [get\_ports axi\_arre...}
+
+\begin{textblock}
+IO delay budget: fixed 150 ps (≈ 20.8% of 720 ps period; not scaled to avoid exposing new AXI violations)
+\end{textblock}
+
+\subsection*{Before: set\_max\_area       0}
+
+\begin{textblock}
+set_max_transition handled via MAX_TRANSITION_CONSTRAINT in config.json (25ps for ASAP7 1ps time_unit)
+\end{textblock}
+
+\subsection*{Before: set\_false\_path -hold -from [get\_cells -hierarchical \{*ex...}
+
+\begin{textblock}
+##############################################################################
+11. Run 18: EX1a→EX1b short-path hold false-path
+Run 17 introduced a 1-path hold violation (-13.8 ps) on the short path
+through the ex1a_ex1b_reg_q register (1 gate: AOI211) to the EX1b logic.
+Suppress hold check for all paths launching from this register bank so
+that the single-gate path cannot violate the hold margin.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: set\_false\_path -hold -from [get\_clocks clk] -to [get\_clo...}
+
+\begin{textblock}
+Suppress hold on all clk→gclk_sram paths: SRAM clk0 rises ~146 ps after
+the launch FF's clock edge, making short combinational paths fail hold.
+This is a structural guarantee (gated clock never leads the source clock),
+not a timing exception — same rationale as the din0/addr0/csb0 false paths.
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}}\label{tm:pd:asap7-gpu-sdc}
@@ -6654,6 +6764,31 @@ This section holds comment text that was in the source file. The text is unchang
 ##############################################################################
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+asap7_gpu.sdc — Timing constraints for gpu_top on ASAP7 7nm predictive
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+IMPORTANT: All time values are in PICOSECONDS (ASAP7 stdcell Liberty declares
+time_unit : "1ps"; OpenROAD reads create_clock -period raw against that unit).
+This mirrors pnr/asap7/constraints/asap7.sdc — do NOT write ns values here.
+
+The GPU shared-memory banks are SRAM macros (sram_1rw_128x32_asap7) clocked
+directly by clk — no ICG, so no generated clock is needed.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: set \_in\_timed \{\}}
+
+\begin{textblock}
+3. IO delays (≈20% of 2000 ps period on timed ports)
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{asap7/hazard\_hls/constraints/asap7.sdc}}\label{tm:pd:asap7-hazard-hls-sdc}
@@ -6669,6 +6804,25 @@ Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
 
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+ALL TIME VALUES ARE PICOSECONDS. ASAP7 Liberty declares time_unit : "1ps",
+while config.json's CLOCK_PERIOD is in ns (0.705 ns = 705 ps). Getting this
+wrong silently constrains the design ~1000x loose (bead: ASAP7 SDC units).
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Deliberately minimal: the template SDC is 300 lines of CPU-specific AXI/APB/
+SRAM/ICG constraints whose get_ports/get_pins references do not exist here.
+
+set_input_delay/set_output_delay are 0 so the FULL period is available to the
+logic. That makes the I/O-bounded paths directly comparable between the
+hand-RTL and HLS arms, which is the whole point of this comparison.
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{asap7/hazard\_rtl/constraints/asap7.sdc}}\label{tm:pd:asap7-hazard-rtl-sdc}
@@ -6682,6 +6836,27 @@ This section holds comment text that was in the source file. The text is unchang
 \begin{textblock}
 Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
 
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+ALL TIME VALUES ARE PICOSECONDS (ASAP7 Liberty time_unit : "1ps").
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+rv32i_hazard_unit is PURELY COMBINATIONAL: no clock port, no reset, no
+registers, therefore ZERO register-to-register paths. report_clock_min_period
+is meaningless for it and "fmax" is undefined.
+
+So it is timed against a VIRTUAL clock with a zero I/O budget: the entire 705 ps
+is available to the combinational cone, and the reported setup slack gives the
+input-to-output path delay directly as (705 - slack) ps. That delay -- not an
+fmax -- is this block's primary number, and it is compared against the HLS arm
+on throughput (its period x 6-9 cycles). Same zero I/O budget as the clocked
+arms so the two are measured on the same basis.
 \end{textblock}
 
 \end{relocated}
@@ -6735,6 +6910,50 @@ scan_in / scan_out delays) is a Stage 2 deliverable and does not exist yet. Guar
 
    Two-cycle multicycle on AXI crossbar → macro INPUT interface paths (real).
 ##############################################################################
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+phase5_soc.sdc — Timing constraints for soc_top on ASAP7 7nm predictive
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+IMPORTANT: All time values are in PICOSECONDS.
+ASAP7 stdcell Liberty declares time_unit: "1ps".
+LibreLane passes CLOCK_PERIOD (ns) to create_clock internally; this SDC is
+loaded raw by OpenROAD/OpenSTA which interprets values against the 1 ps unit.
+
+Clock topology (single-clock SoC, sv2v synthesis):
+  clk_i     = top-level clock input port.  CTS root.
+  core_clk  = PLL stub output net (BUFx2 passthrough, divide-1).
+              After sv2v + Yosys flatten, the PLL stub BUFx2 drives core_clk
+              at the top level.  CTS traces through this buffer so all FFs
+              (driven by core_clk) are balanced against each other.
+
+SoC fmax target: 571 MHz (GPU-governed), period = 1750 ps.
+CPU signed-off at 1282 MHz standalone; GPU at 571 MHz standalone.
+##############################################################################
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+1. Primary clock — clk_i port, 1750 ps (571 MHz)
+\end{textblock}
+
+\subsection*{Before: set \_in\_timed \{\}}
+
+\begin{textblock}
+4. SoC I/O delays — timed ports only.
+   Run-13 lesson: set_input_delay -max 350 ps (20% of 1750 ps) on AXI
+   RDATA bus pins feeds the STA with an 350 ps input pessimism on all
+   register→macro paths, making them appear to violate even with the 2-cycle
+   multicycle.  Reduce to 175 ps (10%) for a realistic inter-block budget.
+   Exclude clock, reset, observability and async pins.
 \end{textblock}
 
 \end{relocated}
@@ -6900,6 +7119,48 @@ scan_in / scan_out delays) is a Stage 2 deliverable and does not exist yet. Guar
 ##############################################################################
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+Canonical source: pnr/constraints/phase5_soc_multiclock.sdc
+This copy exists only so PNR_SDC_FILE/SIGNOFF_SDC_FILE/FALLBACK_SDC_FILE's
+"dir::constraints/..." resolution (relative to pnr/asap7/soc/) finds it,
+matching how phase5_soc.sdc is consumed by the single-clock run-14 config.
+Edit the canonical file above and re-copy; do not hand-edit this copy.
+##############################################################################
+
+phase5_soc_multiclock.sdc — 2-domain IMPLEMENTATION constraints for soc_top
+(synthesis / P&R). Post-route CDC budget verification lives in the
+COMPANION file phase5_soc_multiclock_check.sdc — see the section 11-13
+note below for why the split exists (bead claude_verilog_test-k07).
+IMPORTANT: all time values are in PICOSECONDS (ASAP7 stdcell Liberty
+declares time_unit: "1ps" — see pnr/asap7/soc/constraints/phase5_soc.sdc
+and pnr/asap7/cpu/constraints/asap7.sdc headers for the historical Run
+7-32 units bug this project already paid for once; do not repeat it here).
+Clock topology (2-domain SoC, sv2v synthesis, GH #92/#93):
+  clk_i      = fabric-domain top-level reference input. CTS root for sys_clk.
+  core_clk   = PLL stub output net (BUFx2 passthrough, divide-1) — feeds
+               GPU, crossbar, DMA, SRAM, all peripherals, and the PMU.
+  cpu_clk_i  = SECOND, INDEPENDENT top-level reference input (GH #92) — its
+               own PLL stub (u_cpu_pll_sub) is NOT derived from clk_i.
+  cpu_core_clk = u_cpu_pll_sub's PLL-stub output net (BUFx2 passthrough,
+               divide-1) — feeds u_cpu_cg (rv32i_clock_gate), whose output
+               cpu_gated_clk feeds u_cpu (the CPU hard macro) and
+               u_cpu_axi_cdc's s_* (CPU-domain) face.
+\end{textblock}
+
+\subsection*{Before: puts "INFO: No generated clock for core\_clk — CTS traces...}
+
+\begin{textblock}
+##############################################################################
+2. core_clk / cpu_core_clk — generated from clk_i / cpu_clk_i through their
+   respective PLL-stub BUFx2 cells. Run-13 lesson (see header): do NOT
+   create_generated_clock for either. CTS traces through both BUFx2 cells
+   automatically (CLOCK_NET config per domain) so macro and std-cell sinks
+   on each side land on one balanced tree.
+##############################################################################
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{asap7/template/constraints/asap7.sdc}}\label{tm:pd:asap7-template-sdc}
@@ -6963,6 +7224,77 @@ Cell hierarchy (confirmed from Run-36 netlist, 10 instances):
 ##############################################################################
 \end{textblock}
 
+\subsection*{Trailing comment of: set\_clock\_uncertainty -setup 15 [get\_clocks clk]}
+
+\begin{textblock}
+Run 39: 20→15 ps; ASAP7 jitter ~10 ps, 15 defensible midpoint
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+asap7.sdc — Timing constraints for rv32i_cpu_top on ASAP7 7nm predictive
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+IMPORTANT: All time values are in PICOSECONDS.
+The ASAP7 stdcell Liberty declares  time_unit : "1ps".
+OpenROAD reads create_clock -period raw against the Liberty time unit, so
+the period and all IO delays must be expressed in ps, not ns.
+
+Target:  1408 MHz (710 ps period)
+Fallback: 1389 MHz (720 ps period)
+
+ASAP7 timing characteristics (asap7sc7p5t_SIMPLE RVT TT 0.7V 25C):
+  INV delay:      ~15 ps
+  FF setup:       ~20 ps
+  FF hold:        ~10 ps
+  Clock jitter:   ~10 ps
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: set\_clock\_uncertainty -setup 15 [get\_clocks clk]}
+
+\begin{textblock}
+Fallback: create_clock -name clk -period 710 [get_ports clk_i]  ;# Run 42 closed at 710 ps with +9.08 ps slack (CTS clustering 8/10)
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay  -max 150 -clock clk [get\_ports axi\_arre...}
+
+\begin{textblock}
+IO delay budget: fixed 150 ps (≈ 20.8% of 720 ps period; not scaled to avoid exposing new AXI violations)
+\end{textblock}
+
+\subsection*{Before: set\_max\_area       0}
+
+\begin{textblock}
+set_max_transition handled via MAX_TRANSITION_CONSTRAINT in config.json (25ps for ASAP7 1ps time_unit)
+\end{textblock}
+
+\subsection*{Before: set\_false\_path -hold -from [get\_cells -hierarchical \{*ex...}
+
+\begin{textblock}
+##############################################################################
+11. Run 18: EX1a→EX1b short-path hold false-path
+Run 17 introduced a 1-path hold violation (-13.8 ps) on the short path
+through the ex1a_ex1b_reg_q register (1 gate: AOI211) to the EX1b logic.
+Suppress hold check for all paths launching from this register bank so
+that the single-gate path cannot violate the hold margin.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: set\_false\_path -hold -from [get\_clocks clk] -to [get\_clo...}
+
+\begin{textblock}
+Suppress hold on all clk→gclk_sram paths: SRAM clk0 rises ~146 ps after
+the launch FF's clock edge, making short combinational paths fail hold.
+This is a structural guarantee (gated clock never leads the source clock),
+not a timing exception — same rationale as the din0/addr0/csb0 false paths.
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{asap7/valu\_hls/constraints/asap7.sdc}}\label{tm:pd:asap7-valu-hls-sdc}
@@ -6976,6 +7308,25 @@ This section holds comment text that was in the source file. The text is unchang
 \begin{textblock}
 Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
 
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+ALL TIME VALUES ARE PICOSECONDS. ASAP7 Liberty declares time_unit : "1ps",
+while config.json's CLOCK_PERIOD is in ns (0.705 ns = 705 ps). Getting this
+wrong silently constrains the design ~1000x loose (bead: ASAP7 SDC units).
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Deliberately minimal: the template SDC is 300 lines of CPU-specific AXI/APB/
+SRAM/ICG constraints whose get_ports/get_pins references do not exist here.
+
+set_input_delay/set_output_delay are 0 so the FULL period is available to the
+logic. That makes the I/O-bounded paths directly comparable between the
+hand-RTL and HLS arms, which is the whole point of this comparison.
 \end{textblock}
 
 \end{relocated}
@@ -6994,6 +7345,32 @@ follow-up (bead egt): the sdc_longclk combinational-candidate arm.
 
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+Byte-identical to ../../valu_hls/constraints/asap7.sdc on purpose — same
+clock port, same 705 ps period, same I/O delays — so this comparison is
+apples-to-apples against both the hand-RTL and the baseline HLS arm. The
+generated netlist itself has zero registers (Bambu --speculative-sdc-
+scheduling --clock-period=100), so this SDC's clock is a virtual/reporting
+clock for STAPrePNR, not a constraint the datapath was scheduled against.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+ALL TIME VALUES ARE PICOSECONDS. ASAP7 Liberty declares time_unit : "1ps",
+while config.json's CLOCK_PERIOD is in ns (0.705 ns = 705 ps). Getting this
+wrong silently constrains the design ~1000x loose (bead: ASAP7 SDC units).
+
+Deliberately minimal: the template SDC is 300 lines of CPU-specific AXI/APB/
+SRAM/ICG constraints whose get_ports/get_pins references do not exist here.
+
+set_input_delay/set_output_delay are 0 so the FULL period is available to the
+logic. That makes the I/O-bounded paths directly comparable between the
+hand-RTL and HLS arms, which is the whole point of this comparison.
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{asap7/valu\_rtl/constraints/asap7.sdc}}\label{tm:pd:asap7-valu-rtl-sdc}
@@ -7007,6 +7384,186 @@ This section holds comment text that was in the source file. The text is unchang
 \begin{textblock}
 Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
 
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+ALL TIME VALUES ARE PICOSECONDS (ASAP7 Liberty time_unit : "1ps").
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+vector_alu is PURELY COMBINATIONAL: no clock port, no reset, no
+registers, therefore ZERO register-to-register paths. report_clock_min_period
+is meaningless for it and "fmax" is undefined.
+
+So it is timed against a VIRTUAL clock with a zero I/O budget: the entire 705 ps
+is available to the combinational cone, and the reported setup slack gives the
+input-to-output path delay directly as (705 - slack) ps. That delay -- not an
+fmax -- is this block's primary number, and it is compared against the HLS arm
+on throughput (its period x cycle count). Same zero I/O budget as the clocked
+arms so the two are measured on the same basis.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{constraints/phase1\_cpu.sdc}}\label{tm:pd:phase1-cpu-sdc}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/constraints/phase1_cpu.sdc}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=============================================
+Phase 1: Single-cycle RV32I CPU
+Target: 100 MHz (10ns period)
+File: phase1_cpu.sdc
+=============================================
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay -clock clk -max 2.0 [get\_ports axi\_*read...}
+
+\begin{textblock}
+Assume external memory controller with 2ns setup, 0.5ns hold
+\end{textblock}
+
+\subsection*{Before: set\_load 0.05 [all\_outputs]}
+
+\begin{textblock}
+Output load (assume 50fF capacitance)
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{constraints/phase1\_cpu\_enhanced.sdc}}\label{tm:pd:phase1-cpu-enhanced-sdc}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/constraints/phase1_cpu_enhanced.sdc}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=============================================
+Phase 1: Single-cycle RV32I CPU - Enhanced SDC
+Target: 100 MHz (10ns period)
+File: phase1_cpu_enhanced.sdc
+Description: Comprehensive timing constraints with full port coverage
+=============================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Doc: cr:pd:phase1-cpu-enhanced-sdc
+Create primary clock (100 MHz target)
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay -clock clk -max 2.0 [get\_ports axi\_arrea...}
+
+\begin{textblock}
+Setup requirement: 2ns, Hold requirement: 0.5ns
+\end{textblock}
+
+\subsection*{Before: set\_output\_delay -clock clk -max 2.0 [get\_ports axi\_awad...}
+
+\begin{textblock}
+Assume external memory has 2ns setup requirement
+\end{textblock}
+
+\subsection*{Before: set\_load 0.05 [all\_outputs]}
+
+\begin{textblock}
+Output load capacitance (assume 50fF external load)
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{constraints/phase1\_cpu\_post\_cts.sdc}}\label{tm:pd:phase1-cpu-post-cts-sdc}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/constraints/phase1_cpu_post_cts.sdc}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=============================================
+Phase 1: Single-cycle RV32I CPU - Post-CTS SDC
+Target: 100 MHz (10ns period)
+File: phase1_cpu_post_cts.sdc
+Description: Updated constraints after clock tree synthesis
+=============================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Doc: cr:pd:phase1-cpu-post-cts-sdc
+Create primary clock (100 MHz)
+\end{textblock}
+
+\subsection*{End of file}
+
+\begin{textblock}
+Target: < 100ps between any two flops
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{constraints/phase2\_cpu.sdc}}\label{tm:pd:phase2-cpu-sdc}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/constraints/phase2_cpu.sdc}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=============================================
+Phase 2: 5-stage Pipelined RV32I CPU
+Target: 100 MHz (10ns period)
+File: phase2_cpu.sdc
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Architecture: IF -> ID -> EX -> MEM -> WB
+New in Phase 2: interrupt inputs (ext_irq_i, timer_irq_i),
+                per-port _i/_o suffix naming convention
+=============================================
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay -clock clk\_i -max 2.0 [get\_ports axi\_awr...}
+
+\begin{textblock}
+Assume 2ns max setup relative to clk_i, 0.5ns min hold.
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay -clock clk\_i -max 3.0 [get\_ports apb\_pad...}
+
+\begin{textblock}
+APB is less timing-critical than AXI; 3ns max allowed.
+\end{textblock}
+
+\subsection*{Before: set\_load 0.05 [all\_outputs]}
+
+\begin{textblock}
+The 5-stage pipeline has all register-to-register paths within a single
+clock period. The longest combinational path is through the EX stage
+(forwarding mux -> ALU -> branch comparator -> redirect target), estimated
+at ~6ns, well within the 10ns budget minus 2ns I/O margin = 8ns logic budget.
+\end{textblock}
+
+\subsection*{Before: set\_load 0.05 [all\_outputs]}
+
+\begin{textblock}
+Output load (assume 50fF parasitic capacitance on board-level traces)
 \end{textblock}
 
 \end{relocated}
@@ -7029,6 +7586,148 @@ Power modes:
 Control signal: dbg_halted (net at rv32i_cpu_top scope)
   Driven by u_core output, sampled by PD_TOP logic.
   PSW_CORE turns off VDD_CORE when dbg_halted=1, on when dbg_halted=0.
+\end{textblock}
+
+\subsection*{Before: set\_isolation ISO\_CORE\_TO\_TOP \textbackslash{}}
+
+\begin{textblock}
+When PD_CORE is off (SLEEP mode), all signals driven from u_core into
+PD_TOP logic must be clamped to safe values to prevent X-propagation
+and spurious APB reads.
+
+Clamp to 0:
+  - commit_valid_o  → 0 (no spurious commits observed by testbench)
+  - commit_pc_o     → 0
+  - commit_insn_o   → 0
+  - trap_taken_o    → 0 (no phantom traps)
+  - trap_cause_o    → 0
+  - debug_*_o       → 0 (no phantom debug events)
+  - axi_arvalid_o   → 0 (no spurious AXI read requests)
+  - axi_awvalid_o   → 0 (no spurious AXI write requests)
+  - axi_wvalid_o    → 0
+  - dbg_halted      → held high by separate isolation (see below)
+
+The isolation cells are inserted in the PD_TOP (parent) domain so they
+are powered even when PD_CORE is off.
+\end{textblock}
+
+\subsection*{Before: set\_retention RET\_CORE\_CSR \textbackslash{}}
+
+\begin{textblock}
+When PD_CORE enters SLEEP, the following architectural state must be
+preserved across the power-gate cycle to ensure correct CPU resume:
+
+  MTVEC   — interrupt/trap vector base address
+  MSTATUS — machine status (global interrupt enable bit MIE, MPIE for MRET)
+  MIE     — per-source interrupt enable mask
+  MEPC    — exception program counter (for MRET after ISR)
+  MCAUSE  — latched by u_core for debug readback only; not strictly
+            needed for correctness but cheap to retain
+
+The save/restore is triggered by dbg_halted (save on rising edge,
+restore on falling edge), which is the power-gate control signal.
+In practice, the PMU should issue save BEFORE the switch opens and
+restore AFTER the switch closes; using the halt signal as a proxy is
+a conservative first approximation.
+\end{textblock}
+
+\subsection*{Before: add\_power\_state PD\_TOP \textbackslash{}}
+
+\begin{textblock}
+Optional: retain the entire u_core register state (pipeline registers +
+register file) to enable transparent resume without re-fetching.
+This maximises area overhead; comment out if deep-sleep power saving
+justifies discarding pipeline state (requiring an IF-stage refill on wake).
+
+set_retention RET_CORE_FULL \
+    -domain          PD_CORE \
+    -elements        {u_core} \
+    -retention_power_net  VDD \
+    -retention_ground_net VSS \
+    -save_signal     {dbg_halted 1} \
+    -restore_signal  {dbg_halted 0}
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{constraints/phase3\_cache.sdc}}\label{tm:pd:phase3-cache-sdc}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/constraints/phase3_cache.sdc}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=============================================
+Phase 3: RV32I CPU + L1 I-Cache + L1 D-Cache
+Target: 75 MHz (13.333 ns period) — Sky130 130nm, SRAM-based caches
+File: phase3_cache.sdc
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Extends phase2_cpu.sdc with:
+  - SRAM-to-logic multicycle paths (cache array read completes in 1 cycle
+    but the behavioural model has no explicit setup within the same cycle;
+    declare conservative 1-cycle constraint, tighten once SRAM macros are
+    characterised).
+  - No new external ports (the cache is entirely internal to rv32i_core;
+    all external I/O ports remain identical to Phase 2).
+
+Architecture:
+  5-stage pipeline (IF→ID→EX→MEM→WB)
+  I-Cache: 4 KB direct-mapped (rv32i_icache instance u_icache)
+  D-Cache: 4 KB write-back/write-allocate (rv32i_dcache instance u_dcache)
+  Cache arbiter: single AXI4-Lite port, D$ priority (rv32i_cache_arbiter)
+=============================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Primary clock — 75 MHz = 13.333 ns period
+\end{textblock}
+
+\subsection*{Before: set\_clock\_uncertainty 0.5 [get\_clocks clk\_i]}
+
+\begin{textblock}
+Clock uncertainty — tightened to 0.3 ns (post-CTS; measured worst skew ~0.5 ns)
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay -clock clk\_i -max 2.0 [get\_ports axi\_awr...}
+
+\begin{textblock}
+the L2/DRAM controller.  Use 2 ns setup margin (generous at 75 MHz).
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay -clock clk\_i -max 3.5 [get\_ports apb\_pad...}
+
+\begin{textblock}
+APB is non-critical; 3.5 ns max allowed at 75 MHz.
+\end{textblock}
+
+\subsection*{Before: group\_path -name PIPELINE -from [get\_clocks clk\_i] -to [...}
+
+\begin{textblock}
+Multicycle Paths — Cache SRAM arrays
+---------------------------------------------
+
+RTL fix applied: CS_SRAM_LATCH pipeline register stage added to both
+rv32i_icache and rv32i_dcache (see rv32i_cache_pkg.sv CS_SRAM_LATCH=3'b101).
+
+The SRAM dout buses are registered into tag_dout_r / data_dout_r FFs at
+posedge N+1 (CS_SRAM_LATCH).  CS_TAG_CHECK at posedge N+2 sources all
+combinational logic from those registered values.
+
+Resulting STA paths:
+  negedge N  →  tag_dout_r FF (posedge N+1) : wire-only path, ~1.3 ns TT.
+    Fits comfortably in the 6.67 ns half-period window.
+  tag_dout_r (posedge N+1)  →  state_q FF (posedge N+2) : full-period path.
+    13.33 ns budget.  All 847 previously failing TT violations eliminated.
+
+No set_multicycle_path constraints are needed or correct here.
 \end{textblock}
 
 \end{relocated}
@@ -7123,6 +7822,34 @@ SoC period = 1750 ps governs all blocks.
 ##############################################################################
 \end{textblock}
 
+\subsection*{Before: set \_pll\_buf\_pin [get\_pins -hierarchical -filter "full\_n...}
+
+\begin{textblock}
+2. PLL stub generated clock — core_clk
+
+pll_clkgen_stub synthesizes to a single BUFx2_ASAP7_75t_R cell (_1_) that
+passes ref_clk_i straight through to out_clk_o.  The out_clk_o port of the
+parameterised pll_clkgen module connects to the SoC-level "core_clk" net,
+which clocks all sub-blocks (CPU/GPU macros, crossbar, peripherals).
+
+The generated-clock target must be the driver pin of the core_clk net so
+that OpenROAD CTS builds the clock tree from that point.  Three strategies
+are tried in order of specificity; the first that resolves a non-empty
+collection wins (if all fail, fall back to creating core_clk directly at
+the clk_i port so that STA still sees a constrained core_clk domain):
+
+  S1: Output pin of the BUFx2 inside the PLL stub hierarchy (post-synth name)
+  S2: Any pin hierarchically below u_pll that drives a net named core_clk
+  S3: The core_clk net itself (OpenROAD supports create_clock on a net)
+  S4: Fallback — clone clk_i as core_clk at the port level
+\end{textblock}
+
+\subsection*{Before: set \_in\_timed \{\}}
+
+\begin{textblock}
+4. SoC I/O delays (≈20% of 1750 ps = 350 ps on timed ports)
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{constraints/phase5\_soc.upf}}\label{tm:pd:phase5-soc-upf}
@@ -7213,6 +7940,87 @@ seen active (DOM_PU_ISO symmetrically waits for it to be seen released).  The
 step order above is unchanged; only the wait between steps is now event-based.
 The GPU needs none (same clock, the clamp control is the PMU flop itself).
 ##############################################################################
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Purpose: input for UPF-aware test tools.  This file describes the power
+architecture soc_top is DESIGNED for; the behavioural PMU (rtl/soc/pmu.sv)
+sequences it with clock gates, resets and functional clamps, but no power
+switch exists in the RTL (see section 4).  Its references are machine-checked
+against the elaborated RTL by tools/verif/check_upf.py (CI: qa-checks.yml);
+bead h3lm records the audit that rewrote it.  Nothing in the physical flow
+reads it today (pnr/Makefile UPF_FILE points at phase3_cache.upf, unused).
+
+Domains (4, as before; all on one nominal voltage, 0.7 V ASAP7 RVT):
+
+  PD_CPU    u_cpu     rv32i_cpu_top hard macro incl. L1 caches   switchable rail VDD_CPU
+  PD_GPU    u_gpu     gpu_top                                    switchable rail VDD_GPU
+  PD_SRAM   u_sram    sram_controller + SRAM                     always-on  (VDD)
+  PD_PERIPH everything else in soc_top, incl. the top-level glue always-on  (VDD)
+
+PD_PERIPH membership is EXPLICIT via the roster below: the checker fails if
+a top-level instance is added or removed without updating it.  Why each must
+stay powered while PD_CPU / PD_GPU are off:
+
+\end{textblock}
+
+\subsection*{Before: set\_isolation ISO\_CPU \textbackslash{}}
+
+\begin{textblock}
+##############################################################################
+4. Power switches: intentionally NONE
+
+rtl/soc/pmu.sv (header, "This module deliberately does NOT emit
+cpu_pg_ctrl/gpu_pg_ctrl") has no power-switch control output, and no
+soc_top net can drive one.  The old PSW_CPU / PSW_GPU controlled ports that
+did not exist.  Rather than invent a control net, the switches are omitted
+and the rails are supply ports (section 1).  When a real switch lands, the
+shape is:
+
+  create_power_switch PSW_CPU -domain PD_CPU \
+      -input_supply_port {vin VDD} -output_supply_port {vout VDD_CPU} \
+      -control_port {sleep_n <pmu switch net>} \
+      -on_state {on vin {sleep_n}} -off_state {off {!sleep_n}}
+
+with VDD_CPU's supply port and port state replaced by a supply net driven by
+the switch.  Ordering to honour then (IEEE 1801): save, isolate, [reset],
+switch off; switch on, [reset release], restore, release isolation.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: create\_power\_state\_group SOC\_PST}
+
+\begin{textblock}
+System states.  Names and the 2-bit encodings are pmu.sv's CTRL[1:0]
+(MODE_NORMAL/CPU_OFF/GPU_OFF/IDLE); u_pmu/pmu_mode_req is the REQUESTED mode,
+so a state is the settled condition (the PMU walks 4 actions per direction,
+one per cycle, and those transient cycles belong to no named state).
+Each functional state also requires scan_mode_i == 1'b0 so it is exclusive
+with SCAN.  The checker compares names, encodings and per-mode rail state
+with pmu.sv.
+
+SCAN is the test-mode override: scan_mode_i = 1 with every rail ON, whatever
+the PMU holds.  What the RTL actually does under scan_mode_i (confirmed in
+soc_top.sv / dft_ctrl_ports.sv, and checked):
+  - clock gates:  FORCED OPEN.  dft_ctrl_ports assigns test_en_o = scan_mode_i
+                  and u_cpu_cg / u_gpu_cg take it on test_en (rv32i_clock_gate
+                  latches en | test_en).  Matches this state.
+  - resets:       forced to the scan reset (dft_rst_mux / cdc_reset_sync output
+                  muxes / pll_subsystem u_core_rm).  Matches.
+  - the PMU:      NOT overridden.  Its mode register and FSM are ordinary flops
+                  on the scan chain, so pmu_*_iso_en follows whatever state is
+                  shifted in.  MISMATCH with "all domains ON": the ISO clamps
+                  are not qualified by scan_mode_i, so under scan a clamp can
+                  be active.  Documented, not changed (bead-worthy, see
+                  Doc: ds:ch:upf-power-spec "Phase 5").
 \end{textblock}
 
 \end{relocated}
@@ -7376,6 +8184,43 @@ scan_in / scan_out delays) is a Stage 2 deliverable and does not exist yet. Guar
     on this interface, that is real information the multicycle used to
     hide — do not silently reintroduce the relaxation without checking
     Liberty-vs-Liberty margin at 780 ps first.
+##############################################################################
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+phase5_soc_multiclock.sdc — 2-domain IMPLEMENTATION constraints for soc_top
+(synthesis / P&R). Post-route CDC budget verification lives in the
+COMPANION file phase5_soc_multiclock_check.sdc — see the section 11-13
+note below for why the split exists (bead claude_verilog_test-k07).
+IMPORTANT: all time values are in PICOSECONDS (ASAP7 stdcell Liberty
+declares time_unit: "1ps" — see pnr/asap7/soc/constraints/phase5_soc.sdc
+and pnr/asap7/cpu/constraints/asap7.sdc headers for the historical Run
+7-32 units bug this project already paid for once; do not repeat it here).
+Clock topology (2-domain SoC, sv2v synthesis, GH #92/#93):
+  clk_i      = fabric-domain top-level reference input. CTS root for sys_clk.
+  core_clk   = PLL stub output net (BUFx2 passthrough, divide-1) — feeds
+               GPU, crossbar, DMA, SRAM, all peripherals, and the PMU.
+  cpu_clk_i  = SECOND, INDEPENDENT top-level reference input (GH #92) — its
+               own PLL stub (u_cpu_pll_sub) is NOT derived from clk_i.
+  cpu_core_clk = u_cpu_pll_sub's PLL-stub output net (BUFx2 passthrough,
+               divide-1) — feeds u_cpu_cg (rv32i_clock_gate), whose output
+               cpu_gated_clk feeds u_cpu (the CPU hard macro) and
+               u_cpu_axi_cdc's s_* (CPU-domain) face.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: puts "INFO: No generated clock for core\_clk — CTS traces...}
+
+\begin{textblock}
+##############################################################################
+2. core_clk / cpu_core_clk — generated from clk_i / cpu_clk_i through their
+   respective PLL-stub BUFx2 cells. Run-13 lesson (see header): do NOT
+   create_generated_clock for either. CTS traces through both BUFx2 cells
+   automatically (CLOCK_NET config per domain) so macro and std-cell sinks
+   on each side land on one balanced tree.
 ##############################################################################
 \end{textblock}
 
@@ -7563,6 +8408,68 @@ patterns used everywhere else in this file.
      CDC-EXCEPTION-MISS check in section 15, which fails loudly if the net is not found.
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+phase5_soc_multiclock_check.sdc — POST-ROUTE CDC BUDGET VERIFICATION ONLY
+These SDC's are not used for synthesis, since they collide with the
+set_clock_groups -asynchronous constraint in phase5_soc_multiclock.sdc.
+Instead, they are used to time the design after P&R in order to make sure
+that the CDC crossings are all within spec. (Wording deliberately mirrors
+OpenTitan's hw/top_earlgrey/syn/chip_earlgrey_asic_check_only.sdc, the
+precedent this split follows.)
+USAGE — read this file's purpose narrowly:
+  This file is for TARGETED post-route queries against the specific CDC
+  endpoints named in sections 10-13 below (report_checks -to/-through a
+  named pin, as pnr/scripts/check_cdc_timing.tcl does). It is NOT a
+  substitute full-chip signoff SDC: because sys_clk and cpu_clk have no
+  group/false-path relationship here, a full unfiltered `report_checks`
+  or `report_wns`/`report_tns` sweep against this file WILL show
+  fabricated setup/hold violations on every OTHER pair of FFs that
+  happen to sit in different domains but are not part of a deliberate
+  synchroniser (there is no exception suppressing those, by design — see
+  above). That is expected, not a defect: interrogate specific CDC paths
+  only. Full-chip signoff continues to use phase5_soc_multiclock.sdc.
+Base: sections 1 (clocks) and 4 (async reset false-paths) are copied
+verbatim from phase5_soc_multiclock.sdc so this file is self-contained
+for read_sdc; keep them in sync by hand if either file's clock periods
+change (Run-13 CTS lesson applies identically here — do NOT add
+create_generated_clock for core_clk/cpu_core_clk).
+\end{textblock}
+
+\subsection*{Before: if \{[llength \$::cdc\_exception\_misses] > 0\} \{}
+
+\begin{textblock}
+15. CDC exception coverage gate — hard-fail on any section 11-13 miss.
+
+See the cdc_require_match / cdc_apply_max_delay procs and the
+::cdc_exception_misses list defined just before section 11. If ANY
+exception's get_nets pattern matched an empty collection, or matched but
+its driver/load cells could not be resolved, above, a CDC-EXCEPTION-MISS
+line was already puts'd at the point of failure. This final check
+promotes that from "logged" to "fatal": abort read_sdc with a
+nonzero-equivalent Tcl `error` rather than let the file finish reading as
+if nothing were wrong — an unconstrained CDC boundary that STA reports as
+"clean" is a strictly worse outcome than an aborted read_sdc that names
+the missing instance/pin/net. Section 10's domain-wide fallback has no
+name-match step and so can never itself trigger this gate.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{freepdk45/constraints/freepdk45.sdc}}\label{tm:pd:freepdk45-sdc}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/freepdk45/constraints/freepdk45.sdc}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+freepdk45.sdc — Timing constraints for rv32i_cpu_top on FreePDK45 / nangate45
+Target: 400 MHz (2.500 ns) — 45nm predictive node, OpenRAM SRAM macros
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{sky130/cpu/constraints/sky130\_cpu.sdc}}\label{tm:pd:sky130-cpu-sdc}
@@ -7593,6 +8500,56 @@ hardware imposes and would fight the Stage 2 scan-mode SDC, which owns shift-clo
 Same treatment as the SoC SDC (sky130_soc.sdc, "DFT test access"). Deliberately NOT
 set_case_analysis: this SDC also feeds Liberty generation, and a pinned constant could
 prune arcs from the exported macro model once Stage 2 gives the pins real fanout.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=============================================
+Sky130 Stage 1: rv32i_cpu_top standalone
+Target: 75 MHz (13.333 ns period) — Sky130 130nm, SRAM-based caches
+File: sky130_cpu.sdc
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Extends phase3_cache.sdc with:
+  - AXI4 burst ports added in Phase 5 M2 (arlen/arsize/arburst/rlast,
+    awlen/awsize/awburst, wlast) — required for real DRC/LVS run because
+    all ports must be constrained for clean sign-off STA.
+
+Architecture:
+  5-stage pipeline with EX sub-stages (EX1a/EX1b/EX1c/EX2, from ASAP7 runs)
+  I-Cache: 4 KB direct-mapped (rv32i_icache — u_icache)
+  D-Cache: 4 KB write-back/write-allocate (rv32i_dcache — u_dcache)
+  Cache arbiter: single AXI4 burst port, D$ priority (rv32i_cache_arbiter)
+  M7 perf counters: mcycle/minstret/mhpmcounter3-5 in rv32i_csr_file
+
+Sky130 timing characteristics (sky130_fd_sc_hd TT 1.8V 25C):
+  FF setup:       ~0.4–0.6 ns
+  FF hold:        ~0.2–0.3 ns
+  Clock jitter:   ~0.1 ns
+  Documented fmax ceiling: ~100–120 MHz for this pipeline topology
+=============================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Primary clock — 75 MHz = 13.333 ns period
+\end{textblock}
+
+\subsection*{Before: set\_clock\_uncertainty        0.5 [get\_clocks clk\_i]}
+
+\begin{textblock}
+Clock uncertainty — 0.5 ns setup / 0.2 ns hold
+\end{textblock}
+
+\subsection*{Before: set\_input\_delay -clock clk\_i -max 2.0 [get\_ports axi\_awr...}
+
+\begin{textblock}
+2 ns max input delay (generous at 75 MHz; ~15% of period)
 \end{textblock}
 
 \end{relocated}
@@ -7740,6 +8697,12 @@ wdt_rst_req_o : level-held reset request consumed off-chip / by the pad ring;
            an async-clear path rather than a setup-checked datapath (6a-3).
 
 TRNG, CRYPTO and NPU add no top-level pins at all, so they need nothing here.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+sky130_soc.sdc — Timing constraints for SoC Stage 2 (Sky130A, 40 MHz)
 \end{textblock}
 
 \end{relocated}
@@ -7912,11 +8875,123 @@ NOT COVERED HERE, ON PURPOSE (listed so the gap is visible, not hidden):
 ##############################################################################
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+sky130_soc_cdc_check.sdc -- POST-ROUTE CDC BUDGET VERIFICATION ONLY (Sky130 SoC)
+pnr/constraints/phase5_soc_multiclock_check.sdc (ASAP7). Read ONLY by
+pnr/scripts/check_cdc_timing_sky130.tcl (`make -C pnr check-cdc-timing-sky130-soc`).
+It is NOT an implementation SDC: sky130_soc.sdc is (it declares core_clk / cpu_clk
+asynchronous), this file deliberately does not.
+So the CDC budgets can only be timed by a file that declares BOTH clocks and NEVER relates
+them. Consequence (same as the ASAP7 file): this file is for TARGETED queries on the
+crossings below; a full unfiltered report_wns/report_tns against it would show fabricated
+violations on every unrelated pair of flops that happen to sit in different domains.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: set\_max\_delay \$val -from \$\_launch -to \$\_dpins}
+
+\begin{textblock}
+-to the capture flop's D PIN, not the cell: the section-10 fallback is -to D pins, and
+OpenSTA ranks a pin-qualified exception above a cell-qualified one, so a -to <cell>
+budget silently LOSES to the fallback whatever the declaration order (measured on the
+baseline netlist: the intended 25.0 ns applied as the fallback's 22.5 ns). With both
+sides pin-qualified the later declaration wins, as the ASAP7 file documents.
+\end{textblock}
+
 \end{relocated}
 
 \chapter{Macro placement and pin order notes}\label{tm:ch:pd-macro-placement-notes}
 
 This chapter holds comment text that was removed from the macro placement files.
+
+\section{\texttt{asap7/cpu/macro\_placement.cfg}}\label{tm:pd:asap7-cpu-macro-placement-cfg}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/asap7/cpu/macro_placement.cfg}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+macro_placement.cfg — ASAP7 SRAM placement for rv32i_cpu_top
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+SRAM macro: sram_1rw_256x32_asap7 (adapted from ORFS fakeram7_256x32)
+  Dimensions: 8.360 × 42.000 µm (tall/narrow)
+
+Die core: (5, 5) to (125, 125) in a 130×130 µm die (Run 34: shrunk from 150×150)
+
+Layout: 2 rows of 5 SRAMs (tag + 4 data per cache)
+  x stride: 8.36 + 2.00 = 10.36 µm (2 µm routing channel between macros)
+  x positions: 5.00, 15.36, 25.72, 36.08, 46.44
+  Row 1 (I-cache): y = 5.00 (top edge at 47.00)
+  Row 2 (D-cache): y = 52.00 (5 µm gap; top edge at 94.00)
+  Standard cells above row 2: 125 - 94 = 31 µm available
+  All macro extents (max x=54.8, max y=94.0) fit within new core boundary (125,125)
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{asap7/cpu/macro\_placement\_3014.cfg}}\label{tm:pd:asap7-cpu-macro-placement-3014-cfg}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/asap7/cpu/macro_placement_3014.cfg}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+macro_placement_3014.cfg -- ASAP7 SRAM placement, WIDER ROUTING CHANNELS
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Derived from macro_placement.cfg for the LibreLane 3.0.14 routing bring-up
+(beads ocm / b5a). Same 2 rows x 5 SRAMs, same y, orientation and instance
+paths; ONLY the x stride changes.
+Doc: cr:pd:asap7-cpu-macro-placement-3014-cfg
+\end{textblock}
+
+\subsection*{Former Doc line}
+
+\begin{textblock}
+Doc: cr:pd:asap7-cpu-macro-placement-3014-cfg
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{asap7/gpu/macro\_placement.cfg}}\label{tm:pd:asap7-gpu-macro-placement-cfg}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/asap7/gpu/macro_placement.cfg}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+macro_placement.cfg — 32 GPU shared-memory bank SRAMs (sram_1rw_128x32_asap7)
+instance  x  y  orientation   (8.36 x 42.0 um each)
+Hierarchical netlist (SYNTH_HIERARCHY_MODE=keep): ODB getName() uses slash for module
+hierarchy but DOT for the leaf instance inside a generate block array:
+  u_sm/g_bank[N].u_bank   (NOT u_sm/g_bank[N]/u_bank)
+Confirmed from openroad-floorplan.log: ".*u_bank matched with u_sm/g_bank\[N\].u_bank"
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Two-column layout: banks 0-15 on LEFT (x:10-41.08), banks 16-31 on RIGHT (x:280.56-311.64)
+Left col right edge: 41.08+8.36=49.44 um | Right col right edge: 311.64+8.36=320.00 um
+Central routing corridor: 49.44 to 280.56 = 231 um wide (72% of 320 um core width)
+\end{textblock}
+
+\end{relocated}
 
 \section{\texttt{asap7/soc/macro\_placement.cfg}}\label{tm:pd:asap7-soc-macro-placement-cfg}
 
@@ -7935,6 +9010,122 @@ Layout strategy:
                  CPU right edge: 365+130=495, within core boundary 510.
   Upper half (Y>355): flat logic, AXI crossbar, peripheral routing channels.
 
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=============================================================================
+SoC ASAP7 Hard-Macro Placement Configuration
+=============================================================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Hierarchy strategy (bottom-up hierarchical):
+  - CPU hard macro (rv32i_cpu_top):  130×130 µm hard macro view
+  - GPU hard macro (gpu_top):        340×340 µm hard macro view
+  - SRAM:  synthesised black-box; placed by LibreLane PDN macro grid
+  - Flat:  axi4_crossbar, axi_lite_interconnect, dma_engine, uart_controller,
+           spi_controller, timer, interrupt_controller, sram_controller,
+           boot_rom, pll stubs  (~2 K gates total)
+
+Die:  520×520 µm   (0 0 520 520)
+Core: 500×500 µm   (10 10 510 510)
+
+Halo: 5 µm on all sides enforced by LibreLane PDN macro grid halo.
+
+Coordinate origin: (0,0) = die lower-left.
+Instance paths must match the soc_top instantiation names.
+=============================================================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+GPU hard macro -- lower-left.
+Origin: (15, 15) -> leaves 5 um die-edge clearance + 5 um halo.
+GPU footprint: 340x340 um.  Right edge @ 15+340=355.  Top edge @ 15+340=355.
+Orientation: N (no flip) -- AXI master ports on east face toward crossbar.
+\end{textblock}
+
+\subsection*{Before: u\_cpu 365 15 N}
+
+\begin{textblock}
+CPU hard macro -- lower-right.
+Origin: (365, 15) -> right edge @ 365+130=495 (15 um from core boundary 510).
+GPU right edge (355) + 10 um gap = 365.  CPU footprint: 130x130 um.
+Top edge @ 15+130=145.
+Orientation: N -- AXI master ports on north/east face toward crossbar.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{asap7/template/macro\_placement.cfg}}\label{tm:pd:asap7-template-macro-placement-cfg}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/asap7/template/macro_placement.cfg}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+macro_placement.cfg — ASAP7 SRAM placement for rv32i_cpu_top
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+SRAM macro: sram_1rw_256x32_asap7 (adapted from ORFS fakeram7_256x32)
+  Dimensions: 8.360 × 42.000 µm (tall/narrow)
+
+Die core: (5, 5) to (125, 125) in a 130×130 µm die (Run 34: shrunk from 150×150)
+
+Layout: 2 rows of 5 SRAMs (tag + 4 data per cache)
+  x stride: 8.36 + 2.00 = 10.36 µm (2 µm routing channel between macros)
+  x positions: 5.00, 15.36, 25.72, 36.08, 46.44
+  Row 1 (I-cache): y = 5.00 (top edge at 47.00)
+  Row 2 (D-cache): y = 52.00 (5 µm gap; top edge at 94.00)
+  Standard cells above row 2: 125 - 94 = 31 µm available
+  All macro extents (max x=54.8, max y=94.0) fit within new core boundary (125,125)
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{freepdk45/macro\_placement.cfg}}\label{tm:pd:freepdk45-macro-placement-cfg}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/freepdk45/macro_placement.cfg}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+macro_placement.cfg — FreePDK45 SRAM placement for rv32i_cpu_top
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+SRAM macro dimensions (from OpenRAM LEF): 137.83 × 119.195 µm
+Die core area: (10, 10) to (790, 540)
+
+Layout: 2 rows of 5 macros (tag + 4 data SRAMs per cache)
+Horizontal spacing between macros: 5 µm routing channel
+Vertical spacing between rows: 15 µm routing channel
+Left margin: 10 µm (PDN clearance)
+
+Row 1 (I-cache SRAMs, y = 10 µm):
+  x stride = 137.83 + 5 = 142.83 µm
+  Tag SRAM:    x = 10
+  Data SRAM 0: x = 10 + 142.83 = 152.83
+  Data SRAM 1: x = 10 + 285.66 = 295.66
+  Data SRAM 2: x = 10 + 428.49 = 438.49
+  Data SRAM 3: x = 10 + 571.32 = 581.32
+
+Row 2 (D-cache SRAMs, y = 10 + 119.195 + 15 = 144.195 µm):
+  Same x positions
 \end{textblock}
 
 \end{relocated}
@@ -7969,9 +9160,106 @@ Format: <instance_name> <x> <y> <orientation>
 
 \end{relocated}
 
+\section{\texttt{sky130/cpu/macro\_placement.cfg}}\label{tm:pd:sky130-cpu-macro-placement-cfg}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/sky130/cpu/macro_placement.cfg}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+macro_placement.cfg — Sky130 CPU Stage 1
+Phase 3 cache SRAM macro placement.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Instance names must match the DEF component names (dot-separated,
+flat hierarchy as produced by Yosys synthesis).
+
+Die area  : [0, 0, 3600, 1800] µm  (Run 6: widened from 3200 for routing headroom)
+Core area : [20, 20, 3580, 1780] µm
+
+Layout (orientation N, pins at bottom):
+  Row 0 (y=20..417.5)   : I-cache SRAMs — pins at bottom y=20
+  Channel (y=417.5..520) : 102.5 µm routing channel
+  Row 1 (y=520..917.5)  : D-cache SRAMs — pins at bottom y=520
+  Logic zone (y=917.5..1780): standard-cell logic
+
+SRAM size: 479.78 x 397.5 µm  (sky130_sram_1kbyte_1rw1r_32x256_8)
+Left halo : 100 µm
+tag→data[0] gap: 100 µm (x 579.78→679.78)
+data[0→1,1→2,2→3] gaps: 200 µm  (widened from 100 µm in Run 5)
+
+No ROUTING_OBSTRUCTIONS: native SRAM LEF OBS (met1/met2 full-footprint)
+handles interior blockage. Wider 200 um gaps provide routing channels.
+
+Format: <instance_name> <x> <y> <orientation>
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{sky130/soc/macro\_placement.cfg}}\label{tm:pd:sky130-soc-macro-placement-cfg}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/sky130/soc/macro_placement.cfg}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+macro_placement.cfg — Sky130 SoC Stage 2 hard macro placement
+Doc: cr:pd:sky130-soc-macro-placement-cfg
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Die: 6700 x 3100 um (kept at the GRT-proven-clean size). Core area:
+(20,20)-(6680,3080).
+Doc: cr:pd:sky130-soc-macro-placement-cfg
+Everything else (peripherals: crossbar, DMA, UART, SPI, timer, IRQ ctrl,
+PLL stub, GPU tie-off, boot_rom, sram_controller's own control-logic
+RTL) is flat standard-cell logic filling the remaining area.
+
+Format: <instance_name> <x_origin> <y_origin> <orientation>
+\end{textblock}
+
+\end{relocated}
+
 \chapter{PDN and flow script notes}\label{tm:ch:pd-flow-script-notes}
 
 This chapter holds comment text that was removed from the Tcl scripts of the flows.
+
+\section{\texttt{asap7/pdn\_asap7.tcl}}\label{tm:pd:asap7-pdn-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/asap7/pdn_asap7.tcl}
+
+\subsection*{Before: define\_pdn\_grid \textbackslash{}}
+
+\begin{textblock}
+ASAP7 PDN: M1 followpins → M2 V-stripes → M5 H-stripes
+M2 connects M1 rails (horizontal) via vias at pitch 1.62 µm (dense)
+M5 connects M2 V-stripes at pitch 6.48 µm
+\end{textblock}
+
+\subsection*{Before: add\_pdn\_stripe \textbackslash{}}
+
+\begin{textblock}
+M5 horizontal stripes (coarse, every 6.48 µm)
+\end{textblock}
+
+\subsection*{Before: add\_pdn\_stripe \textbackslash{}}
+
+\begin{textblock}
+M2 vertical stripes (dense, every 1.62 µm) — connect M1 rails to M5 grid
+\end{textblock}
+
+\end{relocated}
 
 \section{\texttt{asap7/pdn\_asap7\_orfs.tcl}}\label{tm:pd:asap7-pdn-orfs-tcl}
 
@@ -7994,6 +9282,73 @@ sparsest setting. The sparsest is what this host can actually route: at ORFS den
 detailed routing reached 122 121 violations and 13.4 GB at 90 % of iteration 0 (of 12)
 and was OOM-killed on a 15.9 GB machine -- twice, once taking the terminal scope with
 it via systemd-oomd. Revisit the density if this ever runs on a larger host.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+pdn_asap7_orfs.tcl — ASAP7 PDN grid that actually builds (beads `gyx` / `4l8`)
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+THE FIX — follow the ORFS ASAP7 reference grid
+----------------------------------------------
+Ported from OpenROAD-flow-scripts
+`flow/platforms/asap7/openRoad/pdn/BLOCKS_grid_strategy.tcl`: put followpins
+on BOTH M1 and M2 (0.018 µm wide, 0.54 µm pitch — one per row), then climb
+M2→M5→M6.  Every rail now has an M2 partner directly above it, so there are
+no channels to repair.
+NOTE: IR drop additionally needs `VIAS_R` in the config — ASAP7 shipped no
+via resistances, so PSM aborted with `PSM-0021` ("Resistance map contains
+invalid values") even once connectivity was clean.  Values in the configs are
+ORFS's (`flow/platforms/asap7/setRC.tcl`).
+
+The macro grid connects M4↔M5 because the SRAM macro PG pins are on M4
+(`sram_1rw_256x32_asap7.lef`); ORFS's own ElementGrid only needs M5↔M6.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: define\_pdn\_grid -macro -default -name macro -halo "2 2" ...}
+
+\begin{textblock}
+Halo 2 µm (ORFS MACRO_ROWS_HALO_X/Y); the old 10 µm halo made no difference
+to the channel failure and only costs routing area.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{asap7/soc/pdn.tcl}}\label{tm:pd:asap7-soc-pdn-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/asap7/soc/pdn.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+pdn.tcl — Power Distribution Network for phase5_soc on ASAP7
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Extends the shared pdn_asap7.tcl pattern used by CPU and GPU blocks.
+SoC uses a denser M5/M7 strap grid to serve both hard macros.
+
+Single-domain topology: PD_CPU / PD_GPU / PD_SRAM / PD_PERIPH all share
+the single VDD/VSS rail at 0.7 V.  UPF isolation is a design-intent model;
+OpenROAD does not differentiate physical supply nets in this flow.
+##############################################################################
+\end{textblock}
+
+\subsection*{Before: define\_pdn\_grid \textbackslash{}}
+
+\begin{textblock}
+Wider pitches than CPU/GPU because flat logic area is ~360×700 µm.
 \end{textblock}
 
 \end{relocated}
@@ -8025,6 +9380,267 @@ connectivity model that produces the ~8.28 M benign PSM-0039
 "Unconnected instance TAP_TAPCELL_ROW_*" violations on this design. Expect
 the same unconnected-tap noise in the IR result; it is a tool artifact,
 not a real supply break.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=================================================================
+PSM supply-voltage declarations for IR-drop analysis
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Sourced by pnr/scripts/08_power.tcl, which skips IR-drop analysis
+entirely when this file is absent. GH #96 / bead claude_verilog_test-8nz.
+
+
+Voltage matches the ASAP7 RVT TT corner used throughout this flow
+(nom_tt_025C_0p7V -- 0.7 V nominal, 25 C).
+=================================================================
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/01\_synth.tcl}}\label{tm:pd:scripts-01-synth-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/01_synth.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 1: RTL Synthesis
+Tool: Yosys
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), Sky130 HD
+================================================================
+\end{textblock}
+
+\subsection*{Before: abc -liberty \$LIB\_TT -D [expr \{int(\$CLOCK\_PERIOD * 1000)...}
+
+\begin{textblock}
+-D sets the target period in picoseconds (13333 ps = 13.333 ns = 75 MHz).
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/02\_floorplan.tcl}}\label{tm:pd:scripts-02-floorplan-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/02_floorplan.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 2: Floorplanning
+Tool: OpenROAD
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), Sky130 HD
+================================================================
+\end{textblock}
+
+\subsection*{Before: set DIE\_AREA\_LL\_X 0.0}
+
+\begin{textblock}
+Phase 3 cell estimate: ~15k-25k standard cells (pipeline + caches synthesised to FFs).
+Sky130 HD site: 0.46 µm wide × 2.72 µm tall.
+At 45% utilisation a 350×350 µm core gives sufficient headroom.
+Die margins: 10 µm on each side → die = 370×370 µm.
+\end{textblock}
+
+\subsection*{Before: tapcell \textbackslash{}}
+
+\begin{textblock}
+sky130_fd_sc_hd requires tap cells every ≤ 14.46 µm (31 pitches).
+Use 15 µm max distance to stay well within the rule.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/03\_place.tcl}}\label{tm:pd:scripts-03-place-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/03_place.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 3: Placement
+Tool: OpenROAD (global + detailed placement)
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), Sky130 HD
+================================================================
+\end{textblock}
+
+\subsection*{Before: global\_placement \textbackslash{}}
+
+\begin{textblock}
+-timing_driven: weights nets by criticality; essential at 75 MHz.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/04\_cts.tcl}}\label{tm:pd:scripts-04-cts-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/04_cts.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 4: Clock Tree Synthesis
+Tool: TritonCTS (integrated in OpenROAD)
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), skew < 100 ps, Sky130 HD
+================================================================
+\end{textblock}
+
+\subsection*{Before: set\_propagated\_clock [all\_clocks]}
+
+\begin{textblock}
+Tighten clock uncertainty post-CTS per Doc: ds:ch:sdc-timing-spec guidance
+(pre-CTS uses 0.5 ns, post-CTS tightens to 0.3 ns)
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/05\_route.tcl}}\label{tm:pd:scripts-05-route-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/05_route.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 5: Routing
+Tool: FastRoute (global) + TritonRoute (detailed)
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), Sky130 HD
+================================================================
+\end{textblock}
+
+\subsection*{Before: puts "==================================================...}
+
+\begin{textblock}
+Global Routing (FastRoute)
+
+Sky130 HD has 5 routing layers plus li1 (local interconnect):
+  li1  — local only, not used for global routing
+  met1 — preferred horizontal (narrow pitch)
+  met2 — preferred vertical
+  met3 — horizontal
+  met4 — vertical (wide pitch, used for power)
+  met5 — horizontal (used for power)
+
+Signal routing: met1–met4 (met4 reserved for power straps but available
+for signal where straps don't conflict).
+Clock routing used met3 exclusively during CTS; FastRoute respects that.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/06\_parasitics.tcl}}\label{tm:pd:scripts-06-parasitics-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/06_parasitics.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 6: Parasitic Extraction
+Tool: OpenRCX (integrated in OpenROAD)
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), Sky130 HD
+================================================================
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/07\_sta.tcl}}\label{tm:pd:scripts-07-sta-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/07_sta.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 7: Static Timing Analysis
+Tool: OpenSTA (invoked as 'sta' standalone binary)
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), Sky130 HD
+Sign-off corners: TT/SS/FF @ nominal voltage
+================================================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+This script is designed to be run with the standalone 'sta' binary
+(OpenSTA), not via openroad.  The Makefile target 'sta' invokes:
+  sta scripts/07_sta.tcl | tee logs/sta.log
+
+The script checks for a SPEF from 06_parasitics.tcl; if not found it
+falls back to reading the routed DEF and using layer-RC estimates so
+that the flow can proceed even without a full RC extraction.
+================================================================
+\end{textblock}
+
+\subsection*{Before: puts "==================================================...}
+
+\begin{textblock}
+Post-CTS: use tighter clock uncertainty (0.3 ns)
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/08\_power.tcl}}\label{tm:pd:scripts-08-power-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/08_power.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+OpenROAD Flow — Stage 8: Power Analysis
+Tool: OpenROAD power estimation
+Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
+Target: 75 MHz (13.333 ns), Sky130 HD
+================================================================
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Power estimation approach:
+  1. Static (leakage) power — from liberty data, no activity needed.
+  2. Dynamic (switching + internal) power — from switching activity.
+
+Activity source priority:
+  a. VCD file pointed to by VCD_FILE env var (from cocotb simulation)
+  b. Default toggle rate of 0.20 (20%) applied globally
+
+The 20% toggle rate is conservative for a running pipeline; it errs
+on the side of overestimating dynamic power, which is safe for
+thermal and IR-drop budgeting.
+================================================================
 \end{textblock}
 
 \end{relocated}
@@ -8088,6 +9704,72 @@ gone (bead 86a), so this is Liberty-table power from gate input-pin
 capacitance only, no post-route wire RC. That is a second, independent
 approximation on top of the activity assumption; asap7_macro_power_inject.py
 writes both into the target .lib's header comment.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+asap7_macro_power.tcl — characterize lumped macro power for an ASAP7 hard
+macro (rv32i_cpu_top / gpu_top) from its own flat gate-level netlist.
+Invoked via: sta -exit scripts/asap7_macro_power.tcl
+  (or through the MCP eda-opensta session: read_liberty/read_verilog/
+   link_design/read_sdc by hand, then source this script's activity+
+   report_power tail — see README.md in this directory for the manual
+   session-based equivalent used to validate this script.)
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Inputs (env vars):
+  NETLIST_PATH   — flat gate-level netlist for the macro's OWN block
+                    (gunzipped .nl.v — e.g. pnr/asap7/cpu/macro/rv32i_cpu_top.nl.v
+                    after `gunzip -k`). This is the macro's own internal
+                    implementation, not a black-box view — it must resolve
+                    down to real standard cells + any internal hard macros
+                    (e.g. the SRAM instances inside rv32i_cpu_top).
+  ASAP7_LIBS     — space-separated Liberty files: the 5 ASAP7 stdcell libs
+                    + the macro's own internal SRAM lib(s). Same set
+                    asap7_macro_views.tcl reads for write_timing_model.
+  SDC_PATH       — the macro's OWN block-level SDC (defines its clock
+                    period — this is what fixes the frequency the
+                    characterized power corresponds to).
+  DESIGN_NAME    — top module name (rv32i_cpu_top / gpu_top).
+  POWER_REPORT_OUT — informational only (recorded in the printed header);
+                    this script writes its report to STDOUT (plain OpenSTA
+                    has no in-Tcl redirect — see the note above the
+                    report_power call below), so the caller must itself
+                    redirect stdout to this path for
+                    asap7_macro_power_inject.py to consume. Required so the
+                    printed header names the same path the caller intends
+                    to use.
+  ACTIVITY_RATE  — global toggle-rate override (default 0.20).
+  ACTIVITY_DUTY  — global duty-cycle override (default 0.5).
+  VCD_FILE / VCD_SCOPE — optional: read_vcd instead of the flat default.
+
+Output: STDOUT — full report_power -digits 6 text (Internal / Switching /
+Leakage / Total, by group: Sequential / Combinational / Clock / Macro /
+Pad, plus the Total row asap7_macro_power_inject.py parses). Redirect it:
+  sta -exit pnr/scripts/asap7_macro_power.tcl > "$POWER_REPORT_OUT" 2>&1
+\end{textblock}
+
+\subsection*{Before: set ACTIVITY\_SOURCE\_STR "flat\_default"}
+
+\begin{textblock}
+Plain OpenSTA ("sta", as opposed to "openroad") has no `redirect { ... }`
+block command or exposed sta::redirect_file_begin/end proc — both were
+tried against this repo's vendored OpenSTA 2.7.0 and neither exists
+(`info commands *redirect*` is empty). So this script does not write
+POWER_REPORT_OUT itself; it prints the header + report_power output to
+stdout in the exact format asap7_macro_power_inject.py expects, and the
+caller captures stdout to $POWER_REPORT_OUT:
+
+  sta -exit pnr/scripts/asap7_macro_power.tcl > "$POWER_REPORT_OUT" 2>&1
+
+(the eda-opensta MCP session equivalent already writes its own report file
+per call — see tools/eda/README.md — so a caller driving this through that
+MCP server instead of a bare `sta -exit` can use that file directly and
+skip the shell redirect.)
 \end{textblock}
 
 \end{relocated}
@@ -8231,6 +9913,22 @@ mem_q) and are covered by the domain-wide fallback report below instead.
 Isolation-ack return crossing (bead 3ogd): cpu_clk -> sys_clk, source net pmu_cpu_iso_en_sync.
 \end{textblock}
 
+\subsection*{Before: if \{[info exists ::cdc\_exception\_misses] \&\& [llength \$::...}
+
+\begin{textblock}
+phase5_soc_multiclock_check.sdc's own section 15 gate raises a Tcl
+`error` when one or more of ITS CDC timing exceptions (sections
+11-13) failed to match any pin/net -- an EXPECTED finding, not a
+tool failure (see that file's cdc_require_match proc / the
+::cdc_exception_misses global it populates). Distinguish that case
+from a genuine SDC read failure (syntax error, bad Tcl elsewhere):
+only ::cdc_exception_misses being non-empty proves this was the
+expected mechanism. Continue past it (rather than exiting here) so
+the report_checks queries below still run and any additional budget
+violations are folded into the SAME final report -- this is the
+"accumulate across all checks, don't bail on first" requirement.
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{scripts/check\_cdc\_timing\_sky130.tcl}}\label{tm:pd:scripts-check-cdc-timing-sky130-tcl}
@@ -8296,6 +9994,86 @@ here, so the limit is 6.25 ns. CDC_CHECK_SKEW_LIMIT (ns) overrides it absolutely
 ----------------------------------------------------------------
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+Post-route CDC budget verification for the 2-domain Sky130 SoC
+Tool: OpenSTA (standalone 'sta' from the librelane nix-shell)
+Reads a finished LibreLane Sky130 SoC run (netlist + OpenRCX SPEF), the std-cell / CPU-macro /
+SRAM Liberty of ONE corner, and pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc, then
+reports the slack of every CDC group the SDC budgets. See that SDC for why the budgets live
+in a file separate from the implementation SDC.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Usage:
+  CDC_CHECK_RUN_DIR=/nobackup/sky130_soc_runs/RUN_... [CDC_CHECK_CORNER=nom_tt_025C_1v80] \
+    sta -no_init -exit pnr/scripts/check_cdc_timing_sky130.tcl
+or: make -C pnr check-cdc-timing-sky130-soc RUN_DIR=... [CDC_CORNER=...]
+
+Env:
+  CDC_CHECK_RUN_DIR   (required) LibreLane run dir.
+  CDC_CHECK_SKEW_FRAC  default 0.25. Per-pointer bit-skew limit as a fraction of min(source, destination) period
+                       (see the skew section for the justification). CDC_CHECK_SKEW_LIMIT (ns) overrides it.
+  CDC_CHECK_CORNER    default nom_tt_025C_1v80 (one corner per sta run; `make check-cdc-timing-sky130-soc` loops nom_tt AND
+                      max_ss by default, bead j41m.5). One of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95}.
+                      The prefix picks the SPEF (OpenRCX writes nom/min/max), the rest the Liberty.
+  CDC_CHECK_NETLIST   default <run>/final/nl/soc_top.nl.v, else the fill-insertion step's nl.v.
+  CDC_CHECK_SPEF      default <run>/*-openroad-rcx/<nom|min|max>/soc_top.<..>.spef; "none" = no parasitics.
+  CDC_CHECK_SDC       default pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc.
+  CDC_CHECK_REPORTS   default ./reports/cdc_sky130.
+  CDC_CHECK_PNR_DIR   default: the pnr/ directory this script lives in (override when it is reached through a symlink).
+  PDK_ROOT            default the ciel path the flow uses.
+EXIT CODE: 0 PASS, 1 CDC finding(s) (unbound exception or a violated/unconstrained group),
+2 setup error (missing input). OpenSTA batch mode does not turn a Tcl `error` into an exit
+code, so every path ends in an explicit `exit`.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/check\_multiclock\_sdc.tcl}}\label{tm:pd:scripts-check-multiclock-sdc-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/check_multiclock_sdc.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+=================================================================
+check_multiclock_sdc.tcl — prove the 2-domain SDC actually bound
+USAGE
+  MC_NETLIST=<path to .nl.v>  \
+  MC_SDC=<path to phase5_soc_multiclock.sdc> \
+  [MC_MACRO_DIR=<dir with macro .lib files>] \
+    sta -no_init -exit pnr/scripts/check_multiclock_sdc.tcl
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+EXIT CODES
+  0  PASS — every expected clock is real, sourced and has registers
+  1  FAIL — a clock is virtual / unsourced / sink-less
+  2  SETUP ERROR — inputs missing
+
+Emits MC-CHECK-RESULT: PASS|FAIL and MC-CHECK-SETUP-ERROR markers so a
+calling Makefile can gate on grep as well as on the exit code (same
+belt-and-braces rationale as check_cdc_timing.tcl / bead dwp: OpenSTA
+batch mode does not reliably propagate a Tcl error into the process
+exit status).
+=================================================================
+Doc: cr:pd:scripts-check-multiclock-sdc-tcl
+\end{textblock}
+
+\subsection*{Former Doc line}
+
+\begin{textblock}
+Doc: cr:pd:scripts-check-multiclock-sdc-tcl
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{scripts/report\_per\_clock\_timing.tcl}}\label{tm:pd:scripts-report-per-clock-timing-tcl}
@@ -8325,6 +10103,109 @@ This section holds comment text that was in the source file. The text is unchang
 bead claude_verilog_test-j41m.8 (DFT Stage 2): used for the functional view vs scan view hold/setup comparison.
 \end{textblock}
 
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+Load a finished Sky130 SoC (or CPU macro) LibreLane run into OpenSTA for ad-hoc post-route timing queries.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+
+  STA_RUN_DIR   (required) run directory
+  STA_CORNER    default nom_tt_025C_1v80 (one of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95})
+  STA_VIEW      func (default) | scan.  scan sets CVT_SDC_SCAN_VIEW=1 before sourcing the SDC, i.e. the gray-pointer
+                hold exemption is NOT applied (sky130_soc.sdc, bead j41m.5).
+  STA_DESIGN    default soc_top  (rv32i_cpu_top for the CPU macro)
+  STA_SDC       default pnr/sky130/soc/constraints/sky130_soc.sdc (macro: pnr/sky130/cpu/constraints/sky130_cpu.sdc)
+  STA_MACRO_LIBS  Tcl list of macro Liberty files for the corner (default: the committed SoC macro views)
+  STA_PNR       pnr/ directory (override if the script is reached through a symlink)
+  STA_CMDS      Tcl file sourced after the design is loaded (reports)
+
+  sta -no_init -exit pnr/scripts/sta_load_sky130_soc.tcl      (inside the librelane nix-shell)
+
+Clocks are propagated. No exceptions are added here; the SDC is the project's own.
+================================================================
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{scripts/sta\_scan\_queries\_sky130\_soc.tcl}}\label{tm:pd:scripts-sta-scan-queries-sky130-soc-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/scripts/sta_scan_queries_sky130_soc.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+================================================================
+DFT Stage 2 post-route queries (bead j41m.8). Sourced through sta_load_sky130_soc.tcl (env STA_CMDS).
+  STA_OUT   output directory for small result files (default .)
+  STA_Q     which block: main | exempt_pins | scan_pins
+    main         per-clock worst setup/hold, clock latency + skew, hold/setup through dft_scan_en, CPU-macro input-pin hold
+    exempt_pins  (functional view) write the capture D pins the SDC exempts from hold to $STA_OUT/exempt_pins.txt
+    scan_pins    (scan view, STA_VIEW=scan) hold slack of those pins, tck -> tck included
+Every number is printed as a "Q: <key> <value>" line so it can be grepped.
+================================================================
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{sky130/soc/pdn.tcl}}\label{tm:pd:sky130-soc-pdn-tcl}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/sky130/soc/pdn.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+pdn.tcl — Power Distribution Network for sky130_soc on Sky130A HD
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Doc: cr:pd:sky130-soc-pdn-tcl
+\end{textblock}
+
+\subsection*{Former Doc line}
+
+\begin{textblock}
+Doc: cr:pd:sky130-soc-pdn-tcl
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/cvt\_wrap.tcl}}\label{tm:pd:sky130-soc-plugin-librelane-cvt-tcl-wrap}
+
+This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{relocated}{pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/cvt_wrap.tcl}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Wrapper that runs a stock LibreLane OpenROAD script with the project's wire-RC calibration
+(bead claude_verilog_test-e45j). CVT_REAL_SCRIPT is the stock script; CVT_PROJ_TCL this directory.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+`source` is renamed so that cvt_apply_rc_calibration runs right after every
+`.../common/set_rc.tcl`, whichever step script sources it and wherever in the script that
+happens -- the shared LibreLane install is not edited. With CVT_RC_CALIBRATION empty this file
+only forwards to the real script.
+TclStep moves every non-allowlisted variable into the file named by _TCL_ENV_IN rather than the
+process environment, so the CVT_* variables only exist after sourcing it (io.tcl re-sources it
+later; that is idempotent).
+\end{textblock}
+
 \end{relocated}
 
 \section{\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/scan\_insert.tcl}}\label{tm:pd:sky130-soc-plugin-librelane-cvt-tcl-scan-insert}
@@ -8352,6 +10233,35 @@ This section holds comment text that was in the source file. The text is unchang
 Finding (j41m.8, Doc: tm:ch:dft-architecture 14.4): 26Q2 insert_dft does NOT reuse existing ports.  It always creates its own
 scan_enable_0 / scan_in_<k> / scan_out_<k>; -scan_*_name_pattern only renames them (a pattern without %d gives every chain
 the same name).  So the tool's ports are created, then merged into the pre-existing soc_top ports below.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+DFT Stage 2 (bead claude_verilog_test-j41m.8): netlist-level scan insertion with OpenROAD `dft`.
+Run by the CVT.ScanInsert step (librelane_plugin_cvt_sky130/__init__.py) with an OpenROAD that has
+set_dft_config / scan_replace / execute_dft_plan (26Q2; the Sky130 flow's own edf00dff has a different,
+defective stitcher, Doc: tm:ch:dft-architecture 1.1/1.3).  Everything is parameterised through the environment:
+  CVT_SCAN_NL_IN / CVT_SCAN_NL_OUT   flow netlist in, scan netlist out
+  CVT_SCAN_TOP                       design name
+  CVT_SCAN_LEFS / CVT_SCAN_LIBS      Tcl lists
+  CVT_SCAN_CLOCKS                    Tcl list of {name port period_ns} triples (STA clocks the stitcher needs)
+  CVT_SCAN_EXCL_CLKNETS              Tcl list of clock NET names whose flops are NOT scanned (TAP clock, test clock);
+                                     inverters/buffers fed only from these nets are followed (negedge-tck flops)
+  CVT_SCAN_EXCL_QRX                  regex on the Q net name of flops that are NOT scanned (crypto key registers)
+  CVT_SCAN_EXPECT_QEXCL              expected count of Q-net-excluded flops (-1 = do not check); mismatch aborts
+  CVT_SCAN_MAX_LENGTH                set_dft_config -max_length
+  CVT_SCAN_PORT_ORDER                Tcl list of regexes on the first flop's clock net; chains are given port indices
+                                     in this class order (first class -> lowest indices)
+  CVT_SCAN_IN_FMT / CVT_SCAN_OUT_FMT existing top ports, e.g. scan_in_i[%d]  (printf style)
+  CVT_SCAN_EN_NET                    existing net every SCE pin is joined to (soc_top: dft_scan_en, macro: scan_en_i)
+  CVT_SCAN_BUF_CELL                  buffer master put between a chain's last Q net and its scan_out port
+  CVT_SCAN_OUT_GATE_NET              (optional) net name of the crypto wipe-done signal.  When set, each scan_out port is
+                                     driven by CVT_SCAN_OUT_GATE_CELL (an AND2: A = chain last Q, B = this net) INSTEAD of a
+                                     buffer (bead j41m.17 decision 5a).  If the net is missing or undriven the step FAILS;
+                                     it never falls back to a buffer.
+  CVT_SCAN_OUT_GATE_CELL             the AND2 master (default sky130_fd_sc_hd__and2_2)
+  CVT_SCAN_REPORT                    report file (key=value lines, parsed by the step and by check_scan_chains.py)
 \end{textblock}
 
 \end{relocated}
@@ -8786,6 +10696,20 @@ sky130-soc-sv2v above) into plain Verilog-2005, then set USE_SYNLIG:false
 and point valu_hls_comb/config.json's VERILOG_FILES at the sv2v output
 instead of the raw .sv + gpu_pkg.sv. Deterministic/reproducible via this
 target -- do not hand-edit the generated .v.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Target: Phase 3 RV32I CPU + L1 I-Cache + L1 D-Cache
+PDK: Sky130 HD (sky130_fd_sc_hd)
+Frequency: 75 MHz (13.333 ns period)
+\end{textblock}
+
+\subsection*{Before: librelane-asap7-soc-synth: check-asap7-openroad}
+
+\begin{textblock}
+Die: 720×720 µm, clock: 1750 ps (571 MHz GPU-governed), SYNTH-ONLY for first run.
 \end{textblock}
 
 \end{relocated}

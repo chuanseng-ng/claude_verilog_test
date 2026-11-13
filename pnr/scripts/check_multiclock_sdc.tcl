@@ -1,23 +1,16 @@
-#=================================================================
-# check_multiclock_sdc.tcl — prove the 2-domain SDC actually bound
-# USAGE
-#   MC_NETLIST=<path to .nl.v>  \
-#   MC_SDC=<path to phase5_soc_multiclock.sdc> \
-#   [MC_MACRO_DIR=<dir with macro .lib files>] \
-#     sta -no_init -exit pnr/scripts/check_multiclock_sdc.tcl
+# check_multiclock_sdc.tcl - Prove that the 2-domain SDC bound to the netlist (OpenSTA)
 #
-# EXIT CODES
-#   0  PASS — every expected clock is real, sourced and has registers
-#   1  FAIL — a clock is virtual / unsourced / sink-less
-#   2  SETUP ERROR — inputs missing
-#
-# Emits MC-CHECK-RESULT: PASS|FAIL and MC-CHECK-SETUP-ERROR markers so a
-# calling Makefile can gate on grep as well as on the exit code (same
-# belt-and-braces rationale as check_cdc_timing.tcl / bead dwp: OpenSTA
-# batch mode does not reliably propagate a Tcl error into the process
-# exit status).
-#=================================================================
-# Doc: cr:pd:scripts-check-multiclock-sdc-tcl
+# Scope: MC_NETLIST=<.nl.v> [MC_SDC=<sdc>] sta -no_init -exit pnr/scripts/check_multiclock_sdc.tcl. Run it by hand: no Makefile target runs it.
+# Contents: reads the netlist, the macro Liberty files and the SDC. Checks that every expected clock is real, sourced and has registers.
+# Inputs: MC_NETLIST (netlist path, required). Optional: MC_SDC (default: the asap7/soc copy of phase5_soc_multiclock.sdc),
+#   MC_MACRO_DIR (directory with the macro .lib files), MC_ROOT (repo root) and MC_PDK_LIB (ASAP7 standard-cell Liberty directory).
+# User rules:
+#   Exit 0: PASS. Every expected clock is real, sourced and has registers.
+#   Exit 1: FAIL. A clock is missing, virtual, unsourced or has no sink, or its port is absent from the netlist.
+#   Exit 2: setup error. An input is missing or read_sdc aborts.
+#   The script prints MC-CHECK-RESULT: PASS or FAIL and MC-CHECK-SETUP-ERROR, so a Makefile can gate on grep as well as on the exit code.
+#   OpenSTA batch mode does not reliably propagate a Tcl error into the process exit status.
+# Doc: tm:pd:scripts-check-multiclock-sdc-tcl, cr:pd:scripts-check-multiclock-sdc-tcl
 
 proc mc_env {name default} {
     if {[info exists ::env($name)] && $::env($name) ne ""} {

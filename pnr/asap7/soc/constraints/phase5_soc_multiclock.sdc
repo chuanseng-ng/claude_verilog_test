@@ -1,28 +1,24 @@
-# Canonical source: pnr/constraints/phase5_soc_multiclock.sdc
-# This copy exists only so PNR_SDC_FILE/SIGNOFF_SDC_FILE/FALLBACK_SDC_FILE's
-# "dir::constraints/..." resolution (relative to pnr/asap7/soc/) finds it,
-# matching how phase5_soc.sdc is consumed by the single-clock run-14 config.
-# Edit the canonical file above and re-copy; do not hand-edit this copy.
-###############################################################################
-
-# phase5_soc_multiclock.sdc — 2-domain IMPLEMENTATION constraints for soc_top
-# (synthesis / P&R). Post-route CDC budget verification lives in the
-# COMPANION file phase5_soc_multiclock_check.sdc — see the section 11-13
-# note below for why the split exists (bead claude_verilog_test-k07).
-# IMPORTANT: all time values are in PICOSECONDS (ASAP7 stdcell Liberty
-# declares time_unit: "1ps" — see pnr/asap7/soc/constraints/phase5_soc.sdc
-# and pnr/asap7/cpu/constraints/asap7.sdc headers for the historical Run
-# 7-32 units bug this project already paid for once; do not repeat it here).
-# Clock topology (2-domain SoC, sv2v synthesis, GH #92/#93):
-#   clk_i      = fabric-domain top-level reference input. CTS root for sys_clk.
-#   core_clk   = PLL stub output net (BUFx2 passthrough, divide-1) — feeds
-#                GPU, crossbar, DMA, SRAM, all peripherals, and the PMU.
-#   cpu_clk_i  = SECOND, INDEPENDENT top-level reference input (GH #92) — its
-#                own PLL stub (u_cpu_pll_sub) is NOT derived from clk_i.
-#   cpu_core_clk = u_cpu_pll_sub's PLL-stub output net (BUFx2 passthrough,
-#                divide-1) — feeds u_cpu_cg (rv32i_clock_gate), whose output
-#                cpu_gated_clk feeds u_cpu (the CPU hard macro) and
-#                u_cpu_axi_cdc's s_* (CPU-domain) face.
+# phase5_soc_multiclock.sdc - Implementation constraints for soc_top with two clock domains (ASAP7)
+#
+# Scope: copy of the canonical file pnr/constraints/phase5_soc_multiclock.sdc. It exists so that dir::constraints/ resolves against pnr/asap7/soc.
+#   The config_multiclock*.json files of pnr/asap7/soc set PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE to the copy.
+#   Make targets: librelane-asap7-soc-multiclock and librelane-asap7-soc-multiclock-hier.
+# Contents: clocks sys_clk (clk_i) and cpu_clk (cpu_clk_i); clock group cdc_boundary; false paths; DFT case analysis
+#   (scan_mode_i 0, scan_en_i 0, scan_rst_ni 1); I/O delays on sys_clk; SRAM hold false paths;
+#   multicycle paths into the u_gpu pins and the u_cpu APB inputs; hold false paths on all I/O.
+# Inputs: none. The ports and the u_cpu and u_gpu pins must exist in soc_top. Section 10b stops with an error if no u_cpu APB input pin matches.
+# User rules:
+#   All time values are picoseconds. The ASAP7 Liberty time unit is one picosecond. Do not repeat the units error this project made before.
+#   Do not create_generated_clock for core_clk or cpu_core_clk. CTS traces through the two PLL-stub BUFx2 cells.
+#   Do not remove set_clock_groups -asynchronous. Synthesis and P&R need it.
+#   core_clk feeds the GPU, crossbar, DMA, SRAM, peripherals and PMU. cpu_core_clk feeds u_cpu_cg.
+#   The output cpu_gated_clk of u_cpu_cg feeds u_cpu and the CPU-domain face of u_cpu_axi_cdc.
+#   The CDC exceptions are not in this file. They are in phase5_soc_multiclock_check.sdc.
+#   OpenSTA has no set_max_delay -datapath_only flag, and it drops a set_max_delay across an asynchronous clock group.
+#   Keep the section 10b pin list on one line. A backslash inside braces matches nothing.
+#   Do not add a multicycle on other u_cpu pins, or restore the apb_prdata_o false path,
+#   without first checking the macro Liberty at the cpu_clk period.
+#   Do not edit this copy by hand. Edit the canonical file and copy it here.
 # Doc: tm:pd:asap7-soc-phase5-multiclock-sdc, cr:pd:asap7-soc-phase5-multiclock-sdc
 
 create_clock -name sys_clk -period 1750 -waveform {0 875} [get_ports clk_i]
@@ -39,13 +35,9 @@ set_clock_uncertainty -hold  10 [get_clocks cpu_clk]
 set_clock_transition   10       [get_clocks cpu_clk]
 set_clock_latency -source 50    [get_clocks cpu_clk]
 
-###############################################################################
-# 2. core_clk / cpu_core_clk — generated from clk_i / cpu_clk_i through their
-#    respective PLL-stub BUFx2 cells. Run-13 lesson (see header): do NOT
-#    create_generated_clock for either. CTS traces through both BUFx2 cells
-#    automatically (CLOCK_NET config per domain) so macro and std-cell sinks
-#    on each side land on one balanced tree.
-###############################################################################
+# 2. core_clk and cpu_core_clk come from clk_i and cpu_clk_i through their PLL-stub BUFx2 cells.
+# Do not create_generated_clock for either. CTS traces through both cells (CLOCK_NET config per domain),
+# so the macro and standard-cell sinks of each domain land on one balanced tree.
 # (no create_generated_clock for core_clk)
 # (no create_generated_clock for cpu_core_clk)
 puts "INFO: No generated clock for core_clk — CTS traces through the fabric PLL BUFx2 as part of sys_clk's tree."

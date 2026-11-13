@@ -1,9 +1,11 @@
-#=============================================
-# Phase 1: Single-cycle RV32I CPU - Post-CTS SDC
-# Target: 100 MHz (10ns period)
-# File: phase1_cpu_post_cts.sdc
-# Description: Updated constraints after clock tree synthesis
-#=============================================
+# phase1_cpu_post_cts.sdc - Post-CTS timing constraints for the Phase 1 single-cycle RV32I CPU (rv32i_cpu_top, clock clk)
+#
+# Scope: pnr/constraints/Makefile.sdc selects it as SDC_POST_CTS for the cts, route and sta stages.
+# Contents: design information; clock clk with tighter uncertainty than before CTS; AXI4-Lite and APB3 input and output delays;
+#   commit-interface outputs; false paths; load and drive; design-rule constraints; clock skew analysis commands.
+# Inputs: none. All time values in this file are in ns.
+# User rules: use this file after CTS for more accurate timing analysis. Before CTS use phase1_cpu_enhanced.sdc.
+# Doc: cr:pd:phase1-cpu-post-cts-sdc, tm:pd:phase1-cpu-post-cts-sdc
 
 #---------------------------------------------
 # Design Information
@@ -17,8 +19,7 @@
 # Clock Definition
 #---------------------------------------------
 
-# Doc: cr:pd:phase1-cpu-post-cts-sdc
-# Create primary clock (100 MHz)
+# Create primary clock.
 create_clock -name clk -period 10.0 [get_ports clk]
 
 # Post-CTS clock uncertainty (much tighter than pre-CTS)
@@ -185,5 +186,5 @@ set_max_fanout 16 [current_design]
 #---------------------------------------------
 
 # After CTS, analyze clock skew to ensure it's acceptable
-# Target: < 100ps between any two flops
+# Target: a small skew between any two flops. The limit is in cr:pd:phase1-cpu-post-cts-sdc.
 # Run: report_clock_skew -hold -setup [get_clocks clk]

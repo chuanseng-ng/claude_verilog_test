@@ -1,31 +1,25 @@
-#=============================================
-# Phase 3: RV32I CPU + L1 I-Cache + L1 D-Cache
-# Target: 75 MHz (13.333 ns period) — Sky130 130nm, SRAM-based caches
-# File: phase3_cache.sdc
+# phase3_cache.sdc - Timing constraints for the Phase 3 RV32I CPU with L1 I-cache and D-cache (Sky130, clock clk_i)
 #
-# Extends phase2_cpu.sdc with:
-#   - SRAM-to-logic multicycle paths (cache array read completes in 1 cycle
-#     but the behavioural model has no explicit setup within the same cycle;
-#     declare conservative 1-cycle constraint, tighten once SRAM macros are
-#     characterised).
-#   - No new external ports (the cache is entirely internal to rv32i_core;
-#     all external I/O ports remain identical to Phase 2).
-#
-# Architecture:
-#   5-stage pipeline (IF→ID→EX→MEM→WB)
-#   I-Cache: 4 KB direct-mapped (rv32i_icache instance u_icache)
-#   D-Cache: 4 KB write-back/write-allocate (rv32i_dcache instance u_dcache)
-#   Cache arbiter: single AXI4-Lite port, D$ priority (rv32i_cache_arbiter)
-#=============================================
+# Scope: pnr/librelane/config.json sets PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE to this file.
+#   pnr/Makefile sets SDC_FILE to it for the OpenROAD stage targets. pnr/openlane1/config.json sets BASE_SDC_FILE to it.
+# Contents: it extends phase2_cpu.sdc: clock clk_i; AXI4-Lite and APB3 delays; APB3 multicycle paths; false paths;
+#   path groups for the critical pipeline paths; load and drive; area and design-rule constraints.
+#   The cache SRAM arrays need no multicycle constraint.
+#   There are no new external ports. The caches are internal to rv32i_core, so all external ports are the same as in Phase 2.
+# Inputs: none. All time values in this file are in ns.
+# User rules:
+#   All AXI ports at cpu_top level are the cache-arbiter outputs. They face the L2/DRAM controller.
+#   If an asynchronous APB clock is introduced, add a create_clock and a clock group for it (see the APB section).
+# Doc: tm:pd:phase3-cache-sdc
 
 #---------------------------------------------
 # Clock Definition
 #---------------------------------------------
 
-# Primary clock — 75 MHz = 13.333 ns period
+# Primary clock.
 create_clock -name clk_i -period 13.333 [get_ports clk_i]
 
-# Clock uncertainty — tightened to 0.3 ns (post-CTS; measured worst skew ~0.5 ns)
+# Clock uncertainty: tightened after CTS.
 set_clock_uncertainty 0.5 [get_clocks clk_i]
 set_clock_uncertainty -hold 0.2 [get_clocks clk_i]
 
@@ -37,7 +31,7 @@ set_clock_latency -source 1.0 [get_clocks clk_i]
 # Input Constraints — AXI4-Lite
 #---------------------------------------------
 # All AXI ports at cpu_top level are the cache-arbiter outputs; they face
-# the L2/DRAM controller.  Use 2 ns setup margin (generous at 75 MHz).
+# Use a generous setup margin at the target frequency.
 
 # Ready signals
 set_input_delay -clock clk_i -max 2.0 [get_ports axi_awready_i]
@@ -67,7 +61,7 @@ set_input_delay -clock clk_i -min 0.5 [get_ports axi_rvalid_i]
 #---------------------------------------------
 # Input Constraints — APB3 Debug Interface
 #---------------------------------------------
-# APB is non-critical; 3.5 ns max allowed at 75 MHz.
+# APB is non-critical. It gets a larger max input delay.
 
 set_input_delay -clock clk_i -max 3.5 [get_ports apb_paddr_i]
 set_input_delay -clock clk_i -max 3.5 [get_ports apb_psel_i]
@@ -174,23 +168,11 @@ set_false_path -to [get_ports debug_ebreak_o]
 #   set_clock_groups -asynchronous -group {clk_i} -group {apb_clk}
 
 #---------------------------------------------
-# Multicycle Paths — Cache SRAM arrays
-#---------------------------------------------
-#
-# RTL fix applied: CS_SRAM_LATCH pipeline register stage added to both
-# rv32i_icache and rv32i_dcache (see rv32i_cache_pkg.sv CS_SRAM_LATCH=3'b101).
-#
-# The SRAM dout buses are registered into tag_dout_r / data_dout_r FFs at
-# posedge N+1 (CS_SRAM_LATCH).  CS_TAG_CHECK at posedge N+2 sources all
-# combinational logic from those registered values.
-#
-# Resulting STA paths:
-#   negedge N  →  tag_dout_r FF (posedge N+1) : wire-only path, ~1.3 ns TT.
-#     Fits comfortably in the 6.67 ns half-period window.
-#   tag_dout_r (posedge N+1)  →  state_q FF (posedge N+2) : full-period path.
-#     13.33 ns budget.  All 847 previously failing TT violations eliminated.
-#
-# No set_multicycle_path constraints are needed or correct here.
+# Multicycle Paths - Cache SRAM arrays. No set_multicycle_path is needed or correct here.
+# CS_SRAM_LATCH (rv32i_cache_pkg.sv) registers the SRAM dout buses into tag_dout_r and data_dout_r at posedge N+1.
+# CS_TAG_CHECK at posedge N+2 sources all combinational logic from those registers.
+# The path from negedge N to tag_dout_r (posedge N+1) is wire-only and fits the half-period window.
+# The path from tag_dout_r (posedge N+1) to state_q (posedge N+2) takes a full period.
 
 #---------------------------------------------
 # Path Groups — prioritise pipeline critical paths

@@ -1,21 +1,15 @@
-###############################################################################
-# pdn_asap7_orfs.tcl — ASAP7 PDN grid that actually builds (beads `gyx` / `4l8`)
+# pdn_asap7_orfs.tcl - Shared ASAP7 PDN grid for blocks: M1 and M2 followpins, then M5 and M6 stripes
 #
-# THE FIX — follow the ORFS ASAP7 reference grid
-# ----------------------------------------------
-# Ported from OpenROAD-flow-scripts
-# `flow/platforms/asap7/openRoad/pdn/BLOCKS_grid_strategy.tcl`: put followpins
-# on BOTH M1 and M2 (0.018 µm wide, 0.54 µm pitch — one per row), then climb
-# M2→M5→M6.  Every rail now has an M2 partner directly above it, so there are
-# no channels to repair.
-# NOTE: IR drop additionally needs `VIAS_R` in the config — ASAP7 shipped no
-# via resistances, so PSM aborted with `PSM-0021` ("Resistance map contains
-# invalid values") even once connectivity was clean.  Values in the configs are
-# ORFS's (`flow/platforms/asap7/setRC.tcl`).
-#
-# The macro grid connects M4↔M5 because the SRAM macro PG pins are on M4
-# (`sram_1rw_256x32_asap7.lef`); ORFS's own ElementGrid only needs M5↔M6.
-###############################################################################
+# Scope: cpu/pdn_orfs.tcl and gpu/pdn_orfs.tcl source this file. config_3014.json of the CPU and the GPU sets PDN_CFG to them.
+#   soc/pdn_orfs.tcl sources it too, but no SoC config names that wrapper.
+# Contents: global connections; voltage domain CORE; grid top with M1 and M2 followpin rails (one per row), M5 and M6 stripes
+#   and the M1-M2, M2-M5 and M5-M6 connections; macro grid with M4-M5 and M5-M6 connections.
+# Inputs: environment variables SCRIPTS_DIR, VDD_NET and GND_NET.
+# User rules:
+#   The grid follows the ORFS ASAP7 reference grid: followpins on both M1 and M2, so every rail has an M2 partner above it.
+#   The macro grid connects M4 to M5 because the SRAM macro PG pins are on M4 (sram_1rw_256x32_asap7.lef).
+#   IR drop analysis also needs VIAS_R in the config. ASAP7 ships no via resistances, and PSM aborts without them.
+#   Take the VIAS_R values from the ORFS setRC.tcl of the ASAP7 platform.
 # Doc: tm:pd:asap7-pdn-orfs-tcl, cr:pd:asap7-pdn-orfs-tcl
 
 source $::env(SCRIPTS_DIR)/openroad/common/set_global_connections.tcl
@@ -42,8 +36,7 @@ add_pdn_connect -grid top -layers {M5 M6}
 
 ###############################################################################
 # Macro grid — SRAM PG pins are on M4, so M4↔M5 is required here.
-# Halo 2 µm (ORFS MACRO_ROWS_HALO_X/Y); the old 10 µm halo made no difference
-# to the channel failure and only costs routing area.
+# Macro halo: the ORFS value (MACRO_ROWS_HALO_X and MACRO_ROWS_HALO_Y). A larger halo made no difference to the channel failure and only costs routing area.
 ###############################################################################
 define_pdn_grid -macro -default -name macro -halo "2 2" -voltage_domains CORE
 

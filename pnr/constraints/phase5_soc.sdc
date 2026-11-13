@@ -1,23 +1,14 @@
-###############################################################################
-# WARNING (GH #96, 2026-08-05): THIS COPY IS STALE AND DIVERGENT.
-# It still carries the run-13 `create_generated_clock` block for core_clk
-# (see section 2 below) that caused the CTS split-tree failure (~214 ps
-# setup skew between the macro-clk tree and the std-cell-FF tree).
-# The IN-USE, run-14 sign-off file is:
-#   pnr/asap7/soc/constraints/phase5_soc.sdc
-# (no create_generated_clock; CLOCK_NET=clk_i lets CTS trace through the PLL
-# stub buffer into one balanced tree — see that file's own header).
-# config.json's PNR_SDC_FILE/SIGNOFF_SDC_FILE/FALLBACK_SDC_FILE all point at
-# the asap7/soc/constraints/ copy, not this one. Do not point any config at
-# this file. Kept for history only; not deleted in GH #96 (deletion is a
-# separate, deferred cleanup).
-###############################################################################
-
-###############################################################################
-# phase5_soc.sdc — Timing constraints for soc_top on ASAP7 7nm predictive
-###############################################################################
-
-# Doc: tm:pd:phase5-soc-sdc
+# phase5_soc.sdc (stale copy) - Timing constraints for soc_top on ASAP7 with a generated clock for core_clk
+#
+# Scope: no config reads this file. pnr/asap7/soc/config.json sets PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE
+#   to pnr/asap7/soc/constraints/phase5_soc.sdc.
+# Contents: clock clk_i; generated clock core_clk through the PLL stub BUFx2 (strategies S1 to S4); false paths and I/O delays.
+# User rules:
+#   This copy is stale and divergent. Do not point any config at it. It stays for history only.
+#   Section 2 still has the create_generated_clock block for core_clk. That block caused the CTS split-tree failure:
+#   a setup skew between the macro-clock tree and the standard-cell flop tree.
+#   The file in use has no create_generated_clock. CLOCK_NET=clk_i lets CTS trace through the PLL stub buffer into one balanced tree.
+# Doc: tm:pd:phase5-soc-sdc, cr:pd:phase5-soc-sdc
 ###############################################################################
 # 1. Primary clock — defined at the SoC top-level reference input
 ###############################################################################
@@ -29,23 +20,11 @@ set_clock_transition   10       [get_clocks clk_i]
 set_clock_latency -source 50    [get_clocks clk_i]
 
 ###############################################################################
-# 2. PLL stub generated clock — core_clk
-#
-# pll_clkgen_stub synthesizes to a single BUFx2_ASAP7_75t_R cell (_1_) that
-# passes ref_clk_i straight through to out_clk_o.  The out_clk_o port of the
-# parameterised pll_clkgen module connects to the SoC-level "core_clk" net,
-# which clocks all sub-blocks (CPU/GPU macros, crossbar, peripherals).
-#
-# The generated-clock target must be the driver pin of the core_clk net so
-# that OpenROAD CTS builds the clock tree from that point.  Three strategies
-# are tried in order of specificity; the first that resolves a non-empty
-# collection wins (if all fail, fall back to creating core_clk directly at
-# the clk_i port so that STA still sees a constrained core_clk domain):
-#
-#   S1: Output pin of the BUFx2 inside the PLL stub hierarchy (post-synth name)
-#   S2: Any pin hierarchically below u_pll that drives a net named core_clk
-#   S3: The core_clk net itself (OpenROAD supports create_clock on a net)
-#   S4: Fallback — clone clk_i as core_clk at the port level
+# 2. PLL stub generated clock - core_clk.
+# pll_clkgen_stub synthesises to one BUFx2 cell. It passes ref_clk_i to out_clk_o, which drives the core_clk net.
+# The generated-clock target must be the driver pin of the core_clk net, so that CTS builds the tree from that point.
+# S1: BUFx2 output pin inside u_pll. S2: any pin below u_pll that drives core_clk. S3: the core_clk net. S4: a clone of clk_i at the port.
+# The first strategy that resolves a non-empty collection wins.
 ###############################################################################
 
 # S1 — exact BUFx2 output pin (reliable pre-CTS; Yosys names the cell _1_)
@@ -105,7 +84,7 @@ if {[llength [get_clocks -quiet core_clk]] > 0} {
 set_false_path -from [get_ports rst_n_i]
 
 ###############################################################################
-# 4. SoC I/O delays (≈20% of 1750 ps = 350 ps on timed ports)
+# 4. SoC I/O delays on timed ports.
 #    Exclude clocks and reset from the timed set.
 ###############################################################################
 set _in_timed {}

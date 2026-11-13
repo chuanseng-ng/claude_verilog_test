@@ -1,9 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 4: Clock Tree Synthesis
-# Tool: TritonCTS (integrated in OpenROAD)
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), skew < 100 ps, Sky130 HD
-#================================================================
+# 04_cts.tcl - Stage 4 of the OpenROAD flow: clock tree synthesis (TritonCTS in OpenROAD, Sky130 HD)
+#
+# Scope: make target cts runs it from pnr/Makefile.
+# Contents: builds the clock tree, then tightens the clock uncertainty after CTS.
+# Inputs: environment variables TOP_MODULE and SDC_FILE. SKY130_ROOT overrides the PDK location.
+# User rules: The clock uncertainty after CTS is smaller than before CTS (Doc: ds:ch:sdc-timing-spec).
+# Doc: tm:pd:scripts-04-cts-tcl
 
 #----------------------------------------------------------------
 # Configuration
@@ -110,8 +111,7 @@ puts "================================================================"
 
 estimate_parasitics -placement
 
-# Tighten clock uncertainty post-CTS per Doc: ds:ch:sdc-timing-spec guidance
-# (pre-CTS uses 0.5 ns, post-CTS tightens to 0.3 ns)
+# Tighten the clock uncertainty after CTS per Doc: ds:ch:sdc-timing-spec. Before CTS the value is larger.
 set_propagated_clock [all_clocks]
 set_clock_uncertainty 0.3 [get_clocks clk_i]
 

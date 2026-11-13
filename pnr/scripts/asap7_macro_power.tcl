@@ -1,41 +1,22 @@
-# asap7_macro_power.tcl — characterize lumped macro power for an ASAP7 hard
-# macro (rv32i_cpu_top / gpu_top) from its own flat gate-level netlist.
-# Invoked via: sta -exit scripts/asap7_macro_power.tcl
-#   (or through the MCP eda-opensta session: read_liberty/read_verilog/
-#    link_design/read_sdc by hand, then source this script's activity+
-#    report_power tail — see README.md in this directory for the manual
-#    session-based equivalent used to validate this script.)
+# asap7_macro_power.tcl - Lumped power of an ASAP7 hard macro (rv32i_cpu_top or gpu_top) from its flat gate-level netlist
 #
-# Inputs (env vars):
-#   NETLIST_PATH   — flat gate-level netlist for the macro's OWN block
-#                     (gunzipped .nl.v — e.g. pnr/asap7/cpu/macro/rv32i_cpu_top.nl.v
-#                     after `gunzip -k`). This is the macro's own internal
-#                     implementation, not a black-box view — it must resolve
-#                     down to real standard cells + any internal hard macros
-#                     (e.g. the SRAM instances inside rv32i_cpu_top).
-#   ASAP7_LIBS     — space-separated Liberty files: the 5 ASAP7 stdcell libs
-#                     + the macro's own internal SRAM lib(s). Same set
-#                     asap7_macro_views.tcl reads for write_timing_model.
-#   SDC_PATH       — the macro's OWN block-level SDC (defines its clock
-#                     period — this is what fixes the frequency the
-#                     characterized power corresponds to).
-#   DESIGN_NAME    — top module name (rv32i_cpu_top / gpu_top).
-#   POWER_REPORT_OUT — informational only (recorded in the printed header);
-#                     this script writes its report to STDOUT (plain OpenSTA
-#                     has no in-Tcl redirect — see the note above the
-#                     report_power call below), so the caller must itself
-#                     redirect stdout to this path for
-#                     asap7_macro_power_inject.py to consume. Required so the
-#                     printed header names the same path the caller intends
-#                     to use.
-#   ACTIVITY_RATE  — global toggle-rate override (default 0.20).
-#   ACTIVITY_DUTY  — global duty-cycle override (default 0.5).
-#   VCD_FILE / VCD_SCOPE — optional: read_vcd instead of the flat default.
-#
-# Output: STDOUT — full report_power -digits 6 text (Internal / Switching /
-# Leakage / Total, by group: Sequential / Combinational / Clock / Macro /
-# Pad, plus the Total row asap7_macro_power_inject.py parses). Redirect it:
-#   sta -exit pnr/scripts/asap7_macro_power.tcl > "$POWER_REPORT_OUT" 2>&1
+# Scope: sta -exit pnr/scripts/asap7_macro_power.tcl > "$POWER_REPORT_OUT" 2>&1
+#   The report goes to stdout. asap7_macro_power_inject.py parses it.
+# Contents: reads the Liberty files, the netlist and the block SDC; sets switching activity (a global default or a VCD);
+#   runs report_power -digits 6 and prints a header and the report.
+# Inputs (environment variables):
+#   NETLIST_PATH: flat gate-level netlist of the macro's own block (the gunzipped .nl.v). It must resolve to standard cells
+#     and internal hard macros, such as the SRAM instances. A black-box view does not work.
+#   ASAP7_LIBS: space-separated Liberty files: the five ASAP7 stdcell libs and the internal SRAM lib(s).
+#     It is the set that asap7_macro_views.tcl reads for write_timing_model.
+#   SDC_PATH: the block-level SDC of the macro. Its clock period fixes the frequency of the characterized power.
+#   DESIGN_NAME: top module name. POWER_REPORT_OUT: required, and used only in the printed header.
+#   ACTIVITY_RATE (default 0.20) and ACTIVITY_DUTY (default 0.5): global toggle rate and duty cycle.
+#   VCD_FILE and VCD_SCOPE (optional): read the activity from a VCD instead of the flat default.
+# User rules:
+#   Redirect stdout to the path in POWER_REPORT_OUT yourself. Plain OpenSTA has no in-Tcl redirect.
+#   Set POWER_REPORT_OUT to the path you redirect to, so the printed header names that path.
+#   The script reads no SPEF, so net load is pin capacitance only. The default activity is an assumption, not a measured trace.
 # Doc: tm:pd:scripts-asap7-macro-power-tcl
 
 set NETLIST         $::env(NETLIST_PATH)
@@ -88,20 +69,9 @@ if {$VCD_FILE ne ""} {
 }
 
 # ── 5. report_power ────────────────────────────────────────────────────────
-# Plain OpenSTA ("sta", as opposed to "openroad") has no `redirect { ... }`
-# block command or exposed sta::redirect_file_begin/end proc — both were
-# tried against this repo's vendored OpenSTA 2.7.0 and neither exists
-# (`info commands *redirect*` is empty). So this script does not write
-# POWER_REPORT_OUT itself; it prints the header + report_power output to
-# stdout in the exact format asap7_macro_power_inject.py expects, and the
-# caller captures stdout to $POWER_REPORT_OUT:
-#
-#   sta -exit pnr/scripts/asap7_macro_power.tcl > "$POWER_REPORT_OUT" 2>&1
-#
-# (the eda-opensta MCP session equivalent already writes its own report file
-# per call — see tools/eda/README.md — so a caller driving this through that
-# MCP server instead of a bare `sta -exit` can use that file directly and
-# skip the shell redirect.)
+# Plain OpenSTA (sta, not openroad) has no redirect block command and no sta::redirect_file_begin proc.
+# So this script does not write POWER_REPORT_OUT. It prints the header and the report_power output to stdout in the format
+# that asap7_macro_power_inject.py expects. The caller captures stdout: sta -exit pnr/scripts/asap7_macro_power.tcl > "$POWER_REPORT_OUT" 2>&1
 set ACTIVITY_SOURCE_STR "flat_default"
 if {$VCD_FILE ne ""} { set ACTIVITY_SOURCE_STR "vcd:$VCD_FILE" }
 

@@ -1,8 +1,10 @@
-#=============================================
-# Phase 1: Single-cycle RV32I CPU
-# Target: 100 MHz (10ns period)
-# File: phase1_cpu.sdc
-#=============================================
+# phase1_cpu.sdc - Baseline timing constraints for the Phase 1 single-cycle RV32I CPU (rv32i_cpu_top, clock clk)
+#
+# Scope: baseline SDC of Phase 1. pnr/constraints/Makefile.sdc names it SDC_BASELINE.
+#   pnr/constraints/Makefile.sdc uses phase1_cpu_enhanced.sdc before CTS and phase1_cpu_post_cts.sdc for cts, route and sta.
+# Contents: clock clk; AXI4-Lite and APB3 input and output delays; false paths; output load and drive; area and design-rule constraints.
+# Inputs: none. All time values in this file are in ns.
+# Doc: tm:pd:phase1-cpu-sdc
 
 #---------------------------------------------
 # Clock Definition
@@ -25,7 +27,7 @@ set_clock_transition 0.1 [get_clocks clk]
 #---------------------------------------------
 
 # AXI4-Lite input delays (based on protocol timing)
-# Assume external memory controller with 2ns setup, 0.5ns hold
+# The input delays assume an external memory controller. The setup and hold values are in the commands below (ns).
 set_input_delay -clock clk -max 2.0 [get_ports axi_*ready]
 set_input_delay -clock clk -max 2.0 [get_ports axi_rdata]
 set_input_delay -clock clk -max 2.0 [get_ports axi_rresp]
@@ -94,7 +96,7 @@ set_false_path -to [get_ports trap_*]
 # Load and Drive Constraints
 #---------------------------------------------
 
-# Output load (assume 50fF capacitance)
+# Output load: an assumed external capacitance. The value is below in pF.
 set_load 0.05 [all_outputs]
 
 # Input drive (assume BUF_X1 driving inputs)

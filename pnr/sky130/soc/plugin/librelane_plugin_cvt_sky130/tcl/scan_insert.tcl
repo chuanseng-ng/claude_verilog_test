@@ -1,27 +1,25 @@
-# DFT Stage 2 (bead claude_verilog_test-j41m.8): netlist-level scan insertion with OpenROAD `dft`.
-# Run by the CVT.ScanInsert step (librelane_plugin_cvt_sky130/__init__.py) with an OpenROAD that has
-# set_dft_config / scan_replace / execute_dft_plan (26Q2; the Sky130 flow's own edf00dff has a different,
-# defective stitcher, Doc: tm:ch:dft-architecture 1.1/1.3).  Everything is parameterised through the environment:
-#   CVT_SCAN_NL_IN / CVT_SCAN_NL_OUT   flow netlist in, scan netlist out
-#   CVT_SCAN_TOP                       design name
-#   CVT_SCAN_LEFS / CVT_SCAN_LIBS      Tcl lists
-#   CVT_SCAN_CLOCKS                    Tcl list of {name port period_ns} triples (STA clocks the stitcher needs)
-#   CVT_SCAN_EXCL_CLKNETS              Tcl list of clock NET names whose flops are NOT scanned (TAP clock, test clock);
-#                                      inverters/buffers fed only from these nets are followed (negedge-tck flops)
-#   CVT_SCAN_EXCL_QRX                  regex on the Q net name of flops that are NOT scanned (crypto key registers)
-#   CVT_SCAN_EXPECT_QEXCL              expected count of Q-net-excluded flops (-1 = do not check); mismatch aborts
-#   CVT_SCAN_MAX_LENGTH                set_dft_config -max_length
-#   CVT_SCAN_PORT_ORDER                Tcl list of regexes on the first flop's clock net; chains are given port indices
-#                                      in this class order (first class -> lowest indices)
-#   CVT_SCAN_IN_FMT / CVT_SCAN_OUT_FMT existing top ports, e.g. scan_in_i[%d]  (printf style)
-#   CVT_SCAN_EN_NET                    existing net every SCE pin is joined to (soc_top: dft_scan_en, macro: scan_en_i)
-#   CVT_SCAN_BUF_CELL                  buffer master put between a chain's last Q net and its scan_out port
-#   CVT_SCAN_OUT_GATE_NET              (optional) net name of the crypto wipe-done signal.  When set, each scan_out port is
-#                                      driven by CVT_SCAN_OUT_GATE_CELL (an AND2: A = chain last Q, B = this net) INSTEAD of a
-#                                      buffer (bead j41m.17 decision 5a).  If the net is missing or undriven the step FAILS;
-#                                      it never falls back to a buffer.
-#   CVT_SCAN_OUT_GATE_CELL             the AND2 master (default sky130_fd_sc_hd__and2_2)
-#   CVT_SCAN_REPORT                    report file (key=value lines, parsed by the step and by check_scan_chains.py)
+# scan_insert.tcl - Netlist-level scan insertion with OpenROAD dft (Sky130 SoC, DFT Stage 2)
+#
+# Scope: the CVT.ScanInsert step (librelane_plugin_cvt_sky130/__init__.py) runs it. It needs an OpenROAD with set_dft_config,
+#   scan_replace and execute_dft_plan (26Q2). The OpenROAD of the Sky130 flow has a different, defective stitcher.
+# Contents: reads the flow netlist, replaces flops with scan flops, stitches the chains, and writes the scan netlist and a report.
+# Inputs (environment variables):
+#   CVT_SCAN_NL_IN, CVT_SCAN_NL_OUT (netlists), CVT_SCAN_TOP (design name), CVT_SCAN_LEFS, CVT_SCAN_LIBS (Tcl lists),
+#   CVT_SCAN_REPORT (report file of key=value lines; the step and check_scan_chains.py parse it).
+#   CVT_SCAN_CLOCKS: Tcl list of {name port period_ns} triples (the STA clocks the stitcher needs).
+#   CVT_SCAN_EXCL_CLKNETS: clock net names whose flops are not scanned (TAP clock, test clock).
+#     Inverters and buffers fed only from these nets are followed (negedge-tck flops).
+#   CVT_SCAN_EXCL_QRX: regex on the Q net name of flops that are not scanned (crypto key registers).
+#   CVT_SCAN_EXPECT_QEXCL: expected count of those flops. -1 skips the check. A mismatch aborts.
+#   CVT_SCAN_MAX_LENGTH: set_dft_config -max_length.
+#   CVT_SCAN_PORT_ORDER: Tcl list of regexes on the clock net of a chain's first flop. Chains get port indices in this class order.
+#   CVT_SCAN_IN_FMT, CVT_SCAN_OUT_FMT: existing top ports in printf style, for example scan_in_i[%d].
+#   CVT_SCAN_EN_NET: existing net that every SCE pin joins (soc_top: dft_scan_en, macro: scan_en_i).
+#   CVT_SCAN_BUF_CELL: buffer master between the last Q net of a chain and its scan_out port.
+#   CVT_SCAN_OUT_GATE_NET (optional): net of the crypto wipe-done signal. When set, CVT_SCAN_OUT_GATE_CELL drives each scan_out port
+#     (an AND2: A is the last Q of the chain, B is this net) instead of a buffer.
+#     If the net is missing or undriven, the step fails. It never falls back to a buffer.
+#   CVT_SCAN_OUT_GATE_CELL: the AND2 master (default sky130_fd_sc_hd__and2_2).
 # Doc: tm:pd:sky130-soc-plugin-librelane-cvt-tcl-scan-insert
 
 proc env_or {name default} {

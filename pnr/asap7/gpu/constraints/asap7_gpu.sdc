@@ -1,14 +1,15 @@
-###############################################################################
-# asap7_gpu.sdc — Timing constraints for gpu_top on ASAP7 7nm predictive
+# asap7_gpu.sdc - Timing constraints for gpu_top on ASAP7 (clock clk)
 #
-# IMPORTANT: All time values are in PICOSECONDS (ASAP7 stdcell Liberty declares
-# time_unit : "1ps"; OpenROAD reads create_clock -period raw against that unit).
-# This mirrors pnr/asap7/constraints/asap7.sdc — do NOT write ns values here.
-#
-# The GPU shared-memory banks are SRAM macros (sram_1rw_128x32_asap7) clocked
-# directly by clk — no ICG, so no generated clock is needed.
-###############################################################################
-
+# Scope: pnr/asap7/gpu/config.json and config_3014.json set PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE to this file.
+# Contents: clock clk with uncertainty, transition and source latency; false paths on the AXI-Lite slave ports (s_axil_*);
+#   I/O delays on the timed ports; false path from rst_n; SRAM input hold false paths (Liberty artifact: no hold arc on din0, addr0, csb0);
+#   hold false path from the m_axi inputs.
+# Inputs: none. The period and delays are literal values in this file.
+# User rules:
+#   All time values are picoseconds. The ASAP7 Liberty time unit is one picosecond. OpenROAD reads create_clock -period raw against it.
+#   Do not write ns values here. The file mirrors pnr/asap7/cpu/constraints/asap7.sdc.
+#   Do not copy the m_axi input hold false paths into a SoC SDC without checking the real fabric timing.
+#   The GPU shared-memory banks are SRAM macros (sram_1rw_128x32_asap7) clocked directly by clk. There is no ICG, so no generated clock is needed.
 # Doc: tm:pd:asap7-gpu-sdc, cr:pd:asap7-gpu-sdc
 ###############################################################################
 # 1. Clock
@@ -35,7 +36,7 @@ if {[llength $_s_axil_ports] > 0} {
 }
 
 ###############################################################################
-# 3. IO delays (≈20% of 2000 ps period on timed ports)
+# 3. I/O delays on timed ports.
 ###############################################################################
 # OpenSTA does not implement remove_from_collection; use Tcl filter instead.
 set _in_timed {}

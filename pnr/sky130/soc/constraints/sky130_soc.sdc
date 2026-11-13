@@ -1,5 +1,24 @@
-# sky130_soc.sdc — Timing constraints for SoC Stage 2 (Sky130A, 40 MHz)
+# sky130_soc.sdc - Functional-mode timing constraints for the Sky130 SoC (soc_top with the CPU hard macro)
 #
+# Scope: LibreLane flow in pnr/sky130/soc. config.json and config_rccal.json set PNR_SDC_FILE, SIGNOFF_SDC_FILE and
+#   FALLBACK_SDC_FILE to this file. sta_load_sky130_soc.tcl, tools/dft/make_scan_analysis_sdc.py and
+#   tb/tests/test_cvt_scan_step.py also read it.
+# Contents: clocks core_clk (clk_i), cpu_clk (cpu_clk_i) and tck (tck_i, when it exists); I/O delays; false paths; DFT case analysis;
+#   clock group async_domains; CDC hold exemption; 2-cycle path on the APB debug ports.
+# Inputs: environment variable CVT_SDC_SCAN_VIEW (optional). The file sets clock_period and _jtag_period itself.
+#   It guards optional ports with -quiet, so an older netlist still reads it.
+# User rules:
+#   Do not add set_max_delay across core_clk, cpu_clk and tck here. OpenSTA drops it inside an asynchronous group.
+#   The CDC budgets are in sky130_soc_cdc_check.sdc, read by check_cdc_timing_sky130.tcl (make target check-cdc-timing-sky130-soc).
+#   Set CVT_SDC_SCAN_VIEW to 1 to skip the CDC hold exemption in a scan-mode STA view.
+#   In scan mode the flow does not repair hold on the exempted stage-0 synchroniser flops. That hold is not verified.
+#   Mask those flops in the scan capture response.
+#   This file is not a scan-mode SDC. A TAP flop also drives scan_mode, so STA can propagate tck and scan_clk_i
+#   through the dft_clk_mux selects. This file cannot pin that flop, because its name does not survive flattening.
+#   The tck period is a placeholder until a pad ring and an ATE exist.
+#   Timing sign-off is typical-corner (nom_tt) only. Do not report it as a multi-corner sign-off.
+#   The SRAM arcs are the same at all nine corners, because the 4 KB SRAM macro Liberty has one corner only.
+#   Slow-corner (ss) setup is not signed off with this constraint set.
 # Doc: tm:pd:sky130-soc-sdc, cr:pd:sky130-soc-sdc
 
 set clock_period 25.0

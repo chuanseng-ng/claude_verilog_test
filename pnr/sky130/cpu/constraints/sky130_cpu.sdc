@@ -1,33 +1,19 @@
-#=============================================
-# Sky130 Stage 1: rv32i_cpu_top standalone
-# Target: 75 MHz (13.333 ns period) — Sky130 130nm, SRAM-based caches
-# File: sky130_cpu.sdc
+# sky130_cpu.sdc - Timing constraints for rv32i_cpu_top standalone on Sky130 (Stage 1, clock clk_i)
 #
-# Extends phase3_cache.sdc with:
-#   - AXI4 burst ports added in Phase 5 M2 (arlen/arsize/arburst/rlast,
-#     awlen/awsize/awburst, wlast) — required for real DRC/LVS run because
-#     all ports must be constrained for clean sign-off STA.
-#
-# Architecture:
-#   5-stage pipeline with EX sub-stages (EX1a/EX1b/EX1c/EX2, from ASAP7 runs)
-#   I-Cache: 4 KB direct-mapped (rv32i_icache — u_icache)
-#   D-Cache: 4 KB write-back/write-allocate (rv32i_dcache — u_dcache)
-#   Cache arbiter: single AXI4 burst port, D$ priority (rv32i_cache_arbiter)
-#   M7 perf counters: mcycle/minstret/mhpmcounter3-5 in rv32i_csr_file
-#
-# Sky130 timing characteristics (sky130_fd_sc_hd TT 1.8V 25C):
-#   FF setup:       ~0.4–0.6 ns
-#   FF hold:        ~0.2–0.3 ns
-#   Clock jitter:   ~0.1 ns
-#   Documented fmax ceiling: ~100–120 MHz for this pipeline topology
-#=============================================
-
-
+# Scope: pnr/sky130/cpu/config.json sets PNR_SDC_FILE (and the sign-off SDC keys) to this file.
+#   sta_load_sky130_soc.tcl uses it as the default SDC for the CPU macro.
+# Contents: it extends phase3_cache.sdc with the AXI4 burst ports added in Phase 5 (arlen, arsize, arburst, rlast,
+#   awlen, awsize, awburst, wlast). Also clock clk_i and the AXI4 and APB3 delays.
+#   The design is the five-stage pipeline with the EX sub-stages, two 4 KB caches, a cache arbiter and the performance counters.
+# Inputs: none. All time values in this file are in ns.
+# User rules:
+#   Constrain every port. The real DRC and LVS run needs all ports constrained for a clean sign-off STA.
+#   Sky130 limits this pipeline topology to a documented frequency ceiling. See tm:pd:sky130-cpu-sdc.
 # Doc: tm:pd:sky130-cpu-sdc
-# Primary clock — 75 MHz = 13.333 ns period
+# Primary clock.
 create_clock -name clk_i -period 13.333 [get_ports clk_i]
 
-# Clock uncertainty — 0.5 ns setup / 0.2 ns hold
+# Clock uncertainty: setup and hold.
 set_clock_uncertainty        0.5 [get_clocks clk_i]
 set_clock_uncertainty -hold  0.2 [get_clocks clk_i]
 
@@ -38,7 +24,7 @@ set_clock_latency -source 1.0 [get_clocks clk_i]
 #---------------------------------------------
 # Input Constraints — AXI4 channels
 #---------------------------------------------
-# 2 ns max input delay (generous at 75 MHz; ~15% of period)
+# A generous max input delay at the target frequency.
 
 # AXI4-Lite / AXI4 ready signals
 set_input_delay -clock clk_i -max 2.0 [get_ports axi_awready_i]

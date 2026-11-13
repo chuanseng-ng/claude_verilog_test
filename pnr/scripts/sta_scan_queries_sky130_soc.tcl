@@ -1,12 +1,12 @@
-#================================================================
-# DFT Stage 2 post-route queries (bead j41m.8). Sourced through sta_load_sky130_soc.tcl (env STA_CMDS).
-#   STA_OUT   output directory for small result files (default .)
-#   STA_Q     which block: main | exempt_pins | scan_pins
-#     main         per-clock worst setup/hold, clock latency + skew, hold/setup through dft_scan_en, CPU-macro input-pin hold
-#     exempt_pins  (functional view) write the capture D pins the SDC exempts from hold to $STA_OUT/exempt_pins.txt
-#     scan_pins    (scan view, STA_VIEW=scan) hold slack of those pins, tck -> tck included
-# Every number is printed as a "Q: <key> <value>" line so it can be grepped.
-#================================================================
+# sta_scan_queries_sky130_soc.tcl - DFT post-route timing queries on a loaded Sky130 SoC run
+#
+# Scope: sta_load_sky130_soc.tcl sources it through the environment variable STA_CMDS.
+# Contents: query blocks chosen by STA_Q. main: per-clock worst setup and hold, clock latency and skew, hold and setup through dft_scan_en,
+#   CPU-macro input-pin hold. exempt_pins (functional view): writes the capture D pins the SDC exempts from hold to $STA_OUT/exempt_pins.txt.
+#   scan_pins (scan view, STA_VIEW=scan): hold slack of those pins, including tck to tck.
+# Inputs: STA_OUT (output directory for small result files, default .) and STA_Q (main, exempt_pins or scan_pins; default main).
+# User rules: every number prints as a "Q: <key> <value>" line, so it can be grepped.
+# Doc: tm:pd:scripts-sta-scan-queries-sky130-soc-tcl
 proc q_out {k v} { puts "Q: $k $v" }
 proc q_slack {pin kind} {
     set s [get_property $pin $kind]
