@@ -1,6 +1,127 @@
 label	file	line	title
-cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7	Archive
-cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	7	ASAP7 CPU, GPU and SoC runs
+cr:app:archive-cocotb-setup-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	7661	cocotb Test Infrastructure Setup - Summary
+cr:app:archive-cocotb-setup-summary:1-bus-functional-models-bfms	docs/manual/cr/parts/04-fix-log-and-archive.tex	7682	1. Bus Functional Models (BFMs)
+cr:app:archive-cocotb-setup-summary:1-full-protocol-support	docs/manual/cr/parts/04-fix-log-and-archive.tex	8004	1. Full Protocol Support
+cr:app:archive-cocotb-setup-summary:2-common-utilities	docs/manual/cr/parts/04-fix-log-and-archive.tex	7753	2. Common Utilities
+cr:app:archive-cocotb-setup-summary:2-reference-model-integration	docs/manual/cr/parts/04-fix-log-and-archive.tex	8020	2. Reference Model Integration
+cr:app:archive-cocotb-setup-summary:3-test-templates	docs/manual/cr/parts/04-fix-log-and-archive.tex	7811	3. Test Templates
+cr:app:archive-cocotb-setup-summary:3-verification-strategy-alignment	docs/manual/cr/parts/04-fix-log-and-archive.tex	8038	3. Verification Strategy Alignment
+cr:app:archive-cocotb-setup-summary:4-build-infrastructure	docs/manual/cr/parts/04-fix-log-and-archive.tex	7877	4. Build Infrastructure
+cr:app:archive-cocotb-setup-summary:4-developer-experience	docs/manual/cr/parts/04-fix-log-and-archive.tex	8056	4. Developer Experience
+cr:app:archive-cocotb-setup-summary:5-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	7907	5. Documentation
+cr:app:archive-cocotb-setup-summary:after-cocotb-infrastructure-complete	docs/manual/cr/parts/04-fix-log-and-archive.tex	8276	After (cocotb infrastructure complete)
+cr:app:archive-cocotb-setup-summary:apb3-master-bfm	docs/manual/cr/parts/04-fix-log-and-archive.tex	7715	1. Bus Functional Models (BFMs)
+cr:app:archive-cocotb-setup-summary:axi4-lite-master-bfm	docs/manual/cr/parts/04-fix-log-and-archive.tex	7684	1. Bus Functional Models (BFMs)
+cr:app:archive-cocotb-setup-summary:before-no-cocotb-infrastructure	docs/manual/cr/parts/04-fix-log-and-archive.tex	8258	Before (No cocotb infrastructure)
+cr:app:archive-cocotb-setup-summary:clock-and-reset-utilities	docs/manual/cr/parts/04-fix-log-and-archive.tex	7783	2. Common Utilities
+cr:app:archive-cocotb-setup-summary:comparison-before-vs-after	docs/manual/cr/parts/04-fix-log-and-archive.tex	8256	Comparison: Before vs After
+cr:app:archive-cocotb-setup-summary:cpu-tests	docs/manual/cr/parts/04-fix-log-and-archive.tex	7813	3. Test Templates
+cr:app:archive-cocotb-setup-summary:deliverables-created	docs/manual/cr/parts/04-fix-log-and-archive.tex	7680	Deliverables Created
+cr:app:archive-cocotb-setup-summary:dependencies-installed	docs/manual/cr/parts/04-fix-log-and-archive.tex	8339	Dependencies Installed
+cr:app:archive-cocotb-setup-summary:directory-structure-created	docs/manual/cr/parts/04-fix-log-and-archive.tex	7973	Directory Structure Created
+cr:app:archive-cocotb-setup-summary:example-test-working-now	docs/manual/cr/parts/04-fix-log-and-archive.tex	7847	3. Test Templates
+cr:app:archive-cocotb-setup-summary:file-count-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	8298	File Count Summary
+cr:app:archive-cocotb-setup-summary:immediate-next-steps-before-phase-1	docs/manual/cr/parts/04-fix-log-and-archive.tex	8198	Immediate Next Steps (Before Phase 1)
+cr:app:archive-cocotb-setup-summary:installation-guide	docs/manual/cr/parts/04-fix-log-and-archive.tex	7945	5. Documentation
+cr:app:archive-cocotb-setup-summary:integration-with-project	docs/manual/cr/parts/04-fix-log-and-archive.tex	8116	Integration with Project
+cr:app:archive-cocotb-setup-summary:key-features	docs/manual/cr/parts/04-fix-log-and-archive.tex	8002	Key Features
+cr:app:archive-cocotb-setup-summary:lines-of-code-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	8318	Lines of Code Summary
+cr:app:archive-cocotb-setup-summary:main-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	7909	5. Documentation
+cr:app:archive-cocotb-setup-summary:makefiles	docs/manual/cr/parts/04-fix-log-and-archive.tex	7879	4. Build Infrastructure
+cr:app:archive-cocotb-setup-summary:next-phase-0-tasks	docs/manual/cr/parts/04-fix-log-and-archive.tex	8352	Next Phase 0 Tasks
+cr:app:archive-cocotb-setup-summary:phase-0-exit-criteria-cocotb-section	docs/manual/cr/parts/04-fix-log-and-archive.tex	8166	Phase 0 Exit Criteria - cocotb Section
+cr:app:archive-cocotb-setup-summary:phase-1-rtl-verification	docs/manual/cr/parts/04-fix-log-and-archive.tex	8232	Phase 1 RTL Verification
+cr:app:archive-cocotb-setup-summary:phase-1-testing-once-rtl-exists	docs/manual/cr/parts/04-fix-log-and-archive.tex	8094	Phase 1+ Testing (Once RTL Exists)
+cr:app:archive-cocotb-setup-summary:recommendations	docs/manual/cr/parts/04-fix-log-and-archive.tex	8373	Recommendations
+cr:app:archive-cocotb-setup-summary:scoreboard	docs/manual/cr/parts/04-fix-log-and-archive.tex	7755	2. Common Utilities
+cr:app:archive-cocotb-setup-summary:success-metrics	docs/manual/cr/parts/04-fix-log-and-archive.tex	8423	Success Metrics
+cr:app:archive-cocotb-setup-summary:testing-the-infrastructure	docs/manual/cr/parts/04-fix-log-and-archive.tex	8074	Testing the Infrastructure
+cr:app:archive-cocotb-setup-summary:verify-installation	docs/manual/cr/parts/04-fix-log-and-archive.tex	8076	Verify Installation
+cr:app:archive-cocotb-setup-summary:what-was-accomplished	docs/manual/cr/parts/04-fix-log-and-archive.tex	7670	What Was Accomplished
+cr:app:archive-cocotb-setup-summary:whats-next	docs/manual/cr/parts/04-fix-log-and-archive.tex	8196	What\textquotesingle s Next
+cr:app:archive-cocotb-setup-summary:works-with-existing-infrastructure	docs/manual/cr/parts/04-fix-log-and-archive.tex	8118	Works With Existing Infrastructure
+cr:app:archive-pre-commit-setup-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	8448	Pre-commit Hooks Setup - Complete Summary
+cr:app:archive-pre-commit-setup-summary:auto-fix-capabilities	docs/manual/cr/parts/04-fix-log-and-archive.tex	8619	Auto-fix Capabilities
+cr:app:archive-pre-commit-setup-summary:auto-fix-example	docs/manual/cr/parts/04-fix-log-and-archive.tex	8716	Auto-fix Example
+cr:app:archive-pre-commit-setup-summary:benefits	docs/manual/cr/parts/04-fix-log-and-archive.tex	8759	Benefits
+cr:app:archive-pre-commit-setup-summary:complete-qa-stack	docs/manual/cr/parts/04-fix-log-and-archive.tex	8868	Complete QA Stack
+cr:app:archive-pre-commit-setup-summary:configuration-files	docs/manual/cr/parts/04-fix-log-and-archive.tex	8459	Configuration Files
+cr:app:archive-pre-commit-setup-summary:documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	8501	Documentation
+cr:app:archive-pre-commit-setup-summary:documentation-reference	docs/manual/cr/parts/04-fix-log-and-archive.tex	8916	Documentation Reference
+cr:app:archive-pre-commit-setup-summary:example-workflow	docs/manual/cr/parts/04-fix-log-and-archive.tex	8675	Example Workflow
+cr:app:archive-pre-commit-setup-summary:features	docs/manual/cr/parts/04-fix-log-and-archive.tex	8617	Features
+cr:app:archive-pre-commit-setup-summary:installation-3-simple-steps	docs/manual/cr/parts/04-fix-log-and-archive.tex	8559	Installation (3 Simple Steps)
+cr:app:archive-pre-commit-setup-summary:manual-check-commands	docs/manual/cr/parts/04-fix-log-and-archive.tex	8799	Manual Check Commands
+cr:app:archive-pre-commit-setup-summary:manual-fix-example	docs/manual/cr/parts/04-fix-log-and-archive.tex	8735	Manual Fix Example
+cr:app:archive-pre-commit-setup-summary:next-steps	docs/manual/cr/parts/04-fix-log-and-archive.tex	8938	Next Steps
+cr:app:archive-pre-commit-setup-summary:on-every-commit	docs/manual/cr/parts/04-fix-log-and-archive.tex	8578	On Every Commit
+cr:app:archive-pre-commit-setup-summary:on-every-push	docs/manual/cr/parts/04-fix-log-and-archive.tex	8601	On Every Push
+cr:app:archive-pre-commit-setup-summary:quality-checks	docs/manual/cr/parts/04-fix-log-and-archive.tex	8639	Quality Checks
+cr:app:archive-pre-commit-setup-summary:quality-improvements	docs/manual/cr/parts/04-fix-log-and-archive.tex	8779	Quality Improvements
+cr:app:archive-pre-commit-setup-summary:questions	docs/manual/cr/parts/04-fix-log-and-archive.tex	8957	Questions?
+cr:app:archive-pre-commit-setup-summary:skipping-hooks-emergency-only	docs/manual/cr/parts/04-fix-log-and-archive.tex	8824	Skipping Hooks (Emergency Only)
+cr:app:archive-pre-commit-setup-summary:speed	docs/manual/cr/parts/04-fix-log-and-archive.tex	8659	Speed
+cr:app:archive-pre-commit-setup-summary:summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	8977	Summary
+cr:app:archive-pre-commit-setup-summary:time-savings	docs/manual/cr/parts/04-fix-log-and-archive.tex	8761	Time Savings
+cr:app:archive-pre-commit-setup-summary:uninstalling	docs/manual/cr/parts/04-fix-log-and-archive.tex	8856	Uninstalling
+cr:app:archive-pre-commit-setup-summary:updating-hooks	docs/manual/cr/parts/04-fix-log-and-archive.tex	8843	Updating Hooks
+cr:app:archive-pre-commit-setup-summary:what-happens-now	docs/manual/cr/parts/04-fix-log-and-archive.tex	8576	What Happens Now
+cr:app:archive-pre-commit-setup-summary:what-was-created	docs/manual/cr/parts/04-fix-log-and-archive.tex	8457	What Was Created
+cr:app:archive-pre-commit-setup-summary:when-hooks-fail	docs/manual/cr/parts/04-fix-log-and-archive.tex	8714	When Hooks Fail
+cr:app:archive-quickstart-precommit	docs/manual/cr/parts/04-fix-log-and-archive.tex	9019	Pre-commit Hooks - Quick Start
+cr:app:archive-quickstart-precommit:benefits	docs/manual/cr/parts/04-fix-log-and-archive.tex	9204	Benefits
+cr:app:archive-quickstart-precommit:comparison-local-vs-ci	docs/manual/cr/parts/04-fix-log-and-archive.tex	9224	Comparison: Local vs CI
+cr:app:archive-quickstart-precommit:example-workflow	docs/manual/cr/parts/04-fix-log-and-archive.tex	9095	Example Workflow
+cr:app:archive-quickstart-precommit:full-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	9299	Full Documentation
+cr:app:archive-quickstart-precommit:hooks-are-too-slow	docs/manual/cr/parts/04-fix-log-and-archive.tex	9284	Hooks are too slow
+cr:app:archive-quickstart-precommit:if-a-hook-fails	docs/manual/cr/parts/04-fix-log-and-archive.tex	9125	If a Hook Fails
+cr:app:archive-quickstart-precommit:installation-one-time-setup	docs/manual/cr/parts/04-fix-log-and-archive.tex	9027	Installation (One-Time Setup)
+cr:app:archive-quickstart-precommit:manual-hook-execution	docs/manual/cr/parts/04-fix-log-and-archive.tex	9168	Manual Hook Execution
+cr:app:archive-quickstart-precommit:on-every-commit	docs/manual/cr/parts/04-fix-log-and-archive.tex	9046	On Every Commit ✓
+cr:app:archive-quickstart-precommit:on-every-push	docs/manual/cr/parts/04-fix-log-and-archive.tex	9066	On Every Push ✓
+cr:app:archive-quickstart-precommit:pre-commit-command-not-found	docs/manual/cr/parts/04-fix-log-and-archive.tex	9264	"pre-commit: command not found"
+cr:app:archive-quickstart-precommit:pylint-command-not-found	docs/manual/cr/parts/04-fix-log-and-archive.tex	9274	"pylint: command not found"
+cr:app:archive-quickstart-precommit:skipping-hooks-emergency-only	docs/manual/cr/parts/04-fix-log-and-archive.tex	9188	Skipping Hooks (Emergency Only)
+cr:app:archive-quickstart-precommit:summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	9307	Summary
+cr:app:archive-quickstart-precommit:troubleshooting	docs/manual/cr/parts/04-fix-log-and-archive.tex	9262	Troubleshooting
+cr:app:archive-quickstart-precommit:uninstalling	docs/manual/cr/parts/04-fix-log-and-archive.tex	9249	Uninstalling
+cr:app:archive-quickstart-precommit:usage	docs/manual/cr/parts/04-fix-log-and-archive.tex	9078	Usage
+cr:app:archive-quickstart-precommit:what-you-get	docs/manual/cr/parts/04-fix-log-and-archive.tex	9044	What You Get
+cr:app:archive-readme	docs/manual/cr/parts/04-fix-log-and-archive.tex	7521	Archived Documentation
+cr:app:archive-readme:contents	docs/manual/cr/parts/04-fix-log-and-archive.tex	7530	Contents
+cr:app:archive-readme:current-active-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	7572	Current Active Documentation
+cr:app:archive-readme:design-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	7612	Design Documentation
+cr:app:archive-readme:fixes-directory	docs/manual/cr/parts/04-fix-log-and-archive.tex	7597	Fixes Directory
+cr:app:archive-readme:root-directory	docs/manual/cr/parts/04-fix-log-and-archive.tex	7580	Root Directory
+cr:app:archive-readme:session-summaries	docs/manual/cr/parts/04-fix-log-and-archive.tex	7551	Session Summaries
+cr:app:archive-readme:setup-summaries-completed-2026-01-18	docs/manual/cr/parts/04-fix-log-and-archive.tex	7532	Setup Summaries (Completed - 2026-01-18)
+cr:app:archive-readme:test-status	docs/manual/cr/parts/04-fix-log-and-archive.tex	7626	Test Status
+cr:app:archive-session-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	9340	Session Summary - EBREAK Fix \& Random Tests Validation
+cr:app:archive-session-summary:1-white-check-mark-ebreak-halt-detection-bug-fixed	docs/manual/cr/parts/04-fix-log-and-archive.tex	9354	\texorpdfstring{1. \ok{} EBREAK Halt Detection Bug - FIXED}{1. EBREAK Halt Detection Bug - FIXED}
+cr:app:archive-session-summary:2-white-check-mark-random-instruction-tests-validated	docs/manual/cr/parts/04-fix-log-and-archive.tex	9423	\texorpdfstring{2. \ok{} Random Instruction Tests - VALIDATED}{2. Random Instruction Tests - VALIDATED}
+cr:app:archive-session-summary:3-white-check-mark-makefile-enhancement	docs/manual/cr/parts/04-fix-log-and-archive.tex	9476	\texorpdfstring{3. \ok{} Makefile Enhancement}{3. Makefile Enhancement}
+cr:app:archive-session-summary:accomplishments	docs/manual/cr/parts/04-fix-log-and-archive.tex	9351	Accomplishments
+cr:app:archive-session-summary:commit-1-ebreak-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	9854	Commit 1: EBREAK Fix
+cr:app:archive-session-summary:commit-2-makefile-enhancement	docs/manual/cr/parts/04-fix-log-and-archive.tex	9880	Commit 2: Makefile Enhancement
+cr:app:archive-session-summary:commit-recommendations	docs/manual/cr/parts/04-fix-log-and-archive.tex	9852	Commit Recommendations
+cr:app:archive-session-summary:documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	9697	Documentation
+cr:app:archive-session-summary:ebreak-fix-implementation	docs/manual/cr/parts/04-fix-log-and-archive.tex	9538	EBREAK Fix Implementation
+cr:app:archive-session-summary:files-changed	docs/manual/cr/parts/04-fix-log-and-archive.tex	9624	Files Changed
+cr:app:archive-session-summary:immediate	docs/manual/cr/parts/04-fix-log-and-archive.tex	9797	Immediate
+cr:app:archive-session-summary:known-issues	docs/manual/cr/parts/04-fix-log-and-archive.tex	9779	Known Issues
+cr:app:archive-session-summary:long-term	docs/manual/cr/parts/04-fix-log-and-archive.tex	9833	Long-term
+cr:app:archive-session-summary:next-steps	docs/manual/cr/parts/04-fix-log-and-archive.tex	9795	Next Steps
+cr:app:archive-session-summary:random-test-architecture	docs/manual/cr/parts/04-fix-log-and-archive.tex	9573	Random Test Architecture
+cr:app:archive-session-summary:rtl-changes	docs/manual/cr/parts/04-fix-log-and-archive.tex	9626	RTL Changes
+cr:app:archive-session-summary:short-term	docs/manual/cr/parts/04-fix-log-and-archive.tex	9814	Short-term
+cr:app:archive-session-summary:statistics	docs/manual/cr/parts/04-fix-log-and-archive.tex	9907	Statistics
+cr:app:archive-session-summary:technical-details	docs/manual/cr/parts/04-fix-log-and-archive.tex	9536	Technical Details
+cr:app:archive-session-summary:test-infrastructure	docs/manual/cr/parts/04-fix-log-and-archive.tex	9658	Test Infrastructure
+cr:app:archive-session-summary:test-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	9513	Test Summary
+cr:app:archive-session-summary:verification-status	docs/manual/cr/parts/04-fix-log-and-archive.tex	9754	Verification Status
+cr:app:archive-session-summary:whats-working-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	9757	\texorpdfstring{What\textquotesingle s Working \ok{}}{What\textquotesingle s Working }
+cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
+cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
 cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	15	Build files
 cr:ch:fix-log	docs/manual/cr/parts/04-fix-log-and-archive.tex	3	Fix log
 cr:ch:investigations	docs/manual/cr/parts/03-investigations.tex	3	Investigations
@@ -8,20 +129,603 @@ cr:ch:phase-5-soc-runs	docs/manual/cr/parts/02-run-histories.tex	3	Phase 5 SoC r
 cr:ch:phase-history	docs/manual/cr/parts/01-phase-and-status-history.tex	3	Phase history
 cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	7	Physical design files
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
-cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	11	Sky130 runs
-cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	7	Status history
+cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
+cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	11	Test benches
+cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
+cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
+cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	306	Controls (MEASURED unless marked)
+cr:defect:asap7-cpu-synlig-ma7:first-divergence-and-mechanism	docs/manual/cr/parts/03-investigations.tex	355	First divergence and mechanism
+cr:defect:asap7-cpu-synlig-ma7:harness-fix-found-on-the-way-measured	docs/manual/cr/parts/03-investigations.tex	160	Harness fix found on the way (MEASURED)
+cr:defect:asap7-cpu-synlig-ma7:method	docs/manual/cr/parts/03-investigations.tex	126	Method
+cr:defect:asap7-cpu-synlig-ma7:not-done	docs/manual/cr/parts/03-investigations.tex	486	Not done
+cr:defect:asap7-cpu-synlig-ma7:provenance-measured	docs/manual/cr/parts/03-investigations.tex	52	Provenance (MEASURED)
+cr:defect:asap7-cpu-synlig-ma7:reproduce	docs/manual/cr/parts/03-investigations.tex	499	Reproduce
+cr:defect:asap7-cpu-synlig-ma7:result-1-the-two-ma7-programs-yosys-sim-original-harness-four-netlists-measured	docs/manual/cr/parts/03-investigations.tex	183	\texorpdfstring{Result 1: the two ma7 programs, yosys \code{sim} (original harness), four netlists (MEASURED)}{Result 1: the two ma7 programs, yosys (original harness), four netlists (MEASURED)}
+cr:defect:asap7-cpu-synlig-ma7:result-2-six-programs-verilator-cycle-exact-vs-rtl-measured	docs/manual/cr/parts/03-investigations.tex	230	Result 2: six programs, Verilator, cycle-exact vs RTL (MEASURED)
+cr:defect:asap7-cpu-synlig-ma7:update-2026-10-10-bead-ainf-is-synlig-pr-259-safe-for-the-remaining-struct-member-selects	docs/manual/cr/parts/03-investigations.tex	518	\texorpdfstring{Update 2026-10-10 (bead \code{ainf}): is "Synlig + PR \#259" safe for the remaining struct-member selects?}{Update 2026-10-10 (bead ): is "Synlig + PR \#259" safe for the remaining struct-member selects?}
+cr:defect:asap7-cpu-synlig-ma7:verdict	docs/manual/cr/parts/03-investigations.tex	26	Verdict
+cr:defect:sky130-cpu-ss-setup-r51p	docs/manual/cr/parts/03-investigations.tex	2650	Sky130 CPU macro: ss reg-to-reg setup failure (bead r51p) - path analysis
+cr:defect:sky130-cpu-ss-setup-r51p:1-the-premise-in-the-bead-is-not-what-the-reports-show	docs/manual/cr/parts/03-investigations.tex	2663	1. The premise in the bead is not what the reports show
+cr:defect:sky130-cpu-ss-setup-r51p:2-what-the-failing-cone-is-measured-from-the-runs-own-netlist-54-openroad-fillinsertionrv32i-cpu-topnlv	docs/manual/cr/parts/03-investigations.tex	2702	\texorpdfstring{2. What the failing cone is (measured, from the run\textquotesingle s own netlist \code{54-openroad-fillinsertion/rv32i_cpu_top.nl.v})}{2. What the failing cone is (measured, from the run\textquotesingle s own netlist )}
+cr:defect:sky130-cpu-ss-setup-r51p:3-where-the-time-goes-worst-path-u-dcachestate-q3-u-icacheu-tag-sramcsb0-1584-ns-data-path	docs/manual/cr/parts/03-investigations.tex	2746	\texorpdfstring{3. Where the time goes (worst path, \code{u_dcache.state_q[3]} -\textgreater{} \code{u_icache.u_tag_sram/csb0}, 15.84 ns data path)}{3. Where the time goes (worst path, -\textgreater{} , 15.84 ns data path)}
+cr:defect:sky130-cpu-ss-setup-r51p:4-consequences-for-the-fix	docs/manual/cr/parts/03-investigations.tex	2797	4. Consequences for the fix
+cr:defect:sky130-cpu-ss-setup-r51p:5-what-changed-rtl-and-why-it-is-cycle-exact	docs/manual/cr/parts/03-investigations.tex	2847	5. What changed (RTL) and why it is cycle-exact
+cr:defect:sky130-cpu-ss-setup-r51p:6-pd-handoff-expected-versus-residual-for-the-batched-cpu-re-harden	docs/manual/cr/parts/03-investigations.tex	2945	6. PD handoff: expected versus residual (for the batched CPU re-harden)
+cr:defect:sky130-cpu-synlig-dud4	docs/manual/cr/parts/03-investigations.tex	578	\texorpdfstring{Sky130 CPU macro netlist vs RTL differential (bead \code{dud4})}{Sky130 CPU macro netlist vs RTL differential (bead )}
+cr:defect:sky130-cpu-synlig-dud4:consequences	docs/manual/cr/parts/03-investigations.tex	792	Consequences
+cr:defect:sky130-cpu-synlig-dud4:corrected-mechanism	docs/manual/cr/parts/03-investigations.tex	733	Corrected mechanism
+cr:defect:sky130-cpu-synlig-dud4:gate-bead-gc0y	docs/manual/cr/parts/03-investigations.tex	948	Gate (bead gc0y)
+cr:defect:sky130-cpu-synlig-dud4:harness-problem-found-and-fixed-on-the-way-measured	docs/manual/cr/parts/03-investigations.tex	713	Harness problem found and fixed on the way (MEASURED)
+cr:defect:sky130-cpu-synlig-dud4:main-rtl-pair-originmain-5eb5f63-measured	docs/manual/cr/parts/03-investigations.tex	856	\texorpdfstring{Main-RTL pair (\code{origin/main} = \code{5eb5f63}, MEASURED)}{Main-RTL pair ( = , MEASURED)}
+cr:defect:sky130-cpu-synlig-dud4:negative-control-on-a-clean-baseline-measured	docs/manual/cr/parts/03-investigations.tex	833	Negative control, on a clean baseline (MEASURED)
+cr:defect:sky130-cpu-synlig-dud4:not-done-limits	docs/manual/cr/parts/03-investigations.tex	908	Not done / limits
+cr:defect:sky130-cpu-synlig-dud4:re-harden-on-sv2v-2026-10-11-remedy-applied	docs/manual/cr/parts/03-investigations.tex	971	Re-harden on sv2v (2026-10-11) --- remedy applied
+cr:defect:sky130-cpu-synlig-dud4:reproduce	docs/manual/cr/parts/03-investigations.tex	930	Reproduce
+cr:defect:sky130-cpu-synlig-dud4:root-cause-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	607	Root cause (MEASURED unless marked)
+cr:defect:sky130-cpu-synlig-dud4:simulation-result-three-netlists-same-testbench-same-programs-measured	docs/manual/cr/parts/03-investigations.tex	649	Simulation result: three netlists, same testbench, same programs (MEASURED)
+cr:defect:sky130-cpu-synlig-dud4:verdict	docs/manual/cr/parts/03-investigations.tex	591	Verdict
+cr:defect:sky130-cpu-synlig-dud4:why-nothing-caught-it	docs/manual/cr/parts/03-investigations.tex	763	Why nothing caught it
+cr:defect:sky130-slew-cap-e45j	docs/manual/cr/parts/03-investigations.tex	1049	\texorpdfstring{Sky130 SoC max-slew / max-cap: root cause and the RC-calibrated repair (bead \code{e45j})}{Sky130 SoC max-slew / max-cap: root cause and the RC-calibrated repair (bead )}
+cr:defect:sky130-slew-cap-e45j:1-the-earlier-root-cause-was-only-half-right	docs/manual/cr/parts/03-investigations.tex	1065	1. The earlier root cause was only half right
+cr:defect:sky130-slew-cap-e45j:2-the-fix-project-local-plugin-no-edit-to-the-shared-librelane-install	docs/manual/cr/parts/03-investigations.tex	1140	2. The fix: project-local plugin, no edit to the shared LibreLane install
+cr:defect:sky130-slew-cap-e45j:2026-10-26-addendum-stable-hand-instantiated-driver-waivers-pr-330-dft-stage-2	docs/manual/cr/parts/03-investigations.tex	2101	2026-10-26 addendum: stable hand-instantiated driver waivers (PR \#330, DFT Stage 2)
+cr:defect:sky130-slew-cap-e45j:3-result	docs/manual/cr/parts/03-investigations.tex	1173	3. Result
+cr:defect:sky130-slew-cap-e45j:4-what-is-left-max-ss-295	docs/manual/cr/parts/03-investigations.tex	1243	4. What is left (max\_ss 295)
+cr:defect:sky130-slew-cap-e45j:5-confirmation-run-on-current-rtl-2026-10-08-not-adopted	docs/manual/cr/parts/03-investigations.tex	1280	5. Confirmation run on current RTL (2026-10-08): NOT adopted
+cr:defect:sky130-slew-cap-e45j:6-noise-repeat-and-the-wire-length-experiment-2026-10-0809-still-not-adopted	docs/manual/cr/parts/03-investigations.tex	1389	\texorpdfstring{6. Noise repeat and the wire-length experiment (2026-10-08/\allowbreak{}09): still NOT adopted}{6. Noise repeat and the wire-length experiment (2026-10-08/09): still NOT adopted}
+cr:defect:sky130-slew-cap-e45j:61-noise-the-flow-is-bit-deterministic-here-measured	docs/manual/cr/parts/03-investigations.tex	1405	6.1 Noise: the flow is bit-deterministic here (measured)
+cr:defect:sky130-slew-cap-e45j:62-why-the-one-cap-violation-survives-measured-on-the-confirmation-run	docs/manual/cr/parts/03-investigations.tex	1431	6.2 Why the one cap violation survives (measured on the confirmation run)
+cr:defect:sky130-slew-cap-e45j:63-the-single-variable-run-grt-design-repair-max-wire-length-1500	docs/manual/cr/parts/03-investigations.tex	1478	\texorpdfstring{6.3 The single-variable run: \texttt{GRT\_\allowbreak{}DESIGN\_\allowbreak{}REPAIR\_\allowbreak{}MAX\_\allowbreak{}WIRE\_\allowbreak{}LENGTH\ =\allowbreak{}\ 1500}}{6.3 The single-variable run: }
+cr:defect:sky130-slew-cap-e45j:64-recommendation-and-next-step	docs/manual/cr/parts/03-investigations.tex	1574	6.4 Recommendation and next step
+cr:defect:sky130-slew-cap-e45j:7-adoption-2026-10-09-rccal-is-the-default-max-cap-gated-with-a-named-waiver	docs/manual/cr/parts/03-investigations.tex	1613	7. Adoption (2026-10-09): rccal is the default; max-cap gated with a named waiver
+cr:defect:sky130-slew-cap-e45j:71-un-skipping-the-stock-checker-alone-would-have-gated-nothing-measured	docs/manual/cr/parts/03-investigations.tex	1638	7.1 Un-skipping the stock checker alone would have gated nothing (measured)
+cr:defect:sky130-slew-cap-e45j:72-what-was-built	docs/manual/cr/parts/03-investigations.tex	1674	7.2 What was built
+cr:defect:sky130-slew-cap-e45j:73-validation-no-new-full-flow-was-run-see-74	docs/manual/cr/parts/03-investigations.tex	1728	7.3 Validation (no new full flow was run; see 7.4)
+cr:defect:sky130-slew-cap-e45j:74-what-is-not-validated	docs/manual/cr/parts/03-investigations.tex	1793	7.4 What is NOT validated
+cr:defect:sky130-slew-cap-e45j:75-end-to-end-confirmation-2026-10-09-the-adopted-flow-completes-with-cvtmaxcapviolations-in-position	docs/manual/cr/parts/03-investigations.tex	1823	\texorpdfstring{7.5 End-to-end confirmation (2026-10-09): the adopted flow completes with \code{CVT.MaxCapViolations} in position}{7.5 End-to-end confirmation (2026-10-09): the adopted flow completes with in position}
+cr:defect:sky130-slew-cap-e45j:8-new-baseline-on-the-sv2v-rebuilt-cpu-macro-2026-10-11-bead-dud4-stale-waiver-3-unwaived-ss-corner-nets	docs/manual/cr/parts/03-investigations.tex	1958	\texorpdfstring{8. New baseline on the sv2v-rebuilt CPU macro (2026-10-11, bead \code{dud4}): stale waiver, 3 unwaived ss-corner nets}{8. New baseline on the sv2v-rebuilt CPU macro (2026-10-11, bead ): stale waiver, 3 unwaived ss-corner nets}
+cr:defect:sky130-slew-cap-e45j:9-wire-length-1500-adopted-as-default-2026-10-28-bead-e45j	docs/manual/cr/parts/03-investigations.tex	2122	\texorpdfstring{9. Wire-length 1500 adopted as default (2026-10-28, bead \code{e45j})}{9. Wire-length 1500 adopted as default (2026-10-28, bead )}
+cr:defect:synlig-struct-select-ainf	docs/manual/cr/parts/03-investigations.tex	2277	\texorpdfstring{Synlig struct-member part-select defect: rule, site table, equivalence (bead \code{ainf})}{Synlig struct-member part-select defect: rule, site table, equivalence (bead )}
+cr:defect:synlig-struct-select-ainf:d1-read-side-a-packedunpacked-struct-with-exactly-two-members-declared-with-a-packed-range	docs/manual/cr/parts/03-investigations.tex	2309	\texorpdfstring{D1 (read side): a packed/\allowbreak{}unpacked struct with EXACTLY TWO members declared with a packed range}{D1 (read side): a packed/unpacked struct with EXACTLY TWO members declared with a packed range}
+cr:defect:synlig-struct-select-ainf:d2-write-side-part-select-of-a-struct-member-on-the-left-hand-side	docs/manual/cr/parts/03-investigations.tex	2396	D2 (write side): part-select of a struct member on the LEFT-HAND side
+cr:defect:synlig-struct-select-ainf:d3-element-select-of-a-struct-member-that-is-a-multi-dimensional-packed-array	docs/manual/cr/parts/03-investigations.tex	2574	D3: element select of a struct member that is a multi-dimensional packed array
+cr:defect:synlig-struct-select-ainf:step-1-reading-for-this-repo	docs/manual/cr/parts/03-investigations.tex	2413	Step 1 reading for this repo
+cr:defect:synlig-struct-select-ainf:step-1-the-defect-rule-probe-evidence-toolsverifstruct-selectresultsround17txt-370-probes	docs/manual/cr/parts/03-investigations.tex	2297	\texorpdfstring{Step 1: the defect rule (probe evidence: \code{tools/verif/struct_select/results/round1..7.txt}, 370 probes)}{Step 1: the defect rule (probe evidence: , 370 probes)}
+cr:defect:synlig-struct-select-ainf:step-2a-mechanical-site-table-toolsverifstruct-selectsitetablepy-output-resultssitetabletxt	docs/manual/cr/parts/03-investigations.tex	2425	\texorpdfstring{Step 2a: mechanical site table (\src{tools/verif/struct_select/sitetable.py}, output \code{results/sitetable.txt})}{Step 2a: mechanical site table (, output )}
+cr:defect:synlig-struct-select-ainf:step-2b-synlig-vs-sv2v-equivalence-on-the-real-modules-modeqsh-run-modeqsh-mkconepy	docs/manual/cr/parts/03-investigations.tex	2510	\texorpdfstring{Step 2b: Synlig-vs-sv2v equivalence on the real modules (\code{modeq.sh}, \code{run_modeq.sh}, \code{mkcone.py})}{Step 2b: Synlig-vs-sv2v equivalence on the real modules (, , )}
+cr:defect:synlig-struct-select-ainf:step-4-verdict-recommendation-limits	docs/manual/cr/parts/03-investigations.tex	2610	Step 4: verdict, recommendation, limits
+cr:fix:cpu-dataflow-diagram	docs/manual/cr/parts/04-fix-log-and-archive.tex	5542	Phase 1 RV32I CPU Dataflow Diagram
+cr:fix:cpu-dataflow-diagram:1-fetch-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5601	1. FETCH Stage
+cr:fix:cpu-dataflow-diagram:2-decode-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5625	2. DECODE Stage
+cr:fix:cpu-dataflow-diagram:3-execute-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5661	3. EXECUTE Stage
+cr:fix:cpu-dataflow-diagram:4-memory-stage-if-mem-rd-or-mem-wr	docs/manual/cr/parts/04-fix-log-and-archive.tex	5710	4. MEMORY Stage (if mem\_rd or mem\_wr)
+cr:fix:cpu-dataflow-diagram:5-writeback-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5756	5. WRITEBACK Stage
+cr:fix:cpu-dataflow-diagram:branch-comparator-integration-detail	docs/manual/cr/parts/04-fix-log-and-archive.tex	5797	Branch Comparator Integration Detail
+cr:fix:cpu-dataflow-diagram:control-fsm-state-diagram	docs/manual/cr/parts/04-fix-log-and-archive.tex	5849	Control FSM State Diagram
+cr:fix:cpu-dataflow-diagram:critical-paths-timing	docs/manual/cr/parts/04-fix-log-and-archive.tex	5962	Critical Paths (Timing)
+cr:fix:cpu-dataflow-diagram:detailed-dataflow-instruction-execution	docs/manual/cr/parts/04-fix-log-and-archive.tex	5599	Detailed Dataflow: Instruction Execution
+cr:fix:cpu-dataflow-diagram:key-signals-to-monitor	docs/manual/cr/parts/04-fix-log-and-archive.tex	6010	Key Signals to Monitor
+cr:fix:cpu-dataflow-diagram:longest-combinational-paths	docs/manual/cr/parts/04-fix-log-and-archive.tex	5964	Longest Combinational Paths
+cr:fix:cpu-dataflow-diagram:module-signal-flow-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	5900	Module Signal Flow Summary
+cr:fix:cpu-dataflow-diagram:rv32i-alusv	docs/manual/cr/parts/04-fix-log-and-archive.tex	5930	\texorpdfstring{rv32i\_\allowbreak{}alu.sv}{rv32i\_alu.sv}
+cr:fix:cpu-dataflow-diagram:rv32i-branch-compsv-star	docs/manual/cr/parts/04-fix-log-and-archive.tex	5940	\texorpdfstring{rv32i\_\allowbreak{}branch\_\allowbreak{}comp.sv \textbf{*}}{rv32i\_branch\_comp.sv }
+cr:fix:cpu-dataflow-diagram:rv32i-controlsv	docs/manual/cr/parts/04-fix-log-and-archive.tex	5949	\texorpdfstring{rv32i\_\allowbreak{}control.sv}{rv32i\_control.sv}
+cr:fix:cpu-dataflow-diagram:rv32i-decodesv	docs/manual/cr/parts/04-fix-log-and-archive.tex	5902	\texorpdfstring{rv32i\_\allowbreak{}decode.sv}{rv32i\_decode.sv}
+cr:fix:cpu-dataflow-diagram:rv32i-imm-gensv	docs/manual/cr/parts/04-fix-log-and-archive.tex	5911	\texorpdfstring{rv32i\_\allowbreak{}imm\_\allowbreak{}gen.sv}{rv32i\_imm\_gen.sv}
+cr:fix:cpu-dataflow-diagram:rv32i-regfilesv	docs/manual/cr/parts/04-fix-log-and-archive.tex	5920	\texorpdfstring{rv32i\_\allowbreak{}regfile.sv}{rv32i\_regfile.sv}
+cr:fix:cpu-dataflow-diagram:scoreboard-comparison-points	docs/manual/cr/parts/04-fix-log-and-archive.tex	6037	Scoreboard Comparison Points
+cr:fix:cpu-dataflow-diagram:summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	6057	Summary
+cr:fix:cpu-dataflow-diagram:top-level-block-diagram	docs/manual/cr/parts/04-fix-log-and-archive.tex	5550	Top-Level Block Diagram
+cr:fix:cpu-dataflow-diagram:verification-points	docs/manual/cr/parts/04-fix-log-and-archive.tex	6008	Verification Points
+cr:fix:cpu-integration-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	6087	Phase 1 RTL Integration Summary
+cr:fix:cpu-integration-summary:1-branch-comparator-control-fsm	docs/manual/cr/parts/04-fix-log-and-archive.tex	6740	1. Branch Comparator → Control FSM
+cr:fix:cpu-integration-summary:1-control-fsm-review-rv32i-controlsv	docs/manual/cr/parts/04-fix-log-and-archive.tex	6469	\texorpdfstring{1. Control FSM Review (\code{rv32i_control.sv})}{1. Control FSM Review ()}
+cr:fix:cpu-integration-summary:2-core-integration-review-rv32i-coresv	docs/manual/cr/parts/04-fix-log-and-archive.tex	6508	\texorpdfstring{2. Core Integration Review (\code{rv32i_core.sv})}{2. Core Integration Review ()}
+cr:fix:cpu-integration-summary:2-decoder-all-modules	docs/manual/cr/parts/04-fix-log-and-archive.tex	6751	2. Decoder → All Modules
+cr:fix:cpu-integration-summary:3-register-file-alu-branch-comparator	docs/manual/cr/parts/04-fix-log-and-archive.tex	6762	3. Register File → ALU \& Branch Comparator
+cr:fix:cpu-integration-summary:3-top-level-integration-review-rv32i-cpu-topsv	docs/manual/cr/parts/04-fix-log-and-archive.tex	6549	\texorpdfstring{3. Top-Level Integration Review (\code{rv32i_cpu_top.sv})}{3. Top-Level Integration Review ()}
+cr:fix:cpu-integration-summary:4-control-fsm-all-modules	docs/manual/cr/parts/04-fix-log-and-archive.tex	6773	4. Control FSM → All Modules
+cr:fix:cpu-integration-summary:branch-comparator-integration	docs/manual/cr/parts/04-fix-log-and-archive.tex	6124	Branch Comparator Integration
+cr:fix:cpu-integration-summary:conclusion	docs/manual/cr/parts/04-fix-log-and-archive.tex	6784	Conclusion
+cr:fix:cpu-integration-summary:connections	docs/manual/cr/parts/04-fix-log-and-archive.tex	6135	Connections
+cr:fix:cpu-integration-summary:created-rtl-structure	docs/manual/cr/parts/04-fix-log-and-archive.tex	6233	Created RTL Structure
+cr:fix:cpu-integration-summary:dataflow	docs/manual/cr/parts/04-fix-log-and-archive.tex	6165	Dataflow
+cr:fix:cpu-integration-summary:file-locations	docs/manual/cr/parts/04-fix-log-and-archive.tex	6447	File Locations
+cr:fix:cpu-integration-summary:immediate-actions	docs/manual/cr/parts/04-fix-log-and-archive.tex	6633	Immediate Actions
+cr:fix:cpu-integration-summary:integration-quality-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	6585	Integration Quality Summary
+cr:fix:cpu-integration-summary:key-integration-points	docs/manual/cr/parts/04-fix-log-and-archive.tex	6738	Key Integration Points
+cr:fix:cpu-integration-summary:location	docs/manual/cr/parts/04-fix-log-and-archive.tex	6126	Location
+cr:fix:cpu-integration-summary:module-hierarchy	docs/manual/cr/parts/04-fix-log-and-archive.tex	6106	Module Hierarchy
+cr:fix:cpu-integration-summary:next-steps-for-human-review	docs/manual/cr/parts/04-fix-log-and-archive.tex	6466	Next Steps for Human Review
+cr:fix:cpu-integration-summary:overview	docs/manual/cr/parts/04-fix-log-and-archive.tex	6096	Overview
+cr:fix:cpu-integration-summary:recommendations	docs/manual/cr/parts/04-fix-log-and-archive.tex	6631	Recommendations
+cr:fix:cpu-integration-summary:rv32i-controlsv-control-fsm	docs/manual/cr/parts/04-fix-log-and-archive.tex	6236	\texorpdfstring{rv32i\_\allowbreak{}control.sv (Control FSM)}{rv32i\_control.sv (Control FSM)}
+cr:fix:cpu-integration-summary:rv32i-coresv-core-integration	docs/manual/cr/parts/04-fix-log-and-archive.tex	6303	\texorpdfstring{rv32i\_\allowbreak{}core.sv (Core Integration)}{rv32i\_core.sv (Core Integration)}
+cr:fix:cpu-integration-summary:rv32i-cpu-topsv-top-level	docs/manual/cr/parts/04-fix-log-and-archive.tex	6376	\texorpdfstring{rv32i\_\allowbreak{}cpu\_\allowbreak{}top.sv (Top-Level)}{rv32i\_cpu\_top.sv (Top-Level)}
+cr:fix:cpu-integration-summary:timing	docs/manual/cr/parts/04-fix-log-and-archive.tex	6214	Timing
+cr:fix:cpu-integration-summary:usage-in-control-fsm	docs/manual/cr/parts/04-fix-log-and-archive.tex	6189	Usage in Control FSM
+cr:fix:cpu-integration-summary:verification-strategy	docs/manual/cr/parts/04-fix-log-and-archive.tex	6679	Verification Strategy
+cr:fix:cpu-verification-ready	docs/manual/cr/parts/04-fix-log-and-archive.tex	6820	Phase 1 RTL - Verification Ready
+cr:fix:cpu-verification-ready:all-modules-implemented-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	6841	\texorpdfstring{All Modules Implemented \ok{}}{All Modules Implemented }
+cr:fix:cpu-verification-ready:apb3-debug-interface	docs/manual/cr/parts/04-fix-log-and-archive.tex	6938	APB3 Debug Interface
+cr:fix:cpu-verification-ready:axi-protocol-fixes-see-fixescritical-fixesmd	docs/manual/cr/parts/04-fix-log-and-archive.tex	7064	\texorpdfstring{AXI Protocol Fixes (See fixes/\allowbreak{}CRITICAL\_\allowbreak{}FIXES.md)}{AXI Protocol Fixes (See \cref{cr:fix:critical-fixes})}
+cr:fix:cpu-verification-ready:cocotb-testbench-created	docs/manual/cr/parts/04-fix-log-and-archive.tex	7089	Cocotb Testbench Created
+cr:fix:cpu-verification-ready:critical-bugs-fixed-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	7061	\texorpdfstring{Critical Bugs Fixed \ok{}}{Critical Bugs Fixed }
+cr:fix:cpu-verification-ready:debug-capabilities	docs/manual/cr/parts/04-fix-log-and-archive.tex	6977	Debug Capabilities
+cr:fix:cpu-verification-ready:debug-features-implemented-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	6936	\texorpdfstring{Debug Features Implemented \ok{}}{Debug Features Implemented }
+cr:fix:cpu-verification-ready:debug-features-pending-implementation	docs/manual/cr/parts/04-fix-log-and-archive.tex	7006	Debug Features Pending Implementation
+cr:fix:cpu-verification-ready:documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	7366	Documentation
+cr:fix:cpu-verification-ready:expected-output	docs/manual/cr/parts/04-fix-log-and-archive.tex	7447	Expected Output
+cr:fix:cpu-verification-ready:files-modified-today-2026-01-19	docs/manual/cr/parts/04-fix-log-and-archive.tex	7322	Files Modified Today (2026-01-19)
+cr:fix:cpu-verification-ready:how-to-run-verification	docs/manual/cr/parts/04-fix-log-and-archive.tex	7410	How to Run Verification
+cr:fix:cpu-verification-ready:if-tests-fail	docs/manual/cr/parts/04-fix-log-and-archive.tex	7464	If Tests Fail
+cr:fix:cpu-verification-ready:next-steps-for-verification	docs/manual/cr/parts/04-fix-log-and-archive.tex	7178	Next Steps for Verification
+cr:fix:cpu-verification-ready:phase-1-completion-criteria	docs/manual/cr/parts/04-fix-log-and-archive.tex	7484	Phase 1 Completion Criteria
+cr:fix:cpu-verification-ready:phase-1a-initial-smoke-tests-current	docs/manual/cr/parts/04-fix-log-and-archive.tex	7180	Phase 1a: Initial Smoke Tests (Current)
+cr:fix:cpu-verification-ready:phase-1b-full-instruction-coverage	docs/manual/cr/parts/04-fix-log-and-archive.tex	7206	Phase 1b: Full Instruction Coverage
+cr:fix:cpu-verification-ready:phase-1c-random-instruction-testing	docs/manual/cr/parts/04-fix-log-and-archive.tex	7230	Phase 1c: Random Instruction Testing
+cr:fix:cpu-verification-ready:phase-1d-debug-interface-testing	docs/manual/cr/parts/04-fix-log-and-archive.tex	7252	Phase 1d: Debug Interface Testing
+cr:fix:cpu-verification-ready:phase-1e-stress-testing	docs/manual/cr/parts/04-fix-log-and-archive.tex	7276	Phase 1e: Stress Testing
+cr:fix:cpu-verification-ready:phase-1f-physical-design	docs/manual/cr/parts/04-fix-log-and-archive.tex	7298	Phase 1f: Physical Design
+cr:fix:cpu-verification-ready:prerequisites	docs/manual/cr/parts/04-fix-log-and-archive.tex	7412	Prerequisites
+cr:fix:cpu-verification-ready:reference-model-ready	docs/manual/cr/parts/04-fix-log-and-archive.tex	7158	Reference Model Ready
+cr:fix:cpu-verification-ready:rtl-files	docs/manual/cr/parts/04-fix-log-and-archive.tex	7324	RTL Files
+cr:fix:cpu-verification-ready:rtl-status	docs/manual/cr/parts/04-fix-log-and-archive.tex	6838	RTL Status
+cr:fix:cpu-verification-ready:run-tests	docs/manual/cr/parts/04-fix-log-and-archive.tex	7428	Run Tests
+cr:fix:cpu-verification-ready:sign-off-checklist	docs/manual/cr/parts/04-fix-log-and-archive.tex	7379	Sign-off Checklist
+cr:fix:cpu-verification-ready:simulation-makefile-created	docs/manual/cr/parts/04-fix-log-and-archive.tex	7124	Simulation Makefile Created
+cr:fix:cpu-verification-ready:summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	6829	Summary
+cr:fix:cpu-verification-ready:verification-files	docs/manual/cr/parts/04-fix-log-and-archive.tex	7351	Verification Files
+cr:fix:cpu-verification-ready:verification-infrastructure-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	7087	\texorpdfstring{Verification Infrastructure \ok{}}{Verification Infrastructure }
+cr:fix:cpu-verification-ready:verilator-lint-status-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	6888	\texorpdfstring{Verilator Lint Status \ok{}}{Verilator Lint Status }
+cr:fix:cpu-verification-ready:warning-headers-removed-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	6913	\texorpdfstring{Warning Headers Removed \ok{}}{Warning Headers Removed }
+cr:fix:critical-fixes	docs/manual/cr/parts/04-fix-log-and-archive.tex	2124	Critical AXI Protocol Fixes
+cr:fix:critical-fixes:1-axi-protocol-compliance	docs/manual/cr/parts/04-fix-log-and-archive.tex	2492	1. AXI Protocol Compliance
+cr:fix:critical-fixes:2-load-instruction-testing	docs/manual/cr/parts/04-fix-log-and-archive.tex	2518	2. Load Instruction Testing
+cr:fix:critical-fixes:3-state-machine-testing	docs/manual/cr/parts/04-fix-log-and-archive.tex	2544	3. State Machine Testing
+cr:fix:critical-fixes:axi-protocol-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	2376	AXI Protocol Summary
+cr:fix:critical-fixes:bug-1-incorrect-axi-read-timing-in-fetch-state	docs/manual/cr/parts/04-fix-log-and-archive.tex	2141	Bug 1: Incorrect AXI Read Timing in FETCH State
+cr:fix:critical-fixes:bug-2-incorrect-axi-readwrite-timing-in-mem-wait-state	docs/manual/cr/parts/04-fix-log-and-archive.tex	2233	\texorpdfstring{Bug 2: Incorrect AXI Read/\allowbreak{}Write Timing in MEM\_WAIT State}{Bug 2: Incorrect AXI Read/Write Timing in MEM\_WAIT State}
+cr:fix:critical-fixes:bug-3-missing-axi-address-mux	docs/manual/cr/parts/04-fix-log-and-archive.tex	2294	Bug 3: Missing AXI Address Mux
+cr:fix:critical-fixes:correct-axi4-lite-read-transaction	docs/manual/cr/parts/04-fix-log-and-archive.tex	2378	Correct AXI4-Lite Read Transaction
+cr:fix:critical-fixes:correct-axi4-lite-write-transaction	docs/manual/cr/parts/04-fix-log-and-archive.tex	2397	Correct AXI4-Lite Write Transaction
+cr:fix:critical-fixes:files-modified	docs/manual/cr/parts/04-fix-log-and-archive.tex	2415	Files Modified
+cr:fix:critical-fixes:fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	2184	Fix
+cr:fix:critical-fixes:fix-1	docs/manual/cr/parts/04-fix-log-and-archive.tex	2243	Fix
+cr:fix:critical-fixes:fix-2	docs/manual/cr/parts/04-fix-log-and-archive.tex	2328	Fix
+cr:fix:critical-fixes:impact	docs/manual/cr/parts/04-fix-log-and-archive.tex	2453	Impact
+cr:fix:critical-fixes:issue-identified	docs/manual/cr/parts/04-fix-log-and-archive.tex	2132	Issue Identified
+cr:fix:critical-fixes:problem	docs/manual/cr/parts/04-fix-log-and-archive.tex	2143	Problem
+cr:fix:critical-fixes:problem-1	docs/manual/cr/parts/04-fix-log-and-archive.tex	2235	Problem
+cr:fix:critical-fixes:problem-2	docs/manual/cr/parts/04-fix-log-and-archive.tex	2296	Problem
+cr:fix:critical-fixes:review-checklist	docs/manual/cr/parts/04-fix-log-and-archive.tex	2601	Review Checklist
+cr:fix:critical-fixes:status	docs/manual/cr/parts/04-fix-log-and-archive.tex	2574	Status
+cr:fix:critical-fixes:testing-recommendations	docs/manual/cr/parts/04-fix-log-and-archive.tex	2490	Testing Recommendations
+cr:fix:ebreak-bug-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	4906	EBREAK Halt Bug Fix
+cr:fix:ebreak-bug-fix:commit-message	docs/manual/cr/parts/04-fix-log-and-archive.tex	5149	Commit Message
+cr:fix:ebreak-bug-fix:expected-behavior-after-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	5094	Expected Behavior (After Fix)
+cr:fix:ebreak-bug-fix:how-it-works	docs/manual/cr/parts/04-fix-log-and-archive.tex	5020	How It Works
+cr:fix:ebreak-bug-fix:impact	docs/manual/cr/parts/04-fix-log-and-archive.tex	5127	Impact
+cr:fix:ebreak-bug-fix:new-detection-logic	docs/manual/cr/parts/04-fix-log-and-archive.tex	4993	New Detection Logic
+cr:fix:ebreak-bug-fix:problem-description	docs/manual/cr/parts/04-fix-log-and-archive.tex	4917	Problem Description
+cr:fix:ebreak-bug-fix:related-files-modified	docs/manual/cr/parts/04-fix-log-and-archive.tex	5109	Related Files Modified
+cr:fix:ebreak-bug-fix:root-cause	docs/manual/cr/parts/04-fix-log-and-archive.tex	4929	Root Cause
+cr:fix:ebreak-bug-fix:test-case-test-ebreakpy	docs/manual/cr/parts/04-fix-log-and-archive.tex	5071	\texorpdfstring{Test Case (test\_\allowbreak{}ebreak.py)}{Test Case (test\_ebreak.py)}
+cr:fix:ebreak-bug-fix:the-bug-rv32i-cpu-topsv325-340	docs/manual/cr/parts/04-fix-log-and-archive.tex	4932	\texorpdfstring{The Bug (rv32i\_\allowbreak{}cpu\_\allowbreak{}top.sv:325-340)}{The Bug (rv32i\_cpu\_top.sv:325-340)}
+cr:fix:ebreak-bug-fix:the-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	4991	The Fix
+cr:fix:ebreak-bug-fix:verification	docs/manual/cr/parts/04-fix-log-and-archive.tex	5068	Verification
+cr:fix:ebreak-bug-fix:what-actually-happened	docs/manual/cr/parts/04-fix-log-and-archive.tex	4967	What Actually Happened
+cr:fix:ebreak-bug-fix:why-this-failed	docs/manual/cr/parts/04-fix-log-and-archive.tex	4946	Why This Failed
+cr:fix:ebreak-bug-fix:why-this-works	docs/manual/cr/parts/04-fix-log-and-archive.tex	5045	Why This Works
+cr:fix:fixes-index	docs/manual/cr/parts/04-fix-log-and-archive.tex	402	RV32I CPU - RTL Fixes Reference Guide
+cr:fix:fixes-index:1-critical-axi-protocol-fixes	docs/manual/cr/parts/04-fix-log-and-archive.tex	520	1. Critical AXI Protocol Fixes
+cr:fix:fixes-index:10-uart-rx-false-start-window-bead-rqvo	docs/manual/cr/parts/04-fix-log-and-archive.tex	1071	10. UART RX False-Start Window (bead rqvo)
+cr:fix:fixes-index:11-i2c-startstop-condition-times-bead-gecv	docs/manual/cr/parts/04-fix-log-and-archive.tex	1123	\texorpdfstring{11. I2C START/\allowbreak{}STOP Condition Times (bead gecv)}{11. I2C START/STOP Condition Times (bead gecv)}
+cr:fix:fixes-index:12-gpu-warp-count-saturated-at-7-bead-47lf-gh-254	docs/manual/cr/parts/04-fix-log-and-archive.tex	1199	12. GPU Warp Count Saturated at 7 (bead 47lf, GH \#254)
+cr:fix:fixes-index:13-hazard-unit-rs-part-select-synlig-frontend-hazard-bead-dud4	docs/manual/cr/parts/04-fix-log-and-archive.tex	1324	13. Hazard-Unit rs Part-Select, Synlig Frontend Hazard (bead dud4)
+cr:fix:fixes-index:14-performance-counters-freeze-while-a-csr-instruction-is-in-ex-bead-kiit-gh-260	docs/manual/cr/parts/04-fix-log-and-archive.tex	1405	14. Performance Counters Freeze While a CSR Instruction Is in EX (bead kiit, GH \#260)
+cr:fix:fixes-index:15-gpu-gpu-ctrlreset-cannot-recover-from-error-bead-q6w0-gh-261	docs/manual/cr/parts/04-fix-log-and-archive.tex	1498	\texorpdfstring{15. GPU GPU\_\allowbreak{}CTRL.reset Cannot Recover From ERROR (bead q6w0, GH \#261)}{15. GPU GPU\_CTRL.reset Cannot Recover From ERROR (bead q6w0, GH \#261)}
+cr:fix:fixes-index:16-csr-write-to-minstret-minstreth-lands-under-in-flight-retirements-bead-f7z3	docs/manual/cr/parts/04-fix-log-and-archive.tex	1633	16. CSR Write to minstret / minstreth Lands Under In-Flight Retirements (bead f7z3)
+cr:fix:fixes-index:17-gpu-block-x-launch-contract-zero-hang-64-truncation-partial-warp-lanes-bead-6hy6	docs/manual/cr/parts/04-fix-log-and-archive.tex	1743	17. GPU BLOCK\_X Launch Contract: Zero Hang, \textgreater64 Truncation, Partial-Warp Lanes (bead 6hy6)
+cr:fix:fixes-index:2-branch-jump-and-memory-fixes	docs/manual/cr/parts/04-fix-log-and-archive.tex	613	2. Branch, Jump, and Memory Fixes
+cr:fix:fixes-index:3-rtl-debug-report	docs/manual/cr/parts/04-fix-log-and-archive.tex	707	3. RTL Debug Report
+cr:fix:fixes-index:4-timing-analysis	docs/manual/cr/parts/04-fix-log-and-archive.tex	741	4. Timing Analysis
+cr:fix:fixes-index:5-isa-test-fixes	docs/manual/cr/parts/04-fix-log-and-archive.tex	808	5. ISA Test Fixes
+cr:fix:fixes-index:6-test-fix-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	875	6. Test Fix Summary
+cr:fix:fixes-index:7-ebreak-halt-detection-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	904	7. EBREAK Halt Detection Fix
+cr:fix:fixes-index:8-pc-mismatch-logging-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	965	8. PC Mismatch Logging Fix
+cr:fix:fixes-index:9-axi-lite-ring-phantom-decerr-r-beat-bead-3xtv	docs/manual/cr/parts/04-fix-log-and-archive.tex	1018	9. AXI-Lite Ring Phantom DECERR R Beat (bead 3xtv)
+cr:fix:fixes-index:bug-1-branchjump-timing-issue	docs/manual/cr/parts/04-fix-log-and-archive.tex	627	Issues Fixed
+cr:fix:fixes-index:bug-1-incorrect-axi-read-timing-in-fetch-state	docs/manual/cr/parts/04-fix-log-and-archive.tex	533	Issues Fixed
+cr:fix:fixes-index:bug-2-incorrect-axi-readwrite-timing-in-mem-wait-state	docs/manual/cr/parts/04-fix-log-and-archive.tex	555	Issues Fixed
+cr:fix:fixes-index:bug-2-load-data-latching	docs/manual/cr/parts/04-fix-log-and-archive.tex	649	Issues Fixed
+cr:fix:fixes-index:bug-3-missing-axi-address-mux	docs/manual/cr/parts/04-fix-log-and-archive.tex	575	Issues Fixed
+cr:fix:fixes-index:bug-3-register-file-synchronous-reads	docs/manual/cr/parts/04-fix-log-and-archive.tex	670	Issues Fixed
+cr:fix:fixes-index:confidence-level	docs/manual/cr/parts/04-fix-log-and-archive.tex	2056	Confidence Level
+cr:fix:fixes-index:content	docs/manual/cr/parts/04-fix-log-and-archive.tex	718	Content
+cr:fix:fixes-index:control-logic	docs/manual/cr/parts/04-fix-log-and-archive.tex	1942	Control Logic
+cr:fix:fixes-index:core-integration	docs/manual/cr/parts/04-fix-log-and-archive.tex	1964	Core Integration
+cr:fix:fixes-index:critical-fixes-cpu-non-functional-functional	docs/manual/cr/parts/04-fix-log-and-archive.tex	1874	Critical Fixes (CPU Non-Functional → Functional)
+cr:fix:fixes-index:files-modified-rtl	docs/manual/cr/parts/04-fix-log-and-archive.tex	1940	Files Modified (RTL)
+cr:fix:fixes-index:fix-timeline	docs/manual/cr/parts/04-fix-log-and-archive.tex	505	Fix Timeline
+cr:fix:fixes-index:impact-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	1872	Impact Summary
+cr:fix:fixes-index:issue-1-incorrect-instruction-encodings	docs/manual/cr/parts/04-fix-log-and-archive.tex	821	Issues Fixed
+cr:fix:fixes-index:issue-1-insufficient-wait-time-after-resume	docs/manual/cr/parts/04-fix-log-and-archive.tex	754	Issues Fixed
+cr:fix:fixes-index:issue-2-axi-transaction-timing	docs/manual/cr/parts/04-fix-log-and-archive.tex	773	Issues Fixed
+cr:fix:fixes-index:issue-2-test-initialization-issues	docs/manual/cr/parts/04-fix-log-and-archive.tex	840	Issues Fixed
+cr:fix:fixes-index:issue-fixed	docs/manual/cr/parts/04-fix-log-and-archive.tex	915	Issue Fixed
+cr:fix:fixes-index:issue-fixed-1	docs/manual/cr/parts/04-fix-log-and-archive.tex	976	Issue Fixed
+cr:fix:fixes-index:issue-fixed-10	docs/manual/cr/parts/04-fix-log-and-archive.tex	1757	Issue Fixed
+cr:fix:fixes-index:issue-fixed-2	docs/manual/cr/parts/04-fix-log-and-archive.tex	1030	Issue Fixed
+cr:fix:fixes-index:issue-fixed-3	docs/manual/cr/parts/04-fix-log-and-archive.tex	1083	Issue Fixed
+cr:fix:fixes-index:issue-fixed-4	docs/manual/cr/parts/04-fix-log-and-archive.tex	1136	Issue Fixed
+cr:fix:fixes-index:issue-fixed-5	docs/manual/cr/parts/04-fix-log-and-archive.tex	1215	Issue Fixed
+cr:fix:fixes-index:issue-fixed-6	docs/manual/cr/parts/04-fix-log-and-archive.tex	1337	Issue Fixed
+cr:fix:fixes-index:issue-fixed-7	docs/manual/cr/parts/04-fix-log-and-archive.tex	1419	Issue Fixed
+cr:fix:fixes-index:issue-fixed-8	docs/manual/cr/parts/04-fix-log-and-archive.tex	1514	Issue Fixed
+cr:fix:fixes-index:issue-fixed-9	docs/manual/cr/parts/04-fix-log-and-archive.tex	1648	Issue Fixed
+cr:fix:fixes-index:issues-fixed	docs/manual/cr/parts/04-fix-log-and-archive.tex	531	Issues Fixed
+cr:fix:fixes-index:issues-fixed-1	docs/manual/cr/parts/04-fix-log-and-archive.tex	624	Issues Fixed
+cr:fix:fixes-index:issues-fixed-2	docs/manual/cr/parts/04-fix-log-and-archive.tex	752	Issues Fixed
+cr:fix:fixes-index:issues-fixed-3	docs/manual/cr/parts/04-fix-log-and-archive.tex	819	Issues Fixed
+cr:fix:fixes-index:main-project-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	2069	Main Project Documentation
+cr:fix:fixes-index:overview	docs/manual/cr/parts/04-fix-log-and-archive.tex	413	Overview
+cr:fix:fixes-index:phase-1-exit-criteria-59-met	docs/manual/cr/parts/04-fix-log-and-archive.tex	2028	Phase 1 Exit Criteria (5/9 met)
+cr:fix:fixes-index:problem-ebreak-halt-cause-incorrect	docs/manual/cr/parts/04-fix-log-and-archive.tex	917	Issue Fixed
+cr:fix:fixes-index:problem-spurious-pc-mismatch-logs	docs/manual/cr/parts/04-fix-log-and-archive.tex	978	Issue Fixed
+cr:fix:fixes-index:quick-reference	docs/manual/cr/parts/04-fix-log-and-archive.tex	425	Quick Reference
+cr:fix:fixes-index:references	docs/manual/cr/parts/04-fix-log-and-archive.tex	2067	References
+cr:fix:fixes-index:register-file	docs/manual/cr/parts/04-fix-log-and-archive.tex	1986	Register File
+cr:fix:fixes-index:specifications	docs/manual/cr/parts/04-fix-log-and-archive.tex	2085	Specifications
+cr:fix:fixes-index:summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	886	Summary
+cr:fix:fixes-index:test-coverage-improvement	docs/manual/cr/parts/04-fix-log-and-archive.tex	1896	Test Coverage Improvement
+cr:fix:fixes-index:test-infrastructure-improvements	docs/manual/cr/parts/04-fix-log-and-archive.tex	1916	Test Infrastructure Improvements
+cr:fix:fixes-index:test-results	docs/manual/cr/parts/04-fix-log-and-archive.tex	691	Test Results
+cr:fix:fixes-index:test-results-1	docs/manual/cr/parts/04-fix-log-and-archive.tex	859	Test Results
+cr:fix:fixes-index:top-level	docs/manual/cr/parts/04-fix-log-and-archive.tex	2004	Top-Level
+cr:fix:fixes-index:validation	docs/manual/cr/parts/04-fix-log-and-archive.tex	595	Validation
+cr:fix:fixes-index:validation-1	docs/manual/cr/parts/04-fix-log-and-archive.tex	792	Validation
+cr:fix:fixes-index:validation-2	docs/manual/cr/parts/04-fix-log-and-archive.tex	949	Validation
+cr:fix:fixes-index:validation-3	docs/manual/cr/parts/04-fix-log-and-archive.tex	1002	Validation
+cr:fix:fixes-index:verification-status	docs/manual/cr/parts/04-fix-log-and-archive.tex	2026	Verification Status
+cr:fix:fixes-readme	docs/manual/cr/parts/04-fix-log-and-archive.tex	8	RTL Fixes Documentation
+cr:fix:fixes-readme:critical-fixes-cpu-non-functional-without	docs/manual/cr/parts/04-fix-log-and-archive.tex	65	Critical Fixes (CPU Non-Functional Without)
+cr:fix:fixes-readme:design-specs	docs/manual/cr/parts/04-fix-log-and-archive.tex	285	Design Specs
+cr:fix:fixes-readme:directory-structure	docs/manual/cr/parts/04-fix-log-and-archive.tex	43	Directory Structure
+cr:fix:fixes-readme:document-naming-convention	docs/manual/cr/parts/04-fix-log-and-archive.tex	334	Document Naming Convention
+cr:fix:fixes-readme:fix-categories	docs/manual/cr/parts/04-fix-log-and-archive.tex	63	Fix Categories
+cr:fix:fixes-readme:fix-validation-status	docs/manual/cr/parts/04-fix-log-and-archive.tex	236	Fix Validation Status
+cr:fix:fixes-readme:for-code-review	docs/manual/cr/parts/04-fix-log-and-archive.tex	218	For Code Review
+cr:fix:fixes-readme:for-implementing-similar-fixes	docs/manual/cr/parts/04-fix-log-and-archive.tex	198	For Implementing Similar Fixes
+cr:fix:fixes-readme:for-understanding-a-specific-bug	docs/manual/cr/parts/04-fix-log-and-archive.tex	162	For Understanding a Specific Bug
+cr:fix:fixes-readme:for-understanding-the-overall-fix-history	docs/manual/cr/parts/04-fix-log-and-archive.tex	180	For Understanding the Overall Fix History
+cr:fix:fixes-readme:high-priority-fixes-instructions-failed	docs/manual/cr/parts/04-fix-log-and-archive.tex	89	High Priority Fixes (Instructions Failed)
+cr:fix:fixes-readme:how-to-use-this-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	160	How to Use This Documentation
+cr:fix:fixes-readme:low-priority-fixes-cosmeticdocumentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	139	\texorpdfstring{Low Priority Fixes (Cosmetic/\allowbreak{}Documentation)}{Low Priority Fixes (Cosmetic/Documentation)}
+cr:fix:fixes-readme:main-project-docs	docs/manual/cr/parts/04-fix-log-and-archive.tex	269	Main Project Docs
+cr:fix:fixes-readme:maintenance	docs/manual/cr/parts/04-fix-log-and-archive.tex	313	Maintenance
+cr:fix:fixes-readme:medium-priority-fixes-testdebug-issues	docs/manual/cr/parts/04-fix-log-and-archive.tex	118	\texorpdfstring{Medium Priority Fixes (Test/\allowbreak{}Debug Issues)}{Medium Priority Fixes (Test/Debug Issues)}
+cr:fix:fixes-readme:questions	docs/manual/cr/parts/04-fix-log-and-archive.tex	374	Questions?
+cr:fix:fixes-readme:quick-start	docs/manual/cr/parts/04-fix-log-and-archive.tex	18	Quick Start
+cr:fix:fixes-readme:related-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	267	Related Documentation
+cr:fix:fixes-readme:test-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	301	Test Documentation
+cr:fix:fixes-readme:update-fixes-indexmd	docs/manual/cr/parts/04-fix-log-and-archive.tex	351	\texorpdfstring{Update FIXES\_\allowbreak{}INDEX.md}{Update \cref{cr:fix:fixes-index}}
+cr:fix:fixes-readme:when-to-add-new-fix-documents	docs/manual/cr/parts/04-fix-log-and-archive.tex	315	When to Add New Fix Documents
+cr:fix:pc-mismatch-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	5168	PC Mismatch Error Fix - Monitor Task Cleanup
+cr:fix:pc-mismatch-fix:actual-results	docs/manual/cr/parts/04-fix-log-and-archive.tex	5528	Actual Results
+cr:fix:pc-mismatch-fix:after-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	5341	After Fix
+cr:fix:pc-mismatch-fix:before-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	5329	Before Fix
+cr:fix:pc-mismatch-fix:changes-made	docs/manual/cr/parts/04-fix-log-and-archive.tex	5294	Changes Made
+cr:fix:pc-mismatch-fix:expected-output	docs/manual/cr/parts/04-fix-log-and-archive.tex	5514	Expected Output
+cr:fix:pc-mismatch-fix:implementation	docs/manual/cr/parts/04-fix-log-and-archive.tex	5273	Implementation
+cr:fix:pc-mismatch-fix:lessons-learned	docs/manual/cr/parts/04-fix-log-and-archive.tex	5420	Lessons Learned
+cr:fix:pc-mismatch-fix:performance-analysis	docs/manual/cr/parts/04-fix-log-and-archive.tex	5384	Performance Analysis
+cr:fix:pc-mismatch-fix:problem-description	docs/manual/cr/parts/04-fix-log-and-archive.tex	5179	Problem Description
+cr:fix:pc-mismatch-fix:related-issues	docs/manual/cr/parts/04-fix-log-and-archive.tex	5479	Related Issues
+cr:fix:pc-mismatch-fix:results	docs/manual/cr/parts/04-fix-log-and-archive.tex	5327	Results
+cr:fix:pc-mismatch-fix:root-cause	docs/manual/cr/parts/04-fix-log-and-archive.tex	5200	Root Cause
+cr:fix:pc-mismatch-fix:task-lifecycle-management	docs/manual/cr/parts/04-fix-log-and-archive.tex	5422	Task Lifecycle Management
+cr:fix:pc-mismatch-fix:test-command	docs/manual/cr/parts/04-fix-log-and-archive.tex	5503	Test Command
+cr:fix:pc-mismatch-fix:test-infrastructure-best-practices	docs/manual/cr/parts/04-fix-log-and-archive.tex	5457	Test Infrastructure Best Practices
+cr:fix:pc-mismatch-fix:test-output	docs/manual/cr/parts/04-fix-log-and-archive.tex	5353	Test Output
+cr:fix:pc-mismatch-fix:the-accumulation	docs/manual/cr/parts/04-fix-log-and-archive.tex	5230	The Accumulation
+cr:fix:pc-mismatch-fix:the-bug	docs/manual/cr/parts/04-fix-log-and-archive.tex	5202	The Bug
+cr:fix:pc-mismatch-fix:the-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	5271	The Fix
+cr:fix:pc-mismatch-fix:verification	docs/manual/cr/parts/04-fix-log-and-archive.tex	5501	Verification
+cr:fix:pc-mismatch-fix:why-2-speedup	docs/manual/cr/parts/04-fix-log-and-archive.tex	5386	Why 2× Speedup?
+cr:fix:pc-mismatch-fix:why-tests-still-passed	docs/manual/cr/parts/04-fix-log-and-archive.tex	5251	Why Tests Still Passed
+cr:fix:rtl-bug-fixes	docs/manual/cr/parts/04-fix-log-and-archive.tex	2635	RTL Bug Fixes - Phase 1 Verification
+cr:fix:rtl-bug-fixes:bar-chart-test-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	2910	\texorpdfstring{\notemark{} Test Summary}{ Test Summary}
+cr:fix:rtl-bug-fixes:fix-1-branchjump-timing-issue	docs/manual/cr/parts/04-fix-log-and-archive.tex	2650	\texorpdfstring{Fix \#1: Branch/\allowbreak{}Jump Timing Issue}{Fix \#1: Branch/Jump Timing Issue}
+cr:fix:rtl-bug-fixes:fix-2-jal-test-encoding-error	docs/manual/cr/parts/04-fix-log-and-archive.tex	2685	Fix \#2: JAL Test Encoding Error
+cr:fix:rtl-bug-fixes:fix-3-load-data-not-latched	docs/manual/cr/parts/04-fix-log-and-archive.tex	2702	Fix \#3: Load Data Not Latched
+cr:fix:rtl-bug-fixes:issue-1-branches-still-failing-6-tests	docs/manual/cr/parts/04-fix-log-and-archive.tex	2738	Issue \#1: Branches Still Failing (6 tests)
+cr:fix:rtl-bug-fixes:issue-2-loads-still-return-0-5-tests	docs/manual/cr/parts/04-fix-log-and-archive.tex	2779	Issue \#2: Loads Still Return 0 (5 tests)
+cr:fix:rtl-bug-fixes:issue-3-stores-dont-write-memory-3-tests	docs/manual/cr/parts/04-fix-log-and-archive.tex	2824	Issue \#3: Stores Don\textquotesingle t Write Memory (3 tests)
+cr:fix:rtl-bug-fixes:issue-4-jumps-still-failing-2-tests	docs/manual/cr/parts/04-fix-log-and-archive.tex	2866	Issue \#4: Jumps Still Failing (2 tests)
+cr:fix:rtl-bug-fixes:pencil-files-modified	docs/manual/cr/parts/04-fix-log-and-archive.tex	3002	\texorpdfstring{\notemark{} Files Modified}{ Files Modified}
+cr:fix:rtl-bug-fixes:white-check-mark-fixes-implemented	docs/manual/cr/parts/04-fix-log-and-archive.tex	2647	\texorpdfstring{\ok{} Fixes Implemented}{ Fixes Implemented}
+cr:fix:rtl-bug-fixes:wrench-recommended-next-steps	docs/manual/cr/parts/04-fix-log-and-archive.tex	2942	\texorpdfstring{\notemark{} Recommended Next Steps}{ Recommended Next Steps}
+cr:fix:rtl-bug-fixes:x-remaining-issues	docs/manual/cr/parts/04-fix-log-and-archive.tex	2736	\texorpdfstring{\bad{} Remaining Issues}{ Remaining Issues}
+cr:fix:rtl-debug-report	docs/manual/cr/parts/04-fix-log-and-archive.tex	3027	\texorpdfstring{RTL Debug Report - Branch/\allowbreak{}Load/\allowbreak{}Store Issues}{RTL Debug Report - Branch/Load/Store Issues}
+cr:fix:rtl-debug-report:apb-debug-interface	docs/manual/cr/parts/04-fix-log-and-archive.tex	3544	APB Debug Interface
+cr:fix:rtl-debug-report:conclusion	docs/manual/cr/parts/04-fix-log-and-archive.tex	3574	Conclusion
+cr:fix:rtl-debug-report:fix-1-branch-timing-v1-failed	docs/manual/cr/parts/04-fix-log-and-archive.tex	3063	Fix \#1: Branch Timing (v1 - Failed)
+cr:fix:rtl-debug-report:fix-2-branch-timing-v2-failed	docs/manual/cr/parts/04-fix-log-and-archive.tex	3073	Fix \#2: Branch Timing (v2 - Failed)
+cr:fix:rtl-debug-report:fix-3-load-data-latch-failed	docs/manual/cr/parts/04-fix-log-and-archive.tex	3086	Fix \#3: Load Data Latch (Failed)
+cr:fix:rtl-debug-report:fix-4-jal-encoding-fixed-in-test	docs/manual/cr/parts/04-fix-log-and-archive.tex	3096	Fix \#4: JAL Encoding (Fixed in test)
+cr:fix:rtl-debug-report:fixes-attempted	docs/manual/cr/parts/04-fix-log-and-archive.tex	3061	Fixes Attempted
+cr:fix:rtl-debug-report:issue-1-branch-instructions-not-taking	docs/manual/cr/parts/04-fix-log-and-archive.tex	3110	Issue \#1: Branch Instructions Not Taking
+cr:fix:rtl-debug-report:issue-2-loads-return-0	docs/manual/cr/parts/04-fix-log-and-archive.tex	3195	Issue \#2: Loads Return 0
+cr:fix:rtl-debug-report:issue-3-stores-dont-write-memory	docs/manual/cr/parts/04-fix-log-and-archive.tex	3276	Issue \#3: Stores Don\textquotesingle t Write Memory
+cr:fix:rtl-debug-report:option-a-add-rtl-debug-signals-star-recommended	docs/manual/cr/parts/04-fix-log-and-archive.tex	3356	\texorpdfstring{Option A: Add RTL Debug Signals \textbf{*} RECOMMENDED}{Option A: Add RTL Debug Signals RECOMMENDED}
+cr:fix:rtl-debug-report:option-b-simplify-test-case	docs/manual/cr/parts/04-fix-log-and-archive.tex	3395	Option B: Simplify Test Case
+cr:fix:rtl-debug-report:option-c-check-instruction-fetch-timing	docs/manual/cr/parts/04-fix-log-and-archive.tex	3432	Option C: Check Instruction Fetch Timing
+cr:fix:rtl-debug-report:option-d-review-state-machine-timing	docs/manual/cr/parts/04-fix-log-and-archive.tex	3461	Option D: Review State Machine Timing
+cr:fix:rtl-debug-report:problem-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	3038	Problem Summary
+cr:fix:rtl-debug-report:recommended-next-steps	docs/manual/cr/parts/04-fix-log-and-archive.tex	3346	Recommended Next Steps
+cr:fix:rtl-debug-report:root-cause-analysis	docs/manual/cr/parts/04-fix-log-and-archive.tex	3108	Root Cause Analysis
+cr:fix:rtl-debug-report:simpleaximemory-model	docs/manual/cr/parts/04-fix-log-and-archive.tex	3513	SimpleAXIMemory Model
+cr:fix:rtl-debug-report:testbench-analysis	docs/manual/cr/parts/04-fix-log-and-archive.tex	3511	Testbench Analysis
+cr:fix:rtl-debug-report:vcd-analysis-attempts	docs/manual/cr/parts/04-fix-log-and-archive.tex	3486	VCD Analysis Attempts
+cr:fix:rtl-isa-test-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	4316	ISA Compliance Test Failures - Root Cause Analysis
+cr:fix:rtl-isa-test-fix:debug-test-output	docs/manual/cr/parts/04-fix-log-and-archive.tex	4412	Debug Test Output
+cr:fix:rtl-isa-test-fix:evidence	docs/manual/cr/parts/04-fix-log-and-archive.tex	4368	Evidence
+cr:fix:rtl-isa-test-fix:expected-result	docs/manual/cr/parts/04-fix-log-and-archive.tex	4592	Expected Result
+cr:fix:rtl-isa-test-fix:files-to-modify	docs/manual/cr/parts/04-fix-log-and-archive.tex	4577	Files to Modify
+cr:fix:rtl-isa-test-fix:isa-compliance-test-failing	docs/manual/cr/parts/04-fix-log-and-archive.tex	4388	ISA Compliance Test (FAILING)
+cr:fix:rtl-isa-test-fix:long-term-fix-fix-debug-pc-write	docs/manual/cr/parts/04-fix-log-and-archive.tex	4514	Long-term Fix: Fix Debug PC Write
+cr:fix:rtl-isa-test-fix:next-steps	docs/manual/cr/parts/04-fix-log-and-archive.tex	4558	Next Steps
+cr:fix:rtl-isa-test-fix:quick-fix-modify-test-structure	docs/manual/cr/parts/04-fix-log-and-archive.tex	4465	Quick Fix: Modify Test Structure
+cr:fix:rtl-isa-test-fix:root-cause	docs/manual/cr/parts/04-fix-log-and-archive.tex	4328	Root Cause
+cr:fix:rtl-isa-test-fix:secondary-issue-debug-pc-write-not-working	docs/manual/cr/parts/04-fix-log-and-archive.tex	4427	Secondary Issue: Debug PC Write Not Working
+cr:fix:rtl-isa-test-fix:smoke-test-passing	docs/manual/cr/parts/04-fix-log-and-archive.tex	4370	Smoke Test (PASSING)
+cr:fix:rtl-isa-test-fix:solution	docs/manual/cr/parts/04-fix-log-and-archive.tex	4463	Solution
+cr:fix:rtl-isa-test-fix:status	docs/manual/cr/parts/04-fix-log-and-archive.tex	4536	Status
+cr:fix:rtl-isa-test-fix:summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	4318	Summary
+cr:fix:test-fix-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	4601	ISA Compliance Test Fix Summary
+cr:fix:test-fix-summary:1-jal-backward-jump-test	docs/manual/cr/parts/04-fix-log-and-archive.tex	4700	1. JAL Backward Jump Test
+cr:fix:test-fix-summary:2-store-instructions-sw-sh-sb	docs/manual/cr/parts/04-fix-log-and-archive.tex	4746	2. Store Instructions (SW, SH, SB)
+cr:fix:test-fix-summary:debug-pc-write	docs/manual/cr/parts/04-fix-log-and-archive.tex	4792	Debug PC Write
+cr:fix:test-fix-summary:debug-register-write-persistence	docs/manual/cr/parts/04-fix-log-and-archive.tex	4801	Debug Register Write Persistence
+cr:fix:test-fix-summary:debug-tests-created	docs/manual/cr/parts/04-fix-log-and-archive.tex	4850	Debug Tests Created
+cr:fix:test-fix-summary:failing-437-x	docs/manual/cr/parts/04-fix-log-and-archive.tex	4684	\texorpdfstring{FAILING (4/37) \bad{}}{FAILING (4/37) }
+cr:fix:test-fix-summary:files-modified	docs/manual/cr/parts/04-fix-log-and-archive.tex	4819	Files Modified
+cr:fix:test-fix-summary:implementation	docs/manual/cr/parts/04-fix-log-and-archive.tex	4647	Implementation
+cr:fix:test-fix-summary:investigation-done	docs/manual/cr/parts/04-fix-log-and-archive.tex	4790	Investigation Done
+cr:fix:test-fix-summary:key-learnings	docs/manual/cr/parts/04-fix-log-and-archive.tex	4887	Key Learnings
+cr:fix:test-fix-summary:next-actions	docs/manual/cr/parts/04-fix-log-and-archive.tex	4870	Next Actions
+cr:fix:test-fix-summary:passing-3337-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	4658	\texorpdfstring{PASSING (33/37) \ok{}}{PASSING (33/37) }
+cr:fix:test-fix-summary:problem	docs/manual/cr/parts/04-fix-log-and-archive.tex	4608	Problem
+cr:fix:test-fix-summary:remaining-issues	docs/manual/cr/parts/04-fix-log-and-archive.tex	4698	Remaining Issues
+cr:fix:test-fix-summary:reset-timing	docs/manual/cr/parts/04-fix-log-and-archive.tex	4810	Reset Timing
+cr:fix:test-fix-summary:root-cause-identified-and-fixed	docs/manual/cr/parts/04-fix-log-and-archive.tex	4606	Root Cause Identified and Fixed
+cr:fix:test-fix-summary:solution	docs/manual/cr/parts/04-fix-log-and-archive.tex	4629	Solution
+cr:fix:test-fix-summary:status-3337-tests-passing-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	4604	\texorpdfstring{Status: 33/37 Tests PASSING \ok{}}{Status: 33/37 Tests PASSING }
+cr:fix:test-fix-summary:test-results	docs/manual/cr/parts/04-fix-log-and-archive.tex	4656	Test Results
+cr:fix:timing-analysis	docs/manual/cr/parts/04-fix-log-and-archive.tex	3604	Instruction Fetch Timing Analysis
+cr:fix:timing-analysis:alternative-hypothesis-pc-update-issue-warning	docs/manual/cr/parts/04-fix-log-and-archive.tex	4058	\texorpdfstring{Alternative Hypothesis: PC Update Issue \warn{}}{Alternative Hypothesis: PC Update Issue }
+cr:fix:timing-analysis:conclusion	docs/manual/cr/parts/04-fix-log-and-archive.tex	4272	Conclusion
+cr:fix:timing-analysis:critical-realization-immediate-value-fire	docs/manual/cr/parts/04-fix-log-and-archive.tex	4144	\texorpdfstring{CRITICAL REALIZATION: Immediate Value! \warn{}}{CRITICAL REALIZATION: Immediate Value! }
+cr:fix:timing-analysis:cycle-1-fetch-pc0x00	docs/manual/cr/parts/04-fix-log-and-archive.tex	3655	Cycle 1: FETCH (PC=0x00)
+cr:fix:timing-analysis:cycle-2-fetch-decode-clock-edge	docs/manual/cr/parts/04-fix-log-and-archive.tex	3683	Cycle 2: FETCH → DECODE (Clock Edge)
+cr:fix:timing-analysis:cycle-3-decode-execute-clock-edge	docs/manual/cr/parts/04-fix-log-and-archive.tex	3730	Cycle 3: DECODE → EXECUTE (Clock Edge)
+cr:fix:timing-analysis:cycle-4-execute-writeback-clock-edge-warning-critical-cycle	docs/manual/cr/parts/04-fix-log-and-archive.tex	3783	\texorpdfstring{Cycle 4: EXECUTE → WRITEBACK (Clock Edge) \warn{} CRITICAL CYCLE}{Cycle 4: EXECUTE → WRITEBACK (Clock Edge) CRITICAL CYCLE}
+cr:fix:timing-analysis:cycle-5-writeback-fetch-clock-edge-fire-problem-detected	docs/manual/cr/parts/04-fix-log-and-archive.tex	3836	\texorpdfstring{Cycle 5: WRITEBACK → FETCH (Clock Edge) \warn{} \textbf{PROBLEM DETECTED}}{Cycle 5: WRITEBACK → FETCH (Clock Edge) PROBLEM DETECTED}
+cr:fix:timing-analysis:cycle-6-fetch-waiting-for-memory-warning-potential-issue	docs/manual/cr/parts/04-fix-log-and-archive.tex	3874	\texorpdfstring{Cycle 6: FETCH (waiting for memory) \warn{} \textbf{POTENTIAL ISSUE}}{Cycle 6: FETCH (waiting for memory) POTENTIAL ISSUE}
+cr:fix:timing-analysis:detailed-cycle-by-cycle-timeline-non-memory-instruction	docs/manual/cr/parts/04-fix-log-and-archive.tex	3634	Detailed Cycle-by-Cycle Timeline (Non-Memory Instruction)
+cr:fix:timing-analysis:example-beq-x1-x2-8-at-pc0x00	docs/manual/cr/parts/04-fix-log-and-archive.tex	3636	Example: BEQ x1, x2, +8 at PC=0x00
+cr:fix:timing-analysis:final-hypothesis-signal-values-are-wrong-dart	docs/manual/cr/parts/04-fix-log-and-archive.tex	4246	\texorpdfstring{Final Hypothesis: Signal Values are Wrong \ok{}}{Final Hypothesis: Signal Values are Wrong }
+cr:fix:timing-analysis:hypothesis-the-problem-is-not-timing	docs/manual/cr/parts/04-fix-log-and-archive.tex	3940	Hypothesis: The Problem is NOT Timing
+cr:fix:timing-analysis:key-question-when-does-the-problem-occur	docs/manual/cr/parts/04-fix-log-and-archive.tex	3910	Key Question: When Does the Problem Occur?
+cr:fix:timing-analysis:possibility-1-debug-register-writes-not-working-warning	docs/manual/cr/parts/04-fix-log-and-archive.tex	3950	\texorpdfstring{Possibility 1: Debug Register Writes Not Working \warn{}}{Possibility 1: Debug Register Writes Not Working }
+cr:fix:timing-analysis:possibility-2-register-file-reads-during-execution-warning	docs/manual/cr/parts/04-fix-log-and-archive.tex	3979	\texorpdfstring{Possibility 2: Register File Reads During Execution \warn{}}{Possibility 2: Register File Reads During Execution }
+cr:fix:timing-analysis:possibility-3-debug-writes-require-cpu-to-be-halted-warning-likely-issue	docs/manual/cr/parts/04-fix-log-and-archive.tex	4026	\texorpdfstring{Possibility 3: Debug Writes Require CPU to be Halted \warn{} \textbf{LIKELY ISSUE!}}{Possibility 3: Debug Writes Require CPU to be Halted LIKELY ISSUE!}
+cr:fix:timing-analysis:problem-statement	docs/manual/cr/parts/04-fix-log-and-archive.tex	3606	Problem Statement
+cr:fix:timing-analysis:state-machine-flow	docs/manual/cr/parts/04-fix-log-and-archive.tex	3618	State Machine Flow
+cr:fix:timing-analysis:testing-hypothesis-what-if-branch-taken-0	docs/manual/cr/parts/04-fix-log-and-archive.tex	4204	\texorpdfstring{Testing Hypothesis: What if branch\_\allowbreak{}taken = 0?}{Testing Hypothesis: What if branch\_taken = 0?}
 cr:part:fix-log-and-archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	1	Fix log and archive
 cr:part:investigations	docs/manual/cr/parts/03-investigations.tex	1	Investigations
 cr:part:phase-and-status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	1	Phase and status history
 cr:part:run-histories	docs/manual/cr/parts/02-run-histories.tex	1	Run histories
 cr:part:source-file-history	docs/manual/cr/parts/05-source-file-history.tex	1	Source-file history
-cr:status:ai-human-boundaries	docs/manual/cr/parts/01-phase-and-status-history.tex	1166	AI/Human Boundaries
-cr:status:ai-human-boundaries:ai-may-assist-with	docs/manual/cr/parts/01-phase-and-status-history.tex	1168	AI MAY assist with
-cr:status:ai-human-boundaries:human-must	docs/manual/cr/parts/01-phase-and-status-history.tex	1185	Human MUST
-cr:status:claude-md-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	12	Project Overview
-cr:status:claude-md-overview:project-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	298	Project Phases
-cr:status:phase5-workflow	docs/manual/cr/parts/01-phase-and-status-history.tex	360	Current Workflow (Phase 5 --- SoC Integration)
+cr:run:asap7	docs/manual/cr/parts/02-run-histories.tex	2452	ASAP7 P\&R Run History --- RV32I CPU
+cr:run:asap7-cpu	docs/manual/cr/parts/02-run-histories.tex	4728	ASAP7 P\&R Run History --- RV32I CPU
+cr:run:asap7-cpu:era-1-sdc-units-bug-runs-731	docs/manual/cr/parts/02-run-histories.tex	4842	Era 1: SDC Units Bug (Runs 7--31)
+cr:run:asap7-cpu:era-2-sdc-units-corrected-runs-3241	docs/manual/cr/parts/02-run-histories.tex	4953	Era 2: SDC Units Corrected (Runs 32--41)
+cr:run:asap7-cpu:key-fixes-reference	docs/manual/cr/parts/02-run-histories.tex	6316	Key Fixes Reference
+cr:run:asap7-cpu:master-ppa-table	docs/manual/cr/parts/02-run-histories.tex	4840	Master PPA Table
+cr:run:asap7-cpu:per-run-detail	docs/manual/cr/parts/02-run-histories.tex	5056	Per-Run Detail
+cr:run:asap7-cpu:ppa-progression-chart	docs/manual/cr/parts/02-run-histories.tex	6214	PPA Progression Chart
+cr:run:asap7-cpu:root-cause-taxonomy	docs/manual/cr/parts/02-run-histories.tex	6252	Root-Cause Taxonomy
+cr:run:asap7-cpu:run-10-abandoned-aprmay-2026	docs/manual/cr/parts/02-run-histories.tex	5145	Run 10 --- Abandoned (Apr--May 2026)
+cr:run:asap7-cpu:run-11-may-8-2026	docs/manual/cr/parts/02-run-histories.tex	5155	Run 11 (May 8, 2026)
+cr:run:asap7-cpu:run-12-regression-may-9-2026	docs/manual/cr/parts/02-run-histories.tex	5193	Run 12 --- Regression (May 9, 2026)
+cr:run:asap7-cpu:run-13-best-era-1-wns-may-10-2026	docs/manual/cr/parts/02-run-histories.tex	5237	Run 13 --- Best Era-1 WNS (May 10, 2026)
+cr:run:asap7-cpu:run-14-regression-may-14-2026	docs/manual/cr/parts/02-run-histories.tex	5287	Run 14 --- Regression (May 14, 2026)
+cr:run:asap7-cpu:run-15-may-15-2026	docs/manual/cr/parts/02-run-histories.tex	5332	Run 15 (May 15, 2026)
+cr:run:asap7-cpu:run-16-regression-may-15-2026	docs/manual/cr/parts/02-run-histories.tex	5346	Run 16 --- Regression (May 15, 2026)
+cr:run:asap7-cpu:run-17-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	5391	Run 17 (May 16, 2026)
+cr:run:asap7-cpu:run-18-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	5438	Run 18 (May 16, 2026)
+cr:run:asap7-cpu:run-19-slight-regression-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	5482	Run 19 --- Slight Regression (May 16, 2026)
+cr:run:asap7-cpu:run-20-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	5517	Run 20 (May 16, 2026)
+cr:run:asap7-cpu:run-32-sdc-units-bug-fixed-may-1819-2026	docs/manual/cr/parts/02-run-histories.tex	5634	Run 32 --- SDC Units Bug Fixed (May 18--19, 2026)
+cr:run:asap7-cpu:run-33-may-19-2026	docs/manual/cr/parts/02-run-histories.tex	5650	Run 33 (May 19, 2026)
+cr:run:asap7-cpu:run-34-may-19-2026-run-2026-05-19-08-56-42	docs/manual/cr/parts/02-run-histories.tex	5667	\texorpdfstring{Run 34 (May 19, 2026) --- \code{RUN_2026-05-19_08-56-42}}{Run 34 (May 19, 2026) --- }
+cr:run:asap7-cpu:run-35-signed-off-white-check-mark-may-19-2026-run-2026-05-19-10-47-29	docs/manual/cr/parts/02-run-histories.tex	5683	\texorpdfstring{Run 35 --- SIGNED OFF \ok{} (May 19, 2026) --- \code{RUN_2026-05-19_10-47-29}}{Run 35 --- SIGNED OFF (May 19, 2026) --- }
+cr:run:asap7-cpu:run-36-may-19-2026-run-2026-05-19-16-33-50	docs/manual/cr/parts/02-run-histories.tex	5730	\texorpdfstring{Run 36 (May 19, 2026) --- \code{RUN_2026-05-19_16-33-50}}{Run 36 (May 19, 2026) --- }
+cr:run:asap7-cpu:run-37-may-19-2026-run-2026-05-19-17-21-21	docs/manual/cr/parts/02-run-histories.tex	5777	\texorpdfstring{Run 37 (May 19, 2026) --- \code{RUN_2026-05-19_17-21-21}}{Run 37 (May 19, 2026) --- }
+cr:run:asap7-cpu:run-38-may-19-2026-run-2026-05-19-20-04-54	docs/manual/cr/parts/02-run-histories.tex	5826	\texorpdfstring{Run 38 (May 19, 2026) --- \code{RUN_2026-05-19_20-04-54}}{Run 38 (May 19, 2026) --- }
+cr:run:asap7-cpu:run-39-may-19-2026-run-2026-05-19-21-11-26	docs/manual/cr/parts/02-run-histories.tex	5863	\texorpdfstring{Run 39 (May 19, 2026) --- \code{RUN_2026-05-19_21-11-26}}{Run 39 (May 19, 2026) --- }
+cr:run:asap7-cpu:run-40-timing-closed-white-check-mark-may-19-2026-run-2026-05-19-21-59-43	docs/manual/cr/parts/02-run-histories.tex	5915	\texorpdfstring{Run 40 --- TIMING CLOSED \ok{} (May 19, 2026) --- \code{RUN_2026-05-19_21-59-43}}{Run 40 --- TIMING CLOSED (May 19, 2026) --- }
+cr:run:asap7-cpu:run-41-timing-closed-white-check-mark-may-20-2026-run-2026-05-20-05-17-59	docs/manual/cr/parts/02-run-histories.tex	5977	\texorpdfstring{Run 41 --- TIMING CLOSED \ok{} (May 20, 2026) --- \code{RUN_2026-05-20_05-17-59}}{Run 41 --- TIMING CLOSED (May 20, 2026) --- }
+cr:run:asap7-cpu:run-42-power-recovery-white-check-mark-may-20-2026-run-2026-05-20-05-56-25	docs/manual/cr/parts/02-run-histories.tex	6013	\texorpdfstring{Run 42 --- Power Recovery \ok{} (May 20, 2026) --- \code{RUN_2026-05-20_05-56-25}}{Run 42 --- Power Recovery (May 20, 2026) --- }
+cr:run:asap7-cpu:run-43-timing-closed-white-check-mark-may-20-2026-run-2026-05-20-06-27-10	docs/manual/cr/parts/02-run-histories.tex	6072	\texorpdfstring{Run 43 --- TIMING CLOSED \ok{} (May 20, 2026) --- \code{RUN_2026-05-20_06-27-10}}{Run 43 --- TIMING CLOSED (May 20, 2026) --- }
+cr:run:asap7-cpu:run-44-negative-result-may-20-2026-run-2026-05-20-21-43-24	docs/manual/cr/parts/02-run-histories.tex	6137	\texorpdfstring{Run 44 --- NEGATIVE RESULT (May 20, 2026) --- \code{RUN_2026-05-20_21-43-24}}{Run 44 --- NEGATIVE RESULT (May 20, 2026) --- }
+cr:run:asap7-cpu:run-7-baseline-apr-26-2026	docs/manual/cr/parts/02-run-histories.tex	5064	Run 7 --- Baseline (Apr 26, 2026)
+cr:run:asap7-cpu:run-8-apr-26-2026	docs/manual/cr/parts/02-run-histories.tex	5096	Run 8 (Apr 26, 2026)
+cr:run:asap7-cpu:run-9-regression-apr-26-2026	docs/manual/cr/parts/02-run-histories.tex	5132	Run 9 --- Regression (Apr 26, 2026)
+cr:run:asap7-cpu:runs-2123-may-1617-2026	docs/manual/cr/parts/02-run-histories.tex	5561	Runs 21--23 (May 16--17, 2026)
+cr:run:asap7-cpu:runs-2431-may-1718-2026	docs/manual/cr/parts/02-run-histories.tex	5594	Runs 24--31 (May 17--18, 2026)
+cr:run:asap7-cpu:warning-sdc-units-bug-campaign-context	docs/manual/cr/parts/02-run-histories.tex	4789	\texorpdfstring{\warn{} SDC Units Bug --- Campaign Context}{ SDC Units Bug --- Campaign Context}
+cr:run:asap7-cpu:white-check-mark-final-signoff-run-43-2026-05-20	docs/manual/cr/parts/02-run-histories.tex	4743	\texorpdfstring{\ok{} FINAL SIGNOFF --- Run 43 (2026-05-20)}{ FINAL SIGNOFF --- Run 43 (2026-05-20)}
+cr:run:asap7-gpu	docs/manual/cr/parts/02-run-histories.tex	6396	ASAP7 P\&R Run History --- GPU-Lite SIMT Compute Engine
+cr:run:asap7-gpu:campaign-context	docs/manual/cr/parts/02-run-histories.tex	6567	Campaign Context
+cr:run:asap7-gpu:macro-views-phase-5-hand-off	docs/manual/cr/parts/02-run-histories.tex	6636	Macro Views (Phase-5 hand-off)
+cr:run:asap7-gpu:signoff-caveats-documented-not-regressions-carried-by-the-prior-500-mhz-run-too	docs/manual/cr/parts/02-run-histories.tex	6483	Signoff caveats (documented, not regressions --- carried by the prior 500 MHz run too)
+cr:run:asap7-gpu:step-37-runtime-note	docs/manual/cr/parts/02-run-histories.tex	6621	Step-37 runtime note
+cr:run:asap7-gpu:white-check-mark-final-signoff-run-2026-05-28-06-29-48-2026-05-28	docs/manual/cr/parts/02-run-histories.tex	6441	\texorpdfstring{\ok{} FINAL SIGNOFF --- RUN\_\allowbreak{}2026-05-28\_\allowbreak{}06-29-48 (2026-05-28)}{ FINAL SIGNOFF --- RUN\_2026-05-28\_06-29-48 (2026-05-28)}
+cr:run:asap7:addendum-2026-09-19-bead-ma7-sv2v-re-harden-attempts-configjson-use-synligfalse-blocked-not-signed-off	docs/manual/cr/parts/02-run-histories.tex	4343	\texorpdfstring{Addendum 2026-09-19: bead \code{ma7} sv2v re-harden attempts (config.json, USE\_\allowbreak{}SYNLIG:false) --- BLOCKED, not signed off}{Addendum 2026-09-19: bead sv2v re-harden attempts (config.json, USE\_SYNLIG:false) --- BLOCKED, not signed off}
+cr:run:asap7:candidate-3-executed-as-two-bounded-pd-runs-both-refuted-2026-09-19-bead-lxv	docs/manual/cr/parts/02-run-histories.tex	4653	\texorpdfstring{Candidate 3 executed as two bounded PD runs --- both REFUTED (2026-09-19, bead \code{lxv})}{Candidate 3 executed as two bounded PD runs --- both REFUTED (2026-09-19, bead )}
+cr:run:asap7:candidates-12-executed-read-only-no-pd-run-narrowed-not-closed-2026-09-19-bead-lxv	docs/manual/cr/parts/02-run-histories.tex	4545	\texorpdfstring{Candidates 1+2 executed, read-only, no PD run --- NARROWED, not closed (2026-09-19, bead \code{lxv})}{Candidates 1+2 executed, read-only, no PD run --- NARROWED, not closed (2026-09-19, bead )}
+cr:run:asap7:era-1-sdc-units-bug-runs-731	docs/manual/cr/parts/02-run-histories.tex	2787	Era 1: SDC Units Bug (Runs 7--31)
+cr:run:asap7:era-2-sdc-units-corrected-runs-3241	docs/manual/cr/parts/02-run-histories.tex	2898	Era 2: SDC Units Corrected (Runs 32--41)
+cr:run:asap7:key-fixes-reference	docs/manual/cr/parts/02-run-histories.tex	4261	Key Fixes Reference
+cr:run:asap7:master-ppa-table	docs/manual/cr/parts/02-run-histories.tex	2785	Master PPA Table
+cr:run:asap7:pause-button-decision-2026-09-20-shelved-until-a-32-gb-host-beads-lxvma7-2kn	docs/manual/cr/parts/02-run-histories.tex	4503	\texorpdfstring{\hold{} DECISION 2026-09-20: shelved until a ≥32 GB host (beads \code{lxv}/\code{ma7} → \code{2kn})}{ DECISION 2026-09-20: shelved until a ≥32 GB host (beads / → )}
+cr:run:asap7:per-run-detail	docs/manual/cr/parts/02-run-histories.tex	3001	Per-Run Detail
+cr:run:asap7:phase-5-m7-perf-counter-cpu-re-sign-off-at-1282-mhz-2026-06-02	docs/manual/cr/parts/02-run-histories.tex	2590	Phase 5 M7 --- perf-counter CPU re-sign-off at 1282 MHz (2026-06-02)
+cr:run:asap7:ppa-progression-chart	docs/manual/cr/parts/02-run-histories.tex	4159	PPA Progression Chart
+cr:run:asap7:root-cause-taxonomy	docs/manual/cr/parts/02-run-histories.tex	4197	Root-Cause Taxonomy
+cr:run:asap7:run-10-abandoned-aprmay-2026	docs/manual/cr/parts/02-run-histories.tex	3090	Run 10 --- Abandoned (Apr--May 2026)
+cr:run:asap7:run-11-may-8-2026	docs/manual/cr/parts/02-run-histories.tex	3100	Run 11 (May 8, 2026)
+cr:run:asap7:run-12-regression-may-9-2026	docs/manual/cr/parts/02-run-histories.tex	3138	Run 12 --- Regression (May 9, 2026)
+cr:run:asap7:run-13-best-era-1-wns-may-10-2026	docs/manual/cr/parts/02-run-histories.tex	3182	Run 13 --- Best Era-1 WNS (May 10, 2026)
+cr:run:asap7:run-14-regression-may-14-2026	docs/manual/cr/parts/02-run-histories.tex	3232	Run 14 --- Regression (May 14, 2026)
+cr:run:asap7:run-15-may-15-2026	docs/manual/cr/parts/02-run-histories.tex	3277	Run 15 (May 15, 2026)
+cr:run:asap7:run-16-regression-may-15-2026	docs/manual/cr/parts/02-run-histories.tex	3291	Run 16 --- Regression (May 15, 2026)
+cr:run:asap7:run-17-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	3336	Run 17 (May 16, 2026)
+cr:run:asap7:run-18-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	3383	Run 18 (May 16, 2026)
+cr:run:asap7:run-19-slight-regression-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	3427	Run 19 --- Slight Regression (May 16, 2026)
+cr:run:asap7:run-20-may-16-2026	docs/manual/cr/parts/02-run-histories.tex	3462	Run 20 (May 16, 2026)
+cr:run:asap7:run-32-sdc-units-bug-fixed-may-1819-2026	docs/manual/cr/parts/02-run-histories.tex	3579	Run 32 --- SDC Units Bug Fixed (May 18--19, 2026)
+cr:run:asap7:run-33-may-19-2026	docs/manual/cr/parts/02-run-histories.tex	3595	Run 33 (May 19, 2026)
+cr:run:asap7:run-34-may-19-2026-run-2026-05-19-08-56-42	docs/manual/cr/parts/02-run-histories.tex	3612	\texorpdfstring{Run 34 (May 19, 2026) --- \code{RUN_2026-05-19_08-56-42}}{Run 34 (May 19, 2026) --- }
+cr:run:asap7:run-35-signed-off-white-check-mark-may-19-2026-run-2026-05-19-10-47-29	docs/manual/cr/parts/02-run-histories.tex	3628	\texorpdfstring{Run 35 --- SIGNED OFF \ok{} (May 19, 2026) --- \code{RUN_2026-05-19_10-47-29}}{Run 35 --- SIGNED OFF (May 19, 2026) --- }
+cr:run:asap7:run-36-may-19-2026-run-2026-05-19-16-33-50	docs/manual/cr/parts/02-run-histories.tex	3675	\texorpdfstring{Run 36 (May 19, 2026) --- \code{RUN_2026-05-19_16-33-50}}{Run 36 (May 19, 2026) --- }
+cr:run:asap7:run-37-may-19-2026-run-2026-05-19-17-21-21	docs/manual/cr/parts/02-run-histories.tex	3722	\texorpdfstring{Run 37 (May 19, 2026) --- \code{RUN_2026-05-19_17-21-21}}{Run 37 (May 19, 2026) --- }
+cr:run:asap7:run-38-may-19-2026-run-2026-05-19-20-04-54	docs/manual/cr/parts/02-run-histories.tex	3771	\texorpdfstring{Run 38 (May 19, 2026) --- \code{RUN_2026-05-19_20-04-54}}{Run 38 (May 19, 2026) --- }
+cr:run:asap7:run-39-may-19-2026-run-2026-05-19-21-11-26	docs/manual/cr/parts/02-run-histories.tex	3808	\texorpdfstring{Run 39 (May 19, 2026) --- \code{RUN_2026-05-19_21-11-26}}{Run 39 (May 19, 2026) --- }
+cr:run:asap7:run-40-timing-closed-white-check-mark-may-19-2026-run-2026-05-19-21-59-43	docs/manual/cr/parts/02-run-histories.tex	3860	\texorpdfstring{Run 40 --- TIMING CLOSED \ok{} (May 19, 2026) --- \code{RUN_2026-05-19_21-59-43}}{Run 40 --- TIMING CLOSED (May 19, 2026) --- }
+cr:run:asap7:run-41-timing-closed-white-check-mark-may-20-2026-run-2026-05-20-05-17-59	docs/manual/cr/parts/02-run-histories.tex	3922	\texorpdfstring{Run 41 --- TIMING CLOSED \ok{} (May 20, 2026) --- \code{RUN_2026-05-20_05-17-59}}{Run 41 --- TIMING CLOSED (May 20, 2026) --- }
+cr:run:asap7:run-42-power-recovery-white-check-mark-may-20-2026-run-2026-05-20-05-56-25	docs/manual/cr/parts/02-run-histories.tex	3958	\texorpdfstring{Run 42 --- Power Recovery \ok{} (May 20, 2026) --- \code{RUN_2026-05-20_05-56-25}}{Run 42 --- Power Recovery (May 20, 2026) --- }
+cr:run:asap7:run-43-timing-closed-white-check-mark-may-20-2026-run-2026-05-20-06-27-10	docs/manual/cr/parts/02-run-histories.tex	4017	\texorpdfstring{Run 43 --- TIMING CLOSED \ok{} (May 20, 2026) --- \code{RUN_2026-05-20_06-27-10}}{Run 43 --- TIMING CLOSED (May 20, 2026) --- }
+cr:run:asap7:run-44-negative-result-may-20-2026-run-2026-05-20-21-43-24	docs/manual/cr/parts/02-run-histories.tex	4082	\texorpdfstring{Run 44 --- NEGATIVE RESULT (May 20, 2026) --- \code{RUN_2026-05-20_21-43-24}}{Run 44 --- NEGATIVE RESULT (May 20, 2026) --- }
+cr:run:asap7:run-7-baseline-apr-26-2026	docs/manual/cr/parts/02-run-histories.tex	3009	Run 7 --- Baseline (Apr 26, 2026)
+cr:run:asap7:run-8-apr-26-2026	docs/manual/cr/parts/02-run-histories.tex	3041	Run 8 (Apr 26, 2026)
+cr:run:asap7:run-9-regression-apr-26-2026	docs/manual/cr/parts/02-run-histories.tex	3077	Run 9 --- Regression (Apr 26, 2026)
+cr:run:asap7:runs-2123-may-1617-2026	docs/manual/cr/parts/02-run-histories.tex	3506	Runs 21--23 (May 16--17, 2026)
+cr:run:asap7:runs-2431-may-1718-2026	docs/manual/cr/parts/02-run-histories.tex	3539	Runs 24--31 (May 17--18, 2026)
+cr:run:asap7:two-single-variable-experiments-both-refuted-status-blocked-2026-09-19-bead-lxv	docs/manual/cr/parts/02-run-histories.tex	4431	\texorpdfstring{Two single-variable experiments, both refuted --- status: BLOCKED (2026-09-19, bead \code{lxv})}{Two single-variable experiments, both refuted --- status: BLOCKED (2026-09-19, bead )}
+cr:run:asap7:warning-sdc-units-bug-campaign-context	docs/manual/cr/parts/02-run-histories.tex	2734	\texorpdfstring{\warn{} SDC Units Bug --- Campaign Context}{ SDC Units Bug --- Campaign Context}
+cr:run:asap7:white-check-mark-final-signoff-run-43-2026-05-20	docs/manual/cr/parts/02-run-histories.tex	2526	\texorpdfstring{\ok{} FINAL SIGNOFF --- Run 43 (2026-05-20)}{ FINAL SIGNOFF --- Run 43 (2026-05-20)}
+cr:run:asap7:white-check-mark-m7-cpu-sign-off-run-2026-06-02-20-37-12-780-ps	docs/manual/cr/parts/02-run-histories.tex	2606	\texorpdfstring{\ok{} M7 CPU sign-off --- Run 2026-06-02\_\allowbreak{}20-37-12 (780 ps)}{ M7 CPU sign-off --- Run 2026-06-02\_20-37-12 (780 ps)}
+cr:run:asap7:why-1418-mhz-no-longer-holds-and-what-was-tried	docs/manual/cr/parts/02-run-histories.tex	2700	Why 1418 MHz no longer holds, and what was tried
+cr:run:phase5	docs/manual/cr/parts/02-run-histories.tex	8	Phase 5 SoC --- ASAP7 P\&R Run History (M11)
+cr:run:phase5:2026-09-17-bead-djm-fixed-clean-26q2-re-run-soc-ydw2-run-2026-09-17-09-01-42-ydw-closed-0ah-closed-rvb-remains-open	docs/manual/cr/parts/02-run-histories.tex	1827	\texorpdfstring{2026-09-17: bead \code{djm} fixed, clean 26Q2 re-run (\code{soc-ydw2}, \code{RUN_2026-09-17_09-01-42}) --- \code{ydw} closed, \code{0ah} closed, \code{rvb} remains open}{2026-09-17: bead fixed, clean 26Q2 re-run (, ) --- closed, closed, remains open}
+cr:run:phase5:2026-09-18-2-stage-group-distributed-write-pipeline-soc-rvb2-run-2026-09-17-20-41-11-rvb-closed	docs/manual/cr/parts/02-run-histories.tex	1983	\texorpdfstring{2026-09-18: 2-stage group-distributed write pipeline (\code{soc-rvb2}, \code{RUN_2026-09-17_20-41-11}) --- \code{rvb} CLOSED}{2026-09-18: 2-stage group-distributed write pipeline (, ) --- CLOSED}
+cr:run:phase5:2026-09-18-sys-clk-cts-skew-growth-investigation-bead-ea0-read-only-no-re-run	docs/manual/cr/parts/02-run-histories.tex	2259	\texorpdfstring{2026-09-18: sys\_clk CTS skew growth investigation (bead \code{ea0}, read-only, no re-run)}{2026-09-18: sys\_clk CTS skew growth investigation (bead , read-only, no re-run)}
+cr:run:phase5:caveats-read-before-quoting-any-number-above	docs/manual/cr/parts/02-run-histories.tex	352	Caveats --- read before quoting any number above
+cr:run:phase5:combined-re-run-rvb-rtl-0ah-cts-fix-rsz6rsz7-bounded-post-grt-repair	docs/manual/cr/parts/02-run-histories.tex	1525	Combined re-run: rvb RTL + 0ah CTS fix + rsz6/rsz7 bounded post-GRT repair
+cr:run:phase5:correction-2026-09-17-the-cts-fix-above-was-a-no-op-reference-numbers-stand-but-are-not-reproducible-from-config	docs/manual/cr/parts/02-run-histories.tex	1636	CORRECTION (2026-09-17): the CTS fix above was a no-op; reference numbers stand but are not reproducible from config
+cr:run:phase5:cpu-clk-cts-hold-skew-fix-combined-rvb0ah-re-run-2026-09-17-beads-0ahrvbydw	docs/manual/cr/parts/02-run-histories.tex	1482	\texorpdfstring{cpu\_clk CTS hold-skew fix + combined rvb/0ah re-run (2026-09-17, beads \code{0ah}/\code{rvb}/\code{ydw})}{cpu\_clk CTS hold-skew fix + combined rvb/0ah re-run (2026-09-17, beads //)}
+cr:run:phase5:further-correction-2026-09-17-second-pass-the-identical-binary-premise-above-was-also-wrong	docs/manual/cr/parts/02-run-histories.tex	1728	FURTHER CORRECTION (2026-09-17, second pass): the "identical binary" premise above was also wrong
+cr:run:phase5:how-cpu-clk-was-closed-two-independent-problems	docs/manual/cr/parts/02-run-histories.tex	395	\texorpdfstring{How \code{cpu_clk} was closed --- two independent problems}{How was closed --- two independent problems}
+cr:run:phase5:known-limitations-follow-ups	docs/manual/cr/parts/02-run-histories.tex	1152	Known limitations / follow-ups
+cr:run:phase5:multi-clock-re-closure-gh-96-both-domains-met	docs/manual/cr/parts/02-run-histories.tex	293	Multi-clock re-closure (GH \#96) --- BOTH DOMAINS MET
+cr:run:phase5:pdn-caveat-2026-09-12-beads-gyx-4l8-every-asap7-run-has-an-empty-power-grid	docs/manual/cr/parts/02-run-histories.tex	1247	\texorpdfstring{PDN caveat (2026-09-12, beads \code{gyx} / \code{4l8}) --- every ASAP7 run has an empty power grid}{PDN caveat (2026-09-12, beads / ) --- every ASAP7 run has an empty power grid}
+cr:run:phase5:pdn-fixed-2026-09-12-same-day-orfs-style-grid-builds-and-ir-drop-now-runs	docs/manual/cr/parts/02-run-histories.tex	1318	PDN fixed (2026-09-12, same day) --- ORFS-style grid builds, and IR drop now runs
+cr:run:phase5:pdn-note-why-the-tap-cell-violations-are-accepted	docs/manual/cr/parts/02-run-histories.tex	176	PDN note (why the tap-cell violations are accepted)
+cr:run:phase5:power-figure-caveat-macro-power-omitted-from-every-figure-bead-ew3	docs/manual/cr/parts/02-run-histories.tex	554	\texorpdfstring{Power figure caveat: macro power omitted from every figure (bead \code{ew3})}{Power figure caveat: macro power omitted from every figure (bead )}
+cr:run:phase5:reproduce	docs/manual/cr/parts/02-run-histories.tex	541	Reproduce
+cr:run:phase5:routing-physical-closure-caveat-detailed-routing-committed-zero-wires-bead-xy6	docs/manual/cr/parts/02-run-histories.tex	891	\texorpdfstring{Routing / physical-closure caveat: detailed routing committed zero wires (bead \code{xy6})}{Routing / physical-closure caveat: detailed routing committed zero wires (bead )}
+cr:run:phase5:routing-with-a-real-pdn-is-host-blocked-2026-09-12-bead-4l8	docs/manual/cr/parts/02-run-histories.tex	1394	\texorpdfstring{Routing with a real PDN is host-blocked (2026-09-12, bead \code{4l8})}{Routing with a real PDN is host-blocked (2026-09-12, bead )}
+cr:run:phase5:run-campaign	docs/manual/cr/parts/02-run-histories.tex	192	Run campaign
+cr:run:phase5:sign-off-result-run-14-accepted	docs/manual/cr/parts/02-run-histories.tex	125	Sign-off result (run 14 --- accepted)
+cr:run:phase5:the-synthesis-blocker-and-fix-the-central-m11-problem	docs/manual/cr/parts/02-run-histories.tex	500	The synthesis blocker and fix (the central M11 problem)
+cr:run:phase5:what-made-cpu-clk-hard-measured-not-inferred	docs/manual/cr/parts/02-run-histories.tex	462	\texorpdfstring{What made \code{cpu_clk} hard (measured, not inferred)}{What made hard (measured, not inferred)}
+cr:status:ai-human-boundaries	docs/manual/cr/parts/01-phase-and-status-history.tex	4914	AI/Human Boundaries
+cr:status:ai-human-boundaries:ai-may-assist-with	docs/manual/cr/parts/01-phase-and-status-history.tex	4916	AI MAY assist with
+cr:status:ai-human-boundaries:human-must	docs/manual/cr/parts/01-phase-and-status-history.tex	4933	Human MUST
+cr:status:claude-md-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	3760	Project Overview
+cr:status:claude-md-overview:project-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	4046	Project Phases
+cr:status:phase-history	docs/manual/cr/parts/01-phase-and-status-history.tex	8	Phase History
+cr:status:phase-history:implemented-features	docs/manual/cr/parts/01-phase-and-status-history.tex	228	Implemented Features
+cr:status:phase-history:in-progress-dft-and-fpga-status-2026-10-15	docs/manual/cr/parts/01-phase-and-status-history.tex	202	In Progress: DFT and FPGA (status 2026-10-15)
+cr:status:phase-history:phase-0-complete-white-check-mark-2026-01-18	docs/manual/cr/parts/01-phase-and-status-history.tex	19	\texorpdfstring{Phase 0 Complete \ok{} (2026-01-18)}{Phase 0 Complete (2026-01-18)}
+cr:status:phase-history:phase-1-complete-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	231	\texorpdfstring{Phase 1 (Complete) \ok{}}{Phase 1 (Complete) }
+cr:status:phase-history:phase-1-complete-white-check-mark-2026-02-13	docs/manual/cr/parts/01-phase-and-status-history.tex	37	\texorpdfstring{Phase 1 Complete \ok{} (2026-02-13)}{Phase 1 Complete (2026-02-13)}
+cr:status:phase-history:phase-2-complete-white-check-mark-2026-03-08	docs/manual/cr/parts/01-phase-and-status-history.tex	64	\texorpdfstring{Phase 2 Complete \ok{} (2026-03-08)}{Phase 2 Complete (2026-03-08)}
+cr:status:phase-history:phase-2-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	263	\texorpdfstring{Phase 2 \ok{}}{Phase 2 }
+cr:status:phase-history:phase-3-complete-white-check-mark-2026-05-21	docs/manual/cr/parts/01-phase-and-status-history.tex	89	\texorpdfstring{Phase 3 Complete \ok{} (2026-05-21)}{Phase 3 Complete (2026-05-21)}
+cr:status:phase-history:phase-4-complete-white-check-mark-2026-05-27	docs/manual/cr/parts/01-phase-and-status-history.tex	114	\texorpdfstring{Phase 4 Complete \ok{} (2026-05-27)}{Phase 4 Complete (2026-05-27)}
+cr:status:phase-history:phase-5-complete-white-check-mark-2026-06-24	docs/manual/cr/parts/01-phase-and-status-history.tex	140	\texorpdfstring{Phase 5 Complete \ok{} (2026-06-24)}{Phase 5 Complete (2026-06-24)}
+cr:status:phase-history:phase-6-complete-white-check-mark-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	168	\texorpdfstring{Phase 6 Complete \ok{} (2026-10-05)}{Phase 6 Complete (2026-10-05)}
+cr:status:phase-status	docs/manual/cr/parts/01-phase-and-status-history.tex	295	Project Phase Status
+cr:status:phase-status:2026-01-16-project-restart	docs/manual/cr/parts/01-phase-and-status-history.tex	2013	2026-01-16: Project Restart
+cr:status:phase-status:2026-01-17-phase-0-documentation-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1977	2026-01-17: Phase 0 Documentation Complete
+cr:status:phase-status:2026-01-17-specification-alignment	docs/manual/cr/parts/01-phase-and-status-history.tex	1997	2026-01-17: Specification Alignment
+cr:status:phase-status:2026-01-18-phase-0-approved-ready-for-phase-1-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1885	\texorpdfstring{2026-01-18: Phase 0 APPROVED - Ready for Phase 1 \ok{}}{2026-01-18: Phase 0 APPROVED - Ready for Phase 1 }
+cr:status:phase-status:2026-01-18-phase-0-implementation-complete-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	1909	\texorpdfstring{2026-01-18: Phase 0 Implementation Complete \ok{}}{2026-01-18: Phase 0 Implementation Complete }
+cr:status:phase-status:2026-01-26-task-2-complete-isa-compliance-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1869	\texorpdfstring{2026-01-26: Task 2 Complete --- ISA Compliance Tests \ok{}}{2026-01-26: Task 2 Complete --- ISA Compliance Tests }
+cr:status:phase-status:2026-01-28-task-3-complete-random-instruction-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1849	\texorpdfstring{2026-01-28: Task 3 Complete --- Random Instruction Tests \ok{}}{2026-01-28: Task 3 Complete --- Random Instruction Tests }
+cr:status:phase-status:2026-02-07-task-4-complete-axi-protocol-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1829	\texorpdfstring{2026-02-07: Task 4 Complete --- AXI Protocol Tests \ok{}}{2026-02-07: Task 4 Complete --- AXI Protocol Tests }
+cr:status:phase-status:2026-02-13-phase-1-verification-complete-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1805	\texorpdfstring{2026-02-13: Phase 1 Verification COMPLETE \ok{}}{2026-02-13: Phase 1 Verification COMPLETE }
+cr:status:phase-status:2026-02-14-phase-2-architecture-approved-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1777	\texorpdfstring{2026-02-14: Phase 2 Architecture Approved \ok{}}{2026-02-14: Phase 2 Architecture Approved }
+cr:status:phase-status:2026-02-16-phase-2-rtl-implementation-complete-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1749	\texorpdfstring{2026-02-16: Phase 2 RTL Implementation COMPLETE \ok{}}{2026-02-16: Phase 2 RTL Implementation COMPLETE }
+cr:status:phase-status:2026-02-27-phase-2-comprehensive-verification-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1692	2026-02-27: Phase 2 Comprehensive Verification COMPLETE
+cr:status:phase-status:2026-03-08-phase-3-rtl-implementation-started	docs/manual/cr/parts/01-phase-and-status-history.tex	1649	2026-03-08: Phase 3 RTL Implementation Started
+cr:status:phase-status:2026-05-21-phase-3-complete-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	1605	\texorpdfstring{2026-05-21: Phase 3 COMPLETE \ok{}}{2026-05-21: Phase 3 COMPLETE }
+cr:status:phase-status:2026-06-20-phase-7-mixed-signal-pll-m-am-c-complete-m-d-docs	docs/manual/cr/parts/01-phase-and-status-history.tex	1564	2026-06-20: Phase 7 Mixed-Signal PLL --- M-a..M-c complete, M-d docs
+cr:status:phase-status:aihuman-responsibilities-for-phase-0-remaining-tasks	docs/manual/cr/parts/01-phase-and-status-history.tex	2196	AI/Human Responsibilities for Phase 0 Remaining Tasks
+cr:status:phase-status:architecture-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	2287	Architecture Decisions
+cr:status:phase-status:arrows-counterclockwise-current-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	2070	\texorpdfstring{\wip{} Current Issues}{ Current Issues}
+cr:status:phase-status:cocotb-infrastructure-setup	docs/manual/cr/parts/01-phase-and-status-history.tex	2235	cocotb Infrastructure Setup
+cr:status:phase-status:contact	docs/manual/cr/parts/01-phase-and-status-history.tex	2329	Contact
+cr:status:phase-status:current-phase	docs/manual/cr/parts/01-phase-and-status-history.tex	303	Current Phase
+cr:status:phase-status:deferred-host-blocked-not-phase-6-work	docs/manual/cr/parts/01-phase-and-status-history.tex	2128	Deferred / host-blocked (not Phase 6 work)
+cr:status:phase-status:documentation-structure	docs/manual/cr/parts/01-phase-and-status-history.tex	2173	Documentation Structure
+cr:status:phase-status:final-specification-review	docs/manual/cr/parts/01-phase-and-status-history.tex	2267	Final Specification Review
+cr:status:phase-status:immediate-dft-j41m-and-fpga-hlrm	docs/manual/cr/parts/01-phase-and-status-history.tex	2081	\texorpdfstring{Immediate --- DFT (\code{j41m}) and FPGA (\code{hlrm})}{Immediate --- DFT () and FPGA ()}
+cr:status:phase-status:key-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	2285	Key Decisions
+cr:status:phase-status:known-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	2030	Known Issues
+cr:status:phase-status:next-actions	docs/manual/cr/parts/01-phase-and-status-history.tex	2078	Next Actions
+cr:status:phase-status:phase-0-foundations-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	699	\texorpdfstring{Phase 0: Foundations \ok{}}{Phase 0: Foundations }
+cr:status:phase-status:phase-1-minimal-rv32i-core-white-check-mark-verification-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	783	\texorpdfstring{Phase 1: Minimal RV32I Core \ok{} VERIFICATION COMPLETE}{Phase 1: Minimal RV32I Core VERIFICATION COMPLETE}
+cr:status:phase-status:phase-2-pipelined-cpu-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	904	\texorpdfstring{Phase 2: Pipelined CPU \ok{} COMPLETE}{Phase 2: Pipelined CPU COMPLETE}
+cr:status:phase-status:phase-3-memory-system-caches-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1075	\texorpdfstring{Phase 3: Memory System \& Caches \ok{} COMPLETE}{Phase 3: Memory System \& Caches COMPLETE}
+cr:status:phase-status:phase-4-gpu-lite-compute-engine-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1189	\texorpdfstring{Phase 4: GPU-Lite Compute Engine \ok{} COMPLETE}{Phase 4: GPU-Lite Compute Engine COMPLETE}
+cr:status:phase-status:phase-5-soc-integration-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	1333	\texorpdfstring{Phase 5: SoC Integration \ok{}}{Phase 5: SoC Integration }
+cr:status:phase-status:phase-6-ip-expansion-white-check-mark-complete-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	1394	\texorpdfstring{Phase 6: IP Expansion \ok{} COMPLETE (2026-10-05)}{Phase 6: IP Expansion COMPLETE (2026-10-05)}
+cr:status:phase-status:phase-7-mixed-signal-pll-clock-generator-construction	docs/manual/cr/parts/01-phase-and-status-history.tex	1493	\texorpdfstring{Phase 7: Mixed-Signal PLL Clock Generator \wip{}}{Phase 7: Mixed-Signal PLL Clock Generator }
+cr:status:phase-status:phase-progress	docs/manual/cr/parts/01-phase-and-status-history.tex	696	Phase Progress
+cr:status:phase-status:process-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	2309	Process Decisions
+cr:status:phase-status:python-reference-model-implementation	docs/manual/cr/parts/01-phase-and-status-history.tex	2198	Python Reference Model Implementation
+cr:status:phase-status:recent-project-changes	docs/manual/cr/parts/01-phase-and-status-history.tex	1561	Recent Project Changes
+cr:status:phase-status:white-check-mark-resolved-2026-01-17	docs/manual/cr/parts/01-phase-and-status-history.tex	2033	\texorpdfstring{\ok{} Resolved (2026-01-17)}{ Resolved (2026-01-17)}
+cr:status:phase5-workflow	docs/manual/cr/parts/01-phase-and-status-history.tex	4108	Current Workflow (Phase 5 --- SoC Integration)
+cr:status:roadmap	docs/manual/cr/parts/01-phase-and-status-history.tex	2339	Project Roadmap
+cr:status:roadmap:6a-additional-peripherals-apb4-slaves-on-the-phase-5-apb-sub-tree	docs/manual/cr/parts/01-phase-and-status-history.tex	3321	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:6b-aes-128-sha-256-accelerator	docs/manual/cr/parts/01-phase-and-status-history.tex	3413	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:6c-npu-minimal-int8-inference-engine	docs/manual/cr/parts/01-phase-and-status-history.tex	3508	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:back-end-flow-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	2386	Back-End Flow Overview
+cr:status:roadmap:openroad-back-end-integration-strategy	docs/manual/cr/parts/01-phase-and-status-history.tex	2362	OpenROAD Back-End Integration Strategy
+cr:status:roadmap:phase	docs/manual/cr/parts/01-phase-and-status-history.tex	2506	Phase
+cr:status:roadmap:phase-0-foundations-white-check-mark-complete-2026-01-18	docs/manual/cr/parts/01-phase-and-status-history.tex	2509	\texorpdfstring{Phase 0 --- Foundations \ok{} COMPLETE (2026-01-18)}{Phase 0 --- Foundations COMPLETE (2026-01-18)}
+cr:status:roadmap:phase-1-minimal-rv32i-core-white-check-mark-complete-2026-02-13	docs/manual/cr/parts/01-phase-and-status-history.tex	2590	\texorpdfstring{Phase 1 --- Minimal RV32I core \ok{} COMPLETE (2026-02-13)}{Phase 1 --- Minimal RV32I core COMPLETE (2026-02-13)}
+cr:status:roadmap:phase-2-pipelined-cpu-white-check-mark-complete-2026-03-08	docs/manual/cr/parts/01-phase-and-status-history.tex	2736	\texorpdfstring{Phase 2 --- Pipelined CPU \ok{} COMPLETE (2026-03-08)}{Phase 2 --- Pipelined CPU COMPLETE (2026-03-08)}
+cr:status:roadmap:phase-3-memory-system-caches-white-check-mark-complete-2026-05-21	docs/manual/cr/parts/01-phase-and-status-history.tex	2862	\texorpdfstring{Phase 3 --- Memory system \& caches \ok{} COMPLETE (2026-05-21)}{Phase 3 --- Memory system \& caches COMPLETE (2026-05-21)}
+cr:status:roadmap:phase-4-gpu-lite-compute-engine-research-level	docs/manual/cr/parts/01-phase-and-status-history.tex	3010	Phase 4 --- "GPU-lite" compute engine (research-level)
+cr:status:roadmap:phase-5-soc-integration-ai-shines-again-white-check-mark-complete-2026-06-24-asap7-soc-571-mhz-629-mw-sign-off-warning-timingpower-unvalidated-post-bead-8f3-current-rtl-re-measured-on-the-fixed-flow-2026-09-18-bead-0d0-727-ps-781-violators-hold-clean-2836-mw-still-not-closed-see-docsphase5-run-historymd	docs/manual/cr/parts/01-phase-and-status-history.tex	3152	\texorpdfstring{Phase 5 --- SoC integration (AI shines again) --- \ok{} COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off \warn{} timing/\allowbreak{}power unvalidated post-bead-\code{8f3}; current RTL re-measured on the fixed flow 2026-09-18, bead \code{0d0}: −727 ps / 781 violators / hold clean / 283.6 mW, still not closed --- see \cref{cr:run:phase5})}{Phase 5 --- SoC integration (AI shines again) --- COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off timing/power unvalidated post-bead-; current RTL re-measured on the fixed flow 2026-09-18, bead : −727 ps / 781 violators / hold clean / 283.6 mW, still not closed --- see )}
+cr:status:roadmap:phase-6-ip-expansion-technology-node-exploration-white-check-mark-6a6c-complete-gate-b-white-check-mark-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	3300	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:phase-7-mixed-signal-pll-clock-generator	docs/manual/cr/parts/01-phase-and-status-history.tex	3715	Phase 7 --- Mixed-Signal PLL Clock Generator
+cr:status:roadmap:post-phase-6-tracks-dft-and-fpga-not-numbered-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	3692	Post-Phase-6 tracks: DFT and FPGA (not numbered phases)
+cr:status:roadmap:power-aware-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	2418	Power-Aware Verification
+cr:status:roadmap:project-expectations	docs/manual/cr/parts/01-phase-and-status-history.tex	2341	Project Expectations
+cr:status:roadmap:target-technologies	docs/manual/cr/parts/01-phase-and-status-history.tex	2489	Target Technologies
+cr:status:roadmap:technology-node-cross-comparison-pd-results-estimates	docs/manual/cr/parts/01-phase-and-status-history.tex	3587	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:timing-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	2452	Timing Verification
 ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	7	CPU phases 0 to 3
 ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	11	DFT requirements
 ds:ch:functional-coverage	docs/manual/ds/parts/04-verification-plan.tex	7	Functional coverage

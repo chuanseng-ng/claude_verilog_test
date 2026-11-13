@@ -3,3 +3,3033 @@
 \chapter{Investigations}\label{cr:ch:investigations}
 
 This chapter holds the investigation reports. Each report keeps its original text.
+
+% Converted from docs/ASAP7_CPU_SYNLIG_MA7.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential
+(beads \code{ma7} / \code{u99} /
+\code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads  /  / )}}\label{cr:defect:asap7-cpu-synlig-ma7}
+
+\begin{record}
+
+Date 2026-10-10. Question: is the ASAP7 \code{rv32i_cpu_top} miscompile
+proven in \code{u99}/\code{ma7} (\code{DBG_GPR[4]} = \code{0x30} instead
+of \code{0x0c}; \texttt{BEQ\ x2,\allowbreak{}x3} with 9 == 9 not taken)
+the same defect that \code{dud4} root-caused on Sky130 (Synlig
+elaborates two hazard-unit port connections as \texttt{5'x}), or does
+ASAP7 have a second cause (ma7\textquotesingle s "\code{OPT_MUXTREE}
+mis-elaborates the runtime-indexed regfile read mux")? Test only: no PD
+run, no config change, no macro view touched. Statements are tagged
+MEASURED or INFERRED.
+
+\end{record}
+
+\subsection{Verdict}\label{cr:defect:asap7-cpu-synlig-ma7:verdict}
+
+\begin{record}
+
+\textbf{ma7 = dud4 (same defect), for the programs and netlists
+covered.} The two netlists that carry the two \texttt{5'x} hazard-unit
+connections (the committed macro and a fresh Synlig synthesis of main
+RTL) reproduce the u99/ma7 failure exactly, in two independent
+simulators. The two netlists that do not (Synlig with the two
+part-selects routed through a named wire; and the sv2v frontend) are
+identical to RTL on all 6 programs and pass all 124 cells of the
+31-register x (rs1, rs2, both, debug) matrix. \textbf{No second cause
+was found and the ma7 regfile read-mux / \code{OPT_MUXTREE} hypothesis
+is not supported}: the regfile read path is correct in both clean
+netlists, and \code{OPT_MUXTREE} removal counts and the regfile
+\texttt{\$mem} structure are identical across all three synthesised arms
+(PD agent\textquotesingle s \code{NOTES.md}).
+
+What this does NOT establish: formal equivalence (6 programs, not
+exhaustive); that the committed macro is bit-identical in behaviour to
+arm S on programs not run; the GPU macro; anything about P\&R-introduced
+faults beyond "the committed post-P\&R netlist behaves like the
+synthesis-only Synlig netlist on all 6 programs".
+
+\end{record}
+
+\subsection{Provenance (MEASURED)}\label{cr:defect:asap7-cpu-synlig-ma7:provenance-measured}
+
+\begin{record}
+
+Netlists from the PD agent\textquotesingle s synthesis-only experiment,
+\code{/nobackup/claude_sim_build/dud4/asap7/} (method, configs, census
+in its \code{NOTES.md}). sha256 re-verified before use:
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*55/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*308/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*308/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*308/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+arm
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+netlist
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+frontend
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+sha256
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+committed & gunzip of \code{pnr/asap7/soc/macro/rv32i_cpu_top.nl.v.gz}
+(post-P\&R, built at RTL \code{999e44a}) & Synlig (config
+\code{USE_SYNLIG:true}; "built by Synlig" is inferred from its flop
+count 4863 and no \code{fwd_b_*}, its run log is gone) &
+\code{a416d23f038065433eafa81553e85b9d599892dc9e6da64ca632563b6d1da0b2} \\
+S & Synlig synthesis, unmodified main RTL & Synlig &
+\code{a2abef9c8f5d024bc512a8bb09ab5fdcb39ed86c9b14d01e03b72b22b5efe046} \\
+W & Synlig + the two hazard-unit part-selects routed through a named
+full-width wire & Synlig &
+\code{505b939796da1977ec8ab5243008b4eea66ed4f0175b2471fe9e7fb6d20d3eee} \\
+V & sv2v frontend & sv2v &
+\code{c2d7f3f37d7d08bece3fd0f8517eef4b682a19af9ee0268353d19a92f6216e24} \\
+\end{longtable}
+}
+
+}
+
+Flop counts (PD agent): committed 4863, S 4863, W 4868, V 4868
+(\code{fwd_b_*} bank present only in W and V).
+
+RTL arms (this test): \textbf{main (CPU RTL identical to
+\code{5eb5f63})} for S/W/V; \textbf{\code{999e44a}} (the commit the
+committed macro was built at, \ghref{96} run 23) for the committed macro.
+The two RTL arms were compared with each other: IDENTICAL on all 6
+programs, cycle-exact on every output port, so the committed-vs-main RTL
+cleanups (declare-before-use, \code{default_nettype}, empty blocks;
+hazard-unit lines and regfile unchanged) do not change observable
+behaviour and the choice of RTL reference does not matter for the
+verdicts below (committed vs \code{999e44a} and vs main give the same
+result, MEASURED).
+
+Committed-netlist physical cells: it instantiates
+\code{DECAPx1/2/4/6/10}, \code{FILLER}, \code{FILLERxp5}, \code{TAPCELL}
+(40,359 lines). None has a port connection (the netlist has no power
+pins), so they were \textbf{removed} with \code{asap7/strip_physical.sh}
+(function-neutral by construction; stub modules would be equivalent).
+Every other cell type is covered (checked per netlist) by the
+Liberty-derived combinational models plus
+\code{asap7_seq_cell_models.v}; the 10 SRAM macros use
+\code{asap7_sram_1rw_256x32_model.v}. The RTL arm uses the same SRAM and
+ICG models (\code{SRAM_ASAP7}, \code{USE_ICG_CELL}).
+
+\end{record}
+
+\subsection{Method}\label{cr:defect:asap7-cpu-synlig-ma7:method}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Simulator 1: yosys 0.62 \code{sim}}, the original u99/ma7
+  harness unmodified (\code{run_cpu_macro_check.sh},
+  \code{run_cpu_macro_check_branch.sh}, \code{tb_cpu_macro_check.v};
+  Liberty
+  \texttt{read\_\allowbreak{}liberty\ -\allowbreak{}ignore\_\allowbreak{}miss\_\allowbreak{}func}
+  models). Programs: \code{ma7_straight} (u99) and \code{ma7_branch}
+  (ma7 step 1). \code{DBG_GPR[4]} is the testbench\textquotesingle s
+  captured APB read, the commit stream comes from the VCD. Wrapper:
+  \code{asap7/run_yosys_gate.sh}.
+\item
+  \textbf{Simulator 2: Verilator 5.048}, cycle-exact. One testbench
+  (\code{asap7/tb_asap7_cpu_check.sv}, derived from the dud4
+  \code{tb_sky130_cpu_check.sv}) for both arms; gate arm = netlist +
+  Liberty-derived cell models (\code{asap7/gen_cell_lib.sh}), RTL arm =
+  RTL tree with the same SRAM/ICG models. All 6 programs of the dud4 set
+  (\code{trivial}, \code{ma7_straight}, \code{ma7_branch},
+  \code{sweepA/B/C}); compared: commit stream, AXI writes, 32 debug GPR
+  reads and a per-cycle trace of every output port
+  (\texttt{sky130/\allowbreak{}compare\_\allowbreak{}arms.\allowbreak{}py\ diff}),
+  plus the 31-register port matrix (\code{sky130/port_matrix.py}).
+\item
+  Every yosys/\allowbreak{}Verilator job ran under
+  \texttt{systemd-\allowbreak{}run\ -\allowbreak{}-\allowbreak{}user\ -\allowbreak{}-\allowbreak{}scope\ -\allowbreak{}p\ MemoryMax=\allowbreak{}5G\ -\allowbreak{}p\ MemorySwapMax=\allowbreak{}0}.
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Harness fix found on the way (MEASURED)}\label{cr:defect:asap7-cpu-synlig-ma7:harness-fix-found-on-the-way-measured}
+
+\begin{record}
+
+The dud4 TB\textquotesingle s APB sequencer never completes on
+main-vintage RTL (0 debug reads, TIMEOUT even in the RTL arm). Cause:
+the TB drove APB inputs with non-blocking assignments at the clock edge;
+under Verilator \code{--timing} a TB process resumed by a posedge runs
+before the DUT\textquotesingle s clocked logic of the same edge, so the
+DUT already saw the new inputs at that edge and the registered
+\code{pready} came one cycle earlier than the sequencer expected.
+\code{tb_asap7_cpu_check.sv} drives APB inputs 1 ns after the edge with
+blocking assignments; then all 32 debug reads work on the RTL arms
+(\code{trivial}: \texttt{x1\ =\allowbreak{}\ 5}, rest 0) and the port
+matrix and debug-GPR comparison are available for main-vintage RTL (they
+were not in the dud4 main-RTL pair). The other TB inputs (AXI
+responders) still use NBAs at the edge; they are identical in both arms
+and were unaffected (cycle-exact agreement of the clean arms).
+
+\end{record}
+
+\subsection{\texorpdfstring{Result 1: the two ma7 programs, yosys
+\code{sim} (original harness), four netlists
+(MEASURED)}{Result 1: the two ma7 programs, yosys  (original harness), four netlists (MEASURED)}}\label{cr:defect:asap7-cpu-synlig-ma7:result-1-the-two-ma7-programs-yosys-sim-original-harness-four-netlists-measured}
+
+\begin{record}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*143/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*252/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*344/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*241/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+netlist
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\code{ma7_straight}: \code{DBG_GPR[4]} (RTL \code{0x0c})
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\code{ma7_branch}: \texttt{BEQ\ x2,\allowbreak{}x3} (x2 = x3 = 9, must
+be TAKEN)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\code{ma7_branch}: \code{DBG_GPR[4]} (RTL \code{0x0e})
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+committed (post-P\&R) & \textbf{\code{0x30}} FAIL & \textbf{not taken},
+retires WRONG marker \code{0x14}, parks at \code{0x18} FAIL &
+\textbf{\code{0x2e}} FAIL \\
+S (Synlig, main RTL) & \textbf{\code{0x30}} FAIL & \textbf{not taken},
+parks at \code{0x18} FAIL & \textbf{\code{0x2e}} FAIL \\
+W (Synlig + workaround) & \code{0x0c} PASS & taken, retires
+\code{0x20},\code{0x24}, parks at PASS \code{0x28} & \code{0x0e} PASS \\
+V (sv2v) & \code{0x0c} PASS & taken, parks at \code{0x28} & \code{0x0e}
+PASS \\
+\end{longtable}
+}
+
+}
+
+Commit streams: committed and S identical (73 commit edges); W and V
+identical (70).
+
+\end{record}
+
+\subsection{Result 2: six programs, Verilator, cycle-exact vs RTL
+(MEASURED)}\label{cr:defect:asap7-cpu-synlig-ma7:result-2-six-programs-verilator-cycle-exact-vs-rtl-measured}
+
+\begin{record}
+
+"IDENTICAL" = commit stream, AXI writes, 32 debug GPR reads and the
+per-cycle trace of every output port all equal.
+
+\begin{landscape}
+\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*206/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*77/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*120/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*103/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*86/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*86/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*86/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*215/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+gate netlist (RTL ref)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+trivial
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ma7\_\allowbreak{}straight
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ma7\_\allowbreak{}branch
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+sweepA
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+sweepB
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+sweepC
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+port matrix (124 cells)
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+committed (\code{999e44a}) & IDENT & DIVERGES & DIVERGES & DIVERGES &
+DIVERGES & DIVERGES & 96 FAIL \\
+S (main) & IDENT & DIVERGES & DIVERGES & DIVERGES & DIVERGES & DIVERGES
+& 96 FAIL \\
+W (main) & IDENT & IDENT & IDENT & IDENT & IDENT & IDENT & \textbf{124 /
+124 PASS} \\
+V (main) & IDENT & IDENT & IDENT & IDENT & IDENT & IDENT & \textbf{124 /
+124 PASS} \\
+\end{longtable}
+}
+
+\end{landscape}
+
+(committed vs main RTL gives the same divergences as vs \code{999e44a};
+\code{rtl_999} vs \code{rtl_main} is IDENTICAL on all 6.) Failing-arm
+signatures, identical on committed and S: \code{ma7_straight} x2/x3/x4 =
+\code{0x0c/0x18/0x30} (RTL \code{0x07/0x0c/0x0c}); \code{ma7_branch}
+first commit divergence \#5 (BEQ not taken, pc \code{0x14} instead of
+\code{0x20}); sweeps A/B/C all diverge at commit \#69 (first MMIO store
+at pc \code{0x114}, restart at pc 0, 1392 commits and 0 AXI writes
+against 916 commits and 116 writes). This is the Sky130 dud4 signature,
+number for number.
+
+Caveat on the failing matrix: on S and committed the sweeps derail at
+the first store, so the 96 FAIL cells are "the program never reached the
+store", not 96 independently faulty register read cells. The clean
+verdict on the regfile read path comes from W and V
+(124/\allowbreak{}124). The debug-read column passes for 28 of 31
+registers on S (x2, x30 and one more fail), i.e. most of the registers
+hold the expected final value; the failing ones are those written by
+wrong results.
+
+\end{record}
+
+\subsection{Controls (MEASURED unless marked)}\label{cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{(a) positive:} \code{trivial} is IDENTICAL on all four
+  netlists and both simulators agree on
+  \code{ma7_straight}/\code{ma7_branch} verdicts on all four (yosys
+  \code{sim} and Verilator give the same \code{x4} and the same branch
+  outcome).
+\item
+  \textbf{(b) the gate arm really executes:} 74 / 96 / 196 commits on
+  trivial / straight / branch, PCs advance through the expected
+  sequences, the clean arms retire 916 commits and perform 116 AXI
+  stores in each sweep; no stuck-in-reset and no X (all debug reads
+  defined).
+\item
+  \textbf{(c) negative (fault injection into arm V, clean baseline
+  IDENTICAL):} stuck-at-0 on the sinks of a single net,
+  \code{asap7/inject_stuck.py}. \code{u_core.mem_wb_reg[160]} (INFERRED
+  from the struct packing: instruction bit 21): detected in \textbf{5 of
+  6} programs (all but \code{trivial}); \code{u_core.mem_wb_reg[150]}
+  (INFERRED: instruction bit 11 = \code{rd[4]}): detected in \textbf{4
+  of 6} (\code{ma7_branch}, \code{sweepA/B/C}; not \code{trivial}, nor
+  \code{ma7_straight}, which only writes x1..x4 so \code{rd[4]} is
+  always 0 and the stuck-at is invisible). \textbf{Limitation:} only
+  nets that keep a name after ASAP7 mapping can be targeted
+  (\code{mem_wb_reg} pc/\allowbreak{}instruction bits); the regfile
+  storage, read mux and hazard-compare nets are anonymous, so no fault
+  could be injected \emph{into the regfile read mux} as the Sky130
+  control did. The injected faults are on the commit-observation path.
+  The sensitivity of the differential to a datapath fault is instead
+  shown by arms S and committed, which are real datapath faults and are
+  detected in 5 of 6 programs.
+\item
+  \textbf{(d) X / initialisation:} random power-up state
+  (\code{+verilator+rand+reset+2}, seeds 7 and 23) on the RTL arms and
+  all four gate arms: every arm is IDENTICAL to its own zero-initialised
+  run on all 6 programs, and gate-vs-RTL verdicts are unchanged (W, V:
+  6/6 identical; S, committed: 1/6, only \code{trivial}). The yosys runs
+  use \code{-zinit}. INFERRED: that the randomisation actually changed
+  the initial state was not independently checked (same mechanism as the
+  dud4 control).
+\end{itemize}
+
+\end{record}
+
+\subsection{First divergence and mechanism}\label{cr:defect:asap7-cpu-synlig-ma7:first-divergence-and-mechanism}
+
+\begin{record}
+
+MEASURED (per-cycle boundary trace, \code{asap7/first_divergence.py}),
+arm S vs RTL main:
+
+\begin{itemize}
+\tightlist
+\item
+  \code{ma7_straight}: the commit stream and every output port are
+  identical for the whole run; the first differing port value is the
+  debug read of x2 (cycle 439, \code{prdata} \code{0x7} vs \code{0xc}).
+  Same on committed vs \code{999e44a}. I.e. the instruction stream is
+  fetched and retired correctly and only the \emph{data} computed is
+  wrong.
+\item
+  \code{ma7_branch}: first differing port cycle is 39,
+  \code{debug_pc_src} / \code{debug_take_branch_jump} asserted in RTL
+  (BEQ taken) and not in S; the commit stream diverges at commit \#5.
+\end{itemize}
+
+Arithmetic mechanism (the failing values are reproduced exactly;
+INFERRED internals, MEASURED values). Model: with the forwarding selects
+independent of the consumer\textquotesingle s \code{rs1}/\code{rs2},
+each ALU operand is the \emph{previous instruction\textquotesingle s
+result}.
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*134/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*255/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*215/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*376/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+program
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+instr
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+S / committed (debug read)
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+straight & \texttt{ADDI\ x1,\allowbreak{}x0,\allowbreak{}5} & 0+5 = 5 &
+x1 = 5 (RTL 5) \\
+straight & \texttt{ADDI\ x2,\allowbreak{}x0,\allowbreak{}7} & prev(5)+7
+= \textbf{12} & x2 = \code{0x0c} (RTL 7) \\
+straight & \texttt{ADD\ x3,\allowbreak{}x1,\allowbreak{}x2} & 12+12 =
+\textbf{24} & x3 = \code{0x18} (RTL 12) \\
+straight & \texttt{ADD\ x4,\allowbreak{}x3,\allowbreak{}x0} & 24+24 =
+\textbf{48} & x4 = \code{0x30} (RTL 12) \\
+branch & \texttt{ADDI\ x2,\allowbreak{}x0,\allowbreak{}9} & prev(5)+9 =
+\textbf{14} & x2 = \code{0x0e} (RTL 9) \\
+branch & \texttt{ADDI\ x3,\allowbreak{}x0,\allowbreak{}9} & 14+9 =
+\textbf{23} & x3 = \code{0x17} (RTL 9) \\
+branch & \texttt{ADD\ x4,\allowbreak{}x1,\allowbreak{}x2} & 23+23 =
+\textbf{46} & x4 = \code{0x2e} (RTL 14) \\
+\end{longtable}
+}
+
+The BEQ then compares stored x2 = 14 with stored x3 = 23 and is not
+taken: the ma7 "corruption reaches the execute datapath" observation is
+real, but it is wrong \emph{data produced by forwarding}, not a bad
+regfile read (INFERRED that the BEQ reads those stored values).
+
+Causal isolation (MEASURED): arm W differs from arm S in exactly the two
+hazard-unit port-connection lines (\code{rv32i_core.sv:436-437}), same
+Synlig frontend, same flow, same config; W is IDENTICAL to RTL and S is
+not. Arm V (a different frontend, which elaborates those lines
+correctly: no \texttt{5'x}) is also identical. Synthesis evidence (PD
+agent, MEASURED): Synlig logs
+\texttt{Range\ select\ [639:\allowbreak{}608]\ /\allowbreak{}\ [799:\allowbreak{}768]\ out\ of\ bounds\ on\ signal\ \textbackslash{}if\_\allowbreak{}id\_\allowbreak{}reg\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ undef},
+the raw RTLIL has
+\texttt{connect\ \textbackslash{}if\_\allowbreak{}id\_\allowbreak{}rs1\_\allowbreak{}addr\ 5'x},
+the S/\allowbreak{}committed netlists have 4863 flops and no
+\code{fwd_b_*} bank while W/V have 4868.
+
+Not done: direct observation of the forwarding-select flops. In the
+ASAP7 netlists the flops are anonymous (the hierarchy and
+\code{fwd_*}/\code{id_ex_reg}/regfile storage names are lost in
+ABC/\allowbreak{}DFFHQN mapping), so the Sky130-style probes of the
+select flops and regfile storage are not available. The mechanism rests
+on the arithmetic reproduction above and the W/S isolation, not on a
+waveform of the select flops.
+
+\end{record}
+
+\subsection{Consequences}\label{cr:defect:asap7-cpu-synlig-ma7:consequences}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  The ASAP7 CPU macro views (\code{pnr/asap7/soc/macro/rv32i_cpu_top.*})
+  are functionally wrong for the reason Sky130\textquotesingle s are
+  (MEASURED on the netlist; the LEF/\allowbreak{}Liberty views are
+  derived from the same netlist). The config switch to
+  \code{USE_SYNLIG:false} (sv2v) from \code{ma7} fixes it, as does an
+  RTL change that routes the two part-selects through a full-width wire
+  (arm W).
+\item
+  \textbf{Option for the blocked \code{lxv}/\code{ma7} sv2v re-harden
+  (not a decision):} if the RTL fix (\prref{259}) is merged, a Synlig build
+  is a second route to a correct ASAP7 CPU macro (arm W is the evidence,
+  at synthesis level; place-and-route of a W-style netlist was not run).
+  The Synlig route would also avoid the sv2v-specific routing regression
+  recorded in \code{lxv} only if that regression is frontend-dependent,
+  which this test does not show (\code{e69}\textquotesingle s 2,045
+  violations came from the Synlig-era macro; the 108,716 from sv2v
+  builds).
+\item
+  The same \code{struct.member[a:b]} in a port connection pattern may
+  exist elsewhere (the GPU\textquotesingle s
+  \code{warp_scheduler.sv:152} was flagged in \code{ma7}); only the
+  \code{rv32i_core} cone was checked for the Synlig
+  \texttt{out\ of\ bounds} warning (PD agent), the GPU was not
+  simulated.
+\item
+  No step gates on Synlig\textquotesingle s
+  \texttt{Range\ select\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ undef}
+  warning (see \cref{cr:defect:sky130-cpu-synlig-dud4}).
+\end{itemize}
+
+\end{record}
+
+\subsection{Not done}\label{cr:defect:asap7-cpu-synlig-ma7:not-done}
+
+\begin{record}
+
+Formal equivalence of S/W/V vs RTL; waveform-level view of the
+forwarding-select flops (anonymous after mapping); a fault injected into
+the regfile read mux itself; P\&R of an arm-W netlist; the GPU macro;
+programs beyond the 6 (no loads, no CSR, no interrupts, no
+cache-miss-heavy streams beyond what the sweeps do); yosys \code{sim}
+runs of the sweeps (the sweeps ran in Verilator only).
+
+\end{record}
+
+\subsection{Reproduce}\label{cr:defect:asap7-cpu-synlig-ma7:reproduce}
+
+\begin{record}
+
+Scratch: \code{/nobackup/claude_sim_build/dud4/asap7_sim/}.
+\texttt{asap7/\allowbreak{}gen\_\allowbreak{}cell\_\allowbreak{}lib.\allowbreak{}sh\ <out.\allowbreak{}v>}
+(cell models), \code{asap7/strip_physical.sh} (committed netlist),
+\texttt{asap7/\allowbreak{}build\_\allowbreak{}arm.\allowbreak{}sh\ rtl|gate}
+(Verilator; \code{RTL_ROOT=} selects the RTL tree, \code{CELLLIB=} the
+cell models), \code{sky130/gen_all_progs.sh}, \code{sky130/run_arm.sh},
+\texttt{sky130/\allowbreak{}compare\_\allowbreak{}arms.\allowbreak{}py\ diff},
+\code{sky130/port_matrix.py}, \code{asap7/run_yosys_gate.sh},
+\code{asap7/first_divergence.py}, \code{asap7/inject_stuck.py}. Netlists
+are not committed.
+
+\end{record}
+
+\subsection{\texorpdfstring{Update 2026-10-10 (bead \code{ainf}): is
+"Synlig + PR \#259" safe for the remaining struct-member
+selects?}{Update 2026-10-10 (bead ): is "Synlig + PR \#259" safe for the remaining struct-member selects?}}\label{cr:defect:asap7-cpu-synlig-ma7:update-2026-10-10-bead-ainf-is-synlig-pr-259-safe-for-the-remaining-struct-member-selects}
+
+\begin{record}
+
+Full evidence: \cref{cr:defect:synlig-struct-select-ainf}. Verdict, stated
+no stronger than measured:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{CPU (\src{rtl/cpu}): no second Synlig miscompile of this class
+  was found.} Synlig has three struct-select defects: D1 (\code{s.m[..]}
+  on a struct type with exactly two packed-range members), D2 (LHS
+  part-select of a member) and D3 (element select of a multi-dimensional
+  packed-array member). In \src{rtl/cpu} there are 15 remaining member
+  selects (\code{ex:109}, \code{mem:103,104,111,112}, \code{wb:75},
+  \code{ex1c:122-150,197}), all on struct types with 7..19 ranged
+  members; the only CPU R == 2 type (\code{if_id_reg_t}) has no select
+  since \prref{259}; there is no LHS member select and no multi-dimensional
+  array member in any CPU struct. MEASURED: Synlig-vs-sv2v miter + SAT
+  (flop-exposed, with a NOT-EQUIV negative control) proves
+  \code{rv32i_pipeline_ex}, \code{_mem}, \code{_wb}, \code{_ex1c} EQUIV,
+  in addition to the earlier hazard, forwarding, ALU, branch-compare,
+  decode and immgen proofs. So the byte/\allowbreak{}halfword
+  load-extraction and store-lane paths are covered by a proof, not by a
+  simulation. NOT covered: whole-core equivalence (\code{rv32i_core},
+  regfile, CSR file, caches were not miter-checked), and defects of
+  other classes (the \code{ma7} regfile \code{OPT_MUXTREE} class is a
+  separate question).
+\item
+  \textbf{GPU (\src{rtl/gpu}): NOT safe under Synlig.}
+  \code{gpu_compute_unit} reads \code{id_ex_q.rs1_data[l]} /
+  \code{rs2_data[l]}
+  (\texttt{logic\ [N\_\allowbreak{}LANES-\allowbreak{}1:\allowbreak{}0][31:\allowbreak{}0]}
+  members): Synlig elaborates the 32-bit element as ONE bit (D3). The
+  VLD/\allowbreak{}VST/\allowbreak{}VLDS/\allowbreak{}VSTS addresses and
+  store data are wrong in a Synlig netlist; the committed Synlig-built
+  \code{gpu_top} macro views are affected.
+\item
+  \textbf{Fragility.} Whether a CPU struct is exposed to D1 depends on
+  how many members carry a packed range: \code{if_id_reg_t} is R == 2
+  today (safe only because it has no selects); the next-closest struct
+  types are R \textgreater= 7 in the CPU and \code{dma_engine.desc_t} R
+  == 3 (one removal from R == 2). Adding a member select to
+  \code{if_id_reg_t}, \code{warp_state_t} or \code{div_entry_t}, or
+  removing members from a 3-ranged-member struct, would silently re-arm
+  D1. Any new GPU/CPU use of a multi-dimensional packed member would
+  re-arm D3. The conclusion above is a property of the current source,
+  not of Synlig. Recommendation:
+  \src{tools/verif/check_struct_member_select.py} (baseline of
+  today\textquotesingle s hits) in CI, rewrite the remaining sites
+  through named wires, and for the GPU use sv2v or the named-wire
+  rewrite before any Synlig GPU build.
+\end{itemize}
+
+\end{record}
+
+% Converted from docs/SKY130_CPU_SYNLIG_DUD4.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{\texorpdfstring{Sky130 CPU macro netlist vs RTL differential
+(bead
+\code{dud4})}{Sky130 CPU macro netlist vs RTL differential (bead )}}\label{cr:defect:sky130-cpu-synlig-dud4}
+
+\begin{record}
+
+Date 2026-10-10. Question: is the Sky130 \code{rv32i_cpu_top} hard macro
+netlist (built with
+\texttt{USE\_\allowbreak{}SYNLIG:\allowbreak{}\ true}) functionally
+corrupt, the way \code{u99}/\code{ma7} showed for ASAP7? Test only: no
+PD run, no config change, no re-harden. Statements are tagged MEASURED,
+INFERRED or HYPOTHESIS.
+
+\end{record}
+
+\subsection{Verdict}\label{cr:defect:sky130-cpu-synlig-dud4:verdict}
+
+\begin{record}
+
+\textbf{CORRUPT, and the cause is localised to the Synlig frontend.} The
+committed Sky130 CPU macro netlist computes wrong results. Synlig
+elaborates two port connections of the hazard unit as undefined; a
+synthesis of the same pinned RTL through sv2v is functionally identical
+to RTL on every program tried, and a Synlig synthesis of the same RTL
+reproduces the committed netlist\textquotesingle s failure signature.
+The mechanism is \textbf{hazard/\allowbreak{}forwarding compare against
+undefined \code{rs1}/\code{rs2}}, not the regfile read mux that
+\code{ma7}/\code{u99} blame.
+
+\end{record}
+
+\subsection{Root cause (MEASURED unless marked)}\label{cr:defect:sky130-cpu-synlig-dud4:root-cause-measured-unless-marked}
+
+\begin{record}
+
+\code{rv32i_core.sv} connects the hazard unit as
+\code{.if_id_rs1_addr(if_id_reg.instruction[19:15])},
+\code{.if_id_rs2_addr(if_id_reg.instruction[24:20])} (lines 432/433 at
+\code{5c49ddf}; 436/437 on main). Synlig/\allowbreak{}Surelog logs
+during \code{Yosys.Synthesis} and JsonHeader:
+
+\begin{lstlisting}[language={}]
+rv32i_core.sv:432: Warning: Range select [639:608] out of bounds on signal `\if_id_reg': Setting all 32 result bits to undef.
+rv32i_core.sv:433: Warning: Range select [799:768] out of bounds on signal `\if_id_reg': Setting all 32 result bits to undef.
+\end{lstlisting}
+
+The raw RTLIL straight from Synlig has
+\texttt{connect\ \textbackslash{}if\_\allowbreak{}id\_\allowbreak{}rs1\_\allowbreak{}addr\ 5'x}
+and
+\texttt{connect\ \textbackslash{}if\_\allowbreak{}id\_\allowbreak{}rs2\_\allowbreak{}addr\ 5'x}
+(\code{localise/raw_synlig.il}, lines 22700-22701). A part-select of a
+packed-struct field inside a port connection is what triggers it. sv2v
+elaborates the same lines correctly. With the compare address undefined,
+every
+\texttt{rd\_\allowbreak{}addr\ =\allowbreak{}=\allowbreak{}\ if\_\allowbreak{}id\_\allowbreak{}rs?\_\allowbreak{}addr}
+in \code{rv32i_hazard_unit} (pre-decoded forwarding selects, load-use
+detect) is a don\textquotesingle t-care, so Yosys merges the B-side
+registered selects into the A-side ones.
+
+Flop census (post-synthesis, pinned RTL \code{5c49ddf}): Synlig 4,829
+\code{dfxtp} with \textbf{0} \code{fwd_b_*} flops; sv2v 4,834 with 5
+(\code{fwd_b_sel_r} x3, \code{fwd_b_ex1c_r}, \code{fwd_b_ex1b2_r}). The
+committed post-PnR netlist has \textbf{4,829} \code{dfxtp} and no
+\code{fwd_b_*} nets, i.e. exactly the Synlig count.
+\texttt{Removed\ N\ multiplexer\ ports} counts are identical in both
+arms (\code{OPT_MUXTREE} is not the difference). Source of these
+numbers: \code{/nobackup/claude_sim_build/dud4/synth/NOTES.md} (PD-agent
+synthesis-only experiment; commands, hashes and tool versions there:
+LibreLane 2.4.13, Yosys 0.46, Surelog 1.82, sv2v 0.0.13.1).
+
+\end{record}
+
+\subsection{Simulation result: three netlists, same testbench, same
+programs (MEASURED)}\label{cr:defect:sky130-cpu-synlig-dud4:simulation-result-three-netlists-same-testbench-same-programs-measured}
+
+\begin{record}
+
+RTL arm: RTL at \code{5c49ddf} (+\code{SRAM_SKY130}). Gate arms:
+synthesis-only netlists (\code{Yosys.Synthesis} output, same PDK,
+config, library, strategy per pair; single variable = frontend), PDK
+functional cell models, project SRAM model. Programs: \code{trivial},
+\code{ma7_straight} (u99), \code{ma7_branch}, \code{sweepA/B/C}
+(31-register sweeps). Comparison: commit stream, AXI writes, 32 debug
+GPR reads and a per-cycle trace of every output port.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+gate netlist (pinned RTL \code{5c49ddf})
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+result vs RTL
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+committed post-PnR netlist (\code{995c487}) & x4 = \code{0x30}, BEQ
+x2,x3 not taken, sweeps trap at the first MMIO store (earlier section of
+this PR) \\
+\code{pinned/synlig} synth netlist & \textbf{5 of 6 programs diverge}
+with the same signature: \code{ma7_straight} x4 = \code{0x30} (RTL
+\code{0x0c}); \code{ma7_branch} first commit divergence \#5 (pc 0x14
+instead of 0x20, BEQ not taken); sweeps A/B/C diverge at commit \#69
+(first MMIO store, pc 0x114 -\textgreater{} restart at pc 0).
+\code{trivial} identical. Port matrix: 96 of 124 exercised cells FAIL \\
+\code{pinned/sv2v} synth netlist & \textbf{IDENTICAL to RTL on all 6
+programs}, cycle-exact on every output port, all 32 debug reads. Port
+matrix: \textbf{124 of 124 cells PASS} (x1..x31 x \{rs1, rs2, both,
+debug\}) \\
+\code{wa/synlig} (main RTL + scratch workaround: the two selects routed
+through a full-width wire) & see "Main-RTL pair" below \\
+\end{longtable}
+}
+
+}
+
+So: the fault exists at synthesis output (P\&R, CTS, resizer and ECO are
+exonerated for this signature), the fault comes from the frontend, and
+the sv2v netlist of the same RTL is functionally correct for what was
+tested.
+
+Ruled out as harness effects (MEASURED): initial state/X (random-reset
+runs, two seeds, identical to zero-init per arm); Verilator scheduling
+(original \code{ma7} yosys-\code{sim} harness also gives \code{0x30} and
+the not-taken branch on the committed netlist, and \code{0xc} on the
+pinned sv2v synth netlist); SRAM model and latency (same file, both
+arms); RTL commit (pinned; the RTL arm matches the by-construction
+expectation 116/116 stores and final GPRs); cell models (\code{trivial}
+is cycle-exact identical on every netlist).
+
+\end{record}
+
+\subsubsection{Harness problem found and fixed on the way (MEASURED)}\label{cr:defect:sky130-cpu-synlig-dud4:harness-problem-found-and-fixed-on-the-way-measured}
+
+\begin{record}
+
+On the first attempt the synthesis-output netlists produced no commits
+at all in Verilator, for \textbf{both} frontends. Cause: the PDK
+\code{sky130_fd_sc_hd__conb_1} model uses \code{pullup}/\code{pulldown}
+primitives; where the Yosys netlist drives output
+ports/\allowbreak{}nets straight from tie cells, Verilator resolves them
+as pulled tri-states, warns
+\texttt{Circular\ combinational\ logic\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ \_\allowbreak{}\_\allowbreak{}out\_\allowbreak{}\_\allowbreak{}strong\_\allowbreak{}\_\allowbreak{}out}
+and returns 0 for \code{HI}, so the CPU never starts. Fix:
+\code{CONB_FIX=1} in \code{build_arm.sh} swaps the cell type for a plain
+\texttt{HI=\allowbreak{}1,\allowbreak{}\ LO=\allowbreak{}0} module
+(\code{conb_model.v}). The yosys-\code{sim} Liberty run is unaffected
+and independently gave the same answers. The committed post-PnR netlist
+was not affected (its ties go through \code{assign} nets).
+
+\end{record}
+
+\subsection{Corrected mechanism}\label{cr:defect:sky130-cpu-synlig-dud4:corrected-mechanism}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  MEASURED (committed netlist, \code{ma7_straight} probes): regfile read
+  data into ID/EX equals RTL in every cycle except the final
+  \texttt{SW\ x4}; stored values are wrong from \code{x2} on
+  (\code{0x0c} instead of \code{0x07} at cycle 26); the registered
+  forwarding-select flops assert in a rolling pattern (cycles 25-31)
+  where RTL asserts once.
+\item
+  INFERRED from the arithmetic and the root cause: with
+  \code{if_id_rs1/rs2} undefined the forwarding selects depend on the
+  producer alone, so each ALU operand is the previous
+  instruction\textquotesingle s result (\code{7+5}, \code{12+12},
+  \code{24+24}), including for \code{x0}. That also explains why the
+  sweeps trap at the first store: the address operand is forwarded
+  garbage.
+\item
+  The debug read mux is faithful (storage == debug read for all 32
+  registers). The regfile read mux is \textbf{not} the fault; it passes
+  the full 31-register x port matrix on the sv2v netlist, and the Synlig
+  netlist\textquotesingle s regfile read results are not what fails.
+\end{itemize}
+
+\end{record}
+
+\subsection{Why nothing caught it}\label{cr:defect:sky130-cpu-synlig-dud4:why-nothing-caught-it}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Port-connection fault \emph{between} modules: per-module
+  Synlig-vs-sv2v SAT equivalence (hazard, forwarding, ALU, branch
+  comparator, decode, immediate generator: all equivalent in isolation;
+  \code{equiv_all_comb.sh}) cannot see it because the broken wires are
+  the instance\textquotesingle s port connection inside
+  \code{rv32i_core}, outside every isolated module.
+\item
+  It is a logged \textbf{Warning} that no step gates on.
+  \code{Checker.YosysSynthChecks}, lint (Verilator on the sources),
+  unmapped-cell, NetlistAssign and inferred-latch checks all pass
+  (\code{synthesis__check_error__count} 0 in every arm).
+\item
+  Netgen LVS compares layout to the same wrong netlist; STA and P\&R are
+  happy with a smaller, wrong design (Synlig netlist is 333-957 cells
+  smaller).
+\item
+  The earlier \code{OPT_MUXTREE} hypothesis fits the symptom only by
+  coincidence (identical removal counts in both arms).
+\end{itemize}
+
+\end{record}
+
+\subsection{Consequences}\label{cr:defect:sky130-cpu-synlig-dud4:consequences}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  The Sky130 SoC consumes the wrong CPU macro
+  (\src{pnr/sky130/soc/config.json} MACROS). Every Sky130 SoC result
+  that depends on CPU behaviour at gate level rests on it; RTL-level
+  cocotb results are unaffected.
+\item
+  ASAP7 (INFERRED, untested): the ASAP7 CPU config is also
+  \code{USE_SYNLIG:true} on RTL with the same two lines, and its
+  \code{u99}/\code{ma7} signature (x4 = \code{0x30}, BEQ not taken) is
+  identical to the one reproduced here by the Synlig netlist. So the
+  ASAP7 failure is very likely this defect, and the
+  \code{u99}/\code{ma7} "regfile read-mux OPT\_\allowbreak{}MUXTREE"
+  diagnosis is in doubt. Not verified by building or simulating any
+  ASAP7 netlist here.
+\item
+  Remedies (owner\textquotesingle s decision, both need a re-harden):
+  switch the Sky130 CPU config to sv2v (as the SoC and, since
+  \code{ma7}, ASAP7 already are) and/or rewrite the two part-selects
+  through a full-width wire; gate on the Synlig
+  \texttt{Range\ select\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ out\ of\ bounds}
+  / \code{undef} warning.
+\item
+  Surelog shared-cache caveat (MEASURED, from the synthesis run): the
+  Makefile runs LibreLane with cwd = the librelane checkout, so
+  Surelog\textquotesingle s \code{slpp_all} cache is shared across every
+  project and worktree; one run logged source paths from an older
+  worktree whose \code{rv32i_core.sv}, \code{rv32i_hazard_unit.sv} and
+  \code{rv32i_forwarding_unit.sv} differ. The resulting netlist was
+  byte-identical to the clean-cwd run, so no stale content leaked in
+  that instance, but it is a latent hazard and cannot be excluded for
+  the committed netlist (its run directory is gone).
+\end{itemize}
+
+\end{record}
+
+\subsection{Negative control, on a clean baseline (MEASURED)}\label{cr:defect:sky130-cpu-synlig-dud4:negative-control-on-a-clean-baseline-measured}
+
+\begin{record}
+
+Baseline = \code{pinned/sv2v} netlist (IDENTICAL to RTL on all 6
+programs). Fault (scratch copy,
+\texttt{inject\_\allowbreak{}fault.\allowbreak{}py\ tie1}): data input
+A1 tied to 0 on the 63 first-level read-mux cells that select x1 among
+x0..x3 in every read tree (\code{find_x1_read_cells.py}). Detected in
+\textbf{4 of 6 programs} (\code{ma7_branch}, \code{sweepA},
+\code{sweepB}, \code{sweepC}; first AXI write divergence: expected
+\code{0x91b7584a}, got \code{0x00001000}). Not detected in
+\code{trivial} and \code{ma7_straight} (neither reads x1 through a
+settled read-mux path that matters there: \code{x1} is consumed via
+forwarding or only through the debug path). So the differential detects
+a regfile read-path fault when the program reads settled registers,
+which the sweeps do. Earlier controls against the faulty committed
+netlist were weak (an S0/S1 swap was invisible because x1 and x2 share
+bit 0).
+
+\end{record}
+
+\subsection{\texorpdfstring{Main-RTL pair (\code{origin/main} =
+\code{5eb5f63}, MEASURED)}{Main-RTL pair ( = , MEASURED)}}\label{cr:defect:sky130-cpu-synlig-dud4:main-rtl-pair-originmain-5eb5f63-measured}
+
+\begin{record}
+
+RTL arm \code{RTL_ROOT=.../synth/rtl_main}; gate arms \code{synlig/},
+\code{sv2v/} and \code{wa/synlig} (main + the scratch workaround).
+Caveat: \code{999e44a} registered the APB outputs, and
+\code{tb_sky130_cpu_check.sv}\textquotesingle s APB sequencer hangs on
+the main RTL itself (0 debug reads, TIMEOUT in the RTL arm too), so for
+this pair \textbf{debug-port reads and the port matrix are unavailable};
+the sequencer was not adapted. Everything else (commit stream functional
+and cycle-exact, AXI write stream functional and cycle-exact, per-cycle
+trace of every output port) was compared, and the only failing check
+reported in every program is the 0-vs-32 debug-read count, equal on both
+sides. The RTL arm\textquotesingle s 116/116 sweep stores match the
+by-construction expectation.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+gate netlist (main RTL)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+result vs main RTL
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{sv2v/} & commit, AXI and per-cycle trace identical on all 6
+programs \\
+\code{wa/synlig} (workaround: two selects via a full-width wire) &
+commit, AXI and per-cycle trace identical on all 6 programs, i.e. the
+same Synlig frontend is fine once the two lines are routed through a
+full-width wire. \textbf{This isolates the defect to those two lines
+under Synlig.} \\
+\code{synlig/} (unmodified) & fails: \code{ma7_branch} first commit
+divergence \#5 (BEQ not taken), sweeps A/B/C divergence at commit \#69,
+same as pinned \\
+\end{longtable}
+}
+
+}
+
+The defect is therefore still present on current \code{main}.
+
+\end{record}
+
+\subsection{Not done / limits}\label{cr:defect:sky130-cpu-synlig-dud4:not-done-limits}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Whole-CPU formal equivalence between netlists and RTL; ASAP7 netlist
+  simulation; the sv2v netlist was shown correct only for the programs
+  above (all 31 registers on both ID ports, plus both ma7 programs), not
+  exhaustively.
+\item
+  The committed netlist\textquotesingle s own run log is gone, so "built
+  by Synlig" for that exact file is inferred from its signature (4,829
+  flops, no \code{fwd_b_*}) plus the config, not read from a log.
+\item
+  \code{rv32i_core.sv} line-number mapping is per RTL version (432/433
+  pinned, 436/437 main).
+\end{itemize}
+
+\end{record}
+
+\subsection{Reproduce}\label{cr:defect:sky130-cpu-synlig-dud4:reproduce}
+
+\begin{record}
+
+\code{gen_all_progs.sh},
+\texttt{build\_\allowbreak{}arm.\allowbreak{}sh\ rtl|gate}
+(\code{CONB_FIX=1} for Yosys synthesis-output netlists; \code{RTL_ROOT=}
+selects the RTL tree), \code{run_arm.sh},
+\texttt{compare\_\allowbreak{}arms.\allowbreak{}py\ diff},
+\code{port_matrix.py}, \code{run_and_compare.sh},
+\code{run_yosys_gate_check.sh}, \code{inject_fault.py},
+\code{find_x1_read_cells.py}, \code{equiv_all_comb.sh}; probes
+\code{build_probe_arms.sh}, \code{run_probe.sh}, \code{decode_trace.py}.
+Scratch under \code{/nobackup/claude_sim_build/dud4}. Netlists are not
+committed.
+
+\end{record}
+
+\subsection{Gate (bead gc0y)}\label{cr:defect:sky130-cpu-synlig-dud4:gate-bead-gc0y}
+
+\begin{record}
+
+The defect class is now gated in every \src{pnr/Makefile} LibreLane run
+(\src{docs/SYNTH_UNDEF_GATE.md}): a log scanner plus a structural check
+of the elaborated header JSON, via the
+\src{pnr/plugins/librelane_plugin_cvt_synthgate} plugin. Negative
+control: this note\textquotesingle s reverted \code{rv32i_core.sv}
+hazard lines make
+\texttt{make\ librelane-\allowbreak{}sky130-\allowbreak{}cpu} abort at
+the JsonHeader step.
+
+Testbench fix: \src{tools/verif/gls/sky130/tb_sky130_cpu_check.sv} now
+drives APB inputs 1 ns after the clock edge with blocking assignments
+(back-ported from the ASAP7 testbench). Before, its NBA-at-the-edge
+sequencer raced the registered \code{pready} on main RTL and debug reads
+timed out. Measured on main RTL (RTL arm, Verilator 5.048): all six
+programs complete with 32 APB reads each; \code{ma7_straight} reads
+\code{x3=0x0c}, \code{x4=0x0c}.
+
+\end{record}
+
+\subsection{Re-harden on sv2v (2026-10-11) --- remedy applied}\label{cr:defect:sky130-cpu-synlig-dud4:re-harden-on-sv2v-2026-10-11-remedy-applied}
+
+\begin{record}
+
+User-approved remedy: sv2v switch for \src{pnr/sky130/cpu} (this change)
+plus the RTL part-select rewrite (\prref{259}). Correctness only; no DFT
+pins.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{S1}
+  \texttt{make\ -\allowbreak{}C\ pnr\ sky130-\allowbreak{}cpu-\allowbreak{}sv2v}
+  (26 SV files, defines
+  \texttt{PDK\_\allowbreak{}sky130A\ SCL\_\allowbreak{}sky130\_\allowbreak{}fd\_\allowbreak{}sc\_\allowbreak{}hd\ \_\allowbreak{}\_\allowbreak{}librelane\_\allowbreak{}\_\allowbreak{}\ \_\allowbreak{}\_\allowbreak{}pnr\_\allowbreak{}\_\allowbreak{}\ SRAM\_\allowbreak{}SKY130}
+  = the arm-V recipe above); \code{librelane-sky130-cpu} depends on it;
+  config \code{USE_SYNLIG:false}, \code{VERILOG_FILES} = SRAM stub +
+  generated file; nothing else changed. Real yosys: 22/22 modules
+  defined, only the SRAM stub is a blackbox. \code{FP_PIN_ORDER_CFG} was
+  already wired (\code{pin_order.cfg}), so no pin file was generated.
+\item
+  \textbf{S2} synthesis only (\code{dud4_synth},
+  origin/\allowbreak{}main \code{4d8e543} with \prref{259} and \#268): gate
+  PASS (\code{fail=0}), census 4 868 flops (\code{fwd_b_sel_r},
+  \code{fwd_b_ex1c_r}, \code{fwd_b_ex1b2_r} present), 28 102 cells,
+  netlist sha256 \code{2acc6f6a...921d}. Differential: 6/6 programs
+  IDENTICAL, matrix 124/124 (RTL arm also 124/124, debug reads work on
+  main RTL after the testbench fix).
+\item
+  \textbf{S3} full P\&R \code{RUN_2026-10-11_06-00-12}, 75 MHz
+  unchanged: LVS match, KLayout 0, routing DRC 0, Magic 27 733 913
+  (99.9869 \% inside SRAM footprints; 3 626 \code{nwell.4}), setup clean
+  at six tt/ff corners (+3.44 ns nom\_tt), \textbf{ss reg-to-reg setup
+  fails} (nom\_ss -3.198 ns/854, max\_ss -3.704 ns/996; icache tag-SRAM
+  half-cycle paths; reported, not tuned), hold reg-to-reg clean /
+  I/O-only violators (nom\_tt -0.379 ns), antenna 96/96, 77.8 mW, 40.83
+  \% util, 4 868 flops. Old ss CPU-standalone numbers are not
+  recoverable.
+\item
+  \textbf{S4} post-fill netlist (the one committed): census passes; 6/6
+  IDENTICAL; 124/124; negative control (63 x1 read-mux cells tied)
+  diverges on 4/6 programs, 90 matrix cells FAIL. \code{pnl.v} equals
+  \code{nl.v} modulo the power ports. Re-validated on the committed
+  \code{.nl.v.gz} with
+  \src{tools/verif/gls/sky130/run_netlist_proof.sh}.
+\item
+  \textbf{S5} views replaced (sha256, 12 chars, old -\textgreater{}
+  new): lef \texttt{018792de0046\ -\allowbreak{}>\ dfbfb5eba536};
+  nl.v.gz \texttt{d905d526e8b8\ -\allowbreak{}>\ 9e45b339ffad}; gds
+  \texttt{474056b81d76\ -\allowbreak{}>\ 7923de1f2d34}; spice
+  \texttt{9aa1afb320e2\ -\allowbreak{}>\ 2cd659eac361}; nom\_tt lib
+  \texttt{3b9410015273\ -\allowbreak{}>\ c777011d5b9f}, max\_ss
+  \texttt{738952c5cd95\ -\allowbreak{}>\ 69c843f19d23} (all nine are
+  pairwise distinct with correct per-corner temperature and voltage).
+  403/403 LEF pins at identical position and layer; the Liberty has 0
+  combinational in-\textgreater out arcs (old 462, the old macro
+  predates registered APB outputs).
+\item
+  \textbf{S6} SoC \code{RUN_2026-10-11_08-39-41}: see
+  \cref{cr:defect:sky130-slew-cap-e45j:8-new-baseline-on-the-sv2v-rebuilt-cpu-macro-2026-10-11-bead-dud4-stale-waiver-3-unwaived-ss-corner-nets} and
+  \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}. Not a single-variable
+  comparison with the 2026-10-09 baseline.
+\end{itemize}
+
+Open (owner): the stale \code{axi_rdata_i[12]} max-cap waiver and 3
+unwaived ss-corner nets; the \code{gc0y} structural \code{x-driven-net}
+check false-positived on 509 sv2v function-inlining temporaries on the
+SoC (that run used \code{CVT_SYNTH_GATE=warn}, shell-only) -
+\textbf{fixed by bead \bead{j1b7}}: dead function temporaries are exempt
+on a pre-proc RTLIL proof and the SoC gate runs blocking
+(\src{docs/SYNTH_UNDEF_GATE.md}); ASAP7 macros are still the corrupt
+views (shelved).
+
+\end{record}
+
+% Converted from docs/SKY130_SLEW_CAP_E45J.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{\texorpdfstring{Sky130 SoC max-slew / max-cap: root cause and
+the RC-calibrated repair (bead
+\code{e45j})}{Sky130 SoC max-slew / max-cap: root cause and the RC-calibrated repair (bead )}}\label{cr:defect:sky130-slew-cap-e45j}
+
+\begin{record}
+
+\textbf{Status 2026-10-09 (updated).} Mechanism found, fix measured on
+four runs. Sections 5-6 record why adoption was first refused (one
+max-cap net, cap 1). \textbf{Section 7 supersedes that: by user decision
+2026-10-09 the RC-calibrated flow (\code{config_rccal.json} + the
+project plugin) is now the DEFAULT Sky130 SoC flow and max-cap is gated
+at all nine corners with ONE named single-net waiver.} Bead left
+\textbf{open} (max-slew residual 102-423 is still skipped and tracked).
+Everything here is measured from run artifacts unless marked
+\emph{inference}.
+
+\end{record}
+
+\subsection{1. The earlier root cause was only half right}\label{cr:defect:sky130-slew-cap-e45j:1-the-earlier-root-cause-was-only-half-right}
+
+\begin{record}
+
+\code{e45j} attributed the violations to "repair runs on GRT-estimated
+parasitics, there is no post-RCX repair stage". Two corrections, both
+measured on the Gate B baseline \code{RUN_2026-10-05_06-50-11}:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{The "0/0/0 at steps 33/40/41" figures were nom\_tt only.}
+  Mid-PnR STA (\code{OpenROAD.STAMidPNR}) runs a single corner
+  (\texttt{DEFAULT\_\allowbreak{}CORNER\ =\allowbreak{}\ nom\_\allowbreak{}tt});
+  the other eight corners\textquotesingle{} values in each
+  step\textquotesingle s \code{state_out.json} are stale copies from
+  step 9. Step 51 is the first all-corner measurement, so the headline
+  "0 -\textgreater{} 8357" compared one corner with nine.
+\item
+  \textbf{The repair steps are corner-aware; the estimator is the
+  problem.} Loading the step-40 ODB, re-running global routing
+  in-session and reporting per corner gave \textbf{max\_ss slew 307 (277
+  on ANTENNA pins), cap 0, and 0 at every tt/ff corner} -\/- versus 7622
+  / 140 after RCX. So at the GRT estimate the design was already almost
+  clean at the worst corner; the post-RCX gap is the estimated RC being
+  too optimistic.
+\end{enumerate}
+
+Why: the sky130 tech LEF gives ground-only per-layer C (met1 0.085 fF/um
+... met5 0.088 fF/um, no coupling or fringe).
+\texttt{estimate\_\allowbreak{}parasitics\ -\allowbreak{}spef\_\allowbreak{}file}
+on the same ODB compared with the OpenRCX SPEF of the same nets (17 525
+nets with C \textgreater{} 5 fF), total RCX / estimate:
+
+{
+\begin{longtable}[]{@{}lllll@{}}
+\toprule\noalign{}
+RC corner & sum C & sum R & per-net median C & per-net median R \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+min & 1.69 & 0.62 & 1.58 & 0.58 \\
+nom & 1.88 & 1.02 & 1.76 & 1.00 \\
+max & 2.04 & 1.91 & 1.93 & 1.93 \\
+\end{longtable}
+}
+
+Every repair step therefore sized buffers against roughly half the
+capacitance that routing later delivers. (A post-RCX repair stage would
+also work, but it is not needed to reach this result and it is the
+option that needs the shared-LibreLane edit evaluated in
+\code{LIBRELANE_PATCHING_EVALUATION.md}.)
+
+Two more measured facts:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{ANTENNA diode pins are 26 \% (max\_ss) to 76 \% (nom\_tt) of
+  violating pins} in the baseline, but they sit on the same nets as
+  ordinary sinks, so excluding them shrinks the count, not the set of
+  bad nets. On max\_ss the 5 639 non-diode violating pins lie on
+  \textbf{314 distinct nets}.
+\item
+  \textbf{\code{set_max_fanout} really is absent}, and the unconstrained
+  distribution is large: baseline netlist has 5 181 nets with fanout
+  \textgreater{} 10, 1 258 \textgreater{} 32, 51 \textgreater{} 100 (max
+  217).
+\end{itemize}
+
+\end{record}
+
+\subsection{2. The fix: project-local plugin, no edit to the shared
+LibreLane install}\label{cr:defect:sky130-slew-cap-e45j:2-the-fix-project-local-plugin-no-edit-to-the-shared-librelane-install}
+
+\begin{record}
+
+\src{pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/} (LibreLane
+imports any \code{librelane_plugin_*} on \code{PYTHONPATH}; the Makefile
+adds the directory). It defines \code{CVT.RepairDesignPostGPL},
+\code{CVT.ResizerTimingPostCTS}, \code{CVT.RepairDesignPostGRT},
+\code{CVT.ResizerTimingPostGRT}, subclasses of the stock steps that run
+the \textbf{stock script unchanged} through \code{tcl/cvt_wrap.tcl}. The
+wrapper renames Tcl \code{source} so \code{tcl/rc_calibration.tcl} runs
+right after \code{common/set_rc.tcl} and rescales the per-layer RC per
+STA corner (\code{CVT_RC_CALIBRATION}, e.g.
+\texttt{nom=\allowbreak{}1.\allowbreak{}88,\allowbreak{}1.\allowbreak{}02\ min=\allowbreak{}1.\allowbreak{}69,\allowbreak{}0.\allowbreak{}62\ max=\allowbreak{}2.\allowbreak{}04,\allowbreak{}1.\allowbreak{}91},
+the table above). Verified by dumping the estimate
+before/\allowbreak{}after: total estimated C scales 1.87 / 2.02 and R
+1.02 / 1.91 for nom / max as set. Empty variable = byte-identical
+pass-through.
+
+Run it:
+\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc-\allowbreak{}rccal-\allowbreak{}noklayout}
+(selects \code{config_rccal.json}, which is \code{config.json} plus
+\code{meta.substituting_steps} and \code{CVT_RC_CALIBRATION};
+\code{config.json} is untouched).
+
+Two plugin gotchas found: \code{TclStep} moves non-allowlisted env into
+the \code{_TCL_ENV_IN} file, so a wrapper must \code{source} it before
+reading its own variables; and \code{set_layer_rc} wants kohm/um and
+pF/um (a first attempt with C off by 1e12 collapsed the estimate 67x,
+caught by the dump).
+
+\end{record}
+
+\subsection{3. Result}\label{cr:defect:sky130-slew-cap-e45j:3-result}
+
+\begin{record}
+
+Baseline \code{RUN_2026-10-05_06-50-11} (the Gate B run; its config keys
+and numbers match f7vs.15\textquotesingle s close reason) vs
+\code{RUN_2026-10-06_22-43-34} (\code{config_rccal.json}). \textbf{RTL
+caveat:} \code{dma_engine.sv} was pinned to its Gate B version
+(\code{49ace76}) for the run, because \code{857750c} landed afterwards;
+the run therefore changes exactly one thing. All 62 steps completed; the
+only deferred error is the 8 984 Magic DRC of bead \bead{45a}.
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*405/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*342/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*234/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+baseline
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+RC-calibrated
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+max\_ss slew / cap violating pins & 7622 / 140 & \textbf{295 / 0} \\
+nom\_ss & 2648 / 78 & 143 / 0 \\
+min\_ss & 1669 / 33 & 5 / 0 \\
+max\_tt & 2331 / 3 & 209 / 0 \\
+nom\_tt & 1016 / 1 & 64 / 0 \\
+max\_ff / nom\_ff / min\_tt / min\_ff & 1661 / 944 / 876 / 753 (cap
+2/0/0/0) & 122 / 53 / 0 / 0 (cap 0) \\
+max\_ss slew, non-diode pins (distinct nets) & 5639 (314) & \textbf{97
+(33)} \\
+max\_ss slew composition ANT / other / SRAM & 1983 / 5609 / 30 & 198 /
+81 / 16 \\
+antenna nets / pins & 210 / 305 & \textbf{184 / 259} \\
+setup worst slack (all corners) & +0.579 ns & \textbf{+3.276 ns} \\
+hold worst slack & +0.279 ns & +0.275 ns \\
+setup / hold violators & 0 / 0 & 0 / 0 \\
+Netgen LVS & PASSED & PASSED \\
+routing DRC & 0 & 0 \\
+Magic DRC (bead \bead{45a}) & 8984 & 8984 \\
+stdcell area / utilisation & 1 703 620 um2 / 44.84 \% & 1 778 150 um2 /
+45.20 \% \\
+power & 81.0 mW & 80.9 mW \\
+fanout \textgreater{} 10 / \textgreater{} 32 / \textgreater{} 100 nets &
+5181 / 1258 / 51 & 5839 / 694 / 26 \\
+\end{longtable}
+}
+
+Max-cap is \textbf{0 at all nine corners}, which is the gate
+\code{Checker.MaxCapViolations} would apply
+(\texttt{TIMING\_\allowbreak{}VIOLATION\_\allowbreak{}CORNERS\ =\allowbreak{}\ ['*']}).
+It is still \code{--skip}ped: the checker was not executed on this run,
+only the metric read. Max-slew is not 0, so
+\code{Checker.MaxSlewViolations} stays skipped.
+
+Unlike the margin-raise (\code{e45j}, 2380 slew, +50 antenna nets) and
+the antenna-effort raise (\code{58q}) that traded against each other,
+this lever \textbf{improved both axes at once} and bought +2.7 ns of
+setup margin on the thin max\_ss path. The antenna improvement is
+\emph{inference-level} explained: fewer late-added repair buffers
+because the repair was sized correctly the first time.
+
+\end{record}
+
+\subsection{4. What is left (max\_ss 295)}\label{cr:defect:sky130-slew-cap-e45j:4-what-is-left-max-ss-295}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  16 pins on the SRAM macro inputs: checked against the relaxed 0.5 ns
+  limit of \code{sky130_soc.sdc:120-124}; inherits bead \bead{o1i}, not
+  a buffering problem.
+\item
+  198 ANTENNA diode pins at max\_ss (\emph{inference}: they sit on the
+  same nets as real sinks, in line with the baseline pattern, and are
+  the \code{58q} mirror effect; not re-mapped to nets in this run).
+\item
+  97 non-diode pins (81 non-SRAM) on 33 distinct nets; the worst have 8
+  violating pins each (e.g. \code{net3131}, \code{net3132},
+  \code{net23978}, \code{cpu_bridge_s_wdata[19]}). The nets are
+  resizer-generated names and were not traced back to RTL signals.
+\end{itemize}
+
+Next experiments, each a single full run (\textasciitilde4 h on this
+host): (a) raise the C multipliers a further \textasciitilde10 \% (the
+median ratios are below the sum ratios used, but long nets dominate
+slew); (b) set \code{GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH} (untried; the
+resizer auto-picks 6 335 um); (c) a real \code{set_max_fanout} in the
+PnR SDC (changes repair behaviour: 5 839 nets exceed 10). A post-RCX ECO
+pass stays an option only if (a)-(b) do not reach 0.
+
+Single-run caveat: one full run per arm; no repeat was made, so
+run-to-run noise on the slew counts is not characterised (the antenna
+and setup differences are large against the historical drift on this
+design).
+
+\end{record}
+
+\subsection{5. Confirmation run on current RTL (2026-10-08): NOT
+adopted}\label{cr:defect:sky130-slew-cap-e45j:5-confirmation-run-on-current-rtl-2026-10-08-not-adopted}
+
+\begin{record}
+
+User decision 2026-10-08: adopt the RC-calibrated flow as the default
+Sky130 SoC flow and un-skip \code{Checker.MaxCapViolations} \textbf{if}
+a confirmation run on current \code{main} RTL matches section 3. Run:
+\code{RUN_2026-10-08_05-21-39}
+(\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc-\allowbreak{}rccal-\allowbreak{}noklayout},
+\code{origin/main} at \code{3ad22f8}, no \code{dma_engine.sv} pin, so it
+carries the \code{wdmo} DMA fix and the \code{3xtv}
+\code{axi_lite_interconnect} fix; all 62 steps ran, sole deferred error
+is the 8 984 Magic DRC of bead \bead{45a}). \textbf{Acceptance failed on
+max-cap}, so no default was changed and \code{Checker.MaxCapViolations}
+stays skipped.
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*175/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*208/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*274/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*323/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+(violating pins unless noted)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Gate B \code{RUN_2026-10-05_06-50-11}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+rccal \code{RUN_2026-10-06_22-43-34} (pinned DMA)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+rccal confirm \code{RUN_2026-10-08_05-21-39} (current RTL)
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+max\_ss slew / cap & 7622 / 140 & 295 / 0 & \textbf{423 / 1} \\
+nom\_ss & 2648 / 78 & 143 / 0 & 189 / \textbf{1} \\
+min\_ss & 1669 / 33 & 5 / 0 & 16 / \textbf{1} \\
+max\_tt & 2331 / 3 & 209 / 0 & 257 / \textbf{1} \\
+nom\_tt & 1016 / 1 & 64 / 0 & 95 / \textbf{1} \\
+min\_tt & 876 / 0 & 0 / 0 & 12 / \textbf{1} \\
+max\_ff / nom\_ff / min\_ff slew & 1661 / 944 / 753 & 122 / 53 / 0 & 254
+/ 46 / 11 (cap 0) \\
+max\_ss slew ANT / other / SRAM & 1983 / 5609 / 30 & 198 / 81 / 16 & 304
+/ 102 / 18 \\
+antenna nets / pins & 210 / 305 & 184 / 259 & 205 / 273 \\
+setup worst slack / violators & +0.579 ns / 0 & +3.276 ns / 0 & +3.329
+ns / 0 \\
+hold worst slack / violators & +0.279 ns / 0 & +0.275 ns / 0 & +0.282 ns
+/ 0 \\
+Netgen LVS / routing DRC & PASSED / 0 & PASSED / 0 & PASSED / 0 \\
+Magic DRC (bead \bead{45a}) & 8984 & 8984 & 8984 \\
+stdcell area / utilisation & 1 703 620 um2 / 44.84 \% & 1 778 150 um2 /
+45.20 \% & 1 780 450 um2 / 45.21 \% \\
+instances & 315 038 & 314 625 & 312 320 \\
+power & 81.0 mW & 80.9 mW & 84.9 mW \\
+\end{longtable}
+}
+
+}
+
+\textbf{The single cap violation.} All six tt/ss corners fail on the
+same driver, \code{_078722_/X}, a \code{sky130_fd_sc_hd__o22a_4} that
+drives \code{cpu_bridge_s_rdata[12]} (the \code{cdc_gray_fifo} R-channel
+read mux, \code{cdc_gray_fifo.sv} \code{mem_q[rd_bin_q]}, bead
+\bead{7ohm}): 0.614 pF against a 0.530 pF limit at nom\_tt (+16 \%) and
+0.643 pF against 0.333 pF at max\_ss; ff corners have no cap violation
+(the same driver also appears in the nom\_tt slew list, 1.63 ns against
+1.50 ns). \code{RepairDesignPostGRT} (step 37) logged "Found 296 slew
+violations / 18 capacitance violations ... Inserted 34 buffers in 148
+nets" and the estimate-side \code{nom_tt} metric was 0 afterwards, so
+this net was inside the repair target on the calibrated GRT estimate and
+exceeded it only after RCX (\emph{inference}: a detour or an unbuffered
+long wire that the calibrated estimate under-counts on this one net; not
+traced to a route length in this run).
+
+\textbf{Reading.} Max-cap 0 at nine corners was \emph{not} a stable
+property: it held on the pinned-DMA run and failed on one net on current
+RTL. Un-skipping would therefore turn \code{librelane-sky130-soc} into a
+failing flow (from \code{checker.py}
+\code{TimingViolations.check_timing_violations}: any violating corner
+matched by
+\texttt{TIMING\_\allowbreak{}VIOLATION\_\allowbreak{}CORNERS\ =\allowbreak{}\ ['*']}
+raises a \code{DeferredStepError}; read from source, the checker was not
+executed; \textbf{this reading is wrong, see 7.1}). Slew and antenna
+moved the wrong way against the previous rccal run, by 43 \% (max\_ss
+295 -\textgreater{} 423), 2.1x (max\_ff 122 -\textgreater{} 254), +11 \%
+antenna nets, but remain about 18x better than Gate B on max\_ss. Noise
+reasoning: the netlist is different (312 320 vs 314 625 instances, -0.7
+\%, different DMA and interconnect RTL), so placement and routing are a
+different random draw; one run per arm cannot separate that from a real
+effect. The deltas in slew and antenna are therefore uncharacterised,
+not evidence of a regression in the flow; the cap violation is a hard
+fail of the stated acceptance gate regardless of cause.
+
+\textbf{Not done.} No default, \code{Makefile}, \code{config.json} or
+checker skip was changed. The recommended next step is one more
+single-variable run toward cap 0 (the +10 \% C multipliers, or
+\code{GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH}), and a repeat of the
+\emph{same} config on the same RTL to measure run-to-run noise before
+adopting anything.
+
+\end{record}
+
+\subsection{\texorpdfstring{6. Noise repeat and the wire-length
+experiment (2026-10-08/\allowbreak{}09): still NOT
+adopted}{6. Noise repeat and the wire-length experiment (2026-10-08/09): still NOT adopted}}\label{cr:defect:sky130-slew-cap-e45j:6-noise-repeat-and-the-wire-length-experiment-2026-10-0809-still-not-adopted}
+
+\begin{record}
+
+User decision 2026-10-08: experiment first, adopt \code{config_rccal} as
+default (and un-skip \code{Checker.MaxCapViolations}) only if max-cap is
+0 at all nine corners with LVS PASSED, routing DRC 0,
+setup/\allowbreak{}hold 0 violators, and slew/\allowbreak{}antenna no
+worse than the confirmation run within measured noise. Both runs below
+used \code{origin/main} \code{944d8c5}, whose \src{rtl/} and \src{pnr/}
+are identical to the confirmation run\textquotesingle s \code{3ad22f8}
+(\texttt{git\ diff\ -\allowbreak{}-\allowbreak{}stat\ 3ad22f8\ 944d8c5\ -\allowbreak{}-\allowbreak{}\ rtl\ pnr}
+is empty; the intervening commits are tests and docs).
+
+\end{record}
+
+\subsubsection{6.1 Noise: the flow is bit-deterministic here (measured)}\label{cr:defect:sky130-slew-cap-e45j:61-noise-the-flow-is-bit-deterministic-here-measured}
+
+\begin{record}
+
+Run 1 (\code{RUN_2026-10-08_21-07-20}, exact \code{config_rccal.json},
+same RTL, a different worktree path) was compared with the confirmation
+run \code{RUN_2026-10-08_05-21-39}. After normalising the worktree path
+embedded in net names, the synthesis netlist and the DEFs after global
+placement, CTS, global routing, step 37, step 40 and detailed routing
+have identical checksums; the step-37 repair logs match line for line
+(296 slew / 18 cap violations, 34 buffers in 148 nets, 40 resized); and
+every step-51 metric is equal: slew at all nine corners (max\_ss 423 ...
+min\_ff 11), cap (1 at the six tt/ss corners), antenna 205 nets / 273
+pins, 312 320 instances, 45.2134 \% utilisation, 84.89 mW, setup +3.3286
+/ hold +0.2822 ns, route wirelength 7 502 911. So the run-to-run noise
+on slew, cap and antenna is \textbf{zero for identical inputs}: every
+difference in a changed-input run is a real response to the input,
+though the response of a chaotic flow to a small input change is still
+one sample per arm. Run 1 was stopped at step 52 (IR-drop report) once
+the post-RCX metrics proved identical; steps 53-62 (Magic, LVS, DRC)
+were \textbf{not} repeated (LVS PASSED / Magic 8 984 on the confirmation
+run carry over by determinism: \emph{inference}).
+
+\end{record}
+
+\subsubsection{6.2 Why the one cap violation survives (measured on the
+confirmation run)}\label{cr:defect:sky130-slew-cap-e45j:62-why-the-one-cap-violation-survives-measured-on-the-confirmation-run}
+
+\begin{record}
+
+The single violating driver \code{_078722_}
+(\code{sky130_fd_sc_hd__o22a_4}, max\_\allowbreak{}capacitance 0.5301
+pF) drives \code{cpu_bridge_s_rdata[12]}. Everything about this net is
+an outlier:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Load}: one functional sink, the CPU macro pin
+  \code{axi_rdata_i[12]}, plus 12 \code{diode_2} antenna cells (0.0009
+  pF each). The macro\textquotesingle s Liberty gives that pin
+  \textbf{0.2464 pF}, against a median of 0.0083 pF over its 92 input
+  pins (next largest 0.1305 pF \code{apb_paddr_i[4]}, then 0.0658 pF).
+  The post-RCX SPEF wire cap is 0.358 pF. 0.358 + 0.2464
+
+  \begin{itemize}
+  \tightlist
+  \item
+    12 x 0.0009 = 0.615 pF, matching the 0.614 pF reported.
+  \end{itemize}
+\item
+  \textbf{Length}: 2 196.5 um routed, rank 54 of 117 008 nets (p99 = 854
+  um, p99.9 = 1 871 um). The global-routing guide for the net at step 37
+  already spans 1 518 x 669 um, so the calibrated estimate saw the same
+  length: this is not an under-counted detour.
+\item
+  \textbf{Repair never touched it}: the net is
+  \texttt{o22a\_\allowbreak{}4\ -\allowbreak{}>\ macro\ pin} unchanged
+  at step 33 and 37; only the antenna step added the 11-12 diodes (they
+  add \textasciitilde0.01 pF, not the cause). The driver is already the
+  largest drive in its family.
+\end{itemize}
+
+So the cause is a long wire into a macro input whose characterised pin
+capacitance is \textasciitilde30x the median, not an RC-estimator error:
+at \textasciitilde0.16 fF/um (the calibrated nom value) the estimate for
+2 190 um is \textasciitilde0.35 pF, which together with the 0.246 pF pin
+already exceeds 0.53 pF. The earlier "inference" in section 5 (a detour
+that the estimate under-counts) is superseded.
+
+\end{record}
+
+\subsubsection{\texorpdfstring{6.3 The single-variable run:
+\texttt{GRT\_\allowbreak{}DESIGN\_\allowbreak{}REPAIR\_\allowbreak{}MAX\_\allowbreak{}WIRE\_\allowbreak{}LENGTH\ =\allowbreak{}\ 1500}}{6.3 The single-variable run: }}\label{cr:defect:sky130-slew-cap-e45j:63-the-single-variable-run-grt-design-repair-max-wire-length-1500}
+
+\begin{record}
+
+Choice (justified from 6.2): the failing net is a long point-to-point
+wire, not high fanout, and its estimate is already calibrated, so a
+further +10 \% on the C multipliers would barely move a net that is 15
+\% over the limit by a different mechanism, and would perturb every net.
+A wire-length cap targets exactly long wires. The stock auto value is 3
+205 um (\code{RSZ-0058} in the step-37 log), which never touches a 2 196
+um net; 1 500 um is the smallest perturbation that splits it.
+\code{config_rccal_wl1500.json} is \code{config_rccal.json} plus that
+one key (verified by \code{diff} and by \code{resolved.json});
+\code{config.json} and \code{config_rccal.json} are unchanged. Run:
+\code{RUN_2026-10-08_23-12-19}, all 62 steps, same host,
+\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc\ SKY130\_\allowbreak{}SOC\_\allowbreak{}CONFIG=\allowbreak{}config\_\allowbreak{}rccal\_\allowbreak{}wl1500.\allowbreak{}json\ SKY130\_\allowbreak{}SOC\_\allowbreak{}EXTRA\_\allowbreak{}SKIP=\allowbreak{}"-\allowbreak{}-\allowbreak{}skip\ KLayout.\allowbreak{}DRC\ -\allowbreak{}-\allowbreak{}skip\ Checker.\allowbreak{}KLayoutDRC"}.
+(Passing \code{SKY130_SOC_CONFIG=} to the \code{-rccal-noklayout} target
+does \textbf{not} work: that recipe re-assigns it, and a first launch
+silently ran the plain rccal config; it was caught from
+\code{resolved.json}, killed after minutes, and relaunched.)
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*183/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*162/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*209/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*264/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*162/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+(violating pins unless noted)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Gate B \code{RUN_2026-10-05_06-50-11}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+rccal, pinned DMA \code{RUN_2026-10-06_22-43-34}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+confirmation \code{RUN_2026-10-08_05-21-39} = noise repeat
+\code{RUN_2026-10-08_21-07-20}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+wl1500 \code{RUN_2026-10-08_23-12-19}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+max\_ss slew / cap & 7622 / 140 & 295 / 0 & 423 / 1 & \textbf{102 /
+1} \\
+nom\_ss & 2648 / 78 & 143 / 0 & 189 / 1 & 21 / 1 \\
+min\_ss & 1669 / 33 & 5 / 0 & 16 / 1 & 17 / 1 \\
+max\_tt & 2331 / 3 & 209 / 0 & 257 / 1 & 16 / 1 \\
+nom\_tt & 1016 / 1 & 64 / 0 & 95 / 1 & 13 / 1 \\
+min\_tt & 876 / 0 & 0 / 0 & 12 / 1 & 12 / 1 \\
+max\_ff / nom\_ff / min\_ff slew (cap 0) & 1661 / 944 / 753 & 122 / 53 /
+0 & 254 / 46 / 11 & 13 / 11 / 0 \\
+max\_ss slew ANT / SRAM / other & 1983 / 30 / 5609 & 198 / 16 / 81 & 304
+/ 18 / 101 & 54 / 18 / 30 \\
+antenna nets / pins & 210 / 305 & 184 / 259 & 205 / 273 & 212 / 253 \\
+setup worst slack / violators & +0.579 ns / 0 & +3.276 / 0 & +3.329 / 0
+& +3.345 / 0 \\
+hold worst slack / violators & +0.279 ns / 0 & +0.275 / 0 & +0.282 / 0 &
++0.274 / 0 \\
+Netgen LVS / routing DRC & PASSED / 0 & PASSED / 0 & PASSED / 0 & PASSED
+/ 0 \\
+Magic DRC (bead \bead{45a}) & 8984 & 8984 & 8984 & 8984 \\
+utilisation / instances & 44.84 \% / 315 038 & 45.20 \% / 314 625 &
+45.21 \% / 312 320 & 45.23 \% / 312 244 \\
+power & 81.0 mW & 80.9 mW & 84.9 mW & 84.9 mW \\
+step-37 repair (buffers / nets / resized) & - & - & 34 / 148 / 40 & 200
+/ 257 / 128 \\
+\end{longtable}
+}
+
+}
+
+Result: \textbf{slew improves sharply with no cost elsewhere} (max\_ss
+423 -\textgreater{} 102, max\_tt 257 -\textgreater{} 16, max\_ff 254
+-\textgreater{} 13; ANT diode pins 304 -\textgreater{} 54; antenna pins
+273 -\textgreater{} 253 while nets 205 -\textgreater{} 212;
+setup/\allowbreak{}hold/\allowbreak{}LVS/\allowbreak{}DRC unchanged
+within a few ps), \textbf{but max-cap stays at 1 at the same six corners
+on the same net}: \code{_078722_/X} is 0.646 pF against 0.530 pF at
+nom\_tt, slightly worse than before (0.614), and the net is again
+\texttt{o22a\_\allowbreak{}4\ -\allowbreak{}>\ macro\ pin} with no
+buffer at step 37 (checked in the step-37 ODB). The adoption bar (cap 0
+at all nine corners) is \textbf{not met}, so no default changed,
+\code{Checker.MaxCapViolations} stays skipped, and \code{config_rccal}
+is not promoted. (Single arm for a changed input, with zero repeat
+noise; why the resizer does not buffer this particular 2 196 um net
+although it buffered 200 others under the cap was not established.
+\emph{Inference}: the net\textquotesingle s far end is a hard-macro pin
+and repair\_\allowbreak{}design does not rebuffer toward it.)
+
+\end{record}
+
+\subsubsection{6.4 Recommendation and next step}\label{cr:defect:sky130-slew-cap-e45j:64-recommendation-and-next-step}
+
+\begin{record}
+
+\emph{Superseded by section 7: the user chose option (1) below (named
+waiver) and adopted rccal on 2026-10-09.}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Do not adopt yet.} Adoption needs cap 0 and it is 1, so the
+  decision rule is unchanged.
+\item
+  The residual is a \textbf{single net of a different kind} than the
+  previous 8 623 -\textgreater{} 295 slew story: a cap violation caused
+  by one macro input pin characterised at 0.2464 pF. Config-level sweeps
+  are unlikely to fix it (two runs: auto-length and 1 500 um wire-length
+  both leave it untouched). Options, cheapest first, none executed: (1)
+  accept it as a tracked single-net residual and un-skip the cap checker
+  only with a documented, named waiver for this net (a waiver is a moved
+  target, user\textquotesingle s call); (2) look at the CPU macro: why
+  does \code{axi_rdata_i[12]} present 0.2464 pF when its siblings
+  present \textasciitilde0.01 pF? An input buffer inside the macro (a
+  CPU macro re-harden) would fix it at the source, but that edits a
+  macro view and needs explicit approval (cf. bead \bead{ma7}/\code{lxv}
+  hard-macro rule); (3) constrain placement of \code{_078722_} next to
+  the macro pin (a pin-specific placement constraint, brittle across
+  re-synthesis names).
+\item
+  \texttt{GRT\_\allowbreak{}DESIGN\_\allowbreak{}REPAIR\_\allowbreak{}MAX\_\allowbreak{}WIRE\_\allowbreak{}LENGTH\ =\allowbreak{}\ 1500}
+  is independently attractive for \textbf{slew} (max\_ss 423
+  -\textgreater{} 102 at no measured cost): worth adopting together with
+  rccal when rccal itself is adopted, after one more arm on a different
+  RTL vintage to see it is not a one-draw effect. Not adopted now.
+\end{itemize}
+
+\end{record}
+
+\subsection{7. Adoption (2026-10-09): rccal is the default; max-cap
+gated with a named waiver}\label{cr:defect:sky130-slew-cap-e45j:7-adoption-2026-10-09-rccal-is-the-default-max-cap-gated-with-a-named-waiver}
+
+\begin{record}
+
+\textbf{Decision (user, 2026-10-09).} Adopt the RC-calibrated flow as
+the default Sky130 SoC flow, un-skip the max-cap check, waive the one
+residual net by name, and do \textbf{not} adopt
+\texttt{GRT\_\allowbreak{}DESIGN\_\allowbreak{}REPAIR\_\allowbreak{}MAX\_\allowbreak{}WIRE\_\allowbreak{}LENGTH\ =\allowbreak{}\ 1500}
+(it needs one more arm on another RTL vintage). Max-slew stays skipped
+(102-423 pins at max\_ss, tracked here).
+
+\textbf{This is a moved target, and it is the user\textquotesingle s to
+move.} The cap gate was "0 at nine corners". It is now "0 except the
+waived net". The justification is in
+\src{pnr/sky130/soc/constraints/max_cap_waivers.json} and in section
+6.2: the sole functional load is a CPU-macro input whose Liberty pin
+capacitance (0.2464 pF) is \textasciitilde30x the median of the
+macro\textquotesingle s inputs and 46 \% of the driver\textquotesingle s
+0.5301 pF limit, so no repair on the SoC side can fix it. The real fix
+(an input buffer inside the CPU macro) edits a hard-macro view and still
+needs approval (cf. beads \code{ma7}/\code{lxv}).
+
+\end{record}
+
+\subsubsection{7.1 Un-skipping the stock checker alone would have gated
+nothing (measured)}\label{cr:defect:sky130-slew-cap-e45j:71-un-skipping-the-stock-checker-alone-would-have-gated-nothing-measured}
+
+\begin{record}
+
+Section 5 said the stock checker would fail on any violating corner
+matched by
+\texttt{TIMING\_\allowbreak{}VIOLATION\_\allowbreak{}CORNERS\ =\allowbreak{}\ ['*']};
+that was read from source and is \textbf{wrong}.
+\code{Checker.MaxCapViolations} reads \code{MAX_CAP_VIOLATION_CORNERS}
+first, and its class sets
+\texttt{corner\_\allowbreak{}override\ =\allowbreak{}\ [""]}
+(\code{librelane/steps/checker.py}), which matches no corner. Executed
+with
+\texttt{-\allowbreak{}-\allowbreak{}only\ Checker.\allowbreak{}MaxCapViolations}
+on the finished run\textquotesingle s state
+(\code{RUN_2026-10-08_05-21-39}, 6 corners with cap = 1):
+
+\begin{itemize}
+\tightlist
+\item
+  default: \textbf{exit 0},
+  \texttt{WARNING\ Max\ Cap\ violations\ found\ in\ the\ following\ corners:\allowbreak{}\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ max\_\allowbreak{}ss\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ nom\_\allowbreak{}tt}
+  then \texttt{VERBOSE\ No\ max\ cap\ violations\ found};
+\item
+  with
+  \texttt{-\allowbreak{}c\ MAX\_\allowbreak{}CAP\_\allowbreak{}VIOLATION\_\allowbreak{}CORNERS=\allowbreak{}["*"]}:
+  exit 2 (\texttt{One\ or\ more\ deferred\ errors}), but then there is
+  no way to waive one net, because the checker only sees a per-corner
+  count.
+\end{itemize}
+
+So "un-skip" without more work is a silent no-op, and "un-skip with
+corners" fails every run on the known net.
+
+\end{record}
+
+\subsubsection{7.2 What was built}\label{cr:defect:sky130-slew-cap-e45j:72-what-was-built}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \src{pnr/sky130/soc/plugin/cvt_maxcap_waiver.py} (pure Python, no
+  LibreLane import; also a CLI): parses the \texttt{max\ capacitance}
+  table of each corner\textquotesingle s \code{checks.rpt}, resolves
+  each violating driver\textquotesingle s net in the final netlist, and
+  waives a violation only if that net feeds a \textbf{macro pin} named
+  by a waiver (\code{u_cpu*} / \code{axi_rdata_i[12]}) \textbf{and} its
+  capacitance is at or below the waiver\textquotesingle s
+  \code{max_cap_pf} ceiling (0.70 pF). Keyed on the macro pin, not on
+  the synthesis-generated driver name (\code{_078722_}), which goes
+  stale at the next re-synthesis. Bus-port bits are taken from the
+  netlist\textquotesingle s concatenation order (first element = MSB);
+  for this run that gave \code{axi_rdata_i[12]} independently of the
+  earlier hand analysis.
+\item
+  \code{CVT.MaxCapViolations} step in the project plugin, substituted
+  for \code{Checker.MaxCapViolations} in \code{config_rccal.json} (and
+  \code{config_rccal_wl1500.json}) via \code{meta.substituting_steps},
+  waiver file via \code{CVT_MAXCAP_WAIVERS}. It gates \textbf{all}
+  corners, raises a deferred error (flow finishes, like the other
+  checkers) on any unwaived violation, warns on stale waivers, writes
+  \code{max_cap_waivers.rpt} in its step dir and emits
+  \texttt{design\_\allowbreak{}\_\allowbreak{}max\_\allowbreak{}cap\_\allowbreak{}violation\_\allowbreak{}\_\allowbreak{}\{waived,\allowbreak{}unwaived\}\_\allowbreak{}\_\allowbreak{}count}.
+\item
+  Fail-closed inputs (each unit-tested): a report without its
+  \texttt{max\ cap\ violation\ count\ N} line, a row count that
+  disagrees with the summary line or with the flow\textquotesingle s
+  per-corner metric, a corner with a metric but no report, a violation
+  whose driver is not in the netlist, and violations with no netlist are
+  all errors, never passes. A waiver that waives nothing is reported
+  STALE (\code{--strict-stale} / \code{CVT_MAXCAP_STRICT_STALE} makes it
+  fail). A waiver without a justification, with a duplicate id, or with
+  a non-positive ceiling is rejected.
+\item
+  \src{pnr/Makefile}: \code{SKY130_SOC_CONFIG} now defaults to
+  \code{config_rccal.json}, so \code{librelane-sky130-soc} and
+  \code{-noklayout} run the adopted flow. \code{-norccal} /
+  \code{-norccal-noklayout} run the pre-adoption \code{config.json}
+  (stock max-cap checker skipped there, as it is a no-op anyway).
+  \code{SKY130_SOC_CONFIG=} is now honoured by every target
+  (\code{-rccal-noklayout} is an alias of \code{-noklayout}; the old
+  recipe silently ignored the override).
+  \texttt{make\ -\allowbreak{}C\ pnr\ sky130-\allowbreak{}soc-\allowbreak{}maxcap-\allowbreak{}check\ [SKY130\_\allowbreak{}SOC\_\allowbreak{}MAXCAP\_\allowbreak{}RUN=\allowbreak{}<run>]\ [STRICT\_\allowbreak{}STALE=\allowbreak{}1]}
+  re-runs the check on any finished run.
+\end{itemize}
+
+\end{record}
+
+\subsubsection{7.3 Validation (no new full flow was run; see 7.4)}\label{cr:defect:sky130-slew-cap-e45j:73-validation-no-new-full-flow-was-run-see-74}
+
+\begin{record}
+
+No full flow was run because the finished runs already carry the exact
+flow inputs for everything except the final checker step, and the flow
+is bit-deterministic here (6.1). The new check was applied to those
+artifacts:
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*355/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*269/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*355/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+run / case
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+waiver list
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+result
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{RUN_2026-10-08_05-21-39} (rccal, current RTL), CLI &
+\code{max_cap_waivers.json}, \code{--strict-stale} & \textbf{PASS}: 9
+corners, 6 waived (\code{_078722_/X}, net \code{cpu_bridge_s_rdata[12]},
+0.5600-0.6427 pF), 0 unwaived, 0 stale \\
+same run, CLI & \textbf{empty} (negative control) & \textbf{FAIL}, exit
+1: 6 UNWAIVED \\
+\code{RUN_2026-10-08_21-07-20} (noise repeat) &
+\code{max_cap_waivers.json} & PASS (identical numbers; bit-identical
+flow) \\
+\code{RUN_2026-10-08_23-12-19} (wl1500) & \code{max_cap_waivers.json} &
+PASS: waived caps 0.5874-0.6761 pF, all under the 0.70 pF ceiling \\
+\code{RUN_2026-10-05_06-50-11} (Gate B, no rccal) &
+\code{max_cap_waivers.json} & \textbf{FAIL}: 257 unwaived, 1 stale
+waiver \\
+in-flow,
+\texttt{librelane\ -\allowbreak{}-\allowbreak{}only\ CVT.\allowbreak{}MaxCapViolations}
+with \code{config_rccal.json} on
+\code{RUN_2026-10-08_05-21-39}\textquotesingle s state &
+\code{max_cap_waivers.json} & \textbf{exit 0}, 6 waived / 0 unwaived,
+metrics \texttt{waived=\allowbreak{}6\ unwaived=\allowbreak{}0} in
+\code{state_out.json} \\
+same in-flow run,
+\texttt{-\allowbreak{}c\ CVT\_\allowbreak{}MAXCAP\_\allowbreak{}WAIVERS=\allowbreak{}<empty\ list>}
+& empty & \textbf{exit 2},
+\texttt{6\ unwaived\ max-\allowbreak{}cap\ violation(s)\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ FAIL\ -\allowbreak{}\ deferred} \\
+\end{longtable}
+}
+
+}
+
+Unit tests: \src{tb/tests/test_cvt_maxcap_waiver.py}, 50 tests written
+first (RED: module missing), then green. Two mutations were applied by
+hand to prove they bite (reversing the bus-bit order: 9 failures;
+removing the ceiling test: 1 failure), then reverted.
+
+\end{record}
+
+\subsubsection{7.4 What is NOT validated}\label{cr:defect:sky130-slew-cap-e45j:74-what-is-not-validated}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \sout{No full flow has run with the adopted config.} \textbf{Resolved
+  by 7.5} (end-to-end run 2026-10-09: the substituted step ran in
+  position and gave the same verdict as the \code{--only} validation).
+\item
+  All adopted-flow numbers are one RTL vintage
+  (\code{3ad22f8}/\code{944d8c5}). On a new vintage the net name
+  changes, which is why the waiver is keyed on the macro pin, but the
+  cap may move: the ceiling (0.70 pF; 0.2464 pF fixed pin cap + wire)
+  fails loudly if the wire grows by \textasciitilde25 \%, and a STALE
+  warning appears if the net stops violating.
+\item
+  Max-slew is still skipped (\code{Checker.MaxSlewViolations}): 102-423
+  pins at max\_ss, antenna diodes 54-304 of them.
+\item
+  Antenna (\code{Odb.CheckDesignAntennaProperties}) and fanout (no
+  \code{set_max_fanout} in the SDC, so "0 fanout violations" stays
+  vacuous) are unchanged.
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{7.5 End-to-end confirmation (2026-10-09):
+the adopted flow completes with \code{CVT.MaxCapViolations} in
+position}{7.5 End-to-end confirmation (2026-10-09): the adopted flow completes with  in position}}\label{cr:defect:sky130-slew-cap-e45j:75-end-to-end-confirmation-2026-10-09-the-adopted-flow-completes-with-cvtmaxcapviolations-in-position}
+
+\begin{record}
+
+One full
+\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc-\allowbreak{}noklayout}
+(no overrides, so \code{SKY130_SOC_CONFIG=config_rccal.json}) on
+\code{origin/main} \code{6190313} (\prref{239} merged), run
+\code{RUN_2026-10-09_06-18-39}, 06:18:31 -\textgreater{} 09:44:08 (3 h
+26 min wall). RTL is \textbf{unchanged} since the reference: the last
+commit touching \src{rtl/} is \code{ce2b1fc} (2026-10-07), before
+reference run \code{RUN_2026-10-08_05-21-39}; the commits since
+\code{3ad22f8} are tests, docs and the PD flow files only (the
+\code{rqvo} UART fix is not on main). Metrics below are the last
+\code{state_out.json} of each run (step 63 / step 62).
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*254/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*360/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*366/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+metric (all-corner unless stated)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+reference \code{RUN_2026-10-08_05-21-39}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+end-to-end \code{RUN_2026-10-09_06-18-39}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+max-slew, max\_ss / max\_tt / nom\_tt (pins) & 423 / 257 / 95 (all nine:
+423 254 257 11 16 12 46 189 95) & \textbf{identical} at all nine
+corners \\
+max-cap, raw (6 corners tt/ss) & 1 per corner (\code{_078722_}, net
+\code{cpu_bridge_s_rdata[12]}) & \textbf{identical} \\
+max-cap, waived / unwaived & not computable in-flow (stock checker
+skipped) & \textbf{6 waived / 0 unwaived / 0 stale},
+\texttt{max-\allowbreak{}cap\ check:\allowbreak{}\ PASS}; waived caps
+0.5600-0.6427 pF, all under the 0.70 pF ceiling \\
+antenna (nets / pins) & 205 / 273, 10 918 diodes & \textbf{identical} \\
+setup worst slack, per corner & +3.3286 ns (max\_ss), +10.0518
+(nom\_tt); 0 violators & \textbf{identical}, 0 violators at all nine
+corners \\
+hold worst slack, per corner & +0.2822 ns (min\_ff), +0.5397 (nom\_tt);
+0 violators & \textbf{identical}, 0 violators at all nine corners \\
+LVS & 0 errors, PASSED & \textbf{identical} (all \code{design__lvs_*} =
+0) \\
+routing DRC & 0 (iterations 59021, 21775, 18600, 1095, 67, 2, 0) &
+\textbf{identical}, same iteration trail \\
+Magic DRC & 8 984 (waived PDK artifact, bead \bead{45a}) & 8 984
+(\textbf{identical}) \\
+KLayout DRC & skipped & skipped
+(\texttt{-\allowbreak{}-\allowbreak{}skip\ KLayout.\allowbreak{}DRC\ -\allowbreak{}-\allowbreak{}skip\ Checker.\allowbreak{}KLayoutDRC},
+deferred, not waived) \\
+util / instances / power & 45.2134 \% / 312 320 / 84.89 mW &
+identical \\
+\end{longtable}
+}
+
+}
+
+\textbf{Did \code{CVT.MaxCapViolations} run in-flow, and what did it
+say?} Yes. \code{flow.log} line 650:
+\texttt{Running\ 'CVT.\allowbreak{}MaxCapViolations'} as step
+\textbf{62}, in the slot the stock \code{Checker.MaxCapViolations}
+occupied (after 61 \code{Checker.HoldViolations}, before 63
+\code{Misc.ReportManufacturability}); \code{resolved.json} shows
+\code{meta.substituting_steps}
+\texttt{Checker.\allowbreak{}MaxCapViolations\ -\allowbreak{}>\ CVT.\allowbreak{}MaxCapViolations}
+and \code{CVT_MAXCAP_WAIVERS} pointing at
+\code{constraints/max_cap_waivers.json}; the stock step does not appear.
+Runtime 4.4 s. Verdict \textbf{PASS} (the six violations, all
+\code{_078722_/X} -\textgreater{} \code{cpu_bridge_s_rdata[12]}, are
+waived by \code{cpu-axi-rdata-i12-pin-cap}; unwaived count 0 in
+\code{design__max_cap_violation__unwaived__count}). The
+step\textquotesingle s WARNING is re-emitted by \code{flow.py} and shows
+up in the manufacturability summary, as designed. This matches the
+\code{--only} validation of 7.3 (6 waived / 0 unwaived, same caps to
+four digits), so the 7.4 inference is confirmed.
+
+\textbf{Bit-identical to the reference?} Yes, modulo the worktree path.
+After replacing the embedded \code{agent-a<hash>} worktree path (it
+appears in sv2v-derived net names) and dropping \code{//} header lines,
+the SHA-256 of the final netlist
+(\code{48-openroad-fillinsertion/soc_top.nl.v}) and of the final DEF
+(\code{49-odb-cellfrequencytables/soc_top.def}) are equal between the
+two runs (\code{746cd83c9917a19b}, \code{ed09a01574b539c1}); the SDC is
+byte-equal. Of 292 metrics keys in the last state, 289 are equal; the 3
+that differ are the two new
+\texttt{design\_\allowbreak{}\_\allowbreak{}max\_\allowbreak{}cap\_\allowbreak{}violation\_\allowbreak{}\_\allowbreak{}\{waived,\allowbreak{}unwaived\}\_\allowbreak{}\_\allowbreak{}count}
+keys (absent in the reference, expected) and
+\code{design_powergrid__drop__average__net:VGND__corner:nom_tt}
+(1.63812e-05 vs 1.63834e-05 V, +0.013 \%, an IR-analysis readout; no
+timing or physical metric moved). Second confirmation of
+6.1\textquotesingle s determinism, now across a third worktree path and
+with the new step in the flow.
+
+\textbf{Exit status.} \code{make} returned 2 and LibreLane reported
+\texttt{One\ or\ more\ deferred\ errors\ were\ encountered:\allowbreak{}\ 8984\ Magic\ DRC\ errors\ found.\allowbreak{}}
+This is the \textbf{same deferred error as the reference run} (its
+\code{error.log} ends with the same line): the Magic DRC count is the
+waived PDK artifact of bead \bead{45a}, deferred errors let the flow
+reach step 63. It is not a new failure and not caused by
+\code{CVT.MaxCapViolations}. Anyone gating on the make exit code needs
+to know that the adopted Sky130 SoC flow exits non-zero until the Magic
+DRC waiver is turned into a checker-level exemption (not done here;
+untouched).
+
+\textbf{Setup finding (worktree runs).} The first launch aborted in
+\textasciitilde9 s at config load
+(\texttt{PermissionError:\allowbreak{}\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ cpu/\allowbreak{}macro/\allowbreak{}\ rv32i\_\allowbreak{}cpu\_\allowbreak{}top.\allowbreak{}gds\ is\ not\ located\ any\ path\ readable\ to\ LibreLane})
+before any run directory existed: the macro \code{*.gds} /
+\code{*.spice} views are gitignored
+(\texttt{pnr/\allowbreak{}sky130/\allowbreak{}cpu/\allowbreak{}macro/\allowbreak{}rv32i\_\allowbreak{}cpu\_\allowbreak{}top.\allowbreak{}\{gds,\allowbreak{}spice\}},
+\texttt{pnr/\allowbreak{}sky130/\allowbreak{}soc/\allowbreak{}macro/\allowbreak{}sky130\_\allowbreak{}sram\_\allowbreak{}4kbyte\_\allowbreak{}1rw1r\_\allowbreak{}32x1024\_\allowbreak{}8.\allowbreak{}\{gds,\allowbreak{}sp\}})
+and exist only in the primary checkout. A fresh worktree needs them
+copied
+(\texttt{rsync\ -\allowbreak{}a\ -\allowbreak{}-\allowbreak{}ignore-\allowbreak{}existing\ <primary>/\allowbreak{}pnr/\allowbreak{}sky130/\allowbreak{}\{cpu,\allowbreak{}soc\}/\allowbreak{}macro/\allowbreak{}\ .\allowbreak{}.\allowbreak{}.\allowbreak{}})
+before \code{make} can start. Not a flow defect; the copied files are
+the same inputs the primary-tree runs use.
+
+Still open (unchanged by this run): max-slew is skipped (423 at
+max\_ss), the waiver is for the one macro-pin net, and a new RTL vintage
+may move the cap (ceiling 0.70 pF; STALE warning if the net stops
+violating).
+
+\end{record}
+
+\subsection{\texorpdfstring{8. New baseline on the sv2v-rebuilt CPU
+macro (2026-10-11, bead \code{dud4}): stale waiver, 3 unwaived ss-corner
+nets}{8. New baseline on the sv2v-rebuilt CPU macro (2026-10-11, bead ): stale waiver, 3 unwaived ss-corner nets}}\label{cr:defect:sky130-slew-cap-e45j:8-new-baseline-on-the-sv2v-rebuilt-cpu-macro-2026-10-11-bead-dud4-stale-waiver-3-unwaived-ss-corner-nets}
+
+\begin{record}
+
+\code{RUN_2026-10-11_08-39-41}
+(\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc-\allowbreak{}rccal-\allowbreak{}noklayout},
+08:39 -\textgreater{} 12:11 WIB, 3 h 32 min) is the first SoC run on the
+re-hardened CPU macro (\cref{cr:defect:sky130-cpu-synlig-dud4},
+"Re-harden"). \textbf{This is a new baseline, not a single-variable
+comparison with \code{RUN_2026-10-09_06-18-39} (§7.5):} the CPU macro
+frontend (Synlig -\textgreater{} sv2v), the macro\textquotesingle s
+registered APB outputs (old macro predates \code{999e44a}), the
+hazard-select RTL fix (\prref{259}), the csr counter fix (\prref{268}) and the
+UART/\allowbreak{}I2C/\allowbreak{}GPU RTL changes since all differ.
+\code{CVT_SYNTH_GATE=warn} was exported in the shell for this run (see
+the PR body: the \code{gc0y} structural check false-positives on 509
+sv2v function-inlining temporaries in the SoC); no tracked file carries
+it. KLayout DRC skipped as in §7.5.
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*395/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*272/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*313/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+metric
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+baseline \code{RUN_2026-10-09_06-18-39}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+new \code{RUN_2026-10-11_08-39-41}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+LVS / routing DRC / Magic DRC & 0 / 0 / 8 984 & 0 / 0 / 8 984 \\
+setup worst slack (violators), all 9 corners & +3.3286 ns max\_ss (0) &
++2.4825 ns max\_ss (0); nom\_tt +10.1818 \\
+hold worst slack (violators), all 9 corners & +0.2822 ns min\_ff (0) &
++0.2874 ns min\_ff (0); nom\_tt +0.5395 \\
+antenna nets / pins; diodes & 205 / 273; 10 918 & 187 / 265; 12 500 \\
+max-slew pins max\_ss / max\_tt / nom\_tt (checker skipped) & 423 / 257
+/ 95 & 370 / 230 / 200 \\
+max-cap raw violations & 1 per tt/ss corner (6) & max\_ss 3, nom\_ss 1,
+all other corners 0 \\
+\code{CVT.MaxCapViolations} & PASS (6 waived / 0 unwaived) &
+\textbf{FAIL: 0 waived / 4 unwaived / 1 stale waiver} \\
+util / instances / power & 45.21 \% / 312 320 / 84.9 mW & 45.22 \% / 313
+777 / 84.6 mW \\
+\end{longtable}
+}
+
+}
+
+\textbf{The waiver is stale.} \code{cpu-axi-rdata-i12-pin-cap} waived
+nothing at any corner. Its premise, the anomalous 0.2464 pF Liberty pin
+cap, belonged to the old macro. The new Liberty has
+\code{axi_rdata_i[12]} at 0.0469 pF (nom\_tt) / 0.0496 pF (max\_ss); the
+largest data input is now \code{axi_rdata_i[14]} at 0.0675 / 0.0691 pF
+(input median 0.0056 pF). \textbf{The waiver was neither removed nor
+changed} (the check still fails, and waiver changes are an owner
+decision).
+
+\textbf{Three unwaived nets, all flat SoC logic with no macro load, ss
+corners only} (no waiver added):
+
+{
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+net / driver & corner & cap & limit \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{_114232_/Y} (\code{_060214_}) & max\_ss & 0.3020 pF & 0.2701 pF
+(+11.8 \%) \\
+\code{_114232_/Y} (\code{_060214_}) & nom\_ss & 0.2862 pF & 0.2701 pF
+(+6.0 \%) \\
+\code{_111540_/X} (\code{_057530_}) & max\_ss & 0.3278 pF & 0.3250 pF
+(+0.9 \%) \\
+\code{_112095_/X} (\code{_058083_}) & max\_ss & 0.3345 pF & 0.3342 pF
+(+0.1 \%) \\
+\end{longtable}
+}
+
+Report: \code{62-cvt-maxcapviolations/max_cap_waivers.rpt} of the run.
+
+\textbf{Owner decision 2026-10-11, "waive 2, fix 1" (applied in
+\src{pnr/sky130/soc/constraints/max_cap_waivers.json}):}
+
+\begin{itemize}
+\tightlist
+\item
+  The stale \code{cpu-axi-rdata-i12-pin-cap} waiver is \textbf{removed}.
+\item
+  \code{_111540_/X} (0.3278 vs 0.3250 pF, +0.9 \%) and \code{_112095_/X}
+  (0.3345 vs 0.3342 pF, +0.1 \%), both max\_ss only, are \textbf{waived
+  by driver name}, each with a justification, restricted to the
+  \code{max_ss_100C_1v60} corner, a ceiling 0.5 \% above the measured
+  value, and \textbf{pinned to \code{RUN_2026-10-11_08-39-41}}.
+  Synthesis-generated names go stale on any re-run, so these two waivers
+  apply only to that run, show up as STALE on any other, and must then
+  be re-evaluated, not renewed.
+\item
+  \code{_114232_/Y} (+11.8 \% at max\_ss, +6.0 \% at nom\_ss) stays
+  \textbf{unwaived}. It must be closed at the next SoC run; the
+  \code{j41m.4} scan-pin re-harden of the CPU macro forces one (recorded
+  in bead \bead{e45j}).
+\item
+  To express a driver-name waiver the checker
+  (\code{cvt_maxcap_waiver.py}) gained an optional \code{driver} key
+  (exact instance, no globs) that is mutually exclusive with
+  \code{load_pin} and \textbf{requires} \code{run_id}; the flow step and
+  the CLI pass the run directory name. Load-pin waivers are unchanged. 7
+  new unit tests (\src{tb/tests/test_cvt_maxcap_waiver.py}, 59 pass).
+\end{itemize}
+
+Offline check against the existing run (checker script only, no flow
+re-run):
+\texttt{python3\ pnr/\allowbreak{}sky130/\allowbreak{}soc/\allowbreak{}plugin/\allowbreak{}cvt\_\allowbreak{}maxcap\_\allowbreak{}waiver.\allowbreak{}py\ /\allowbreak{}nobackup/\allowbreak{}sky130\_\allowbreak{}soc\_\allowbreak{}runs/\allowbreak{}RUN\_\allowbreak{}2026-\allowbreak{}10-\allowbreak{}11\_\allowbreak{}08-\allowbreak{}39-\allowbreak{}41\ -\allowbreak{}-\allowbreak{}waivers\ pnr/\allowbreak{}sky130/\allowbreak{}soc/\allowbreak{}constraints/\allowbreak{}max\_\allowbreak{}cap\_\allowbreak{}waivers.\allowbreak{}json}
+-\textgreater{}
+\texttt{2\ waived,\allowbreak{}\ 2\ unwaived\ violation(s),\allowbreak{}\ 0\ stale\ waiver(s)};
+the two unwaived are both \code{_114232_/Y} (max\_ss 0.3020 pF, nom\_ss
+0.2862 pF vs 0.2701 pF);
+\texttt{max-\allowbreak{}cap\ check:\allowbreak{}\ FAIL} (exit 1), as
+intended until \code{_114232_} is closed.
+
+Previous owner decision options, now resolved: waive by name (two nets),
+accept (none), re-run (\code{_114232_} at the next run). The
+setup/\allowbreak{}hold/\allowbreak{}LVS/\allowbreak{}DRC numbers do not
+depend on that decision. The SoC closes setup and hold at all nine
+corners (typical-corner caveat of
+\src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §7 unchanged), whereas the
+CPU \textbf{standalone} macro does not close ss reg-to-reg setup
+(max\_ss -3.70 ns, 996 violators, icache tag-SRAM half-cycle paths at 75
+MHz); the SoC runs at 40 MHz.
+
+\end{record}
+
+\subsection{2026-10-26 addendum: stable hand-instantiated driver waivers
+(PR \#330, DFT Stage 2)}\label{cr:defect:sky130-slew-cap-e45j:2026-10-26-addendum-stable-hand-instantiated-driver-waivers-pr-330-dft-stage-2}
+
+\begin{record}
+
+A \code{driver} waiver can now set \texttt{"stable":\allowbreak{}\ true}
+and omit \code{run_id} when the driver is a stable hand-instantiated
+driver, e.g. the clock mux \code{u_cpu_pll_sub.u_ref_cm.u_mux/X}. The
+loader refuses \code{stable} on a tool-generated name; ceiling, corners
+and justification bind as before; a stable waiver on a driver that does
+not violate is STALE. Synthesis-named drivers keep the mandatory
+\code{run_id}. Waiver file state after the scan run
+\code{RUN_2026-10-26_09-59-03}: mux\_clk (no run\_id, 0.45 pF),
+din0{[}22{]} (0.37 pF, max\_ss + nom\_ss), din0{[}23{]} (0.36),
+din0{[}26{]} (0.355); \code{_047147_/Y} stays unwaived and is tracked
+here. \code{--strict-stale} on that run: 7 waived, 1 unwaived, 0 stale.
+Details: \src{docs/design/DFT_ARCHITECTURE.md} 14.13.
+
+\end{record}
+
+\subsection{\texorpdfstring{9. Wire-length 1500 adopted as default
+(2026-10-28, bead
+\code{e45j})}{9. Wire-length 1500 adopted as default (2026-10-28, bead )}}\label{cr:defect:sky130-slew-cap-e45j:9-wire-length-1500-adopted-as-default-2026-10-28-bead-e45j}
+
+\begin{record}
+
+User decision 2026-10-28:
+\texttt{GRT\_\allowbreak{}DESIGN\_\allowbreak{}REPAIR\_\allowbreak{}MAX\_\allowbreak{}WIRE\_\allowbreak{}LENGTH\ =\allowbreak{}\ 1500}
+is now in \src{pnr/sky130/soc/config_rccal.json}, the default Sky130 SoC
+flow. Section 6.4 asked for one more arm on a different RTL vintage
+before adopting it; this is that arm. \code{config_rccal_wl1500.json}
+was the A/B arm of sections 6 and 9 and is \textbf{removed} (it was a
+copy of \code{config_rccal.json} plus this one key, so it is redundant;
+nothing else referenced it besides historical text in this file,
+\code{DFT_ARCHITECTURE.md} and \code{SKY130_CDC_MAXSS_ANALYSIS.md},
+which are left as history).
+
+\textbf{The arm.} \code{RUN_2026-10-28_05-14-30} against baseline
+\code{RUN_2026-10-27_05-40-27} (\prref{333}, scan re-harden, CPU scan
+macro, \code{CVTClassicScan}, \code{CVT_SYNTH_GATE=warn}, KLayout DRC
+skipped,
+\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc-\allowbreak{}noklayout\ SKY130\_\allowbreak{}SOC\_\allowbreak{}CONFIG=\allowbreak{}config\_\allowbreak{}rccal\_\allowbreak{}wl1500.\allowbreak{}json}).
+Single variable, measured: the flattened \code{resolved.json} differs in
+exactly one key (0 -\textgreater{} 1500), and \code{soc_top.nl.v} of
+steps 04, 07 and 11 is sha256-identical to the baseline (worktree path
+normalised). RSZ-0065 in step 38 confirms the knob reached the post-GRT
+repair; step 29 (post-GPL, \code{DESIGN_REPAIR_MAX_WIRE_LENGTH}) is
+unchanged at the automatic 3 205 um. The flow is bit-deterministic here
+(section 6.1), so every difference is a response to the key.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*323/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*328/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*328/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+wl1500 \code{RUN_2026-10-28_05-14-30}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+baseline \code{RUN_2026-10-27_05-40-27}
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+max-slew violating pins, max\_ss & \textbf{129} & 1067 \\
+nom\_ss / min\_ss & 57 / 33 & 709 / 64 \\
+max\_tt / nom\_tt & 1 / 0 & 695 / 145 \\
+max\_ff / nom\_ff & 0 / 0 & 596 / 48 \\
+max\_ss slew, diode pins & 89 & 930 \\
+max-cap violators in the flow STA, max\_ss & 5 & 6 \\
+max-cap with the waiver file, \code{--strict-stale} & 8 waived, 1
+unwaived, 2 stale (old file); \textbf{9 waived, 0 unwaived, 0 stale}
+(file of this section) & 10 unwaived, 3 stale (old file) \\
+setup, max\_ss (flow STA) & 5 violators, WNS -0.055, TNS -0.226 ns & 6
+violators, WNS -0.153, TNS -0.603 ns \\
+\code{core_clk} setup nom\_tt / nom\_ss / max\_ss (replica STA, ns) &
++5.600 / +0.220 / -0.055 & +5.588 / +0.132 / -0.153 \\
+hold violators, 9 corners & 0 & 0 \\
+\code{core_clk} hold worst max\_ss / nom\_ff / max\_ff (ns) & +0.336 /
++0.245 / +0.247 & +0.231 / +0.280 / +0.268 \\
+done -\textgreater{} \code{dft_scan_en} -\textgreater{} SE setup,
+max\_ss (ns) & +0.740 & +0.671 \\
+Netgen LVS / routing DRC & 0 / 0 & 0 / 0 \\
+Magic DRC & 10 962 (nwell.4 10 930 + met4.4a 32) & 10 959 (10 927 +
+32) \\
+antenna nets / pins (diodes) & 292 / 375 (18 683) & 290 / 382 (20
+500) \\
+utilisation / power & 46.63 \% / 119.03 mW & 46.64 \% / 119.10 mW \\
+instances / timing-repair buffers & 331 309 / 28 879 & 332 973 / 28
+726 \\
+step-38 repair (buffers / nets / resized) & 240 / 341 / 184 & 45 / 174 /
+63 \\
+post-route CDC budget check & PASS at all 9 corners & PASS (after the
+check-SDC fix of \code{DFT_ARCHITECTURE.md} 14.14.1) \\
+\end{longtable}
+}
+
+}
+
+Slew: the 31 diode-heavy nets driven by \code{wire} repair clkbuf\_16
+(up to 59 diodes each) are gone, which is where 930 -\textgreater{} 89
+diode pins comes from. What is left at max\_ss is 10 nets: 25 pins on
+macro/\allowbreak{}port nets, two \code{a22oi_4} nets, three hold
+dlygates and a \code{mux2}. The max-slew checker stays skipped in the
+flow, so these are measured from the STA reports, not gated. Setup: the
+same NPU weight-memory SRAM -\textgreater{} \code{npu_weight_mem} flop
+paths (bead \bead{7dhp}, accepted) at max\_ss only; the sixth endpoint
+(\code{_169106_}) is now positive. Hold stays positive everywhere but is
+lower at the nom\_\allowbreak{}ff/\allowbreak{}max\_\allowbreak{}ff
+corners (-0.035 / -0.021 ns). Both runs ended \code{make} with deferred
+errors; this run\textquotesingle s were Magic DRC (accepted, bead
+\bead{45a}) and one max-cap net, no early exit (all 64 steps ran, LVS
+included).
+
+\textbf{Waiver changes with it (user decision 2026-10-28),
+\src{pnr/sky130/soc/constraints/max_cap_waivers.json}.}
+
+\begin{itemize}
+\tightlist
+\item
+  \code{hold-dlygate-scd-link} class ceiling 0.115 -\textgreater{}
+  \textbf{0.120 pF}: \code{hold18202/X} measured 0.1151 pF at max\_ss
+  (0.1053 nom\_ss), 0.1 \% over the old ceiling, same class and cause
+  (diode pin capacitance on a scan-link hold buffer); the other class
+  members measured 0.1077, 0.1038 and 0.1031 pF. 0.120 is 4.2 \% above
+  the worst measured value.
+\item
+  \code{gen-a21oi-107570-run-2026-10-27} and
+  \code{gen-or4-076179-run-2026-10-27} (run-pinned to the baseline)
+  \textbf{deleted}: those two nets no longer violate, so they waived
+  nothing (STALE under \code{--strict-stale}).
+\item
+  \code{u-ref-cm-mux-clk-cpu-pll-sub} is unchanged: \code{mux_clk} is
+  0.442 / 0.463 / 0.468 pF
+  (min/\allowbreak{}nom/\allowbreak{}max\_\allowbreak{}ss) against its
+  0.55 pF ceiling (baseline 0.475 / 0.508 / 0.519).
+\item
+  Proof:
+  \texttt{make\ -\allowbreak{}C\ pnr\ sky130-\allowbreak{}soc-\allowbreak{}maxcap-\allowbreak{}check\ SKY130\_\allowbreak{}SOC\_\allowbreak{}MAXCAP\_\allowbreak{}RUN=\allowbreak{}/\allowbreak{}nobackup/\allowbreak{}sky130\_\allowbreak{}soc\_\allowbreak{}runs/\allowbreak{}RUN\_\allowbreak{}2026-\allowbreak{}10-\allowbreak{}28\_\allowbreak{}05-\allowbreak{}14-\allowbreak{}30\ STRICT\_\allowbreak{}STALE=\allowbreak{}1}
+  -\textgreater{} \textbf{9 waived, 0 unwaived, 0 stale: PASS}.
+  \src{tb/tests/test_cvt_maxcap_waiver.py} 100 pass (its pin on the
+  committed file now expects 0.12 and the two run-pinned entries
+  absent). The adopted default has not itself been run end to end; this
+  run used the identical config through a differently named file, so the
+  next full run is the first with \code{config_rccal.json} directly.
+\end{itemize}
+
+\textbf{Scan-chain check needs \code{--en-net}.}
+\src{tools/dft/check_scan_chains.py} counts the
+resizer\textquotesingle s clone of the enable gate
+(\texttt{and2\_\allowbreak{}2\ clone13} next to
+\texttt{and2\_\allowbreak{}4\ \_\allowbreak{}090536\_\allowbreak{}},
+same function and input nets) as the same root only when told the root
+net: pass
+\textbf{\texttt{-\allowbreak{}-\allowbreak{}en-\allowbreak{}net\ dft\_\allowbreak{}scan\_\allowbreak{}en}}.
+Without it the check fails with "SCE pins trace to 2 different roots"
+although the netlist is correct (measured both ways on this run). With
+it:
+\texttt{check\_\allowbreak{}scan\_\allowbreak{}chains.\allowbreak{}py\ <49-\allowbreak{}openroad-\allowbreak{}fillinsertion/\allowbreak{}soc\_\allowbreak{}top.\allowbreak{}nl.\allowbreak{}v>\ -\allowbreak{}-\allowbreak{}en-\allowbreak{}net\ dft\_\allowbreak{}scan\_\allowbreak{}en\ -\allowbreak{}-\allowbreak{}out-\allowbreak{}gate-\allowbreak{}net\ crypto\_\allowbreak{}wipe\_\allowbreak{}done\ -\allowbreak{}-\allowbreak{}expect-\allowbreak{}chains\ 6\ -\allowbreak{}-\allowbreak{}expect-\allowbreak{}unscanned\ 922\ -\allowbreak{}-\allowbreak{}expect-\allowbreak{}length\ 3565,\allowbreak{}3565,\allowbreak{}3565,\allowbreak{}3565,\allowbreak{}3562,\allowbreak{}981\ -\allowbreak{}-\allowbreak{}explain-\allowbreak{}qrx\ 'u\_\allowbreak{}crypto\textbackslash{}.\allowbreak{}(g\_\allowbreak{}aes\textbackslash{}.\allowbreak{}u\_\allowbreak{}aes\textbackslash{}.\allowbreak{}rk\_\allowbreak{}q|key\_\allowbreak{}q)'\ -\allowbreak{}-\allowbreak{}explain-\allowbreak{}clk\ tck\_\allowbreak{}i,\allowbreak{}scan\_\allowbreak{}clk\_\allowbreak{}i}
+-\textgreater{} exit 0, 18 803 scan flops, 922 unscanned (664
+\code{tck_i}, 2 \code{scan_clk_i}, 256 crypto keys), SCE roots
+\texttt{\{dft\_\allowbreak{}scan\_\allowbreak{}en:\allowbreak{}\ 18803\}}.
+
+Limits: one arm on this vintage (plus the section 6 arm on an older one,
+both in the same direction); KLayout DRC skipped (bead \bead{00ef}); the
+stock max-slew checker still skipped; hold margin at the ff corners is a
+few tens of ps lower and was not investigated further.
+
+\end{record}
+
+% Converted from docs/SYNLIG_STRUCT_SELECT_AINF.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{\texorpdfstring{Synlig struct-member part-select defect: rule,
+site table, equivalence (bead
+\code{ainf})}{Synlig struct-member part-select defect: rule, site table, equivalence (bead )}}\label{cr:defect:synlig-struct-select-ainf}
+
+\begin{record}
+
+Date 2026-10-10. Scope: does the Synlig frontend silently mis-elaborate
+the struct-member part-selects that \prref{259} (\code{dud4}) did not
+rewrite? Everything below is MEASURED unless marked INFERRED. Tools:
+yosys 0.46 + Synlig plugin
+(\code{/nix/store/7vsbsrhbj6kx5lfdc8qs9wlccxfb8f7h-yosys-synlig-sv},
+Surelog 1.82) vs sv2v 0.0.13.1 + yosys; comparison = miter +
+\texttt{sat\ -\allowbreak{}verify\ -\allowbreak{}prove-\allowbreak{}asserts\ -\allowbreak{}seq\ 4\ -\allowbreak{}set-\allowbreak{}init-\allowbreak{}zero}
+(flow from \prref{264}\textquotesingle s
+\src{tools/verif/synth_gate/equiv_probe.sh}, re-implemented in
+\src{tools/verif/struct_select/run_probes.sh}; every job under
+\texttt{systemd-\allowbreak{}run\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ MemoryMax=\allowbreak{}4G}).
+
+\end{record}
+
+\subsection{\texorpdfstring{Step 1: the defect rule (probe evidence:
+\code{tools/verif/struct_select/results/round1..7.txt}, 370
+probes)}{Step 1: the defect rule (probe evidence: , 370 probes)}}\label{cr:defect:synlig-struct-select-ainf:step-1-the-defect-rule-probe-evidence-toolsverifstruct-selectresultsround17txt-370-probes}
+
+\begin{record}
+
+Two independent Synlig defects. Neither is triggered by plain reads of a
+member of an ordinary struct.
+
+\end{record}
+
+\subsubsection{\texorpdfstring{D1 (read side): a
+packed/\allowbreak{}unpacked struct with EXACTLY TWO members declared
+with a packed
+range}{D1 (read side): a packed/unpacked struct with EXACTLY TWO members declared with a packed range}}\label{cr:defect:synlig-struct-select-ainf:d1-read-side-a-packedunpacked-struct-with-exactly-two-members-declared-with-a-packed-range}
+
+\begin{record}
+
+"Ranged member" = declared \texttt{logic\ [n:\allowbreak{}0]\ m;} (a
+\code{[0:0]} range counts; a scalar \texttt{logic\ m;}, a struct-typed
+member and an enum-typed member do NOT count). If a struct type has
+exactly two ranged members, then for ANY member \code{m} of it
+
+\begin{lstlisting}[language={}]
+s.m[hi:lo]   (or s.m[i], constant or runtime)   is evaluated by Synlig as   s[ hi*W + (hi-lo) : hi*W ]
+\end{lstlisting}
+
+where \code{W} is the width of the LAST-declared (LSB-most) ranged
+member. \code{lo} and the member\textquotesingle s own offset are
+ignored; the select behaves like "element \code{hi} of an array of W-bit
+elements", truncated to the select width.
+
+\begin{itemize}
+\tightlist
+\item
+  \code{if_id_reg_t} =
+  \texttt{\{pc[31:\allowbreak{}0],\allowbreak{}\ instruction[31:\allowbreak{}0],\allowbreak{}\ valid\}}
+  has two ranged members (valid is a scalar) and W = 32:
+  \code{instruction[19:15]} -\textgreater{}
+  \texttt{[19*32+\allowbreak{}4\ :\allowbreak{}\ 19*32]\ =\allowbreak{}\ [612:\allowbreak{}608]}
+  (the logged \code{[639:608]} is the whole 32-bit element, which is
+  then truncated); \code{[24:20]} -\textgreater{} \code{[768+4:768]}.
+  This reproduces the dud4 numbers exactly.
+\item
+  \texttt{n\_\allowbreak{}t\ =\allowbreak{}\ \{pad[7:\allowbreak{}0],\allowbreak{}\ in(struct),\allowbreak{}\ tail[4:\allowbreak{}0]\}}
+  (two ranged members, W = 5): \code{n.tail[3:2]} -\textgreater{}
+  \texttt{[3*5+\allowbreak{}1:\allowbreak{}3*5]\ =\allowbreak{}\ [16:\allowbreak{}15]},
+  \code{n.pad[7:4]} -\textgreater{}
+  \texttt{[7*5+\allowbreak{}3:\allowbreak{}7*5]\ =\allowbreak{}\ [38:\allowbreak{}35]}
+  (both measured, in bounds, no warning, wrong).
+\item
+  Fits all 27 failing two-ranged-member probes of round 3 (random widths
+  1..32) without exception.
+\item
+  Counter-evidence that this is not "number of members": a 3-member
+  struct with one scalar (2 ranged) fails, a 3-member struct with
+  \texttt{logic\ [0:\allowbreak{}0]} instead of the scalar (3 ranged) is
+  correct (\code{s01} vs \code{s02}, round 5); 1, 3, 4, 5 ranged members
+  are correct in all 120+ probes (rounds 2, 3, 6, 7).
+\end{itemize}
+
+Outcome classes (a) correct:
+\texttt{hi\ =\allowbreak{}=\allowbreak{}\ 0} and the member is the LSB
+member and \texttt{lo\ =\allowbreak{}=\allowbreak{}\ 0}; (b)
+\texttt{hi*W\ +\allowbreak{}\ width\ >\ struct\ width}: warning
+\texttt{Range\ select\ [.\allowbreak{}.\allowbreak{}]\ out\ of\ bounds\ on\ signal\ .\allowbreak{}.\allowbreak{}.\allowbreak{}}
+and \code{x} (this is dud4); (c) in bounds but wrong, NO warning, NO
+\code{x}: possible whenever
+\texttt{hi*W\ +\allowbreak{}\ (hi-\allowbreak{}lo)\ <\ total\ width};
+measured instances: round 7 \code{X2_rhs_hi1} (\code{s.b[1:0]} read from
+\code{s[33:32]} instead of \code{s[1:0]}), \code{X2_rhs_bit},
+\code{X2_rhs_concat}, \code{X2_rhs_reg}, \code{X2_rhs_local},
+\code{i03}, \code{i04}, round 5 \code{s*}. (c) IS possible, and for
+small \code{hi} it is the normal case, not the exception. Split by
+\src{tools/verif/struct_select/classify.py} (round 3, 27 failing of 150:
+17 warn+x, 2 warn+wrong, \textbf{8 fully silent}; round 7: 21 fully
+silent, 17 warn+wrong, 5 warn+x). "warn+wrong" = the
+\texttt{Range\ select\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ out\ of\ bounds}
+warning IS printed (the 32-bit "element" overruns the struct) but the
+surviving bits are wrong data, not \code{x}; the \prref{264} warning
+scanner sees those. "Fully silent" = the element fits inside the struct:
+no warning, no \code{x}, wrong bits (e.g. \code{s.m[0]} of a non-LSB
+member of a two-ranged struct, or \code{s.b[1:0]} with W large); only a
+miter / simulation sees them. D2 is always fully silent.
+
+Where D1 shows: port-typed struct, local wire/reg struct, concatenation
+operands, \code{case} selectors, bit selects, runtime bit select
+\code{s.m[i]}, port-connection expressions, unpacked structs with two
+ranged members. Where it does NOT show:
+\texttt{s.\allowbreak{}m[b\ +\allowbreak{}:\allowbreak{}\ n]} /
+\texttt{s.\allowbreak{}m[b\ -\allowbreak{}:\allowbreak{}\ n]} (indexed
+part-select, correct), selects of a full-width wire copy
+(\texttt{w\ =\allowbreak{}\ s.\allowbreak{}m;\ w[7:\allowbreak{}4]}), an
+array-of-struct element base (\code{arr[1].m[1:0]} was correct in the
+one probe, \code{X2_rhs_arr}; not proven in general). It does not depend
+on the base signal being a port, local, register or array element beyond
+that.
+
+\end{record}
+
+\subsubsection{D2 (write side): part-select of a struct member on the
+LEFT-HAND side}\label{cr:defect:synlig-struct-select-ainf:d2-write-side-part-select-of-a-struct-member-on-the-left-hand-side}
+
+\begin{record}
+
+\texttt{y.\allowbreak{}m[hi:\allowbreak{}lo]\ =\allowbreak{}\ v} with
+\texttt{hi\ !=\allowbreak{}\ lo} is elaborated as the WHOLE-member
+assignment \texttt{y.\allowbreak{}m\ =\allowbreak{}\ v} (zero-extended);
+the bits of \code{m} outside the select are lost and the select position
+is ignored. No warning, no \code{x}. Independent of the number of ranged
+members (measured R = 2, 3, 4: \code{lhs_copy}, \code{lhs_zero},
+\code{lhs_ff}, \code{lhs_assign} all NOT equivalent). The single-bit LHS
+\texttt{y.\allowbreak{}m[i]\ =\allowbreak{}\ v} is correct for R
+\textgreater= 3 and wrong for R = 2 (\code{X3_lhs_bit},
+\code{X4_lhs_bit} equivalent; \code{X2_lhs_bit} not).
+
+\end{record}
+
+\subsection{Step 1 reading for this repo}\label{cr:defect:synlig-struct-select-ainf:step-1-reading-for-this-repo}
+
+\begin{record}
+
+The rule is a function of the struct TYPE (count of ranged members), not
+of the member position, so every site can be predicted from its struct
+definition (step 2).
+
+\end{record}
+
+\subsection{\texorpdfstring{Step 2a: mechanical site table
+(\src{tools/verif/struct_select/sitetable.py}, output
+\code{results/sitetable.txt})}{Step 2a: mechanical site table (, output )}}\label{cr:defect:synlig-struct-select-ainf:step-2a-mechanical-site-table-toolsverifstruct-selectsitetablepy-output-resultssitetabletxt}
+
+\begin{record}
+
+Struct types in \src{rtl/} (R = members declared with a packed range,
+i.e. the D1 trigger when R == 2):
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*401/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*48/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*129/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*401/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+type
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+R
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+where
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+note
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{if_id_reg_t} & \textbf{2} &
+rv32i\_\allowbreak{}pipeline\_\allowbreak{}pkg & D1 HOT (\code{pc},
+\code{instruction} ranged; \code{valid} scalar). The dud4 type. \\
+\code{warp_state_t} & \textbf{2} & gpu\_pkg & D1 HOT, but no member
+select exists on it \\
+\code{div_entry_t} & \textbf{2} & gpu\_pkg & D1 HOT, but no member
+select exists on it \\
+\code{desc_t} & 3 & dma\_\allowbreak{}engine & one member-removal from
+R=2; no member select \\
+\code{mem_wb_reg_t} 7, \code{ex_mem_reg_t} 12, \code{ex1_ex2_reg_t} 12,
+\code{id_ex_reg_t} 14, \code{ex1a_ex1b_t} 19 & \textgreater= 7 &
+pipeline pkg & far from 2 \\
+\code{if_id_t} 4, \code{id_ex_t} 9, \code{ex_wb_t} 6
+(gpu\_\allowbreak{}compute\_\allowbreak{}unit), \code{kernel_desc_t} 8,
+\code{gpu_[rib]_instr_t} 5-6 & \textgreater= 4 & gpu & \\
+\end{longtable}
+}
+
+}
+
+READ selects \code{x.m[..]} in the whole \src{rtl/} tree: 23 (24 incl.
+the two on one gpu\_top line), all on types with R \textgreater= 7, so
+\textbf{all predicted correct}:
+rv32i\_\allowbreak{}pipeline\_\allowbreak{}ex:109
+(\code{id_ex_reg_t.csr_op[2]}),
+rv32i\_\allowbreak{}pipeline\_\allowbreak{}mem:103,104,111,112
+(\code{ex_mem_reg_t.alu_result[0]}, \code{[1:0]}),
+rv32i\_\allowbreak{}pipeline\_\allowbreak{}wb:75
+(\code{mem_wb_reg_t.trap_cause[3:0]}),
+rv32i\_\allowbreak{}pipeline\_\allowbreak{}ex1c:122-150,197
+(\code{ex1a_ex1b_t.alu_result[1:0]/[1]/[31:1]},
+\code{.fwd_store[7:0]/[15:0]}), gpu\_\allowbreak{}top:253
+(\code{kernel_desc_t.block_x[9:3]}, \code{[2:0]}; the line was :250 in
+the dud4 sweep),
+gpu\_\allowbreak{}compute\_\allowbreak{}unit:377,378,386,388
+(\code{id_ex_t.rs1_data[l]}, \code{.rs2_data[l]}, \code{.imm[11]}). None
+of these is on an R == 2 type, so D1 does not apply. \textbf{No select
+at all exists on any of the three R == 2 types}
+(\code{if_id_reg_t}\textquotesingle s two were removed by \prref{259}). Not
+covered by probes: \code{id_ex_t.rs1_data[l]}, a member that is itself a
+2-D packed array \code{[N_LANES-1:0][31:0]} selected by a loop variable
+-\/- predicted correct by the type rule but verified separately in step
+2b.
+
+WRITE (LHS) selects
+\texttt{y.\allowbreak{}m[hi:\allowbreak{}lo]\ =\allowbreak{}\ .\allowbreak{}.\allowbreak{}}
+/
+\texttt{y.\allowbreak{}m[i]\ =\allowbreak{}\ .\allowbreak{}.\allowbreak{}}
+(D2): \textbf{none} in \src{rtl/} (regex over single-line statements,
+plain, \code{assign}, and concatenation-LHS forms; 0 hits). D2 is
+therefore not triggered anywhere today.
+
+\end{record}
+
+\subsection{\texorpdfstring{Step 2b: Synlig-vs-sv2v equivalence on the
+real modules (\code{modeq.sh}, \code{run_modeq.sh},
+\code{mkcone.py})}{Step 2b: Synlig-vs-sv2v equivalence on the real modules (, , )}}\label{cr:defect:synlig-struct-select-ainf:step-2b-synlig-vs-sv2v-equivalence-on-the-real-modules-modeqsh-run-modeqsh-mkconepy}
+
+\begin{record}
+
+Method: elaborate the module with Synlig and with sv2v+yosys,
+\code{flatten}, expose flops
+(\texttt{expose\ -\allowbreak{}evert-\allowbreak{}dff}, so the check is
+combinational with matched state), miter +
+\texttt{sat\ -\allowbreak{}verify\ -\allowbreak{}prove-\allowbreak{}asserts}.
+Memory cap
+\texttt{systemd-\allowbreak{}run\ -\allowbreak{}p\ MemoryMax=\allowbreak{}4G\ -\allowbreak{}p\ MemorySwapMax=\allowbreak{}0},
+timeout 900 s. Negative control: sv2v arm fed a copy of
+\code{rv32i_pipeline_wb.sv} with \code{trap_cause[3:0]} changed to
+\code{[4:1]} -\textgreater{} NOT-EQUIV (model found), as required. SAT
+sizes are non-trivial (e.g. 10 884 variables / 29 627 clauses for
+\code{rv32i_pipeline_ex}).
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*377/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*256/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*128/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*219/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+module / cone
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+sites
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+prediction
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+result
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{rv32i_pipeline_wb} & wb:75 & correct & \textbf{EQUIV} \\
+\code{rv32i_pipeline_ex1c} & ex1c:122-150,197 (byte/\allowbreak{}half
+store lanes) & correct & \textbf{EQUIV} \\
+\code{rv32i_pipeline_mem} & mem:103,104,111,112 (misalign) & correct &
+\textbf{EQUIV} \\
+\code{rv32i_pipeline_ex} (with alu, branch\_\allowbreak{}comp) & ex:109
+& correct & \textbf{EQUIV} \\
+\code{gpu_top} cone (\code{n_warps_raw}, text extracted verbatim) &
+gpu\_\allowbreak{}top:253 & correct & \textbf{EQUIV} \\
+\code{gpu_compute_unit} cone (always\_\allowbreak{}comb at :370-390
+extracted verbatim, \code{id_ex_t} from the source) & 377,378,386,388 &
+\textbf{correct (type rule)} & \textbf{NOT EQUIVALENT -\/- prediction
+wrong} \\
+\end{longtable}
+}
+
+}
+
+The three D1/D2 sites classes behave as predicted. The GPU result is a
+\textbf{third, independent defect (D3)} that the type rule does not
+cover:
+
+\end{record}
+
+\subsubsection{D3: element select of a struct member that is a
+multi-dimensional packed array}\label{cr:defect:synlig-struct-select-ainf:d3-element-select-of-a-struct-member-that-is-a-multi-dimensional-packed-array}
+
+\begin{record}
+
+\code{id_ex_t} has
+\texttt{logic\ [N\_\allowbreak{}LANES-\allowbreak{}1:\allowbreak{}0][31:\allowbreak{}0]\ rs1\_\allowbreak{}data,\allowbreak{}\ rs2\_\allowbreak{}data;}.
+\code{id_ex_q.rs1_data[l]} (32-bit element \code{l}) is elaborated by
+Synlig as the single BIT \code{rs1_data[l]} (zero-extended), at the
+correct member base. Evidence in the cone netlist: Synlig
+\texttt{mem\_\allowbreak{}addr\_\allowbreak{}o[31:\allowbreak{}0]\ =\allowbreak{}\ id\_\allowbreak{}ex\_\allowbreak{}q[320]\ +\allowbreak{}\ sext(imm)}
+versus sv2v
+\texttt{id\_\allowbreak{}ex\_\allowbreak{}q[351:\allowbreak{}320]\ +\allowbreak{}\ sext(imm)};
+lane 1 reads bit 321 instead of \code{[383:352]}, etc. Probes (round 8,
+\code{results/round8_d3.txt}; independent of R,
+constant/\allowbreak{}runtime/\allowbreak{}loop index,
+port/\allowbreak{}local base, always fully silent: \code{oob=0}):
+\code{s.r[2]} -\textgreater{} \code{s[10]} instead of \code{s[31:24]},
+\code{s.r[i]}, \code{s.r[l]} in a loop, a one-ranged-member struct too.
+Correct forms: \texttt{w\ =\allowbreak{}\ s.\allowbreak{}r;\ w[l]}, a
+plain (non-struct) 2-D vector \code{r[l]}, and a select of bits INSIDE
+an element (\code{s.r[2][5:2]}, equivalent).
+
+Consequence in \code{gpu_compute_unit}: the memory address
+(\code{mem_addr_o[l]}, \code{shmem_addr_o[l]}) and store data
+(\code{mem_wdata_o[l]}, \code{shmem_wdata_o[l]}) of
+VLD/\allowbreak{}VST/\allowbreak{}VLDS/\allowbreak{}VSTS are computed
+from ONE bit of the rs1/rs2 vector register instead of the 32-bit value.
+Not proven on whole-module level (flop names differ between the
+frontends after aliasing, which defeats the name-based flop exposure;
+the cone is verbatim source text with the same typedef). No CPU module
+contains this idiom (\code{sitetable.txt}: the only
+multi-dimensional-array-member element selects in \src{rtl/} are these
+four GPU lines).
+
+\end{record}
+
+\subsection{Step 4: verdict, recommendation, limits}\label{cr:defect:synlig-struct-select-ainf:step-4-verdict-recommendation-limits}
+
+\begin{record}
+
+Verdict: see the dated paragraph in \cref{cr:defect:asap7-cpu-synlig-ma7}.
+CPU: remaining sites correct under Synlig (type rule + EQUIV of
+ex/\allowbreak{}mem/\allowbreak{}wb/\allowbreak{}ex1c; step 3 gate-level
+load/\allowbreak{}store programs not needed, no CPU module was predicted
+or measured wrong). GPU: second live miscompile (D3) in
+\code{gpu_compute_unit}; \code{gpu_top} cone is fine.
+
+Recommendation (no \src{rtl/} edits made here): (1) rewrite the
+remaining sites through named signals and broaden
+\code{CODING_GUIDELINES.md} to "no
+part/\allowbreak{}bit/\allowbreak{}element select of a struct member
+anywhere"; (2) GPU: wire-first
+(\texttt{logic\ [N\_\allowbreak{}LANES-\allowbreak{}1:\allowbreak{}0][31:\allowbreak{}0]\ rs1\_\allowbreak{}w\ =\allowbreak{}\ id\_\allowbreak{}ex\_\allowbreak{}q.\allowbreak{}rs1\_\allowbreak{}data;})
+or build the GPU with sv2v only (the \code{ma7} config change already
+did) and treat the committed Synlig GPU views as suspect; (3) CI:
+\src{tools/verif/check_struct_member_select.py} (source-idiom tripwire,
+baseline \src{tools/verif/struct_member_select_baseline.txt} =
+today\textquotesingle s 23 select sites + 3 R == 2 types, unit tests
+\src{tb/tests/test_check_struct_member_select.py}); it catches D1, D2
+and D3 because it flags every member select, but its baseline key has no
+line numbers, so a second select of the same \code{base.member} in the
+same file is not flagged. A stronger check is a per-module
+Synlig-vs-sv2v miter (\code{modeq.sh}) in the PD flow.
+
+Not verified: whole-module equivalence of
+\code{gpu_compute_unit}/\code{gpu_top}/\code{rv32i_core} (flop-name
+aliasing between the frontends defeats the name-based flop exposure;
+cones were cut verbatim instead); the GPU netlist behaviour in
+simulation; the committed GPU macro views; any select form hidden from
+the single-line regex (multi-line expressions, macros); Sky130 netlists;
+step 3 (gate-level ld/st programs) was skipped as agreed.
+
+\end{record}
+
+% Converted from docs/SKY130_CPU_SS_SETUP_R51P.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{Sky130 CPU macro: ss reg-to-reg setup failure (bead r51p) -
+path analysis}\label{cr:defect:sky130-cpu-ss-setup-r51p}
+
+\begin{record}
+
+Status: cache-side RTL fix landed on \code{fix/icache-ss-setup-r51p} (\prref{318}, stacked on \#313). User decision 2026-10-19: no cycle-count
+change and no pipeline restructuring; the remaining ss residual stays
+open in r51p and is measured at the batched CPU re-harden. Source data:
+\code{pnr/sky130/cpu/runs/RUN_2026-10-11_06-00-12/57-openroad-stapostpnr/max_ss_100C_1v60/max.rpt}
+(top 1000 setup paths, 75 MHz = 13.333 ns, uncertainty 0.5 ns).
+Measured, not inferred, unless marked.
+
+\end{record}
+
+\subsection{1. The premise in the bead is not what the reports show}\label{cr:defect:sky130-cpu-ss-setup-r51p:1-the-premise-in-the-bead-is-not-what-the-reports-show}
+
+\begin{record}
+
+The bead and the user decision describe the worst paths as "into the
+icache tag SRAM\textquotesingle s negedge-sampled inputs (half-cycle
+paths)". The reports say otherwise.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{The SRAM input arcs are full-cycle.} In
+  \src{pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib}
+  every input pin (\code{csb0}, \code{web0}, \code{addr0}, \code{din0},
+  \code{wmask0}) has
+  \texttt{timing\_\allowbreak{}type\ :\allowbreak{}\ setup\_\allowbreak{}rising}
+  against \code{clk0}. The worst path\textquotesingle s required time is
+  \texttt{13.\allowbreak{}333\ (rise\ edge)\ +\allowbreak{}\ clk0\ arrival\ -\allowbreak{}\ 0.\allowbreak{}5\ uncertainty\ -\allowbreak{}\ 0.\allowbreak{}103\ setup}:
+  a capture at the next rising edge, one full period. STA prints the
+  endpoint as "falling edge-triggered flip-flop" only because the macro
+  also has a \code{falling_edge} arc on \code{dout0}.
+\item
+  \textbf{The half-cycle paths are on the SRAM outputs} (\code{dout0}
+  launches on the falling edge). They are already cut by the
+  \code{CS_SRAM_LATCH} register stage (\code{tag_dout_r} /
+  \code{data_dout_r}). None of the 1000 reported worst paths starts at
+  an SRAM.
+\item
+  \textbf{The SRAM endpoints are 5 to 50 of 1000, not the population.}
+  947 of the 1000 reported endpoints are ordinary flops. The worst SRAM
+  endpoint (\code{u_tag_sram/csb0}, -3.704 ns) is 0.02 ns worse than the
+  worst flop endpoint (\code{pc_if_from_core}, -3.684 ns). Retiming only
+  the SRAM input pins cannot move WNS.
+\end{itemize}
+
+\end{record}
+
+\subsection{\texorpdfstring{2. What the failing cone is (measured, from
+the run\textquotesingle s own netlist
+\code{54-openroad-fillinsertion/rv32i_cpu_top.nl.v})}{2. What the failing cone is (measured, from the run\textquotesingle s own netlist )}}\label{cr:defect:sky130-cpu-ss-setup-r51p:2-what-the-failing-cone-is-measured-from-the-runs-own-netlist-54-openroad-fillinsertionrv32i-cpu-topnlv}
+
+\begin{record}
+
+Start points of the 1000 paths (flop Q-net name):
+\code{u_core.u_dcache.state_q} 407 (worst -3.704),
+\code{u_core.ex_mem_reg} 329 (-3.363), \code{u_core.ex1b_ex2_reg_q} 116
+(-2.907), plus a few others. End points: \code{u_icache.refill_buf_q}
+128, \code{u_dcache.wb_buf_q} 82,
+\code{u_csr.mcycle_q}/\code{minstret_q} 74, \code{if_id_reg} 33,
+\code{ic_addr_q} 32, \code{pc_if_from_core} 30, debug-register write
+data \code{dbg_*} \textasciitilde230, SRAM csb0 5.
+
+Three combinational cells (\code{_22517_} o21ai, \code{_22618_} a21oi,
+\code{wire1348}) lie on 58 \% of all 1000 paths. Their fan-in cone
+(netlist traversal) is exactly: 8 bits of \code{ex_mem_reg}, 5 bits of
+\code{u_dcache.state_q}, \code{u_dcache.hit_bank_q},
+\code{mem_trap_entry_r}, \code{ex_pc_redirect_r},
+\code{ex1c_ex1b_reg_q}. That is the \textbf{global stall / redirect
+network}:
+
+\begin{lstlisting}[language={}]
+dcache.state_q, ex_mem_reg  ->  dc_stall_o -> mem_cache_stall (rv32i_pipeline_mem.sv:151)
+                            ->  hazard-unit priority chain (rv32i_hazard_unit.sv:362-427: mem_cache_stall beats ex_pc_redirect)
+                            ->  pc_redirect / jal_redirect -> ic_valid_o (rv32i_pipeline_if.sv:116)
+                            ->  icache: addr_mismatch / hit / ic_stall_o / SRAM csb0 / refill_buf_q enable
+                            ->  if_cache_stall -> stall_pc -> pc_q, if_id_reg, ic_addr_q enables
+\end{lstlisting}
+
+Further down the same cone (cell \code{_22767_} onward) sit
+\code{mem_wb_reg} (72 leaves) and \code{dbg_bp0_addr} /
+\code{dbg_bp1_addr} (59 / 57 leaves): the combinational breakpoint
+compare
+\texttt{bp0\_\allowbreak{}hit\ =\allowbreak{}\ ctrl[0]\ \&\&\ (commit\_\allowbreak{}pc\_\allowbreak{}o\ =\allowbreak{}=\allowbreak{}\ dbg\_\allowbreak{}bp0\_\allowbreak{}addr)\ \&\&\ commit\_\allowbreak{}valid\_\allowbreak{}o}
+(\code{rv32i_cpu_top.sv:794-797}) feeds \code{dbg_halt_req} (line 696),
+which gates \code{ic_valid_o}. It is in the cone but is not the
+latest-arriving input: it launches from flops and settles before the
+stall network does.
+
+\end{record}
+
+\subsection{\texorpdfstring{3. Where the time goes (worst path,
+\code{u_dcache.state_q[3]} -\textgreater{}
+\code{u_icache.u_tag_sram/csb0}, 15.84 ns data
+path)}{3. Where the time goes (worst path,  -\textgreater{} , 15.84 ns data path)}}\label{cr:defect:sky130-cpu-ss-setup-r51p:3-where-the-time-goes-worst-path-u-dcachestate-q3-u-icacheu-tag-sramcsb0-1584-ns-data-path}
+
+\begin{record}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*894/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*86/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+segment
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ns
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+clk-to-Q 0.64 + 4 fanout buffers (state\_\allowbreak{}q{[}3{]} fans out
+to \textasciitilde65 sinks) & 2.0 \\
+\code{dc_stall_o} state decode: and4bb + a31o + a211o (4-bit binary
+state, 3 levels) & 2.5 \\
+trunk: o21ai + a21oi + buffer (\code{mem_cache_stall} and its priority
+gating) & 1.6 \\
+gating into \code{tag_csb0}: a2111oi (1.59 ns, slew 1.5 ns) + 11
+repeater buffers over a long route (\textasciitilde3.1 ns) + and4 + 4
+buffers + a21oi + 4 buffers & \textasciitilde9.7 \\
+\end{longtable}
+}
+
+}
+
+Pre-PNR (no wires, ideal clocks) the same netlist already gives nom\_ss
+WNS -1.78 ns / TNS -79 ns
+(\code{12-openroad-staprepnr/nom_ss_100C_1v60/wns.max.rpt}). So roughly
+half of the post-route -3.2 (nom\_ss) is logic depth and half is
+wire/\allowbreak{}buffer/\allowbreak{}skew. The cure for the logic half
+is RTL; the wire half is the PD agent\textquotesingle s.
+
+For flop endpoints starting at \code{ex_mem_reg[0]} (-3.363): Q 1.21 +
+buffers 1.1 + \code{need_mem_access}
+o211ai/\allowbreak{}nor2/\allowbreak{}o21ai (3 levels, 3 repeaters)
+reach the trunk at \textasciitilde7.1 ns after launch, then a 14-gate
+tail (hazard priority, \code{ic_valid_o}, the icache
+\code{valid_array[latch_index]} 256:1 read tree, \code{addr_mismatch},
+\code{ic_stall_o}, enable muxes) reaches the flop at 22.8 ns.
+
+\end{record}
+
+\subsection{4. Consequences for the fix}\label{cr:defect:sky130-cpu-ss-setup-r51p:4-consequences-for-the-fix}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  The user-prescribed change (retime icache tag-SRAM inputs for a full
+  cycle) is a no-op in STA terms: they already get one.
+\item
+  What can be done in RTL, cycle-exactly, and attacks the measured cone:
+
+  \begin{enumerate}
+  \def\labelenumi{\arabic{enumi}.}
+  \tightlist
+  \item
+    (landed) Cache FSM state encoding: put every
+    unconditionally-stalling state in the \code{1xxx} half so
+    \code{dc_stall_o} / \code{ic_stall_o} need \code{state_q[3]} instead
+    of a 4-bit decode (removes \textasciitilde2 of the 2.5 ns decode
+    segment). Pure encoding.
+  \item
+    (landed, Sky130 arm only) Remove \code{ic_valid_i} (and thereby the
+    whole redirect/\allowbreak{}halt/\allowbreak{}stall cone) from
+    \code{tag_csb0} / \code{data_csb0}: a read issued in \code{CS_IDLE}
+    with
+    \texttt{ic\_\allowbreak{}valid\_\allowbreak{}i\ =\allowbreak{}\ 0}
+    is never consumed (dout is sampled only in \code{CS_SRAM_LATCH},
+    entered only with
+    \texttt{ic\_\allowbreak{}valid\_\allowbreak{}i\ =\allowbreak{}\ 1}),
+    so the SRAM enable can depend on
+    \texttt{state\_\allowbreak{}q\ =\allowbreak{}=\allowbreak{}\ CS\_\allowbreak{}IDLE}
+    alone. This is the legitimate form of the user\textquotesingle s
+    intent for the five SRAM pins.
+  \end{enumerate}
+\item
+  Not expected to close ss at 75 MHz on its own. Remaining violators
+  after 1 and 2 are the \code{ex_mem_reg} -\textgreater{}
+  \code{need_mem_access} entrance and the 14-gate tail; both need
+  pipeline-structure changes, which the user ruled out for this PR
+  (section 6).
+\item
+  Context for a human decision (not acted on): the SoC runs this macro
+  at 40 MHz (25 ns); the 75 MHz standalone ss failure does not affect
+  SoC closure. The user decision for r51p is: RTL fix, do not relax the
+  period, do not use SDC.
+\end{itemize}
+
+\end{record}
+
+\subsection{5. What changed (RTL) and why it is cycle-exact}\label{cr:defect:sky130-cpu-ss-setup-r51p:5-what-changed-rtl-and-why-it-is-cycle-exact}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \src{rtl/mem/rv32i_cache_pkg.sv}: new \code{cache_state_t} encoding.
+  \texttt{state\_\allowbreak{}q[3]\ =\allowbreak{}\ 1} for LATCH,
+  HIT\_\allowbreak{}PENDING, REFILL, WRITEBACK,
+  UNCACHED\_\allowbreak{}RD/\allowbreak{}WR, FLUSH\_\allowbreak{}SCAN,
+  INVAL\_\allowbreak{}SCAN; IDLE (0000, reset), TAG\_\allowbreak{}CHECK,
+  DONE have it clear. All arms share the package.
+\item
+  \code{rv32i_dcache.sv} / \code{rv32i_icache.sv}: \code{dc_stall_o} /
+  \code{ic_stall_o} =
+  \texttt{state\_\allowbreak{}q[3]\ ||\ (IDLE\ \&\&\ valid)\ ||\ (TAG\_\allowbreak{}CHECK\ \&\&\ !hit)}.
+  Same truth table over the reachable states (icache never enters the
+  D\$-only states).
+\item
+  \code{rv32i_icache.sv}, Sky130 arm only
+  (\texttt{ifdef\ SRAM\_\allowbreak{}SKY130}):
+  \texttt{idle\_\allowbreak{}read\_\allowbreak{}en\ =\allowbreak{}\ 1}
+  so tag/data \code{csb0} in \code{CS_IDLE} do not depend on
+  \code{ic_valid_i} / \code{ic_invalidate_i}. Why only Sky130: on ASAP7
+  \code{csb0} feeds the SRAM clock gate (extra enabled cycles are extra
+  dynamic power on a flow that was signed off as-is), and the FreePDK45
+  / FPGA arms have no timing problem here. Why it is safe:
+  \code{tag_dout_r} / \code{data_dout_r} capture \code{dout0} only in
+  \code{CS_SRAM_LATCH}, which is entered only from a \code{CS_IDLE}
+  cycle with
+  \texttt{ic\_\allowbreak{}valid\_\allowbreak{}i\ =\allowbreak{}\ 1} and
+  \texttt{ic\_\allowbreak{}invalidate\_\allowbreak{}i\ =\allowbreak{}\ 0};
+  a read in any other IDLE cycle is never consumed and has no side
+  effect. Writes (\code{tag_we_q} / \code{data_we_q}) still override.
+\item
+  No \code{ma7} / \code{ainf} exposure: no struct-member selects, no
+  runtime-indexed muxes added (\code{check_struct_member_select.py} exit
+  0).
+\end{itemize}
+
+Verification (all on this branch, measured):
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+gate
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+result
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\src{tb/tests/test_cache_stall_encoding.py} (new; RED before RTL, 3
+failed / 2 passed) & 5/5 \\
+icache / dcache / cache\_\allowbreak{}integration, Sky130 arm & 9/9,
+8/8, 5/5 \\
+icache / dcache / cache\_\allowbreak{}integration, default arm & 9/9,
+8/8, 5/5 \\
+\texttt{make\ -\allowbreak{}C\ sim\ rollup} (34 suites) & 265 tests, 0
+fail \\
+\code{test_mbist_cpu_macro} (collars still work) & 7/7 \\
+RTL-vs-RTL differential, base (\#313) vs this branch, six
+\src{tools/verif/gls/sky130} programs & 6/6 IDENTICAL, same total cycles
+(466/\allowbreak{}566/\allowbreak{}966/\allowbreak{}4666/\allowbreak{}4666/\allowbreak{}4666) \\
+Verilator lint \code{lint}, \code{lint_soc}, \code{lint_soc_sky130} & 0
+errors; only existing warning classes (UNUSEDPARAM, DECLFILENAME,
+MODDUP, PINCONNECTEMPTY on \code{dout1}) \\
+\code{dft-scan-check}, \code{-asap7}, \code{-cpu-macro},
+\code{-cpu-macro-asap7} & 0 violations each \\
+\code{soc_all_ci} plain and \code{FPGA=1} & left to PR CI (PD flow
+occupies the host) \\
+mutation campaign, 15 mutants on the changed logic & 13 killed, 2
+survived (both provably equivalent, below) \\
+\end{longtable}
+}
+
+}
+
+Mutants: dcache/\allowbreak{}icache stall (bit 3 dropped, idle ungated,
+hit inverted) x6, encoding bit-3 or collision x4, idle read never
+(Sky130 / tag / data) x3 all KILLED (by the structural test or by
+\code{icache} / \code{dcache}). Survivors: M14
+\texttt{idle\_\allowbreak{}read\_\allowbreak{}en\ =\allowbreak{}\ !ic\_\allowbreak{}invalidate\_\allowbreak{}i}
+and M15 (functional arm drops \code{ic_valid_i}): both only add reads
+that are never consumed, so they are equivalent mutants by the argument
+above (M15 sits in code not compiled in the Sky130-arm suites).
+\code{PASS_FLOOR} unchanged: no cocotb test was added or removed.
+
+\end{record}
+
+\subsection{6. PD handoff: expected versus residual (for the batched CPU
+re-harden)}\label{cr:defect:sky130-cpu-ss-setup-r51p:6-pd-handoff-expected-versus-residual-for-the-batched-cpu-re-harden}
+
+\begin{record}
+
+Expected effect (INFERRED from the RUN\_\allowbreak{}2026-10-11 path
+structure; not measured, no LibreLane run was done):
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*405/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*49/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*108/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*418/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+path class (RUN\_\allowbreak{}2026-10-11, max\_ss)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+paths
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+worst before
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+expected after
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+launched at \code{u_dcache.state_q} (decode head of the cone) & 407 &
+-3.704 & roughly +1.3 to +2.0 ns: and4bb+a31o+a211o (2.46 ns) replaced
+by one OR level \\
+SRAM \code{csb0} endpoints (tag + 4 data) & 5 & -3.704 .. -2.3 & cone is
+now icache \code{state_q} + \code{tag_we_q} only: expected to clear \\
+launched at \code{ex_mem_reg} (via \code{need_mem_access}) & 329 &
+-3.363 & UNCHANGED \\
+launched at \code{ex1b_ex2_reg_q} (load-use) & 116 & -2.907 &
+UNCHANGED \\
+other (\code{mem_wb_reg}, \code{last_commit_insn_q}, ...) &
+\textasciitilde140 & -2.98 .. -0.4 & unchanged \\
+\end{longtable}
+}
+
+}
+
+So the expected residual WNS is about -3.4 ns, set by \code{ex_mem_reg}
+and \code{ex1b_ex2_reg_q} entrances, not by the state decode. TNS should
+improve; WNS barely. Pre-PNR (no wires) the same netlist was already
+-1.78 ns at nom\_ss, so about half of the residual is logic depth (RTL)
+and half is wire/\allowbreak{}buffer/\allowbreak{}skew (placement; the
+\code{csb0} path alone carried an 11-repeater, 3.1 ns chain).
+
+Re-check after the re-harden:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \code{max_ss} and \code{nom_ss}
+  WNS/\allowbreak{}TNS/\allowbreak{}violator count versus -3.704 /
+  -1677.6 / 996 (RUN\_\allowbreak{}2026-10-11). Expect WNS about -3.4,
+  startpoint class \code{ex_mem_reg} / \code{ex1b_ex2_reg_q}.
+\item
+  Re-run \code{classify.py}-style startpoint/\allowbreak{}endpoint
+  grouping: \code{u_dcache.state_q} should have dropped out of the top
+  paths; SRAM \code{csb0} endpoints should be positive. The collars from
+  \#313 add a \code{mem_collar} mux in series with each pin (about one
+  gate); that is on the full-cycle input arc and is not expected to
+  bind.
+\item
+  Check the icache/\allowbreak{}dcache SRAM \code{csb0} activity did not
+  raise the Sky130 power/IR figures noticeably (Sky130 arm now reads in
+  every IDLE cycle).
+\item
+  Hold: no new input-to-flop paths were added; the usual boundary-port
+  hold set is unchanged in structure.
+\item
+  \code{check_cpu_netlist_census} / gate-vs-RTL
+  (\code{run_netlist_proof.sh}) on the new netlist as for any re-harden.
+\end{enumerate}
+
+Not done in this PR (user decision: no pipeline restructuring; remains
+open in r51p): registering \code{need_mem_access} /
+\code{mem_misaligned} as precomputed flags in \code{rv32i_pipeline_ex2}
+(D-side is a pure function of \code{ex1b_ex2_reg_q}, shallow), the
+\code{ic_valid_o} / \code{dbg_halt_req} breakpoint-compare coupling
+(\code{rv32i_cpu_top.sv:794-797}), and the load-use priority chain
+behind \code{ex1b_ex2_reg_q}. SoC context unchanged: the SoC runs this
+macro at 40 MHz and closes all 9 corners.
+
+\end{record}

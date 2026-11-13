@@ -704,7 +704,7 @@ class GPUScoreboard(uvm_component):
 
 ## Phase 5 Verification
 
-**Status**: ✅ COMPLETE (2026-06-24, M1–M12); live status in `docs/PHASE_STATUS.md`
+**Status**: ✅ COMPLETE (2026-06-24, M1–M12); live status in `Doc: cr:status:phase-status`
 
 ### System-Level Verification
 
@@ -958,4 +958,4 @@ Complete migration documentation available at:
 - PHASE4_GPU_ARCHITECTURE_SPEC.md: GPU architecture
 - REFERENCE_MODEL_SPEC.md: Python reference model API
 - MEMORY_MAP.md: Address space and register definitions
-- ROADMAP.md: Project phase plan
+- Doc: cr:status:roadmap: Project phase plan

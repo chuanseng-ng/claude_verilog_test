@@ -4,9 +4,3757 @@
 
 This chapter holds the completion record of each phase.
 
+% Converted from docs/readme/PHASE_HISTORY.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{Phase History}\label{cr:status:phase-history}
+
+\begin{record}
+
+Detailed completion records for each project phase. For the high-level
+map and current status, see the root \src{README.md} and
+\cref{cr:status:phase-status} (\cref{cr:status:phase-status}).
+
+\end{record}
+
+\subsection{\texorpdfstring{Phase 0 Complete \ok{}
+(2026-01-18)}{Phase 0 Complete  (2026-01-18)}}\label{cr:status:phase-history:phase-0-complete-white-check-mark-2026-01-18}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} All 7 architectural specifications finalized and approved
+\item
+  \ok{} Python reference models implemented and validated (66/66 tests
+  passing)
+\item
+  \ok{} cocotb test infrastructure ready
+\end{itemize}
+
+\end{record}
+
+\subsection{\texorpdfstring{Phase 1 Complete \ok{}
+(2026-02-13)}{Phase 1 Complete  (2026-02-13)}}\label{cr:status:phase-history:phase-1-complete-white-check-mark-2026-02-13}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} All 8 RTL modules implemented (\textasciitilde1,900 lines)
+\item
+  \ok{} All 9/9 verification exit criteria met
+\item
+  \ok{} 37/37 RV32I instructions verified
+\item
+  \ok{} 10,000 random instructions, 0 failures
+\item
+  \ok{} AXI protocol compliance verified (11/11 tests)
+\item
+  \ok{} Debug interface complete (6/6 tests)
+\item
+  \ok{} Full coverage: 37/37 instructions, 8/8 FSM states
+\item
+  \ok{} Archived to \src{micro_p/} directory
+\end{itemize}
+
+\end{record}
+
+\subsection{\texorpdfstring{Phase 2 Complete \ok{}
+(2026-03-08)}{Phase 2 Complete  (2026-03-08)}}\label{cr:status:phase-history:phase-2-complete-white-check-mark-2026-03-08}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Architecture approved (5-stage pipeline + interrupts + CSR)
+\item
+  \ok{} All 14 RTL modules implemented
+\item
+  \ok{} Comprehensive verification: 111/111 tests passing (all 7 suites)
+\item
+  \ok{} Random regression: 50,000 instructions (500 seeds × 100), 0
+  failures
+\item
+  \ok{} IRQ latency: ≤3 cycles from assertion to
+  trap\_\allowbreak{}taken
+\item
+  \ok{} Backend: 75 MHz achieved on Sky130 130nm
+\end{itemize}
+
+\end{record}
+
+\subsection{\texorpdfstring{Phase 3 Complete \ok{}
+(2026-05-21)}{Phase 3 Complete  (2026-05-21)}}\label{cr:status:phase-history:phase-3-complete-white-check-mark-2026-05-21}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} L1 I-Cache (4 KB, direct-mapped) + L1 D-Cache (4 KB, write-back
+  + write-allocate)
+\item
+  \ok{} FENCE.I: 1-cycle I-cache invalidation
+\item
+  \ok{} Cache arbiter: D\$ priority over I\$ (D-write \textgreater{}
+  D-read \textgreater{} I-read)
+\item
+  \ok{} Verification: I-cache 7/7, D-cache 8/8, integration 5/5;
+  \textbf{139/139 full regression}
+\item
+  \ok{} PPA sign-off (ASAP7 7nm, Run 43, 2026-05-20): \textbf{1418 MHz /
+  27.27 mW / 3,844 µm²}, 0 DRC, 0 antenna
+\end{itemize}
+
+\end{record}
+
+\subsection{\texorpdfstring{Phase 4 Complete \ok{}
+(2026-05-27)}{Phase 4 Complete  (2026-05-27)}}\label{cr:status:phase-history:phase-4-complete-white-check-mark-2026-05-27}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 9/9 GPU-Lite RTL modules (\src{rtl/gpu/}): top, command queue,
+  warp scheduler, compute unit, vector regfile, vector ALU, memory unit,
+  coalescer, shared memory
+\item
+  \ok{} SIMT execution: 8-lane warps, round-robin scheduler,
+  single-level divergence stack, 16 KB / 32-bank shared memory
+\item
+  \ok{} Verification: GPU unit + kernel tests green; CPU re-gate 140/140
+  + 100k random; 1,000-kernel random regression, 0
+  deadlocks/\allowbreak{}mismatches
+\item
+  \ok{} PPA sign-off (ASAP7 7nm, Run \code{RUN_2026-05-28_06-29-48}):
+  \textbf{571 MHz (1.75 ns) / 262 mW / 115,600 µm² die / 60,500 µm²
+  stdcell}, Setup WS +197.3 ps, Hold WS +16.3 ps (0 viol), 0 antenna
+\end{itemize}
+
+\end{record}
+
+\subsection{\texorpdfstring{Phase 5 Complete \ok{}
+(2026-06-24)}{Phase 5 Complete  (2026-06-24)}}\label{cr:status:phase-history:phase-5-complete-white-check-mark-2026-06-24}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} M1--M12 complete: AXI4 crossbar and AXI-Lite/\allowbreak{}APB
+  fabric; Phase 3 refill FSMs upgraded to AXI4 bursts; UART, SPI, timer,
+  IRQ controller and DMA; behavioral AXI4 SRAM controller;
+  \code{soc_top} integration; CSR performance counters; SoC verification
+  (boot, DMA/\allowbreak{}UART/\allowbreak{}SPI loopback, SW coherency,
+  CPU-GPU IRQ); M10 L2 decision NO-GO; M11 backend flow; M12 sign-off
+  (\src{CLAUDE.md} items 1--10)
+\item
+  \ok{} Behavioral PMU (2026-08-01) and the 2-domain multi-clock SoC
+  with CDC (2026-08-09) (\src{CLAUDE.md} items 11--12)
+\item
+  \warn{} The M11 sign-off figures (571 MHz / 62.9 mW, fabric-only,
+  excluding both hard macros) are unvalidated, and the routing claims
+  are withdrawn. The current-RTL measurement is setup WNS −727.37 ps,
+  781 violators, hold clean (bead \bead{0d0}). See
+  \cref{cr:run:phase5}.
+\end{itemize}
+
+\end{record}
+
+\subsection{\texorpdfstring{Phase 6 Complete \ok{}
+(2026-10-05)}{Phase 6 Complete  (2026-10-05)}}\label{cr:status:phase-history:phase-6-complete-white-check-mark-2026-10-05}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 6a peripherals, all APB4 slaves: GPIO (\code{ckc}, RTL
+  2026-09-20, Sky130-hardened 2026-09-26), PWM (\code{f7vs.6},
+  2026-09-28), WDT (\code{f7vs.7}, 2026-09-29), TRNG (\code{f7vs.8},
+  2026-10-01), I2C (\code{f7vs.9}, 2026-10-03, \prref{208}). APB indices
+  7--11, IRQ bits 5--9.
+\item
+  \ok{} 6b CRYPTO (\code{f7vs.10}, 2026-10-03): AES-128 (ECB and CTR)
+  and SHA-256 at APB index 12 / IRQ bit 10; \code{test_crypto} 41/41.
+  Not production cryptography (\src{CLAUDE.md} item 14).
+\item
+  \ok{} 6c INT8 NPU (\code{f7vs.11}, 2026-10-04): 4×4 weight-stationary
+  array at APB index 13 / IRQ bit 11; \code{test_npu} 39/39,
+  \code{test_soc_npu} 1/1.
+\item
+  \ok{} Gate A synthesis probes per item (CRYPTO 277 875 µm², NPU 203
+  179 µm² stdcell) and Gate B, the batched Sky130 harden
+  (\code{f7vs.15}, \prref{214}, \code{RUN_2026-10-05_06-50-11}): setup met
+  at all 9 corners (worst max\_ss +0.579 ns), hold clean, Netgen LVS
+  clear, routing DRC 0.
+\item
+  ASAP7 is out of scope for all of Phase 6 (beads \code{ma7},
+  \code{lxv}, \code{2kn}). Sources:
+  \src{docs/PHASE6_IP_EXPANSION_PLAN.md} §8, \cref{cr:status:phase-status}.
+\end{itemize}
+
+\end{record}
+
+\subsection{In Progress: DFT and FPGA (status 2026-10-15)}\label{cr:status:phase-history:in-progress-dft-and-fpga-status-2026-10-15}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{DFT: scan, MBIST and JTAG for the Sky130 SoC} (epic
+  \code{j41m}, \ghref{244}). Stage 0 architecture (\prref{250},
+  \src{docs/design/DFT_ARCHITECTURE.md}); Stage 1a scan-ready SoC fabric
+  (\prref{258}; bead \bead{j41m.2} still open); Stage 1b IEEE 1149.1 JTAG
+  TAP (\prref{270}, \code{j41m.3}); TRST reset-sync check (\prref{280}) and CI
+  \code{dft-scan-check} for both PDKs (\prref{281}). Stage 2 scan insertion
+  not started; MBIST not built.
+\item
+  \textbf{FPGA prototyping} (epic \code{hlrm}, \ghref{245}). Stage 0
+  without hardware: FPGA-define memory arms and yosys resource counts
+  (\prref{279}), SRAM backdoor helper with \code{FPGA=1} regression 762
+  passed (\prref{282}), board recommendation Digilent Nexys Video XC7A200T
+  and ECP5 fmax lower bound (\prref{283},
+  \src{docs/FPGA_BOARD_SELECTION.md}). Board-gated stages wait for a
+  board.
+\end{itemize}
+
+\end{record}
+
+\subsection{Implemented Features}\label{cr:status:phase-history:implemented-features}
+
+\subsubsection{\texorpdfstring{Phase 1 (Complete)
+\ok{}}{Phase 1 (Complete) }}\label{cr:status:phase-history:phase-1-complete-white-check-mark}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{ISA}: Complete RISC-V RV32I base integer instruction set (37
+  instructions)
+\item
+  \textbf{Architecture}: Single-cycle execution with AXI stalls
+\item
+  \textbf{Memory Interface}: AXI4-Lite Master (unified
+  instruction/\allowbreak{}data bus)
+\item
+  \textbf{Debug Interface}: APB3 Slave with full capabilities
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Halt/\allowbreak{}Resume/\allowbreak{}Single-step execution
+  \item
+    Register file read/\allowbreak{}write access
+  \item
+    Program counter manipulation
+  \item
+    Hardware breakpoints (2 breakpoints)
+  \end{itemize}
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 2 \ok{}}{Phase 2 }}\label{cr:status:phase-history:phase-2-white-check-mark}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{ISA}: RV32I + Zicsr (CSR instructions:
+  CSRRW/\allowbreak{}S/\allowbreak{}C/\allowbreak{}I variants)
+\item
+  \textbf{Architecture}: 5-stage in-order pipeline
+  (IF/\allowbreak{}ID/\allowbreak{}EX/\allowbreak{}MEM/\allowbreak{}WB)
+\item
+  \textbf{Interrupt Support}: RISC-V M-mode (timer + external
+  interrupts)
+\item
+  \textbf{Hazard Handling}: Detection, stalling, EX/MEM/WB forwarding
+\item
+  \textbf{Target Performance}: 1 IPC at 200 MHz (2x Phase 1 frequency)
+\item
+  \textbf{AXI Arbitration}: Priority arbiter for IF vs MEM requests
+\item
+  \textbf{Debug Interface}: Enhanced with pipeline drain support
+\end{itemize}
+
+\end{record}
+
 \chapter{Status history}\label{cr:ch:status-history}
 
 This chapter holds the earlier project status statements.
+
+% Converted from docs/PHASE_STATUS.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{Project Phase Status}\label{cr:status:phase-status}
+
+\begin{record}
+
+Last updated: 2026-10-15
+
+\end{record}
+
+\subsection{Current Phase}\label{cr:status:phase-status:current-phase}
+
+\begin{record}
+
+\textbf{Phase 5: SoC Integration} - \ok{} COMPLETE (2026-06-24) ---
+M1--M12 done. M10 L2 gate → NO-GO
+(\src{docs/M10_L2_DECISION_ANALYSIS.md}); M11 ASAP7 SoC P\&R signed off
+\textbf{571 MHz / 62.9 mW / 520×520 µm / 65.6 \% util / 0 DRC / 0
+antenna} (sv2v frontend; \cref{cr:run:phase5}). Indicative
+ASAP7 (predictive PDK). \warn{} \textbf{Timing/\allowbreak{}power now
+also unvalidated} (bead \bead{8f3}/\code{0p6}, 2026-09-16): produced by
+\code{OpenROAD.STAMidPNR-3} without an in-session re-route, a defect
+proven to give false-clean zero-wire STA; run 14\textquotesingle s
+artifacts are wiped and cannot be re-checked. \ok{} \textbf{Update
+2026-09-18 (bead \bead{0d0})}: the SoC on \emph{current} RTL has since
+been re-measured three times on the fixed flow
+(\code{STA_POSTGRT_INSESSION_GRT=1}, pinned OpenROAD 26Q2,
+annotation-gated). Current honest point, superseding the earlier 258.5
+mW / −2084 ps snapshot: \textbf{setup WNS −727.37 ps / TNS −60,665 ps /
+781 violators, hold CLEAN, 283.6 mW total / 89.6 mW fabric-only}
+(\code{RUN_2026-09-17_20-41-11}). Timing is still NOT closed at 1750 ps,
+and run 14\textquotesingle s own numbers remain unvalidated ---
+\cref{cr:run:phase5} §"Power figure caveat".
+
+\textbf{Phase 6: IP Expansion} - \ok{} COMPLETE (2026-10-05) --- 6a
+(GPIO, PWM, WDT, TRNG, I2C), 6b (CRYPTO) and 6c (NPU) RTL complete; epic
+\code{f7vs} closed (15/15 children). The batched Sky130 SoC harden (Gate
+B, \code{f7vs.15}, \prref{214}) closed timing at all 9 corners on
+2026-10-05. ASAP7 stays out of scope for Phase 6 (beads
+\code{ma7}/\code{lxv}/\code{2kn}). Details in the Phase 6 section below.
+
+\textbf{DFT: scan + MBIST + JTAG for the Sky130 SoC} (epic \code{j41m},
+\ghref{244}) - \wip{} IN PROGRESS --- Stage 0 architecture \ok{}
+(\src{docs/design/DFT_ARCHITECTURE.md}, \prref{250}); Stage 1a scan-ready
+SoC fabric merged (\prref{258}; bead \bead{j41m.2} still open); Stage 1b
+IEEE 1149.1 JTAG TAP \ok{} (\prref{270}, \code{j41m.3}). Stage 2 scan
+insertion not started; MBIST not built (Stage 4 plan only).
+
+\textbf{FPGA prototyping} (epic \code{hlrm}, \ghref{245}) - \wip{} IN
+PROGRESS --- Stage 0 \ok{} without hardware:
+\src{docs/FPGA_STAGE0_EVALUATION.md} (\prref{279}) and
+\src{docs/FPGA_BOARD_SELECTION.md} (\prref{283}; recommendation Digilent
+Nexys Video XC7A200T). Open-tool ECP5 fmax lower bound:
+\textasciitilde48--52 MHz CPU-only on LFE5U-85F (a lower bound, not an
+estimate of the Artix-7). Board-gated stages not started. A Vivado
+Artix-7 run is in progress on a separate branch with no results yet.
+
+\textbf{Phase 7: Mixed-Signal PLL Clock Generator} - \wip{} IN PROGRESS
+--- M-a/\allowbreak{}M-b1/\allowbreak{}M-b2/\allowbreak{}M-c \ok{}
+complete (2026-06-20); M-d = documentation (this update). Dual-PDK
+charge-pump PLL via analog-design agents (ASAP7 indicative + Sky130 real
+CP-block DRC/LVS), AMS RNM integrated as SoC clock source. See
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md}. (Phase 7 ran alongside the
+in-progress Phase 5 PD/\allowbreak{}sign-off tail.)
+
+\begin{itemize}
+\tightlist
+\item
+  M1--M8 \ok{}: AXI4 crossbar + AXI-Lite ring, cache burst upgrade,
+  peripherals
+  (UART/\allowbreak{}SPI/\allowbreak{}timer/\allowbreak{}IRQ), DMA,
+  behavioral SRAM, perf counters, SoC top.
+\item
+  M9 \ok{} SoC verification: boot 100/100; DMA+UART+SPI loopback; SW
+  coherency (D\$ flush→GPU→D\$ inval); CPU-GPU IRQ integration; DUT-side
+  boot SRAM check. \code{soc_all} 73/73 at M9 (now 120/120 --- see the
+  PMU entry below); 1M+ cycle stress (1,079,867 cyc, 0 fail). Two RTL
+  bugs found+fixed: D-cache MMIO caching (\code{go9}) and
+  axi4\_\allowbreak{}crossbar AR/AW handshake+arbitration (\code{7fs}).
+\end{itemize}
+
+\textbf{Phase 6a: GPIO controller (bead \bead{ckc})} - \ok{} COMPLETE
+(2026-09-26; RTL 2026-09-20, Sky130 harden 2026-09-26). First Phase 6
+peripheral. New \src{rtl/periph/gpio_controller.sv} --- APB4 slave on
+\code{apb4_register_bank}, 32 pins.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Bus}: APB4, per \src{docs/PERIPHERAL_BUS_EVALUATION.md}
+  ("Phase 6 peripherals become trivial APB drop-ins"). The "AXI4-Lite"
+  wording in \cref{cr:status:roadmap} and \src{CLAUDE.md} was stale and has
+  been corrected.
+\item
+  \textbf{Integration}: APB slave index 7 at
+  \texttt{0x2000\_\allowbreak{}A000–AFFF}; \code{APB_N_SLAVES} 7 → 8;
+  \code{AXIL_APB_LIMIT} and \code{PERIPH_LIMIT} both extended
+  \code{0x2000_9FFF} → \code{0x2000_AFFF} --- the same two-edit pattern
+  used for PLL, PMU and PLL2. New IRQ source at
+  \code{interrupt_controller} bit 5 (\code{N_SOURCES} 5 → 6).
+\item
+  \textbf{Pins}: unidirectional triplet \code{gpio_out_o[31:0]} /
+  \code{gpio_oe_o[31:0]} / \code{gpio_in_i[31:0]} on \code{soc_top}.
+  There is \textbf{no tristate anywhere in this RTL tree} and the Sky130
+  SoC hardens as a core macro with no pad ring, so the bidirectional
+  merge is deliberately a pad-ring integration concern. \code{gpio_in_i}
+  is asynchronous and is synchronised per pin by \code{N_PINS} separate
+  \texttt{cdc\_\allowbreak{}sync\ \#(.\allowbreak{}WIDTH(1))} instances
+  --- not one wide instance, because that primitive\textquotesingle s
+  scope warning forbids multi-bit binary buses.
+\item
+  \textbf{Interrupts}: per-pin level/\allowbreak{}edge with polarity.
+  \code{GPIO_IRQ_STAT} is \textbf{edge-sticky / level-live} (ARM PL061
+  semantics): edge-mode bits latch until a \code{GPIO_IRQ_CLR} write,
+  with a set beating a same-cycle clear so an edge is never lost to a
+  racing clear; level-mode bits track their condition live and ignore
+  \code{GPIO_IRQ_CLR} entirely. A fully sticky raw register was rejected
+  because the reset defaults (level, active-low, pins low) make every
+  pin\textquotesingle s condition true, latching all-ones out of reset.
+  \code{GPIO_IRQ_EN} masks the output only. \code{irq_o} is level-held,
+  which the 2-FF CPU-domain crossing at \code{soc_top.sv:623-627}
+  requires.
+\item
+  \textbf{Verification}: \code{test_gpio} \textbf{16/16} (reset defaults
+  incl. the deliberate all-ones \code{GPIO_IRQ_STAT} at
+  level/\allowbreak{}active-low defaults, RW round-trip, output/OE
+  mirroring, the cycle-exact 3-edge input-sync latency,
+  rising/\allowbreak{}falling edge capture, level tracking, edge
+  stickiness + clear, set-beats-same-cycle-clear,
+  clear-no-effect-on-level, \code{pstrb} partial-word clear,
+  \code{GPIO_IRQ_EN} masking the output only, \code{irq_o} held 50
+  cycles, \code{GPIO_IRQ_CLR} reads-as-0, out-of-range access).
+  \code{soc_all} \textbf{217/217} across 27 suites, up from 201.
+  Extending the APB window broke
+  \code{test_axil_interconnect.test_decerr_unmapped}, which probed
+  \code{0x2000_A000} expecting DECERR --- now the GPIO slot;
+  \code{BAD_HIGH} bumped to \code{0x2000_B000}, the maintenance step
+  that test\textquotesingle s own comment prescribes for each window
+  growth.
+\item
+  \textbf{Hardened 2026-09-26} (\code{RUN_2026-09-26_00-07-59}, bead
+  \bead{00ef}): \textbf{Netgen LVS PASSED} ("Circuits match uniquely", 0
+  errors), routing DRC 0, \textbf{setup AND hold both clean at all 9
+  corners} (+7.08 ns / +0.1413 ns), 48.25 mW, 38.98 \% util, die
+  unchanged 6700 × 3100 µm. Magic DRC 9,081 is the only remaining
+  deferred error (bead \bead{45a} waiver). First Sky130 SoC hardening
+  since 2026-07-30 --- \warn{} NOT single-variable vs. that baseline (33
+  RTL commits between, 13 touching \code{soc_top.sv}). \textbf{The ss
+  setup failure that bead \bead{ujv} was deferred on is gone} on current
+  RTL. KLayout DRC deliberately skipped (8.5 GB OOM on this 15 GB host,
+  and it sits before LVS in the flow) --- deferred, not waived. Hold
+  went \textbf{71 → 3 → 0}: resizer hold margins 0.05 → 0.3 closed 68,
+  and
+  \texttt{set\_\allowbreak{}false\_\allowbreak{}path\ -\allowbreak{}from\ [get\_\allowbreak{}ports\ gpio\_\allowbreak{}in\_\allowbreak{}i]}
+  closed the 3 survivors (all one path, \code{gpio_in_i[31]} → a
+  \code{cdc_sync} stage-1 flop). Detail:
+  \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}.
+\end{itemize}
+
+\textbf{Sky130 PD quality campaign, 2026-09-26} --- four runs after the
+GPIO harden, each single-variable:
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*55/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*419/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*316/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*190/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Bead
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Change
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Result
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Cost
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{00ef} & \code{set_false_path} on \code{gpio_in_i} +
+\code{cpu_rst_n_i} & hold 3 → \textbf{0} at all 9 corners & --- \\
+\code{e45j} & design-repair margins 10→30 / 20→40 \% & max-slew 8623 →
+\textbf{2380}, cap 346 → \textbf{70} & antenna 191 → 263 pins \\
+\code{58q} & \code{GRT_ANTENNA_ITERS} 8→20, \code{MARGIN} 25→50 &
+antenna 263 → \textbf{182} pins, 182 → \textbf{114} nets & max-slew 2380
+→ 3199 \\
+\end{longtable}
+}
+
+}
+
+\warn{} \textbf{The slew and antenna knobs pull against each other} ---
+repair buffers cut slew and raise antenna; antenna diodes cut antenna
+and raise slew, each diode being another load pin. Both current points
+are \textbf{single-axis optima}; the Pareto frontier is demonstrated but
+has never been swept jointly.
+
+Two structural findings from that campaign, both recorded rather than
+fixed:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{No post-RCX repair stage exists in LibreLane.} Every
+  repair/\allowbreak{}resizer step is pre-route on GRT-\emph{estimated}
+  parasitics, so real-parasitic erosion appears first at post-route STA
+  and last at a point where nothing can act on it (slew/cap 0 at steps
+  33/40/41 → thousands at step 51). The same gap explains the hold
+  regression. Adding a stage needs a shared-LibreLane edit ---
+  evaluated, and recommended \emph{not yet}, in
+  \src{docs/LIBRELANE_PATCHING_EVALUATION.md}.
+\item
+  \textbf{\texttt{max\ fanout\ violations\ =\allowbreak{}\ 0} is
+  vacuous} --- \code{sky130_soc.sdc} has no \code{set_max_fanout} at
+  all, so a 211-fanout net reports clean. Do not cite that metric until
+  a real constraint exists.
+\end{itemize}
+
+\textbf{LibreLane install state captured 2026-09-26}
+(\src{pnr/librelane_patches/}). The shared install carried 15 modified
+files (+641/\allowbreak{}−89) as \emph{uncommitted} edits, and the
+pre-existing patch archive lived under the \textbf{gitignored}
+\src{memory/} --- so no PD figure in this repo was reproducible from a
+clean checkout, and the exact tool state behind every number existed on
+one disk, unbacked-up. Now tracked, with sha256s and a verified
+(\texttt{git\ apply\ -\allowbreak{}-\allowbreak{}check\ -\allowbreak{}-\allowbreak{}reverse})
+full diff. \warn{} One patch in that set,
+\code{drt.tcl}\textquotesingle s catch-and-continue around
+\code{detailed_route}, is why every ASAP7 "0 DRC / 0 antenna" claim was
+withdrawn (bead \bead{xy6}); re-examining it is the next step.
+
+\textbf{Bead \code{ujv} re-examined 2026-09-26 --- its ss setup failure
+NO LONGER REPRODUCES.} At an unchanged 25.0 ns period, max\_ss went
+\textbf{−4.328 ns FAIL → +8.097 ns PASS} (nom\_ss −2.885 → +9.232,
+min\_ss −1.120 → +10.069), a +12.4 ns swing. Its parking condition ("do
+not chase ss until hold is green at all 9 corners") is also now
+satisfied. \warn{} But the \textbf{root cause is bypassed, not fixed}:
+\code{ujv} blamed the CPU macro\textquotesingle s 8.155 ns ss clk→Q, and
+\code{u_cpu} now appears \textbf{zero times} in
+max\_ss\textquotesingle s 1000 worst paths while the macro views are
+unchanged since 2026-07-27 --- so that weakness is latent and would
+resurface at a shorter period. \textbf{Opportunity:} +8.1 ns of ss
+margin now exists where −4.3 ns did, so real frequency headroom above 40
+MHz is likely and has never been swept. The ROADMAP\textquotesingle s 75
+MHz Sky130 figure for GPIO remains a projection. Sky130 SoC headroom at
+the last sign-off was 37.9 \% utilisation on a 6700 × 3100 µm die, with
+the tightest margin max\_tt setup +0.339 ns.
+
+\textbf{Pre-Phase-6 \#5: behavioral PMU (GH epic \#98)} - \ok{} COMPLETE
+(2026-08-01). New \src{rtl/soc/pmu.sv} --- APB4 slave (reusing
+\code{apb4_register_bank}) + a per-domain sequencer FSM encoding the 4
+PST states from \src{pnr/constraints/phase5_soc.upf}
+(NORMAL/\allowbreak{}CPU\_\allowbreak{}OFF/\allowbreak{}GPU\_\allowbreak{}OFF/\allowbreak{}IDLE).
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Sequencing order is fixed by the UPF, not chosen}: power-down
+  \texttt{ret\_\allowbreak{}save\ →\ iso\_\allowbreak{}en\ →\ gate\ clock\ →\ assert\ reset};
+  power-up
+  \texttt{release\ reset\ →\ ungate\ clock\ →\ ret\_\allowbreak{}restore\ →\ de-\allowbreak{}assert\ iso\_\allowbreak{}en}.
+  Each domain walks an explicit 9-state chain, one action per cycle, so
+  the order is structurally guaranteed and directly assertable.
+\item
+  \textbf{Integration} (\#100): no free APB slot existed --- every 4 KB
+  slot from \code{0x2000_2000} to \code{0x2000_7FFF} was taken --- so
+  \code{PERIPH_LIMIT} and \code{AXIL_APB_LIMIT} were both extended to
+  \code{0x2000_8FFF}, with PMU at
+  \texttt{0x2000\_\allowbreak{}8000–8FFF} as APB slave 5. Two
+  \code{rv32i_clock_gate} cells now gate \code{core_clk} into
+  \code{u_cpu}/\code{u_gpu} --- the first SoC-level clock gates.
+  Isolation clamps sit in \code{soc_top} outside the gated domains, per
+  the UPF\textquotesingle s \texttt{-\allowbreak{}location\ parent}.
+\item
+  \textbf{Scope limit}: this is a \emph{sequencing} controller.
+  Retention save/\allowbreak{}restore are emitted in the correct order
+  for verification to assert but are a functional no-op --- the UPF
+  (rewritten 2026-10-17, bead \bead{h3lm}) declares no retention and no
+  power switches. No real supply removal, power switches, or retention
+  silicon; \code{pg_ctrl} is deliberately not emitted.
+\item
+  \textbf{Verification} (\#101): \code{soc_all} \textbf{120/120} (was
+  82/82), \code{test_pmu} 10/10 with per-cycle ordering assertions in
+  both directions. Reset defaults leave both domains
+  on/\allowbreak{}un-isolated/\allowbreak{}un-reset, so the SoC is
+  functionally identical to pre-PMU for firmware that never writes CTRL.
+\end{itemize}
+
+\textbf{Pre-Phase-6 \#4: 2-domain multi-clock SoC + CDC (GH epic \#90)}
+- \ok{} COMPLETE (2026-08-09). The SoC is split into a CPU domain and a
+GPU+bus+peripheral domain, giving exactly \textbf{one} CDC boundary (CPU
+↔ crossbar M0).
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{PD result} (\#96, run 23 \code{RUN_2026-08-09_14-36-16}):
+  \code{cpu_clk} 780 ps at \textbf{+9.8 ps} WS, TNS 0, 0 violators →
+  \textbf{1282 MHz MET}; \code{sys_clk} 1750 ps at \textbf{+74.8 ps} WS,
+  TNS 0, 0 violators → \textbf{571 MHz MET}. 0 routing DRC, 0 antenna, 0
+  slew/cap, 51.9 mW, 66.9 \% util, die unchanged 520 × 520 µm,
+  post-route CDC budget check PASS. \textbf{The CPU runs at 2.24× the
+  fabric clock and is no longer de-rated onto the 1750 ps cycle} --- the
+  point of the epic. Run 14 remains the accepted single-clock M11
+  sign-off and is byte-reproducible; the multi-clock flow runs off
+  \src{pnr/asap7/soc/config_multiclock.json} +
+  \code{constraints/phase5_soc_multiclock.sdc}.
+\item
+  \textbf{RTL} (\#91/\allowbreak{}\#92/\allowbreak{}\#93):
+  \src{rtl/soc/async_axi_fifo.sv} (dual-clock AXI4 bridge on new
+  \src{rtl/soc/cdc/} primitives), a second \code{pll_subsystem} +
+  \code{APB_PLL2} slot, and \src{rtl/soc/apb_cdc_bridge.sv}.
+  \code{soc_all} 159/159; \code{soc_multiclock} 4/4 at a \textbf{7 ns /
+  3 ns coprime ratio} --- the first real CDC coverage in this repo, and
+  it found two RTL bugs invisible to every 1:1 suite (both a \emph{reset
+  value that advertises availability}).
+\item
+  \textbf{Two PD root causes, both now fixed and documented}: the CPU
+  macro Liberty exported \textasciitilde600--800 ps combinational in→out
+  arcs on its APB outputs (fixed by making all three outputs pure
+  registered), and the macro\textquotesingle s boundary pins
+  free-floated between regenerations --- \textbf{393 of 401 moved},
+  worth 535 ps of setup --- fixed by \src{pnr/asap7/cpu/pin_order.cfg}
+  (\src{pnr/asap7/cpu/README_pin_order.md}).
+\item
+  \warn{} \textbf{Do not quote 62.9 → 51.9 mW as a multi-clock power
+  win.} \code{report_power} attributes 0.00 W to the macros, and the
+  drop coincides with the first-ever ICG insertion
+  (\code{USE_ICG_CELL}). ASAP7 IR drop remains unobtainable ---
+  \code{analyze_power_grid} fails \code{PSM-0069} on both rails from the
+  M1-only tap-cell connectivity artifact. Both tracked as beads.
+\item
+  \warn{} \textbf{The run-23 timing figures above (both domains MET) are
+  also unvalidated} (bead \bead{8f3}/\code{0p6}): produced by the stock,
+  non-re-routing \code{OpenROAD.STAMidPNR-3} step, proven elsewhere to
+  report false-clean zero-wire STA. Run 23\textquotesingle s artifacts
+  are wiped; not re-verifiable directly. \ok{} The honest
+  \emph{current-RTL} point (2026-09-18, bead \bead{0d0}) is setup WNS
+  −727.37 ps / 781 violators / hold clean / 283.6 mW at
+  \code{RUN_2026-09-17_20-41-11} --- a different, still-unclosed design
+  point, not a re-run of run 23. See \cref{cr:run:phase5}
+  §"Power figure caveat".
+\item
+  Full record: \cref{cr:run:phase5} (\cref{cr:run:phase5})
+  and \src{docs/3PLL_CDC_EVALUATION.md}.
+\end{itemize}
+
+\textbf{Sky130 real DRC/LVS sign-off (GH epic \#102)} --- Stages 1--2
+\ok{} complete (2026-07-31); Stages 3--4 \hold{} host-gated.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Stage 1} (CPU standalone, \ghref{103}): KLayout DRC 0, Netgen LVS
+  MATCH, setup +0.366 ns @ 75 MHz. Magic DRC 27.7 M waived --- 100 \%
+  inside SRAM macro footprints, PDK artifact (bead \bead{45a}).
+\item
+  \textbf{Stage 2} (CPU macro + peripherals SoC, no GPU, \ghref{104}): LVS
+  PASSED, routing DRC 0, PDN 0, hold clean, 40 MHz, nom\_tt 37.63 mW,
+  226,952 stdcells, die 6700 × 3100 µm. Setup fails at ss (bead
+  \bead{ujv}) and antenna leaves a 140/120 residual (bead \bead{58q})
+  --- both documented, deferred.
+\item
+  \warn{} \textbf{Timing scope: typical-corner (nom\_tt) only.} The SRAM
+  macro is characterized at TT alone, so the nine reported corners are
+  nine labels backed by one macro model. The physical gates
+  (LVS/\allowbreak{}DRC/\allowbreak{}PDN) are not affected and stand as
+  real results. Closing ss honestly needs per-corner SRAM SPICE
+  characterization, measured at \textasciitilde80--95 h on a host that
+  reboots every 2--8 h → bead \bead{o1i}, deferred host-blocked.
+\item
+  \textbf{Stages 3--4} (GPU standalone + full SoC incl. GPU, \ghref{105}/\allowbreak{}\#106): not attempted; need ≥32 GB RAM +
+  \textasciitilde500 GB scratch. GPU stays ASAP7-indicative-only.
+\item
+  Full record: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §7.
+\end{itemize}
+
+\textbf{Previous Phases}:
+
+\begin{itemize}
+\tightlist
+\item
+  Phase 4 (GPU-Lite SIMT Compute Engine) - \ok{} COMPLETE (2026-05-27)
+  --- all GPU tests green, ASAP7 ≥500 MHz sign-off
+\item
+  Phase 3 (Memory System \& Caches) - \ok{} COMPLETE (2026-05-21) ---
+  all 20 cache tests passing, 139/139 total
+\item
+  Phase 2 (Pipelined CPU) - \ok{} COMPLETE (2026-03-08) --- 75 MHz on
+  Sky130 130nm
+\item
+  Phase 1 (Minimal RV32I Core) - \ok{} COMPLETE (2026-02-13)
+\item
+  Phase 0 (Foundations) - \ok{} COMPLETE (2026-01-18)
+\end{itemize}
+
+\end{record}
+
+\subsection{Phase Progress}\label{cr:status:phase-status:phase-progress}
+
+\subsubsection{\texorpdfstring{Phase 0: Foundations
+\ok{}}{Phase 0: Foundations }}\label{cr:status:phase-status:phase-0-foundations-white-check-mark}
+
+\begin{record}
+
+\textbf{Status}: Specifications and implementation complete
+
+\textbf{Completed}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} RV32I subset defined
+  (PHASE0\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md)
+\item
+  \ok{} Reset behavior specified
+\item
+  \ok{} Trap behavior specified
+\item
+  \ok{} Memory ordering rules specified
+\item
+  \ok{} Commit semantics specified
+\item
+  \ok{} Project structure created (rtl/, tb/, sim/, docs/)
+\item
+  \ok{} Interface specifications (RTL\_\allowbreak{}DEFINITION.md) -
+  AXI4-Lite \& APB3 protocols defined
+\item
+  \ok{} GPU architecture specification
+  (PHASE4\_\allowbreak{}GPU\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md)
+  - complete
+\item
+  \ok{} Reference model specification
+  (REFERENCE\_\allowbreak{}MODEL\_\allowbreak{}SPEC.md) - complete
+\item
+  \ok{} Memory map specification (MEMORY\_\allowbreak{}MAP.md) -
+  complete with 4 KB alignment
+\item
+  \ok{} Phase-aligned verification plan
+  (VERIFICATION\_\allowbreak{}PLAN.md) - structured by phases
+\item
+  \ok{} Phase 1 CPU specification
+  (PHASE1\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md) - complete
+\item
+  \ok{} Python reference model implementation - 66/66 tests passing
+  (memory, RV32I, GPU)
+\item
+  \ok{} cocotb test infrastructure setup - complete with BFMs,
+  scoreboard, utilities, documentation
+\end{itemize}
+
+\textbf{Remaining}:
+
+\begin{itemize}
+\tightlist
+\item
+  None - Phase 0 complete!
+\end{itemize}
+
+\textbf{Exit Criteria Status}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Written ISA + microarchitecture spec
+  (PHASE0\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md exists)
+\item
+  \ok{} No RTL yet (confirmed - directories empty)
+\item
+  \ok{} Supporting specifications complete (all 7 specs finalized)
+\item
+  \ok{} Python reference model matches specification (66/66 tests
+  passing)
+\item
+  \ok{} Test infrastructure ready (cocotb infrastructure complete)
+\item
+  \ok{} Final human specification review complete (approved 2026-01-18)
+\end{itemize}
+
+\textbf{Target Completion}: 2026-01-31
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 1: Minimal RV32I Core \ok{}
+VERIFICATION
+COMPLETE}{Phase 1: Minimal RV32I Core  VERIFICATION COMPLETE}}\label{cr:status:phase-status:phase-1-minimal-rv32i-core-white-check-mark-verification-complete}
+
+\begin{record}
+
+\textbf{Status}: RTL implementation complete, all 9/9 verification exit
+criteria met (2026-02-13)
+
+\textbf{Prerequisites}: \ok{} Phase 0 exit criteria met
+
+\textbf{RTL Modules} (8/8 complete, \textasciitilde1,900 lines total):
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*374/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*484/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*121/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Module
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+File
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CPU top-level (AXI4-Lite + APB3) & \src{rtl/cpu/rv32i_cpu_top.sv} &
+\ok{} Complete \\
+CPU core wrapper & \src{rtl/cpu/core/rv32i_core.sv} & \ok{} Complete \\
+Control FSM & \src{rtl/cpu/core/rv32i_control.sv} & \ok{} Complete \\
+Instruction decoder & \src{rtl/cpu/core/rv32i_decode.sv} & \ok{}
+Complete \\
+ALU & \src{rtl/cpu/core/rv32i_alu.sv} & \ok{} Complete \\
+Register file & \src{rtl/cpu/core/rv32i_regfile.sv} & \ok{} Complete \\
+Immediate generator & \src{rtl/cpu/core/rv32i_imm_gen.sv} & \ok{}
+Complete \\
+Branch comparator & \src{rtl/cpu/core/rv32i_branch_comp.sv} & \ok{}
+Complete \\
+\end{longtable}
+}
+
+\textbf{Verification Exit Criteria} (9/9 met):
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*56/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*243/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*159/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*523/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\#
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Criterion
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Target
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+1 & Smoke tests passing & 6/6 & \ok{} MET --- 6/6 with scoreboard \\
+2 & Scoreboard mismatches & 0 & \ok{} MET --- 0 mismatches \\
+3 & Instruction coverage & 37/37 (100\%) & \ok{} MET --- all 37 RV32I
+instructions \\
+4 & Random instruction tests & 10,000+, 0 fail & \ok{} MET --- 10,000
+instructions, 0 failures \\
+5 & AXI protocol tests & 100\% pass & \ok{} MET --- 11/11 tests
+passing \\
+6 & Debug interface tests & 100\% pass & \ok{} MET --- 6/6 tests
+(single-step, BP0, BP1, GPR/PC write) \\
+7 & Code coverage & \textgreater95\% & \ok{} MET --- Verilator annotated
+reports, \texttt{make\ coverage} \\
+8 & State coverage & 8/8 (100\%) & \ok{} MET --- 8/8 FSM states
+covered \\
+9 & Failing random seeds & 0 & \ok{} MET --- 0 failing seeds (100/100
+pass) \\
+\end{longtable}
+}
+
+\textbf{Key RTL Fixes Applied}:
+
+\begin{itemize}
+\tightlist
+\item
+  Branch/\allowbreak{}jump timing fix (registered decision flag in
+  rv32i\_\allowbreak{}control.sv)
+\item
+  Load data latching fix (mem\_\allowbreak{}rdata\_\allowbreak{}raw
+  register in rv32i\_\allowbreak{}core.sv)
+\item
+  Register file combinational reads (rv32i\_\allowbreak{}regfile.sv)
+\end{itemize}
+
+\textbf{Verification Milestones}:
+
+\begin{itemize}
+\tightlist
+\item
+  2026-01-24: Task 1 complete --- Scoreboard integration (6/6 smoke
+  tests)
+\item
+  2026-01-26: Task 2 complete --- ISA compliance tests (37/37 passing)
+\item
+  2026-01-28: Task 3 complete --- Random instruction generator (10,000
+  instructions, 0 failures)
+\item
+  2026-02-07: Task 4 complete --- AXI4-Lite protocol tests (11/11
+  implemented)
+\item
+  2026-02-13: Tasks 5, 6, 7 complete --- Debug interface (6/6), Coverage
+  (100\%), Docs
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 2: Pipelined CPU \ok{}
+COMPLETE}{Phase 2: Pipelined CPU  COMPLETE}}\label{cr:status:phase-status:phase-2-pipelined-cpu-white-check-mark-complete}
+
+\begin{record}
+
+\textbf{Status}: \ok{} COMPLETE (2026-03-08) --- 75 MHz achieved on
+Sky130 130nm
+
+\textbf{Prerequisites}: \ok{} Phase 1 exit criteria met (2026-02-13)
+
+\textbf{Architecture Spec}:
+\src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} --- APPROVED (2026-02-14),
+all 7 open questions resolved
+
+\textbf{RTL Modules} (14/14 complete):
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*330/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*543/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*107/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Module
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+File
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CPU top-level (AXI4-Lite + APB3) & \src{rtl/cpu/rv32i_cpu_top.sv} &
+\ok{} Complete \\
+CPU core wrapper & \src{rtl/cpu/core/rv32i_core.sv} & \ok{} Complete \\
+IF pipeline stage & \src{rtl/cpu/core/pipeline/rv32i_pipeline_if.sv} &
+\ok{} Complete \\
+ID pipeline stage & \src{rtl/cpu/core/pipeline/rv32i_pipeline_id.sv} &
+\ok{} Complete \\
+EX pipeline stage & \src{rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv} &
+\ok{} Complete \\
+MEM pipeline stage & \src{rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv} &
+\ok{} Complete \\
+WB pipeline stage & \src{rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv} &
+\ok{} Complete \\
+Pipeline package & \src{rtl/cpu/core/rv32i_pipeline_pkg.sv} & \ok{}
+Complete \\
+Hazard unit & \src{rtl/cpu/core/rv32i_hazard_unit.sv} & \ok{}
+Complete \\
+Forwarding unit & \src{rtl/cpu/core/rv32i_forwarding_unit.sv} & \ok{}
+Complete \\
+CSR file & \src{rtl/cpu/core/rv32i_csr_file.sv} & \ok{} Complete \\
+Interrupt controller & \src{rtl/cpu/core/rv32i_interrupt_ctrl.sv} &
+\ok{} Complete \\
+AXI arbiter & \src{rtl/cpu/rv32i_axi_arbiter.sv} & \ok{} Complete \\
+Decode (updated for CSR) & \src{rtl/cpu/core/rv32i_decode.sv} & \ok{}
+Complete \\
+\end{longtable}
+}
+
+\textbf{Reused Phase 1 Modules} (4/4):
+
+\begin{itemize}
+\tightlist
+\item
+  ALU (\code{rv32i_alu.sv})
+\item
+  Register file (\code{rv32i_regfile.sv})
+\item
+  Immediate generator (\code{rv32i_imm_gen.sv})
+\item
+  Branch comparator (\code{rv32i_branch_comp.sv})
+\end{itemize}
+
+\textbf{Architecture Decisions Implemented (2026-02-14)}:
+
+\begin{itemize}
+\tightlist
+\item
+  OQ-1: \ok{} Modified in-place (Phase 1 archived to \src{micro_p/})
+\item
+  OQ-2: \ok{} External interrupt (MEIP) \textgreater{} Timer interrupt
+  (MTIP)
+\item
+  OQ-3: \ok{} EBREAK sets \code{mcause=3} + \code{mepc} + triggers debug
+  halt
+\item
+  OQ-4: \ok{} CSR write takes priority over same-cycle interrupt check
+  in EX
+\item
+  OQ-5: \ok{} Debug halt drains pipeline immediately (no wait for MRET)
+\item
+  OQ-6: \ok{} In-flight AXI transaction completes; flushed responses
+  discarded
+\item
+  OQ-7: \ok{} Add pipeline stage first → ASAP7 second → relax frequency
+  last resort
+\end{itemize}
+
+\textbf{Verification Progress} (2026-02-27):
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} RTL implementation complete (2026-02-16)
+\item
+  \ok{} Initial testing complete (115/115 regression tests passing)
+\item
+  \ok{} Comprehensive verification complete (111/111 tests, all 7 suites
+  pass):
+
+  \begin{itemize}
+  \tightlist
+  \item
+    smoke\_\allowbreak{}uvm: 4/4 PASS
+  \item
+    isa\_uvm: 54/54 PASS (37/37 RV32I instructions + CSR)
+  \item
+    pipeline\_\allowbreak{}hazards: 16/16 PASS (RAW/\allowbreak{}control
+    hazards, forwarding, store-store, JAL rd)
+  \item
+    interrupts: 12/12 PASS (timer/\allowbreak{}ext IRQ, MIE gating,
+    MRET, CSR insns, latency ≤3 cyc)
+  \item
+    debug: 6/6 PASS (single-step, BP0/BP1, GPR write, PC write, reg
+    reads)
+  \item
+    axi\_\allowbreak{}protocol: 12/12 PASS (back-pressure, error
+    injection, arbiter)
+  \item
+    fault\_\allowbreak{}injection: 7/7 PASS (misaligned, illegal, AXI
+    fetch error)
+  \end{itemize}
+\item
+  \ok{} Random regression: 500 seeds × 100 instructions = \textbf{50,000
+  instructions, 0 failures}
+\item
+  \ok{} Backend flow: \textbf{75 MHz achieved on Sky130 130nm} (200 MHz
+  target not met due to PDK limitations)
+
+  \begin{itemize}
+  \tightlist
+  \item
+    SDC constraints: \src{pnr/constraints/phase2_cpu.sdc}
+  \item
+    UPF power intent: \src{pnr/constraints/phase2_cpu.upf}
+  \end{itemize}
+\item
+  \ok{} ASAP7 backend flow: \textbf{1418 MHz achieved at Run 43
+  (2026-05-20)} --- 27.27 mW, 3 844 µm² stdcell, 0
+  DRC/\allowbreak{}antenna/\allowbreak{}timing violations \warn{}
+  unvalidated, STA-zero-wire (bead \bead{8f3}/\code{0p6}); artifacts
+  wiped, not re-checkable --- \cref{cr:run:asap7}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Run directory: \code{pnr/asap7/runs/RUN_2026-05-20_06-27-10/}
+  \item
+    Config: \code{pnr/asap7/config.json} (CLOCK\_\allowbreak{}PERIOD
+    0.705, CTS clustering 8/10)
+  \item
+    Constraints: \code{pnr/asap7/constraints/asap7.sdc}
+  \item
+    Full per-run history: \cref{cr:run:asap7}
+  \end{itemize}
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 3: Memory System \& Caches \ok{}
+COMPLETE}{Phase 3: Memory System \& Caches  COMPLETE}}\label{cr:status:phase-status:phase-3-memory-system-caches-white-check-mark-complete}
+
+\begin{record}
+
+\textbf{Status}: \ok{} COMPLETE (2026-05-21) --- all 20 Phase 3 tests
+passing, 139/139 total tests clean
+
+\textbf{Prerequisites}: \ok{} Phase 2 exit criteria met (2026-03-08)
+
+\textbf{Architecture Spec}:
+\src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} --- APPROVED (2026-03-08),
+all 6 open questions resolved
+
+\textbf{RTL Modules} (10/10 complete):
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*330/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*543/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*107/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Module
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+File
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Cache package & \src{rtl/mem/rv32i_cache_pkg.sv} & \ok{} Complete \\
+I-Cache & \src{rtl/mem/rv32i_icache.sv} & \ok{} Complete \\
+D-Cache & \src{rtl/mem/rv32i_dcache.sv} & \ok{} Complete \\
+Cache arbiter & \src{rtl/mem/rv32i_cache_arbiter.sv} & \ok{} Complete \\
+IF stage (cache IF) & \src{rtl/cpu/core/pipeline/rv32i_pipeline_if.sv} &
+\ok{} Complete \\
+MEM stage (cache IF + FENCE.I) &
+\src{rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv} & \ok{} Complete \\
+Hazard unit (renamed stalls) & \src{rtl/cpu/core/rv32i_hazard_unit.sv} &
+\ok{} Complete \\
+Core (cache integration) & \src{rtl/cpu/core/rv32i_core.sv} & \ok{}
+Complete \\
+Pipeline package (fence\_i field) &
+\src{rtl/cpu/core/rv32i_pipeline_pkg.sv} & \ok{} Complete \\
+Decoder (FENCE.I) & \src{rtl/cpu/core/rv32i_decode.sv} & \ok{}
+Complete \\
+\end{longtable}
+}
+
+\textbf{Architecture Decisions Implemented (2026-03-08)}:
+
+\begin{itemize}
+\tightlist
+\item
+  OQ-1: \ok{} Direct-mapped (1-way) associativity
+\item
+  OQ-2: \ok{} 16-byte cache line (4 words, 4 AXI transactions per
+  refill)
+\item
+  OQ-3: \ok{} Write-back + write-allocate for D-cache
+\item
+  OQ-4: \ok{} No AXI burst --- 4 separate AXI4-Lite transactions per
+  refill
+\item
+  OQ-5: \ok{} 75 MHz target on Sky130 (matches Phase 2 achieved
+  frequency)
+\item
+  OQ-6: \ok{} Blocking cache (stall pipeline on every miss)
+\end{itemize}
+
+\textbf{Bug Fixes Landed (2026-05-21)}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} PDN \code{pdn_asap7.tcl} --- GND nets removed from
+  \code{-secondary_power} (API bug \#35)
+\item
+  \ok{} I-cache AXI cancel race --- \code{cancel_ar_q} +
+  \code{cancel_wait_r_q} flags added (bug \#36): three timing races
+  fixed: R-same-cycle-as-cancel, AR-accepted-same-cycle-as-cancel, AXI
+  A3.2.1 arvalid-no-retract compliance
+\item
+  \ok{} D-cache CS\_REFILL --- audit comment added confirming no
+  equivalent cancel race
+\end{itemize}
+
+\textbf{Verification Results} (2026-05-21):
+
+{
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+Suite & Tests & Result \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+I-Cache unit tests (\texttt{make\ icache}) & 7/7 & \ok{} PASS \\
+D-Cache unit tests (\texttt{make\ dcache}) & 8/8 & \ok{} PASS \\
+Cache integration (\texttt{make\ cache\_\allowbreak{}integration}) & 5/5
+& \ok{} PASS \\
+Phase 2 full regression (\texttt{make\ test}) & 119/119 & \ok{} PASS \\
+\textbf{Total} & \textbf{139/139} & \textbf{\ok{} ALL PASS} \\
+\end{longtable}
+}
+
+\textbf{Achieved frequency}: 75 MHz on Sky130 130nm (ASAP7 runs 1--43
+logged in \cref{cr:run:asap7-cpu})
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 4: GPU-Lite Compute Engine \ok{}
+COMPLETE}{Phase 4: GPU-Lite Compute Engine  COMPLETE}}\label{cr:status:phase-status:phase-4-gpu-lite-compute-engine-white-check-mark-complete}
+
+\begin{record}
+
+\textbf{Status}: \ok{} COMPLETE (2026-05-27) --- all GPU tests green,
+1,000-kernel random regression pass, ASAP7 PD sign-off
+
+\begin{quote}
+\textbf{Note 2026-10-10 (bead \bead{47lf}, \ghref{254})}: the Phase 4 "all
+GPU tests green" sign-off did not exercise \code{BLOCK_X} above 56 ---
+no multi-warp test compared RTL against a model, and \code{gpu_top}
+silently ran only 7 of 8 warps for \code{BLOCK_X} 57..64 (warp 7 never
+executed). Fixed in \src{rtl/gpu} (\code{WARP_CNT_W}); 64-thread
+operation is verified from that date (\code{kernel_block_warps.py}, all
+64 lanes vs \code{GpuRefModel}). The ASAP7 \code{gpu_top} macro views
+were hardened from the pre-fix RTL and are not re-hardened (see
+\cref{cr:run:asap7-gpu}).
+
+\textbf{Note 2026-10-11 (bead \bead{6hy6})}: the three \code{BLOCK_X}
+cases left by \code{47lf} are now defined and fixed: \code{BLOCK_X} 0 or
+\textgreater{} 64 raises GPU ERROR at launch (reusing the \code{q6w0}
+ERROR path), the block limit is 64 threads (the spec text saying 256 was
+wrong), and a partial last warp starts with only its valid lanes active.
+See \cref{cr:fix:fixes-index:17-gpu-block-x-launch-contract-zero-hang-64-truncation-partial-warp-lanes-bead-6hy6}.
+\end{quote}
+
+\textbf{Prerequisites}: \ok{} Phase 3 exit criteria met (2026-05-21)
+
+\textbf{RTL Modules} (9/9 complete):
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*291/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*543/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*146/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Module
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+File
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+GPU top & \src{rtl/gpu/gpu_top.sv} & \ok{} Complete \\
+Command queue & \src{rtl/gpu/gpu_command_queue.sv} & \ok{} Complete \\
+Warp scheduler & \src{rtl/gpu/warp_scheduler.sv} & \ok{} Complete \\
+Compute unit & \src{rtl/gpu/gpu_compute_unit.sv} & \ok{} Complete \\
+Vector register file & \src{rtl/gpu/vector_register_file.sv} & \ok{}
+Complete \\
+Vector ALU & \src{rtl/gpu/vector_alu.sv} & \ok{} Complete \\
+Memory unit & \src{rtl/gpu/gpu_memory_unit.sv} & \ok{} Complete \\
+Memory coalescer & \src{rtl/gpu/memory_coalescer.sv} & \ok{} Complete \\
+Shared memory & \src{rtl/gpu/shared_memory.sv} & \ok{} Complete \\
+\end{longtable}
+}
+
+\textbf{Verification Results} (2026-05-23):
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*630/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*257/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*93/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Suite
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Tests
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Result
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+GPU unit tests (\texttt{make\ gpu\_\allowbreak{}unit}) & all & \ok{}
+PASS \\
+GPU kernel tests (\texttt{make\ gpu\_\allowbreak{}kernels}) & all &
+\ok{} PASS \\
+CPU-GPU handoff (\code{test_cpu_gpu_handoff.py}) & 1/1 & \ok{} PASS \\
+CPU re-gate (\texttt{make\ test} +
+\texttt{make\ random\_\allowbreak{}uvm}) & 140/140 + 100k instr & \ok{}
+PASS \\
+GPU random regression (\texttt{make\ gpu\_\allowbreak{}random}) & 1,000
+kernels & \ok{} PASS \\
+\end{longtable}
+}
+
+\textbf{Physical Design} (2026-05-28):
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} ASAP7 sign-off: \textbf{571 MHz (1.75 ns) / 262 mW / 115,600 µm²
+  die / 60,500 µm² stdcell / 70\% util} \warn{} unvalidated,
+  STA-zero-wire (bead \bead{8f3}/\code{0p6}); GPU run artifacts wiped,
+  re-validation deferred (host cost estimate: several hours / 9--14+
+  GiB) --- \cref{cr:run:asap7-gpu}
+\item
+  \ok{} Setup WS +197.3 ps (0 violations), Hold WS +16.3 ps (0
+  violations), slew/\allowbreak{}cap/\allowbreak{}fanout 0, antenna 0
+\item
+  \ok{} Run: \code{pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/}
+  (supersedes 500 MHz \code{RUN_2026-05-27_11-16-37})
+\item
+  \ok{} Constraints: \src{pnr/asap7/gpu/constraints/asap7_gpu.sdc}; full
+  history: \cref{cr:run:asap7-gpu}
+\end{itemize}
+
+\textbf{Phase 4 sign-off frequency is 571 MHz} --- the
+\code{CLOCK_PERIOD} 2.0→1.75 ns stretch push closed clean
+(\code{RUN_2026-05-28_06-29-48}), upgrading the GPU signoff from the
+prior 500 MHz \code{RUN_2026-05-27_11-16-37} (now superseded). Hold is
+clean at +16.3 ps / 0 viol at the final stage; the prior 500 MHz
+run\textquotesingle s \code{final/metrics.json} showed hold −212 ps /
+368 viol.
+
+\textbf{Signoff caveats} (deferred to Phase-5 SoC PD, same as the prior
+run): PDN connectivity not closed (\code{PSM-0069} / \code{PDN-0179},
+9.56 M grid viol --- identical to the 500 MHz run); 325 \code{DRT-0074}
+on top-level I/O ports only (0 internal-net DRC); timing is post-GRT
+estimated (\code{STAPostPNR} + \code{RCX} gated off --- same methodology
+as prior run). A confirmation re-run with post-PnR STA + RCX enabled is
+recommended before locking the number.
+
+\textbf{Step-37 runtime note}: \code{repair_design_postgrt} is the
+bottleneck (\textasciitilde18.9 h single-threaded --- runs GRT twice + a
+multi-thousand-iteration repair loop on \textasciitilde485 K instances).
+Mitigation: \code{DRT_THREADS} 4→12 (\src{pnr/asap7/gpu/config.json}).
+
+\textbf{Macro views}: signoff DB exported for Phase-5 SoC via
+\texttt{make\ macro-\allowbreak{}views-\allowbreak{}asap7\ BLOCK=\allowbreak{}gpu}
+→
+\texttt{pnr/\allowbreak{}asap7/\allowbreak{}gpu/\allowbreak{}macro/\allowbreak{}\{gpu\_\allowbreak{}top.\allowbreak{}lef,\allowbreak{}\ *.\allowbreak{}lib,\allowbreak{}\ gpu\_\allowbreak{}top.\allowbreak{}nl.\allowbreak{}v.\allowbreak{}gz\}}
+(netlist gzipped to clear GitHub\textquotesingle s 100 MB limit;
+\texttt{gunzip\ -\allowbreak{}k} to restore).
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 5: SoC Integration
+\ok{}}{Phase 5: SoC Integration }}\label{cr:status:phase-status:phase-5-soc-integration-white-check-mark}
+
+\begin{record}
+
+\textbf{Status}: COMPLETE (2026-06-24) --- M1--M12 done. M11 ASAP7 SoC
+P\&R signed off 571 MHz / 62.9 mW / 520×520 µm / 65.6 \% util / 0 DRC /
+0 antenna \warn{} timing/\allowbreak{}power unvalidated
+post-bead-\code{8f3} (see top of this file)
+(\cref{cr:run:phase5}). Milestone detail in
+\src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (golden spec)
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*80/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*450/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*450/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Milestone
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Scope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+M1 & AXI4/\allowbreak{}AXI-Lite shared package & \ok{} 2026-05-31
+(lint-clean) \\
+M2 & Cache refill FSMs → AXI4 burst & \ok{} 2026-05-31 (146/146
+tests) \\
+M3 & AXI4 crossbar + AXI-Lite interconnect & \ok{} 2026-05-31 (16/16
+tests) \\
+M4 & UART / SPI / timer / IRQ controller & \ok{} 2026-06-01 \\
+M5 & DMA engine & \ok{} 2026-06-01 (6/6 tests) \\
+M6 & Behavioral SRAM controller & \ok{} 2026-06-01 (7/7 tests) \\
+M7 & Performance counters (CSR + AXI-Lite GPU stats) & \ok{} 2026-06-02
+(CPU re-sign-off 1282 MHz) \\
+M8 & SoC top integration (\src{rtl/soc/soc_top.sv}) & \ok{} 2026-06-02
+(lint-clean) \\
+M9 & SoC verification --- foundation slice (boot 100/100) & \ok{}
+2026-06-03 (\prref{65}) \\
+M9 & Fast-follows: CPU→GPU kernel launch, SW coherency,
+DMA/\allowbreak{}peripheral loopback, SRAM readback, 1M-cycle random,
+benchmarks & \ok{} 2026-06-24 (1,079,867 cyc, 0 fail) \\
+M10 & L2 cache decision gate (needs M9 benchmarks) & \ok{} 2026-06-21
+--- \textbf{NO-GO} (\src{docs/M10_L2_DECISION_ANALYSIS.md}) \\
+M11 & SoC P\&R + STA (\code{phase5_soc.sdc}/\code{.upf}) & \ok{}
+2026-06-24 \warn{} figures unvalidated, bead \bead{0p6} \\
+M12 & Sign-off + documentation & \ok{} 2026-06-24 \\
+\end{longtable}
+}
+
+}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 6: IP Expansion \ok{} COMPLETE
+(2026-10-05)}{Phase 6: IP Expansion  COMPLETE (2026-10-05)}}\label{cr:status:phase-status:phase-6-ip-expansion-white-check-mark-complete-2026-10-05}
+
+\begin{record}
+
+\textbf{Golden spec}: \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (added
+2026-09-28, bead \bead{f7vs.1}). \textbf{Tracking}: bead epic
+\code{claude_verilog_test-f7vs}. \textbf{Definition of done, per item}:
+RTL + cocotb verification + SoC integration. Physical design is a
+separately batched gate (Gate A synthesis probe per item; Gate B one
+Sky130 harden), not per-item.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*49/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*363/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*115/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*79/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*375/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Item
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Scope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+APB idx / IRQ bit
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Bead
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+6a-1 & GPIO controller, 32 pins & 7 / 5 & \code{ckc}, \code{00ef} &
+\ok{} 2026-09-26 (Sky130-hardened; LVS PASS, DRC 0, setup+hold clean
+9/9) \\
+G1 & Golden spec + ROADMAP bus/\allowbreak{}numbering corrections & ---
+& \code{f7vs.1} & \ok{} 2026-09-28 \\
+G2 & APB window + IRQ source pre-allocation & --- & \code{f7vs.2} &
+\ok{} 2026-09-28 (\prref{197}) \\
+G3 & \code{tb_soc_top.sv} ports + SDC exceptions, one forced clean & ---
+& \code{f7vs.3} & \ok{} 2026-09-28 (\prref{197}) \\
+G4 & File-list checker + first \code{apb_interconnect} unit suite & ---
+& \code{f7vs.4} & \ok{} 2026-09-28 (\prref{197}) \\
+G5 & This section + de-staled Next Actions & --- & \code{f7vs.5} & \ok{}
+2026-09-28 (\prref{197}) \\
+6a-2 & PWM controller, 4 channels & 8 / 6 & \code{f7vs.6} & \ok{}
+2026-09-28 (RTL + 16/16 L1 + soc\_pwm L2; \code{soc_all_ci} 279) \\
+6a-3 & Watchdog timer & 9 / 7 & \code{f7vs.7} & \ok{} 2026-09-29 (RTL +
+22/22 L1 + soc\_wdt L2 incl. RST\_EN reset path; \code{soc_all_ci}
+303) \\
+6a-4 & TRNG (portable LFSR entropy; RO source Sky130-only) & 10 / 8 &
+\code{f7vs.8} & \ok{} 2026-10-01 (RTL bit-exact vs Python model + 22/22
+L1 + soc\_trng L2; \code{soc_all_ci} 326) \\
+6a-5 & I2C master controller & 11 / 9 & \code{f7vs.9} & \ok{} 2026-10-03
+(RTL + bit engine + \code{i2c_slave} BFM + 46/46 L1 + soc\_i2c L2; \prref{208}; \code{soc_all_ci} 394) \\
+6b & CRYPTO --- AES-128 (ECB+CTR) + SHA-256 & 12 / 10 & \code{f7vs.10} &
+\ok{} 2026-10-03 (RTL 3 files + 41/41 L1 + soc\_\allowbreak{}crypto L2 +
+\textbf{Gate A run}: 277 875 µm² ≈ 28 \% of SoC stdcell area --- first
+recorded as 3.59 \% against a stdcell+macro denominator, corrected
+2026-10-04 --- +14.04 ns ss @ 25 ns) \\
+6c & INT8 NPU, 4×4 weight-stationary, 4 KB weight SRAM & 13 / 11 &
+\code{f7vs.11} & \ok{} 2026-10-04 (RTL 3 files + 39/39 L1 + soc\_npu L2
++ mutation 65 mutants: 55 killed, 10 provably equivalent, 0 gaps +
+\textbf{Gate A}: 203 179 µm² stdcell ≈ 20 \% of SoC stdcell + 4 KB
+macro, +1.84 ns ss @ 25 ns) \\
+Gate B & Batched Sky130 SoC harden with all Phase 6 IP & --- &
+\code{f7vs.15} & \ok{} 2026-10-05 (\code{RUN_2026-10-05_06-50-11}, \prref{214}): setup met at all 9 corners (worst max\_ss +0.579 ns), hold 0
+violators, Netgen LVS clear, routing DRC 0, 81.0 mW total, 44.8 \% util;
+antenna 210 nets / 305 pins accepted by user decision; \code{e45j}
+slew/cap recorded, not a Phase 6 exit criterion. Source:
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} §8, run 2 \\
+\end{longtable}
+}
+
+}
+
+Three documentation defects were corrected when the golden spec landed:
+AES/SHA is \textbf{APB4}, not AXI4-Lite (\code{ROADMAP.md:431} (\cref{cr:status:roadmap}) was a
+survivor of the pre-2026-09-20 text); the AES throughput figures
+describe a \textbf{deferred AXI4-master version}, not what 6b lands; and
+the TRNG \textbf{RTL is portable} --- only its ring-oscillator entropy
+source is Sky130-exclusive.
+
+\warn{} \textbf{ASAP7 is out of scope for all of Phase 6},
+triple-blocked on beads \code{ma7} (proven Synlig \code{OPT_MUXTREE}
+miscompile in the CPU/GPU macro netlists), \code{lxv}
+(routing-congestion regression) and \code{2kn} (needs a ≥32 GB host;
+this one has \textasciitilde15 GB). Every peripheral still goes into the
+ASAP7 sv2v file list, enforced by
+\src{tools/verif/check_periph_filelists.py}, so unblocking is a re-run
+rather than a porting exercise.
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 7: Mixed-Signal PLL Clock Generator
+\wip{}}{Phase 7: Mixed-Signal PLL Clock Generator }}\label{cr:status:phase-status:phase-7-mixed-signal-pll-clock-generator-construction}
+
+\begin{record}
+
+\textbf{Status}:
+M-a/\allowbreak{}M-b1/\allowbreak{}M-b2/\allowbreak{}M-c \ok{} complete
+(2026-06-20); M-d = documentation (this update). Golden spec:
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md}.
+
+Dual-PDK charge-pump integer-N PLL (ring VCO) designed end-to-end via
+the analog-design orchestrator agents, integrated into the SoC as the
+clock source via a PDK-agnostic real-number model (RNM). Doubled as a
+validation run of the analog-design agent suite (real
+ngspice/\allowbreak{}magic/\allowbreak{}netgen ran; closed-loop meta fix
+loop + adversarial physical verification both added value --- the latter
+caught a false DRC pass).
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*83/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*467/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*430/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Milestone
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Scope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+M-a & Analog infra (\code{analog} devshell) + dual-PDK PLL architecture
++ modeling & \ok{} \\
+M-b1 & ASAP7 variant: circuit + ngspice --- 100 MHz→1.282 GHz, N=13, 0.7
+V & \ok{} (electrical \textbf{indicative}: BSIM4 substitute, no
+BSIM-CMG) \\
+M-b2 & Sky130 variant: real \code{sky130_fd_pr} circuit/\allowbreak{}sim
++ magic layout --- 10→100 MHz, N=10, 1.8 V; \textbf{CP-block DRC=0 +
+netgen LVS MATCH} & \ok{} (CP block;
+VCO/\allowbreak{}LF/\allowbreak{}BIAS regen \hold{}) \\
+M-c & SoC integration (\src{rtl/soc/pll/}): clock seam, AXI-Lite slave
+@0x2000\_\allowbreak{}7000 (\code{AXIL_N_SLAVES} 6→7), 2 RTL bugs fixed,
+cosim 7/7 + regression & \ok{} \\
+M-d & Phase 7 documentation
+(plan/\allowbreak{}roadmap/\allowbreak{}status/\allowbreak{}CLAUDE.md) &
+\ok{} 2026-06-20 \\
+\end{longtable}
+}
+
+}
+
+\textbf{Real vs indicative}: Sky130 CP block carries \textbf{real}
+DRC+LVS sign-off; ASAP7 electrical is \textbf{indicative} (no BSIM-CMG
+FinFET models in open ngspice). \textbf{Follow-ups}: Sky130 full-chip
+DRC/LVS (mechanical VCO/\allowbreak{}LF/\allowbreak{}BIAS PDK-generator
+regen) and the RNM-mode AXI CDC synchroniser. Two RTL bugs found+fixed:
+PLL bootstrap deadlock (regs were on the gated core domain → moved to
+ref \code{clk_i}, default-enable \code{CONTROL[0]}) and
+\code{PERIPH_LIMIT} decode hole (0x2000\_\allowbreak{}6FFF →
+0x2000\_\allowbreak{}7FFF).
+
+\end{record}
+
+\subsection{Recent Project Changes}\label{cr:status:phase-status:recent-project-changes}
+
+\subsubsection{2026-06-20: Phase 7 Mixed-Signal PLL --- M-a..M-c
+complete, M-d docs}\label{cr:status:phase-status:2026-06-20-phase-7-mixed-signal-pll-m-am-c-complete-m-d-docs}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Dual-PDK charge-pump integer-N PLL (ring VCO) designed
+  end-to-end via the analog-design orchestrator agents.
+\item
+  \ok{} ASAP7 variant (indicative): 100 MHz→1.282 GHz, N=13, 0.7 V;
+  electrical via calibrated planar BSIM4 substitute (no BSIM-CMG in open
+  ngspice).
+\item
+  \ok{} Sky130 variant (real): 10→100 MHz, N=10, 1.8 V, real
+  \code{sky130_fd_pr}; Kvco 530 MHz/V; CP UP/DN mismatch 4.78\%→0.37\%
+  (independent bias legs); behavioral lock 100.000 MHz / 1.38 µs; real
+  magic layout + \textbf{CP-block DRC=0 + netgen LVS MATCH} (4 pfet + 1
+  nfet extracted). Adversarial PV caught a false DRC pass (hand-drawn
+  geometry 50× too small → 0 FETs).
+\item
+  \ok{} SoC integration (\src{rtl/soc/pll/}): clock seam
+  (\code{clk_i}→PLL ref→\code{core_clk},
+  \texttt{core\_\allowbreak{}rst\_\allowbreak{}n\ =\allowbreak{}\ rst\_\allowbreak{}n\_\allowbreak{}i\ \&\ pll\_\allowbreak{}locked}),
+  AXI-Lite slave @0x2000\_\allowbreak{}7000 (\code{AXIL_N_SLAVES} 6→7).
+  Cosim 7/7 (\code{test_pll_lock} 3/3 + \code{test_pll_regs} 4/4) +
+  boot/\allowbreak{}periph regression clean.
+\item
+  \ok{} Two RTL bugs found+fixed: PLL bootstrap deadlock (regs on gated
+  core domain → ref \code{clk_i} + default-enable \code{CONTROL[0]});
+  \code{PERIPH_LIMIT}
+  0x2000\_\allowbreak{}6FFF→0x2000\_\allowbreak{}7FFF.
+\item
+  \hold{} Follow-ups: Sky130 full-chip DRC/LVS
+  (VCO/\allowbreak{}LF/\allowbreak{}BIAS PDK-generator regen) and
+  RNM-mode AXI CDC synchroniser.
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-05-21: Phase 3 COMPLETE
+\ok{}}{2026-05-21: Phase 3 COMPLETE }}\label{cr:status:phase-status:2026-05-21-phase-3-complete-white-check-mark}
+
+\begin{record}
+
+\textbf{All exit criteria met --- 139/139 tests passing}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 10/10 Phase 3 RTL modules implemented (cache\_\allowbreak{}pkg,
+  icache, dcache, cache\_\allowbreak{}arbiter, 6 modified pipeline
+  files)
+\item
+  \ok{} Bug fixes: PDN secondary\_\allowbreak{}power API (\#35), I-cache
+  AXI cancel race with 3 sub-cases (\#36)
+\item
+  \ok{} I-cache unit tests: 7/7 PASS (\texttt{make\ icache}) --- hit,
+  miss, conflict, FENCE.I, latency, boundary
+\item
+  \ok{} D-cache unit tests: 8/8 PASS (\texttt{make\ dcache}) ---
+  read/\allowbreak{}write hit/miss, dirty eviction, strobes, latency
+\item
+  \ok{} Cache integration tests: 5/5 PASS
+  (\texttt{make\ cache\_\allowbreak{}integration}) --- locality,
+  load-after-store, FENCE.I self-modifying code, conflict stress, warmup
+  IPC
+\item
+  \ok{} Phase 2 full regression: 119/119 PASS (no regressions from Phase
+  3 RTL changes)
+\item
+  \ok{} Makefile fix: \code{PYTHON3=/usr/bin/python3} (system Python
+  3.10 matches \code{PYTHONHOME=/usr}; nix Python 3.11 was mismatched)
+\item
+  \ok{} Test timing fix: 4 tests updated to use
+  \code{_fetch()}/\code{_read()}/\code{_write()} helpers (5-state SRAM
+  pipeline takes 3 cycles for a hit from CS\_DONE, not 1)
+\item
+  \textbf{TOTAL: 139/139 tests (119 Phase 2 + 20 Phase 3), 0 failures}
+\item
+  \textbf{Branch}: \code{bug-fix-35-36} → ready to merge to \code{main}
+\end{itemize}
+
+\end{record}
+
+\subsubsection{2026-03-08: Phase 3 RTL Implementation Started}\label{cr:status:phase-status:2026-03-08-phase-3-rtl-implementation-started}
+
+\begin{record}
+
+\textbf{Phase 3 kicked off}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} PHASE3\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md approved
+  --- all 6 open questions resolved
+\item
+  \ok{} Phase 2 marked complete --- 75 MHz achieved on Sky130 130nm
+\item
+  \wip{} Phase 3 RTL implementation in progress (cache package, I-cache,
+  D-cache, arbiter)
+\item
+  \wip{} Python cache reference model development started
+  (\src{tb/models/cache_model.py})
+\end{itemize}
+
+\textbf{Architecture highlights}:
+
+\begin{itemize}
+\tightlist
+\item
+  I-Cache: 4 KB direct-mapped, 16-byte lines, 256 sets; read-only;
+  FENCE.I invalidation
+\item
+  D-Cache: 4 KB direct-mapped, 16-byte lines, 256 sets; write-back +
+  write-allocate
+\item
+  External interface: 4 sequential AXI4-Lite transactions per refill (no
+  burst)
+\item
+  Cache arbiter: D-cache priority over I-cache (replaces Phase 2 AXI
+  arbiter)
+\item
+  Target frequency: 75 MHz on Sky130 130nm
+\end{itemize}
+
+\end{record}
+
+\subsubsection{2026-02-27: Phase 2 Comprehensive Verification COMPLETE}\label{cr:status:phase-status:2026-02-27-phase-2-comprehensive-verification-complete}
+
+\begin{record}
+
+\textbf{All 7 test suites passing, 50,000 random instructions verified}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} smoke\_\allowbreak{}uvm: 4/4 PASS
+\item
+  \ok{} isa\_uvm: 54/54 PASS --- full RV32I ISA + Zicsr (CSR)
+  instructions
+\item
+  \ok{} pipeline\_\allowbreak{}hazards: 16/16 PASS ---
+  RAW/\allowbreak{}control hazards, EX/MEM/WB forwarding
+\item
+  \ok{} interrupts: 12/12 PASS --- timer/ext IRQ delivery, MIE gating,
+  MRET, IRQ latency ≤3 cycles
+\item
+  \ok{} debug: 6/6 PASS --- single-step, breakpoints, GPR/PC write,
+  register reads
+\item
+  \ok{} axi\_\allowbreak{}protocol: 12/12 PASS --- back-pressure, error
+  injection, protocol compliance
+\item
+  \ok{} fault\_\allowbreak{}injection: 7/7 PASS --- misaligned access,
+  illegal instruction, AXI fetch error
+\item
+  \ok{} Random regression: 500 seeds × 100 instructions = \textbf{50,000
+  instructions, 0 failures}
+\item
+  \textbf{TOTAL: 111/111 Phase 2 tests passing}
+\end{itemize}
+
+\textbf{Infrastructure improvements}:
+
+\begin{itemize}
+\tightlist
+\item
+  Created \src{tb/cocotb/cpu/phase2_test_utils.py} --- shared APBDebug +
+  setup helpers
+\item
+  Added Phase 2 Makefile targets (\code{pipeline_hazards},
+  \code{interrupts}, \code{axi_protocol}, \code{fault_injection},
+  \code{phase2_all})
+\item
+  Added 2 new pipeline hazard tests (\code{test_back_to_back_stores},
+  \code{test_jal_rd_dependency})
+\item
+  Fixed \code{test_csr_mstatus_mie_gate}: DBG\_\allowbreak{}MSTATUS (APB
+  0x200) is READ-ONLY per RTL design
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-02-16: Phase 2 RTL Implementation
+COMPLETE \ok{}}{2026-02-16: Phase 2 RTL Implementation COMPLETE }}\label{cr:status:phase-status:2026-02-16-phase-2-rtl-implementation-complete-tada}
+
+\begin{record}
+
+\textbf{All 14 RTL modules implemented}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 5-stage pipeline modules (IF, ID, EX, MEM, WB)
+\item
+  \ok{} Hazard detection and forwarding units
+\item
+  \ok{} CSR file and interrupt controller
+\item
+  \ok{} AXI arbiter for IF/MEM priority
+\item
+  \ok{} Phase 1 modules reused (ALU, regfile, imm\_gen,
+  branch\_\allowbreak{}comp)
+\item
+  \ok{} Initial regression: 115/115 tests passing
+\item
+  \wip{} Comprehensive verification in progress
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-02-14: Phase 2 Architecture Approved
+\ok{}}{2026-02-14: Phase 2 Architecture Approved }}\label{cr:status:phase-status:2026-02-14-phase-2-architecture-approved-tada}
+
+\begin{record}
+
+\textbf{Architecture specification finalized}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} All 7 open questions resolved
+\item
+  \ok{} 5-stage pipeline design approved
+\item
+  \ok{} Interrupt support (M-mode, timer + external)
+\item
+  \ok{} CSR instructions
+  (CSRRW/\allowbreak{}S/\allowbreak{}C/\allowbreak{}I variants)
+\item
+  \ok{} Hazard handling strategy defined
+\item
+  \ok{} Debug interface updated for pipeline drain
+\item
+  \ok{} RTL implementation authorized
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-02-13: Phase 1 Verification COMPLETE
+\ok{}}{2026-02-13: Phase 1 Verification COMPLETE }}\label{cr:status:phase-status:2026-02-13-phase-1-verification-complete-tada}
+
+\begin{record}
+
+\textbf{All 9/9 exit criteria met}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Tasks 5, 6, 7 complete --- debug interface tests (6/6), coverage
+  (37/37 instructions, 8/8 states), documentation
+\item
+  \ok{} Phase 1 RTL implementation confirmed complete (8/8 modules,
+  \textasciitilde1,900 lines)
+\item
+  \ok{} All verification suites passing with 0 failures
+\item
+  \ok{} Ready to begin Phase 2 (5-stage pipelined CPU)
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-02-07: Task 4 Complete --- AXI
+Protocol Tests
+\ok{}}{2026-02-07: Task 4 Complete --- AXI Protocol Tests }}\label{cr:status:phase-status:2026-02-07-task-4-complete-axi-protocol-tests-tada}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 11/11 AXI4-Lite protocol tests implemented and passing
+\item
+  \ok{} Back-pressure, error injection, and protocol compliance
+  categories covered
+\item
+  \ok{} \src{tb/cocotb/cpu/axi_models.py} (380 lines) +
+  \code{test_axi_protocol.py} (860 lines)
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-01-28: Task 3 Complete --- Random
+Instruction Tests
+\ok{}}{2026-01-28: Task 3 Complete --- Random Instruction Tests }}\label{cr:status:phase-status:2026-01-28-task-3-complete-random-instruction-tests-tada}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 10,000 random instructions (100 seeds × 100 instructions), 0
+  failures
+\item
+  \ok{} \src{tb/generators/rv32i_instr_gen.py} implemented
+\item
+  \ok{} \code{tb/cocotb/cpu/test_random_instructions.py} with multi-seed
+  support
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-01-26: Task 2 Complete --- ISA
+Compliance Tests
+\ok{}}{2026-01-26: Task 2 Complete --- ISA Compliance Tests }}\label{cr:status:phase-status:2026-01-26-task-2-complete-isa-compliance-tests-tada}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} All 37/37 RV32I instructions tested and passing
+\item
+  \ok{} Major RTL bugs fixed (branch/\allowbreak{}jump timing, load data
+  latching, register file reads)
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-01-18: Phase 0 APPROVED - Ready for
+Phase 1 \ok{}}{2026-01-18: Phase 0 APPROVED - Ready for Phase 1 }}\label{cr:status:phase-status:2026-01-18-phase-0-approved-ready-for-phase-1-tada}
+
+\begin{record}
+
+\textbf{Phase 0 Exit Criteria Met}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} All 7 specifications reviewed and approved by human
+\item
+  \ok{} Python reference models validated (66/66 tests passing)
+\item
+  \ok{} cocotb test infrastructure reviewed and approved
+\item
+  \ok{} Project ready to transition to Phase 1 RTL implementation
+\end{itemize}
+
+\textbf{Authorization}: Phase 1 RTL development may now begin per
+PHASE1\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md
+
+\end{record}
+
+\subsubsection{\texorpdfstring{2026-01-18: Phase 0 Implementation
+Complete \ok{}}{2026-01-18: Phase 0 Implementation Complete }}\label{cr:status:phase-status:2026-01-18-phase-0-implementation-complete-white-check-mark}
+
+\begin{record}
+
+\textbf{Python Reference Models}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} \src{tb/models/memory_model.py} - Sparse memory model with
+  alignment checking (157 lines, 21 tests)
+\item
+  \ok{} \src{tb/models/rv32i_model.py} - Instruction-accurate RV32I CPU
+  model (450+ lines, 33 tests)
+\item
+  \ok{} \src{tb/models/gpu_kernel_model.py} - SIMT GPU execution model
+  (450+ lines, 12 tests)
+\item
+  \ok{} All 66 unit tests passing
+\end{itemize}
+
+\textbf{cocotb Test Infrastructure}:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} \src{tb/cocotb/bfm/axi4lite_master.py} - AXI4-Lite master BFM
+  (200+ lines)
+\item
+  \ok{} \src{tb/cocotb/bfm/apb3_master.py} - APB3 master BFM with debug
+  interface (250+ lines)
+\item
+  \ok{} \src{tb/cocotb/common/scoreboard.py} - RTL vs reference model
+  comparison (130+ lines)
+\item
+  \ok{} \src{tb/cocotb/common/clock_reset.py} - Clock and reset
+  utilities
+\item
+  \ok{} \src{tb/cocotb/cpu/test_example_counter.py} - Example test (3/3
+  tests passing)
+\item
+  \ok{} \src{tb/cocotb/cpu/test_smoke.py} - CPU smoke tests (6/6 tests
+  passing)
+\item
+  \ok{} \code{tb/cocotb/cpu/test_isa_compliance.py} - ISA compliance
+  tests (33/37 passing)
+\item
+  \ok{} Complete documentation (README.md,
+  COCOTB\_\allowbreak{}SETUP\_\allowbreak{}SUMMARY.md)
+\end{itemize}
+
+\textbf{Issues Resolved}:
+
+\begin{itemize}
+\tightlist
+\item
+  Fixed Makefile clean target conflicts
+\item
+  Updated to cocotb 2.0 API (logging changes)
+\item
+  Fixed test timing issues in counter disable test
+\end{itemize}
+
+\textbf{Phase 0 Status}: \ok{} COMPLETE - All specifications, reference
+models, and infrastructure approved (2026-01-18)
+
+\end{record}
+
+\subsubsection{2026-01-17: Phase 0 Documentation Complete}\label{cr:status:phase-status:2026-01-17-phase-0-documentation-complete}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} All 7 specification documents finalized
+\item
+  \ok{} MEMORY\_\allowbreak{}MAP.md aligned to 4 KB minimum regions
+\item
+  \ok{} All known documentation issues resolved
+\item
+  Ready to proceed with Python reference model implementation
+\item
+  Phase 0 specifications ready for human review
+\end{itemize}
+
+\end{record}
+
+\subsubsection{2026-01-17: Specification Alignment}\label{cr:status:phase-status:2026-01-17-specification-alignment}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Identified documentation gaps
+\item
+  Created phase status tracking
+\item
+  Aligning all specifications with current project state
+\end{itemize}
+
+\end{record}
+
+\subsubsection{2026-01-16: Project Restart}\label{cr:status:phase-status:2026-01-16-project-restart}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Removed previous RTL implementation
+\item
+  Starting fresh with specification-driven approach
+\item
+  Commit:
+  \texttt{1b4bb3b\ [Code]\ Remove\ database\ to\ restart\ project}
+\end{itemize}
+
+\end{record}
+
+\subsection{Known Issues}\label{cr:status:phase-status:known-issues}
+
+\subsubsection{\texorpdfstring{\ok{} Resolved
+(2026-01-17)}{ Resolved (2026-01-17)}}\label{cr:status:phase-status:white-check-mark-resolved-2026-01-17}
+
+\begin{record}
+
+All previous specification issues have been resolved:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \ok{} \textbf{CLAUDE.md RTL references} - All RTL references properly
+  labeled as "Planned Architecture (Phase 1)"
+\item
+  \ok{} \textbf{RTL\_\allowbreak{}DEFINITION.md protocol details} - Now
+  includes AXI4-Lite (ARM IHI 0022E) and APB3 (ARM IHI 0024C)
+  specifications
+\item
+  \ok{} \textbf{GPU specification} -
+  PHASE4\_\allowbreak{}GPU\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md
+  created (520 lines)
+\item
+  \ok{} \textbf{Reference model specification} -
+  REFERENCE\_\allowbreak{}MODEL\_\allowbreak{}SPEC.md created (596
+  lines)
+\item
+  \ok{} \textbf{Memory map} - MEMORY\_\allowbreak{}MAP.md created (360
+  lines) with 4 KB minimum alignment
+\item
+  \ok{} \textbf{Verification plan phase alignment} - Restructured by
+  phases (Phase 0-5 sections)
+\item
+  \ok{} \textbf{Interrupt support clarity} - Clearly stated as Phase 2+
+  in \cref{cr:status:roadmap}
+\end{enumerate}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{\wip{} Current Issues}{ Current Issues}}\label{cr:status:phase-status:arrows-counterclockwise-current-issues}
+
+\begin{record}
+
+\textbf{None} - All Phase 0 documentation and implementation complete
+
+\end{record}
+
+\subsection{Next Actions}\label{cr:status:phase-status:next-actions}
+
+\subsubsection{\texorpdfstring{Immediate --- DFT (\code{j41m}) and FPGA
+(\code{hlrm})}{Immediate --- DFT () and FPGA ()}}\label{cr:status:phase-status:immediate-dft-j41m-and-fpga-hlrm}
+
+\begin{record}
+
+\textbf{Phases 0--6 are complete.} Phase 6 closed 2026-10-05 (Gate B).
+Phase 7 M-a..M-c complete 2026-06-20.
+
+\textbf{Current priority}: finish DFT Stage 1a (bead \bead{j41m.2},
+still open; \code{j41m.9} is its GPU scan-reset test gap), then Stage 2
+scan insertion (\code{j41m.8}, \code{j41m.4}--\code{j41m.6}). Open human
+decisions in \src{docs/design/DFT_ARCHITECTURE.md}: Q-TRST and Q-STUB,
+and the Sky130 CPU-macro re-harden, which depends on bead \bead{dud4}.
+
+FPGA stages beyond Stage 0 are gated on a board choice (\code{hlrm}).
+The Vivado Artix-7 run is in progress on a separate branch.
+
+Golden specs: \src{docs/design/DFT_ARCHITECTURE.md},
+\src{docs/FPGA_BOARD_SELECTION.md},
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (Phase 6, closed).
+
+\textbf{Regression gates in CI (read 2026-10-15)}:
+
+\begin{itemize}
+\tightlist
+\item
+  \code{cocotb.yml} soc job:
+  \texttt{PASS\_\allowbreak{}FLOOR:\allowbreak{}\ '759'} (its comment
+  records 762 measured on \prref{276}). CPU job:
+  \texttt{PASS\_\allowbreak{}FLOOR:\allowbreak{}\ '100'}.
+\item
+  \code{soc_coverage.yml} (nightly, cron \texttt{30\ 2\ *\ *\ *}):
+  \texttt{PASS\_\allowbreak{}FLOOR:\allowbreak{}\ '759'},
+  \texttt{CPU\_\allowbreak{}PASS\_\allowbreak{}FLOOR:\allowbreak{}\ '262'}.
+  Line gate 95 \% on \src{rtl/soc}, \src{rtl/periph}, \src{rtl/npu} plus
+  the control-signal toggle gate (bead \bead{s1cg}, \prref{246}); line gate
+  95 \% also on \src{rtl/cpu}, \src{rtl/mem}, \src{rtl/gpu} (bead
+  \bead{a5ze}, \prref{262}). Not a per-PR gate.
+\item
+  \code{qa-checks.yml}: struct-member select gate, blocking (\prref{275},
+  bead \bead{ainf}); beads reopen gate.
+\item
+  \code{rtl-checks.yml}: \code{dft-scan-check} and
+  \code{dft-scan-check-asap7} (\prref{281}, bead \bead{j41m.12}).
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Deferred / host-blocked (not Phase 6 work)}\label{cr:status:phase-status:deferred-host-blocked-not-phase-6-work}
+
+\begin{record}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*126/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*460/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*394/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Bead
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Item
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Blocker
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{ma7} & ASAP7 CPU/GPU macros are Synlig-built with a proven branch
+miscompile & ≥32 GB host (\code{2kn}) \\
+\code{lxv} & ASAP7 CPU sv2v re-harden: routing-congestion regression &
+≥32 GB host (\code{2kn}) \\
+\code{8qn4} & ASAP7 SoC has never been run with GPIO & chained to
+\code{ma7}/\code{lxv} \\
+\code{e45j} & Sky130 post-RCX max-slew/\allowbreak{}max-cap; no post-RCX
+repair stage exists in LibreLane & re-measured at Gate B; \textbf{not} a
+Phase 6 exit criterion \\
+\code{o1i} & Per-corner SRAM SPICE characterization
+(\textasciitilde80-95 h) & host stability \\
+\ghref{105}/\#106 & Sky130 GPU stages 3-4 & ≥32 GB RAM + \textasciitilde500
+GB scratch \\
+\code{hlrm} Stages 1+ & FPGA bring-up, firmware validation,
+dual-oscillator CDC & a board choice (human decision) \\
+\end{longtable}
+}
+
+}
+
+\end{record}
+
+\subsection{Documentation Structure}\label{cr:status:phase-status:documentation-structure}
+
+\begin{record}
+
+\begin{textblock}
+docs/
+├── ROADMAP.md                        # High-level project plan
+├── PHASE_STATUS.md                   # This file - current status
+├── design/
+│   ├── PHASE0_ARCHITECTURE_SPEC.md   # Phase 0 CPU specification
+│   ├── PHASE1_ARCHITECTURE_SPEC.md   # Phase 1 CPU specification (verified 2026-02-13)
+│   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md # Phase 4 GPU specification (frozen, ✅ complete)
+│   ├── DESIGN_EXPECTATION.md         # High-level design goals
+│   ├── RTL_DEFINITION.md             # Interface definitions
+│   ├── GPU_MODEL.md                  # GPU execution model overview
+│   ├── MEMORY_MAP.md                 # Address space allocation (complete 2026-01-17)
+│   └── REFERENCE_MODEL_SPEC.md       # Python model specification (complete 2026-01-17)
+└── verification/
+    └── VERIFICATION_PLAN.md          # Verification strategy
+\end{textblock}
+
+\end{record}
+
+\subsection{AI/Human Responsibilities for Phase 0 Remaining Tasks}\label{cr:status:phase-status:aihuman-responsibilities-for-phase-0-remaining-tasks}
+
+\subsubsection{Python Reference Model Implementation}\label{cr:status:phase-status:python-reference-model-implementation}
+
+\begin{record}
+
+\textbf{AI may assist with}:
+
+\begin{itemize}
+\tightlist
+\item
+  Class structure and boilerplate code
+\item
+  Simple instruction implementations (ADD, SUB, AND, OR, XOR, SLL, SRL,
+  SRA)
+\item
+  Register file and memory model scaffolding
+\item
+  Unit test generation and formatting
+\end{itemize}
+
+\textbf{Human must}:
+
+\begin{itemize}
+\tightlist
+\item
+  Implement complex instructions (BRANCH, LOAD, STORE, JAL, JALR)
+\item
+  Design and approve control flow logic
+\item
+  Verify instruction semantics match RISC-V specification
+\item
+  Cross-validate against spike simulator
+\item
+  Final code review and approval
+\end{itemize}
+
+\end{record}
+
+\subsubsection{cocotb Infrastructure Setup}\label{cr:status:phase-status:cocotb-infrastructure-setup}
+
+\begin{record}
+
+\textbf{AI may assist with}:
+
+\begin{itemize}
+\tightlist
+\item
+  cocotb configuration files (Makefile, pyproject.toml)
+\item
+  AXI4-Lite and APB3 driver scaffolding
+\item
+  Test harness boilerplate
+\item
+  Monitor and scoreboard templates
+\end{itemize}
+
+\textbf{Human must}:
+
+\begin{itemize}
+\tightlist
+\item
+  Review test strategy alignment with VERIFICATION\_\allowbreak{}PLAN.md
+\item
+  Approve infrastructure design decisions
+\item
+  Validate driver implementations against protocol specs
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Final Specification Review}\label{cr:status:phase-status:final-specification-review}
+
+\begin{record}
+
+\textbf{HUMAN-ONLY}:
+
+\begin{itemize}
+\tightlist
+\item
+  Review all specifications for consistency and completeness
+\item
+  Approve Phase 0 completion
+\item
+  Authorize transition to Phase 1 (RTL implementation)
+\end{itemize}
+
+\end{record}
+
+\subsection{Key Decisions}\label{cr:status:phase-status:key-decisions}
+
+\subsubsection{Architecture Decisions}\label{cr:status:phase-status:architecture-decisions}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{ISA}: RV32I subset (no CSR, no MMU, no compressed)
+\item
+  \textbf{Initial pipeline}: Single-cycle (Phase 1), 5-stage pipeline
+  (Phase 2)
+\item
+  \textbf{Memory interface}: AXI4-Lite for main memory, APB3 for debug
+\item
+  \textbf{Debug strategy}: APB3 slave interface with
+  halt/\allowbreak{}resume/\allowbreak{}step
+\item
+  \textbf{Verification}: Python reference model + cocotb + pyuvm
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Process Decisions}\label{cr:status:phase-status:process-decisions}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Specification-first}: All specs finalized before RTL
+\item
+  \textbf{No architecture drift}: Phase N cannot start until Phase N-1
+  exits
+\item
+  \textbf{AI boundaries}: AI assists with RTL/\allowbreak{}tests, humans
+  own architecture
+\item
+  \textbf{Verification requirement}: Reference model must match RTL
+\end{itemize}
+
+\end{record}
+
+\subsection{Contact}\label{cr:status:phase-status:contact}
+
+\begin{record}
+
+For questions about project status or phase transitions, refer to
+\cref{cr:status:roadmap} or the latest git commits.
+
+\end{record}
+
+% Converted from docs/ROADMAP.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{Project Roadmap}\label{cr:status:roadmap}
+
+\subsection{Project Expectations}\label{cr:status:roadmap:project-expectations}
+
+\begin{record}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Create simple micro-processor with RV32I subset
+\item
+  Upgrade micro-processor to become pipelined CPU
+\item
+  Develop memory system \& caches
+\item
+  Create a simple GPU compute engine
+\item
+  Integrate all IPs into SoC with some peripherals
+\end{enumerate}
+
+\end{record}
+
+\subsection{OpenROAD Back-End Integration Strategy}\label{cr:status:roadmap:openroad-back-end-integration-strategy}
+
+\begin{record}
+
+Starting from Phase 1, \textbf{every IP block} will go through the
+complete OpenROAD physical design flow to ensure silicon-readiness. This
+approach provides:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Early timing validation}: Identify critical paths before
+  tape-out
+\item
+  \textbf{Power budgeting}: Understand power consumption per block
+\item
+  \textbf{Area estimation}: Guide floorplanning decisions
+\item
+  \textbf{Reality check}: Ensure RTL is physically implementable
+\end{enumerate}
+
+\end{record}
+
+\subsubsection{Back-End Flow Overview}\label{cr:status:roadmap:back-end-flow-overview}
+
+\begin{record}
+
+For each new IP (CPU core, cache, GPU, peripherals):
+
+\begin{textblock}
+RTL Design
+    ↓
+Synthesis (Yosys/OpenROAD)
+    ↓
+Floorplan (OpenROAD)
+    ↓
+Placement (OpenROAD)
+    ↓
+Clock Tree Synthesis (TritonCTS)
+    ↓
+Routing (TritonRoute)
+    ↓
+Parasitic Extraction (OpenRCX)
+    ↓
+Static Timing Analysis (OpenSTA)
+    ↓
+Power Analysis (OpenROAD)
+    ↓
+Physical Verification (KLayout/Magic)
+    ↓
+Gate-Level Simulation (Verilator + UPF)
+\end{textblock}
+
+\end{record}
+
+\subsubsection{Power-Aware Verification}\label{cr:status:roadmap:power-aware-verification}
+
+\begin{record}
+
+\textbf{UPF (Unified Power Format)} is used to specify power intent:
+
+\begin{itemize}
+\tightlist
+\item
+  Power domains and supply networks
+\item
+  Isolation strategies for domain boundaries
+\item
+  Retention strategies for state preservation
+\item
+  Power state tables (PST) for mode transitions
+\end{itemize}
+
+\textbf{Power-aware simulation} validates:
+
+\begin{itemize}
+\tightlist
+\item
+  Isolation cell functionality
+\item
+  Level shifter correctness
+\item
+  Retention register behavior
+\item
+  Power sequencing
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Timing Verification}\label{cr:status:roadmap:timing-verification}
+
+\begin{record}
+
+\textbf{SDC (Synopsys Design Constraints)} specifies timing
+requirements:
+
+\begin{itemize}
+\tightlist
+\item
+  Clock definitions (period, uncertainty, jitter)
+\item
+  Input/\allowbreak{}output delays relative to clock
+\item
+  False paths (paths that don\textquotesingle t need timing checks)
+\item
+  Multi-cycle paths (paths with \textgreater1 cycle budget)
+\item
+  Clock domain crossing constraints
+\end{itemize}
+
+\textbf{Static Timing Analysis (STA)} verifies:
+
+\begin{itemize}
+\tightlist
+\item
+  Setup timing (data arrives before clock edge)
+\item
+  Hold timing (data stable after clock edge)
+\item
+  Clock skew and latency
+\item
+  Timing across all process corners (fast/\allowbreak{}slow)
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Target Technologies}\label{cr:status:roadmap:target-technologies}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Sky130}: Open-source 130nm PDK (SkyWater + Google)
+\item
+  \textbf{ASAP7}: Predictive 7nm FinFET PDK (Arizona State University)
+\end{itemize}
+
+Both support the OpenROAD flow and are suitable for
+academic/\allowbreak{}research projects.
+
+\end{record}
+
+\subsection{Phase}\label{cr:status:roadmap:phase}
+
+\subsubsection{\texorpdfstring{Phase 0 --- Foundations \ok{} COMPLETE
+(2026-01-18)}{Phase 0 --- Foundations  COMPLETE (2026-01-18)}}\label{cr:status:roadmap:phase-0-foundations-white-check-mark-complete-2026-01-18}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Goals
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Define what correctness means
+  \item
+    Prevent architecture drift later
+  \end{itemize}
+\item
+  Human-led (must)
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Define RV32I subset (no CSR, no MMU, no compressed)
+  \item
+    Define:
+
+    \begin{itemize}
+    \tightlist
+    \item
+      Reset behavior
+    \item
+      Trap behavior
+    \item
+      Memory ordering rules
+    \end{itemize}
+  \item
+    Decide pipeline strategy (single-cycle vs multi-cycle)
+  \end{itemize}
+\item
+  AI-assisted
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Generate:
+
+    \begin{itemize}
+    \tightlist
+    \item
+      Project skeleton
+    \item
+      Lint rules
+    \item
+      Basic SV coding guidelines
+    \end{itemize}
+  \item
+    Draft documentation templates
+  \end{itemize}
+\end{itemize}
+
+\ok{} Exit criteria MET
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Written ISA + microarchitecture spec
+  (PHASE0\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md)
+\item
+  \ok{} No RTL (as planned)
+\item
+  \ok{} All 7 specifications approved
+\item
+  \ok{} Python reference models validated (66/66 tests passing)
+\item
+  \ok{} cocotb test infrastructure ready
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 1 --- Minimal RV32I core \ok{}
+COMPLETE
+(2026-02-13)}{Phase 1 --- Minimal RV32I core  COMPLETE (2026-02-13)}}\label{cr:status:roadmap:phase-1-minimal-rv32i-core-white-check-mark-complete-2026-02-13}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Architecture
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Single-issue
+  \item
+    In-order
+  \item
+    Single-cycle with AXI stalls
+  \item
+    Blocking loads/\allowbreak{}stores
+  \item
+    \textbf{No interrupts} (deferred to Phase 2)
+  \item
+    AXI4-Lite master (unified instruction/\allowbreak{}data bus)
+  \item
+    APB3 slave (debug interface with
+    halt/\allowbreak{}resume/\allowbreak{}step/\allowbreak{}breakpoints)
+  \end{itemize}
+\end{itemize}
+
+\textbf{RTL (SystemVerilog)} \ok{} ALL COMPLETE
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 8 modules implemented (\textasciitilde1,900 lines)
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \ok{} ALU module (rv32i\_\allowbreak{}alu.sv)
+  \item
+    \ok{} Register file (rv32i\_\allowbreak{}regfile.sv)
+  \item
+    \ok{} Instruction decoder (rv32i\_\allowbreak{}decode.sv)
+  \item
+    \ok{} Immediate generator
+    (rv32i\_\allowbreak{}imm\_\allowbreak{}gen.sv)
+  \item
+    \ok{} Branch comparator
+    (rv32i\_\allowbreak{}branch\_\allowbreak{}comp.sv)
+  \item
+    \ok{} Control FSM (rv32i\_\allowbreak{}control.sv)
+  \item
+    \ok{} Core wrapper (rv32i\_\allowbreak{}core.sv)
+  \item
+    \ok{} CPU top-level (rv32i\_\allowbreak{}cpu\_\allowbreak{}top.sv)
+  \end{itemize}
+\end{itemize}
+
+\textbf{Verification (Python-first)} \ok{} ALL COMPLETE
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} cocotb test infrastructure
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \ok{} AXI4-Lite memory models
+  \item
+    \ok{} APB3 debug interface drivers
+  \item
+    \ok{} Scoreboard validation
+  \end{itemize}
+\item
+  \ok{} Comprehensive test suites
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \ok{} 6/6 smoke tests passing
+  \item
+    \ok{} 37/37 ISA compliance tests
+  \item
+    \ok{} 10,000 random instructions (0 failures)
+  \item
+    \ok{} 11/11 AXI protocol tests
+  \item
+    \ok{} 6/6 debug interface tests
+  \end{itemize}
+\item
+  \ok{} Coverage
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \ok{} 37/37 instructions (100\%)
+  \item
+    \ok{} 8/8 FSM states (100\%)
+  \end{itemize}
+\end{itemize}
+
+\textbf{Physical Design \& Power (Optional)}
+
+\begin{itemize}
+\tightlist
+\item
+  OpenROAD flow scripts ready
+\item
+  Phase 1 constraints available (phase1\_\allowbreak{}cpu.sdc,
+  phase1\_\allowbreak{}cpu.upf)
+\item
+  Can be run for Phase 1 baseline metrics
+\end{itemize}
+
+\ok{} Exit criteria MET (9/9)
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Smoke tests passing (6/6 with scoreboard)
+\item
+  \ok{} Scoreboard mismatches: 0
+\item
+  \ok{} Instruction coverage: 37/37 RV32I instructions (100\%)
+\item
+  \ok{} Random instruction tests: 10,000 instructions, 0 failures
+\item
+  \ok{} AXI protocol tests: 11/11 passing
+\item
+  \ok{} Debug interface tests: 6/6 passing (single-step, BP0, BP1,
+  GPR/PC write)
+\item
+  \ok{} Code coverage: \textgreater95\% (Verilator annotated reports)
+\item
+  \ok{} State coverage: 8/8 FSM states (100\%)
+\item
+  \ok{} Failing random seeds: 0 (100/100 seeds pass)
+\item
+  \ok{} Archived to \src{micro_p/} directory
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 2 --- Pipelined CPU \ok{} COMPLETE
+(2026-03-08)}{Phase 2 --- Pipelined CPU  COMPLETE (2026-03-08)}}\label{cr:status:roadmap:phase-2-pipelined-cpu-white-check-mark-complete-2026-03-08}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Architecture
+
+  \begin{itemize}
+  \tightlist
+  \item
+    5-stage pipeline
+    (IF/\allowbreak{}ID/\allowbreak{}EX/\allowbreak{}MEM/\allowbreak{}WB)
+  \item
+    In-order execution
+  \item
+    Hazard detection + stalling + forwarding
+  \item
+    \textbf{Interrupt support added} (M-mode: timer + external)
+  \item
+    \textbf{CSR instructions}
+    (CSRRW/\allowbreak{}S/\allowbreak{}C/\allowbreak{}I variants)
+  \item
+    Same AXI4-Lite and APB3 interfaces as Phase 1
+  \item
+    AXI arbiter for IF/MEM priority
+  \item
+    Achieved: 75 MHz on Sky130 130nm (200 MHz target not met due to PDK
+    limitations)
+  \end{itemize}
+\end{itemize}
+
+\textbf{RTL} \ok{} ALL COMPLETE
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} 14 modules implemented (\textasciitilde3,000 lines)
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \ok{} 5 pipeline stage modules (IF, ID, EX, MEM, WB)
+  \item
+    \ok{} Pipeline package
+    (rv32i\_\allowbreak{}pipeline\_\allowbreak{}pkg.sv)
+  \item
+    \ok{} Hazard detection unit
+    (rv32i\_\allowbreak{}hazard\_\allowbreak{}unit.sv)
+  \item
+    \ok{} Forwarding unit
+    (rv32i\_\allowbreak{}forwarding\_\allowbreak{}unit.sv)
+  \item
+    \ok{} CSR file (rv32i\_\allowbreak{}csr\_\allowbreak{}file.sv)
+  \item
+    \ok{} Interrupt controller
+    (rv32i\_\allowbreak{}interrupt\_\allowbreak{}ctrl.sv)
+  \item
+    \ok{} AXI arbiter (rv32i\_\allowbreak{}axi\_\allowbreak{}arbiter.sv)
+  \item
+    \ok{} Updated decoder for CSR instructions
+  \item
+    \ok{} Reused: ALU, regfile, imm\_gen, branch\_\allowbreak{}comp
+  \end{itemize}
+\end{itemize}
+
+\textbf{Verification} \ok{} ALL COMPLETE
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Pipeline hazard tests --- 16/16
+  (RAW/\allowbreak{}WAR/\allowbreak{}WAW, forwarding)
+\item
+  \ok{} Interrupt and CSR tests --- 12/12
+\item
+  \ok{} Debug interface tests --- 6/6 (pipeline drain)
+\item
+  \ok{} Random instruction regression --- 50,000 instructions, 0
+  failures
+\item
+  \ok{} AXI arbiter protocol tests --- 12/12
+\item
+  \ok{} Fault injection tests --- 7/7
+\item
+  \ok{} Total: 111/111 tests passing
+\end{itemize}
+
+\textbf{Physical Design \& Power} \ok{} COMPLETE
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Phase 2 constraints: \src{pnr/constraints/phase2_cpu.sdc},
+  \src{pnr/constraints/phase2_cpu.upf}
+\item
+  \ok{} Backend flow executed on Sky130 130nm
+\item
+  \ok{} \textbf{75 MHz achieved} (200 MHz target not met --- Sky130 PDK
+  limitation)
+\end{itemize}
+
+\notemark{} AI contribution \textasciitilde60\%
+
+\ok{} Exit criteria MET
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Zero false commits (scoreboard validation, 50k random
+  instructions)
+\item
+  \ok{} Pipeline hazard tests passing (16/16)
+\item
+  \ok{} Interrupt tests passing (12/12)
+\item
+  \ok{} All 111/111 Phase 2 tests passing
+\item
+  \ok{} Timing closure at 75 MHz on Sky130
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 3 --- Memory system \& caches \ok{}
+COMPLETE
+(2026-05-21)}{Phase 3 --- Memory system \& caches  COMPLETE (2026-05-21)}}\label{cr:status:roadmap:phase-3-memory-system-caches-white-check-mark-complete-2026-05-21}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Architecture
+
+  \begin{itemize}
+  \tightlist
+  \item
+    I-Cache: 4 KB direct-mapped, 16-byte lines, 256 sets, read-only,
+    FENCE.I invalidation
+  \item
+    D-Cache: 4 KB direct-mapped, 16-byte lines, 256 sets, write-back +
+    write-allocate
+  \item
+    External interface: AXI4-Lite (4 separate transactions per refill
+    --- no burst)
+  \item
+    Cache arbiter: D-cache priority over I-cache (replaces Phase 2 AXI
+    arbiter)
+  \item
+    Architecture spec: \src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} ---
+    APPROVED (2026-03-08)
+  \end{itemize}
+\end{itemize}
+
+\textbf{RTL} \ok{} COMPLETE (\textasciitilde1,424 lines)
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} New modules in \src{rtl/mem/}:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \ok{} \code{rv32i_cache_pkg.sv} --- parameters, types (4 KB, 16-byte
+    lines, direct-mapped)
+  \item
+    \ok{} \code{rv32i_icache.sv} --- I-cache with
+    IDLE/\allowbreak{}REFILL/\allowbreak{}DONE FSM, FENCE.I (575 lines)
+  \item
+    \ok{} \code{rv32i_dcache.sv} --- D-cache with
+    IDLE/\allowbreak{}TAG\_\allowbreak{}CHECK/\allowbreak{}WRITEBACK/\allowbreak{}REFILL/\allowbreak{}DONE
+    FSM, write-allocate (618 lines)
+  \item
+    \ok{} \code{rv32i_cache_arbiter.sv} --- D\$ priority AXI arbiter
+    (183 lines)
+  \end{itemize}
+\item
+  \ok{} Modified CPU modules:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \ok{} \code{rv32i_decode.sv} --- FENCE.I decode (opcode=0x0F,
+    funct3=001)
+  \item
+    \ok{} \code{rv32i_pipeline_pkg.sv} --- \code{fence_i} field added to
+    \code{id_ex_reg_t}
+  \item
+    \ok{} \code{rv32i_pipeline_if.sv} --- cache interface (replaces AXI
+    state machine)
+  \item
+    \ok{} \code{rv32i_pipeline_mem.sv} --- cache interface + FENCE.I
+    (replaces AXI state machine)
+  \item
+    \ok{} \code{rv32i_hazard_unit.sv} --- rename stall signals
+    (\code{if_cache_stall}, \code{mem_cache_stall})
+  \item
+    \ok{} \code{rv32i_core.sv} --- cache + arbiter integration
+    (instantiated at lines 742/\allowbreak{}762/\allowbreak{}794)
+  \end{itemize}
+\end{itemize}
+
+\textbf{Verification} \ok{} COMPLETE
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Python cache reference model (\src{tb/models/cache_model.py})
+\item
+  \ok{} I-cache unit tests: \src{tb/cocotb/mem/test_icache.py} ---
+  \textbf{7/7 pass}
+\item
+  \ok{} D-cache unit tests: \src{tb/cocotb/mem/test_dcache.py} ---
+  \textbf{8/8 pass}
+\item
+  \ok{} Integration: \src{tb/cocotb/cpu/test_cache_integration.py} ---
+  \textbf{5/5 pass}
+\item
+  \ok{} Full regression: \textbf{139/139 tests pass} (119 Phase 2 + 20
+  Phase 3 cache tests)
+\item
+  \ok{} FENCE.I ordering verified; no livelock or deadlock scenarios
+  found
+\end{itemize}
+
+\textbf{Physical Design \& Power (OpenROAD back-end)} \ok{} COMPLETE
+(ASAP7 sign-off)
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} Phase 2+3 RTL signed off on ASAP7 7nm --- \textbf{Run 43
+  (2026-05-20)}:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \textbf{1418 MHz fmax}, 27.27 mW power, 3,844 µm² stdcell area
+  \item
+    \textbf{0 DRC, 0 antenna violations}, +5.97 ps setup slack, +22.54
+    ps hold slack
+  \item
+    \warn{} Timing/\allowbreak{}power unvalidated post-bead-\code{8f3}
+    (STA-zero-wire defect, 2026-09-16); Run 43 artifacts wiped, not
+    re-checkable --- bead \bead{0p6}
+  \item
+    Full run history: \cref{cr:run:asap7}
+  \end{itemize}
+\item
+  Sky130 realistic ceiling: 75--120 MHz (PDK-limited; Phase 2 achieved
+  75 MHz)
+\end{itemize}
+
+\notemark{} AI contribution \textasciitilde40\%
+
+\ok{} Exit criteria --- ALL MET
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} No deadlocks in cache FSMs (verified by 139/139 regression +
+  integration tests)
+\item
+  \ok{} Correct behavior under randomized memory latency
+\item
+  \ok{} FENCE.I invalidation semantics implemented and verified
+\item
+  \ok{} Timing closure on ASAP7 (1418 MHz, 0 violations)
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Phase 4 --- "GPU-lite" compute engine (research-level)}\label{cr:status:roadmap:phase-4-gpu-lite-compute-engine-research-level}
+
+\begin{record}
+
+\warn{} This is not a CPU extension.
+
+\textbf{Prerequisites}: Phase 3 complete (pipelined CPU with caches and
+interrupts)
+
+\textbf{Scope (keep it sane)}
+
+\begin{itemize}
+\tightlist
+\item
+  Single compute unit
+
+  \begin{itemize}
+  \tightlist
+  \item
+    SIMD/SIMT lanes
+  \item
+    No graphics
+  \item
+    No preemption
+  \item
+    \textbf{GPU interrupt output} to notify CPU of kernel completion
+    (requires Phase 2+ CPU)
+  \end{itemize}
+\end{itemize}
+
+\textbf{RTL}
+
+\begin{itemize}
+\tightlist
+\item
+  AI SHOULD
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Vector ALU blocks
+  \item
+    Lane control logic
+  \item
+    Simple warp scheduler templates
+  \end{itemize}
+\item
+  Human MUST
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Define execution model (SIMD vs SIMT)
+  \item
+    Handle divergence
+  \item
+    Define memory coalescing rules
+  \end{itemize}
+\end{itemize}
+
+\textbf{Verification}
+
+\begin{itemize}
+\tightlist
+\item
+  Python kernel model
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Vector reference execution
+  \item
+    Divergence checker
+  \end{itemize}
+\item
+  AI SHOULD
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Generate kernel tests
+  \item
+    Build comparison harness
+  \end{itemize}
+\item
+  Human MUST
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Debug race conditions
+  \item
+    Validate numerical correctness
+  \end{itemize}
+\end{itemize}
+
+\textbf{Physical Design \& Power (OpenROAD back-end)}
+
+\begin{itemize}
+\tightlist
+\item
+  GPU compute unit as separate power domain
+\item
+  UPF for GPU power gating (idle power savings)
+\item
+  Vector ALU datapath optimization
+\item
+  Register file (8-lane SIMT) physical design
+\item
+  Warp scheduler timing constraints
+\item
+  Power analysis for compute kernels
+\item
+  Dynamic voltage/\allowbreak{}frequency scaling (DVFS) infrastructure
+\item
+  Thermal analysis for sustained compute workloads
+\item
+  GPU-CPU interface timing constraints
+\end{itemize}
+
+\notemark{} AI contribution \textasciitilde30--40\%
+
+\ok{} Exit criteria (updated)
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{GPU power domain functional}
+\item
+  \textbf{Timing closure for compute datapath}
+\item
+  \textbf{Power consumption validated per warp}
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 5 --- SoC integration (AI shines
+again) --- \ok{} COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW
+sign-off \warn{} timing/\allowbreak{}power unvalidated
+post-bead-\code{8f3}; current RTL re-measured on the fixed flow
+2026-09-18, bead \code{0d0}: −727 ps / 781 violators / hold clean /
+283.6 mW, still not closed --- see
+\cref{cr:run:phase5})}{Phase 5 --- SoC integration (AI shines again) ---  COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off  timing/power unvalidated post-bead-; current RTL re-measured on the fixed flow 2026-09-18, bead : −727 ps / 781 violators / hold clean / 283.6 mW, still not closed --- see )}}\label{cr:status:roadmap:phase-5-soc-integration-ai-shines-again-white-check-mark-complete-2026-06-24-asap7-soc-571-mhz-629-mw-sign-off-warning-timingpower-unvalidated-post-bead-8f3-current-rtl-re-measured-on-the-fixed-flow-2026-09-18-bead-0d0-727-ps-781-violators-hold-clean-2836-mw-still-not-closed-see-docsphase5-run-historymd}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Components
+
+  \begin{itemize}
+  \tightlist
+  \item
+    CPU + GPU-lite
+  \item
+    Interconnect
+  \item
+    DMA
+  \item
+    UART / SPI / Timer
+  \item
+    Boot ROM
+  \end{itemize}
+\end{itemize}
+
+\textbf{RTL}
+
+\begin{itemize}
+\tightlist
+\item
+  AI SHOULD
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Address maps
+  \item
+    Interconnect glue
+  \item
+    Peripheral controllers
+  \end{itemize}
+\item
+  Human MUST
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Define memory map
+  \item
+    Decide arbitration rules
+  \item
+    Own integration decisions
+  \end{itemize}
+\end{itemize}
+
+\textbf{Verification}
+
+\begin{itemize}
+\tightlist
+\item
+  cocotb system tests
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Boot tests
+  \item
+    Firmware execution
+  \item
+    Peripheral stress tests
+  \end{itemize}
+\item
+  AI SHOULD
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Write firmware tests
+  \item
+    Automate regressions
+  \item
+    Generate fault injection
+  \end{itemize}
+\end{itemize}
+
+\textbf{Physical Design \& Power (OpenROAD back-end - Full SoC)}
+
+\begin{itemize}
+\tightlist
+\item
+  Top-level SoC floorplan
+\item
+  Multiple power domains (CPU, GPU, peripherals, always-on)
+\item
+  UPF for system-level power management
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Domain isolation cells
+  \item
+    Level shifters for voltage domains
+  \item
+    Retention strategies for low-power modes
+  \end{itemize}
+\item
+  Hierarchical P\&R (block-level then top-level)
+\item
+  Clock distribution network (multiple clock domains)
+\item
+  Power delivery network (PDN) analysis
+\item
+  IR drop analysis and mitigation
+\item
+  Electromigration (EM) analysis
+\item
+  Sign-off timing analysis (multi-corner, multi-mode)
+\item
+  Power estimation for system workloads
+\item
+  Tape-out quality checks (DRC, LVS, antenna)
+\end{itemize}
+
+\notemark{} AI contribution \textasciitilde70\%
+
+\ok{} Exit criteria
+
+\begin{itemize}
+\tightlist
+\item
+  Boots software
+\item
+  Passes long random regressions
+\item
+  \textbf{Full SoC timing closure (all corners)}
+\item
+  \textbf{Power delivery verified (IR drop \textless{} 5\%)}
+\item
+  \textbf{All power modes functional (active, idle, sleep)}
+\item
+  \textbf{DRC/LVS clean}
+\item
+  \textbf{Tape-out ready (if target technology selected)}
+\end{itemize}
+
+\end{record}
+
+\subsubsection{\texorpdfstring{Phase 6+ --- IP Expansion \& Technology
+Node Exploration (\ok{} 6a--6c complete; Gate B \ok{}
+2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B  2026-10-05)}}\label{cr:status:roadmap:phase-6-ip-expansion-technology-node-exploration-white-check-mark-6a6c-complete-gate-b-white-check-mark-2026-10-05}
+
+\begin{record}
+
+\textbf{Prerequisites}: Phase 5 complete (full SoC validated)
+
+\textbf{Status (2026-10-15)}: Phase 6 complete. 6a (GPIO, PWM, WDT,
+TRNG, I2C), 6b (CRYPTO) and 6c (NPU) are built; the batched Sky130
+harden (Gate B) closed 2026-10-05 (bead \bead{f7vs.15}, \prref{214}). ASAP7
+is out of scope for Phase 6 (beads \code{ma7}, \code{lxv}, \code{2kn}).
+
+\begin{quote}
+\textbf{Golden spec:} \src{docs/PHASE6_IP_EXPANSION_PLAN.md} --- full
+register maps, address/\allowbreak{}IRQ allocation, per-item acceptance
+criteria and non-goals. This section is the roadmap-level summary; the
+plan is authoritative where they differ.
+\end{quote}
+
+\end{record}
+
+\paragraph{6a. Additional Peripherals (APB4 slaves on the Phase 5 APB
+sub-tree)}\label{cr:status:roadmap:6a-additional-peripherals-apb4-slaves-on-the-phase-5-apb-sub-tree}
+
+\begin{record}
+
+\begin{quote}
+\textbf{Bus correction (2026-09-20):} this heading previously read
+"AXI4-Lite slaves". \src{docs/PERIPHERAL_BUS_EVALUATION.md} settled the
+peripheral-bus standard as \textbf{APB4} behind
+\code{apb4_register_bank} --- "Phase 6 peripherals become trivial APB
+drop-ins". The per-node frequency columns below are \emph{projections},
+not measured results.
+\end{quote}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*127/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*292/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*112/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*112/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*112/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*224/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+IP
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+RTL file
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Sky130
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+FreePDK45
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ASAP7
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Note
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+GPIO controller & \src{rtl/periph/gpio_controller.sv} & \ok{} 75 MHz &
+\ok{} 400 MHz & \ok{} 1 GHz & ← \textbf{RTL landed} (bead \bead{ckc}) \\
+I2C controller & \src{rtl/periph/i2c_controller.sv} & \ok{} 75 MHz &
+\ok{} 400 MHz & \ok{} 1 GHz & \\
+PWM controller & \src{rtl/periph/pwm_controller.sv} & \ok{} 75 MHz &
+\ok{} 400 MHz & \ok{} 1 GHz & ← \textbf{RTL landed} (bead
+\bead{f7vs.6}) \\
+Watchdog timer & \src{rtl/periph/watchdog_timer.sv} & \ok{} 75 MHz &
+\ok{} 400 MHz & \ok{} 1 GHz & ← \textbf{RTL landed} (bead
+\bead{f7vs.7}) \\
+TRNG & \src{rtl/periph/trng.sv} & \ok{} RTL portable & \ok{} RTL
+portable & \ok{} RTL portable & ← \textbf{RTL landed} (bead
+\bead{f7vs.8}) \\
+\end{longtable}
+}
+
+}
+
+Note (corrected 2026-09-28, bead \bead{f7vs.1}): the TRNG \textbf{RTL is
+fully portable}. Sky130-exclusivity is confined to a swappable entropy
+sub-module selected by \texttt{`ifdef} --- \code{trng_ro_sky130.sv}
+(ring oscillator) vs. the default \code{trng_lfsr_entropy.sv}, which is
+deterministic and \textbf{explicitly not cryptographic} (it forces
+\texttt{TRNG\_\allowbreak{}STATUS.\allowbreak{}INSECURE\ =\allowbreak{}\ 1}).
+What is Sky130-exclusive is the \textbf{entropy-quality claim}, not the
+RTL, so \code{trng.sv} has zero top-level ports and sits in every file
+list and every PD flow. See \src{docs/PHASE6_IP_EXPANSION_PLAN.md} §7.
+
+\textbf{GPIO controller --- status (Phase 6a, bead \bead{ckc},
+2026-09-20).} RTL + SoC integration + cocotb suite landed:
+\code{test_gpio} \textbf{16/16}, \code{soc_all} \textbf{217/217} across
+27 suites (was 201 pre-GPIO; CI \code{PASS_FLOOR} raised 170 → 210).
+APB4 slave at \texttt{0x2000\_\allowbreak{}A000–AFFF} (APB index 7,
+\code{APB_N_SLAVES} 7 → 8); \code{AXIL_APB_LIMIT} and
+\code{PERIPH_LIMIT} extended to \code{0x2000_AFFF}. 32 pins exposed as
+the unidirectional triplet \code{gpio_out_o} / \code{gpio_oe_o} /
+\code{gpio_in_i} --- this RTL tree contains no tristate and the Sky130
+SoC hardens as a core macro with no pad ring, so the bidirectional merge
+is left to pad-ring integration. Per-pin level/\allowbreak{}edge
+interrupt with polarity; new \code{interrupt_controller} source bit 5
+(\code{N_SOURCES} 5 → 6). Wired into the Sky130 and ASAP7 sv2v file
+lists. \textbf{Hardened on Sky130 2026-09-26}
+(\code{RUN_2026-09-26_00-07-59}, bead \bead{00ef}): Netgen LVS PASSED,
+routing DRC 0, setup AND hold both clean at all 9 corners. \warn{} The
+SoC clock is \textbf{25 ns / 40 MHz} (\src{pnr/sky130/soc/config.json}),
+so this measures GPIO \emph{inside a 40 MHz SoC} --- the 75 MHz column
+above is a per-peripheral projection and is still NOT a measurement.
+Detail: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}.
+
+\end{record}
+
+\paragraph{6b. AES-128 + SHA-256 Accelerator}\label{cr:status:roadmap:6b-aes-128-sha-256-accelerator}
+
+\begin{record}
+
+\begin{quote}
+\textbf{Bus correction (2026-09-28, bead \bead{f7vs.1}):} this section
+previously said "AXI4-Lite slave". The peripheral-bus standard is
+\textbf{APB4} behind \code{apb4_register_bank}
+(\code{docs/PERIPHERAL_BUS_EVALUATION.md:5,43} names AES-SHA
+explicitly). The 2026-09-20 correction reached the 6a heading only and
+never propagated here. Golden spec:
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} §2.
+\end{quote}
+
+\ok{} \textbf{LANDED 2026-10-03 (bead \bead{f7vs.10})} ---
+\src{rtl/periph/crypto_accel.sv} + \code{aes128_core.sv} +
+\code{sha256_core.sv}, APB4 slave index 12 at \code{0x2000_F000-FFFF},
+IRQ bit 10. \code{test_crypto} 41/41, \code{test_soc_crypto} 1/1.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{APB4 slave} (control/\allowbreak{}status,
+  key/\allowbreak{}IV/\allowbreak{}digest registers), one 4 KB slot at
+  \code{0x2000_F000}
+\item
+  Bulk data by \textbf{programmed I/O over APB}. An AXI4
+  master/\allowbreak{}slave path is an explicit \textbf{non-goal of
+  Phase 6b} --- it would need \code{SOC_N_SLAVES} 3 → 4 and a change to
+  \code{axi4_crossbar}. Tracked as Phase 6b-2, not scheduled.
+\item
+  \textbf{AES-128 encrypt-only, exposing ECB \emph{and} CTR.} CTR makes
+  an encrypt-only core a complete cipher in both directions, so there is
+  no inverse S-box and no inverse key schedule. Iterative 128-bit
+  datapath, on-the-fly key schedule, \code{SBOX_PARALLEL=16} →
+  \textbf{11 cycles/\allowbreak{}block} (the documented fold-to-4
+  fallback is 41 and bit-identical; Gate A measured the default at 277
+  875 µm² --- \textasciitilde28 \% of the SoC\textquotesingle s stdcell
+  area, not the 3.59 \% first recorded, which divided by stdcell
+  \textbf{plus} macro area; core utilisation only moves 39.0 \% →
+  \textasciitilde43.7 \% with CRYPTO + NPU, so the fallback was still
+  not taken. See plan §8\textquotesingle s correction).
+\item
+  \textbf{SHA-256} single block-compress, 64 rounds at 1/cycle →
+  \textbf{66 cycles/\allowbreak{}block}. Padding, length and multi-block
+  chaining are software\textquotesingle s job per FIPS 180-4;
+  \texttt{CTRL[4]\ SHA\_\allowbreak{}CONT} chains from the RO
+  \code{DIGEST} words.
+\item
+  \textbf{Keys are not bus-readable} (shadow register outside the bank;
+  \code{KEY0-3} read 0 forever), but any master can substitute its own
+  key and use the block as an oracle --- see the security notes in
+  \src{docs/design/MEMORY_MAP.md}. \textbf{Not production cryptography}:
+  no DPA/\allowbreak{}side-channel resistance, no fault hardening, not
+  certified.
+\end{itemize}
+
+\warn{} \textbf{The throughput table below describes the DEFERRED
+AXI4-master version, not what Phase 6b lands.} An APB single-beat
+register feed is far slower. Do not quote these figures against the
+delivered RTL. (Bead \code{f7vs.1}.)
+
+Note the delivered AES is \textbf{11 cycles/\allowbreak{}block}, not the
+100 this table assumed, so the per-block latency is \textasciitilde9×
+better than projected --- but the APB register feed, not the round
+count, is what bounds throughput, and nothing in this repo measures it.
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*245/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*187/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*548/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Node
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+AES throughput
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Notes
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Sky130 (75 MHz) & \textasciitilde75 MB/s & assumed 100
+cycles/\allowbreak{}block; delivered RTL is 11 \\
+FreePDK45 (400 MHz) & \textasciitilde400 MB/s & Same pipeline, 5×
+faster \\
+ASAP7 (1 GHz) & \textasciitilde1 GB/s & High-throughput secure
+element \\
+\end{longtable}
+}
+
+\end{record}
+
+\paragraph{6c. NPU --- Minimal INT8 Inference Engine}\label{cr:status:roadmap:6c-npu-minimal-int8-inference-engine}
+
+\begin{record}
+
+\ok{} \textbf{LANDED 2026-10-04 (bead \bead{f7vs.11})} ---
+\src{rtl/npu/npu_top.sv} + \code{npu_mac_array.sv} +
+\code{npu_weight_mem.sv}, APB4 slave index 13 at
+\code{0x2001_0000-0FFF}, IRQ bit 11. \code{test_npu} 39/39,
+\code{test_soc_npu} 1/1, mutation campaign 65 mutants: 55 killed, 10
+provably equivalent, 0 gaps. Phase 6 is complete.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{4×4 INT8 weight-stationary array} (16 MACs), INT8 × INT8 →
+  INT32 accumulate, plus a shared requantizer (×16-bit scale, arithmetic
+  floor shift, INT8 saturation, optional ReLU, one lane per cycle). PIO
+  over APB4 only --- weights via \code{WADDR}/\code{WDATA}, activations
+  via a depth-4 \code{AIN} FIFO, results via a depth-4 \code{AOUT} FIFO.
+\item
+  \textbf{4 KB weight SRAM, not 16 KB} --- exactly one
+  \code{sky130_sram_4kbyte_1rw1r_32x1024_8}, a macro already in the
+  Sky130 SoC flow. Every \code{ifdef} arm is a hard macro (4×
+  \code{sram_1rw_256x32_*} on ASAP7/\allowbreak{}FreePDK45), so the
+  weight memory can never be synthesised as the 32 768 flops that OOM
+  this host. 16 KB stays a parameter bump plus three more macros.
+\item
+  \textbf{No new runtime-indexed mux} (the \code{ma7} Synlig
+  \code{OPT_MUXTREE} defect class): proven on the coarse-grain netlist,
+  zero \texttt{\$shiftx}/\texttt{\$pmux}/\texttt{\$mem*} in the three
+  \src{rtl/npu} modules.
+\item
+  \textbf{Gate A:} 203 179 µm² stdcell (≈20 \% of the
+  SoC\textquotesingle s stdcell area) + the 472 439 µm² macro,
+  \textbf{+1.84 ns} setup at ss on 25 ns. Thin: the limiter is the MAC
+  array\textquotesingle s single-cycle multiply + adder tree +
+  accumulate, and the pre-identified Gate B fallback (registering the
+  column sums) was not needed: the Gate B NPU MAC path measured +3.56 ns
+  at max\_ss in run 1 (\code{f7vs.15} notes).
+\item
+  Target: keyword spotting / gesture detection class workloads ---
+  \textbf{demo firmware is a non-goal}.
+\end{itemize}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*291/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*140/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*388/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*162/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Node
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+NPU clock
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Peak throughput
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+INT4/\allowbreak{}sparsity
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Sky130 (40 MHz, as built) & 40 MHz & 1.28 GOPS (16 MAC × 2 op × 40 MHz)
+& \bad{} Too slow \\
+FreePDK45 (300--400 MHz) & 300--400 MHz & \textasciitilde20 GOPS & \ok{}
+Feasible \\
+ASAP7 (800 MHz--1 GHz) & 800 MHz+ & \textasciitilde50 GOPS & \ok{}
+Preferred \\
+\end{longtable}
+}
+
+INT8 MAC critical path: \textasciitilde10--13 logic levels. Full NPU
+(INT4/\allowbreak{}tiling/\allowbreak{}sparsity) requires FreePDK45 or
+ASAP7.
+
+\end{record}
+
+\paragraph{Technology Node Cross-Comparison (PD Results + Estimates)}\label{cr:status:roadmap:technology-node-cross-comparison-pd-results-estimates}
+
+\begin{record}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*188/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*188/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*344/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*261/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Phase
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Sky130 (130nm)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+FreePDK45 (45nm)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+ASAP7 (7nm)
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Ph2 CPU & 75 MHz \ok{} & 400 MHz \ok{} (run 2026-03-23) & 1 GHz
+(planned) \\
+Ph3 CPU+Cache & 75 MHz \ok{} & \textbf{400 MHz \ok{} WNS=0} (run
+2026-03-23) & 500 MHz--1 GHz (planned) \\
+Ph4 GPU-lite & 50--75 MHz (est.) & 300 MHz (est.) & 500 MHz (est.) \\
+Ph5 SoC & 50--75 MHz (est.) & 250 MHz (est.) & 400 MHz (est.) \\
+Ph6+ peripherals & 75 MHz & 400 MHz & 1 GHz \\
+Ph6+ AES/\allowbreak{}SHA-256 & 75 MHz & 400 MHz & 1 GHz \\
+Ph6+ NPU (min.) & 50 MHz & 300 MHz & 800 MHz \\
+Ph6+ NPU (full) & \bad{} & 300 MHz & 800 MHz \\
+\end{longtable}
+}
+
+\textbf{FreePDK45 Phase 3 PD results (run 2026-03-23)}:
+
+\begin{itemize}
+\tightlist
+\item
+  WNS = 0 ns, TNS = 0 ns @ 400 MHz (timing closed)
+\item
+  Die: 760 × 480 µm = 364,800 µm² (15.8× smaller than Sky130)
+\item
+  Power: 22.59 mW total (vs 59.86 mW Sky130 --- 62\% lower despite 5.3×
+  faster clock)
+\item
+  Cells: 26,038 standard cells, SRAM macros: 164,286 µm²
+\item
+  PDN: SRAM macros not connected to grid
+  (PDN\_\allowbreak{}CONNECT\_\allowbreak{}MACROS\_\allowbreak{}TO\_\allowbreak{}GRID=false)
+  --- known limitation for predictive PDK
+\end{itemize}
+
+\textbf{ASAP7 sign-off} \ok{} (Run 43, 2026-05-20): 1418 MHz / 27.27 mW
+/ 3 844 µm² stdcell, 0 DRC / 0 antenna / 0 setup-hold violations. RVT TT
+@ 0.7 V / 25 °C. SRAM via FF-array stub
+(\code{sram_1rw_256x32_asap7_stub.v} + Liberty/\allowbreak{}LEF). Config
+at \src{pnr/asap7/}. Full campaign history:
+\cref{cr:run:asap7}. \warn{} Timing/\allowbreak{}power
+unvalidated post-bead-\code{8f3} (STA-zero-wire, 2026-09-16); Run 43
+artifacts wiped, not re-checkable --- bead \bead{0p6}.
+
+\textbf{Sky130 real DRC/LVS sign-off} (GH epic \#102) --- the only PDK
+in this project with genuine physical verification; ASAP7 skips
+Magic/\allowbreak{}KLayout/\allowbreak{}Netgen entirely, and FreePDK45
+has them permanently blocked. Stages 1--2 \ok{} complete 2026-07-31,
+Stages 3--4 \hold{} host-gated.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Stage 1 --- CPU standalone} (\ghref{103}): KLayout DRC 0, Netgen
+  LVS MATCH, setup +0.366 ns @ 75 MHz, native Sky130 macro views. Magic
+  DRC 27.7 M waived (100 \% inside SRAM macro footprints, PDK artifact;
+  bead \bead{45a}).
+\item
+  \textbf{Stage 2 --- CPU macro + peripherals SoC, no GPU} (\ghref{104}):
+  LVS PASSED, routing DRC 0, PDN 0, hold clean, KLayout DRC 4 (waived),
+  40 MHz, nom\_tt 37.63 mW, 226,952 stdcells, die 6700 × 3100 µm. Two
+  documented residual gates, neither open work: setup fails at ss (bead
+  \bead{ujv}, \textbf{deferred host-blocked}) and antenna 140 pin / 120
+  net (bead \bead{58q}, \textbf{closed} as a quantified accepted
+  trade-off against hold).
+\item
+  \warn{} \textbf{Stage-2 timing is a typical-corner (nom\_tt)
+  sign-off}, not a validated multi-corner one --- the SRAM macro is
+  characterized at TT only, so the nine reported corners are nine labels
+  backed by a single macro model. The physical gates
+  (LVS/\allowbreak{}DRC/\allowbreak{}PDN) carry no such caveat.
+  Per-corner SRAM SPICE characterization measured at
+  \textasciitilde80--95 h against a host that reboots every 2--8 h →
+  bead \bead{o1i}, deferred host-blocked.
+\item
+  \textbf{Stages 3--4 --- GPU} (\ghref{105}/\allowbreak{}\#106): not
+  attempted; need ≥32 GB RAM + \textasciitilde500 GB scratch vs the
+  current \textasciitilde15 GB host. GPU stays ASAP7-indicative-only.
+\item
+  Full record: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §7.
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Post-Phase-6 tracks: DFT and FPGA (not numbered phases)}\label{cr:status:roadmap:post-phase-6-tracks-dft-and-fpga-not-numbered-phases}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{DFT: scan, MBIST and JTAG for the Sky130 SoC} (epic
+  \code{j41m}): Stage 0 architecture \ok{}
+  (\src{docs/design/DFT_ARCHITECTURE.md}); Stage 1a fabric RTL merged
+  (\prref{258}, bead \bead{j41m.2} still open); Stage 1b JTAG TAP \ok{} (\prref{270}). Stage 2 scan insertion is not started, and MBIST has no RTL
+  yet.
+\item
+  \textbf{FPGA prototyping} (epic \code{hlrm}): Stage 0 \ok{} without
+  hardware (\src{docs/FPGA_STAGE0_EVALUATION.md}, \prref{279}). Board
+  recommendation Digilent Nexys Video XC7A200T
+  (\src{docs/FPGA_BOARD_SELECTION.md}, \prref{283}). Open-tool ECP5 fmax
+  lower bound \textasciitilde48--52 MHz CPU-only. Later stages wait for
+  a board.
+\end{itemize}
+
+\end{record}
+
+\subsubsection{Phase 7 --- Mixed-Signal PLL Clock Generator}\label{cr:status:roadmap:phase-7-mixed-signal-pll-clock-generator}
+
+\begin{record}
+
+\textbf{Status}:
+M-a/\allowbreak{}M-b1/\allowbreak{}M-b2/\allowbreak{}M-c complete
+(2026-06-20); M-d = documentation (this update). Full plan →
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (golden spec).
+
+A dual-PDK charge-pump integer-N PLL (ring VCO) designed end-to-end via
+the \textbf{analog-design orchestrator agents}, then integrated into the
+SoC as the clock source via a PDK-agnostic real-number model (RNM). This
+phase also doubled as a validation run of the installed analog-design
+agent suite (real ngspice / magic / netgen all ran; the closed-loop meta
+fix loop and adversarial physical verification both demonstrably added
+value).
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{ASAP7 variant} (\src{analog/pll_clkgen/}, indicative): 100 MHz
+  → 1.282 GHz, N=13, 0.7 V --- matches the ASAP7 SoC 780 ps clock.
+  Electrical is \textbf{indicative only}: open ngspice has no BSIM-CMG
+  FinFET models, so transistor sims used a calibrated planar BSIM4
+  substitute.
+\item
+  \textbf{Sky130 variant} (\src{analog/pll_clkgen/sky130/}, \textbf{real
+  sign-off}): 10 MHz → 100 MHz, N=10, 1.8 V, real \code{sky130_fd_pr}
+  models, real magic layout on \code{sky130A.tech}. Charge-pump block:
+  real magic DRC = 0 + netgen LVS MATCH.
+  VCO/\allowbreak{}LF/\allowbreak{}BIAS block regen + full-chip DRC/LVS
+  are follow-ups.
+\item
+  \textbf{SoC integration} (\src{rtl/soc/pll/}): \code{clk_i} → PLL ref
+  → \code{core_clk}; AXI-Lite config/\allowbreak{}status slave at
+  \code{0x2000_7000} (\code{AXIL_N_SLAVES} 6→7). Two RTL bugs
+  found+fixed (PLL bootstrap deadlock on gated domain;
+  \code{PERIPH_LIMIT} decode hole). Cosim 7/7 (\code{test_pll_lock} 3/3
+  + \code{test_pll_regs} 4/4) + regression clean. RNM-mode AXI CDC
+  synchroniser deferred.
+\end{itemize}
+
+\end{record}
 
 % Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
 \chapter{Project Overview}\label{cr:status:claude-md-overview}
@@ -21,12 +3769,12 @@ MHz / 62.9 mW \warn{} fabric-only, excludes both hard macros / 520×520
 µm / 65.6 \% util / 0 DRC / 0 antenna \warn{} routing claims
 unsupported, see below} (run 14, sv2v frontend; PDN \warn{} withdrawn
 --- the grid is EMPTY, see below). Power-attribution root cause +
-bounds: \src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat" (bead
+bounds: \cref{cr:run:phase5} §"Power figure caveat" (bead
 \bead{ew3}). \textbf{The "0 DRC / 0 antenna" figure is vacuous --- run
 14\textquotesingle s detailed routing committed zero wires (bead
 \bead{xy6}); timing/\allowbreak{}power/\allowbreak{}area numbers are
 unaffected (GRT-estimated parasitics, as always) but every routing-clean
-claim is withdrawn.} \src{docs/PHASE5_RUN_HISTORY.md} §"Routing /
+claim is withdrawn.} \cref{cr:run:phase5} §"Routing /
 physical-closure caveat". \warn{} \textbf{The 571 MHz / 62.9 mW
 timing+power figure itself is now also unvalidated (bead
 \bead{8f3}/\code{0p6}, 2026-09-16): it came from
@@ -37,7 +3785,7 @@ parasitics. Run 14\textquotesingle s artifacts are wiped (bead
 \bead{alq}) and cannot be re-measured with the now-fixed
 \code{STA_POSTGRT_INSESSION_GRT=1}; the honest current-RTL replacement
 is 258.5 mW / setup WNS −2084 ps / 41,864 violators
-(\src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat", bead
+(\cref{cr:run:phase5} §"Power figure caveat", bead
 \bead{w3a}/\code{86a}/\code{0p6}) --- a different, unfinished design
 point, not a re-run of run 14.} \ok{} \textbf{UPDATE 2026-09-18 (bead
 \bead{0d0}): the SoC has since been re-measured three times on the fixed
@@ -47,12 +3795,12 @@ fabric-only (\code{RUN_2026-09-17_20-41-11}, pinned OpenROAD 26Q2,
 annotation-gated, zero real signal drivers unannotated) --- this
 supersedes the −2084 ps figure above as the current basis. Timing is
 still NOT closed at 1750 ps. Run 14 itself remains unvalidated and
-unrecoverable.} See \src{docs/PHASE5_RUN_HISTORY.md}.
+unrecoverable.} See \cref{cr:run:phase5}.
 
 \textbf{Status}: Phase 4 complete (2026-05-27, all GPU tests green;
 ASAP7 GPU sign-off 571 MHz / 262 mW \warn{} STA-zero-wire, unvalidated
 post-\code{8f3}, re-run deferred --- see
-\src{docs/GPU_ASAP7_RUN_HISTORY.md}); Phase 3 complete (2026-05-21,
+\cref{cr:run:asap7-gpu}); Phase 3 complete (2026-05-21,
 139/139 total, ASAP7 1418 MHz sign-off \warn{} same STA caveat, bead
 \bead{8f3}/\code{0p6}); Phase 2 complete (2026-03-08, 75 MHz on Sky130,
 real post-route SPEF --- unaffected).
@@ -81,7 +3829,7 @@ Sky130 CPU hard macro is NOT: it is configured \code{USE_SYNLIG:true}
 and its committed netlist
 \src{pnr/sky130/cpu/macro/rv32i_cpu_top.nl.v.gz} is itself functionally
 WRONG (bead \bead{dud4}, 2026-10-10,
-\src{docs/SKY130_CPU_SYNLIG_DUD4.md})} --- the u99 program leaves
+\cref{cr:defect:sky130-cpu-synlig-dud4})} --- the u99 program leaves
 \code{x4=0x30} (RTL \code{0x0c}), the ma7
 \texttt{BEQ\ x2,\allowbreak{}x3} is evaluated NOT-TAKEN, confirmed in
 two simulators; the Sky130 SoC consumes this macro. Root cause
@@ -164,7 +3912,7 @@ frontends, consistent with \code{e69}\textquotesingle s own non-zero
 requires a hard-macro LEF/\allowbreak{}pin-layout change, which
 \textbf{needs explicit human approval} before any macro view is touched;
 none was attempted. Full trail: bead \bead{lxv},
-\src{docs/ASAP7_RUN_HISTORY.md}. \hold{} \textbf{DECISION 2026-09-20
+\cref{cr:run:asap7}. \hold{} \textbf{DECISION 2026-09-20
 (user): SHELVED until a ≥32 GB host is available} --- beads \code{lxv}
 and \code{ma7} are now formally blocked on \code{2kn}. The user declined
 both alternatives (authorising a hard-macro LEF edit, or re-baselining
@@ -181,7 +3929,7 @@ across 5 single-variable experiments). On obtaining the host, resume by
 re-running the sv2v CPU re-harden \textbf{with} the real power grid
 before touching macro geometry: a PDN-bearing route has never been tried
 and may change the DRT picture on its own. \bad{} \textbf{UPDATE
-2026-10-10 (bead \bead{ainf}, \src{docs/SYNLIG_STRUCT_SELECT_AINF.md}):
+2026-10-10 (bead \bead{ainf}, \cref{cr:defect:synlig-struct-select-ainf}):
 "Synlig + \prref{259}" is supported for the CPU struct-member selects but
 NOT for the GPU.} Synlig has three silent struct-select defects (D1:
 \code{s.m[..]} on a struct type with exactly two packed-range members;
@@ -199,7 +3947,7 @@ data are wrong in any Synlig-built GPU netlist, including the committed
 of today\textquotesingle s source (\code{if_id_reg_t} is a latent R=2
 type; \code{check_struct_member_select.py} guards new selects). \ok{}
 \textbf{UPDATE 2026-10-10 (beads \code{ma7}/\code{dud4},
-\src{docs/ASAP7_CPU_SYNLIG_MA7.md}): the ASAP7 miscompile is the same
+\cref{cr:defect:asap7-cpu-synlig-ma7}): the ASAP7 miscompile is the same
 defect as Sky130\textquotesingle s, NOT a regfile read-mux /
 \code{OPT_MUXTREE} fault --- this SUPERSEDES the
 "OPT\_\allowbreak{}MUXTREE runtime-indexed mux" mechanism and the "two
@@ -267,7 +4015,7 @@ re-run on the new macro (\code{RUN_2026-10-11_08-39-41}, rccal flow):
 LVS 0, routing DRC 0, setup and hold clean at all 9 corners (worst +2.48
 / +0.287 ns); \code{CVT.MaxCapViolations} FAILS (3 flat nets, ss
 corners) and the \code{axi_rdata_i[12]} waiver is now stale --- owner
-decisions open (see bead \bead{dud4}, \src{docs/SKY130_SLEW_CAP_E45J.md}
+decisions open (see bead \bead{dud4}, \cref{cr:defect:sky130-slew-cap-e45j}
 §8). \textbf{This is a NEW baseline, not a single-variable comparison}
 (frontend + RTL since July + registered-APB-output macro). Every earlier
 Sky130 CPU/SoC result wrapped the functionally wrong macro.
@@ -290,8 +4038,8 @@ no hardware, item 17).
 \textbf{Target}: Build a complete SoC with CPU, GPU, caches, and
 peripherals through incremental phases.
 
-Per-phase completion records → \src{docs/readme/PHASE_HISTORY.md} and
-\src{docs/PHASE_STATUS.md}.
+Per-phase completion records → \cref{cr:status:phase-history} and
+\cref{cr:status:phase-status}.
 
 \end{record}
 
@@ -299,8 +4047,8 @@ Per-phase completion records → \src{docs/readme/PHASE_HISTORY.md} and
 
 \begin{record}
 
-See \src{docs/ROADMAP.md} for the complete phase plan and
-\src{docs/PHASE_STATUS.md} for current status.
+See \cref{cr:status:roadmap} for the complete phase plan and
+\cref{cr:status:phase-status} for current status.
 
 {\footnotesize\setlength{\tabcolsep}{3pt}
 
@@ -410,12 +4158,12 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
   power-grid shapes (bead \bead{4l8}); the "benign tap-cell artifact"
   reading was wrong. \warn{} Timing/\allowbreak{}power also unvalidated
   post-\code{8f3} (STA zero-wire, run 14 artifacts wiped) --- see
-  \src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat" bead
+  \cref{cr:run:phase5} §"Power figure caveat" bead
   \bead{0p6} note. \ok{} Current RTL HAS been re-measured on the fixed
   flow (bead \bead{0d0}, 2026-09-18): −727.37 ps / 781 violators / hold
   clean / 283.6 mW at \code{RUN_2026-09-17_20-41-11}; run
   14\textquotesingle s own figures stay unvalidated.
-  \src{docs/PHASE5_RUN_HISTORY.md}
+  \cref{cr:run:phase5}
 \item
   \ok{} \textbf{Sign-off} (M12): M11 PPA recorded; docs updated
   (CLAUDE/\allowbreak{}ROADMAP/\allowbreak{}PHASE\_\allowbreak{}STATUS →
@@ -608,7 +4356,7 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
   met its 780 ps target. 0 routing DRC, 0 antenna, 0 slew/cap \warn{}
   all unsupported, run 23 committed zero routed wires --- bead
   \bead{xy6}, 51.9 mW \warn{} fabric-only (excludes both hard macros ---
-  see bead \bead{ew3} / \src{docs/PHASE5_RUN_HISTORY.md}; the 62.9→51.9
+  see bead \bead{ew3} / \cref{cr:run:phase5}; the 62.9→51.9
   mW drop vs. run 14 must NOT be read as a multi-clock power win, it
   coincides with the unrelated first-ever \code{USE_ICG_CELL}
   insertion), 66.9 \% util, and the \textbf{post-route CDC budget check
@@ -620,7 +4368,7 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
   CLEAN, 283.6 mW total / 89.6 mW fabric-only} at
   \code{RUN_2026-09-17_20-41-11} (bead \bead{0d0}, 2026-09-18;
   supersedes the earlier −2084 ps / 41,864-violator \code{w3a-sta-7}
-  snapshot) --- \src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat".
+  snapshot) --- \cref{cr:run:phase5} §"Power figure caveat".
   The CPU domain runs \textbf{2.24× the fabric} instead of being
   de-rated onto it. Getting there needed two independent fixes: (a) the
   macro exported \textasciitilde600--800 ps combinational in→out arcs on
@@ -639,7 +4387,7 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
   produce a byte-identical LEF, which made tuning measurable for the
   first time (block setup −25.87 → −10.48 → \textbf{−0.87 ps} across
   three revisions). Full table + caveats →
-  \src{docs/PHASE5_RUN_HISTORY.md}. \warn{} \textbf{Three findings that
+  \cref{cr:run:phase5}. \warn{} \textbf{Three findings that
   outlive \#96, all measured:} (1) bead \bead{s9f} --- librelane
   declares the resizer slack margins \texttt{units=\allowbreak{}"ns"}
   but passes them raw to OpenROAD, which reads the Liberty unit; ASAP7
@@ -677,7 +4425,7 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
   \code{dbSWire} shapes on VDD/VSS in run 23 and in the 3.0.14 CPU run,
   against 65 610 in a sky130 control. Consequence: every ASAP7
   routing/\allowbreak{}DRC number was produced with M1/M2/M5 free of PDN
-  metal and is a lower bound. See \src{docs/PHASE5_RUN_HISTORY.md} §PDN
+  metal and is a lower bound. See \cref{cr:run:phase5} §PDN
   caveat. \textbf{Fixed 2026-09-12 (bead \bead{4l8}):} the grid topology
   was wrong --- M1 rails were connected straight to M5 with M2 as a
   parallel sparse strap; the ORFS ASAP7 reference puts followpins on
@@ -693,10 +4441,10 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
 see items 13--15): additional \textbf{APB4} peripherals
 (GPIO/\allowbreak{}I2C/\allowbreak{}PWM/\allowbreak{}WDT/\allowbreak{}TRNG/\allowbreak{}AES-SHA),
 minimal INT8 NPU (\src{rtl/npu/}), and FreePDK45 tech-node exploration.
-See \src{docs/ROADMAP.md}. \warn{} Peripherals are \textbf{APB4}, not
+See \cref{cr:status:roadmap}. \warn{} Peripherals are \textbf{APB4}, not
 AXI4-Lite --- \src{docs/PERIPHERAL_BUS_EVALUATION.md} settled that
 ("Phase 6 peripherals become trivial APB drop-ins"); the AXI4-Lite
-wording that stood here and in \code{docs/ROADMAP.md:398} until
+wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadmap}) until
 2026-09-20 was stale.
 
 \begin{enumerate}
@@ -810,7 +4558,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} until
   runs in the adopted flow with hold clean. Both checkers remain
   \code{--skip}-ped, and "max fanout = 0" is \textbf{vacuous} because
   the SDC has no \code{set_max_fanout} at all. \ok{} \textbf{UPDATE
-  2026-10-07 (bead \bead{e45j}, \src{docs/SKY130_SLEW_CAP_E45J.md}):
+  2026-10-07 (bead \bead{e45j}, \cref{cr:defect:sky130-slew-cap-e45j}):
   root cause corrected and largely fixed.} The "0/0/0 at steps 33/40/41"
   figures were \textbf{nom\_tt only} (mid-PnR STA runs one corner; other
   corners\textquotesingle{} \code{state_out} values are stale step-9
@@ -836,7 +4584,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} until
   residual: 16 SRAM-input pins = \code{o1i}, \textasciitilde33 buffer
   nets, diode pins); \code{Checker.MaxCapViolations} could now be
   un-skipped but was not executed this run. \ok{} \textbf{UPDATE
-  2026-10-09 (bead \bead{e45j}, \src{docs/SKY130_SLEW_CAP_E45J.md} §7):
+  2026-10-09 (bead \bead{e45j}, \cref{cr:defect:sky130-slew-cap-e45j:7-adoption-2026-10-09-rccal-is-the-default-max-cap-gated-with-a-named-waiver}):
   the RC-calibrated flow is now the DEFAULT Sky130 SoC flow}
   (\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc[-\allowbreak{}noklayout]}
   runs \code{config_rccal.json}; \code{-norccal[-noklayout]} runs the
@@ -864,7 +4612,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} until
   \code{GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500} is NOT adopted (needs
   another RTL-vintage arm); the source fix (an input buffer inside the
   CPU macro) still needs hard-macro approval. \warn{} \textbf{UPDATE
-  2026-10-08 (bead \bead{e45j}, \src{docs/SKY130_SLEW_CAP_E45J.md} §5):
+  2026-10-08 (bead \bead{e45j}, \cref{cr:defect:sky130-slew-cap-e45j:5-confirmation-run-on-current-rtl-2026-10-08-not-adopted}):
   confirmation on CURRENT RTL did NOT hold, so rccal is NOT adopted as
   default and \code{Checker.MaxCapViolations} stays skipped.}
   \code{RUN_2026-10-08_05-21-39} (rccal, no DMA pin): LVS PASSED,
@@ -891,7 +4639,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} until
   Remaining fix is macro-side (CPU macro input buffering, needs
   approval) or a named single-net waiver (user\textquotesingle s call).
   \ok{} \textbf{UPDATE 2026-10-28 (bead \bead{e45j},
-  \src{docs/SKY130_SLEW_CAP_E45J.md} section 9):
+  \cref{cr:defect:sky130-slew-cap-e45j:9-wire-length-1500-adopted-as-default-2026-10-28-bead-e45j}):
   \code{GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500} IS now adopted (in
   \src{pnr/sky130/soc/config_rccal.json}, the default), which SUPERSEDES
   the "NOT adopted (needs another RTL-vintage arm)" above (kept as

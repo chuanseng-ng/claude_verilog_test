@@ -1,6 +1,6 @@
 # Synthesis undef-elaboration gate (bead `gc0y`)
 
-Origin: bead `dud4` (`docs/SKY130_CPU_SYNLIG_DUD4.md`) and `ma7` (`docs/ASAP7_CPU_SYNLIG_MA7.md`). The Synlig/UHDM frontend
+Origin: bead `dud4` (`Doc: cr:defect:sky130-cpu-synlig-dud4`) and `ma7` (`Doc: cr:defect:asap7-cpu-synlig-ma7`). The Synlig/UHDM frontend
 elaborated `.if_id_rs1_addr(if_id_reg.instruction[19:15])` as `5'x` and logged only
 `Warning: Range select [639:608] out of bounds on signal \if_id_reg: Setting all 32 result bits to undef.`
 Synthesis deleted the forwarding-select flops; lint, `Checker.YosysSynthChecks`, LVS and P&R all passed.

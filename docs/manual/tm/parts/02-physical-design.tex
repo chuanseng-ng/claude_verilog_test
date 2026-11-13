@@ -209,7 +209,7 @@ V / 25 °C). Run with \texttt{make\ librelane-\allowbreak{}asap7}. Phase
 \code{pnr/asap7/runs/RUN_2026-05-20_06-27-10/} (run directory no longer
 on disk to re-verify directly; \code{drt.tcl}\textquotesingle s
 catch-and-continue patch was already in place before this run per
-\src{docs/ASAP7_RUN_HISTORY.md}\textquotesingle s caveat banner, so
+\cref{cr:run:asap7}\textquotesingle s caveat banner, so
 timing/\allowbreak{}power/\allowbreak{}area stand but the
 DRC/\allowbreak{}antenna claim does not). \textbf{Phase 5 M7 update
 (2026-06-02):} adding the perf-monitoring CSRs lowers the standalone CPU
@@ -219,7 +219,7 @@ mW, 4 058 µm²; achievable \textasciitilde1323 MHz)} at run
 number does not hold with M7 (limiter = 836-fanout counter-write-enable
 cone). Moot for the SoC (GPU-governed \textasciitilde571 MHz).
 \src{pnr/asap7/cpu/config.json} + \code{constraints/asap7.sdc} are now
-at 780 ps. See \src{docs/ASAP7_RUN_HISTORY.md} for the full campaign
+at 780 ps. See \cref{cr:run:asap7} for the full campaign
 history. \warn{} \textbf{Both the 1418 MHz and 1282 MHz figures above
 are \code{8f3}-affected} (bead \bead{8f3}/\code{0p6}, 2026-09-16): stock
 \code{OpenROAD.STAMidPNR-3} without an in-session re-route, same
@@ -228,5 +228,5 @@ are gone (unrecoverable); the M7 1282 MHz point \textbf{was re-measured
 on current RTL with the fix} (\code{STA_POSTGRT_INSESSION_GRT=1}, run
 tag \code{bpp7_postgrt_set}) and does \textbf{not} hold --- honest
 result is setup WNS \textbf{−169.7 ps / TNS −70,913 ps / 1008 violators}
-(hold clean, unaffected). Full detail: \src{docs/ASAP7_RUN_HISTORY.md}.
+(hold clean, unaffected). Full detail: \cref{cr:run:asap7}.
 \end{relocated}

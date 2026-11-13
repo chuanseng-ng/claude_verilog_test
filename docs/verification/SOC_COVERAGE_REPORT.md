@@ -425,7 +425,7 @@ described above (100 % on the exact CPU/GPU `.dat`).
 | | L566 else, L581 | b | Burst-contract violation (5th R beat without RLAST); FSM `default:`. Waived. |
 | | L498 if | a | Abort in `CS_SRAM_LATCH` on FENCE.I or an address change in exactly that cycle. **Open**, needs a unit-level icache stimulus (slice 2). |
 | `vector_alu` | L63, L65 | a | VBNE and VBGE never run. Closed by `test_branch_vbne`, `test_branch_vbge`. |
-| `gpu_top` | L251 cond_then | c | `BLOCK_X` 57..64: the 3-bit warp count saturated at 7, warp 7 never ran. **Fixed 2026-10-10** (bead `47lf` / GH #254, `fixes/FIXES_INDEX.md` section 12): the count is now `WARP_CNT_W` = 4 bits and the cap is `N_WARPS`; the `expect_fail` is gone. (The row's line number is from the pre-fix tree; the edit moved the FSM `default:` from L268 to L272.) |
+| `gpu_top` | L251 cond_then | c | `BLOCK_X` 57..64: the 3-bit warp count saturated at 7, warp 7 never ran. **Fixed 2026-10-10** (bead `47lf` / GH #254, Doc: cr:fix:fixes-index:12-gpu-warp-count-saturated-at-7-bead-47lf-gh-254): the count is now `WARP_CNT_W` = 4 bits and the cap is `N_WARPS`; the `expect_fail` is gone. (The row's line number is from the pre-fix tree; the edit moved the FSM `default:` from L268 to L272.) |
 | | L272 (was L268) | b | FSM `default:`. Waived. |
 | | L143 if, L155, L262, L265 if, L266, L267 (2), L311, L312, L314, L331 | a | Soft-reset bit, write to an unmapped register, `GPS_RUNNING` -> `GPS_ERROR` (divergence-stack overflow at `gpu_top` level), `GPS_DONE`/`GPS_ERROR` -> idle, `BLOCK_Y`/`BLOCK_Z`/`IRQ_STATUS` reads, read of an unmapped register. **Open**, slice 2. |
 

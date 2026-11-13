@@ -318,7 +318,7 @@ pre-commit gc
 
 ## See Also
 
-- `../QUICKSTART_PRECOMMIT.md` - Quick pre-commit setup
+- `Doc: cr:app:archive-quickstart-precommit` - Quick pre-commit setup
 - `.github/PRE_COMMIT_SETUP.md` - Detailed pre-commit guide
 - `.github/CI_SETUP.md` - CI/CD documentation
 - `.github/QA_WORKFLOW_DIAGRAM.md` - Visual workflow

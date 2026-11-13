@@ -18,7 +18,7 @@ M7 hardware perf counters (`mhpmcounter3`=I$ miss, `mhpmcounter4`=D$ miss,
 > cycles). Cycle counts taken from `mcycle` before the fix therefore under-count by one per CSR
 > instruction in the measured window (the size of the effect depends on how many CSR instructions
 > the harness executes inside its window; it was not re-measured). The results below are left as
-> recorded. See `fixes/FIXES_INDEX.md` section 14.
+> recorded. See Doc: cr:fix:fixes-index:14-performance-counters-freeze-while-a-csr-instruction-is-in-ex-bead-kiit-gh-260.
 
 The decision workload is `sweep.c`: a working-set sweep (512 B → 32 KB) in two
 access patterns — **SEQ** (sequential) and **STRIDE** (256 B stride, defeats

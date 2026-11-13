@@ -15,7 +15,7 @@
 > M7 CSRs lowers the standalone CPU sign-off to **1282 MHz** (780 ps, run
 > `pnr/asap7/cpu/runs/RUN_2026-06-02_20-37-12/`; limiter = 836-fanout
 > counter-write-enable cone). Moot for the SoC, which is GPU-governed at ~571 MHz.
-> See CLAUDE.md "Technology Node Strategy" and `docs/ASAP7_RUN_HISTORY.md` (M7 section).
+> See CLAUDE.md "Technology Node Strategy" and `Doc: cr:run:asap7` (M7 section).
 
 **Why this plan exists.** The repo just signed off ASAP7 Run 43 at 1418 MHz
 (commit `901fca6`, 2026-05-20) which integrated the Phase 2 pipeline **and**
@@ -25,7 +25,7 @@ The recent campaign was driven through `phase-2-3/asap7-run-rtl-ppa-improv`.
 However, two things are still open:
 
 1. **Phase 3 is RTL-complete but not formally signed-off in verification.**
-   `docs/PHASE_STATUS.md` still marks Phase 3 as 🔄 IN PROGRESS. Two gates
+   `Doc: cr:status:phase-status` still marks Phase 3 as 🔄 IN PROGRESS. Two gates
    listed in `CLAUDE.md` § "Phase 3 Workflow" remain unconfirmed since cache
    integration: (a) the 111-test Phase 2 regression must be re-run with caches
    enabled (FENCE.I is now a legal instruction rather than an illegal-instr
@@ -73,7 +73,7 @@ PD sign-off comparable to Run 43.
   landed. FENCE.I is now legal — any test asserting it traps would now fail.
 - 50,000-instruction random regression with caches enabled — **not recorded**
   for the cache-integrated DUT.
-- `docs/PHASE_STATUS.md` and `docs/ROADMAP.md` still mark Phase 3 as in
+- `Doc: cr:status:phase-status` and `Doc: cr:status:roadmap` still mark Phase 3 as in
   progress.
 
 ### Phase 4 — spec frozen, reference model done, RTL absent
@@ -109,7 +109,7 @@ future sessions load it deterministically.
   promoted from `~/.claude/plans/read-and-check-if-shiny-hennessy.md`).
 - **Update `CLAUDE.md`** "Key Documentation > Architecture & Design" table to
   add a row pointing at `docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md`.
-- **Update `docs/PHASE_STATUS.md`** "Next Steps" to link the new doc.
+- **Update `Doc: cr:status:phase-status`** "Next Steps" to link the new doc.
 - **Commit** with `[Doc] Add Phase 3 closure + Phase 4 implementation plan as golden spec`.
 
 Rationale: Plan-mode `~/.claude/plans/*.md` files are per-user and not
@@ -148,9 +148,9 @@ checked into the repo. Future sessions need a repo-tracked source of truth.
   results (4.1 + 4.2), ASAP7 Run 43 metrics that already cover this RTL
   (1418 MHz / 27.27 mW / 3 844 µm² / +5.97 ps slack), reference-model
   cross-validation status. Mirror the Phase 2 sign-off doc format.
-- Update `docs/PHASE_STATUS.md` to mark Phase 3 ✅ COMPLETE with the
+- Update `Doc: cr:status:phase-status` to mark Phase 3 ✅ COMPLETE with the
   sign-off date and link.
-- Update `docs/ROADMAP.md` Phase 3 row to ✅.
+- Update `Doc: cr:status:roadmap` Phase 3 row to ✅.
 - Commit: `[Spec] Phase 3 sign-off — caches verified vs reference model`.
 
 ### 4.4 Phase 3 exit gate
@@ -331,11 +331,11 @@ LibreLane-driven incremental campaign Phase 2+3 used (Runs 7→43).
 - 0 DRC, 0 antenna, 0 LVS short / open.
 - Power estimate recorded; area recorded.
 - Final run committed as `[PD] ASAP7 Phase 4 GPU sign-off: Run N @ <freq> / <power>`.
-- Append to `docs/ASAP7_RUN_HISTORY.md`.
+- Append to `Doc: cr:run:asap7`.
 
 ### 7.5 Memory bookkeeping
 - Update `tb/models/cache_model.py`-style memory file is not needed for GPU;
-  instead, append a Phase 4 section to `docs/ASAP7_RUN_HISTORY.md`.
+  instead, append a Phase 4 section to `Doc: cr:run:asap7`.
 - Update `MEMORY.md` index with a new `project_asap7_gpu_run_state.md`
   reference for Phase 4 PD runs.
 
@@ -374,9 +374,9 @@ LibreLane-driven incremental campaign Phase 2+3 used (Runs 7→43).
 | Path | Why |
 |---|---|
 | `CLAUDE.md` | Add doc link to golden spec; update Phase 3 ✅ status; update Phase 4 status from ⏸️ to 🔄 once started. |
-| `docs/PHASE_STATUS.md` | Phase 3 → ✅; Phase 4 → 🔄; link golden spec. |
-| `docs/ROADMAP.md` | Phase 3 → ✅; Phase 4 status row. |
-| `docs/ASAP7_RUN_HISTORY.md` | Append Phase 4 GPU runs. |
+| `Doc: cr:status:phase-status` | Phase 3 → ✅; Phase 4 → 🔄; link golden spec. |
+| `Doc: cr:status:roadmap` | Phase 3 → ✅; Phase 4 status row. |
+| `Doc: cr:run:asap7` | Append Phase 4 GPU runs. |
 | `sim/Makefile` | Add GPU test discovery if needed (likely already pattern-matches `tb.cocotb.gpu.*`). |
 
 ### To reuse (do not modify)
@@ -409,7 +409,7 @@ Phase 4 sign-off is:
 6. Re-run Phase 2+3 regression (CPU-only DUT) → 111/111 + 50k random pass.
 7. `make librelane-asap7` on `pnr/asap7/gpu/config.json` (or a new make
    target `librelane-asap7-gpu`) → WNS ≥ 0, hold ≥ 0, 0 DRC, 0 antenna.
-8. Commit run history entry → tag Phase 4 ✅ in `docs/PHASE_STATUS.md`.
+8. Commit run history entry → tag Phase 4 ✅ in `Doc: cr:status:phase-status`.
 
 ---
 

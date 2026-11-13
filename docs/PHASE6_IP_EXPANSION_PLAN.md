@@ -3,7 +3,7 @@
 **Status:** Phase 6 complete (2026-10-05). 6a–6c are built and Gate B (§8) closed 2026-10-05 (bead `f7vs.15`); epic `f7vs` is closed. This document is kept as the golden spec, and its per-item status text is dated.
 **Scope:** every remaining Phase 6 item — the four unbuilt 6a peripherals, the 6b crypto
 accelerator, and the 6c NPU.
-**Supersedes for planning purposes:** the 24-line sketch at `docs/ROADMAP.md:429-453`, which
+**Supersedes for planning purposes:** the 24-line sketch at `Doc: cr:status:roadmap:429-453`, which
 remains the roadmap-level summary. Where the two disagree, this document is authoritative.
 
 This is the Phase 6 equivalent of `docs/PHASE5_SOC_INTEGRATION_PLAN.md` and
@@ -23,7 +23,7 @@ sub-phase letters below are now the only ones used:
 | **6b** | AES-128 + SHA-256 accelerator (`crypto_accel`) | ✅ 2026-10-03 (`f7vs.10`) |
 | **6c** | Minimal INT8 NPU (`npu_top`) | ✅ 2026-10-04 (`f7vs.11`) |
 
-`docs/ROADMAP.md:398` already used this reading. `CLAUDE.md:31`'s "6a GPIO ✅ done; 6b+ not
+`Doc: cr:status:roadmap:398` already used this reading. `CLAUDE.md:31`'s "6a GPIO ✅ done; 6b+ not
 started" treated 6a as GPIO-only; that wording is corrected to "6a GPIO done, 6a remainder +
 6b + 6c planned".
 
@@ -38,7 +38,7 @@ Items numbered **6a-2 … 6a-5** below are the remaining 6a peripherals, in impl
 — as the reason to settle it before scaling. Every peripheral in this document is therefore an
 APB4 slave on the existing `axil_to_apb` → `apb_interconnect` sub-tree.
 
-**`docs/ROADMAP.md:431`'s "AXI4-Lite slave" for AES/SHA is stale** — a survivor of the
+**`Doc: cr:status:roadmap:431`'s "AXI4-Lite slave" for AES/SHA is stale** — a survivor of the
 pre-2026-09-20 text, the same wording the bus correction fixed for the 6a heading but not for 6b.
 Corrected in the same PR as this document.
 
@@ -54,7 +54,7 @@ would require giving crypto an AXI4 slave data port — `SOC_N_SLAVES` 3 → 4
 handshake and arbitration defect (bead `7fs`) — in exchange for a throughput number nothing in
 this repo measures.
 
-⚠️ **Consequence for the roadmap's figures.** `docs/ROADMAP.md:437-439` quotes ~75 MB/s (Sky130),
+⚠️ **Consequence for the roadmap's figures.** `Doc: cr:status:roadmap:437-439` quotes ~75 MB/s (Sky130),
 ~400 MB/s (FreePDK45) and ~1 GB/s (ASAP7) for AES. Those describe the **deferred AXI4-master
 version**, not what Phase 6b lands. An APB single-beat register feed is far slower. The roadmap
 is annotated accordingly; do not quote those numbers against the delivered RTL.
@@ -198,7 +198,7 @@ number of items that land per unit of debugging.
 | G2 | Address window + IRQ pre-allocation | `f7vs.2` | Collapses 6 rounds of window-growth churn into 1 |
 | G3 | `tb_soc_top.sv` ports + SDC exceptions | `f7vs.3` | Collapses the Verilator cache-stale hazard to 1 event |
 | G4 | Filelist checker + `apb_interconnect` suite | `f7vs.4` | Automates the one hazard cocotb cannot catch |
-| G5 | `PHASE_STATUS.md` Phase 6 section | `f7vs.5` | De-stales the project status |
+| G5 | `Doc: cr:status:phase-status` Phase 6 section | `f7vs.5` | De-stales the project status |
 | 6a-2 | **PWM** | `f7vs.6` | Cheapest payload: no async input, no CDC, no FSM, no FIFO. Validates G2–G4 |
 | 6a-3 | **WDT** | `f7vs.7` | Tiny RTL, but carries the reset-tree decision — do it while the diff is small |
 | 6a-4 | **TRNG** | `f7vs.8` | Trivial under the `ifdef` entropy design; settles randomness-scoreboarding methodology cheaply |
@@ -316,7 +316,7 @@ This removes the entire "keep a non-portable peripheral out of the ASAP7 file li
 conditional SoC-level instantiation and no tied-off slot, and keeps the G4 filelist checker
 simple. What is Sky130-exclusive is the **entropy-quality claim**, not the RTL.
 
-`docs/ROADMAP.md:411-413`'s TRNG row is corrected to: *"✅ RTL portable (LFSR entropy source);
+`Doc: cr:status:roadmap:411-413`'s TRNG row is corrected to: *"✅ RTL portable (LFSR entropy source);
 ring-oscillator entropy Sky130-only."*
 
 Health tests: **repetition-count only** (NIST SP 800-90B), with a sticky `STATUS.health_fail`.
@@ -979,7 +979,7 @@ the module.
 | 4 | `chip-design-soc:soc-integration` | `APB_<NAME>` index, `APB_N_SLAVES`++, both array literal appends; `soc_bus.sv` comments; `soc_top.sv` instantiation, replacing the G3 port tie and the G2 `1'b0` IRQ tie; `interrupt_controller.sv` header; all five file lists; G4 checker green |
 | 5 | `verification-orchestrator` | `test_soc_<name>.py` on `tb_soc_top` (`CLK_PERIOD_NS = 2`, reusing `SOC_BOOT_SOURCES`); firmware from a committed pure-Python generator in `<name>_fw/gen_<name>_hex.py` emitting the hex plus an `addrs.py` of marker PCs (the `gpio_fw` pattern). **CI-safe** → belongs in `soc_all_ci` |
 | 6 | `chip-design-firmware:firmware-orchestrator` *(selected items)* | `sw/drivers/<name>.h`, header-only, all `static inline`; `sw/bench/<name>_demo.c`; `test_<name>_driver.py` scoreboarding against `.sym` markers. **`soc_all` only, never `soc_all_ci`** |
-| 7 | *(close-out)* | `MEMORY_MAP.md`, `CLAUDE.md`, `ROADMAP.md`, `PHASE_STATUS.md`, `README.md`; `soc_all_ci` from clean; raise `PASS_FLOOR` to the **measured** number |
+| 7 | *(close-out)* | `MEMORY_MAP.md`, `CLAUDE.md`, `Doc: cr:status:roadmap`, `Doc: cr:status:phase-status`, `README.md`; `soc_all_ci` from clean; raise `PASS_FLOOR` to the **measured** number |
 
 L3 drivers are **outside the chosen DoD** for this phase. When they are scheduled, prioritise I2C
 and CRYPTO — they are what firmware actually drives, and a compiled-C system test is genuinely
@@ -1042,8 +1042,8 @@ it. After groundwork G2/G3, items 4, 5, 11 and parts of 7 are already done for e
     *(Pre-added by G3.)*
 12. **`docs/design/MEMORY_MAP.md`** — global table `:24-43`; ring prose `:45-54`; a new register
     table modelled on GPIO's `:282-314`; interrupt hierarchy `:395-406`.
-13. **Docs** — `CLAUDE.md` (GPIO's consolidated paragraph is item 13), `docs/ROADMAP.md:405-427`,
-    `docs/PHASE_STATUS.md`, `README.md`.
+13. **Docs** — `CLAUDE.md` (GPIO's consolidated paragraph is item 13), `Doc: cr:status:roadmap:405-427`,
+    `Doc: cr:status:phase-status`, `README.md`.
 14. **Suite registration** — `.PHONY` at `tb/cocotb/soc/Makefile:452`; `soc_all_ci` `:931-957`;
     `soc_all` `:928-929`; `PASS_FLOOR` at `.github/workflows/cocotb.yml:165`.
 
@@ -1084,9 +1084,9 @@ Recorded so they are decisions rather than omissions:
 
 | Document | Relationship |
 |:---------|:-------------|
-| `docs/ROADMAP.md` §Phase 6+ | Roadmap-level summary; this document is authoritative where they differ |
+| `Doc: cr:status:roadmap` §Phase 6+ | Roadmap-level summary; this document is authoritative where they differ |
 | `docs/PERIPHERAL_BUS_EVALUATION.md` | The APB4 decision this phase implements |
-| `docs/PHASE_STATUS.md` | Per-item live status |
+| `Doc: cr:status:phase-status` | Per-item live status |
 | `docs/design/MEMORY_MAP.md` | Address and register reference, updated per item |
 | `docs/CPP_TO_RTL_HLS_EVALUATION.md` | HLS-vs-hand-RTL evidence behind the 6c decision |
 | `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` | Gate B context |
