@@ -1,26 +1,21 @@
-# Post-route CDC budget verification for the 2-domain ASAP7 SoC
-# Tool: OpenSTA (invoked as 'sta' standalone binary)
-# Invoked via: sta pnr/scripts/check_cdc_timing.tcl
-# (Makefile target: make check-cdc-timing-asap7-soc, see pnr/Makefile)
-# Requires a routed netlist that actually contains the CDC modules
-# (async_axi_fifo / apb_cdc_bridge / second PLL stub) — i.e. a P&R run of
-# pnr/asap7/soc/config.json with PNR_SDC_FILE pointed at
-# phase5_soc_multiclock.sdc instead of the single-clock phase5_soc.sdc.
-# EXIT CODE CONTRACT (bead claude_verilog_test-dwp, 2026-08-03):
-#   exit 0 -- PASS: every CDC exception matched a real object and every
-#             targeted timing budget was met.
-#   exit 1 -- CDC FINDING(S): a design/constraint problem -- one or more
-#             CDC exceptions matched an EMPTY collection (unmatched /
-#             renamed instance) and/or one or more targeted budgets
-#             reported a VIOLATED slack. Names of every finding are
-#             printed in the final CDC-CHECK-RESULT block, not just the
-#             exit code.
-#   exit 2 -- SETUP/USAGE ERROR: the check itself could not run at all
-#             (missing env var, missing liberty/netlist/SDC file, or an
-#             SDC read failure unrelated to the CDC-EXCEPTION-MISS
-#             mechanism below). This is a tool/environment problem, not a
-#             finding about the design -- CI must be able to tell the two
-#             apart.
+# check_cdc_timing.tcl - Post-route CDC budget check for the 2-domain ASAP7 SoC (OpenSTA)
+#
+# Scope: make target check-cdc-timing-asap7-soc runs it as `sta pnr/scripts/check_cdc_timing.tcl`.
+#   With CDC_CHECK_ODB set, run it under openroad, not sta. It reads the SDC phase5_soc_multiclock_check.sdc.
+# Contents: reads the Liberty files and the routed soc_top netlist, reads the check SDC, then runs targeted report_checks
+#   queries on the CDC endpoints that the SDC excepts. It collects every finding and prints one CDC-CHECK-RESULT block.
+# Inputs: CDC_CHECK_RUN_DIR (required): a routed ASAP7 SoC run built with PNR_SDC_FILE set to phase5_soc_multiclock.sdc.
+#   Optional: CDC_CHECK_SDC (check SDC path), CDC_CHECK_ODB (read this OpenROAD database instead of the netlist),
+#   CDC_CHECK_FORCE_GRT=1, CDC_CHECK_PROPAGATED_CLOCK=1, ASAP7_LIB_DIR (Liberty directory),
+#   and RT_MIN_LAYER and RT_MAX_LAYER (routing layer range).
+# User rules:
+#   Exit 0: PASS. Every CDC exception matched a real object and every targeted budget was met.
+#   Exit 1: CDC finding. An exception matched an empty collection (unmatched or renamed instance),
+#   or a budget has a violated slack. The final CDC-CHECK-RESULT block names every finding.
+#   Exit 2: setup or usage error. The check could not run: a missing variable, Liberty, netlist or SDC file,
+#   or an SDC read failure unrelated to CDC-EXCEPTION-MISS. CI must tell exit 1 and exit 2 apart.
+#   Batch-mode sta returns exit code 0 even after a Tcl error. This script never relies on an uncaught error to fail.
+#   This script runs targeted queries only. It is not a full-chip sign-off sweep.
 # Doc: tm:pd:scripts-check-cdc-timing-tcl, cr:pd:scripts-check-cdc-timing-tcl
 
 proc cdc_fatal_setup {msg} {
@@ -152,17 +147,9 @@ if {![file exists $CHECK_SDC]} {
 }
 
 if {[catch {read_sdc $CHECK_SDC} _sdc_err]} {
-    # phase5_soc_multiclock_check.sdc's own section 15 gate raises a Tcl
-    # `error` when one or more of ITS CDC timing exceptions (sections
-    # 11-13) failed to match any pin/net -- an EXPECTED finding, not a
-    # tool failure (see that file's cdc_require_match proc / the
-    # ::cdc_exception_misses global it populates). Distinguish that case
-    # from a genuine SDC read failure (syntax error, bad Tcl elsewhere):
-    # only ::cdc_exception_misses being non-empty proves this was the
-    # expected mechanism. Continue past it (rather than exiting here) so
-    # the report_checks queries below still run and any additional budget
-    # violations are folded into the SAME final report -- this is the
-    # "accumulate across all checks, don't bail on first" requirement.
+# The check SDC raises a Tcl error from its section 15 gate when a CDC exception matched nothing. That is an expected finding.
+# Only a non-empty ::cdc_exception_misses proves this mechanism. Any other read_sdc failure is a setup error.
+# Continue past the error, so the report_checks queries below still run and all findings go into one final report.
     if {[info exists ::cdc_exception_misses] && [llength $::cdc_exception_misses] > 0} {
         foreach _miss $::cdc_exception_misses {
             cdc_record_finding "unmatched CDC exception (phase5_soc_multiclock_check.sdc): $_miss"

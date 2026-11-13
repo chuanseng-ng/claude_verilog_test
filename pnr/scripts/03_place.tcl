@@ -1,9 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 3: Placement
-# Tool: OpenROAD (global + detailed placement)
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), Sky130 HD
-#================================================================
+# 03_place.tcl - Stage 3 of the OpenROAD flow: placement (OpenROAD, global and detailed placement, Sky130 HD)
+#
+# Scope: make target place runs it from pnr/Makefile.
+# Contents: runs timing-driven global placement and detailed placement.
+# Inputs: environment variables TOP_MODULE and SDC_FILE. SKY130_ROOT overrides the PDK location.
+# User rules: PLACE_DENSITY in this script sets the target cell density.
+# Doc: tm:pd:scripts-03-place-tcl
 
 #----------------------------------------------------------------
 # Configuration
@@ -93,7 +94,7 @@ puts "Running global placement (timing-driven, density $PLACE_DENSITY)"
 puts "================================================================"
 
 # global_placement uses RePlAce under the hood.
-# -timing_driven: weights nets by criticality; essential at 75 MHz.
+# -timing_driven: weights nets by criticality. It is essential at the target frequency.
 # -density: target cell density (matches PLACE_DENSITY variable).
 # -pad_left / -pad_right: leave room for filler/decap cells.
 global_placement \

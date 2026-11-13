@@ -1,3 +1,15 @@
+# pdn_asap7.tcl - Power grid script for an ASAP7 block: M1 followpins, M2 V-stripes, M5 H-stripes
+#
+# Scope: no config.json in pnr/asap7 names this file today. pnr/asap7/soc/pdn.tcl extends this pattern.
+# Contents: global connections; secondary VDD and GND nets; voltage domain CORE; grid stdcell_grid with M5 and M2 stripes
+#   and M1 followpin rails; M1-M2 and M2-M5 connections; default macro grid with an M2-M5 connection.
+# Inputs: environment variables SCRIPTS_DIR, VDD_NET, VDD_NETS, GND_NET, GND_NETS, FP_PDN_HPITCH, FP_PDN_HOFFSET,
+#   FP_PDN_RAIL_WIDTH, FP_PDN_HORIZONTAL_HALO and FP_PDN_VERTICAL_HALO.
+# User rules:
+#   Pass only VDD nets to -secondary_power. It does not accept ground nets.
+#   The M5 stripe width must come from the M5 WIDTHTABLE.
+#   The CPU and GPU blocks use pdn_asap7_orfs.tcl through their pdn_orfs.tcl wrappers.
+# Doc: tm:pd:asap7-pdn-tcl
 source $::env(SCRIPTS_DIR)/openroad/common/set_global_connections.tcl
 set_global_connections
 
@@ -33,16 +45,14 @@ foreach gnd $::env(GND_NETS) {
 set_voltage_domain -name CORE -power $::env(VDD_NET) -ground $::env(GND_NET) \
     -secondary_power $secondary
 
-# ASAP7 PDN: M1 followpins → M2 V-stripes → M5 H-stripes
-# M2 connects M1 rails (horizontal) via vias at pitch 1.62 µm (dense)
-# M5 connects M2 V-stripes at pitch 6.48 µm
+# ASAP7 PDN: M1 followpins, M2 V-stripes, M5 H-stripes. M2 connects the M1 rails by vias. M5 connects the M2 stripes.
 define_pdn_grid \
     -name stdcell_grid \
     -starts_with POWER \
     -voltage_domain CORE \
     -pins "M5 M2"
 
-# M5 horizontal stripes (coarse, every 6.48 µm)
+# M5 horizontal stripes (coarse).
 # Width must be from M5 WIDTHTABLE: 0.024, 0.120, 0.216, ... Use 0.120
 add_pdn_stripe \
     -grid stdcell_grid \
@@ -53,7 +63,7 @@ add_pdn_stripe \
     -spacing 0.120 \
     -starts_with POWER -extend_to_core_ring
 
-# M2 vertical stripes (dense, every 1.62 µm) — connect M1 rails to M5 grid
+# M2 vertical stripes (dense) - connect the M1 rails to the M5 grid.
 add_pdn_stripe \
     -grid stdcell_grid \
     -layer M2 \

@@ -1,9 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 1: RTL Synthesis
-# Tool: Yosys
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), Sky130 HD
-#================================================================
+# 01_synth.tcl - Stage 1 of the OpenROAD flow: RTL synthesis (Yosys, Sky130 HD)
+#
+# Scope: make target synth runs it from pnr/Makefile.
+# Contents: reads the RTL, synthesises it and maps it to Sky130 HD cells with abc.
+# Inputs: environment variables TOP_MODULE, CLOCK_PERIOD (in ns) and PDK. SKY130_ROOT overrides the PDK location.
+# User rules: CLOCK_PERIOD is in ns. The script passes it to abc in picoseconds.
+# Doc: tm:pd:scripts-01-synth-tcl
 
 #----------------------------------------------------------------
 # Configuration — override via env vars if needed
@@ -192,7 +193,7 @@ synth -top $TOP_MODULE -flatten
 dfflibmap -liberty $LIB_TT
 
 # ABC: combinational optimisation + technology mapping with timing target.
-# -D sets the target period in picoseconds (13333 ps = 13.333 ns = 75 MHz).
+# -D sets the abc target period in picoseconds. The expression converts CLOCK_PERIOD from ns.
 abc -liberty $LIB_TT -D [expr {int($CLOCK_PERIOD * 1000)}]
 
 # Remove dangling wires and unused cells

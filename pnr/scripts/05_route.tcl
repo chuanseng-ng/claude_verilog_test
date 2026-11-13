@@ -1,9 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 5: Routing
-# Tool: FastRoute (global) + TritonRoute (detailed)
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), Sky130 HD
-#================================================================
+# 05_route.tcl - Stage 5 of the OpenROAD flow: routing (FastRoute for global routing, TritonRoute for detailed routing, Sky130 HD)
+#
+# Scope: make target route runs it from pnr/Makefile.
+# Contents: runs global routing, then detailed routing.
+# Inputs: environment variables TOP_MODULE and SDC_FILE. SKY130_ROOT overrides the PDK location.
+# User rules: set_routing_layers allows met1 to met4 for signals and met3 to met4 for clocks.
+# Doc: tm:pd:scripts-05-route-tcl
 
 #----------------------------------------------------------------
 # Configuration
@@ -80,19 +81,10 @@ set_wire_rc -clock  -layer met3
 estimate_parasitics -placement
 
 #----------------------------------------------------------------
-# Global Routing (FastRoute)
-#
-# Sky130 HD has 5 routing layers plus li1 (local interconnect):
-#   li1  — local only, not used for global routing
-#   met1 — preferred horizontal (narrow pitch)
-#   met2 — preferred vertical
-#   met3 — horizontal
-#   met4 — vertical (wide pitch, used for power)
-#   met5 — horizontal (used for power)
-#
-# Signal routing: met1–met4 (met4 reserved for power straps but available
-# for signal where straps don't conflict).
-# Clock routing used met3 exclusively during CTS; FastRoute respects that.
+# Global Routing (FastRoute). Sky130 HD has five routing layers plus li1, which is local only and not used for global routing.
+# met1, met3 and met5 are horizontal. met2 and met4 are vertical. met4 and met5 carry power.
+# Signal routing uses met1 to met4. met4 is reserved for power straps but is available for signal where the straps do not conflict.
+# set_routing_layers below allows met1 to met4 for signals and met3 to met4 for clocks.
 #----------------------------------------------------------------
 
 puts "================================================================"

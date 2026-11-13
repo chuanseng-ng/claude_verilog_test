@@ -1,13 +1,20 @@
-# sky130_soc_cdc_check.sdc -- POST-ROUTE CDC BUDGET VERIFICATION ONLY (Sky130 SoC)
-# pnr/constraints/phase5_soc_multiclock_check.sdc (ASAP7). Read ONLY by
-# pnr/scripts/check_cdc_timing_sky130.tcl (`make -C pnr check-cdc-timing-sky130-soc`).
-# It is NOT an implementation SDC: sky130_soc.sdc is (it declares core_clk / cpu_clk
-# asynchronous), this file deliberately does not.
-# So the CDC budgets can only be timed by a file that declares BOTH clocks and NEVER relates
-# them. Consequence (same as the ASAP7 file): this file is for TARGETED queries on the
-# crossings below; a full unfiltered report_wns/report_tns against it would show fabricated
-# violations on every unrelated pair of flops that happen to sit in different domains.
-###############################################################################
+# sky130_soc_cdc_check.sdc - Post-route CDC budget constraints for the 2-domain Sky130 SoC (companion SDC)
+#
+# Scope: check_cdc_timing_sky130.tcl times it (make -C pnr check-cdc-timing-sky130-soc).
+#   tb/tests/test_cvt_scan_step.py and tools/docs/check_pinned_text.py read its text. No implementation flow reads it.
+# Contents: clocks core_clk (clk_i), cpu_clk (cpu_clk_i) and tck (tck_i, when present); reset false paths; functional-view case analysis;
+#   Tcl helper procs; section 10 fallback; max-delay budgets on the CDC crossings.
+# Inputs: environment variables CVT_SDC_SCAN_VIEW and CDC_CHECK_MBIST_BUDGET_NS (both optional).
+#   The file sets clock_period and tck_period itself. All time values are in ns, the sky130_fd_sc_hd Liberty unit.
+# User rules:
+#   This is not an implementation SDC. sky130_soc.sdc is, and it declares core_clk and cpu_clk asynchronous.
+#   This file declares no clock group and no false path between core_clk, cpu_clk and tck. This is deliberate.
+#   The CDC budgets can only be timed by a file that declares the clocks and never relates them.
+#   Use it for targeted queries only. A full report_wns or report_tns shows fabricated violations on unrelated cross-domain flop pairs.
+#   OpenSTA has no set_max_delay -datapath_only. read_sdc stops on it.
+#   Between two overlapping -from/-to exceptions the last one declared wins,
+#   so the section 10 fallback must stay before the per-crossing budgets.
+#   Do not put a literal '.' in a get_nets -filter pattern.
 # Doc: tm:pd:sky130-soc-cdc-check-sdc, cr:pd:sky130-soc-cdc-check-sdc
 
 set clock_period 25.0
@@ -158,11 +165,9 @@ proc cdc_apply_sync_budget {group inst_token val from_clk to_clk description} {
             lappend ::cdc_exception_misses "${description} (net [get_full_name $_n]) no launch"
             continue
         }
-        # -to the capture flop's D PIN, not the cell: the section-10 fallback is -to D pins, and
-        # OpenSTA ranks a pin-qualified exception above a cell-qualified one, so a -to <cell>
-        # budget silently LOSES to the fallback whatever the declaration order (measured on the
-        # baseline netlist: the intended 25.0 ns applied as the fallback's 22.5 ns). With both
-        # sides pin-qualified the later declaration wins, as the ASAP7 file documents.
+# Target the capture flop's D PIN, not the cell. The section-10 fallback is -to D pins, and OpenSTA ranks a pin-qualified exception above a cell-qualified one.
+# So a -to <cell> budget silently loses to the fallback, whatever the declaration order.
+# With both sides pin-qualified the later declaration wins, as the ASAP7 file documents.
         set_max_delay $val -from $_launch -to $_dpins
         dict lappend ::cdc_groups $group {*}$_dpins
         lappend ::cdc_last_pins {*}$_dpins

@@ -1,9 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 2: Floorplanning
-# Tool: OpenROAD
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), Sky130 HD
-#================================================================
+# 02_floorplan.tcl - Stage 2 of the OpenROAD flow: floorplanning (OpenROAD, Sky130 HD)
+#
+# Scope: make target floorplan runs it from pnr/Makefile.
+# Contents: sets the die and core area, then inserts tap cells and end caps.
+# Inputs: environment variables TOP_MODULE and SDC_FILE. SKY130_ROOT overrides the PDK location.
+# User rules: The die size follows a cell-count estimate and a utilisation target. Change it with the design size.
+# Doc: tm:pd:scripts-02-floorplan-tcl
 
 #----------------------------------------------------------------
 # Configuration
@@ -42,10 +43,8 @@ set NETLIST_FILE "$RESULTS_DIR/${TOP_MODULE}.v"
 set OUT_DEF      "$RESULTS_DIR/${TOP_MODULE}_fp.def"
 
 # Floorplan parameters
-# Phase 3 cell estimate: ~15k-25k standard cells (pipeline + caches synthesised to FFs).
-# Sky130 HD site: 0.46 µm wide × 2.72 µm tall.
-# At 45% utilisation a 350×350 µm core gives sufficient headroom.
-# Die margins: 10 µm on each side → die = 370×370 µm.
+# The die size comes from a cell-count estimate and 45 percent utilisation. The core leaves a margin on each side.
+# The Sky130 HD site sets the row grid.
 set DIE_AREA_LL_X 0.0
 set DIE_AREA_LL_Y 0.0
 set DIE_AREA_UR_X 370.0
@@ -127,8 +126,7 @@ puts "================================================================"
 puts "Inserting tap cells and end caps"
 puts "================================================================"
 
-# sky130_fd_sc_hd requires tap cells every ≤ 14.46 µm (31 pitches).
-# Use 15 µm max distance to stay well within the rule.
+# sky130_fd_sc_hd requires a maximum distance between tap cells (31 pitches). The value below stays well within that rule.
 tapcell \
     -tapcell_master sky130_fd_sc_hd__tapvpwrvgnd_1 \
     -endcap_master  sky130_fd_sc_hd__decap_3 \

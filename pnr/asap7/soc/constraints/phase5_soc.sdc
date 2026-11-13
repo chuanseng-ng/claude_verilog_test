@@ -1,25 +1,20 @@
-###############################################################################
-# phase5_soc.sdc — Timing constraints for soc_top on ASAP7 7nm predictive
+# phase5_soc.sdc - Timing constraints for soc_top with one clock (ASAP7, single-clock SoC)
 #
-# IMPORTANT: All time values are in PICOSECONDS.
-# ASAP7 stdcell Liberty declares time_unit: "1ps".
-# LibreLane passes CLOCK_PERIOD (ns) to create_clock internally; this SDC is
-# loaded raw by OpenROAD/OpenSTA which interprets values against the 1 ps unit.
-#
-# Clock topology (single-clock SoC, sv2v synthesis):
-#   clk_i     = top-level clock input port.  CTS root.
-#   core_clk  = PLL stub output net (BUFx2 passthrough, divide-1).
-#               After sv2v + Yosys flatten, the PLL stub BUFx2 drives core_clk
-#               at the top level.  CTS traces through this buffer so all FFs
-#               (driven by core_clk) are balanced against each other.
-#
-# SoC fmax target: 571 MHz (GPU-governed), period = 1750 ps.
-# CPU signed-off at 1282 MHz standalone; GPU at 571 MHz standalone.
-###############################################################################
-
+# Scope: pnr/asap7/soc/config.json sets PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE to this file.
+#   Make target: librelane-asap7-soc.
+# Contents: clock clk_i on port clk_i (uncertainty, transition, source latency); false paths on reset, DFT, APB,
+#   observability, UART and SPI pins; DFT case analysis (scan_mode_i 0, scan_en_i 0, scan_rst_ni 1); I/O delays on timed ports;
+#   SRAM input hold false paths; multicycle paths into the u_cpu and u_gpu pins; hold false paths on all I/O.
+# Inputs: none. The period and delays are literal values in this file.
+# User rules:
+#   All time values are picoseconds. The ASAP7 Liberty time unit is one picosecond. LibreLane passes CLOCK_PERIOD (ns)
+#   to create_clock internally, but OpenROAD and OpenSTA load this SDC raw and read its values in that unit.
+#   core_clk is the PLL stub output net (BUFx2 passthrough, divide by 1). Do not create a generated clock for it.
+#   CTS traces through the buffer, so all flops driven by core_clk balance against each other under clk_i.
+#   The period is set by the GPU, not by the CPU. The CPU and GPU are black-box macros here.
 # Doc: tm:pd:asap7-soc-phase5-sdc, cr:pd:asap7-soc-phase5-sdc
 ###############################################################################
-# 1. Primary clock — clk_i port, 1750 ps (571 MHz)
+# 1. Primary clock - port clk_i.
 ###############################################################################
 create_clock -name clk_i -period 1750 -waveform {0 875} [get_ports clk_i]
 
@@ -50,12 +45,9 @@ if {[llength $_dft_in] > 0} { set_false_path -from $_dft_in }
 if {[llength [get_ports -quiet scan_out_o]] > 0} { set_false_path -to [get_ports scan_out_o] }
 
 ###############################################################################
-# 4. SoC I/O delays — timed ports only.
-#    Run-13 lesson: set_input_delay -max 350 ps (20% of 1750 ps) on AXI
-#    RDATA bus pins feeds the STA with an 350 ps input pessimism on all
-#    register→macro paths, making them appear to violate even with the 2-cycle
-#    multicycle.  Reduce to 175 ps (10%) for a realistic inter-block budget.
-#    Exclude clock, reset, observability and async pins.
+# 4. SoC I/O delays - timed ports only. Exclude clock, reset, observability and async pins.
+# A 20 percent input delay on the AXI RDATA pins gave an input pessimism on all register-to-macro paths.
+# They then appeared to violate even with the 2-cycle multicycle. The budget below is 10 percent, a realistic inter-block budget.
 ###############################################################################
 set _in_timed {}
 foreach _p [all_inputs] {

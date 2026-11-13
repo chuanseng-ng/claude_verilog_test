@@ -2448,6 +2448,39 @@ Last updated: 2026-01-22
 
 \end{record}
 
+\section{\texttt{constraints/phase5\_soc.sdc}}\label{cr:pd:phase5-soc-sdc}
+
+This section holds dated history that was in a comment of the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{record}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+##############################################################################
+WARNING (GH #96, 2026-08-05): THIS COPY IS STALE AND DIVERGENT.
+It still carries the run-13 `create_generated_clock` block for core_clk
+(see section 2 below) that caused the CTS split-tree failure (~214 ps
+setup skew between the macro-clk tree and the std-cell-FF tree).
+The IN-USE, run-14 sign-off file is:
+  pnr/asap7/soc/constraints/phase5_soc.sdc
+(no create_generated_clock; CLOCK_NET=clk_i lets CTS trace through the PLL
+stub buffer into one balanced tree — see that file's own header).
+config.json's PNR_SDC_FILE/SIGNOFF_SDC_FILE/FALLBACK_SDC_FILE all point at
+the asap7/soc/constraints/ copy, not this one. Do not point any config at
+this file. Kept for history only; not deleted in GH #96 (deletion is a
+separate, deferred cleanup).
+##############################################################################
+
+##############################################################################
+phase5_soc.sdc — Timing constraints for soc_top on ASAP7 7nm predictive
+##############################################################################
+
+Doc: tm:pd:phase5-soc-sdc
+\end{textblock}
+
+\end{record}
+
 \section{\texttt{constraints/phase5\_soc.upf}}\label{cr:pd:phase5-soc-upf}
 
 This section holds dated history that was in a comment of the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
@@ -3392,6 +3425,34 @@ only needs ONE side non-empty to look "matched" via cdc_report_through's
 llength check, so a vacuous d_i sub-clause was invisible in this report
 every time pmu_cpu_iso_en's plain net matched, i.e. always. That masked
 the exact CDC-EXCEPTION-MISS bead je8's early check on run 8 surfaced.
+\end{textblock}
+
+\subsection*{Header comment}
+
+\begin{textblock}
+Post-route CDC budget verification for the 2-domain ASAP7 SoC
+Tool: OpenSTA (invoked as 'sta' standalone binary)
+Invoked via: sta pnr/scripts/check_cdc_timing.tcl
+(Makefile target: make check-cdc-timing-asap7-soc, see pnr/Makefile)
+Requires a routed netlist that actually contains the CDC modules
+(async_axi_fifo / apb_cdc_bridge / second PLL stub) — i.e. a P&R run of
+pnr/asap7/soc/config.json with PNR_SDC_FILE pointed at
+phase5_soc_multiclock.sdc instead of the single-clock phase5_soc.sdc.
+EXIT CODE CONTRACT (bead claude_verilog_test-dwp, 2026-08-03):
+  exit 0 -- PASS: every CDC exception matched a real object and every
+            targeted timing budget was met.
+  exit 1 -- CDC FINDING(S): a design/constraint problem -- one or more
+            CDC exceptions matched an EMPTY collection (unmatched /
+            renamed instance) and/or one or more targeted budgets
+            reported a VIOLATED slack. Names of every finding are
+            printed in the final CDC-CHECK-RESULT block, not just the
+            exit code.
+  exit 2 -- SETUP/USAGE ERROR: the check itself could not run at all
+            (missing env var, missing liberty/netlist/SDC file, or an
+            SDC read failure unrelated to the CDC-EXCEPTION-MISS
+            mechanism below). This is a tool/environment problem, not a
+            finding about the design -- CI must be able to tell the two
+            apart.
 \end{textblock}
 
 \end{record}

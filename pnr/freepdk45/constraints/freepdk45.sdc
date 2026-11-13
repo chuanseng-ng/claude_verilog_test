@@ -1,6 +1,10 @@
 ###############################################################################
-# freepdk45.sdc — Timing constraints for rv32i_cpu_top on FreePDK45 / nangate45
-# Target: 400 MHz (2.500 ns) — 45nm predictive node, OpenRAM SRAM macros
+# freepdk45.sdc - Timing constraints for rv32i_cpu_top on FreePDK45 / NanGate45 (clock clk, OpenRAM SRAM macros)
+#
+# Scope: pnr/freepdk45/config.json sets PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE to this file.
+# Contents: clock clk on port clk_i; AXI4-Lite master port timing; APB3 debug slave port timing; reset and interrupt inputs; environment.
+# Inputs: none. All time values in this file are in ns.
+# Doc: tm:pd:freepdk45-sdc
 ###############################################################################
 
 ###############################################################################

@@ -1,8 +1,8 @@
 #================================================================
 # OpenROAD Physical Design Flow - Makefile
-# Target: Phase 3 RV32I CPU + L1 I-Cache + L1 D-Cache
-# PDK: Sky130 HD (sky130_fd_sc_hd)
-# Frequency: 75 MHz (13.333 ns period)
+# Main targets: the OpenROAD stage targets for Sky130 (synth to power), the LibreLane flows of each node (librelane-*),
+# the sv2v preprocessing targets and the CDC checks.
+# Needs: PDK, TOP_MODULE, CLOCK_PERIOD (in ns) and CLOCK_PORT. The defaults are below.
 #================================================================
 
 # Doc: tm:pd:makefile, cr:pd:makefile
@@ -1304,7 +1304,7 @@ librelane-asap7-gpu-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_GPU_DIR))
 
 # ASAP7 SoC (Phase 5 M11): hierarchical — CPU+GPU as hard macros, flat peripherals
-# Die: 720×720 µm, clock: 1750 ps (571 MHz GPU-governed), SYNTH-ONLY for first run.
+# Run librelane-asap7-soc-synth first to check elaboration, then librelane-asap7-soc.
 # To run synthesis only (confirm elaboration before full P&R):
 #   make librelane-asap7-soc-synth
 # To run the full P&R closure (expect 4–8 h):

@@ -1,13 +1,17 @@
-# ALL TIME VALUES ARE PICOSECONDS. ASAP7 Liberty declares time_unit : "1ps",
-# while config.json's CLOCK_PERIOD is in ns (0.705 ns = 705 ps). Getting this
-# wrong silently constrains the design ~1000x loose (bead: ASAP7 SDC units).
+# asap7.sdc - Minimal timing constraints for memory_coalescer_hls (ASAP7, one clock port clk)
 #
-# Deliberately minimal: the template SDC is 300 lines of CPU-specific AXI/APB/
-# SRAM/ICG constraints whose get_ports/get_pins references do not exist here.
-#
-# set_input_delay/set_output_delay are 0 so the FULL period is available to the
-# logic. That makes the I/O-bounded paths directly comparable between the
-# hand-RTL and HLS arms, which is the whole point of this comparison.
+# Scope: the config.json of this directory sets PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE to this file.
+#   Make target: librelane-asap7-coalescer-hls.
+# Contents: set_units in picoseconds; clock clk on port clk; clock uncertainty and transition; zero input and output
+#   delay on all ports; false path from rst_n.
+# Inputs: none. This file sets its own clock period. config.json CLOCK_PERIOD is in ns.
+# User rules:
+#   All time values in this file are picoseconds. CLOCK_PERIOD in config.json is in ns.
+#   A wrong unit silently constrains the design about 1000 times too loose.
+#   Input and output delays are 0, so the full period is available to the logic.
+#   This keeps the I/O-bounded paths comparable between the hand-RTL arm and the HLS arm.
+#   The file is deliberately minimal. Do not copy the CPU-specific AXI, APB, SRAM and ICG
+#   constraints of the template SDC here. Their get_ports and get_pins references do not exist in this design.
 # Doc: tm:pd:asap7-coalescer-hls-sdc
 
 set_units -time 1ps

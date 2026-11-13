@@ -1,12 +1,11 @@
-#=============================================
-# Phase 2: 5-stage Pipelined RV32I CPU
-# Target: 100 MHz (10ns period)
-# File: phase2_cpu.sdc
+# phase2_cpu.sdc - Timing constraints for the Phase 2 five-stage RV32I CPU (rv32i_cpu_top, clock clk_i)
 #
-# Architecture: IF -> ID -> EX -> MEM -> WB
-# New in Phase 2: interrupt inputs (ext_irq_i, timer_irq_i),
-#                 per-port _i/_o suffix naming convention
-#=============================================
+# Scope: SDC of Phase 2. The pipeline is IF, ID, EX, MEM, WB. phase3_cache.sdc extends this file.
+# Contents: clock clk_i (renamed from clk in Phase 1); AXI4-Lite and APB3 input and output delays; interrupt inputs
+#   (ext_irq_i, timer_irq_i) as false paths; false paths; multicycle paths; load and drive; area and design-rule constraints.
+#   Ports use the _i and _o suffix naming.
+# Inputs: none. All time values in this file are in ns.
+# Doc: tm:pd:phase2-cpu-sdc
 
 #---------------------------------------------
 # Clock Definition
@@ -28,7 +27,7 @@ set_clock_transition 0.1 [get_clocks clk_i]
 # Input Constraints — AXI4-Lite
 #---------------------------------------------
 # Slave-side ready and response signals driven by external memory controller.
-# Assume 2ns max setup relative to clk_i, 0.5ns min hold.
+# Assume a maximum setup and a minimum hold relative to clk_i. The values are below.
 
 # Ready signals
 set_input_delay -clock clk_i -max 2.0 [get_ports axi_awready_i]
@@ -58,7 +57,7 @@ set_input_delay -clock clk_i -min 0.5 [get_ports axi_rvalid_i]
 #---------------------------------------------
 # Input Constraints — APB3 Debug Interface
 #---------------------------------------------
-# APB is less timing-critical than AXI; 3ns max allowed.
+# APB is less timing-critical than AXI. It gets a larger max input delay.
 
 set_input_delay -clock clk_i -max 3.0 [get_ports apb_paddr_i]
 set_input_delay -clock clk_i -max 3.0 [get_ports apb_psel_i]
@@ -169,16 +168,15 @@ set_false_path -from [get_ports axi_rdata_i]    -to [get_ports apb_prdata_o]
 # The APB3 slave in this design asserts apb_pready_o=1 unconditionally,
 # so APB transactions complete in one clock cycle. No multicycle path needed.
 #
-# The 5-stage pipeline has all register-to-register paths within a single
-# clock period. The longest combinational path is through the EX stage
-# (forwarding mux -> ALU -> branch comparator -> redirect target), estimated
-# at ~6ns, well within the 10ns budget minus 2ns I/O margin = 8ns logic budget.
+# The 5-stage pipeline has all register-to-register paths within a single clock period.
+# The longest combinational path runs through the EX stage (forwarding mux, ALU, branch comparator, redirect target).
+# It is well within the period minus the I/O margin.
 
 #---------------------------------------------
 # Load and Drive Constraints
 #---------------------------------------------
 
-# Output load (assume 50fF parasitic capacitance on board-level traces)
+# Output load: an assumed parasitic capacitance on board-level traces. The value is below.
 set_load 0.05 [all_outputs]
 
 # Input drive strength (uncomment and update with actual PDK cell name)

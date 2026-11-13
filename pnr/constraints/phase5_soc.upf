@@ -1,25 +1,21 @@
-###############################################################################
 # phase5_soc.upf - Power intent for soc_top (IEEE 1801-2015, UPF 3.0)
 #
-# Purpose: input for UPF-aware test tools.  This file describes the power
-# architecture soc_top is DESIGNED for; the behavioural PMU (rtl/soc/pmu.sv)
-# sequences it with clock gates, resets and functional clamps, but no power
-# switch exists in the RTL (see section 4).  Its references are machine-checked
-# against the elaborated RTL by tools/verif/check_upf.py (CI: qa-checks.yml);
-# bead h3lm records the audit that rewrote it.  Nothing in the physical flow
-# reads it today (pnr/Makefile UPF_FILE points at phase3_cache.upf, unused).
-#
-# Domains (4, as before; all on one nominal voltage, 0.7 V ASAP7 RVT):
-#
-#   PD_CPU    u_cpu     rv32i_cpu_top hard macro incl. L1 caches   switchable rail VDD_CPU
-#   PD_GPU    u_gpu     gpu_top                                    switchable rail VDD_GPU
-#   PD_SRAM   u_sram    sram_controller + SRAM                     always-on  (VDD)
-#   PD_PERIPH everything else in soc_top, incl. the top-level glue always-on  (VDD)
-#
-# PD_PERIPH membership is EXPLICIT via the roster below: the checker fails if
-# a top-level instance is added or removed without updating it.  Why each must
-# stay powered while PD_CPU / PD_GPU are off:
-#
+# Scope: input for UPF-aware test tools. tools/verif/check_upf.py checks it against the elaborated RTL (CI job qa-checks.yml).
+#   No physical flow reads it. UPF_FILE in pnr/Makefile points at phase3_cache.upf, not at this file.
+# Contents: domains PD_CPU (u_cpu), PD_GPU (u_gpu), PD_SRAM (u_sram) and PD_PERIPH (the rest); supply sets; isolation; power states; the roster.
+# User rules:
+#   The file describes the power architecture soc_top is designed for. The behavioural PMU (rtl/soc/pmu.sv) sequences it
+#   with clock gates, resets and functional clamps. No power switch exists in the RTL (section 4).
+#   tm:pd:phase5-soc-upf shows the create_power_switch shape for a real switch.
+#   There is no retention. The PMU drives ret_save and ret_restore, but nothing in soc_top uses them.
+#   Software must re-initialise the CPU and the GPU after power-up.
+#   The voltages are ASAP7 nominal. A Sky130 user must replace the voltage values.
+#   PD_PERIPH membership is the roster of upf-check lines. The checker fails if a top-level instance is added or removed without a roster update.
+#   Each roster instance must stay powered while PD_CPU and PD_GPU are off. The reason is in the group comment above its lines.
+#   Each non-isolated u_cpu or u_gpu output must be in an 'upf-check unclamped' line (payload, slave_response or observability).
+#   Known gap: unclamped slave_response outputs would drive X into the always-on logic with the supply removed.
+#   Do not reword the upf-check lines. tools/verif/check_upf.py reads them.
+# Roster of PD_PERIPH instances. Each group comment gives the reason the instances stay powered:
 #   CPU-domain synchronisers (cpu_core_clk, ungated PLL output, so they keep
 #   running while u_cpu's clock is gated):
 # upf-check aon u_cpu_clk_dis_sync  -- ~pmu_cpu_clk_en into the CPU clock domain (drives u_cpu_cg)
@@ -145,25 +141,9 @@ create_power_domain PD_GPU \
     -supply {primary SS_GPU} \
     -available_supplies {SS_AON}
 
-###############################################################################
-# 4. Power switches: intentionally NONE
-#
-# rtl/soc/pmu.sv (header, "This module deliberately does NOT emit
-# cpu_pg_ctrl/gpu_pg_ctrl") has no power-switch control output, and no
-# soc_top net can drive one.  The old PSW_CPU / PSW_GPU controlled ports that
-# did not exist.  Rather than invent a control net, the switches are omitted
-# and the rails are supply ports (section 1).  When a real switch lands, the
-# shape is:
-#
-#   create_power_switch PSW_CPU -domain PD_CPU \
-#       -input_supply_port {vin VDD} -output_supply_port {vout VDD_CPU} \
-#       -control_port {sleep_n <pmu switch net>} \
-#       -on_state {on vin {sleep_n}} -off_state {off {!sleep_n}}
-#
-# with VDD_CPU's supply port and port state replaced by a supply net driven by
-# the switch.  Ordering to honour then (IEEE 1801): save, isolate, [reset],
-# switch off; switch on, [reset release], restore, release isolation.
-###############################################################################
+# 4. Power switches: intentionally NONE. pmu.sv has no power-switch control output, and no soc_top net can drive one.
+# The rails are supply ports (section 1). The moved text holds the create_power_switch shape for a real switch.
+# The order to honour with a real switch (IEEE 1801): save, isolate, [reset], switch off; switch on, [reset release], restore, release isolation.
 
 ###############################################################################
 # 5. Isolation: exactly the signals soc_top clamps (functional AND logic in
@@ -219,28 +199,10 @@ add_power_state -supply SS_GPU \
     -state {ON -supply_expr {power == {FULL_ON 0.7} && ground == {FULL_ON 0.0}}} \
     -state {OFF -supply_expr {power == {OFF} && ground == {FULL_ON 0.0}}}
 
-# System states.  Names and the 2-bit encodings are pmu.sv's CTRL[1:0]
-# (MODE_NORMAL/CPU_OFF/GPU_OFF/IDLE); u_pmu/pmu_mode_req is the REQUESTED mode,
-# so a state is the settled condition (the PMU walks 4 actions per direction,
-# one per cycle, and those transient cycles belong to no named state).
-# Each functional state also requires scan_mode_i == 1'b0 so it is exclusive
-# with SCAN.  The checker compares names, encodings and per-mode rail state
-# with pmu.sv.
-#
-# SCAN is the test-mode override: scan_mode_i = 1 with every rail ON, whatever
-# the PMU holds.  What the RTL actually does under scan_mode_i (confirmed in
-# soc_top.sv / dft_ctrl_ports.sv, and checked):
-#   - clock gates:  FORCED OPEN.  dft_ctrl_ports assigns test_en_o = scan_mode_i
-#                   and u_cpu_cg / u_gpu_cg take it on test_en (rv32i_clock_gate
-#                   latches en | test_en).  Matches this state.
-#   - resets:       forced to the scan reset (dft_rst_mux / cdc_reset_sync output
-#                   muxes / pll_subsystem u_core_rm).  Matches.
-#   - the PMU:      NOT overridden.  Its mode register and FSM are ordinary flops
-#                   on the scan chain, so pmu_*_iso_en follows whatever state is
-#                   shifted in.  MISMATCH with "all domains ON": the ISO clamps
-#                   are not qualified by scan_mode_i, so under scan a clamp can
-#                   be active.  Documented, not changed (bead-worthy, see
-#                   Doc: ds:ch:upf-power-spec "Phase 5").
+# System states. Names and encodings follow pmu.sv CTRL[1:0]. A state is a settled condition: transient PMU cycles belong to no state.
+# Each functional state requires scan_mode_i == 1'b0, so it is exclusive with SCAN. The checker compares names, encodings and rail states with pmu.sv.
+# SCAN (scan_mode_i = 1, every rail ON) does not match the RTL fully: the PMU is not overridden, and the ISO clamps are not qualified by scan_mode_i.
+# So a clamp can be active under scan. This is documented, not changed. See ds:ch:upf-power-spec.
 create_power_state_group SOC_PST
 
 add_power_state -group SOC_PST \

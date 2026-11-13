@@ -1,27 +1,22 @@
-# phase5_soc_multiclock_check.sdc — POST-ROUTE CDC BUDGET VERIFICATION ONLY
-# These SDC's are not used for synthesis, since they collide with the
-# set_clock_groups -asynchronous constraint in phase5_soc_multiclock.sdc.
-# Instead, they are used to time the design after P&R in order to make sure
-# that the CDC crossings are all within spec. (Wording deliberately mirrors
-# OpenTitan's hw/top_earlgrey/syn/chip_earlgrey_asic_check_only.sdc, the
-# precedent this split follows.)
-# USAGE — read this file's purpose narrowly:
-#   This file is for TARGETED post-route queries against the specific CDC
-#   endpoints named in sections 10-13 below (report_checks -to/-through a
-#   named pin, as pnr/scripts/check_cdc_timing.tcl does). It is NOT a
-#   substitute full-chip signoff SDC: because sys_clk and cpu_clk have no
-#   group/false-path relationship here, a full unfiltered `report_checks`
-#   or `report_wns`/`report_tns` sweep against this file WILL show
-#   fabricated setup/hold violations on every OTHER pair of FFs that
-#   happen to sit in different domains but are not part of a deliberate
-#   synchroniser (there is no exception suppressing those, by design — see
-#   above). That is expected, not a defect: interrogate specific CDC paths
-#   only. Full-chip signoff continues to use phase5_soc_multiclock.sdc.
-# Base: sections 1 (clocks) and 4 (async reset false-paths) are copied
-# verbatim from phase5_soc_multiclock.sdc so this file is self-contained
-# for read_sdc; keep them in sync by hand if either file's clock periods
-# change (Run-13 CTS lesson applies identically here — do NOT add
-# create_generated_clock for core_clk/cpu_core_clk).
+# phase5_soc_multiclock_check.sdc - Post-route CDC budget check for the 2-domain ASAP7 SoC (companion SDC)
+#
+# Scope: read by pnr/scripts/check_cdc_timing.tcl (make target check-cdc-timing-asap7-soc). No synthesis or P&R config reads it.
+# Contents: clocks sys_clk (clk_i) and cpu_clk (cpu_clk_i) with no clock group; reset false paths (section 4); Tcl procs such as
+#   cdc_require_match and cdc_apply_max_delay; the domain-wide fallback (section 10); the reset-pin waiver (section 10a);
+#   max-delay budgets on async_axi_fifo u_cpu_axi_cdc (11), apb_cdc_bridge u_apb_pll2_cdc (12) and u_apb_dbg_cdc (12a),
+#   and the PMU and IRQ synchronisers (13); the coverage gate (15).
+# Inputs: a routed netlist that contains the CDC modules. The sections match instances by name pattern.
+# User rules:
+#   All time values are picoseconds.
+#   Use this file only for targeted post-route queries on the CDC endpoints of sections 10 to 13 (report_checks -to or -through a named pin).
+#   It is not a full-chip sign-off SDC. sys_clk and cpu_clk have no group or false-path relation here.
+#   A full report_checks, report_wns or report_tns sweep shows fabricated violations on other cross-domain flop pairs. This is expected.
+#   Full-chip sign-off uses phase5_soc_multiclock.sdc. This file is not used for synthesis: it collides with its set_clock_groups -asynchronous.
+#   Sections 1 and 4 are verbatim copies of phase5_soc_multiclock.sdc. Keep them in sync by hand when a clock period changes.
+#   Do not add create_generated_clock for core_clk or cpu_core_clk.
+#   Do not put a literal '.' in a -filter name pattern.
+#   Keep the section 10 fallback before sections 11-13. The last-declared -from/-to exception wins.
+#   A matched name does not prove the exception applied. Check the max_delay value in the reports after an edit.
 # Doc: tm:pd:phase5-soc-multiclock-check-sdc, cr:pd:phase5-soc-multiclock-check-sdc
 
 create_clock -name sys_clk -period 1750 -waveform {0 875} [get_ports clk_i]
@@ -293,19 +288,9 @@ cdc_apply_max_delay $_iso_ack_src 1750 cpu_clk sys_clk \
     "sec.13a pmu_cpu_iso_en_sync (source of u_cpu_iso_ack_sync) single-bit CDC crossing (cpu_clk -> sys_clk)"
 
 ###############################################################################
-# 15. CDC exception coverage gate — hard-fail on any section 11-13 miss.
-#
-# See the cdc_require_match / cdc_apply_max_delay procs and the
-# ::cdc_exception_misses list defined just before section 11. If ANY
-# exception's get_nets pattern matched an empty collection, or matched but
-# its driver/load cells could not be resolved, above, a CDC-EXCEPTION-MISS
-# line was already puts'd at the point of failure. This final check
-# promotes that from "logged" to "fatal": abort read_sdc with a
-# nonzero-equivalent Tcl `error` rather than let the file finish reading as
-# if nothing were wrong — an unconstrained CDC boundary that STA reports as
-# "clean" is a strictly worse outcome than an aborted read_sdc that names
-# the missing instance/pin/net. Section 10's domain-wide fallback has no
-# name-match step and so can never itself trigger this gate.
+# 15. CDC exception coverage gate. It stops the read with an error if a section 11-13 exception matched an empty collection.
+# A CDC-EXCEPTION-MISS line is already printed at each miss. An unconstrained CDC boundary that STA reports as clean is worse than an aborted read_sdc.
+# The domain-wide fallback of section 10 has no name-match step, so it never triggers this gate.
 ###############################################################################
 if {[llength $::cdc_exception_misses] > 0} {
     puts "ERROR: CDC-EXCEPTION-MISS: [llength $::cdc_exception_misses] of sections 11-13's CDC timing exceptions failed to match any object:"

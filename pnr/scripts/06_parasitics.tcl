@@ -1,9 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 6: Parasitic Extraction
-# Tool: OpenRCX (integrated in OpenROAD)
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), Sky130 HD
-#================================================================
+# 06_parasitics.tcl - Stage 6 of the OpenROAD flow: parasitic extraction (OpenRCX in OpenROAD, Sky130 HD)
+#
+# Scope: make target parasitics runs it from pnr/Makefile.
+# Contents: extracts parasitics from the routed design.
+# Inputs: environment variables TOP_MODULE and SDC_FILE. SKY130_ROOT overrides the PDK location.
+# User rules: 07_sta.tcl uses the SPEF from this stage when it exists.
+# Doc: tm:pd:scripts-06-parasitics-tcl
 
 #----------------------------------------------------------------
 # Configuration

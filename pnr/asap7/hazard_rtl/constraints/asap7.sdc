@@ -1,15 +1,17 @@
-# ALL TIME VALUES ARE PICOSECONDS (ASAP7 Liberty time_unit : "1ps").
+# asap7.sdc - Timing constraints for rv32i_hazard_unit (ASAP7, purely combinational block)
 #
-# rv32i_hazard_unit is PURELY COMBINATIONAL: no clock port, no reset, no
-# registers, therefore ZERO register-to-register paths. report_clock_min_period
-# is meaningless for it and "fmax" is undefined.
-#
-# So it is timed against a VIRTUAL clock with a zero I/O budget: the entire 705 ps
-# is available to the combinational cone, and the reported setup slack gives the
-# input-to-output path delay directly as (705 - slack) ps. That delay -- not an
-# fmax -- is this block's primary number, and it is compared against the HLS arm
-# on throughput (its period x 6-9 cycles). Same zero I/O budget as the clocked
-# arms so the two are measured on the same basis.
+# Scope: the config.json of this directory sets PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE to this file.
+#   Make target: librelane-asap7-hazard-rtl.
+# Contents: set_units in picoseconds; virtual clock vclk (no port); zero input and output delay on all ports.
+# Inputs: none. This file sets its own period. config.json CLOCK_PERIOD is in ns and CLOCK_PORT is empty.
+# User rules:
+#   All time values in this file are picoseconds. CLOCK_PERIOD in config.json is in ns.
+#   The block has no clock port, no reset and no register, so it has no register-to-register path.
+#   Do not use report_clock_min_period or fmax for it. Both are meaningless here.
+#   The whole period is available to the combinational cone. The setup slack gives the input-to-output delay:
+#   the period minus the slack. That delay is the primary number of this block.
+#   Compare it with the HLS arm on throughput (HLS period times cycle count).
+#   The zero I/O budget is the same as in the clocked arms, so both are measured on the same basis.
 # Doc: tm:pd:asap7-hazard-rtl-sdc
 
 set_units -time 1ps

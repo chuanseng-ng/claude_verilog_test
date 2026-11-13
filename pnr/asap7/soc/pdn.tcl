@@ -1,13 +1,17 @@
-###############################################################################
-# pdn.tcl — Power Distribution Network for phase5_soc on ASAP7
+# pdn.tcl - Power grid for phase5_soc on ASAP7: M1 followpins, M2 V-stripes, M5 H-stripes, M7 V-stripes
 #
-# Extends the shared pdn_asap7.tcl pattern used by CPU and GPU blocks.
-# SoC uses a denser M5/M7 strap grid to serve both hard macros.
-#
-# Single-domain topology: PD_CPU / PD_GPU / PD_SRAM / PD_PERIPH all share
-# the single VDD/VSS rail at 0.7 V.  UPF isolation is a design-intent model;
-# OpenROAD does not differentiate physical supply nets in this flow.
-###############################################################################
+# Scope: pnr/asap7/soc/config.json and the config_multiclock*.json files set FP_PDN_CFG to this file.
+# Contents: global connections; voltage domain CORE; grid stdcell_grid with M7, M5 and M2 stripes and M1 followpin rails
+#   (the pitch values are in the file); M1-M2, M2-M5 and M5-M7 connections; macro grid macro_grid with a halo,
+#   a ring on M6 and M7, an M6-M7 connection and an M5-M6 connection. It extends the pdn_asap7.tcl pattern.
+# Inputs: environment variables SCRIPTS_DIR, VDD_NET, VDD_NETS, GND_NET, GND_NETS, FP_PDN_HPITCH, FP_PDN_HOFFSET,
+#   FP_PDN_VPITCH, FP_PDN_VOFFSET and FP_PDN_RAIL_WIDTH.
+# User rules:
+#   The SoC is single-domain. PD_CPU, PD_GPU, PD_SRAM and PD_PERIPH share one VDD and one VSS rail.
+#   UPF isolation is a design-intent model. OpenROAD does not differentiate physical supply nets in this flow.
+#   soc/pdn_orfs.tcl says this grid has the same defect as the old block grid (tm:pd:asap7-pdn-orfs-tcl).
+#   This file stays unchanged so that earlier runs stay reproducible. No SoC config names soc/pdn_orfs.tcl yet.
+# Doc: tm:pd:asap7-soc-pdn-tcl
 
 source $::env(SCRIPTS_DIR)/openroad/common/set_global_connections.tcl
 set_global_connections
@@ -44,7 +48,7 @@ set_voltage_domain -name CORE \
 ###############################################################################
 # Standard-cell PDN grid
 # M1 followpins → M2 V-stripes → M5 H-stripes → M7 V-stripes (coarser)
-# Wider pitches than CPU/GPU because flat logic area is ~360×700 µm.
+# The pitches are wider than for the CPU and GPU blocks because the flat logic area is large.
 ###############################################################################
 
 define_pdn_grid \

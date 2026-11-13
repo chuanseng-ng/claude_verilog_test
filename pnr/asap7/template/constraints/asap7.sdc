@@ -1,29 +1,23 @@
-###############################################################################
-# asap7.sdc — Timing constraints for rv32i_cpu_top on ASAP7 7nm predictive
+# asap7.sdc - Timing constraints for rv32i_cpu_top (ASAP7 predictive 7 nm, starting point for a new ASAP7 design)
 #
-# IMPORTANT: All time values are in PICOSECONDS.
-# The ASAP7 stdcell Liberty declares  time_unit : "1ps".
-# OpenROAD reads create_clock -period raw against the Liberty time unit, so
-# the period and all IO delays must be expressed in ps, not ns.
-#
-# Target:  1408 MHz (710 ps period)
-# Fallback: 1389 MHz (720 ps period)
-#
-# ASAP7 timing characteristics (asap7sc7p5t_SIMPLE RVT TT 0.7V 25C):
-#   INV delay:      ~15 ps
-#   FF setup:       ~20 ps
-#   FF hold:        ~10 ps
-#   Clock jitter:   ~10 ps
-###############################################################################
-
+# Scope: template. Copy pnr/asap7/template/ to pnr/asap7/<design>/ for a new design. config.json of the copy sets PNR_SDC_FILE, SIGNOFF_SDC_FILE and FALLBACK_SDC_FILE.
+# Contents: clock clk on port clk_i (uncertainty, transition, source latency); AXI4-Lite, APB3, asynchronous and
+#   observability port constraints; APB multicycle path; SRAM hold false paths; I-cache and D-cache tag multicycle
+#   paths; hold false paths on the ex1a_ex1b_reg_q and ex1c_ex1b_reg_q banks; generated clock gclk_sram on the SRAM clock gates.
+# Inputs: none. The period and the delays are literal values in this file. MAX_TRANSITION_CONSTRAINT in config.json sets the max transition.
+# User rules:
+#   All time values in this file are picoseconds. The ASAP7 Liberty time unit is one picosecond.
+#   OpenROAD reads create_clock -period raw against that unit. Write the period and every I/O delay in ps, not ns.
+#   The AXI input delay is fixed, not scaled with the period, so that no new AXI violations appear.
+#   The SRAM hold false paths cover a fakeram7 Liberty artifact. They do not cover a silicon violation.
 # Doc: tm:pd:asap7-template-sdc
 ###############################################################################
 # 1. Clock definition
 ###############################################################################
 create_clock -name clk -period 705 [get_ports clk_i]
-# Fallback: create_clock -name clk -period 710 [get_ports clk_i]  ;# Run 42 closed at 710 ps with +9.08 ps slack (CTS clustering 8/10)
+# An alternative create_clock command: see tm:pd:asap7-template-sdc.
 
-set_clock_uncertainty -setup 15 [get_clocks clk]  ;# Run 39: 20→15 ps; ASAP7 jitter ~10 ps, 15 defensible midpoint
+set_clock_uncertainty -setup 15 [get_clocks clk]
 set_clock_uncertainty -hold  10 [get_clocks clk]
 set_clock_transition   10       [get_clocks clk]
 
@@ -33,7 +27,7 @@ set_clock_latency -source 50 [get_clocks clk]
 ###############################################################################
 # 2. AXI4-Lite master ports (CPU ↔ memory controller)
 ###############################################################################
-# IO delay budget: fixed 150 ps (≈ 20.8% of 720 ps period; not scaled to avoid exposing new AXI violations)
+# The AXI input delay is fixed, not scaled with the period, so that no new AXI violations appear.
 set_input_delay  -max 150 -clock clk [get_ports axi_arready_i]
 set_input_delay  -min  10 -clock clk [get_ports axi_arready_i]
 
@@ -149,7 +143,7 @@ set_multicycle_path -hold  2 -from [get_ports {apb_paddr_i[*] apb_psel_i apb_pen
 ###############################################################################
 # 7. Environment
 ###############################################################################
-# set_max_transition handled via MAX_TRANSITION_CONSTRAINT in config.json (25ps for ASAP7 1ps time_unit)
+# set_max_transition is not set here. MAX_TRANSITION_CONSTRAINT in config.json sets it.
 set_max_area       0
 
 set_driving_cell -lib_cell BUFx2_ASAP7_75t_R -pin Y [all_inputs]
@@ -191,13 +185,8 @@ set_multicycle_path -setup 2 -through [get_nets -hierarchical "*u_icache*tag_web
 set_multicycle_path -hold  1 -through [get_nets -hierarchical "*u_icache*tag_web0*"]
 set_multicycle_path -setup 2 -through [get_nets -hierarchical "*u_icache*tag_din0*"]
 
-###############################################################################
-# 11. Run 18: EX1a→EX1b short-path hold false-path
-# Run 17 introduced a 1-path hold violation (-13.8 ps) on the short path
-# through the ex1a_ex1b_reg_q register (1 gate: AOI211) to the EX1b logic.
-# Suppress hold check for all paths launching from this register bank so
-# that the single-gate path cannot violate the hold margin.
-###############################################################################
+# 11. Hold is not checked on paths launched from ex1a_ex1b_reg_q.
+# A one-gate path from this bank to the EX1b logic would otherwise violate hold.
 set_false_path -hold -from [get_cells -hierarchical {*ex1a_ex1b_reg_q*}]
 
 ###############################################################################
@@ -221,10 +210,9 @@ create_generated_clock -name gclk_sram \
     -divide_by 1 \
     [get_pins -hierarchical {*u_icg/GCLK}]
 
-# Suppress hold on all clk→gclk_sram paths: SRAM clk0 rises ~146 ps after
-# the launch FF's clock edge, making short combinational paths fail hold.
-# This is a structural guarantee (gated clock never leads the source clock),
-# not a timing exception — same rationale as the din0/addr0/csb0 false paths.
+# Hold is not checked on paths from clk to gclk_sram. The SRAM clk0 rises after the launch flop clock edge,
+# so short combinational paths fail hold. A gated clock never leads the source clock.
+# This is a structural guarantee, not a timing exception. It has the same reason as the din0, addr0 and csb0 false paths.
 set_false_path -hold -from [get_clocks clk] -to [get_clocks gclk_sram]
 
 # Extend section-8 SRAM hold false-path coverage to web0 (write-enable bar).

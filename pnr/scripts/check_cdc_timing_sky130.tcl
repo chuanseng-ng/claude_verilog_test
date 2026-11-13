@@ -1,31 +1,24 @@
-# Post-route CDC budget verification for the 2-domain Sky130 SoC
-# Tool: OpenSTA (standalone 'sta' from the librelane nix-shell)
-# Reads a finished LibreLane Sky130 SoC run (netlist + OpenRCX SPEF), the std-cell / CPU-macro /
-# SRAM Liberty of ONE corner, and pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc, then
-# reports the slack of every CDC group the SDC budgets. See that SDC for why the budgets live
-# in a file separate from the implementation SDC.
+# check_cdc_timing_sky130.tcl - Post-route CDC budget check for the 2-domain Sky130 SoC (OpenSTA)
 #
-# Usage:
-#   CDC_CHECK_RUN_DIR=/nobackup/sky130_soc_runs/RUN_... [CDC_CHECK_CORNER=nom_tt_025C_1v80] \
-#     sta -no_init -exit pnr/scripts/check_cdc_timing_sky130.tcl
-# or: make -C pnr check-cdc-timing-sky130-soc RUN_DIR=... [CDC_CORNER=...]
-#
-# Env:
-#   CDC_CHECK_RUN_DIR   (required) LibreLane run dir.
-#   CDC_CHECK_SKEW_FRAC  default 0.25. Per-pointer bit-skew limit as a fraction of min(source, destination) period
-#                        (see the skew section for the justification). CDC_CHECK_SKEW_LIMIT (ns) overrides it.
-#   CDC_CHECK_CORNER    default nom_tt_025C_1v80 (one corner per sta run; `make check-cdc-timing-sky130-soc` loops nom_tt AND
-#                       max_ss by default, bead j41m.5). One of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95}.
-#                       The prefix picks the SPEF (OpenRCX writes nom/min/max), the rest the Liberty.
-#   CDC_CHECK_NETLIST   default <run>/final/nl/soc_top.nl.v, else the fill-insertion step's nl.v.
-#   CDC_CHECK_SPEF      default <run>/*-openroad-rcx/<nom|min|max>/soc_top.<..>.spef; "none" = no parasitics.
-#   CDC_CHECK_SDC       default pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc.
-#   CDC_CHECK_REPORTS   default ./reports/cdc_sky130.
-#   CDC_CHECK_PNR_DIR   default: the pnr/ directory this script lives in (override when it is reached through a symlink).
-#   PDK_ROOT            default the ciel path the flow uses.
-# EXIT CODE: 0 PASS, 1 CDC finding(s) (unbound exception or a violated/unconstrained group),
-# 2 setup error (missing input). OpenSTA batch mode does not turn a Tcl `error` into an exit
-# code, so every path ends in an explicit `exit`.
+# Scope: make -C pnr check-cdc-timing-sky130-soc RUN_DIR=<run> [CDC_CORNER=<corner>], or in the LibreLane nix-shell:
+#   CDC_CHECK_RUN_DIR=<run> [CDC_CHECK_CORNER=<corner>] sta -no_init -exit pnr/scripts/check_cdc_timing_sky130.tcl
+# Contents: reads a finished LibreLane Sky130 SoC run (netlist and OpenRCX SPEF) and the Liberty of one corner
+#   (standard cells, CPU macro, SRAM), then sky130_soc_cdc_check.sdc. It reports the slack of every CDC group the SDC budgets.
+# Inputs (environment variables):
+#   CDC_CHECK_RUN_DIR (required): the LibreLane run directory.
+#   CDC_CHECK_CORNER: default nom_tt_025C_1v80. One of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95}.
+#     The prefix picks the SPEF (OpenRCX writes nom, min and max). The rest picks the Liberty.
+#   CDC_CHECK_SKEW_FRAC: default 0.25. Per-pointer bit-skew limit as a fraction of the smaller of the source and destination period.
+#     CDC_CHECK_SKEW_LIMIT (ns) overrides it.
+#   CDC_CHECK_NETLIST: default <run>/final/nl/soc_top.nl.v, else the netlist of the fill-insertion step.
+#   CDC_CHECK_SPEF: default <run>/*-openroad-rcx/<nom|min|max>/soc_top.<..>.spef. The value none means no parasitics.
+#   CDC_CHECK_SDC (default sky130_soc_cdc_check.sdc), CDC_CHECK_REPORTS (default ./reports/cdc_sky130),
+#   CDC_CHECK_PNR_DIR (default: the pnr/ directory of this script; override it when a symlink reaches the script), PDK_ROOT.
+# User rules:
+#   Run one corner per sta run. The make target loops over nom_tt and max_ss by default.
+#   Exit 0: PASS. Exit 1: CDC finding (an unbound exception, or a violated or unconstrained group). Exit 2: setup error (missing input).
+#   OpenSTA batch mode does not turn a Tcl error into an exit code, so every path ends in an explicit exit.
+#   The budgets are in a separate SDC from the implementation SDC. The reason is in sky130_soc_cdc_check.sdc.
 # Doc: tm:pd:scripts-check-cdc-timing-sky130-tcl, cr:pd:scripts-check-cdc-timing-sky130-tcl
 
 proc cdc_fatal_setup {msg} {

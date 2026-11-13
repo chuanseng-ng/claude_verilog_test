@@ -1,19 +1,10 @@
-#================================================================
-# OpenROAD Flow — Stage 7: Static Timing Analysis
-# Tool: OpenSTA (invoked as 'sta' standalone binary)
-# Phase: 3 (RV32I CPU + L1 I-Cache + L1 D-Cache)
-# Target: 75 MHz (13.333 ns), Sky130 HD
-# Sign-off corners: TT/SS/FF @ nominal voltage
-#================================================================
+# 07_sta.tcl - Stage 7 of the OpenROAD flow: static timing analysis (OpenSTA, the standalone sta binary, Sky130 HD)
 #
-# This script is designed to be run with the standalone 'sta' binary
-# (OpenSTA), not via openroad.  The Makefile target 'sta' invokes:
-#   sta scripts/07_sta.tcl | tee logs/sta.log
-#
-# The script checks for a SPEF from 06_parasitics.tcl; if not found it
-# falls back to reading the routed DEF and using layer-RC estimates so
-# that the flow can proceed even without a full RC extraction.
-#================================================================
+# Scope: make target sta runs it from pnr/Makefile.
+# Contents: reads the netlist, the Liberty files, the SPEF and the SDC, and reports timing at the TT, SS and FF corners at nominal voltage.
+# Inputs: environment variables TOP_MODULE and SDC_FILE. SKY130_ROOT overrides the PDK location. Run it with the standalone sta binary, not through openroad: sta scripts/07_sta.tcl.
+# User rules: The script reads the SPEF from 06_parasitics.tcl. If no SPEF exists, it uses fixed set_wire_rc resistance and capacitance values (a layer-RC estimate), so the flow can go on without RC extraction.
+# Doc: tm:pd:scripts-07-sta-tcl
 
 #----------------------------------------------------------------
 # Configuration
@@ -94,7 +85,7 @@ link_design $TOP_MODULE
 
 #----------------------------------------------------------------
 # Read SDC Constraints
-# Post-CTS: use tighter clock uncertainty (0.3 ns)
+# Post-CTS: use a tighter clock uncertainty.
 #----------------------------------------------------------------
 
 puts "================================================================"

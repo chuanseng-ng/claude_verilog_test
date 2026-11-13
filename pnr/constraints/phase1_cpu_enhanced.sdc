@@ -1,9 +1,11 @@
-#=============================================
-# Phase 1: Single-cycle RV32I CPU - Enhanced SDC
-# Target: 100 MHz (10ns period)
-# File: phase1_cpu_enhanced.sdc
-# Description: Comprehensive timing constraints with full port coverage
-#=============================================
+# phase1_cpu_enhanced.sdc - Pre-CTS timing constraints for the Phase 1 single-cycle RV32I CPU (rv32i_cpu_top, clock clk)
+#
+# Scope: pnr/constraints/Makefile.sdc selects it as SDC_PRE_CTS for every stage except cts, route and sta.
+# Contents: design information; clock clk; AXI4-Lite and APB3 input and output delays; commit-interface outputs; false paths;
+#   critical internal paths and case analysis (optional); load and drive; area, power and design-rule constraints; operating conditions and libraries.
+# Inputs: none. All time values in this file are in ns. The clock uncertainty is a pre-CTS estimate.
+# User rules: after CTS use phase1_cpu_post_cts.sdc, which has tighter values.
+# Doc: cr:pd:phase1-cpu-enhanced-sdc, tm:pd:phase1-cpu-enhanced-sdc
 
 #---------------------------------------------
 # Design Information
@@ -17,8 +19,7 @@
 # Clock Definition
 #---------------------------------------------
 
-# Doc: cr:pd:phase1-cpu-enhanced-sdc
-# Create primary clock (100 MHz target)
+# Create primary clock.
 create_clock -name clk -period 10.0 [get_ports clk]
 
 # Clock uncertainty (pre-CTS estimate: 5% of period)
@@ -38,7 +39,7 @@ set_clock_transition 0.1 [get_clocks clk]
 
 # AXI4-Lite Read Address Channel (slave to master responses)
 # External memory controller provides these signals
-# Setup requirement: 2ns, Hold requirement: 0.5ns
+# The setup and hold requirements are the delays set below.
 
 # Read address ready (memory accepts address)
 set_input_delay -clock clk -max 2.0 [get_ports axi_arready]
@@ -93,7 +94,7 @@ set_input_delay -clock clk -min 1.0 [get_ports apb_pwdata[*]]
 #---------------------------------------------
 
 # AXI4-Lite outputs must meet external memory timing
-# Assume external memory has 2ns setup requirement
+# Assume the external memory has a setup requirement. The value is below.
 
 # Write address channel (CPU to memory)
 set_output_delay -clock clk -max 2.0 [get_ports axi_awaddr[*]]
@@ -189,7 +190,7 @@ set_false_path -to [get_ports trap_*]
 # Load and Drive Constraints
 #---------------------------------------------
 
-# Output load capacitance (assume 50fF external load)
+# Output load capacitance: an assumed external load. The value is below in pF.
 set_load 0.05 [all_outputs]
 
 # Input drive strength (assume BUF_X1 cell from PDK driving inputs)
