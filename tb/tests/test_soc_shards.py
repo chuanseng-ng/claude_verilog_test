@@ -272,7 +272,17 @@ def _make(args: list[str], root: Path) -> subprocess.CompletedProcess[str]:
     # its real run must not change which weights these tests plan with.
     env = {k: v for k, v in os.environ.items() if k != "SOC_SHARD_WEIGHTS"}
     return subprocess.run(
-        ["make", "--no-print-directory", "-C", str(SOC_DIR), f"SIM_BUILD_ROOT={root}", *args],
+        [
+            "make",
+            "--no-print-directory",
+            "-C",
+            str(SOC_DIR),
+            f"SIM_BUILD_ROOT={root}",
+            # The Makefile default is /usr/bin/python3. Inside a setup-python job that interpreter
+            # can fail to start, so plan with the interpreter that runs this test, as CI does.
+            f"SIM_PYTHON3={sys.executable}",
+            *args,
+        ],
         capture_output=True,
         text=True,
         check=False,
