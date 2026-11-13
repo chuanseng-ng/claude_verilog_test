@@ -96,7 +96,7 @@ Reference: lowRISC Verilog Style Guide, adapted to the house style codified in
   signal and assign the whole member. The copy keeps the identical select, so it adds no mux. Whole
   member reads and writes (`s.m`, `s.m = v`) are fine. Enforced by
   `tools/verif/check_struct_member_select.py` (blocking in `qa-checks.yml`, zero allowed sites, no
-  baseline; see `docs/SYNLIG_STRUCT_SELECT_AINF.md`). Any new `Range select ... out of bounds` /
+  baseline; see `Doc: cr:defect:synlig-struct-select-ainf`). Any new `Range select ... out of bounds` /
   `Setting all ... bits to undef` line in a Synlig synthesis log is a build failure, not a warning.
 - **Latches are banned.** All combinational outputs assigned on every path
   (Verilator lint + `case-missing-default` guard this).
@@ -161,7 +161,7 @@ make lint-verible   # Verible style lint (hard gate; whole tree is clean)
 
 A synthesis frontend can replace logic with `x` and log only a warning (Synlig turned
 `.port(struct_reg.member[19:15])` into `5'x`; lint, `Checker.YosysSynthChecks`, LVS and P&R all passed
-on the wrong design - `docs/SKY130_CPU_SYNLIG_DUD4.md`). Every LibreLane run started from `pnr/Makefile`
+on the wrong design - `Doc: cr:defect:sky130-cpu-synlig-dud4`). Every LibreLane run started from `pnr/Makefile`
 now runs `tools/verif/check_synth_undef.py` after `Yosys.JsonHeader` and `Yosys.Synthesis` (project plugin
 `pnr/plugins/librelane_plugin_cvt_synthgate`, no shared-LibreLane edit) and aborts on a hit, naming
 file:line and the message. It also checks the elaborated `*.h.json` for any instance input or named net wired

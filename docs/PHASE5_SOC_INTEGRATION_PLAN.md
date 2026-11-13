@@ -1,6 +1,6 @@
 # Phase 5 SoC Integration — Roadmap & Implementation Plan
 
-**Status as of 2026-05-30**: This document is the **golden specification** for Phase 5 (SoC Integration). It reconciles `CLAUDE.md`, `docs/ROADMAP.md`, `docs/PHASE_STATUS.md`, `docs/design/MEMORY_MAP.md`, and `docs/verification/VERIFICATION_PLAN.md` into a single ordered work breakdown. Subsequent sessions should read this file first.
+**Status as of 2026-05-30**: This document is the **golden specification** for Phase 5 (SoC Integration). It reconciles `CLAUDE.md`, `Doc: cr:status:roadmap`, `Doc: cr:status:phase-status`, `docs/design/MEMORY_MAP.md`, and `docs/verification/VERIFICATION_PLAN.md` into a single ordered work breakdown. Subsequent sessions should read this file first.
 
 **Last verified**: 2026-05-30 (RTL/test/PD state audited; `rtl/periph/` and `rtl/soc/` confirmed absent)
 
@@ -106,7 +106,7 @@ No PD this item (crossbar hardens at SoC top, M11).
 - **Exit**: ✅ AXI4 burst read/write protocol test passes (`test_sram_controller.py`, 7/7 in `soc_all`).
 
 ### M7 — Performance counters *(deps: CPU+GPU integrated in M8, but spec early)* ✅ COMPLETE
-- ✅ CSR-mapped (CPU `mcycle`/`minstret`/`mhpmcounter3-5`) + AXI-Lite-readable (GPU stats). CPU re-sign-off at ASAP7 780 ps / 1282 MHz (perf-CSR cost; see CLAUDE.md + ASAP7_RUN_HISTORY.md).
+- ✅ CSR-mapped (CPU `mcycle`/`minstret`/`mhpmcounter3-5`) + AXI-Lite-readable (GPU stats). CPU re-sign-off at ASAP7 780 ps / 1282 MHz (perf-CSR cost; see CLAUDE.md + Doc: cr:run:asap7).
 - **Exit**: ✅ counter read-back test matches injected events (7/7).
 
 ### M8 — SoC top integration *(deps: M2–M7)* ✅ COMPLETE
@@ -140,12 +140,12 @@ No PD this item (crossbar hardens at SoC top, M11).
 - ✅ `pnr/constraints/phase5_soc.sdc` — **single-clock** (SoC is one `core_clk` domain via the PLL stub, not multi-clock CDC); SoC I/O delays, false/multicycle.
 - ✅ `pnr/constraints/phase5_soc.upf` — PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH.
 - ✅ `make librelane-asap7-soc` — **sv2v synthesis frontend** (librelane's Synlig/UHDM cannot synth this SoC's SV → 0 DFFs / hollow runs; sv2v → flat Verilog-2005 → native Yosys = 43,546 DFFs). Core commit `6ee91b6`.
-- ✅ Closed (run 14, `RUN_2026-06-23_18-05-38`): **571 MHz** (setup +113.6 ps, hold +22.2 ps), **0 routing DRC, 0 antenna, 0 slew/cap**, 62.9 mW, 520×520 µm, 65.6 % util. PDN ⚠️ **withdrawn 2026-09-12 (bead `4l8`)** — this was recorded as a benign PSM-0039 tap-cell artefact, but no ASAP7 run ever committed a power grid at all (0 `dbSWire` shapes; `pdngen` aborted in `build_grids` before `write_to_db`). Fixed topology in `pnr/asap7/pdn_asap7_orfs.tcl`; see `docs/PHASE5_RUN_HISTORY.md` §PDN caveat.
-- **Exit**: ✅ ASAP7 SoC sign-off — fmax/power/area documented in `docs/PHASE5_RUN_HISTORY.md`. Indicative ASAP7 (predictive PDK; no Magic/KLayout DRC or Netgen LVS, as with CPU/GPU). Follow-ups: sv2v↔RTL equivalence — largely done 2026-09-13 (bead `q7n`: flat 99.65 % proven, 0 disproven; 25 of 27 modules proven outright, bounded BMC passes on `pmu`/`dma_engine`; details in `docs/PHASE5_RUN_HISTORY.md` §Known limitations); CPU-macro burst-port LEF (`claude_verilog_test-g0o`).
+- ✅ Closed (run 14, `RUN_2026-06-23_18-05-38`): **571 MHz** (setup +113.6 ps, hold +22.2 ps), **0 routing DRC, 0 antenna, 0 slew/cap**, 62.9 mW, 520×520 µm, 65.6 % util. PDN ⚠️ **withdrawn 2026-09-12 (bead `4l8`)** — this was recorded as a benign PSM-0039 tap-cell artefact, but no ASAP7 run ever committed a power grid at all (0 `dbSWire` shapes; `pdngen` aborted in `build_grids` before `write_to_db`). Fixed topology in `pnr/asap7/pdn_asap7_orfs.tcl`; see `Doc: cr:run:phase5` §PDN caveat.
+- **Exit**: ✅ ASAP7 SoC sign-off — fmax/power/area documented in `Doc: cr:run:phase5`. Indicative ASAP7 (predictive PDK; no Magic/KLayout DRC or Netgen LVS, as with CPU/GPU). Follow-ups: sv2v↔RTL equivalence — largely done 2026-09-13 (bead `q7n`: flat 99.65 % proven, 0 disproven; 25 of 27 modules proven outright, bounded BMC passes on `pmu`/`dma_engine`; details in `Doc: cr:run:phase5` §Known limitations); CPU-macro burst-port LEF (`claude_verilog_test-g0o`).
 
 ### M12 — Sign-off + docs *(deps: M11)* ✅ COMPLETE (2026-06-24)
-- ✅ Updated `CLAUDE.md`, `docs/PHASE_STATUS.md`, this plan → Phase 5 complete.
-- ✅ Wrote `docs/PHASE5_RUN_HISTORY.md` (M11 run campaign + final PPA).
+- ✅ Updated `CLAUDE.md`, `Doc: cr:status:phase-status`, this plan → Phase 5 complete.
+- ✅ Wrote `Doc: cr:run:phase5` (M11 run campaign + final PPA).
 - **Exit**: all VERIFICATION_PLAN.md Phase 5 exit criteria met.
 
 ---
@@ -202,7 +202,7 @@ bd dep add <M11-id> <M9-id>
 bd dep add <M12-id> <M11-id>
 ```
 
-## 7. Phase 5 exit criteria (VERIFICATION_PLAN.md + ROADMAP.md)
+## 7. Phase 5 exit criteria (VERIFICATION_PLAN.md + Doc: cr:status:roadmap)
 
 - ✅ Boots software from ROM (100/100 attempts)
 - ✅ 1M+ cycle random regression, 0 failures

@@ -253,7 +253,7 @@ git push origin main
 
 ## See Also
 
-- `QUICKSTART_PRECOMMIT.md` - Quick setup guide
+- `Doc: cr:app:archive-quickstart-precommit` - Quick setup guide
 - `.github/PRE_COMMIT_SETUP.md` - Detailed pre-commit docs
 - `.github/CI_SETUP.md` - CI workflow documentation
 - `.github/WORKFLOW_TRIGGERS.md` - When CI runs

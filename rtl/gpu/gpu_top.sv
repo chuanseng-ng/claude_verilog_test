@@ -319,7 +319,7 @@ module gpu_top
     //     (every warp is done, or n_warps_q == 0 after a reset).
     // -------------------------------------------------------------------
     // Full-member read into a plain wire: every select below is on the wire, not on the struct
-    // member (Synlig struct-member select defects, docs/SYNLIG_STRUCT_SELECT_AINF.md).
+    // member (Synlig struct-member select defects, Doc: cr:defect:synlig-struct-select-ainf).
     logic [9:0] cq_block_x;
     assign cq_block_x = cq_desc.block_x;
 
@@ -605,4 +605,3 @@ module gpu_top
     );
 
 endmodule
-

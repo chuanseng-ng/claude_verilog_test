@@ -38,7 +38,7 @@ Phase 3, the full regression bake-off, **was not run**: the plan's stop gate tri
 | String into `int unsigned` parameter | accept | accept + warning | accept | accept |
 | Positive control, legal string override | accept | accept | accept | accept |
 
-The string-into-integer row is probably legal SV (inferred), so accepting it isn't scored as a defect. Struct-select reproducers D1-D3 (`docs/SYNLIG_STRUCT_SELECT_AINF.md`) give correct values on xezim and Verilator; this is no evidence about Synlig.
+The string-into-integer row is probably legal SV (inferred), so accepting it isn't scored as a defect. Struct-select reproducers D1-D3 (`Doc: cr:defect:synlig-struct-select-ainf`) give correct values on xezim and Verilator; this is no evidence about Synlig.
 
 ### Can xezim's misses be fixed? (source read, nothing built)
 

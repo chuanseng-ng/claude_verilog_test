@@ -738,7 +738,7 @@ Before Phase 1 is considered complete, **human must verify**:
 - **MEMORY_MAP.md** - Debug register map
 - **REFERENCE_MODEL_SPEC.md** - Python reference model API
 - **VERIFICATION_PLAN.md** - Verification strategy
-- **ROADMAP.md** - Phase boundaries and responsibilities
+- **Doc: cr:status:roadmap** - Phase boundaries and responsibilities
 
 ---
 

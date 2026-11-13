@@ -1,7 +1,7 @@
 """Structural guards for the cache-FSM timing properties added by bead r51p.
 
 The Sky130 CPU macro's ss setup failure runs through the dcache stall decode
-(docs/SKY130_CPU_SS_SETUP_R51P.md).  Two RTL properties keep that decode shallow and
+(Doc: cr:defect:sky130-cpu-ss-setup-r51p).  Two RTL properties keep that decode shallow and
 must not regress silently:
 
 1. Every *unconditionally* stalling cache state has bit 3 of the state encoding set, and

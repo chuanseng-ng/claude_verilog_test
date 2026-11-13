@@ -1051,7 +1051,7 @@ SKY130_SOC_EXTRA_SKIP ?=
 # gates max-cap at ALL corners and waives only the named entries of constraints/max_cap_waivers.json (macro
 # load pin, ceiling, justification). The stock checker is skipped only for configs that lack that substitution
 # (config.json): un-skipped alone it is a no-op, because checker.py's corner_override=[""] makes it match no
-# corner, so it only logs a WARNING (measured, docs/SKY130_SLEW_CAP_E45J.md section 7).
+# corner, so it only logs a WARNING (measured, Doc: cr:defect:sky130-slew-cap-e45j section 7).
 SKY130_SOC_CONFIG ?= config_rccal.json
 SKY130_SOC_PLUGIN_DIR := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/plugin)
 SKY130_SOC_KLAYOUT_SKIP := --skip KLayout.DRC --skip Checker.KLayoutDRC
@@ -1181,7 +1181,7 @@ librelane-sky130-soc: sky130-soc-sv2v
 # Unlike the pre-adoption recipe it honours SKY130_SOC_CONFIG, e.g. for an A/B arm:
 #   make librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=<arm>.json
 # and confirm the key in <run>/resolved.json. (The wire-length arm config_rccal_wl1500.json was removed
-# 2026-10-28: GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500 is now in config_rccal.json, docs/SKY130_SLEW_CAP_E45J.md section 9.)
+# 2026-10-28: GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500 is now in config_rccal.json, Doc: cr:defect:sky130-slew-cap-e45j section 9.)
 librelane-sky130-soc-rccal-noklayout:
 	@$(MAKE) librelane-sky130-soc-noklayout
 
@@ -2248,7 +2248,7 @@ flop-count:
 # TWO PROTECTIONS, both added after this macro silently destroyed the ASAP7 CPU
 # sign-off runs (2026-09-09): a 10-run bring-up campaign in one night evicted
 # every pre-September run, including the one CLAUDE.md and
-# docs/PHASE5_RUN_HISTORY.md cite. The macro-view archiving under
+# Doc: cr:run:phase5 cite. The macro-view archiving under
 # pnr/asap7/*/macro/ is what saved the netlists and abstracts; the run
 # directories -- step logs, per-step metrics, intermediate ODBs, the STA reports
 # behind the quoted numbers -- were lost and are not reproducible (different

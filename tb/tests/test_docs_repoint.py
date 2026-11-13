@@ -232,7 +232,10 @@ def test_tex_form(tmp_path):
 
 def test_tex_verbatim_untouched(tmp_path):
     """Check tex verbatim untouched."""
-    src = "\\begin{lstlisting}\ndocs/PLAN.md\n\\end{lstlisting}\n"
+    src = (
+        "\\begin{lstlisting}\ndocs/PLAN.md\n\\end{lstlisting}\n"
+        "\\begin{textblock}\ndocs/PLAN.md\n\\end{textblock}\n"
+    )
     root = make_repo(tmp_path, {"docs/manual/tm/a.tex": src})
     run(root, apply=True)
     assert read(root, "docs/manual/tm/a.tex") == src

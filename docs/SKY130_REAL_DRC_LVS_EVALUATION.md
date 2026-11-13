@@ -4,11 +4,11 @@
 
 ## 1. Findings
 
-- **ASAP7 sign-off has no real DRC/LVS.** `pnr/asap7/soc/config.json:112` (+ cpu/gpu) set `RUN_MAGIC_DRC/RUN_KLAYOUT_DRC/RUN_LVS = false` — predictive PDK, indicative only (`PHASE5_RUN_HISTORY.md:34`). All three ASAP7 sign-offs (CPU/GPU/SoC) skip physical verification.
-- **Sky130 gives REAL DRC/LVS.** Proven on the Phase 7 charge-pump PLL: real Magic DRC = 0 + Netgen LVS = MATCH on `sky130A.tech` (`PHASE_STATUS.md`, `PHASE7_MIXED_SIGNAL_PLL_PLAN.md:4`). Magic + Netgen are in the LibreLane nix-shell (currently `--skip`-ped, not absent). Sky130 is the **fabricatable** node (CLAUDE.md).
+- **ASAP7 sign-off has no real DRC/LVS.** `pnr/asap7/soc/config.json:112` (+ cpu/gpu) set `RUN_MAGIC_DRC/RUN_KLAYOUT_DRC/RUN_LVS = false` — predictive PDK, indicative only (`Doc: cr:run:phase5:34`). All three ASAP7 sign-offs (CPU/GPU/SoC) skip physical verification.
+- **Sky130 gives REAL DRC/LVS.** Proven on the Phase 7 charge-pump PLL: real Magic DRC = 0 + Netgen LVS = MATCH on `sky130A.tech` (`Doc: cr:status:phase-status`, `PHASE7_MIXED_SIGNAL_PLL_PLAN.md:4`). Magic + Netgen are in the LibreLane nix-shell (currently `--skip`-ped, not absent). Sky130 is the **fabricatable** node (CLAUDE.md).
 - **FreePDK45 ruled out.** `memory/pd/knowledge.md:136`: Magic DRC + Netgen LVS **permanently blocked** for NanGate45 (only KLayout DRC, post-DRT). → Sky130 is the only real-sign-off PDK.
 - **CPU on Sky130 = easy.** Phase 2 already closed 75 MHz / 0 violations on Sky130 (`pnr/librelane/`). Just enable `RUN_MAGIC_DRC/LVS=true`. Hours.
-- **GPU on Sky130 = the gating risk.** GPU = 485k cells / 60.5k µm² on ASAP7 7nm → **~1.2-1.8M µm²** on Sky130 130nm (20-30×). Synthesis already hit OOM on ASAP7 (`GPU_ASAP7_RUN_HISTORY.md:54`); Sky130 flat ≈ 18-25 h GRT, needs **≥32 GB RAM + ~500 GB scratch** — the **~15 GB host cannot**. Sky130 GPU fmax ~100-150 MHz.
+- **GPU on Sky130 = the gating risk.** GPU = 485k cells / 60.5k µm² on ASAP7 7nm → **~1.2-1.8M µm²** on Sky130 130nm (20-30×). Synthesis already hit OOM on ASAP7 (`Doc: cr:run:asap7-gpu:54`); Sky130 flat ≈ 18-25 h GRT, needs **≥32 GB RAM + ~500 GB scratch** — the **~15 GB host cannot**. Sky130 GPU fmax ~100-150 MHz.
 - **No `pnr/sky130/soc/` exists** (only ASAP7). ASAP7 macro LEFs are ASAP7-layer-specific → **native Sky130 macro regen required** (can't port abstracts across PDKs).
 
 ## 2. Why GO (and why staged)
@@ -151,7 +151,7 @@ only 0.29 % touch the SRAM macro. Both checkers are `--skip`-ped and do not gate
 
 **Every Sky130 CPU and SoC result above (Stage 1, Stage 2, the 2026-09-26 GPIO run and the e45j runs) wrapped a functionally wrong
 CPU macro.** The macro (`RUN_2026-07-27_05-52-19`, `USE_SYNLIG:true`) mis-forwarded because Synlig elaborated two hazard-unit port
-connections as `5'x` (`docs/SKY130_CPU_SYNLIG_DUD4.md`). LVS, DRC and timing numbers were genuine for that netlist; they said
+connections as `5'x` (`Doc: cr:defect:sky130-cpu-synlig-dud4`). LVS, DRC and timing numbers were genuine for that netlist; they said
 nothing about its function. The physical-verification claims stand as measurements of that layout, not as sign-off of a correct CPU.
 
 Remedy: `pnr/sky130/cpu/config.json` -> `USE_SYNLIG:false` on `make -C pnr sky130-cpu-sv2v` output; every other key unchanged
@@ -181,5 +181,5 @@ gitignored): all 403 LEF pins keep identical position and layer, ports match RTL
 **SoC, `RUN_2026-10-11_08-39-41`** (rccal flow, `CVT_SYNTH_GATE=warn`): LVS 0, routing DRC 0, Magic 8 984 (same), setup 0 violators at
 all nine corners (worst +2.4825 ns max_ss, base +3.3286), hold 0 at all nine (worst +0.2874 ns, base +0.2822), antenna 187 nets /
 265 pins, util 45.22 %, 84.6 mW. `CVT.MaxCapViolations` FAILS with 4 unwaived violations on 3 flat nets and the old waiver is stale;
-details and the baseline comparison in `docs/SKY130_SLEW_CAP_E45J.md` §8. **The SoC closes at all nine corners while the CPU
+details and the baseline comparison in Doc: cr:defect:sky130-slew-cap-e45j:8-new-baseline-on-the-sv2v-rebuilt-cpu-macro-2026-10-11-bead-dud4-stale-waiver-3-unwaived-ss-corner-nets. **The SoC closes at all nine corners while the CPU
 standalone macro does not close ss reg-to-reg setup; these are different clock periods (40 vs 75 MHz) and different scopes.**

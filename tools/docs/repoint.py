@@ -58,8 +58,8 @@ SEC_BARE = re.compile(
 )
 TEX_WRAP = re.compile(r"\\(?:src|code|path|texttt|url)\{$")
 FENCE = re.compile(r"^\s*(```|~~~)")
-TEX_VERB_BEGIN = re.compile(r"\\begin\{(lstlisting|logblock|verbatim|Verbatim)\}")
-TEX_VERB_END = re.compile(r"\\end\{(lstlisting|logblock|verbatim|Verbatim)\}")
+TEX_VERB_BEGIN = re.compile(r"\\begin\{(lstlisting|logblock|textblock|verbatim|Verbatim)\}")
+TEX_VERB_END = re.compile(r"\\end\{(lstlisting|logblock|textblock|verbatim|Verbatim)\}")
 
 
 @dataclass

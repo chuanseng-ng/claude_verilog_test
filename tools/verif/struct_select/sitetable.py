@@ -4,7 +4,7 @@
 usage: sitetable.py [repo-root]
 Parses every `typedef struct` in rtl/, counts ranged members R, resolves the struct type of the base
 of every `<base>.m...[sel]` select (heuristic name->type map from declarations), classifies read/write,
-and prints the predicted outcome per docs/SYNLIG_STRUCT_SELECT_AINF.md.
+and prints the predicted outcome per Doc: cr:defect:synlig-struct-select-ainf.
 """
 
 import re

@@ -167,8 +167,8 @@ Purpose
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\src{docs/ROADMAP.md} & High-level project plan and phases \\
-\src{docs/PHASE_STATUS.md} & Current project status and next steps \\
+\cref{cr:status:roadmap} & High-level project plan and phases \\
+\cref{cr:status:phase-status} & Current project status and next steps \\
 \src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} & CPU architectural
 requirements (Phase 0) \\
 \src{docs/design/PHASE1_ARCHITECTURE_SPEC.md} & CPU implementation spec
@@ -273,7 +273,7 @@ adopted for regression; pyslang recommended for use-before-declare (bead
 \bead{qd9l}) \\
 \src{docs/RANDOM_TESTS_STATUS.md} & Random instruction test results and
 guide \\
-\src{fixes/FIXES_INDEX.md} & \textbf{*} Central reference for all RTL
+\cref{cr:fix:fixes-index} & \textbf{*} Central reference for all RTL
 bug fixes \\
 \end{longtable}
 }
@@ -283,7 +283,7 @@ bug fixes \\
 \section{README detail set}\label{um:guide:key-documentation:readme-detail-set}
 
 \src{docs/readme/} holds the deep content split out of the root README:
-\code{PHASE_HISTORY.md}, \code{QUICK_START.md} (build/\allowbreak{}run
+\cref{cr:status:phase-history}, \code{QUICK_START.md} (build/\allowbreak{}run
 commands per phase), \code{SUPPORTED_INSTRUCTIONS.md},
 \code{DEBUG_INTERFACE.md} (APB3 register map),
 \code{PROJECT_STRUCTURE.md} (full directory tree).
@@ -369,7 +369,7 @@ assert result['rd'] == 1
 \end{itemize}
 
 See \src{docs/verification/VERIFICATION_PLAN.md} for the phase-by-phase
-plan. Per-phase completion history → \src{docs/readme/PHASE_HISTORY.md}.
+plan. Per-phase completion history → \cref{cr:status:phase-history}.
 \end{relocated}
 
 

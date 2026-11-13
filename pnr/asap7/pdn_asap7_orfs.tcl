@@ -10,7 +10,7 @@
 # *before* `write_to_db` ever ran.  The local warn-and-continue patch in
 # librelane's `pdn.tcl` swallowed that error, so the flow proceeded with no PDN
 # and reported it as a "benign tap-cell artifact".  See
-# `docs/PHASE5_RUN_HISTORY.md` §"PDN caveat" and `memory/pd/knowledge.md`.
+# `Doc: cr:run:phase5` §"PDN caveat" and `memory/pd/knowledge.md`.
 #
 # ROOT CAUSE OF PDN-0179
 # ----------------------
