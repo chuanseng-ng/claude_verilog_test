@@ -12,6 +12,11 @@ import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
+import pytest
+
+# stuck_bits_formal.py sets an address-space limit with the Unix-only resource module.
+pytest.importorskip("resource")
+
 # pylint: disable=missing-function-docstring
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
