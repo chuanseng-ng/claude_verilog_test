@@ -23,14 +23,14 @@ set map_apb  {m_paddr_o apb_paddr_i m_psel_o apb_psel_i m_penable_o apb_penable_
 set out [open $RUN/arrival_$L.tsv w]
 puts $out "# lib\tgroup\tport\tbit_cap_pf\tmax_arrival_ns\tmin_arrival_ns\tstartpoint"
 foreach {mod map} [list async_axi_fifo $map_fifo apb_cdc_bridge $map_apb] {
-  remove_design -all
+  catch {remove_design -all}
   read_verilog $RUN/out/${mod}.mapped.v
   current_design $mod; link
   create_clock -name s_clk -period 25 [get_ports s_clk_i]
   create_clock -name m_clk -period 25 [get_ports m_clk_i]
   set_clock_groups -asynchronous -group s_clk -group m_clk
   foreach {po mi} $map {
-    foreach p [get_ports -quiet "${po}*"] {
+    foreach_in_collection p [get_ports -quiet "${po}*"] {
       set pn [get_object_name $p]
       regsub {^[a-z0-9_]+_o} $pn $mi mn
       if {![dict exists $capof $mn]} { puts "NO CAP for $mn"; continue }
@@ -38,7 +38,7 @@ foreach {mod map} [list async_axi_fifo $map_fifo apb_cdc_bridge $map_apb] {
     }
   }
   foreach {po mi} $map {
-    foreach p [get_ports -quiet "${po}*"] {
+    foreach_in_collection p [get_ports -quiet "${po}*"] {
       set pn [get_object_name $p]; regsub {^[a-z0-9_]+_o} $pn $mi mn
       set ps [get_timing_paths -from [all_registers -clock_pins] -to $p -delay_type max]
       set pm [get_timing_paths -from [all_registers -clock_pins] -to $p -delay_type min]
