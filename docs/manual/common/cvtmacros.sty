@@ -179,7 +179,11 @@
 % ---- Longtable page break --------------------------------------------
 % Longtable ends a page with \vss, which shrinks without limit. LaTeX 2025 splits
 % the page box to read its marks and reports an error for that glue. The output
-% routine of longtable uses a finite shrink instead.
-\let\cvt@LT@output\LT@output
-\def\LT@output{\def\vss{\vskip\z@\@plus1fil\relax}\cvt@LT@output}
+% routine of longtable uses a finite shrink instead. Only the 2025-11-01 kernel and
+% later need this. With an earlier kernel the finite shrink makes a table row that
+% is taller than the page loop in the output routine, so the patch is not applied.
+\IfFormatAtLeastTF{2025-11-01}{%
+  \let\cvt@LT@output\LT@output
+  \def\LT@output{\def\vss{\vskip\z@\@plus1fil\relax}\cvt@LT@output}%
+}{}
 \endinput
