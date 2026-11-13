@@ -623,3 +623,25 @@ def test_origsec_counts_as_the_heading_number(tmp_path, capsys):
     stripped = _w(tmp_path, "bad.tex", "\\section{Citation line}\\label{x:y}\nBody words here.\n")
     code, out = _run(capsys, "--from", md, "--to", stripped)
     assert code == 1 and "7.3" in out
+
+
+def test_row_blocks_keep_header_and_cell_words(tmp_path, capsys):
+    """Check a table written as row blocks loses no header or cell word."""
+    md = _w(
+        tmp_path,
+        "t.md",
+        "| Id | Option name | Risk |\n|---|---|---|\n| A1 | Register the write | Medium here |\n",
+    )
+    good = _w(
+        tmp_path,
+        "t.tex",
+        "\\begin{rowtable}\n\\rowcolumns{Id, Option name, Risk}\n\n"
+        "\\rowtitle{\\textbf{Id}: A1}\n\n\\begin{rowcell}{Option name}\n\n"
+        "Register the write\n\n\\end{rowcell}\n\n\\begin{rowcell}{Risk}\n\nMedium here\n\n"
+        "\\end{rowcell}\n\\end{rowtable}\n",
+    )
+    code, out = _run(capsys, "--from", md, "--to", good)
+    assert code == 0, out
+    no_header = _w(tmp_path, "n.tex", Path(good).read_text("utf-8").replace("Option name", ""))
+    code, out = _run(capsys, "--from", md, "--to", no_header)
+    assert code == 1 and "name" in out
