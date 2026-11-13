@@ -110,7 +110,7 @@ puts "================================================================"
 
 estimate_parasitics -placement
 
-# Tighten clock uncertainty post-CTS per SDC_TIMING_SPEC.md guidance
+# Tighten clock uncertainty post-CTS per Doc: ds:ch:sdc-timing-spec guidance
 # (pre-CTS uses 0.5 ns, post-CTS tightens to 0.3 ns)
 set_propagated_clock [all_clocks]
 set_clock_uncertainty 0.3 [get_clocks clk_i]

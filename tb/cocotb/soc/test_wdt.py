@@ -1,5 +1,5 @@
 """test_wdt.py -- Phase 6a-3 cocotb verification for watchdog_timer (rtl/periph/watchdog_timer.sv,
-bead claude_verilog_test-f7vs.7, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-3 -- WDT" + Sec.9).
+bead claude_verilog_test-f7vs.7, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-3 -- WDT" + Sec.9).
 
 STRICT TDD: watchdog_timer DOES NOT EXIST YET as of this suite's authorship. This is step 2 of
 the mandated workflow ("the verification orchestrator runs before the RTL orchestrator" --

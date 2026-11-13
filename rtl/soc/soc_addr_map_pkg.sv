@@ -1,8 +1,8 @@
 // soc_addr_map_pkg.sv
 // Phase 5 (M1) — SoC address-decode constants and helper.
 //
-// Defines the Phase 5 memory regions (per docs/design/MEMORY_MAP.md, reconciled
-// to the AXI-Lite-native ring decision in PHASE5_SOC_INTEGRATION_PLAN.md M1) and
+// Defines the Phase 5 memory regions (per Doc: ds:mm:memory-map, reconciled
+// to the AXI-Lite-native ring decision in Doc: ds:ch:phase5-soc-integration-plan M1) and
 // a decode helper that maps an address to a data-fabric slave index.
 //
 // Region summary (data crossbar slaves):

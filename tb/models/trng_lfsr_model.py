@@ -1,6 +1,6 @@
 """trng_lfsr_model.py -- bit-exact pure-Python golden model of the TRNG's default (LFSR) entropy
 source, rtl/periph/trng_lfsr_entropy.sv (bead claude_verilog_test-f7vs.8, Phase 6a-4,
-docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG").
+Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG").
 
 THIS IS NOT A RANDOMNESS MODEL. The default-build TRNG is a deterministic pseudo-random generator
 that advertises the fact by forcing TRNG_STATUS.INSECURE = 1. This module exists so the L1 suite

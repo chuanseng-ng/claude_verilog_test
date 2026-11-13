@@ -1,10 +1,10 @@
 """Zicsr reference model for the rv32i_csr_file M-mode CSR set (bead a5ze).
 
 Expected-value source for tb/cocotb/cpu/test_csr_access.py.  Written from the project specs, not
-from the RTL: docs/design/PHASE2_ARCHITECTURE_SPEC.md section 4.2 (mstatus / mie / mtvec / mepc /
-mcause / mip / ID registers), the Phase 5 M7 performance-counter map (mcountinhibit, mcycle[h],
-minstret[h], mhpmcounter3-5) and the RISC-V Zicsr rule that CSRRS/CSRRC with a zero source do not
-write.
+from the RTL: Doc: ds:ch:phase2-architecture:42-csr-register-set-minimal-phase-2
+(mstatus / mie / mtvec / mepc / mcause / mip / ID registers), the Phase 5 M7
+performance-counter map (mcountinhibit, mcycle[h], minstret[h], mhpmcounter3-5) and the
+RISC-V Zicsr rule that CSRRS/CSRRC with a zero source do not write.
 
 execute() is the untimed instruction view: the counters only change through writes, so a test
 that compares a read against it must freeze them with mcountinhibit first.  tick() is the

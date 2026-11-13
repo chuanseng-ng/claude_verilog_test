@@ -1,6 +1,6 @@
 // aes128_core.sv
 // Phase 6b -- AES-128 encrypt-only block core, iterative 128-bit datapath (bead
-// claude_verilog_test-f7vs.10, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.6b "6b -- CRYPTO"). Sub-core of
+// claude_verilog_test-f7vs.10, Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "6b -- CRYPTO"). Sub-core of
 // crypto_accel.sv: it has no APB, no register storage visible to software and no clock-domain
 // crossing. The parent owns the key shadow, the message shadow, the sticky done flag and the
 // result register (the register bank word IS the result register).

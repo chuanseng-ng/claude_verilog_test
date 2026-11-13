@@ -15,7 +15,7 @@ and PLL-slot extensions.
 Phase 6 update (bead claude_verilog_test-f7vs.2): the APB bridge window was
 extended again, from 0x2000_AFFF to 0x2001_0FFF (soc_periph_map_pkg.sv
 AXIL_APB_LIMIT / soc_addr_map_pkg.sv PERIPH_LIMIT), pre-allocating the full
-14-slot APB sub-map in one commit (docs/PHASE6_IP_EXPANSION_PLAN.md §4):
+14-slot APB sub-map in one commit (Doc: ds:ch:phase6-ip-expansion-plan:4-address-map-pre-allocated-in-full):
 PWM/WDT/TRNG/I2C/CRYPTO/NPU at 0x2000_B000-0x2001_0FFF. Only the first 8 APB
 slots (through GPIO) are wired to real slaves — APB_N_SLAVES stays 8 — so an
 address in the new reserved range (e.g. 0x2000_B000, PWM's slot) is now

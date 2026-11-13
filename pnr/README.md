@@ -145,5 +145,5 @@ Before advancing to the next phase, the design must pass:
 ## References
 
 - OpenROAD Flow Spec: `docs/design/OPENROAD_FLOW_SPEC.md`
-- UPF Power Spec: `docs/design/UPF_POWER_SPEC.md`
+- UPF Power Spec: `Doc: ds:ch:upf-power-spec`
 - SDC Timing Constraints: `constraints/*.sdc`

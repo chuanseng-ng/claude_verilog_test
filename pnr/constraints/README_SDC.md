@@ -229,8 +229,8 @@ Before declaring timing closure:
 
 ## References
 
-- **SDC Specification**: `docs/design/SDC_TIMING_SPEC.md`
-- **CPU Architecture**: `docs/design/PHASE1_ARCHITECTURE_SPEC.md`
+- **SDC Specification**: `Doc: ds:ch:sdc-timing-spec`
+- **CPU Architecture**: `Doc: ds:ch:phase1-architecture`
 - **OpenROAD Flow**: `docs/design/OPENROAD_FLOW_SPEC.md`
 - **Synopsys SDC User Guide**: Industry standard reference
 - **OpenSTA Manual**: https://github.com/The-OpenROAD-Project/OpenSTA

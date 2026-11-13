@@ -1,5 +1,5 @@
 """test_i2c.py -- Phase 6a-5 cocotb L1 protocol verification for i2c_controller
-(rtl/periph/i2c_controller.sv, bead claude_verilog_test-f7vs.9, docs/PHASE6_IP_EXPANSION_PLAN.md
+(rtl/periph/i2c_controller.sv, bead claude_verilog_test-f7vs.9, Doc: ds:ch:phase6-ip-expansion-plan
 Sec.7 "6a-5 -- I2C").
 
 WRITTEN AFTER THE RTL -- READ THIS BEFORE TRUSTING A GREEN RUN.  Every other peripheral in this

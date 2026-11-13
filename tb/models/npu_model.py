@@ -1,6 +1,6 @@
 """npu_model.py -- pure-Python golden model of the INT8 NPU's arithmetic (rtl/npu/npu_top.sv +
 rtl/npu/npu_mac_array.sv + rtl/npu/npu_weight_mem.sv; bead claude_verilog_test-f7vs.11, Phase 6c,
-docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6c -- NPU").
+Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU").
 
 STANDARD LIBRARY ONLY. requirements.txt is deliberately untouched (same promise as
 tb/models/aes128_model.py): this is a test oracle, not a fast implementation.

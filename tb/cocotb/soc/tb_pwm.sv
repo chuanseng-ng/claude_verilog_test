@@ -1,7 +1,7 @@
 // tb_pwm.sv
 // Phase 6a-2 -- standalone cocotb test wrapper for pwm_controller (rtl/periph/pwm_controller.sv,
 // bead claude_verilog_test-f7vs.6). pwm_controller DOES NOT EXIST YET as of this wrapper's
-// authorship -- this is step 2 of the mandated TDD order (docs/PHASE6_IP_EXPANSION_PLAN.md
+// authorship -- this is step 2 of the mandated TDD order (Doc: ds:ch:phase6-ip-expansion-plan
 // Sec.9: "the verification orchestrator runs before the RTL orchestrator"). This file, and the
 // `pwm`/`pwm_lint` Makefile targets built on it, are EXPECTED TO FAIL TO ELABORATE until
 // rtl/periph/pwm_controller.sv is written to match the contract documented here and in
@@ -10,7 +10,7 @@
 // Directly instantiates pwm_controller with true top-level input ports for clk/rst_n and the
 // whole APB4 slave face, and re-exports pwm_o/irq_o as top-level outputs so tests can sample them
 // every cycle. Same standalone pattern as tb_gpio.sv / tb_pmu.sv. Unlike tb_gpio.sv, PWM has NO
-// async input pins at all (push-pull output only, per docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7
+// async input pins at all (push-pull output only, per Doc: ds:ch:phase6-ip-expansion-plan Sec.7
 // "6a-2 -- PWM": "no oe, no async input and no CDC at all").
 //
 // Register map under test (pwm_controller.sv, ADDR_W=12) -- see test_pwm.py's module docstring

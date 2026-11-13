@@ -2,7 +2,7 @@
 // Phase 5 (M1/M3) — AXI-Lite control-ring + APB peripheral sub-map.
 //
 // Phase 6 (bead claude_verilog_test-f7vs.2): the full 14-slave APB sub-tree is
-// pre-allocated in this one commit, per docs/PHASE6_IP_EXPANSION_PLAN.md §4.
+// pre-allocated in this one commit, per Doc: ds:ch:phase6-ip-expansion-plan:4-address-map-pre-allocated-in-full.
 // Slot 13 (NPU) is a BASE/LIMIT constant only —
 // reserved-but-unbuilt, not yet in APB_N_SLAVES or the APB_SLV_BASE/LIMIT
 // arrays. Slots 8-12 (PWM, WDT, TRNG, I2C, CRYPTO) are live. Each reserved slot is promoted to a
@@ -71,7 +71,7 @@ package soc_periph_map_pkg;
     // Phase 6a / bead claude_verilog_test-ckc: extended 0x2000_9FFF -> 0x2000_AFFF for GPIO.
     // Phase 6 / bead claude_verilog_test-f7vs.2: extended 0x2000_AFFF -> 0x2001_0FFF, the
     // final value — pre-allocates the full 14-slot APB window (PWM/WDT/TRNG/I2C/CRYPTO/NPU)
-    // in one commit per docs/PHASE6_IP_EXPANSION_PLAN.md §4.
+    // in one commit per Doc: ds:ch:phase6-ip-expansion-plan:4-address-map-pre-allocated-in-full.
     localparam logic [31:0] AXIL_APB_BASE    = 32'h2000_2000;
     localparam logic [31:0] AXIL_APB_LIMIT   = 32'h2001_0FFF;
     localparam logic [31:0] AXIL_DMA_BASE    = 32'h2000_5000;

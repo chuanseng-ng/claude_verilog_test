@@ -1,6 +1,6 @@
 """test_crypto.py -- Phase 6b cocotb L1 verification for crypto_accel (rtl/periph/crypto_accel.sv
 + rtl/periph/aes128_core.sv + rtl/periph/sha256_core.sv, bead claude_verilog_test-f7vs.10,
-docs/PHASE6_IP_EXPANSION_PLAN.md Sec.6b "CRYPTO", whose "Register-map corrections" and "Acceptance
+Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "CRYPTO", whose "Register-map corrections" and "Acceptance
 criteria" blocks this suite is written to prove).
 
 STRICT TDD: the RTL DID NOT EXIST when this suite was written.  This is step 2 of the mandated

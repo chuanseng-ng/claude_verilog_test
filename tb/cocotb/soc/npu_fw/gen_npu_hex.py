@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_npu_hex.py — generate npu_fw.hex and npu_fw_addrs.py for the Phase 6c SoC-level NPU FABRIC test
-(bead claude_verilog_test-f7vs.11, docs/PHASE6_IP_EXPANSION_PLAN.md §7 "6c -- NPU", L2 testability).
+(bead claude_verilog_test-f7vs.11, Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6c -- NPU", L2 testability).
 
 Scope, deliberately small. The L1 suite (test_npu.py, `make npu`) owns every behaviour of the
 peripheral itself: arithmetic, requantiser corner cases, FIFO depths, weight-write rejection, the

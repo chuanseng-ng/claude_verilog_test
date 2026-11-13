@@ -1,6 +1,6 @@
 // npu_mac_array.sv
 // Phase 6c -- NPU weight-stationary 4 x 4 INT8 MAC grid (bead claude_verilog_test-f7vs.11,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6c -- NPU"; arithmetic spec: tb/models/npu_model.py).
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU"; arithmetic spec: tb/models/npu_model.py).
 //
 // STRUCTURE. Row i (0..3) of the grid holds the four INT8 weights W[i][0..3] of one tile row;
 // column j (0..3) is one output lane. Per chunk, npu_top loads the four tile rows one at a time

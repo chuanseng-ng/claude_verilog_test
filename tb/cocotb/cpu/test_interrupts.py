@@ -268,7 +268,7 @@ async def test_concurrent_irq_priority(dut):
     rv32i_interrupt_ctrl.sv documents 'Priority: external (MEIP) > timer
     (MTIP)' [OQ-2]; at SoC level this is the documented disambiguation between
     the IRQ-controller MEIP line and the direct timer MTIP line
-    (docs/design/MEMORY_MAP.md, Interrupt Hierarchy). This test pins the
+    (Doc: ds:mm:memory-map, Interrupt Hierarchy). This test pins the
     behavior: with both enabled and both pending, mcause must be
     MCAUSE_IRQ_EXTERNAL (0x8000000B), not MCAUSE_IRQ_TIMER (0x80000007).
     """

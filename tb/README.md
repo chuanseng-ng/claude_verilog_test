@@ -23,7 +23,7 @@ tb/
 
 ### Memory Model (`memory_model.py`)
 
-Sparse memory implementation with alignment checking per REFERENCE_MODEL_SPEC.md.
+Sparse memory implementation with alignment checking per Doc: ds:ch:reference-model.
 
 **Features:**
 - Sparse storage (dictionary-based, only stores written bytes)
@@ -42,7 +42,7 @@ data = mem.read(0x1000, 4)         # Read word
 
 ### RV32I CPU Model (`rv32i_model.py`)
 
-Instruction-accurate model implementing all 37 RV32I base instructions per PHASE0_ARCHITECTURE_SPEC.md.
+Instruction-accurate model implementing all 37 RV32I base instructions per Doc: ds:ch:phase0-architecture.
 
 **Features:**
 - All 37 RV32I instructions (arithmetic, logical, shift, load/store, branch, jump)
@@ -75,7 +75,7 @@ print(f"x3 = {state['regs'][3]}")  # Should be 1
 
 ### GPU Kernel Model (`gpu_kernel_model.py`)
 
-SIMT execution model per PHASE4_GPU_ARCHITECTURE_SPEC.md with 8-lane warps.
+SIMT execution model per Doc: ds:ch:phase4-gpu-architecture with 8-lane warps.
 
 **Features:**
 - 8-lane SIMT execution (single instruction, multiple threads)
@@ -191,7 +191,7 @@ These reference models serve as golden references for RTL verification:
 2. **Coverage tracking**: Models track which instructions/scenarios executed
 3. **Debug aid**: Model state helps debug RTL mismatches
 
-See `docs/verification/VERIFICATION_PLAN.md` for complete verification strategy.
+See `Doc: ds:ch:verification-plan` for complete verification strategy.
 
 ## Dependencies
 
@@ -207,7 +207,7 @@ pip install pytest numpy
 
 ## References
 
-- `docs/design/REFERENCE_MODEL_SPEC.md` - Reference model specification
-- `docs/design/PHASE0_ARCHITECTURE_SPEC.md` - CPU architecture
-- `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` - GPU architecture
-- `docs/verification/VERIFICATION_PLAN.md` - Verification strategy
+- `Doc: ds:ch:reference-model` - Reference model specification
+- `Doc: ds:ch:phase0-architecture` - CPU architecture
+- `Doc: ds:ch:phase4-gpu-architecture` - GPU architecture
+- `Doc: ds:ch:verification-plan` - Verification strategy

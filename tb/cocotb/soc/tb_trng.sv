@@ -1,7 +1,7 @@
 // tb_trng.sv
 // Phase 6a-4 -- standalone cocotb test wrapper for trng (rtl/periph/trng.sv, bead
 // claude_verilog_test-f7vs.8). trng DOES NOT EXIST YET as of this wrapper's authorship -- this is
-// step 2 of the mandated TDD order (docs/PHASE6_IP_EXPANSION_PLAN.md Sec.9: "the verification
+// step 2 of the mandated TDD order (Doc: ds:ch:phase6-ip-expansion-plan Sec.9: "the verification
 // orchestrator runs before the RTL orchestrator"). This file, and the `trng`/`trng_lint`
 // Makefile targets built on it, are EXPECTED TO FAIL TO ELABORATE until rtl/periph/trng.sv is
 // written to match the contract documented here and in test_trng.py.
@@ -10,7 +10,7 @@
 // slave face, and re-exports irq_o as the only extra top-level output so tests can sample it every
 // cycle. Same standalone pattern as tb_wdt.sv / tb_pwm.sv / tb_gpio.sv.
 //
-// The TRNG has NO top-level pins at all beyond the bus and irq_o (docs/PHASE6_IP_EXPANSION_PLAN.md
+// The TRNG has NO top-level pins at all beyond the bus and irq_o (Doc: ds:ch:phase6-ip-expansion-plan
 // Sec.7 "6a-4 -- TRNG"): the entropy source is swapped by `ifdef TRNG_RO_SKY130 INSIDE trng.sv,
 // not by a port, so this wrapper -- and every SoC file list -- is identical for both arms. This
 // wrapper deliberately does NOT define TRNG_RO_SKY130: it verifies the DEFAULT (LFSR) arm, the

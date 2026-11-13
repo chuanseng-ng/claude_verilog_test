@@ -3,7 +3,7 @@
 //
 // Defines shared parameters and types for I-cache and D-cache.
 //
-// Cache configuration (from MEMORY_MAP.md):
+// Cache configuration (from Doc: ds:mm:memory-map):
 //   - Size:         4 KB each (I$ and D$)
 //   - Organization: Direct-mapped
 //   - Line size:    16 bytes (4 words)

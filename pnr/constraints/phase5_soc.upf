@@ -314,7 +314,7 @@ add_power_state -supply SS_GPU \
 #                   shifted in.  MISMATCH with "all domains ON": the ISO clamps
 #                   are not qualified by scan_mode_i, so under scan a clamp can
 #                   be active.  Documented, not changed (bead-worthy, see
-#                   docs/design/UPF_POWER_SPEC.md "Phase 5").
+#                   Doc: ds:ch:upf-power-spec "Phase 5").
 create_power_state_group SOC_PST
 
 add_power_state -group SOC_PST \

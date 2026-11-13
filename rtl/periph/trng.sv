@@ -1,6 +1,6 @@
 // trng.sv
 // Phase 6a-4 -- True-random-number-generator peripheral, APB4 slave (bead
-// claude_verilog_test-f7vs.8, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG"). Written to
+// claude_verilog_test-f7vs.8, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG"). Written to
 // the contract in tb/cocotb/soc/test_trng.py (its module docstring is authoritative; this header
 // summarises it) and tb/models/trng_lfsr_model.py (bit-exact entropy datapath).
 //

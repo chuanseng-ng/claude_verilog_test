@@ -104,4 +104,4 @@ These tests will remain archived for historical reference:
 
 ---
 
-**For Questions**: See `docs/pyuvm_migration/` or `docs/verification/VERIFICATION_PLAN.md`
+**For Questions**: See `docs/pyuvm_migration/` or `Doc: ds:ch:verification-plan`

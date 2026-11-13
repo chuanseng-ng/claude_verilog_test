@@ -1,6 +1,6 @@
 // watchdog_timer.sv
 // Phase 6a-3 -- Watchdog timer, APB4 slave (bead claude_verilog_test-f7vs.7,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-3 -- WDT"). Written to the pre-committed contract in
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-3 -- WDT"). Written to the pre-committed contract in
 // tb/cocotb/soc/test_wdt.py (that suite's module docstring is the authoritative spec; this header
 // summarises it).
 //

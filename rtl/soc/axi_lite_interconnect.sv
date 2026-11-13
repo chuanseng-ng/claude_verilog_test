@@ -8,7 +8,7 @@
 // data crossbar this is deliberately simpler — AXI4-Lite has no bursts, so every
 // transfer is a single beat with no len/size/last.
 //
-// Design points (see docs/PHASE5_SOC_INTEGRATION_PLAN.md M3):
+// Design points (see Doc: ds:ch:phase5-soc-integration-plan M3):
 //   * Depth-1 outstanding write + depth-1 outstanding read (independent).  The
 //     selected slave is latched for the life of the transaction.
 //   * Unmapped address -> the interconnect itself returns a DECERR response and

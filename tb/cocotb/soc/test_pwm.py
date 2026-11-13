@@ -1,5 +1,5 @@
 """test_pwm.py -- Phase 6a-2 cocotb verification for pwm_controller (rtl/periph/pwm_controller.sv,
-bead claude_verilog_test-f7vs.6, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-2 -- PWM" + Sec.9).
+bead claude_verilog_test-f7vs.6, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-2 -- PWM" + Sec.9).
 
 STRICT TDD: pwm_controller DOES NOT EXIST YET as of this suite's authorship. This is step 2 of
 the mandated workflow ("the verification orchestrator runs before the RTL orchestrator" --
@@ -22,10 +22,10 @@ Register map (pwm_controller.sv, ADDR_W=12 local byte offset, N_REGS=8):
 
 N_CH defaults to 4 in tb_pwm, matching the register map's fixed [3:0]/[7:4] nibble split above
 (the elaboration-time N_CH guard, 1 <= N_CH <= 8, is a `generate`-scope $fatal per
-docs/PHASE6_IP_EXPANSION_PLAN.md Sec.10 item 1 / gpio_controller.sv precedent -- not exercised
+Doc: ds:ch:phase6-ip-expansion-plan Sec.10 item 1 / gpio_controller.sv precedent -- not exercised
 here, matching test_gpio.py's own precedent of not driving an elaboration-time $fatal via cocotb).
 
-Timing contract, one shared period counter for ALL channels (docs/PHASE6_IP_EXPANSION_PLAN.md
+Timing contract, one shared period counter for ALL channels (Doc: ds:ch:phase6-ip-expansion-plan
 Sec.7: "Shared period, per-channel duty"), left/edge-aligned only (no centre-alignment, no
 dead-time -- both explicit non-goals):
   - A tick occurs every (PRESCALE+1) core_clk cycles.

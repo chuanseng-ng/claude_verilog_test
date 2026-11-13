@@ -1,6 +1,6 @@
 """
 test_soc_i2c.py — Phase 6a-5 SoC-level I2C FABRIC test (bead claude_verilog_test-f7vs.9,
-docs/PHASE6_IP_EXPANSION_PLAN.md §7 "6a-5 -- I2C", L2 testability).
+Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6a-5 -- I2C", L2 testability).
 
 `test_i2c` (tb_i2c.sv / Makefile `i2c` target) owns every I2C protocol behaviour with a real bus
 BFM, driving i2c_controller's APB4 face directly. It has never exercised the controller through the

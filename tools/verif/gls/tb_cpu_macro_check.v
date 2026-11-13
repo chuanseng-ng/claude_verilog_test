@@ -238,7 +238,7 @@ module tb_cpu_macro_check #(
   // architectural value directly. This is a documented interface, unlike
   // debug_rs1_data_o/debug_rs2_data_o (found empirically to not be
   // commit-aligned) and unlike the AXI write channel (never activates: the
-  // D$ is write-back per docs/design/PHASE3_ARCHITECTURE_SPEC.md, so a
+  // D$ is write-back per Doc: ds:ch:phase3-architecture, so a
   // single SW does not itself generate an AXI write, only a cache-line
   // dirty mark).
   localparam [11:0] DBG_CTRL_ADDR = 12'h000;

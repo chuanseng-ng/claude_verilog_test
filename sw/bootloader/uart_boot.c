@@ -28,7 +28,7 @@
 #define ST_RX_EMPTY      (1u << 3)
 #define CTRL_TX_RX_EN    0x3u
 
-/* ---- CPU cache maintenance CSRs (docs/design/PHASE5_MMIO_UNCACHED_DECISION.md) ------- */
+/* ---- CPU cache maintenance CSRs (Doc: ds:dec:phase5-mmio-uncached) ------- */
 #define CSR_DCACHE_FLUSH 0x7C0   /* write: write back every dirty D$ line */
 #define CSR_DCACHE_INVAL 0x7C1   /* write: drop every D$ line (no write-back) */
 

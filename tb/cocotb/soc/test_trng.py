@@ -1,5 +1,5 @@
 """test_trng.py -- Phase 6a-4 cocotb verification for trng (rtl/periph/trng.sv, bead
-claude_verilog_test-f7vs.8, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG" + Sec.9).
+claude_verilog_test-f7vs.8, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG" + Sec.9).
 
 STRICT TDD: trng DOES NOT EXIST YET as of this suite's authorship. This is step 2 of the mandated
 workflow ("the verification orchestrator runs before the RTL orchestrator" -- Sec.9) --

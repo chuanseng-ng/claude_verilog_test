@@ -1,7 +1,7 @@
 # sw/bench — RV32I cache benchmarks (Phase 5 M10 L2 decision)
 
 Bare-metal C benchmarks compiled for the SoC CPU to measure **L1 I$/D$ miss rates**
-and decide the M10 L2-cache gate (`docs/PHASE5_SOC_INTEGRATION_PLAN.md` M10:
+and decide the M10 L2-cache gate (`Doc: ds:ch:phase5-soc-integration-plan` M10:
 "add `rtl/mem/l2_cache.sv` only if justified"). M9 recorded cycle counts but not
 miss rates; these workloads dump `mhpmcounter3` (I$ miss) / `mhpmcounter4` (D$ miss).
 

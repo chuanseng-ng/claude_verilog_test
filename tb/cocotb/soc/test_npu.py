@@ -1,6 +1,6 @@
 """test_npu.py -- Phase 6c cocotb L1 verification for npu_top (rtl/npu/npu_top.sv +
 rtl/npu/npu_mac_array.sv + rtl/npu/npu_weight_mem.sv, bead claude_verilog_test-f7vs.11,
-docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6c -- NPU", whose register map, software contract and
+Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU", whose register map, software contract and
 eight acceptance criteria this suite is written to prove).
 
 STRICT TDD: the RTL DID NOT EXIST when this suite was written.  This is step 2 of the mandated

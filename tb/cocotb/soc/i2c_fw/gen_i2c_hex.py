@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_i2c_hex.py — generate i2c_fw.hex and i2c_fw_addrs.py for the Phase 6a-5 SoC-level I2C FABRIC
-test (bead claude_verilog_test-f7vs.9, docs/PHASE6_IP_EXPANSION_PLAN.md §7 "6a-5 -- I2C" / L2).
+test (bead claude_verilog_test-f7vs.9, Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6a-5 -- I2C" / L2).
 
 Scope, deliberately small. The L1 suite (test_i2c.py, `make i2c`) owns every protocol behaviour,
 with a real bus BFM. At the SoC suites' CLK_PERIOD_NS = 2 a full protocol BFM over thousands of

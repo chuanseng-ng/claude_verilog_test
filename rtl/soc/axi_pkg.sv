@@ -8,7 +8,7 @@
 // Existing Phase 1-4 blocks use flat per-channel ports with NO id field and
 // (today) single-beat transfers.  The crossbar's slave-facing ports are full
 // AXI4 (id + len + size + burst + last); the master-facing ports take the
-// lite-shaped subset.  See docs/PHASE5_SOC_INTEGRATION_PLAN.md §1.
+// lite-shaped subset.  See Doc: ds:ch:phase5-soc-integration-plan:1-scope-locked-decisions.
 
 // The constants below are a shared library package consumed by multiple Phase 5
 // modules (M3 crossbar, M4 cache-upgrade, M6 SRAM controller, M8 peripherals).
