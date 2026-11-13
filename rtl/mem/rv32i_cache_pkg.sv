@@ -41,7 +41,7 @@ package rv32i_cache_pkg;
     // IDLE (stalls only with a request), TAG_CHECK (stalls only on a miss) and DONE
     // (never stalls) have state_q[3] = 0. dc_stall_o / ic_stall_o then need one state
     // bit instead of a 4-bit decode, which sat at the head of the Sky130 ss critical
-    // cone (docs/SKY130_CPU_SS_SETUP_R51P.md). CS_IDLE stays 0 (reset state).
+    // cone (Doc: cr:defect:sky130-cpu-ss-setup-r51p). CS_IDLE stays 0 (reset state).
     // tb/tests/test_cache_stall_encoding.py guards the rule.
     // =========================================================================
     typedef enum logic [3:0] {

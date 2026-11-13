@@ -124,7 +124,7 @@ Blocking source-idiom gate (bead `ainf`, `.github/workflows/qa-checks.yml`): fai
 part or element select taken directly on a struct member anywhere in `rtl/` (read or write). Copy
 the member to a named signal and select from that (`logic [31:0] w; assign w = s.m;` then
 `w[7:0]`). The Synlig frontend mis-elaborates the direct form, silently, depending on the struct
-type (`docs/SYNLIG_STRUCT_SELECT_AINF.md`). There is no allow-list: `struct_member_select_baseline.txt`
+type (`Doc: cr:defect:synlig-struct-select-ainf`). There is no allow-list: `struct_member_select_baseline.txt`
 must stay empty, and the checker fails if it is not.
 
 ```bash

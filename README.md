@@ -60,7 +60,7 @@ a branch). Those are shelved pending a ≥32 GB host. See `CLAUDE.md` for the fu
 | DFT — scan + MBIST + JTAG (`j41m`) | 🚧 | — | Stage 0 architecture (PR #250); Stage 1a fabric RTL (PR #258, bead open); Stage 1b JTAG TAP (PR #270). MBIST not built |
 | FPGA prototype (`hlrm`) | 🚧 | — | Stage 0 open-tool resource counts, no hardware (PR #279); board recommendation Nexys Video XC7A200T (PR #283); ECP5 fmax lower bound ~48–52 MHz CPU |
 
-Full per-phase records and feature lists → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md).
+Full per-phase records and feature lists → Doc: cr:status:phase-history.
 
 ## Project Structure
 
@@ -101,8 +101,8 @@ Core specifications in `docs/`:
 
 | Document | Purpose |
 | :------- | :------ |
-| `ROADMAP.md` | Project phases and overall plan |
-| `PHASE_STATUS.md` | Current phase status and next steps |
+| `Doc: cr:status:roadmap` | Project phases and overall plan |
+| `Doc: cr:status:phase-status` | Current phase status and next steps |
 | `design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements |
 | `design/PHASE1_ARCHITECTURE_SPEC.md` | Phase 1 CPU spec (single-cycle) ✅ Complete |
 | `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ Complete |
@@ -124,7 +124,7 @@ README detail set in `docs/readme/`:
 
 | Document | Purpose |
 | :------- | :------ |
-| `readme/PHASE_HISTORY.md` | Per-phase completion records and feature lists |
+| `Doc: cr:status:phase-history` | Per-phase completion records and feature lists |
 | `readme/QUICK_START.md` | Build/run commands for every phase |
 | `readme/SUPPORTED_INSTRUCTIONS.md` | RV32I + Zicsr instruction tables |
 | `readme/DEBUG_INTERFACE.md` | APB3 debug register map |

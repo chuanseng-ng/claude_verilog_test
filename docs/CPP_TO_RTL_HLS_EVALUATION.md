@@ -953,7 +953,7 @@ the yosys 0.62 build already on this host, or budget a >3G Verilator cosim).
 > regenerated. GPU config was switched (`USE_SYNLIG:false`) for consistency only; the GPU
 > re-harden itself remains fully deferred (host-gated). Full attempt history, ruled-out causes,
 > and the open decision point: bead `ma7` notes, bead `claude_verilog_test-lxv`,
-> `docs/ASAP7_RUN_HISTORY.md`'s 2026-09-19 addendum.
+> `Doc: cr:run:asap7`'s 2026-09-19 addendum.
 
 > ✅ **UPDATE 2026-09-18 (bead `b0t` part A)**: the code-shape argument below has since been backed
 > by a real frontend **differential** — replaying LibreLane's exact `librelane_opt(nodffe=True,

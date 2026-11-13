@@ -483,7 +483,7 @@ module rv32i_icache (
     // ic_invalidate_i = 0, whose own read is the one that is captured. A read has no side
     // effect on the macro. In exchange csb0/addr0 no longer depend on ic_valid_i, i.e. on
     // the dcache-stall -> hazard-priority -> redirect/halt network that dominated the ss
-    // setup failure of the CPU macro (docs/SKY130_CPU_SS_SETUP_R51P.md). Only that arm is
+    // setup failure of the CPU macro (Doc: cr:defect:sky130-cpu-ss-setup-r51p). Only that arm is
     // changed: on ASAP7 csb0 feeds the SRAM clock gate (extra enabled cycles = extra dynamic
     // power on a flow signed off as-is) and the other arms have no timing problem here.
     // Writes (tag_we_q / data_we_q) override below and are unaffected.

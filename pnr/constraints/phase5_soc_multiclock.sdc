@@ -25,7 +25,7 @@
 #
 # Base file: this is a considered EVOLUTION of the signed-off single-clock
 # pnr/asap7/soc/constraints/phase5_soc.sdc (run 14, 571 MHz / 62.9 mW / 0 DRC
-# sign-off — see docs/PHASE5_RUN_HISTORY.md). All 10 of that file's sections
+# sign-off — see Doc: cr:run:phase5). All 10 of that file's sections
 # are preserved below (renumbered), with two substantive changes:
 #   (a) a second clock (cpu_clk) plus an asynchronous clock-group declaration
 #       between it and the existing clock (renamed sys_clk for symmetry with
