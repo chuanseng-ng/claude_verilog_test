@@ -54,6 +54,8 @@ local function load_config(meta)
   C.level = meta_str(meta, 'cvt-level') or 'chapter'
   C.src = meta_str(meta, 'cvt-src') or ''
   C.record = meta_str(meta, 'cvt-record') == '1'
+  C.tables = meta_str(meta, 'cvt-tables') or 'auto'
+  C.table_debug = meta_str(meta, 'cvt-table-debug') == '1'
   C.sections_out = meta_str(meta, 'cvt-sections-out')
   C.warn_out = meta_str(meta, 'cvt-warn-out')
   C.marks = meta_str(meta, 'cvt-marks')
@@ -138,8 +140,20 @@ local function pass_headings(doc)
   local maxlevel = (C.level == 'section') and 4 or 5
   local first_level
   local out, hi = {}, 0
+  local forced   -- value of a <!-- cvt-table: ... --> line, for the next table
   for _, b in ipairs(doc.blocks) do
-    if b.t == 'Header' then
+    local mode = b.t == 'RawBlock' and b.format == 'html'
+      and b.text:match('^%s*<!%-%-%s*cvt%-table:%s*(%a+)%s*%-%->%s*$')
+    if mode then
+      if mode == 'rows' or mode == 'long' or mode == 'auto' then
+        forced = mode
+      else
+        warn('bad-table-mode', mode)
+      end
+    elseif b.t == 'Table' then
+      if forced then b.attr.attributes['cvt-table'] = forced; forced = nil end
+      out[#out + 1] = b
+    elseif b.t == 'Header' then
       hi = hi + 1
       local level, label
       if hi == 1 then
@@ -520,25 +534,29 @@ local function code_block(el)
 end
 
 -- ---------------------------------------------------------------- tables
--- Width of a cell in characters. By now inline code is a raw \code or \texttt macro,
+-- Width of a block in characters. By now inline code is a raw \code or \texttt macro,
 -- which stringify does not see; monospace text is also wider than body text.
+local function block_len(b)
+  local n = 0
+  local s = pandoc.utils.stringify(b)
+  n = n + (utf8.len(s) or #s)
+  b:walk({
+    RawInline = function(r)
+      if r.format == 'latex' then
+        local arg = r.text:match('^\\%a+{(.*)}$')
+        if arg then
+          arg = arg:gsub('\\allowbreak{}', '')
+          n = n + math.ceil(#arg * 1.25)
+        end
+      end
+    end,
+  })
+  return n
+end
+
 local function cell_len(cell)
   local n = 0
-  for _, b in ipairs(cell.contents) do
-    local s = pandoc.utils.stringify(b)
-    n = n + (utf8.len(s) or #s)
-    b:walk({
-      RawInline = function(r)
-        if r.format == 'latex' then
-          local arg = r.text:match('^\\%a+{(.*)}$')
-          if arg then
-            arg = arg:gsub('\\allowbreak{}', '')
-            n = n + math.ceil(#arg * 1.25)
-          end
-        end
-      end,
-    })
-  end
+  for _, b in ipairs(cell.contents) do n = n + block_len(b) end
   return n
 end
 
@@ -581,8 +599,115 @@ local function set_widths(el)
   return raw
 end
 
+-- Row height estimate. A longtable cannot break a row across pages, so a row that is
+-- taller than the page makes longtable fail (an overfull box in the output routine,
+-- and an endless loop in some TeX Live versions). The estimate is in points: for each
+-- cell, the lines its text needs in the column width, times the baseline skip; the row
+-- is as tall as its tallest cell. Page numbers are for A4 with 25 mm margins; a
+-- landscape page swaps width and height. FONT is {size, baseline skip} per table size.
+local PAGE_W, PAGE_H = 455, 703
+local FONT = { normal = { 10.95, 13.6 }, small = { 10, 12 }, footnotesize = { 9, 11 } }
+local CHAR_EM = 0.5        -- mean character width in em, with the wrap loss of ragged text
+local ROW_LIMIT = 0.60     -- a row taller than this share of the page text height
+local TABCOLSEP = { normal = 6, small = 4, footnotesize = 3 }
+
+-- Estimated height in points of every body row, for the given size and orientation.
+local function row_heights(el, size, landscape)
+  local fs, skip = FONT[size][1], FONT[size][2]
+  local linewidth = landscape and PAGE_H or PAGE_W
+  local ncol = #el.colspecs
+  local usable = linewidth - 2 * TABCOLSEP[size] * ncol
+  local heights = {}
+  for _, body in ipairs(el.bodies) do
+    for _, row in ipairs(body.body) do
+      local tallest = 1
+      for i, cell in ipairs(row.cells) do
+        local w = el.colspecs[i] and el.colspecs[i][2]
+        if type(w) == 'number' and w > 0 then
+          local cpl = math.max(4, math.floor(w * usable / (fs * CHAR_EM)))
+          local lines = 0
+          for _, b in ipairs(cell.contents) do
+            lines = lines + math.max(1, math.ceil(block_len(b) / cpl)) + 0.5
+          end
+          if lines > tallest then tallest = lines end
+        end
+      end
+      heights[#heights + 1] = tallest * skip + 4
+    end
+  end
+  return heights
+end
+
+-- Render blocks to LaTeX text. A code block in a cell is converted first.
+local function render_blocks(blocks)
+  local doc = pandoc.Pandoc(blocks):walk({ CodeBlock = code_block })
+  return (pandoc.write(doc, 'latex'):gsub('%s+$', ''))
+end
+
+local function render_inlines(inlines)
+  return render_blocks({ pandoc.Plain(inlines) })
+end
+
+local function cell_plain(cell)
+  return pandoc.utils.stringify(pandoc.Blocks(cell.contents)):gsub('%s+', ' '):gsub('^ ', ''):gsub(' $', '')
+end
+
+-- A table as a list of row blocks: no column, so a row breaks across pages freely.
+-- Each row has a bold title (the first cell with its header) and one entry per other
+-- column, "Header: content". A first cell that is long becomes "Row N" and an entry.
+local function row_blocks(el)
+  local headers = {}
+  for _, hrow in ipairs(el.head.rows) do
+    for i, cell in ipairs(hrow.cells) do
+      headers[i] = headers[i] or render_blocks(cell.contents)
+    end
+  end
+  local function head(i) return headers[i] or '' end
+  local names = {}
+  for i = 1, #el.colspecs do
+    if head(i) ~= '' then names[#names + 1] = head(i) end
+  end
+  local out = {
+    pandoc.RawBlock('latex', '\\begin{rowtable}'),
+    pandoc.RawBlock('latex', '\\rowcolumns{' .. table.concat(names, ', ') .. '}'),
+  }
+  local n = 0
+  for _, body in ipairs(el.bodies) do
+    for _, row in ipairs(body.body) do
+      n = n + 1
+      local first = row.cells[1]
+      local from = 1
+      local title
+      if first and #first.contents == 1 and cell_len(first) <= 40
+          and first.contents[1].t == 'Plain' and cell_plain(first) ~= '' then
+        local h = head(1)
+        local sep = h:find('%w') and ': ' or ' '
+        title = (h ~= '' and ('\\textbf{' .. h .. '}' .. sep) or '') .. render_blocks(first.contents)
+        from = 2
+      else
+        title = 'Row ' .. n
+      end
+      out[#out + 1] = pandoc.RawBlock('latex', '\\rowtitle{' .. title .. '}')
+      for i = from, #row.cells do
+        local cell = row.cells[i]
+        if #cell.contents > 0 then
+          out[#out + 1] = pandoc.RawBlock('latex', '\\begin{rowcell}{' .. head(i) .. '}')
+          for _, b in ipairs(cell.contents) do out[#out + 1] = b end
+          out[#out + 1] = pandoc.RawBlock('latex', '\\end{rowcell}')
+        end
+      end
+    end
+  end
+  out[#out + 1] = pandoc.RawBlock('latex', '\\end{rowtable}')
+  return out
+end
+
 -- A wide table gets a smaller font and less column padding. A table with 7 or more
 -- columns goes on a landscape page, where the linewidth is the page height.
+-- A table that would have a row taller than ROW_LIMIT of the page becomes row blocks
+-- (see row_blocks). A comment line before the table forces the form:
+--   <!-- cvt-table: rows -->   or   <!-- cvt-table: long -->
+-- The same choice for a whole document: md2tex.py --tables {auto,rows,long}.
 local function table_filter(el)
   local raw = set_widths(el)
   local size = ''
@@ -591,7 +716,25 @@ local function table_filter(el)
   elseif raw > 120 then
     size = '\\small\\setlength{\\tabcolsep}{4pt}'
   end
-  if #el.colspecs >= 7 then
+  local landscape = #el.colspecs >= 7
+  local mode = el.attr.attributes['cvt-table'] or C.tables
+  local est = 0
+  if raw > 72 then
+    local name = (raw > 200 and 'footnotesize') or ((raw > 120 or landscape) and 'small') or 'normal'
+    for _, h in ipairs(row_heights(el, name, landscape)) do
+      if h > est then est = h end
+    end
+  end
+  local limit = ROW_LIMIT * (landscape and PAGE_W or PAGE_H)
+  if C.table_debug then
+    warn('table-estimate', string.format('%s: %d columns, tallest row %.0f pt, %.0f%% of the page, %s',
+      C.src, #el.colspecs, est, est / (landscape and PAGE_W or PAGE_H) * 100,
+      landscape and 'landscape' or 'portrait'))
+  end
+  if mode == 'rows' or (mode ~= 'long' and est > limit) then
+    return row_blocks(el)
+  end
+  if landscape then
     if size == '' then size = '\\small\\setlength{\\tabcolsep}{4pt}' end
     return {
       pandoc.RawBlock('latex', '\\begin{landscape}\n' .. size),

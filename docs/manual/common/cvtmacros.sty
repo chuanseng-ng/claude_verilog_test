@@ -173,15 +173,38 @@
   fontsize=\scriptsize,breaklines=true,breakanywhere=true,
   frame=lines,framesep=2mm,rulecolor=\color{black!30}}
 
+% ---- Tables as row blocks ----------------------------------------------
+% A longtable cannot break a row across pages. A table whose rows can be taller than
+% the page is therefore written as row blocks (tools/docs/md2tex.py chooses). A line
+% (\rowcolumns) lists the columns of the original table once. Each row has a bold
+% title (\rowtitle) and one entry per column (rowcell, with the column header as its
+% argument). A row breaks across pages after any entry.
+\NewDocumentEnvironment{rowtable}{}
+  {\par\addvspace{0.4\baselineskip}\small}
+  {\par\addvspace{0.4\baselineskip}}
+\NewDocumentCommand{\rowcolumns}{m}
+  {\par\noindent{\footnotesize\color{black!65}Columns of the original table: #1.}\par}
+\NewDocumentCommand{\rowtitle}{m}
+  {\par\addvspace{0.8\baselineskip}\nobreak
+   {\color{black!35}\noindent\rule{\linewidth}{0.4pt}}\par\nobreak\vspace{2pt}%
+   \noindent\textbf{#1}\par\nobreak\vspace{1pt}}
+\NewDocumentEnvironment{rowcell}{m}
+  {\par\noindent\hangindent=1.2em\hangafter=1 \textbf{#1:}\ \ignorespaces}
+  {\par}
+
 % ---- Indexes ---------------------------------------------------------
 \makeindex[name=\cvtbeadindex,title={Bead index},columns=2]
+% An index that runs over a page makes multicol report "Overfull \vbox ... while \output
+% is active" (a column box up to 16 pt too high; the pages look right). The build gate
+% for tall table rows ignores that line inside an index file (tools/docs/build_books.py).
 
 % ---- Longtable page break --------------------------------------------
 % Longtable ends a page with \vss, which shrinks without limit. LaTeX 2025 splits
 % the page box to read its marks and reports an error for that glue. The output
-% routine of longtable uses a finite shrink instead. Only the 2025-11-01 kernel and
-% later need this. With an earlier kernel the finite shrink makes a table row that
-% is taller than the page loop in the output routine, so the patch is not applied.
+% routine of longtable uses a finite shrink instead. The patch is needed on the
+% 2025-11-01 kernel and later. It is not applied on an earlier kernel.
+% A table row that is taller than the page must not be a longtable row at all; the
+% converter writes such a table as row blocks (see "Tables as row blocks" above).
 \IfFormatAtLeastTF{2025-11-01}{%
   \let\cvt@LT@output\LT@output
   \def\LT@output{\def\vss{\vskip\z@\@plus1fil\relax}\cvt@LT@output}%

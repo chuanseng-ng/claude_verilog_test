@@ -4,7 +4,22 @@
 Usage:
     python tools/docs/md2tex.py INPUT.md --book {ds,tm,um,cr} --kind KIND --slug SLUG \
         -o OUT.tex [--level chapter|section] [--path-map FILE] [--record]
-        [--relocated OLDPATH] [--strip-heading-numbers]
+        [--relocated OLDPATH] [--strip-heading-numbers] [--tables {auto,rows,long}]
+
+Tables. A GFM table becomes a longtable. A longtable cannot break a row across pages,
+and a row taller than the page makes it fail (an overfull box in the output routine,
+and an endless loop in some TeX Live versions). So a table that can have such a row
+becomes row blocks (environment rowtable: a bold row title, then one "Header: content"
+entry per column; rowtitle and rowcell in docs/manual/common/cvtmacros.sty), which
+break across pages freely. The rule (tools/docs/pandoc/cvt.lua, table_filter): the
+converter estimates each row's height from the character count of its cells and the
+column widths, and uses row blocks when the tallest row is more than 60 % of the usable
+page height (A4, 25 mm margins; 703 pt portrait, 455 pt landscape, a table of 7 columns
+or more being landscape). A table of at most 72 characters of natural width has no
+wrapping column and stays a longtable. To force the form, put one comment line before
+the table (<!-- cvt-table: rows -->, <!-- cvt-table: long -->, or auto), or pass
+--tables for the whole document. --table-debug adds one "table-estimate" warning per
+table with the estimate.
 
 Runs pandoc with tools/docs/pandoc/cvt.lua, then post-processes the text
 (label placement, bead / GH / PR / run-id macros, whitespace). Side files:
@@ -33,6 +48,7 @@ HERE = Path(__file__).resolve().parent
 FILTER = HERE / "pandoc" / "cvt.lua"
 MARKS = HERE / "pandoc" / "marks.tsv"
 BOOKS = ("ds", "tm", "um", "cr")
+TABLE_MODES = ("auto", "rows", "long")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 _SECT = r"(?:chapter|section|subsection|subsubsection|paragraph|subparagraph)"
@@ -364,6 +380,8 @@ def convert(
     relocated: str | None = None,
     strip_numbers: bool = False,
     root: Path | None = None,
+    tables: str = "auto",
+    table_debug: bool = False,
 ) -> tuple[int, list[tuple[str, str]]]:
     """Convert one file. Returns (exit code, warnings). Writes out and side files."""
     pandoc = shutil.which("pandoc")
@@ -409,6 +427,8 @@ def convert(
             "cvt-warn-out": lua_warn.as_posix(),
             "cvt-record": "1" if record else "0",
             "cvt-marks": MARKS.as_posix(),
+            "cvt-tables": tables,
+            "cvt-table-debug": "1" if table_debug else "0",
         }
         if path_map is not None:
             meta["cvt-pathmap"] = Path(path_map).resolve().as_posix()
@@ -466,6 +486,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="drop a leading number from heading titles, keep it as origsec",
     )
     ap.add_argument("--root", type=Path, help="repository root (default: from git)")
+    ap.add_argument(
+        "--tables",
+        choices=TABLE_MODES,
+        default="auto",
+        help="table form: auto (by row height), rows (row blocks), long (longtable)",
+    )
+    ap.add_argument(
+        "--table-debug", action="store_true", help="warn with the row height estimate of each table"
+    )
     return ap
 
 
@@ -493,6 +522,8 @@ def main(argv: list[str] | None = None) -> int:
         relocated=args.relocated,
         strip_numbers=args.strip_heading_numbers,
         root=args.root,
+        tables=args.tables,
+        table_debug=args.table_debug,
     )
     if code:
         return code
