@@ -1,0 +1,801 @@
+# Comment-budget baseline (tools/docs/check_comment_budget.py). It may only shrink.
+# Format: <path> | <rule> | <count> | <worst>
+#   count = findings of that rule in that file; worst = largest size (blank for content rules).
+# Rules: hdr blk doc mk wf (size budgets); bead ghpr run date meas fline (banned content).
+# Update after a cleanup: python tools/docs/check_comment_budget.py --update-baseline
+# Growth is refused; the check fails if an entry is higher or lower than the measured value.
+.github/workflows/cocotb.yml | bead | 46 |
+.github/workflows/cocotb.yml | date | 47 |
+.github/workflows/cocotb.yml | ghpr | 11 |
+.github/workflows/cocotb.yml | wf | 9 | 98
+.github/workflows/qa-checks.yml | bead | 6 |
+.github/workflows/qa-checks.yml | wf | 3 | 8
+.github/workflows/random_tests.yml | bead | 1 |
+.github/workflows/random_tests.yml | wf | 1 | 6
+.github/workflows/rtl-checks.yml | bead | 9 |
+.github/workflows/rtl-checks.yml | date | 1 |
+.github/workflows/rtl-checks.yml | ghpr | 2 |
+.github/workflows/rtl-checks.yml | wf | 7 | 20
+.github/workflows/soc_coverage.yml | bead | 41 |
+.github/workflows/soc_coverage.yml | date | 38 |
+.github/workflows/soc_coverage.yml | ghpr | 9 |
+.github/workflows/soc_coverage.yml | wf | 6 | 95
+.github/workflows/synth-undef-gate.yml | bead | 1 |
+pnr/Makefile | bead | 49 |
+pnr/Makefile | date | 16 |
+pnr/Makefile | fline | 5 |
+pnr/Makefile | ghpr | 16 |
+pnr/Makefile | meas | 8 |
+pnr/Makefile | mk | 30 | 59
+pnr/Makefile | run | 11 |
+pnr/asap7/coalescer_hls/constraints/asap7.sdc | bead | 1 |
+pnr/asap7/coalescer_hls/constraints/asap7.sdc | ghpr | 1 |
+pnr/asap7/coalescer_hls/constraints/asap7.sdc | meas | 2 |
+pnr/asap7/coalescer_rtl/constraints/asap7.sdc | bead | 1 |
+pnr/asap7/coalescer_rtl/constraints/asap7.sdc | ghpr | 1 |
+pnr/asap7/coalescer_rtl/constraints/asap7.sdc | meas | 2 |
+pnr/asap7/cpu/constraints/asap7.sdc | bead | 5 |
+pnr/asap7/cpu/constraints/asap7.sdc | hdr | 1 | 28
+pnr/asap7/cpu/constraints/asap7.sdc | meas | 23 |
+pnr/asap7/cpu/macro_placement.cfg | meas | 5 |
+pnr/asap7/cpu/macro_placement_3014.cfg | bead | 3 |
+pnr/asap7/cpu/macro_placement_3014.cfg | date | 3 |
+pnr/asap7/cpu/macro_placement_3014.cfg | hdr | 1 | 77
+pnr/asap7/cpu/macro_placement_3014.cfg | meas | 6 |
+pnr/asap7/gpu/constraints/asap7_gpu.sdc | meas | 7 |
+pnr/asap7/gpu/constraints/asap7_gpu.sdc | run | 1 |
+pnr/asap7/gpu/macro_placement.cfg | meas | 3 |
+pnr/asap7/gpu/macro_placement_3014.cfg | run | 2 |
+pnr/asap7/hazard_hls/constraints/asap7.sdc | bead | 1 |
+pnr/asap7/hazard_hls/constraints/asap7.sdc | ghpr | 1 |
+pnr/asap7/hazard_hls/constraints/asap7.sdc | meas | 2 |
+pnr/asap7/hazard_rtl/constraints/asap7.sdc | bead | 1 |
+pnr/asap7/hazard_rtl/constraints/asap7.sdc | ghpr | 1 |
+pnr/asap7/hazard_rtl/constraints/asap7.sdc | meas | 2 |
+pnr/asap7/pdn_asap7.tcl | meas | 4 |
+pnr/asap7/pdn_asap7_orfs.tcl | bead | 1 |
+pnr/asap7/pdn_asap7_orfs.tcl | date | 1 |
+pnr/asap7/pdn_asap7_orfs.tcl | hdr | 1 | 46
+pnr/asap7/pdn_asap7_orfs.tcl | meas | 5 |
+pnr/asap7/pdn_asap7_orfs.tcl | run | 1 |
+pnr/asap7/soc/constraints/phase5_soc.sdc | bead | 1 |
+pnr/asap7/soc/constraints/phase5_soc.sdc | date | 2 |
+pnr/asap7/soc/constraints/phase5_soc.sdc | ghpr | 3 |
+pnr/asap7/soc/constraints/phase5_soc.sdc | hdr | 1 | 31
+pnr/asap7/soc/constraints/phase5_soc.sdc | meas | 13 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | bead | 11 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | date | 7 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | fline | 5 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | ghpr | 21 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | hdr | 1 | 80
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | meas | 32 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | run | 1 |
+pnr/asap7/soc/macro_placement.cfg | hdr | 1 | 32
+pnr/asap7/soc/macro_placement.cfg | meas | 13 |
+pnr/asap7/soc/pdn.tcl | meas | 1 |
+pnr/asap7/soc/pdn_orfs.tcl | date | 1 |
+pnr/asap7/soc/rv32i_cpu_top_stub.sv | bead | 2 |
+pnr/asap7/soc/soc_top_ports.v | ghpr | 3 |
+pnr/asap7/template/constraints/asap7.sdc | hdr | 1 | 28
+pnr/asap7/template/constraints/asap7.sdc | meas | 22 |
+pnr/asap7/template/macro_placement.cfg | meas | 5 |
+pnr/asap7/valu_hls/constraints/asap7.sdc | bead | 1 |
+pnr/asap7/valu_hls/constraints/asap7.sdc | ghpr | 1 |
+pnr/asap7/valu_hls/constraints/asap7.sdc | meas | 2 |
+pnr/asap7/valu_hls_comb/constraints/asap7.sdc | bead | 2 |
+pnr/asap7/valu_hls_comb/constraints/asap7.sdc | ghpr | 1 |
+pnr/asap7/valu_hls_comb/constraints/asap7.sdc | meas | 3 |
+pnr/asap7/valu_rtl/constraints/asap7.sdc | bead | 1 |
+pnr/asap7/valu_rtl/constraints/asap7.sdc | ghpr | 1 |
+pnr/asap7/valu_rtl/constraints/asap7.sdc | meas | 2 |
+pnr/config/vsrc.tcl | bead | 2 |
+pnr/config/vsrc.tcl | ghpr | 1 |
+pnr/constraints/phase1_cpu.sdc | meas | 3 |
+pnr/constraints/phase1_cpu_enhanced.sdc | date | 1 |
+pnr/constraints/phase1_cpu_enhanced.sdc | meas | 5 |
+pnr/constraints/phase1_cpu_post_cts.sdc | date | 1 |
+pnr/constraints/phase1_cpu_post_cts.sdc | meas | 3 |
+pnr/constraints/phase2_cpu.sdc | meas | 5 |
+pnr/constraints/phase2_cpu.upf | hdr | 1 | 33
+pnr/constraints/phase3_cache.sdc | meas | 8 |
+pnr/constraints/phase3_cache.upf | hdr | 1 | 48
+pnr/constraints/phase5_soc.sdc | date | 1 |
+pnr/constraints/phase5_soc.sdc | ghpr | 2 |
+pnr/constraints/phase5_soc.sdc | hdr | 1 | 36
+pnr/constraints/phase5_soc.sdc | meas | 9 |
+pnr/constraints/phase5_soc.upf | bead | 3 |
+pnr/constraints/phase5_soc.upf | date | 1 |
+pnr/constraints/phase5_soc.upf | ghpr | 1 |
+pnr/constraints/phase5_soc.upf | hdr | 1 | 83
+pnr/constraints/phase5_soc_multiclock.sdc | bead | 13 |
+pnr/constraints/phase5_soc_multiclock.sdc | date | 6 |
+pnr/constraints/phase5_soc_multiclock.sdc | fline | 5 |
+pnr/constraints/phase5_soc_multiclock.sdc | ghpr | 20 |
+pnr/constraints/phase5_soc_multiclock.sdc | hdr | 1 | 76
+pnr/constraints/phase5_soc_multiclock.sdc | meas | 32 |
+pnr/constraints/phase5_soc_multiclock.sdc | run | 1 |
+pnr/constraints/phase5_soc_multiclock_check.sdc | bead | 36 |
+pnr/constraints/phase5_soc_multiclock_check.sdc | date | 13 |
+pnr/constraints/phase5_soc_multiclock_check.sdc | fline | 7 |
+pnr/constraints/phase5_soc_multiclock_check.sdc | ghpr | 6 |
+pnr/constraints/phase5_soc_multiclock_check.sdc | hdr | 1 | 183
+pnr/constraints/phase5_soc_multiclock_check.sdc | meas | 7 |
+pnr/constraints/phase5_soc_multiclock_check.sdc | run | 1 |
+pnr/freepdk45/constraints/freepdk45.sdc | meas | 1 |
+pnr/freepdk45/gen_via_stubs.py | meas | 7 |
+pnr/freepdk45/macro_placement.cfg | meas | 7 |
+pnr/librelane/Makefile | meas | 1 |
+pnr/librelane/macro_placement.cfg | hdr | 1 | 27
+pnr/librelane/macro_placement.cfg | meas | 7 |
+pnr/plugins/librelane_plugin_cvt_synthgate/__init__.py | bead | 2 |
+pnr/scripts/01_synth.tcl | meas | 2 |
+pnr/scripts/02_floorplan.tcl | meas | 6 |
+pnr/scripts/03_place.tcl | meas | 2 |
+pnr/scripts/04_cts.tcl | meas | 2 |
+pnr/scripts/05_route.tcl | meas | 1 |
+pnr/scripts/06_parasitics.tcl | meas | 1 |
+pnr/scripts/07_sta.tcl | meas | 2 |
+pnr/scripts/08_power.tcl | meas | 1 |
+pnr/scripts/asap7_macro_power.tcl | bead | 3 |
+pnr/scripts/asap7_macro_power.tcl | hdr | 1 | 71
+pnr/scripts/check_cdc_timing.tcl | bead | 19 |
+pnr/scripts/check_cdc_timing.tcl | date | 14 |
+pnr/scripts/check_cdc_timing.tcl | ghpr | 5 |
+pnr/scripts/check_cdc_timing.tcl | hdr | 1 | 59
+pnr/scripts/check_cdc_timing.tcl | meas | 2 |
+pnr/scripts/check_cdc_timing_sky130.tcl | bead | 4 |
+pnr/scripts/check_cdc_timing_sky130.tcl | date | 1 |
+pnr/scripts/check_cdc_timing_sky130.tcl | hdr | 1 | 39
+pnr/scripts/check_cdc_timing_sky130.tcl | meas | 2 |
+pnr/scripts/check_multiclock_sdc.tcl | bead | 2 |
+pnr/scripts/check_multiclock_sdc.tcl | date | 1 |
+pnr/scripts/check_multiclock_sdc.tcl | ghpr | 2 |
+pnr/scripts/check_multiclock_sdc.tcl | hdr | 1 | 41
+pnr/scripts/report_per_clock_timing.tcl | bead | 1 |
+pnr/scripts/report_per_clock_timing.tcl | ghpr | 1 |
+pnr/scripts/sta_load_sky130_soc.tcl | bead | 2 |
+pnr/scripts/sta_scan_queries_sky130_soc.tcl | bead | 1 |
+pnr/sky130/cpu/constraints/sky130_cpu.sdc | bead | 1 |
+pnr/sky130/cpu/constraints/sky130_cpu.sdc | hdr | 1 | 27
+pnr/sky130/cpu/constraints/sky130_cpu.sdc | meas | 8 |
+pnr/sky130/cpu/macro_placement.cfg | meas | 6 |
+pnr/sky130/soc/constraints/sky130_soc.sdc | bead | 26 |
+pnr/sky130/soc/constraints/sky130_soc.sdc | date | 16 |
+pnr/sky130/soc/constraints/sky130_soc.sdc | ghpr | 12 |
+pnr/sky130/soc/constraints/sky130_soc.sdc | hdr | 1 | 234
+pnr/sky130/soc/constraints/sky130_soc.sdc | meas | 57 |
+pnr/sky130/soc/constraints/sky130_soc.sdc | run | 20 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | bead | 9 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | date | 2 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | ghpr | 2 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | hdr | 1 | 52
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | meas | 10 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | run | 1 |
+pnr/sky130/soc/macro_placement.cfg | bead | 2 |
+pnr/sky130/soc/macro_placement.cfg | date | 3 |
+pnr/sky130/soc/macro_placement.cfg | ghpr | 2 |
+pnr/sky130/soc/macro_placement.cfg | hdr | 1 | 102
+pnr/sky130/soc/macro_placement.cfg | meas | 14 |
+pnr/sky130/soc/macro_placement.cfg | run | 1 |
+pnr/sky130/soc/openram_sram4k/config_sky130_sram_4kbyte_1rw1r_32x1024_8.py | ghpr | 1 |
+pnr/sky130/soc/pdn.tcl | bead | 2 |
+pnr/sky130/soc/pdn.tcl | date | 12 |
+pnr/sky130/soc/pdn.tcl | ghpr | 10 |
+pnr/sky130/soc/pdn.tcl | hdr | 1 | 153
+pnr/sky130/soc/pdn.tcl | meas | 15 |
+pnr/sky130/soc/pdn.tcl | run | 6 |
+pnr/sky130/soc/plugin/cvt_maxcap_waiver.py | bead | 1 |
+pnr/sky130/soc/plugin/cvt_maxcap_waiver.py | meas | 1 |
+pnr/sky130/soc/plugin/cvt_scan_step.py | bead | 3 |
+pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/cvt_wrap.tcl | bead | 1 |
+pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/rc_calibration.tcl | bead | 2 |
+pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/rc_calibration.tcl | meas | 2 |
+pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/rc_calibration.tcl | run | 1 |
+pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/scan_insert.tcl | bead | 2 |
+pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/scan_insert.tcl | hdr | 1 | 30
+pnr/sky130/soc/rv32i_cpu_top_stub.sv | bead | 2 |
+pnr/sky130/soc/sky130_clkcells_stub.v | bead | 1 |
+pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | date | 2 |
+pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | ghpr | 1 |
+pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | run | 1 |
+pnr/sky130/soc/soc_top_ports.v | ghpr | 3 |
+rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv | meas | 1 |
+rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv | blk | 2 | 13
+rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv | meas | 2 |
+rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv | meas | 1 |
+rtl/cpu/core/pipeline/rv32i_pipeline_if.sv | blk | 1 | 13
+rtl/cpu/core/rv32i_alu.sv | meas | 1 |
+rtl/cpu/core/rv32i_control.sv | blk | 4 | 44
+rtl/cpu/core/rv32i_core.sv | bead | 3 |
+rtl/cpu/core/rv32i_core.sv | blk | 4 | 18
+rtl/cpu/core/rv32i_core.sv | meas | 1 |
+rtl/cpu/core/rv32i_csr_file.sv | bead | 2 |
+rtl/cpu/core/rv32i_csr_file.sv | blk | 3 | 12
+rtl/cpu/core/rv32i_csr_file.sv | ghpr | 1 |
+rtl/cpu/core/rv32i_csr_file.sv | hdr | 1 | 59
+rtl/cpu/core/rv32i_decode.sv | blk | 1 | 37
+rtl/cpu/core/rv32i_hazard_unit.sv | blk | 3 | 17
+rtl/cpu/rv32i_cpu_top.sv | bead | 5 |
+rtl/cpu/rv32i_cpu_top.sv | blk | 9 | 43
+rtl/cpu/rv32i_cpu_top.sv | fline | 1 |
+rtl/cpu/rv32i_cpu_top.sv | ghpr | 3 |
+rtl/cpu/rv32i_cpu_top.sv | meas | 9 |
+rtl/cpu/rv32i_cpu_top.sv | run | 1 |
+rtl/fpga/fpga_sdp_ram_be.sv | ghpr | 1 |
+rtl/fpga/fpga_sram_1rw.sv | ghpr | 1 |
+rtl/gpu/gpu_compute_unit.sv | bead | 1 |
+rtl/gpu/gpu_pkg.sv | bead | 1 |
+rtl/gpu/gpu_pkg.sv | ghpr | 1 |
+rtl/gpu/gpu_top.sv | bead | 5 |
+rtl/gpu/gpu_top.sv | blk | 2 | 28
+rtl/gpu/gpu_top.sv | date | 1 |
+rtl/gpu/warp_scheduler.sv | bead | 2 |
+rtl/gpu/warp_scheduler.sv | blk | 1 | 14
+rtl/gpu/warp_scheduler.sv | fline | 1 |
+rtl/mem/rv32i_cache_pkg.sv | bead | 1 |
+rtl/mem/rv32i_cache_pkg.sv | blk | 1 | 16
+rtl/mem/rv32i_clock_gate.sv | bead | 2 |
+rtl/mem/rv32i_clock_gate.sv | meas | 5 |
+rtl/mem/rv32i_clock_gate.sv | run | 2 |
+rtl/mem/rv32i_dcache.sv | bead | 3 |
+rtl/mem/rv32i_dcache.sv | blk | 7 | 16
+rtl/mem/rv32i_dcache.sv | date | 1 |
+rtl/mem/rv32i_icache.sv | bead | 4 |
+rtl/mem/rv32i_icache.sv | blk | 5 | 17
+rtl/mem/rv32i_icache.sv | meas | 1 |
+rtl/npu/npu_mac_array.sv | bead | 2 |
+rtl/npu/npu_top.sv | bead | 1 |
+rtl/npu/npu_top.sv | hdr | 1 | 77
+rtl/npu/npu_weight_mem.sv | bead | 3 |
+rtl/npu/npu_weight_mem.sv | hdr | 1 | 53
+rtl/periph/aes128_core.sv | bead | 8 |
+rtl/periph/aes128_core.sv | blk | 1 | 12
+rtl/periph/aes128_core.sv | hdr | 1 | 75
+rtl/periph/aes128_core.sv | meas | 1 |
+rtl/periph/crypto_accel.sv | bead | 10 |
+rtl/periph/crypto_accel.sv | ghpr | 1 |
+rtl/periph/crypto_accel.sv | hdr | 1 | 204
+rtl/periph/dma_engine.sv | bead | 2 |
+rtl/periph/dma_engine.sv | blk | 1 | 42
+rtl/periph/dma_engine.sv | hdr | 1 | 46
+rtl/periph/dma_engine.sv | meas | 1 |
+rtl/periph/gpio_controller.sv | bead | 1 |
+rtl/periph/gpio_controller.sv | blk | 1 | 10
+rtl/periph/gpio_controller.sv | fline | 2 |
+rtl/periph/gpio_controller.sv | ghpr | 2 |
+rtl/periph/gpio_controller.sv | hdr | 1 | 85
+rtl/periph/i2c_bit_engine.sv | bead | 3 |
+rtl/periph/i2c_bit_engine.sv | blk | 1 | 11
+rtl/periph/i2c_bit_engine.sv | hdr | 1 | 125
+rtl/periph/i2c_bit_engine.sv | meas | 4 |
+rtl/periph/i2c_controller.sv | bead | 1 |
+rtl/periph/i2c_controller.sv | ghpr | 1 |
+rtl/periph/i2c_controller.sv | hdr | 1 | 135
+rtl/periph/i2c_controller.sv | meas | 2 |
+rtl/periph/interrupt_controller.sv | bead | 7 |
+rtl/periph/interrupt_controller.sv | blk | 1 | 17
+rtl/periph/pwm_controller.sv | bead | 1 |
+rtl/periph/pwm_controller.sv | blk | 1 | 12
+rtl/periph/pwm_controller.sv | fline | 5 |
+rtl/periph/pwm_controller.sv | ghpr | 2 |
+rtl/periph/pwm_controller.sv | hdr | 1 | 92
+rtl/periph/sha256_core.sv | bead | 5 |
+rtl/periph/sha256_core.sv | hdr | 1 | 59
+rtl/periph/spi_controller.sv | bead | 3 |
+rtl/periph/spi_controller.sv | blk | 2 | 24
+rtl/periph/spi_controller.sv | ghpr | 1 |
+rtl/periph/spi_controller.sv | hdr | 1 | 44
+rtl/periph/trng.sv | bead | 3 |
+rtl/periph/trng.sv | ghpr | 1 |
+rtl/periph/trng.sv | hdr | 1 | 58
+rtl/periph/trng_lfsr_entropy.sv | bead | 1 |
+rtl/periph/trng_ro_sky130.sv | bead | 1 |
+rtl/periph/uart_controller.sv | bead | 3 |
+rtl/periph/uart_controller.sv | blk | 4 | 38
+rtl/periph/uart_controller.sv | hdr | 1 | 44
+rtl/periph/watchdog_timer.sv | bead | 2 |
+rtl/periph/watchdog_timer.sv | ghpr | 1 |
+rtl/periph/watchdog_timer.sv | hdr | 1 | 70
+rtl/soc/apb4_register_bank.sv | bead | 2 |
+rtl/soc/apb4_register_bank.sv | ghpr | 1 |
+rtl/soc/apb_cdc_bridge.sv | bead | 6 |
+rtl/soc/apb_cdc_bridge.sv | blk | 6 | 87
+rtl/soc/apb_cdc_bridge.sv | date | 1 |
+rtl/soc/apb_cdc_bridge.sv | fline | 1 |
+rtl/soc/apb_cdc_bridge.sv | ghpr | 13 |
+rtl/soc/apb_cdc_bridge.sv | hdr | 1 | 291
+rtl/soc/apb_cdc_bridge.sv | meas | 2 |
+rtl/soc/apb_interconnect.sv | blk | 1 | 13
+rtl/soc/async_axi_fifo.sv | bead | 1 |
+rtl/soc/async_axi_fifo.sv | date | 1 |
+rtl/soc/async_axi_fifo.sv | fline | 5 |
+rtl/soc/async_axi_fifo.sv | ghpr | 3 |
+rtl/soc/async_axi_fifo.sv | hdr | 1 | 75
+rtl/soc/async_axi_fifo.sv | meas | 1 |
+rtl/soc/axi4_crossbar.sv | blk | 1 | 9
+rtl/soc/axi_lite_interconnect.sv | bead | 2 |
+rtl/soc/axi_lite_interconnect.sv | blk | 1 | 20
+rtl/soc/axi_lite_register_bank.sv | bead | 4 |
+rtl/soc/axi_lite_register_bank.sv | ghpr | 2 |
+rtl/soc/axil_to_apb.sv | ghpr | 1 |
+rtl/soc/boot_rom.sv | bead | 1 |
+rtl/soc/cdc/cdc_gray_fifo.sv | bead | 2 |
+rtl/soc/cdc/cdc_gray_fifo.sv | blk | 1 | 10
+rtl/soc/cdc/cdc_gray_fifo.sv | fline | 1 |
+rtl/soc/cdc/cdc_gray_fifo.sv | ghpr | 2 |
+rtl/soc/cdc/cdc_gray_fifo.sv | hdr | 1 | 78
+rtl/soc/cdc/cdc_reset_sync.sv | bead | 1 |
+rtl/soc/cdc/cdc_reset_sync.sv | blk | 1 | 18
+rtl/soc/cdc/cdc_reset_sync.sv | fline | 1 |
+rtl/soc/cdc/cdc_reset_sync.sv | ghpr | 3 |
+rtl/soc/cdc/cdc_reset_sync.sv | hdr | 1 | 56
+rtl/soc/cdc/cdc_sync.sv | bead | 2 |
+rtl/soc/cdc/cdc_sync.sv | fline | 2 |
+rtl/soc/cdc/cdc_sync.sv | ghpr | 4 |
+rtl/soc/cdc/cdc_sync.sv | hdr | 1 | 107
+rtl/soc/dft/dft_clk_mux.sv | bead | 3 |
+rtl/soc/dft/dft_clk_mux.sv | ghpr | 1 |
+rtl/soc/dft/dft_clk_mux.sv | meas | 2 |
+rtl/soc/dft/dft_clk_mux.sv | run | 2 |
+rtl/soc/dft/dft_clk_switch.sv | bead | 1 |
+rtl/soc/dft/dft_clk_switch.sv | ghpr | 1 |
+rtl/soc/dft/dft_clk_switch.sv | hdr | 1 | 124
+rtl/soc/dft/dft_ctrl.sv | bead | 1 |
+rtl/soc/dft/dft_ctrl.sv | ghpr | 1 |
+rtl/soc/dft/dft_ctrl.sv | hdr | 1 | 49
+rtl/soc/dft/dft_ctrl_ports.sv | bead | 2 |
+rtl/soc/dft/dft_ctrl_ports.sv | ghpr | 1 |
+rtl/soc/dft/dft_rst_mux.sv | bead | 1 |
+rtl/soc/dft/dft_rst_mux.sv | ghpr | 1 |
+rtl/soc/dft/jtag_tap.sv | bead | 1 |
+rtl/soc/dft/jtag_tap.sv | ghpr | 1 |
+rtl/soc/dft/jtag_tap.sv | hdr | 1 | 63
+rtl/soc/dft/mbist_ctl_hold.sv | bead | 1 |
+rtl/soc/dft/mbist_ctl_hold.sv | ghpr | 1 |
+rtl/soc/dft/mbist_ctrl.sv | bead | 2 |
+rtl/soc/dft/mbist_ctrl.sv | ghpr | 1 |
+rtl/soc/dft/mbist_status_sync.sv | bead | 1 |
+rtl/soc/dft/mbist_status_sync.sv | ghpr | 1 |
+rtl/soc/dft/mbist_xing.sv | bead | 1 |
+rtl/soc/dft/mbist_xing.sv | ghpr | 2 |
+rtl/soc/dft/mem_collar.sv | bead | 2 |
+rtl/soc/dft/mem_collar.sv | ghpr | 1 |
+rtl/soc/dft/soc_mbist.sv | bead | 1 |
+rtl/soc/dft/soc_mbist.sv | ghpr | 1 |
+rtl/soc/pll/pll_apb_regs.sv | ghpr | 5 |
+rtl/soc/pll/pll_apb_regs.sv | hdr | 1 | 41
+rtl/soc/pll/pll_clkgen.sv | meas | 2 |
+rtl/soc/pll/pll_rnm.sv | bead | 1 |
+rtl/soc/pll/pll_rnm.sv | meas | 2 |
+rtl/soc/pll/pll_subsystem.sv | bead | 2 |
+rtl/soc/pll/pll_subsystem.sv | ghpr | 3 |
+rtl/soc/pll/pll_subsystem.sv | hdr | 1 | 66
+rtl/soc/pll/pll_subsystem.sv | meas | 1 |
+rtl/soc/pmu.sv | bead | 3 |
+rtl/soc/pmu.sv | blk | 1 | 11
+rtl/soc/pmu.sv | date | 1 |
+rtl/soc/pmu.sv | fline | 1 |
+rtl/soc/pmu.sv | ghpr | 1 |
+rtl/soc/pmu.sv | hdr | 1 | 211
+rtl/soc/soc_addr_map_pkg.sv | bead | 5 |
+rtl/soc/soc_addr_map_pkg.sv | ghpr | 3 |
+rtl/soc/soc_bus.sv | bead | 1 |
+rtl/soc/soc_bus.sv | ghpr | 1 |
+rtl/soc/soc_periph_map_pkg.sv | bead | 25 |
+rtl/soc/soc_periph_map_pkg.sv | fline | 1 |
+rtl/soc/soc_periph_map_pkg.sv | ghpr | 9 |
+rtl/soc/soc_periph_map_pkg.sv | hdr | 1 | 46
+rtl/soc/soc_top.sv | bead | 71 |
+rtl/soc/soc_top.sv | blk | 25 | 132
+rtl/soc/soc_top.sv | date | 1 |
+rtl/soc/soc_top.sv | fline | 3 |
+rtl/soc/soc_top.sv | ghpr | 64 |
+rtl/soc/soc_top.sv | hdr | 1 | 179
+rtl/soc/soc_top.sv | meas | 3 |
+rtl/soc/sram_controller.sv | bead | 10 |
+rtl/soc/sram_controller.sv | blk | 7 | 108
+rtl/soc/sram_controller.sv | date | 7 |
+rtl/soc/sram_controller.sv | fline | 7 |
+rtl/soc/sram_controller.sv | ghpr | 3 |
+rtl/soc/sram_controller.sv | hdr | 1 | 67
+rtl/soc/sram_controller.sv | meas | 4 |
+rtl/soc/sram_controller.sv | run | 2 |
+sim/Makefile | bead | 12 |
+sim/Makefile | date | 1 |
+sim/Makefile | ghpr | 13 |
+sim/Makefile | mk | 10 | 19
+sim/cxx_shim.sh | bead | 1 |
+sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv | date | 1 |
+sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv | ghpr | 1 |
+tb/cocotb/bfm/apb4_master.py | bead | 1 |
+tb/cocotb/bfm/i2c_slave.py | bead | 1 |
+tb/cocotb/bfm/i2c_slave.py | doc | 1 | 82
+tb/cocotb/common/clock_reset.py | meas | 1 |
+tb/cocotb/common/sim_portability.mk | ghpr | 1 |
+tb/cocotb/common/sim_portability.mk | mk | 3 | 48
+tb/cocotb/cpu/Makefile | bead | 3 |
+tb/cocotb/cpu/Makefile | mk | 1 | 7
+tb/cocotb/cpu/legacy/test_isa_compliance.py | date | 1 |
+tb/cocotb/cpu/legacy/test_isa_compliance.py | doc | 1 | 57
+tb/cocotb/cpu/phase2_test_utils.py | bead | 2 |
+tb/cocotb/cpu/phase2_test_utils.py | date | 2 |
+tb/cocotb/cpu/phase2_test_utils.py | fline | 2 |
+tb/cocotb/cpu/phase2_test_utils.py | ghpr | 2 |
+tb/cocotb/cpu/phase2_test_utils.py | meas | 1 |
+tb/cocotb/cpu/test_csr_access.py | bead | 3 |
+tb/cocotb/cpu/test_csr_access.py | doc | 1 | 29
+tb/cocotb/cpu/test_csr_access.py | ghpr | 1 |
+tb/cocotb/cpu/test_decode_corners.py | bead | 1 |
+tb/cocotb/cpu/test_decode_corners.py | fline | 1 |
+tb/cocotb/cpu/test_example_counter.py | meas | 1 |
+tb/cocotb/cpu/test_hazard_unit.py | bead | 1 |
+tb/cocotb/cpu/test_hazard_unit.py | doc | 1 | 30
+tb/cocotb/cpu/test_hazard_unit.py | ghpr | 4 |
+tb/cocotb/cpu/test_interrupts.py | fline | 1 |
+tb/cocotb/cpu/test_isa_uvm.py | date | 1 |
+tb/cocotb/cpu/test_minstret_write.py | bead | 1 |
+tb/cocotb/cpu/test_minstret_write.py | doc | 1 | 32
+tb/cocotb/cpu/test_perf_counters.py | doc | 1 | 28
+tb/cocotb/cpu/test_perf_counters.py | meas | 2 |
+tb/cocotb/cpu/test_smoke.py | bead | 1 |
+tb/cocotb/cpu/test_smoke.py | ghpr | 1 |
+tb/cocotb/gpu/gpu_ref_model.py | bead | 2 |
+tb/cocotb/gpu/gpu_ref_model.py | date | 1 |
+tb/cocotb/gpu/gpu_ref_model.py | doc | 1 | 32
+tb/cocotb/gpu/kernels/kernel_block_warps.py | bead | 3 |
+tb/cocotb/gpu/kernels/kernel_block_warps.py | date | 1 |
+tb/cocotb/gpu/kernels/kernel_block_warps.py | doc | 1 | 44
+tb/cocotb/gpu/kernels/kernel_block_warps.py | ghpr | 1 |
+tb/cocotb/gpu/kernels/kernel_control_paths.py | bead | 11 |
+tb/cocotb/gpu/kernels/kernel_control_paths.py | doc | 1 | 39
+tb/cocotb/gpu/kernels/kernel_control_paths.py | ghpr | 1 |
+tb/cocotb/gpu/kernels/kernel_divergence_basic.py | doc | 1 | 29
+tb/cocotb/gpu/kernels/kernel_sync.py | doc | 1 | 48
+tb/cocotb/gpu/test_divergence.py | doc | 1 | 31
+tb/cocotb/gpu/test_divergence.py | meas | 1 |
+tb/cocotb/gpu/test_random_kernels.py | doc | 1 | 30
+tb/cocotb/gpu/test_vector_alu.py | bead | 2 |
+tb/cocotb/gpu/test_vector_alu.py | doc | 1 | 30
+tb/cocotb/gpu/test_vector_alu.py | ghpr | 2 |
+tb/cocotb/gpu/test_warp_scheduler.py | bead | 2 |
+tb/cocotb/gpu/test_warp_scheduler.py | ghpr | 1 |
+tb/cocotb/mem/test_cache_arbiter.py | bead | 1 |
+tb/cocotb/mem/test_cache_arbiter.py | doc | 1 | 53
+tb/cocotb/mem/test_cache_arbiter.py | ghpr | 1 |
+tb/cocotb/mem/test_icache.py | fline | 1 |
+tb/cocotb/soc/Makefile | bead | 83 |
+tb/cocotb/soc/Makefile | date | 4 |
+tb/cocotb/soc/Makefile | ghpr | 26 |
+tb/cocotb/soc/Makefile | meas | 3 |
+tb/cocotb/soc/Makefile | mk | 35 | 55
+tb/cocotb/soc/axi4_fabric_bfm.py | bead | 3 |
+tb/cocotb/soc/axi4_slave_model.py | doc | 1 | 35
+tb/cocotb/soc/axil_stall_bfm.py | bead | 1 |
+tb/cocotb/soc/boot_fw/gen_boot_hex.py | doc | 1 | 88
+tb/cocotb/soc/coherency_fw/gen_coherency_hex.py | bead | 1 |
+tb/cocotb/soc/coherency_fw/gen_coherency_hex.py | doc | 1 | 128
+tb/cocotb/soc/cpu_gpu_irq_fw/gen_cpu_gpu_irq_hex.py | bead | 1 |
+tb/cocotb/soc/cpu_gpu_irq_fw/gen_cpu_gpu_irq_hex.py | doc | 1 | 66
+tb/cocotb/soc/crypto_fw/gen_crypto_hex.py | bead | 1 |
+tb/cocotb/soc/crypto_fw/gen_crypto_hex.py | doc | 1 | 68
+tb/cocotb/soc/crypto_fw/gen_crypto_hex.py | ghpr | 1 |
+tb/cocotb/soc/func_cov.py | bead | 1 |
+tb/cocotb/soc/func_cov.py | doc | 1 | 37
+tb/cocotb/soc/gpio_fw/gen_gpio_hex.py | bead | 1 |
+tb/cocotb/soc/gpio_fw/gen_gpio_hex.py | doc | 1 | 106
+tb/cocotb/soc/i2c_cov.py | bead | 1 |
+tb/cocotb/soc/i2c_cov.py | doc | 1 | 28
+tb/cocotb/soc/i2c_fw/gen_i2c_hex.py | bead | 2 |
+tb/cocotb/soc/i2c_fw/gen_i2c_hex.py | doc | 1 | 65
+tb/cocotb/soc/i2c_fw/gen_i2c_hex.py | ghpr | 1 |
+tb/cocotb/soc/integ_fw/gen_integ_hex.py | bead | 3 |
+tb/cocotb/soc/integ_fw/gen_integ_hex.py | doc | 1 | 91
+tb/cocotb/soc/integ_fw/gen_integ_hex.py | ghpr | 1 |
+tb/cocotb/soc/jtag_driver.py | bead | 1 |
+tb/cocotb/soc/jtag_driver.py | doc | 1 | 34
+tb/cocotb/soc/jtag_driver.py | meas | 4 |
+tb/cocotb/soc/mbist_golden.py | bead | 1 |
+tb/cocotb/soc/npu_fw/gen_npu_hex.py | bead | 1 |
+tb/cocotb/soc/npu_fw/gen_npu_hex.py | doc | 1 | 61
+tb/cocotb/soc/periph_fw/gen_periph_hex.py | doc | 1 | 47
+tb/cocotb/soc/pll2_fw/gen_pll2_decode_hex.py | doc | 1 | 58
+tb/cocotb/soc/pll2_fw/gen_pll2_decode_hex.py | ghpr | 4 |
+tb/cocotb/soc/pmu_cycle_fw/gen_pmu_cycle_hex.py | bead | 1 |
+tb/cocotb/soc/pmu_cycle_fw/gen_pmu_cycle_hex.py | doc | 1 | 43
+tb/cocotb/soc/pmu_cycle_fw/gen_pmu_cycle_hex.py | ghpr | 1 |
+tb/cocotb/soc/pwm_fw/gen_pwm_hex.py | bead | 1 |
+tb/cocotb/soc/pwm_fw/gen_pwm_hex.py | doc | 1 | 98
+tb/cocotb/soc/reg_maps.py | bead | 2 |
+tb/cocotb/soc/reg_maps.py | ghpr | 1 |
+tb/cocotb/soc/reg_walk.py | bead | 1 |
+tb/cocotb/soc/reg_walk.py | doc | 1 | 39
+tb/cocotb/soc/reg_walk.py | ghpr | 2 |
+tb/cocotb/soc/sky130_sram_fi_wrappers.sv | bead | 1 |
+tb/cocotb/soc/soc_clocks.py | bead | 1 |
+tb/cocotb/soc/soc_clocks.py | ghpr | 4 |
+tb/cocotb/soc/soc_reg_fw.py | bead | 1 |
+tb/cocotb/soc/soc_reg_fw.py | doc | 1 | 30
+tb/cocotb/soc/sram_backdoor.py | doc | 1 | 27
+tb/cocotb/soc/sram_fi_core.sv | bead | 1 |
+tb/cocotb/soc/stress_fw/gen_stress_hex.py | doc | 1 | 70
+tb/cocotb/soc/tb_apb4_register_bank.sv | bead | 2 |
+tb/cocotb/soc/tb_apb_cdc_bridge.sv | bead | 1 |
+tb/cocotb/soc/tb_apb_cdc_bridge.sv | ghpr | 1 |
+tb/cocotb/soc/tb_apb_interconnect.sv | bead | 1 |
+tb/cocotb/soc/tb_async_axi_fifo.sv | bead | 1 |
+tb/cocotb/soc/tb_async_axi_fifo.sv | fline | 1 |
+tb/cocotb/soc/tb_async_axi_fifo.sv | ghpr | 1 |
+tb/cocotb/soc/tb_axi_lite_register_bank.sv | bead | 2 |
+tb/cocotb/soc/tb_axil_apb_fabric.sv | bead | 1 |
+tb/cocotb/soc/tb_axil_apb_fabric.sv | ghpr | 1 |
+tb/cocotb/soc/tb_cdc_gray_fifo.sv | bead | 1 |
+tb/cocotb/soc/tb_cdc_reset_sync_scan.sv | bead | 1 |
+tb/cocotb/soc/tb_cdc_sync.sv | bead | 1 |
+tb/cocotb/soc/tb_clock_gate_scan.sv | bead | 1 |
+tb/cocotb/soc/tb_crypto.sv | bead | 3 |
+tb/cocotb/soc/tb_dft_clk_switch.sv | bead | 1 |
+tb/cocotb/soc/tb_dft_ctrl.sv | bead | 1 |
+tb/cocotb/soc/tb_dft_muxes.sv | bead | 1 |
+tb/cocotb/soc/tb_gpio.sv | bead | 1 |
+tb/cocotb/soc/tb_i2c.sv | bead | 1 |
+tb/cocotb/soc/tb_jtag_tap.sv | bead | 1 |
+tb/cocotb/soc/tb_mbist_cpu_macro.sv | bead | 1 |
+tb/cocotb/soc/tb_mbist_domain.sv | bead | 2 |
+tb/cocotb/soc/tb_mbist_soc_slice.sv | bead | 1 |
+tb/cocotb/soc/tb_mbist_tap.sv | bead | 1 |
+tb/cocotb/soc/tb_npu.sv | bead | 1 |
+tb/cocotb/soc/tb_pmu.sv | bead | 2 |
+tb/cocotb/soc/tb_pmu.sv | ghpr | 1 |
+tb/cocotb/soc/tb_pwm.sv | bead | 1 |
+tb/cocotb/soc/tb_soc_pll.sv | ghpr | 5 |
+tb/cocotb/soc/tb_soc_pll.sv | meas | 1 |
+tb/cocotb/soc/tb_soc_top.sv | bead | 4 |
+tb/cocotb/soc/tb_soc_top.sv | ghpr | 5 |
+tb/cocotb/soc/tb_trng.sv | bead | 1 |
+tb/cocotb/soc/tb_wdt.sv | bead | 1 |
+tb/cocotb/soc/test_apb4_register_bank.py | bead | 10 |
+tb/cocotb/soc/test_apb4_register_bank.py | doc | 1 | 43
+tb/cocotb/soc/test_apb4_register_bank.py | ghpr | 2 |
+tb/cocotb/soc/test_apb_cdc_bridge.py | bead | 17 |
+tb/cocotb/soc/test_apb_cdc_bridge.py | date | 1 |
+tb/cocotb/soc/test_apb_cdc_bridge.py | doc | 1 | 50
+tb/cocotb/soc/test_apb_cdc_bridge.py | ghpr | 15 |
+tb/cocotb/soc/test_apb_cdc_bridge.py | meas | 15 |
+tb/cocotb/soc/test_apb_interconnect.py | bead | 3 |
+tb/cocotb/soc/test_apb_interconnect.py | doc | 1 | 70
+tb/cocotb/soc/test_async_axi_fifo.py | bead | 5 |
+tb/cocotb/soc/test_async_axi_fifo.py | date | 1 |
+tb/cocotb/soc/test_async_axi_fifo.py | doc | 1 | 33
+tb/cocotb/soc/test_async_axi_fifo.py | ghpr | 7 |
+tb/cocotb/soc/test_async_axi_fifo.py | meas | 9 |
+tb/cocotb/soc/test_axi4_to_axilite.py | bead | 1 |
+tb/cocotb/soc/test_axil_apb_fabric.py | bead | 2 |
+tb/cocotb/soc/test_axil_apb_fabric.py | doc | 1 | 28
+tb/cocotb/soc/test_axil_apb_fabric.py | ghpr | 1 |
+tb/cocotb/soc/test_axil_interconnect.py | bead | 7 |
+tb/cocotb/soc/test_axil_interconnect.py | doc | 1 | 47
+tb/cocotb/soc/test_axil_interconnect.py | fline | 2 |
+tb/cocotb/soc/test_axil_interconnect.py | ghpr | 5 |
+tb/cocotb/soc/test_axil_to_apb.py | bead | 2 |
+tb/cocotb/soc/test_axil_to_apb.py | ghpr | 4 |
+tb/cocotb/soc/test_axilite_to_axi4.py | bead | 1 |
+tb/cocotb/soc/test_boot.py | date | 1 |
+tb/cocotb/soc/test_boot.py | fline | 3 |
+tb/cocotb/soc/test_boot.py | meas | 1 |
+tb/cocotb/soc/test_boot_diag.py | meas | 1 |
+tb/cocotb/soc/test_boot_rom.py | bead | 1 |
+tb/cocotb/soc/test_boot_rom_init.py | bead | 1 |
+tb/cocotb/soc/test_cdc_reset_sync_scan.py | bead | 1 |
+tb/cocotb/soc/test_cdc_reset_sync_scan.py | doc | 1 | 38
+tb/cocotb/soc/test_cdc_reset_sync_scan.py | meas | 1 |
+tb/cocotb/soc/test_cdc_sync.py | bead | 1 |
+tb/cocotb/soc/test_cdc_sync.py | doc | 1 | 32
+tb/cocotb/soc/test_clock_gate_scan.py | bead | 1 |
+tb/cocotb/soc/test_cpu_gpu_irq.py | bead | 1 |
+tb/cocotb/soc/test_cpu_gpu_irq.py | doc | 1 | 60
+tb/cocotb/soc/test_cpu_gpu_irq.py | meas | 1 |
+tb/cocotb/soc/test_crossbar.py | meas | 1 |
+tb/cocotb/soc/test_crossbar_errors.py | bead | 1 |
+tb/cocotb/soc/test_crypto.py | bead | 7 |
+tb/cocotb/soc/test_crypto.py | doc | 1 | 165
+tb/cocotb/soc/test_crypto.py | meas | 2 |
+tb/cocotb/soc/test_dft_clk_switch.py | bead | 1 |
+tb/cocotb/soc/test_dft_clk_switch.py | doc | 1 | 60
+tb/cocotb/soc/test_dft_clk_switch.py | meas | 10 |
+tb/cocotb/soc/test_dft_ctrl.py | bead | 1 |
+tb/cocotb/soc/test_dft_ctrl.py | doc | 1 | 65
+tb/cocotb/soc/test_dft_ctrl.py | meas | 5 |
+tb/cocotb/soc/test_dft_muxes.py | bead | 1 |
+tb/cocotb/soc/test_dma.py | bead | 3 |
+tb/cocotb/soc/test_dma.py | ghpr | 1 |
+tb/cocotb/soc/test_dma.py | meas | 1 |
+tb/cocotb/soc/test_gpio.py | bead | 3 |
+tb/cocotb/soc/test_gpio.py | doc | 1 | 82
+tb/cocotb/soc/test_gpio.py | meas | 4 |
+tb/cocotb/soc/test_gpio_driver.py | bead | 2 |
+tb/cocotb/soc/test_gpio_driver.py | date | 1 |
+tb/cocotb/soc/test_gpio_driver.py | doc | 1 | 84
+tb/cocotb/soc/test_gpio_driver.py | meas | 3 |
+tb/cocotb/soc/test_i2c.py | bead | 5 |
+tb/cocotb/soc/test_i2c.py | doc | 1 | 65
+tb/cocotb/soc/test_i2c.py | meas | 6 |
+tb/cocotb/soc/test_irq_ctrl.py | bead | 1 |
+tb/cocotb/soc/test_irq_ctrl.py | meas | 1 |
+tb/cocotb/soc/test_jtag_tap.py | bead | 1 |
+tb/cocotb/soc/test_jtag_tap.py | doc | 1 | 52
+tb/cocotb/soc/test_jtag_tap.py | meas | 4 |
+tb/cocotb/soc/test_l2_bench.py | doc | 1 | 48
+tb/cocotb/soc/test_l2_bench.py | meas | 1 |
+tb/cocotb/soc/test_mbist_cpu_macro.py | bead | 3 |
+tb/cocotb/soc/test_mbist_ctrl.py | bead | 2 |
+tb/cocotb/soc/test_mbist_ctrl.py | doc | 1 | 30
+tb/cocotb/soc/test_mbist_soc_slice.py | bead | 1 |
+tb/cocotb/soc/test_mbist_tap.py | bead | 1 |
+tb/cocotb/soc/test_mbist_tap.py | meas | 1 |
+tb/cocotb/soc/test_npu.py | bead | 3 |
+tb/cocotb/soc/test_npu.py | doc | 1 | 131
+tb/cocotb/soc/test_npu.py | meas | 2 |
+tb/cocotb/soc/test_periph_loopback.py | doc | 1 | 28
+tb/cocotb/soc/test_periph_loopback.py | ghpr | 1 |
+tb/cocotb/soc/test_periph_loopback.py | meas | 1 |
+tb/cocotb/soc/test_periph_sync_stages.py | bead | 1 |
+tb/cocotb/soc/test_pll_apb_regs.py | bead | 2 |
+tb/cocotb/soc/test_pll_apb_regs.py | doc | 1 | 43
+tb/cocotb/soc/test_pll_apb_regs.py | ghpr | 8 |
+tb/cocotb/soc/test_pll_apb_regs.py | meas | 2 |
+tb/cocotb/soc/test_pll_lock.py | doc | 1 | 50
+tb/cocotb/soc/test_pll_lock.py | ghpr | 9 |
+tb/cocotb/soc/test_pll_lock.py | meas | 2 |
+tb/cocotb/soc/test_pll_regs.py | doc | 1 | 57
+tb/cocotb/soc/test_pll_regs.py | meas | 1 |
+tb/cocotb/soc/test_pmu.py | bead | 4 |
+tb/cocotb/soc/test_pmu.py | doc | 1 | 67
+tb/cocotb/soc/test_pmu.py | ghpr | 3 |
+tb/cocotb/soc/test_pmu.py | meas | 2 |
+tb/cocotb/soc/test_pwm.py | bead | 3 |
+tb/cocotb/soc/test_pwm.py | doc | 1 | 131
+tb/cocotb/soc/test_pwm.py | fline | 2 |
+tb/cocotb/soc/test_pwm.py | meas | 2 |
+tb/cocotb/soc/test_register_bank.py | bead | 9 |
+tb/cocotb/soc/test_register_bank.py | ghpr | 1 |
+tb/cocotb/soc/test_soc_coherency.py | bead | 1 |
+tb/cocotb/soc/test_soc_coherency.py | doc | 1 | 52
+tb/cocotb/soc/test_soc_coherency.py | meas | 1 |
+tb/cocotb/soc/test_soc_crypto.py | bead | 1 |
+tb/cocotb/soc/test_soc_crypto.py | doc | 1 | 53
+tb/cocotb/soc/test_soc_crypto.py | meas | 1 |
+tb/cocotb/soc/test_soc_dft_scan.py | bead | 1 |
+tb/cocotb/soc/test_soc_dft_scan.py | doc | 1 | 56
+tb/cocotb/soc/test_soc_gpio.py | bead | 1 |
+tb/cocotb/soc/test_soc_gpio.py | doc | 1 | 46
+tb/cocotb/soc/test_soc_gpio.py | meas | 1 |
+tb/cocotb/soc/test_soc_i2c.py | bead | 6 |
+tb/cocotb/soc/test_soc_i2c.py | doc | 1 | 50
+tb/cocotb/soc/test_soc_i2c.py | meas | 1 |
+tb/cocotb/soc/test_soc_integration.py | bead | 5 |
+tb/cocotb/soc/test_soc_integration.py | doc | 1 | 39
+tb/cocotb/soc/test_soc_integration.py | ghpr | 1 |
+tb/cocotb/soc/test_soc_jtag.py | bead | 1 |
+tb/cocotb/soc/test_soc_jtag.py | doc | 1 | 64
+tb/cocotb/soc/test_soc_multiclock.py | date | 3 |
+tb/cocotb/soc/test_soc_multiclock.py | doc | 1 | 189
+tb/cocotb/soc/test_soc_multiclock.py | ghpr | 9 |
+tb/cocotb/soc/test_soc_multiclock.py | meas | 23 |
+tb/cocotb/soc/test_soc_multiclock_pll2.py | date | 1 |
+tb/cocotb/soc/test_soc_multiclock_pll2.py | doc | 1 | 53
+tb/cocotb/soc/test_soc_multiclock_pll2.py | ghpr | 5 |
+tb/cocotb/soc/test_soc_multiclock_pll2.py | meas | 1 |
+tb/cocotb/soc/test_soc_multiclock_reset.py | bead | 2 |
+tb/cocotb/soc/test_soc_multiclock_reset.py | doc | 1 | 67
+tb/cocotb/soc/test_soc_multiclock_reset.py | fline | 1 |
+tb/cocotb/soc/test_soc_multiclock_reset.py | ghpr | 6 |
+tb/cocotb/soc/test_soc_multiclock_reset.py | meas | 5 |
+tb/cocotb/soc/test_soc_npu.py | bead | 1 |
+tb/cocotb/soc/test_soc_npu.py | doc | 1 | 49
+tb/cocotb/soc/test_soc_npu.py | meas | 1 |
+tb/cocotb/soc/test_soc_pmu_iso_ack.py | bead | 2 |
+tb/cocotb/soc/test_soc_pmu_iso_ack.py | doc | 1 | 54
+tb/cocotb/soc/test_soc_pmu_iso_ack.py | ghpr | 3 |
+tb/cocotb/soc/test_soc_pmu_multiclock.py | bead | 12 |
+tb/cocotb/soc/test_soc_pmu_multiclock.py | doc | 1 | 96
+tb/cocotb/soc/test_soc_pmu_multiclock.py | fline | 1 |
+tb/cocotb/soc/test_soc_pmu_multiclock.py | ghpr | 3 |
+tb/cocotb/soc/test_soc_pmu_multiclock.py | meas | 1 |
+tb/cocotb/soc/test_soc_pwm.py | bead | 1 |
+tb/cocotb/soc/test_soc_pwm.py | doc | 1 | 51
+tb/cocotb/soc/test_soc_pwm.py | meas | 1 |
+tb/cocotb/soc/test_soc_scan_en_gate.py | bead | 1 |
+tb/cocotb/soc/test_soc_scan_en_gate.py | doc | 1 | 54
+tb/cocotb/soc/test_soc_scan_en_gate.py | ghpr | 1 |
+tb/cocotb/soc/test_soc_stress.py | doc | 1 | 28
+tb/cocotb/soc/test_soc_stress.py | meas | 2 |
+tb/cocotb/soc/test_soc_trng.py | bead | 1 |
+tb/cocotb/soc/test_soc_trng.py | doc | 1 | 52
+tb/cocotb/soc/test_soc_trng.py | meas | 1 |
+tb/cocotb/soc/test_soc_wdt.py | bead | 3 |
+tb/cocotb/soc/test_soc_wdt.py | doc | 1 | 54
+tb/cocotb/soc/test_soc_wdt.py | meas | 1 |
+tb/cocotb/soc/test_spi.py | bead | 3 |
+tb/cocotb/soc/test_spi.py | meas | 1 |
+tb/cocotb/soc/test_sram_controller.py | bead | 9 |
+tb/cocotb/soc/test_sram_controller.py | date | 1 |
+tb/cocotb/soc/test_sram_controller.py | ghpr | 5 |
+tb/cocotb/soc/test_sram_controller.py | meas | 2 |
+tb/cocotb/soc/test_sram_fi_equiv.py | bead | 1 |
+tb/cocotb/soc/test_timer.py | bead | 2 |
+tb/cocotb/soc/test_timer.py | meas | 1 |
+tb/cocotb/soc/test_trng.py | bead | 2 |
+tb/cocotb/soc/test_trng.py | doc | 1 | 170
+tb/cocotb/soc/test_trng.py | meas | 2 |
+tb/cocotb/soc/test_uart.py | bead | 3 |
+tb/cocotb/soc/test_uart.py | doc | 1 | 26
+tb/cocotb/soc/test_uart.py | meas | 2 |
+tb/cocotb/soc/test_uart_boot.py | bead | 2 |
+tb/cocotb/soc/test_uart_boot.py | meas | 4 |
+tb/cocotb/soc/test_wdt.py | bead | 3 |
+tb/cocotb/soc/test_wdt.py | doc | 1 | 167
+tb/cocotb/soc/test_wdt.py | fline | 1 |
+tb/cocotb/soc/test_wdt.py | meas | 2 |
+tb/cocotb/soc/trng_fw/gen_trng_hex.py | bead | 1 |
+tb/cocotb/soc/trng_fw/gen_trng_hex.py | doc | 1 | 63
+tb/cocotb/soc/trng_fw/gen_trng_hex.py | ghpr | 1 |
+tb/cocotb/soc/wdt_fw/gen_wdt_hex.py | bead | 1 |
+tb/cocotb/soc/wdt_fw/gen_wdt_hex.py | doc | 1 | 70
+tb/cocotb/soc/wdt_fw/gen_wdt_hex.py | ghpr | 1 |
+tb/cpu_uvm/tests/test_isa_uvm.py | date | 1 |
+tb/models/aes128_model.py | bead | 1 |
+tb/models/aes128_model.py | doc | 1 | 68
+tb/models/csr_model.py | bead | 3 |
+tb/models/gpu_kernel_model.py | bead | 1 |
+tb/models/gpu_kernel_model.py | date | 2 |
+tb/models/npu_model.py | bead | 1 |
+tb/models/npu_model.py | doc | 1 | 96
+tb/models/soc_model.py | doc | 1 | 30
+tb/models/trng_lfsr_model.py | bead | 1 |
+tb/models/trng_lfsr_model.py | doc | 1 | 56
+tb/tests/test_aes128_model.py | bead | 1 |
+tb/tests/test_asap7_macro_power_inject.py | bead | 2 |
+tb/tests/test_beads_checkout_guard.py | bead | 1 |
+tb/tests/test_beads_checkout_guard.py | date | 1 |
+tb/tests/test_cache_stall_encoding.py | bead | 1 |
+tb/tests/test_cdc_gate.py | bead | 1 |
+tb/tests/test_check_beads_reopen.py | bead | 1 |
+tb/tests/test_check_beads_reopen.py | date | 1 |
+tb/tests/test_check_cocotb_results.py | bead | 2 |
+tb/tests/test_check_cpu_netlist_census.py | bead | 1 |
+tb/tests/test_check_scan_chains.py | bead | 1 |
+tb/tests/test_check_synth_undef.py | bead | 2 |
+tb/tests/test_check_synth_undef_functemp.py | bead | 3 |
+tb/tests/test_check_upf.py | bead | 1 |
+tb/tests/test_coverage_report.py | bead | 6 |
+tb/tests/test_coverage_report.py | ghpr | 3 |
+tb/tests/test_coverage_waiver_anchors.py | bead | 1 |
+tb/tests/test_coverage_waiver_anchors.py | ghpr | 3 |
+tb/tests/test_csr_model.py | bead | 2 |
+tb/tests/test_csr_model.py | ghpr | 1 |
+tb/tests/test_cvt_maxcap_waiver.py | bead | 1 |
+tb/tests/test_cvt_maxcap_waiver.py | date | 1 |
+tb/tests/test_cvt_maxcap_waiver.py | run | 1 |
+tb/tests/test_cvt_scan_step.py | bead | 1 |
+tb/tests/test_dft_atpg_coverage.py | bead | 1 |
+tb/tests/test_dft_atpg_coverage.py | date | 1 |
+tb/tests/test_dft_atpg_hold_mask.py | bead | 1 |
+tb/tests/test_dft_atpg_prep.py | bead | 1 |
+tb/tests/test_dft_atpg_regrade.py | bead | 1 |
+tb/tests/test_dft_atpg_regrade_vl.py | bead | 1 |
+tb/tests/test_dft_scan_check.py | bead | 6 |
+tb/tests/test_eda_summarize.py | bead | 4 |
+tb/tests/test_eda_summarize.py | date | 2 |
+tb/tests/test_eda_summarize.py | ghpr | 4 |
+tb/tests/test_functional_coverage_report.py | bead | 1 |
+tb/tests/test_gen_filelist.py | bead | 1 |
+tb/tests/test_gpu_model.py | bead | 2 |
+tb/tests/test_gpu_ref_model_block.py | bead | 1 |
+tb/tests/test_gpu_ref_model_block.py | date | 1 |
+tb/tests/test_npu_model.py | bead | 1 |
+tb/tests/test_pin_lock.py | bead | 1 |
+tb/tests/test_pin_lock.py | meas | 1 |
+tb/tests/test_sim_build_key.py | bead | 1 |
+tb/tests/test_sim_build_key.py | ghpr | 3 |
+tb/tests/test_soc_shards.py | bead | 2 |
+tb/tests/test_sync_rtk_config.py | bead | 1 |

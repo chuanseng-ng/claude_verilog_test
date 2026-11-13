@@ -16,3 +16,9 @@
 
 # interactions.jsonl really IS an append-only audit log, so union is right here.
 .beads/interactions.jsonl  merge=union
+
+# Documentation sources and their tools are compared byte for byte by the drift
+# checks (glossary.tex, labels.tsv) and read by pandoc/lualatex. Keep them LF on
+# every platform.
+docs/manual/**  text eol=lf
+tools/docs/**   text eol=lf
