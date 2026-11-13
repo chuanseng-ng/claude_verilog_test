@@ -247,7 +247,7 @@ set_clock_uncertainty -setup 0.300 [get_clocks core_clk]
 set_clock_uncertainty -hold  0.150 [get_clocks core_clk]
 
 ###############################################################################
-# Second clock root: cpu_clk_i (bead claude_verilog_test-j41m.5, DFT_ARCHITECTURE.md
+# Second clock root: cpu_clk_i (bead claude_verilog_test-j41m.5, Doc: tm:ch:dft-architecture
 # section 4 item 20 / 14.5; GH #92-#96 multi-clock epic).
 #
 # cpu_clk_i is a SECOND, independent top-level reference (u_cpu_pll_sub's reference; the
@@ -368,8 +368,8 @@ if {[llength [get_ports -quiet scan_out_o]] > 0} { set_false_path -to [get_ports
 #
 # tck_i is a third, asynchronous clock root that clocks ONLY the TAP (jtag_tap.sv: FSM, IR,
 # TDRs, TDO). 100 ns (10 MHz) is a conservative placeholder until a pad ring and an ATE
-# exist (DFT_ARCHITECTURE.md 9.5, 9.6). The TAP's outputs scan_mode / test_en / scan_rst /
-# scan_en are static controls (DFT_ARCHITECTURE.md 15.5, crossing 2), so the tck <-> core_clk
+# exist (Doc: tm:ch:dft-architecture 9.5, 9.6). The TAP's outputs scan_mode / test_en / scan_rst /
+# scan_en are static controls (Doc: tm:ch:dft-architecture 15.5, crossing 2), so the tck <-> core_clk
 # relation is declared asynchronous rather than timed.
 #
 # KNOWN GAP (Stage 2): scan_mode is now also driven by a TAP flop, so the dft_clk_mux selects
@@ -379,7 +379,7 @@ if {[llength [get_ports -quiet scan_out_o]] > 0} { set_false_path -to [get_ports
 # SDC (a Stage 2 deliverable) must pin it (or set_clock_sense -stop_propagation on the mux
 # outputs once their pin names are known after synthesis).
 #
-# The glitch-free test-clock switch (dft_clk_switch.sv, DFT_ARCHITECTURE.md 15.5) adds two latch-based
+# The glitch-free test-clock switch (dft_clk_switch.sv, Doc: tm:ch:dft-architecture 15.5) adds two latch-based
 # enables and two 2-FF handshake synchronisers between tck_i and scan_clk_i. scan_clk_i has no clock in
 # this functional-mode SDC (it is a false-path port), so their handshake paths and the clock-gating
 # checks on the enable latches are timed only by the Stage 2 scan-mode SDC. Not run here.
@@ -421,7 +421,7 @@ if {[llength [get_ports -quiet tck_i]] > 0} {
 # cdc_reset_sync instances on the PMU/IRQ signals, including the iso-ack return
 # u_cpu_iso_ack_sync, bead 3ogd), so ordinary setup/hold between them would
 # only report fabricated violations on those synchroniser paths; tck is declared against both
-# (the TAP's outputs are static controls, DFT_ARCHITECTURE.md 15.5 crossing 2).
+# (the TAP's outputs are static controls, Doc: tm:ch:dft-architecture 15.5 crossing 2).
 #
 # THE CDC BUDGETS (max-delay on the crossings) ARE NOT IN THIS FILE, ON PURPOSE. The
 # request that opened this bead asked for `set_max_delay -datapath_only` modelled on
@@ -449,7 +449,7 @@ if {[llength $_async_groups] > 2} {
 
 ###############################################################################
 # CDC gray-pointer capture pins: NO HOLD CHECK in the functional implementation
-# (bead claude_verilog_test-j41m.5 / j41m.4; docs/SKY130_CDC_MAXSS_ANALYSIS.md, decision B).
+# (bead claude_verilog_test-j41m.5 / j41m.4; Doc: tm:pd:sky130-cdc-maxss, decision B).
 #
 # WHY. The DFT test clock enters BOTH domain roots (dft_clk_mux A1 -> core tree and cpu tree),
 # and the group above only separates tck from core_clk/cpu_clk, not tck from itself. So the
@@ -479,7 +479,7 @@ if {[llength $_async_groups] > 2} {
 # SCAN MODE (the reason this is not free). In scan capture the same test clock reaches both
 # trees, so this IS a real same-clock path and the exemption means the flow no longer repairs
 # its hold. What keeps that safe, and what is still UNVERIFIED, is recorded in
-# docs/SKY130_CDC_MAXSS_ANALYSIS.md section 6. Short form: a hold failure here can only corrupt
+# Doc: tm:pd:sky130-cdc-maxss:6-scan-mode-hold-the-approach-chosen-and-what-is-not-verified. Short form: a hold failure here can only corrupt
 # the captured value of the stage-0 flops (a test-response mismatch, never a functional
 # failure), those flops must be masked in the capture response, and the real scan-mode hold
 # slack is measured by re-sourcing this file with CVT_SDC_SCAN_VIEW=1 (below) after Stage 2
@@ -564,7 +564,7 @@ if {[info exists ::env(CVT_SDC_SCAN_VIEW)] && $::env(CVT_SDC_SCAN_VIEW) eq "1"} 
         cvt_cdc_hold_exempt "u_cpu_axi_cdc*${_fifo}*u_rd_ptr_to_wr" $_rd_clk $_wr_clk \
             "u_cpu_axi_cdc.${_fifo}.u_rd_ptr_to_wr (${_rd_clk} -> ${_wr_clk})"
     }
-    # MBIST control-word crossings, TCK -> destination clock (bead y5mn / j41m.10, DFT_ARCHITECTURE.md 16.5): the same
+    # MBIST control-word crossings, TCK -> destination clock (bead y5mn / j41m.10, Doc: tm:ch:dft-architecture 16.5): the same
     # inter-tree skew reasoning as above. The TAP flops sit on the tck root; the destination capture flops sit
     # behind the functional trees that ALSO carry tck (dft_clk_mux), so the flow STA times tck -> dst as a
     # same-clock tck -> tck hold race with the full tree latency, and the resizer would pad it with delay cells

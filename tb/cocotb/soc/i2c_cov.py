@@ -2,8 +2,8 @@
 i2c_cov.py -- functional-coverage model of the I2C master (rtl/periph/i2c_controller.sv), bead h367.
 
 This is the PILOT of the cocotb functional-coverage flow.  The model, the bin-by-bin rationale and
-the reachability notes are in ``docs/verification/I2C_FUNCTIONAL_COVERAGE_MODEL.md``; how another
-peripheral adds one is in ``docs/verification/FUNCTIONAL_COVERAGE.md``.  Plumbing (coverpoint
+the reachability notes are in ``Doc: tm:flow:i2c-functional-coverage-model``; how another
+peripheral adds one is in ``Doc: tm:flow:functional-coverage``.  Plumbing (coverpoint
 construction, YAML export) is ``func_cov.py``; the merge and the gate are
 ``tools/verif/functional_coverage_report.py``.
 

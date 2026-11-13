@@ -7,7 +7,7 @@
 //   clk_sys = 900/18 = 50 MHz -> soc_top.clk_i      (fabric / bus / peripherals / GPU, PMU-gated copy for the GPU)
 //   clk_cpu = 900/12 = 75 MHz -> soc_top.cpu_clk_i  (CPU domain, PMU-gated copy for the CPU)
 // Both are outputs of ONE MMCM, so they are frequency-locked: they exercise the async_axi_fifo / apb_cdc_bridge
-// structure but NOT an independent-clock crossing. The independent-clock CDC soak (Si5351A, FPGA_BOARD_SELECTION.md
+// structure but NOT an independent-clock crossing. The independent-clock CDC soak (Si5351A, Doc: tm:dec:fpga-board-selection
 // section 4) is a later stage.
 // Each ungated clock goes MMCM -> explicit BUFG. The PMU clock gates are BUFGCE primitives (rv32i_clock_gate,
 // FPGA_BUFGCE arm). nexys_video_clkfix.tcl re-sources every BUFGCE.I pin from the MMCM output, IN PARALLEL with the

@@ -2,7 +2,7 @@
 #
 # Run by the CVT.ScanInsert step (librelane_plugin_cvt_sky130/__init__.py) with an OpenROAD that has
 # set_dft_config / scan_replace / execute_dft_plan (26Q2; the Sky130 flow's own edf00dff has a different,
-# defective stitcher, DFT_ARCHITECTURE.md 1.1/1.3).  Everything is parameterised through the environment:
+# defective stitcher, Doc: tm:ch:dft-architecture 1.1/1.3).  Everything is parameterised through the environment:
 #
 #   CVT_SCAN_NL_IN / CVT_SCAN_NL_OUT   flow netlist in, scan netlist out
 #   CVT_SCAN_TOP                       design name
@@ -25,7 +25,7 @@
 #   CVT_SCAN_OUT_GATE_CELL             the AND2 master (default sky130_fd_sc_hd__and2_2)
 #   CVT_SCAN_REPORT                    report file (key=value lines, parsed by the step and by check_scan_chains.py)
 #
-# Finding (j41m.8, DFT_ARCHITECTURE.md 14.4): 26Q2 insert_dft does NOT reuse existing ports.  It always creates its own
+# Finding (j41m.8, Doc: tm:ch:dft-architecture 14.4): 26Q2 insert_dft does NOT reuse existing ports.  It always creates its own
 # scan_enable_0 / scan_in_<k> / scan_out_<k>; -scan_*_name_pattern only renames them (a pattern without %d gives every chain
 # the same name).  So the tool's ports are created, then merged into the pre-existing soc_top ports below.
 

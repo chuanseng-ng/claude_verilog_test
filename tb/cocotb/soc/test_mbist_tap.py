@@ -7,7 +7,7 @@ returns) + a core-domain controller with 2 fault-injecting memories + a CPU-doma
 fault-injecting memories (the controller that moves INTO the CPU macro in the follow-up, section 16.7).
 Three unrelated clocks: TCK, core, CPU; every test runs at several ratios (suffix _cfgN).
 
-The tester sequence is the documented one (DFT_ARCHITECTURE.md 16.5): MBIST_CTRL write, idle, poll
+The tester sequence is the documented one (Doc: tm:ch:dft-architecture 16.5): MBIST_CTRL write, idle, poll
 MBIST_STATUS, read the per-memory record by rewriting rd_sel, MBIST_CTRL write with run = 0.
 
 What is proven (each also checked against mbist_golden.py, the independent golden model):

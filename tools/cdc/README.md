@@ -8,7 +8,7 @@ turns its raw output into a usable gate.
 
 **Status: real gate** (GH #95). Was parked/informational from the 2026-06-09
 POC until the SoC actually became multi-clock (GH epic #90). Full POC history:
-[`docs/verification/CDC_SNITCH_POC.md`](../../docs/verification/CDC_SNITCH_POC.md).
+Doc: tm:flow:cdc-snitch-poc.
 
 ## How it works
 

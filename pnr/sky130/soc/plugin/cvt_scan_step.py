@@ -4,7 +4,7 @@ LibreLane has no DFT step.  This module adds one, plus a ``Classic`` subclass th
 checkers, so the scan flops exist before floorplan, placement, CTS and routing see the design.  Nothing in the shared
 LibreLane install is edited; the plugin directory is put on ``PYTHONPATH`` by pnr/Makefile.
 
-Why a netlist step with OpenROAD 26Q2 (and not the flow's own OpenROAD): DFT_ARCHITECTURE.md 1.1/1.3.  The flow's
+Why a netlist step with OpenROAD 26Q2 (and not the flow's own OpenROAD): Doc: tm:ch:dft-architecture 1.1/1.3.  The flow's
 ``edf00dff`` OpenROAD has a defective stitcher (SET_B left open on negedge flops) and no ``-max_length`` splitting;
 26Q2 chooses the right scan flop and splits a clock domain into chains of at most ``-max_length`` cells.
 

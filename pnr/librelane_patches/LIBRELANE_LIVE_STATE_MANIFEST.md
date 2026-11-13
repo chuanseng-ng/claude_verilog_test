@@ -5,7 +5,7 @@ install at `~/Downloads/Github/librelane` (`LIBRELANE_DIR`, `pnr/Makefile:78`) c
 files as *uncommitted working-tree changes*, against only 7 archived per-topic diffs. Every ASAP7,
 Sky130 and FreePDK45 number this project has produced depends on that state.
 
-See `docs/LIBRELANE_PATCHING_EVALUATION.md` for why this was the precondition for any further
+See `Doc: tm:pd:librelane-patching` for why this was the precondition for any further
 patching.
 
 ## ⚠️ Why this directory exists instead of `memory/pd/patches/`
@@ -103,5 +103,5 @@ responsible for bead `xy6`** — every ASAP7 "0 DRC / 0 antenna" claim was vacuo
 swallowed routing failure and continued reporting clean. Those claims were withdrawn wholesale.
 
 Re-examining whether it is still needed is step 2 of the recommendation in
-`docs/LIBRELANE_PATCHING_EVALUATION.md`. Sky130 routing now converges genuinely (DRC 0 at iteration
+`Doc: tm:pd:librelane-patching`. Sky130 routing now converges genuinely (DRC 0 at iteration
 5), so it may be removable, or at minimum made to fail loudly.

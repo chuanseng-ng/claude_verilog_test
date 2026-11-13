@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mutation campaign for the crypto_accel scan-wipe (bead j41m.6, DFT_ARCHITECTURE.md sec.14.3).
+"""Mutation campaign for the crypto_accel scan-wipe (bead j41m.6, Doc: tm:ch:dft-architecture sec.14.3).
 
 Each mutant is a textual edit of rtl/periph/{crypto_accel,aes128_core,sha256_core}.sv written to a
 private copy of the rtl tree under OUT_DIR and fed to the very same `test_crypto` suite through

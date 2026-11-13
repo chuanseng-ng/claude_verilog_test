@@ -1,7 +1,7 @@
 # tools/dft - Stage 0 DFT experiments (bead j41m.1, GH #244)
 
 Throwaway-grade, reproducible. Outputs go to `/nobackup/claude_sim_build/dft_stage0/` (never into git).
-Findings and interpretation: `docs/design/DFT_ARCHITECTURE.md`. Paths below use the store paths seen on the
+Findings and interpretation: `Doc: tm:ch:dft-architecture`. Paths below use the store paths seen on the
 author's host; re-resolve them with `nix-shell` in the LibreLane checkout if they have been GC'd.
 
 | Binary | Path / how obtained |

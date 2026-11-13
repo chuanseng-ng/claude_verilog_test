@@ -18,7 +18,7 @@
 ## HONEST CAVEAT: the two clocks are outputs of ONE MMCM, so Vivado sees them as related (synchronous) clocks. The
 ## -datapath_only budgets therefore REPLACE the default related-clock setup check on these crossings, but the HOLD check
 ## between related clocks still runs; it is covered by the WHS figure in the build report. An independent-clock soak needs
-## a second oscillator (docs/FPGA_BOARD_SELECTION.md section 4).
+## a second oscillator (Doc: tm:dec:fpga-board-selection:4-second-clock-source-add-on).
 ## NOT TRANSLATED: DFT/scan constraints (tied off at the board top), the ASIC hard-macro boundary multicycles, clock
 ## uncertainty/latency model (Vivado derives it from the routed clock nets).
 

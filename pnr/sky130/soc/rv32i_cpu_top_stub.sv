@@ -82,13 +82,13 @@ module rv32i_cpu_top #(
     input  logic        ext_irq_i,
     input  logic        timer_irq_i,
 
-    // DFT test boundary (bead j41m.4, DFT_ARCHITECTURE.md 14.10)
+    // DFT test boundary (bead j41m.4, Doc: tm:ch:dft-architecture 14.10)
     input  logic        scan_mode_i,
     input  logic        scan_en_i,
     input  logic [1:0]  scan_in_i,
     output logic [1:0]  scan_out_o,
 
-    // MBIST boundary (bead c54a, DFT_ARCHITECTURE.md 16.7): 96 pins. The committed macro views
+    // MBIST boundary (bead c54a, Doc: tm:ch:dft-architecture 16.7): 96 pins. The committed macro views
     // (pnr/sky130/cpu/macro/rv32i_cpu_top.{lef,lib,nl.v.gz}) predate them; the SoC flow fails its macro pin
     // match until the CPU macro is re-hardened with pnr/sky130/cpu/pin_order.cfg + pin_template.def as
     // committed with this stub (soc_top MBIST_CPU = 1).

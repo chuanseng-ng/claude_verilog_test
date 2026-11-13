@@ -1,7 +1,7 @@
 # `hls/` — Bambu HLS flow (GH #119 PPA pilot)
 
 C++ → Verilog via **Bambu (PandA) 2024.10**, for the empirical arm of
-[`docs/CPP_TO_RTL_HLS_EVALUATION.md`](../docs/CPP_TO_RTL_HLS_EVALUATION.md): measure the QoR gap
+Doc: tm:dec:cpp-to-rtl-hls-evaluation: measure the QoR gap
 between `NL → C++ → HLS` and the project's hand-written RTL on already-signed-off blocks.
 
 This directory holds **inputs only** — C++ sources, testbenches, port-adapting shims, and the flag

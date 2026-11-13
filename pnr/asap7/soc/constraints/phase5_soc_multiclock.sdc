@@ -38,7 +38,7 @@
 # are preserved below (renumbered), with two substantive changes:
 #   (a) a second clock (cpu_clk) plus an asynchronous clock-group declaration
 #       between it and the existing clock (renamed sys_clk for symmetry with
-#       the async_axi_fifo.sv / apb_cdc_bridge.sv / docs/3PLL_CDC_EVALUATION.md
+#       the async_axi_fifo.sv / apb_cdc_bridge.sv / Doc: tm:dec:3pll-cdc
 #       naming convention — "cpu_clk" and "sys_clk" are the names already used
 #       in prose throughout this CDC epic);
 #   (b) three new sections (11-13, plus 12a added by the GH #95 fix below)

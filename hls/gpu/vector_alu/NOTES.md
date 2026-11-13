@@ -22,7 +22,7 @@ through identical ASAP7 runs.
 | Cycles / operation | 1 (combinational) | mean 14.35, range 8–38 | ×14–38 |
 | Undriven wires (`synthesis__check_error__count`) | **0** | 16 | — |
 
-Against the thresholds in `docs/CPP_TO_RTL_HLS_EVALUATION.md` (>10 % fmax or >20 %
+Against the thresholds in `Doc: tm:dec:cpp-to-rtl-hls-evaluation` (>10 % fmax or >20 %
 area/power = "regresses"), the HLS arm **regresses on every axis**, by margins several
 times the threshold.
 

@@ -3,7 +3,7 @@ jtag_driver.py -- JTAG TAP driver, reference model and edge logger (bead j41m.3,
 
 Shared by test_jtag_tap.py (module jtag_tap alone), test_dft_ctrl.py (dft_ctrl) and
 test_soc_jtag.py (soc_top via tb_soc_pll).  Everything here is written from
-docs/design/DFT_ARCHITECTURE.md section 15 (TAP rules 15.2, instruction map 15.3), NOT from the RTL,
+Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap (TAP rules 15.2, instruction map 15.3), NOT from the RTL,
 so the reference model is an independent second implementation of the spec.
 
 Pieces

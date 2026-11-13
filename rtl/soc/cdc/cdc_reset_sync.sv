@@ -26,7 +26,7 @@
 //
 // ── Scan bypass (DFT, beads claude_verilog_test-07n and j41m.2) ────────────
 // Two muxes, both selected by scanmode_i, make this reset fully owned by the
-// tester in scan mode (docs/design/DFT_ARCHITECTURE.md sec.4 items 3 and 7):
+// tester in scan mode (Doc: tm:ch:dft-architecture sec.4 items 3 and 7):
 //
 //  1. INPUT mux (07n, OpenTitan prim_rst_sync style): the async clear of the
 //     STAGES flops is `scanmode_i ? scan_rst_ni : rst_n_i`. Without it the

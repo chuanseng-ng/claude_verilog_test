@@ -1,7 +1,7 @@
 # tools/dft/atpg - DFT Stage 3 ATPG spike (bead j41m.15)
 
 Time-boxed open-tool ATPG spike: Quaigh 0.0.6 on a ladder `npu -> crypto -> dma -> fabric`. Findings, tables and caveats:
-`docs/design/DFT_ARCHITECTURE.md` section 18. Heavy outputs go to `/nobackup/claude_sim_build/j41m15/` (never into git).
+`Doc: tm:ch:dft-architecture` section 18. Heavy outputs go to `/nobackup/claude_sim_build/j41m15/` (never into git).
 
 Box (user decision 2026-10-28): about 5 working days, 12 GB RAM and 24 h wall per run, stop at the first rung that breaks a limit.
 `run_capped.sh` enforces it (`systemd-run --user --scope -p MemoryMax=12G -p MemorySwapMax=0` + `timeout 24h` + `/usr/bin/time -v`)

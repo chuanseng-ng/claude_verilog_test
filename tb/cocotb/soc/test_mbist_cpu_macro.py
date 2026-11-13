@@ -1,5 +1,5 @@
 """
-test_mbist_cpu_macro.py -- bead claude_verilog_test-c54a (DFT Stage 4, DFT_ARCHITECTURE.md 16.7): MBIST on the ten
+test_mbist_cpu_macro.py -- bead claude_verilog_test-c54a (DFT Stage 4, Doc: tm:ch:dft-architecture 16.7): MBIST on the ten
 cache SRAMs INSIDE the CPU hard macro, driven end to end through the JTAG TAP.
 
 DUT: tb_mbist_cpu_macro = dft_ctrl + soc_mbist (CPU-domain control-word crossing and status return) + the REAL

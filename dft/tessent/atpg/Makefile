@@ -1,5 +1,5 @@
 # Siemens Tessent scan insertion + ATPG evaluation flow for the Sky130 SoC fabric (DFT Stage 2 evaluation).
-# See docs/design/TESSENT_ATPG_FLOW.md.  Evaluation only: nothing here is back-annotated into PD.
+# See Doc: tm:flow:tessent-atpg.  Evaluation only: nothing here is back-annotated into PD.
 #
 #   make synth    sv2v netlist -> sky130_fd_sc_hd gate netlist (yosys)
 #   make scan     Tessent scan insertion + scan DRC
@@ -90,4 +90,3 @@ atpg-trans: $(SCAN_NET)
 
 clean:
 	rm -rf $(BUILD)
-

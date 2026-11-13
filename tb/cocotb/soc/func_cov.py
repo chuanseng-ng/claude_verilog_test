@@ -5,7 +5,7 @@ The cocotb flow had no covergroup mechanism; ``tools/verif/coverage_report.py`` 
 *code* coverage only.  This module is the thin glue over ``cocotb-coverage`` (PyPI, pinned in
 ``requirements.txt``): it builds coverpoints/crosses idempotently, and writes one YAML file per
 simulator process that ``tools/verif/functional_coverage_report.py`` merges and gates.
-Evaluation and how a peripheral adds a model: ``docs/verification/FUNCTIONAL_COVERAGE.md``.
+Evaluation and how a peripheral adds a model: ``Doc: tm:flow:functional-coverage``.
 
 Design rules
 ------------

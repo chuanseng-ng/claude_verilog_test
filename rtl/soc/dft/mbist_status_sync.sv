@@ -1,6 +1,6 @@
 // mbist_status_sync.sv
 // DFT Stage 4 (bead claude_verilog_test-j41m.14, GH #244): MBIST status block, destination domain
-// -> TCK. Specification: docs/design/DFT_ARCHITECTURE.md section 16.5 ("Status return crossing").
+// -> TCK. Specification: Doc: tm:ch:dft-architecture:165-tap-registers-control-word-crossing-j41m10-folded-in ("Status return crossing").
 //
 // Every status bit crosses through its OWN 2-FF cdc_sync (WIDTH = 1 per instance: the primitive's scope
 // note forbids multi-bit buses, and the bits carry no word coherency requirement of their own). The

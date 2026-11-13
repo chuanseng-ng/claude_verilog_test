@@ -3,7 +3,7 @@
 //
 // Glitch-free ENABLE-BEFORE-SWITCH clock selector between the TAP's scan clock
 // (A, a gated TCK) and the tester's pin test clock (B, scan_clk_i). It resolves
-// open question Q-CLK of docs/design/DFT_ARCHITECTURE.md section 15.5: the plain
+// open question Q-CLK of Doc: tm:ch:dft-architecture:155-clockreset-treatment-and-the-declared-crossings: the plain
 // 2:1 mux `serial ? tck_scan_gated : scan_clk_i` is replaced by this module.
 //
 //   clk_o = (clk_a_i & en_a_q & tck_i) | (clk_b_i & en_b_q)
@@ -118,7 +118,7 @@
 //
 // Combinational-clock note: the output OR/AND is a clock-path structure.
 // Synthesis and CTS see two clock roots into one cell and STA sees the enable
-// latches as clock-gating checks (not run in this stage, see DFT_ARCHITECTURE.md
+// latches as clock-gating checks (not run in this stage, see Doc: tm:ch:dft-architecture
 // section 15). The two 2-FF synchronisers carry the magic_cdc attribute through
 // cdc_sync. The latches are written with always_latch.
 //

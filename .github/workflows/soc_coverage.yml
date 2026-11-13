@@ -5,7 +5,7 @@ name: SoC Coverage
 # Runs the entire soc_all_ci regression built with Verilator --coverage-line --coverage-toggle,
 # merges every per-simulation .dat, and renders a per-module table with
 # tools/verif/coverage_report.py.  Method, run command, per-module table, triage and the gating
-# decision: docs/verification/SOC_COVERAGE_REPORT.md.
+# decision: Doc: tm:flow:soc-coverage-report.
 #
 # Sharding (bead 9ayu.1).  This used to be ONE serial job (74 min: 62 min of instrumented SoC
 # suites + 11 min of CPU/cache/GPU suites).  It is now a fan-out that finishes in the time of its
@@ -59,7 +59,7 @@ name: SoC Coverage
 # control-signal toggle gate stays off those three trees.  The gate step runs AFTER the merge
 # steps and the summary / upload steps are `if: always()`, so a red gate or a red suite still
 # publishes the report and the data.  Definition of a control signal, floors, how to add a waiver
-# or raise a ratchet: SOC_COVERAGE_REPORT.md.
+# or raise a ratchet: Doc: tm:flow:soc-coverage-report.
 #
 # The Verilator pin is the same contract as cocotb.yml: nix-installed (flake-pinned) Verilator
 # compiles the sim, cocotb runs on the setup-python interpreter.  `nix profile install

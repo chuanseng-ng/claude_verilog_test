@@ -131,7 +131,7 @@ module sram_controller
     output logic            s_rvalid,
     input  logic            s_rready,
 
-    // ── MBIST (DFT Stage 4, DFT_ARCHITECTURE.md section 16): collar select/bus in, macro read data out.
+    // ── MBIST (DFT Stage 4, Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing): collar select/bus in, macro read data out.
     //    Active only in the SRAM_SKY130 arm; every other arm ignores the inputs and drives 0.
     input  logic            mb_en_i,
     input  logic            mb_ce_i,
@@ -312,7 +312,7 @@ module sram_controller
     // off the address-phase one-hot decode) — confirmed still the #1
     // post-route setup-violator class on 26Q2 RUN_2026-09-17_09-01-42
     // (16,400 violators, worst -1050.16 ps). See
-    // docs/design/RVB_FANOUT_FIX_PROPOSAL.md for the original root-cause
+    // Doc: tm:pd:rvb-fanout-fix for the original root-cause
     // analysis this second iteration builds on.
     //
     //   Stage 1 (input register slice): registers the accepted W beat's

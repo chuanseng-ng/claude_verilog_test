@@ -47,7 +47,7 @@
 //   core_rst_n  — gated reset: rst_n_i & pll_locked
 //   pll_locked_o — raw PLL lock flag (exported to soc_top port)
 //
-// DFT (bead claude_verilog_test-j41m.2, docs/design/DFT_ARCHITECTURE.md sec.4
+// DFT (bead claude_verilog_test-j41m.2, Doc: tm:ch:dft-architecture sec.4
 // items 7 and 8): scan_mode_i / scan_rst_ni / scan_clk_i make every flop in
 // this module, and the clock and reset it delivers, controllable from ports in
 // test mode.
@@ -223,4 +223,3 @@ module pll_subsystem #(
     );
 
 endmodule : pll_subsystem
-

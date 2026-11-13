@@ -3,7 +3,7 @@
 //
 // IEEE 1149.1-style TAP controller, instruction register and test-data
 // registers, entirely in the TCK domain. Specification:
-// docs/design/DFT_ARCHITECTURE.md section 15 (instruction map 15.3, output
+// Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap (instruction map 15.3, output
 // timing 15.2, deviations 15.6). Compliant minus the boundary register: EXTEST
 // and SAMPLE/PRELOAD are not implemented and decode to BYPASS (no pad ring).
 //
@@ -14,7 +14,7 @@
 //   4'h4 SCAN         1 bit stub; selecting it is the ONLY way into TAP scan mode
 //   4'h5 SCAN_RST     1 bit level, update register, reset 0; effective in SCAN only
 //   4'hF BYPASS       1 bit
-//   4'h6 MBIST_CTRL   29 bit update register (docs/design/DFT_ARCHITECTURE.md section 16.5), reset 0;
+//   4'h6 MBIST_CTRL   29 bit update register (Doc: tm:ch:dft-architecture:165-tap-registers-control-word-crossing-j41m10-folded-in), reset 0;
 //                    Capture-DR reads it back. Update-DR (and entry to Test-Logic-Reset, with the default
 //                    word 0) raises mbist_wr_o for exactly one TCK rising edge: the write strobe of the
 //                    control-word crossing (mbist_xing).

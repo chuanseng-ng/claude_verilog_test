@@ -40,7 +40,7 @@
 //   * NO INTEGRITY AND NO DECRYPT DATAPATH. ECB leaks plaintext patterns block-for-block; CTR is
 //     unauthenticated and trivially malleable (flipping a ciphertext bit flips the plaintext bit).
 //     There is no MAC, no AEAD mode and no AES decrypt -- CTR covers decryption instead.
-//   * SCAN (docs/design/DFT_ARCHITECTURE.md sec.7, bead j41m.2). key_q and the AES core's rk_q (256
+//   * SCAN (Doc: tm:ch:dft-architecture sec.7, bead j41m.2). key_q and the AES core's rk_q (256
 //     flops) are EXCLUDED from scan chains (project decision 3), and their READ side is forced to 0
 //     while scan_mode_i = 1 (key_eff_w here, rk_eff_w in aes128_core): without that mask the
 //     exclusion alone still leaks the key, because shifting in a chosen state, pulsing one capture
@@ -48,7 +48,7 @@
 //     (the AES state s_q, msg_q, the SHA registers, the bank words holding DOUT/DIGEST/IV) is
 //     scanned, and s_q holds block ^ key (the whitening value, reloaded every idle cycle) and later
 //     round states from a PRIOR functional operation.
-//   * SCAN WIPE (bead j41m.6, DFT_ARCHITECTURE.md sec.14.3). Hardware zeroizes the block on every
+//   * SCAN WIPE (bead j41m.6, Doc: tm:ch:dft-architecture sec.14.3). Hardware zeroizes the block on every
 //     scan_mode_i EDGE, rising (entry) AND falling (exit): wipe_w, one cycle, clears key_q,
 //     key_seen_q (so key_valid drops), msg_q, ctr_op_q, the AES core (s_q, rk_q, rcon_q, round_q,
 //     state_q), the SHA core (w_q, a_q..h_q, hin_q, t_q, state_q) and, through the register bank's
@@ -71,7 +71,7 @@
 //     clearing edge has happened) and soc_top gates the scan enable with it: scan_en cannot reach
 //     any scan flop before the wipe is applied, whatever the tester does. The tester still has to
 //     supply the 3 clock edges the wipe needs (with scan_en held off by the gate they are capture
-//     edges) -- DFT_ARCHITECTURE.md sec.14.14. Residual limit: scan_out shows the Q of each
+//     edges) -- Doc: tm:ch:dft-architecture sec.14.14. Residual limit: scan_out shows the Q of each
 //     chain's last flop before any edge (a bit of residue if that flop is a crypto flop).
 //     While wipe_w is high a start is turned into the hang-free illegal path, an in-flight
 //     operation is aborted to done (no data), and KEY / DIN writes are dropped (a KEY write latches
@@ -494,7 +494,7 @@ module crypto_accel
 
     assign busy_q = (state_q != C_IDLE);
 
-    // DFT key mask (docs/design/DFT_ARCHITECTURE.md sec.7.3): 128 AND gates. Must survive synthesis
+    // DFT key mask (Doc: tm:ch:dft-architecture sec.7.3): 128 AND gates. Must survive synthesis
     // as logic on the key path -- it is the whole point of excluding key_q from scan.
     assign key_eff_w = key_q & {128{~scan_mode_i}};
 

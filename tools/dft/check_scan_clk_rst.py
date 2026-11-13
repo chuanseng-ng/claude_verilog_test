@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gate: in scan mode every flop is clocked from a port and every async reset is tester-controlled.
 
-Bead claude_verilog_test-j41m.2 (DFT Stage 1a), docs/design/DFT_ARCHITECTURE.md section 14.
+Bead claude_verilog_test-j41m.2 (DFT Stage 1a), Doc: tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl.
 
 usage: check_scan_clk_rst.py design.json [--top soc_top] [--scan-mode scan_mode_i] [--expect-gates N]
                              [--models cells.v ...]

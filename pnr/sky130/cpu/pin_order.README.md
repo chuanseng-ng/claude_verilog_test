@@ -50,7 +50,7 @@ ALSO repositions both macros away from the die's (20,20) corner (previously
 only 20 µm margin on south/west) to give every edge genuine escape room —
 see `pnr/sky130/soc/macro_placement.cfg`.
 
-## v3: DFT scan boundary (bead j41m.4, DFT_ARCHITECTURE.md 14.10)
+## v3: DFT scan boundary (bead j41m.4, Doc: tm:ch:dft-architecture 14.10)
 
 Six pins are added, all on the **N edge**, appended after `commit_valid_o` so every existing N-edge
 entry keeps its position in the list: `scan_mode_i`, `scan_en_i`, `scan_in_i[1:0]`, `scan_out_o[1:0]`
@@ -105,7 +105,7 @@ sky130-cpu-pin-lock-check` reports the new pin as "pending" and still passes. Af
 
 The same exposure exists on the ASAP7 CPU and GPU macros (`pnr/asap7/`); the lock is not applied there.
 
-## v5: MBIST boundary (bead c54a, DFT_ARCHITECTURE.md 16.7)
+## v5: MBIST boundary (bead c54a, Doc: tm:ch:dft-architecture 16.7)
 
 96 pins are added: `mbist_run_i` and `mbist_cfg_i[25:0]` (27 inputs) on the **N** edge, `mbist_status_o[68:0]`
 (69 outputs) on the **S** edge. N and S were chosen because they are the least dense edges (101 and 97 pins over

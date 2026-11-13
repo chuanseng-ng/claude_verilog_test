@@ -3,7 +3,7 @@ test_soc_scan_en_gate.py -- bead claude_verilog_test-j41m.17 (epic j41m, GH #244
 
 DUT: tb_soc_pll -> soc_top (PLL_IMPL=STUB), the same wrapper test_soc_dft_scan / test_soc_jtag use.
 
-THE PROPERTY UNDER TEST (docs/design/DFT_ARCHITECTURE.md 14.14)
+THE PROPERTY UNDER TEST (Doc: tm:ch:dft-architecture 14.14)
   crypto_accel zeroizes its key and state on every scan_mode edge through functional D logic, and a
   scan mux sits AFTER that logic, so an edge with scan_en = 1 would load scan_in over the cleared
   value. soc_top therefore gates the shift enable:

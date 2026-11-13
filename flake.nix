@@ -37,7 +37,7 @@
       # derivation worth maintaining here), so it is unpacked and run inside an FHS
       # sandbox. The AppImage is pinned by sha256, which is what makes the
       # "pin the HLS release before measuring" requirement of
-      # docs/CPP_TO_RTL_HLS_EVALUATION.md actually enforceable — nix refuses to build
+      # Doc: tm:dec:cpp-to-rtl-hls-evaluation actually enforceable — nix refuses to build
       # if the upstream artefact ever changes under that URL.
       #
       # Version: PandA 2024.10, revision c2ba6936ca2ed63137095fea0b630a1c66e20e63-main.

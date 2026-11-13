@@ -9,7 +9,7 @@
 //
 // Why not soc_top: soc_top's core_clk reaches the macros through dft_clk_mux, whose select is driven by
 // dft_ctrl flops (TAP scan_mode) that Tessent cannot constrain from a primary input (DFT_C1-1 "memory clock
-// not properly sourced", see docs/design/TESSENT_MBIST_EVALUATION.md section 5).
+// not properly sourced", see Doc: tm:dec:tessent-mbist-evaluation:5-simulation-and-fault-injection-results-m).
 `timescale 1ns/1ps
 module mbist_eval_top (
     input  logic        clk,

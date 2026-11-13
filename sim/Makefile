@@ -520,7 +520,7 @@ lint-verible:
 # canonicalizes domains (tools/cdc/cdc_config.yml, mirroring
 # pnr/constraints/phase5_soc_multiclock.sdc) and applies explicit justified
 # waivers; its exit status is the gate. `make cdc CDC_STRICT=1` propagates it.
-# Full writeup: docs/verification/CDC_SNITCH_POC.md
+# Full writeup: Doc: tm:flow:cdc-snitch-poc
 CDC_DIR     := $(PROJ_ROOT)/sim/build/cdc
 CDC_STRICT  ?= 0
 # Same file list as lint_soc. axi_lite_register_bank.sv used to be appended here

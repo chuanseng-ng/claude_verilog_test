@@ -223,7 +223,7 @@ module axi_lite_interconnect #(
     assign ar_hs = m_axil_arvalid && m_axil_arready;
     assign r_hs  = m_axil_rvalid  && m_axil_rready;
 
-    // bead rvb (fan-out fix, Path B / RVB_FANOUT_FIX_PROPOSAL.md §A.2/§B.1
+    // bead rvb (fan-out fix, Path B / Doc: tm:pd:rvb-fanout-fix §A.2/§B.1
     // option B2): the ring's read-data mux output used to drive
     // m_axil_rdata/rvalid/rresp straight through combinationally (no
     // register between this rsel-based mux and the GPU's own unregistered

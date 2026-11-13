@@ -67,7 +67,7 @@ module npu_weight_mem #(
     input  logic [9:0]  rd_addr_i,
     output logic [31:0] rd_data_o,
 
-    // MBIST (DFT Stage 4, DFT_ARCHITECTURE.md section 16): active only in the SRAM_SKY130 arm.
+    // MBIST (DFT Stage 4, Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing): active only in the SRAM_SKY130 arm.
     input  logic        mb_en_i,
     input  logic        mb_ce_i,
     input  logic        mb_we_i,

@@ -105,7 +105,7 @@ jobs:
       # Bead lvdk. BLOCKING: strict pyslang elaboration of soc_top/rv32i_cpu_top/gpu_top (6 arms).
       # Catches what Verilator and sv2v accept but VCS and Xcelium reject, notably use-before-declare.
       # Self-checking: built-in controls must give their expected verdicts or it exits 2. Exit 1 =
-      # illegal RTL. tb/tests/test_check_elab_strict.py repeats it under pytest. See docs/XEZIM_EVALUATION.md s5.
+      # illegal RTL. tb/tests/test_check_elab_strict.py repeats it under pytest. See Doc: tm:dec:xezim s5.
       - name: Strict elaboration gate (pyslang)
         run: python tools/verif/check_elab_strict.py
 

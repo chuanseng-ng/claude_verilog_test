@@ -2,7 +2,7 @@
 test_dft_ctrl.py -- bead claude_verilog_test-j41m.3 (DFT Stage 1b), suite for dft_ctrl.
 
 DUT: tb_dft_ctrl -> dft_ctrl (jtag_tap + the unchanged 1a pin leg dft_ctrl_ports + TCK scan-clock
-gate + combiner, docs/design/DFT_ARCHITECTURE.md section 15.4).  The wrapper also instantiates the
+gate + combiner, Doc: tm:ch:dft-architecture:154-what-the-tap-drives-and-how-it-combines-with-the-1a-pins).  The wrapper also instantiates the
 Stage 1a dft_ctrl_ports on the same four pins (outputs ref_*): the golden
 "TAP idle == 1a" reference.
 

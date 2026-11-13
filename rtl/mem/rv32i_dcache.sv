@@ -43,12 +43,12 @@ module rv32i_dcache (
 
     // DFT (bead j41m.4): forces the SRAM clock gates open in test mode. Used by the
     // `SRAM_ASAP7 arm only (the other arms instantiate no clock gate); quasi-static,
-    // tie 1'b0 when not testing. See docs/design/DFT_ARCHITECTURE.md section 14.10.
+    // tie 1'b0 when not testing. See Doc: tm:ch:dft-architecture section 14.10.
     /* verilator lint_off UNUSEDSIGNAL */
     input  logic        test_en_i,
     /* verilator lint_on  UNUSEDSIGNAL */
 
-    // MBIST (bead claude_verilog_test-c54a, DFT_ARCHITECTURE.md 16.7): the CPU-macro controller's broadcast
+    // MBIST (bead claude_verilog_test-c54a, Doc: tm:ch:dft-architecture 16.7): the CPU-macro controller's broadcast
     // bus and expected-data tag in, one registered mismatch strobe per macro out ({data[3], data[2], data[1],
     // data[0], tag}). Each mem_collar compares its own macro's port-0 read data locally (LOCAL_CMP), so the
     // 32-bit read data of the five macros never leaves the collars. Active only in the SRAM_SKY130 arm
