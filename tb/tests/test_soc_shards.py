@@ -254,6 +254,19 @@ needs_make = pytest.mark.skipif(
 )
 
 
+def _make_output(r: subprocess.CompletedProcess[str]) -> str:
+    """Both streams of a make run, for an assertion message."""
+    return (
+        "make stdout:"
+        + chr(10)
+        + r.stdout[-4000:]
+        + chr(10)
+        + "make stderr:"
+        + chr(10)
+        + r.stderr[-4000:]
+    )
+
+
 def _make(args: list[str], root: Path) -> subprocess.CompletedProcess[str]:
     # The Makefile reads SOC_SHARD_WEIGHTS from the environment too; a CI job that exports it for
     # its real run must not change which weights these tests plan with.
@@ -297,7 +310,8 @@ def test_soc_ci_shard_dry_run_selects_by_index(
         ran = [
             ln for ln in r.stdout.splitlines() if ln and ln in {s.replace(":", " ") for s in suites}
         ]
-        assert ran == [s.replace(":", " ") for s in ss.assign(suites, NSHARDS, weights)[k]]
+        want = [s.replace(":", " ") for s in ss.assign(suites, NSHARDS, weights)[k]]
+        assert ran == want, _make_output(r)
 
 
 @needs_make
@@ -446,4 +460,5 @@ def test_soc_ci_shard_honours_a_weights_override(
     assert r.returncode == 0, r.stderr
     known = {s.replace(":", " ") for s in suites}
     ran = [ln for ln in r.stdout.splitlines() if ln in known]
-    assert ran == [s.replace(":", " ") for s in ss.assign(suites, COCOTB_NSHARDS, plain_weights)[k]]
+    want = [s.replace(":", " ") for s in ss.assign(suites, COCOTB_NSHARDS, plain_weights)[k]]
+    assert ran == want, _make_output(r)
