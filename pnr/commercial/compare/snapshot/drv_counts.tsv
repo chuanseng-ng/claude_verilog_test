@@ -80,6 +80,15 @@ innovusb9	min_ff	0	0	0	204
 innovusb9	max_tt	0	0	21	204
 innovusb9	max_ss	0	0	32	204
 innovusb9	max_ff	0	0	17	204
+innovusb10	nom_tt	0	0	7	204
+innovusb10	nom_ss	0	0	28	204
+innovusb10	nom_ff	0	0	2	204
+innovusb10	min_tt	0	0	3	204
+innovusb10	min_ss	0	0	16	204
+innovusb10	min_ff	0	0	0	204
+innovusb10	max_tt	0	0	8	204
+innovusb10	max_ss	0	0	30	204
+innovusb10	max_ff	0	0	4	204
 icc2	nom_tt	162	10	866	181
 icc2	nom_ss	162	17	39563	181
 icc2	nom_ff	162	3	110	181

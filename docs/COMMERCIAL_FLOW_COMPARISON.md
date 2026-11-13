@@ -515,26 +515,26 @@ The nom qrcTechFile comes from the 2026-10 Techgen cell-level run plus `Techgen 
 **Innovus** (b6 -> b7 -> b8 -> b9)
 
 <!-- GEN-TABLE innovus -->
-| metric | Innovus b6 | Innovus b7 | Innovus b8 | Innovus b9 |
-|---|---|---|---|---|
-| judge shared SDC: worst setup WNS (ns) / setup violators, 9 corners | -3.028 / 227 | -3.028 / 227 | -3.026 / 202 | -2.464 / 202 |
-| judge shared SDC: worst hold WNS (ns) / hold violators, 9 corners | -3.549 / 3873 | -3.549 / 3873 | -3.028 / 3118 | -3.030 / 3127 |
-| judge per-view iolat SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.435 / 891 | -2.435 / 891 | -1.777 / 96 | -1.641 / 96 |
-| judge per-view iolat SDC: worst hold WNS (ns) / hold violators, 9 corners | 0.190 / 0 | 0.190 / 0 | 0.175 / 0 | 0.175 / 0 |
-| judge own SDC: worst setup WNS (ns) / setup violators, 9 corners | -0.050 / 4 | -0.050 / 4 | -0.112 / 2 | 0.026 / 0 |
-| judge own SDC: worst hold WNS (ns) / hold violators, 9 corners | -0.254 / 4 | -0.254 / 4 | -0.010 / 1 | -0.010 / 1 |
-| judge reg-to-reg setup / hold violators, 9 corners (shared SDC) | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
-| judge SRAM dout0 max-cap pins, nom_tt / worst corner | 160 / 161 | 160 / 160 | 0 / 0 | 0 / 0 |
-| judge max-cap pins other than dout0, worst corner | 0 | 0 | 0 | 0 |
-| judge max-tran pins, nom_tt / worst corner | 7 / 29 | 7 / 29 | 7 / 33 | 7 / 32 |
-| judge PrimePower nom_tt (mW) | 76.20 | 76.20 | 74.50 | 74.50 |
-| native routed DRC / native antenna (tool rule) | 0 / 0 | 0 / 0 | - / 0 | - / 0 |
-| signoff KLayout DRC items | 0 | 0 | 0 | 0 |
-| signoff deck antenna nets | 2 | 0 | 0 | 0 |
-| signoff Netgen LVS (GDS, as delivered) | Top level cell failed pin matching | Top level cell failed pin matching | Top level cell failed pin matching | Top level cell failed pin matching |
-| signoff LEC (positive / negative controls) | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught |
-| signoff Magic (std cells from GDS): inside SRAM / straddle / outside | 28315303 / 0 / 0 | 28315303 / 0 / 0 | 28317685 / 0 / 0 | 28317685 / 0 / 0 |
-| derived logical cells | 45895 | 45898 | 45168 | 45181 |
+| metric | Innovus b6 | Innovus b7 | Innovus b8 | Innovus b9 | Innovus b10 |
+|---|---|---|---|---|---|
+| judge shared SDC: worst setup WNS (ns) / setup violators, 9 corners | -3.028 / 227 | -3.028 / 227 | -3.026 / 202 | -2.464 / 202 | -2.464 / 202 |
+| judge shared SDC: worst hold WNS (ns) / hold violators, 9 corners | -3.549 / 3873 | -3.549 / 3873 | -3.028 / 3118 | -3.030 / 3127 | -3.030 / 3127 |
+| judge per-view iolat SDC: worst setup WNS (ns) / setup violators, 9 corners | -2.435 / 891 | -2.435 / 891 | -1.777 / 96 | -1.641 / 96 | -1.641 / 96 |
+| judge per-view iolat SDC: worst hold WNS (ns) / hold violators, 9 corners | 0.190 / 0 | 0.190 / 0 | 0.175 / 0 | 0.175 / 0 | 0.175 / 0 |
+| judge own SDC: worst setup WNS (ns) / setup violators, 9 corners | -0.050 / 4 | -0.050 / 4 | -0.112 / 2 | 0.026 / 0 | 0.026 / 0 |
+| judge own SDC: worst hold WNS (ns) / hold violators, 9 corners | -0.254 / 4 | -0.254 / 4 | -0.010 / 1 | -0.010 / 1 | -0.010 / 1 |
+| judge reg-to-reg setup / hold violators, 9 corners (shared SDC) | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| judge SRAM dout0 max-cap pins, nom_tt / worst corner | 160 / 161 | 160 / 160 | 0 / 0 | 0 / 0 | 0 / 0 |
+| judge max-cap pins other than dout0, worst corner | 0 | 0 | 0 | 0 | 0 |
+| judge max-tran pins, nom_tt / worst corner | 7 / 29 | 7 / 29 | 7 / 33 | 7 / 32 | 7 / 30 |
+| judge PrimePower nom_tt (mW) | 76.20 | 76.20 | 74.50 | 74.50 | 74.50 |
+| native routed DRC / native antenna (tool rule) | 0 / 0 | 0 / 0 | - / 0 | - / 0 | - / 0 |
+| signoff KLayout DRC items | 0 | 0 | 0 | 0 | 0 |
+| signoff deck antenna nets | 2 | 0 | 0 | 0 | 0 |
+| signoff Netgen LVS (GDS, as delivered) | Top level cell failed pin matching | Top level cell failed pin matching | Top level cell failed pin matching | Top level cell failed pin matching | Top level cell failed pin matching |
+| signoff LEC (positive / negative controls) | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught |
+| signoff Magic (std cells from GDS): inside SRAM / straddle / outside | 28315303 / 0 / 0 | 28315303 / 0 / 0 | 28317685 / 0 / 0 | 28317685 / 0 / 0 | 28317685 / 0 / 0 |
+| derived logical cells | 45895 | 45898 | 45168 | 45181 | 45184 |
 <!-- /GEN-TABLE -->
 
 Measured read-path cost of the dout0 buffers (b6 -> b7, ICC2, the 4 buffered dcache pins, PrimeTime base SDC, worst setup slack through the pin, `diag_dout_paths.tcl`,
@@ -672,7 +672,7 @@ The user decisions recorded here are the only waivers or acceptances; nothing el
 Better than b6 on the targets: SRAM dout0 max-cap pins 160 -> 0, deck antenna 2 -> 0, native antenna 2 -> 0, own-SDC max_ss setup -0.050 -> +0.026 ns (4 -> 0 violators) and max_ss hold -0.254 -> +0.265 ns (3 -> 0), per-view iolat setup violators 891 -> 96 and fixed-latency iolat setup violators at nom_ss 4 -> 0, native setup WNS -0.683 -> +0.071 ns (30 -> 0 violators), PrimePower 76.2 -> 74.5 mW.
 **Decision for the user:** the max-tran row (4 counts) and the small MET margin decreases are the only things between b9 and adoption; neither is buffer cost. Keeping b6 follows the rule as written. A max-tran root-cause round like the ICC2 b9 one (item 12) has not been done for Innovus.
 
-**Innovus b10: max-transition root-cause round (2026-11-13, IN PROGRESS: ECO built and checked natively, verification chain running under `signoff/b10_master.sh`; no judge number for b10 exists yet).**
+**Innovus b10: max-transition root-cause round (2026-11-13; built, fully verified and judged; the adoption rule is NOT met on max-transition, `FINAL_GEN_INN` stays b6 until the user decides, see the result block at the end of this paragraph group).**
 User sign-offs of 2026-11-13 recorded for this round (the only acceptances; nothing else is implied):
 (1) root-cause and fix the Innovus max-transition regression in a b10 ECO, the way the ICC2 port max-cap was root-caused in b9 (cell moves rather than added buffers where the geometry allows), then re-judge;
 (2) the small setup and hold slack decreases of the I-cache flip, all still MET, are accepted as measured placement cost of the flip (7 setup rows down 5 to 23 ps, each with at least +2.8 ns of slack, and 18 hold rows down 6 to 27 ps), as for ICC2;
@@ -690,7 +690,40 @@ the adoption rule for Innovus b10 is: adopt (`FINAL_GEN_INN = "b10"`) if max-tra
 *ECO (`impl/innovus/scripts/10m_eco.tcl`, run `runs/b10_innovus`, from the b9 pre-fill database `09_eco`, b9 untouched; no `optDesign`, CTS and all earlier ECO cells `dont_touch`):* three `buf_6` repeaters, one per scattered net, each placed in the SRAM gap column near the middle of the ROUTED path and loaded with the far loads only
 (`B10N1` at (1260, 900) um takes the 9 `a22o` pins; `u_core/B10N2` at (1900, 850) the 4 far pins of `n_12617`; `u_core/B10N3` at (1950, 620) the 2 far loads of `n_12583`); +3 instances of 113,427 (+0.003 %). A first placement at the load centroid (attempt B, `reports/attemptB_centroid`) kept the first segment as long as before (native sink slew at the repeater input 0.35 to 0.37 ns, no gain); the final placement gives 0.25 to 0.30 ns at the repeater inputs (b9: 0.37 to 0.38 at the old sinks, native av_ss) and cuts the drivers' own slew from 0.31 to 0.38 to 0.23 to 0.29 ns.
 Native result of the ECO round: setup WNS +0.071 ns and hold WNS +0.096 ns (both identical to b9), `verify_drc` 24 (the accepted LEF-OBS class, unchanged), process antenna 0, deck antenna on the pre-fill DEF 0 nets / 0 pins (`drclvs/reports/innovus_b10pre_antenna.rpt`).
-*Expectation (inference, from the b9 violator lists, not a measurement):* removing the 14 pins of the three nets would leave nom_ss 11 (b6 14), max_tt 8 (10), max_ss 13 (29), max_ff 4 (8). The judge numbers decide; they are not in yet.
+*Expectation recorded before the judge ran (inference, from the b9 violator lists):* removing the 14 pins of the three nets would leave nom_ss 11 (b6 14), max_tt 8 (10), max_ss 13 (29), max_ff 4 (8). **The measurement does not confirm it at the ss corners (see below).**
+
+**Innovus b10 result (2026-11-13, measured; PrimeTime judge, shared SDC, pin counts of `report_constraint -all_violators`, `drv_counts.tsv`).**
+Verification chain on the b10 layout: Netgen LVS unchanged from b6 / b9 (`Top level cell failed pin matching` on the same 3 `assign` pairs, 45399 devices and 46403 nets on both sides), KLayout DRC 0, deck antenna 0 nets / 0 pins, native antenna 0, Conformal LEC 4/4 equivalent with 4/4 negative controls caught, Magic std-cell-GDS 28,317,685 items, 0 straddling, 0 outside the SRAMs (identical to b9),
+LEF-OBS evidence for the 24 native spacing items: 24 of 24 markers have no GDS met3 touching the marker box (identical to b9), native setup +0.071 / hold +0.096 ns, `verify_drc` 24.
+Max-transition pins at the nine corners (b6 / b9 / b10): nom_tt 7 / 7 / 7, **nom_ss 14 / 24 / 28**, nom_ff 4 / 2 / 2, min_tt 5 / 3 / 3, **min_ss 11 / 11 / 16**, min_ff 4 / 0 / 0, max_tt 10 / 21 / 8, **max_ss 29 / 32 / 30**, max_ff 8 / 17 / 4; Innovus-native max-tran count 41 / 12 / 15.
+The ECO fixed the corners it was aimed at in the PrimeTime judge where they were worst (max_tt 21 -> 8, max_ff 17 -> 4, both now better than b6), but at the ss corners it did not: the three repeater outputs and the loads they were meant to relieve still violate (nom_ss: `B10N1/X` 0.529 ns, the 9 `a22o` `A2` pins 0.534 ns, `u_core/B10N2/X` 0.650 ns against the 0.5 ns limit), so the 14 pins of the three nets were not removed at nom_ss / min_ss / max_ss, and the new `buf_6` outputs add pins of their own.
+The unchanged violators are the same classes as in b9: the three `apb_prdata_o` port nets (3.2 to 3.6 mm from the last driver to the port), the clock input net (`clk_i`, `CTS_ccl_buf_00269/A`, `B6REP_88`), and the SRAM-gap-straddling nets.
+Rule check (`regress_check.py innovus b10`, 28 worse, 113 better, 174 equal): max-tran is worse than b6 at **nom_ss 14 -> 28, min_ss 11 -> 16, max_ss 29 -> 30** (the rule needs no worse than b6 at every corner), and worse than b9 at nom_ss 24 -> 28, min_ss 11 -> 16 and native 12 -> 15 (`regress_check.py innovus b10 b9`: 3 worse, 3 better, 309 equal).
+The remaining 25 rows are the setup / hold slack decreases of the flip that the user accepted on 2026-11-13 (all MET, identical to b9 to within 2 ps except the max-tran rows above).
+So the adoption rule is not met, b10 is not adopted by it, `FINAL_GEN_INN` stays `"b6"`, and the decision on the remaining Innovus max-tran count is the user's (item 13); nothing here is a waiver.
+
+*Innovus b10 vs b6*
+
+<!-- GEN-REGRESS innovus b10 b6 -->
+### innovus_b10 vs innovus_b6: 28 worse, 113 better, 174 equal (WNS tolerance 2 ps)
+
+- judge DRV max_tran: 3 item(s); DRV base nom_ss: 14 -> 28; DRV base min_ss: 11 -> 16; DRV base max_ss: 29 -> 30
+- judge iolat hold_wns (fixed / missing I/O latency, caveat 4: not a layout measure): 3 item(s); iolat nom_ff: 0.197131 -> 0.182237; iolat min_ff: 0.190276 -> 0.175173; iolat max_ff: 0.202114 -> 0.188772
+- judge iolat_pv hold_wns: 6 item(s); iolat_pv nom_ss: 0.998494 -> 0.991838; iolat_pv nom_ff: 0.197131 -> 0.182237; iolat_pv min_ss: 0.988532 -> 0.962168; iolat_pv min_ff: 0.190276 -> 0.175173; iolat_pv max_ss: 1.01689 -> 1.011201; iolat_pv max_ff: 0.202114 -> 0.188772
+- judge iolat_pvs hold_wns: 6 item(s); iolat_pvs nom_ss: 0.998494 -> 0.991838; iolat_pvs nom_ff: 0.197131 -> 0.182237; iolat_pvs min_ss: 0.988532 -> 0.962168; iolat_pvs min_ff: 0.190276 -> 0.175173; iolat_pvs max_ss: 1.01689 -> 1.011201; iolat_pvs max_ff: 0.202114 -> 0.188772
+- judge iolat_pvs setup_wns: 2 item(s); iolat_pvs nom_tt: 3.493258 -> 3.483904; iolat_pvs min_tt: 3.772328 -> 3.758489
+- judge own hold_wns (fixed / missing I/O latency, caveat 4: not a layout measure): 3 item(s); own nom_ff: 0.197131 -> 0.180717; own min_ff: -0.00681 -> -0.009743; own max_ff: 0.202114 -> 0.188772
+- judge own setup_wns: 5 item(s); own nom_tt: 2.830258 -> 2.820903; own nom_ff: 3.830317 -> 3.819601; own min_tt: 2.958437 -> 2.935189; own min_ff: 3.946805 -> 3.941939; own max_ff: 3.629773 -> 3.60778
+<!-- /GEN-REGRESS -->
+
+*Innovus b10 vs b9*
+
+<!-- GEN-REGRESS innovus b10 b9 -->
+### innovus_b10 vs innovus_b9: 3 worse, 3 better, 309 equal (WNS tolerance 2 ps)
+
+- judge DRV max_tran: 2 item(s); DRV base nom_ss: 24 -> 28; DRV base min_ss: 11 -> 16
+- signoff/native  : 1 item(s); native_max_tran_viol: 12 -> 15
+<!-- /GEN-REGRESS -->
 
 ## 5. History arms (earlier commercial iterations, judge on the same chain)
 

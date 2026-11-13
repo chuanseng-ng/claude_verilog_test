@@ -1,0 +1,9 @@
+variant=arm
+key=innovusb10_max_tt
+table=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/iolat_pv/iolat_pv_arm.tsv
+table_md5=0043396bc126e93594ed7d3401ed250e
+early_ns=2.9178
+late_ns=2.9449
+sdc=pnr/commercial/constraints/sky130_cpu_iolat_pv.sdc
+sdc_md5=57e67934c24b53f40489ad30eeb3c1cf
+echo=IOLAT_PV key=innovusb10_max_tt early=2.9178 late=2.9449

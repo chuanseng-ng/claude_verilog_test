@@ -14,7 +14,7 @@ step() { local n=$1; shift; [ -f $M/$n.done ] && { echo "$(date +%T) skip $n (rc
   stagger; echo "$(date +%T) start $n" >> $L; "$@" > $M/$n.out 2>&1; local rc=$?; echo "$(date +%T) end $n rc=$rc" >> $L; echo $rc > $M/$n.done; return $rc; }
 step inn_chain bash -c "cd ../impl/innovus && scripts/chain_inn_b10.sh"
 step inn_verify bash -c "./chain_b10_all.sh innovus"
-step lef_obs bash -c "source $REPO/tools/eda/pd_env.sh >/dev/null 2>&1; S=\$PDK_ROOT/sky130A/libs.ref/sky130_sram_macros; klayout -b -r drclvs/scripts/lef_vs_gds_obs.py -rd gds=\$S/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds -rd lef=\$S/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef -rd viol=$REPO/pnr/commercial/impl/innovus/runs/b10_innovus/reports/final_drc.txt -rd deffile=$REPO/pnr/commercial/impl/innovus/runs/b10_innovus/out/rv32i_cpu_top.def > drclvs/reports/lef_vs_gds_obs_innovus_b10.txt 2>&1"
+step lef_obs bash -c "source $REPO/tools/eda/pd_env.sh >/dev/null 2>&1; S=\$PDK_ROOT/sky130A/libs.ref/sky130_sram_macros; drclvs/scripts/ctr.sh b10_lef_obs klayout -b -r drclvs/scripts/lef_vs_gds_obs.py -rd gds=\$S/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds -rd lef=\$S/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef -rd viol=$REPO/pnr/commercial/impl/innovus/runs/b10_innovus/reports/final_drc.txt -rd deffile=$REPO/pnr/commercial/impl/innovus/runs/b10_innovus/out/rv32i_cpu_top.def > drclvs/reports/lef_vs_gds_obs_innovus_b10.txt 2>&1"
 magic_try() { # magic_try <drclvs arm>
   local A=$1 cn=${1}_mdrc_real_stdgds f=drclvs/runs/$1/mdrc_real_stdgds/reports/drc_violations.magic.rpt t0=$(date +%s)
   [ -f chain_b10_innovus/magic_drc.done ] && mv chain_b10_innovus/magic_drc.done chain_b10_innovus/magic_drc.attempt_prev.done
