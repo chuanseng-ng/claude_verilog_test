@@ -1,9 +1,5 @@
-#================================================================
 # Post-route CDC budget verification for the 2-domain Sky130 SoC
 # Tool: OpenSTA (standalone 'sta' from the librelane nix-shell)
-# bead claude_verilog_test-j41m.5 (2026-10-16). Sky130 sibling of check_cdc_timing.tcl
-# (ASAP7); that script is left untouched.
-#
 # Reads a finished LibreLane Sky130 SoC run (netlist + OpenRCX SPEF), the std-cell / CPU-macro /
 # SRAM Liberty of ONE corner, and pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc, then
 # reports the slack of every CDC group the SDC budgets. See that SDC for why the budgets live
@@ -27,16 +23,10 @@
 #   CDC_CHECK_REPORTS   default ./reports/cdc_sky130.
 #   CDC_CHECK_PNR_DIR   default: the pnr/ directory this script lives in (override when it is reached through a symlink).
 #   PDK_ROOT            default the ciel path the flow uses.
-#
-# Clocks are IDEAL (never set_propagated_clock): the budgets are datapath bounds (launch CK->Q
-# plus wires/logic to the capture D pin), and OpenSTA has no -datapath_only to say so, so
-# keeping the clock ideal is the available approximation (ASAP7 script, CDC_CHECK_PROPAGATED_CLOCK
-# header). Parasitics are real (post-route OpenRCX SPEF), which the ASAP7 netlist-only path is not.
-#
 # EXIT CODE: 0 PASS, 1 CDC finding(s) (unbound exception or a violated/unconstrained group),
 # 2 setup error (missing input). OpenSTA batch mode does not turn a Tcl `error` into an exit
 # code, so every path ends in an explicit `exit`.
-#================================================================
+# Doc: tm:pd:scripts-check-cdc-timing-sky130-tcl, cr:pd:scripts-check-cdc-timing-sky130-tcl
 
 proc cdc_fatal_setup {msg} {
     puts "ERROR: CDC-CHECK-SETUP-ERROR: $msg"
@@ -139,9 +129,6 @@ proc cdc_group_report {group} {
     set want [dict get $::cdc_group_budget $group]
     set rpt_tab  [file join $::REPORTS_DIR cdc_${group}.slack.rpt]
     set rpt_full [file join $::REPORTS_DIR cdc_${group}.worst.rpt]
-    # Groups with a recorded launch set (sec. 14, bead y5mn) are reported -from that set too: their capture
-    # D pins also take ordinary same-domain paths (e.g. ctl_q's enable mux), which must not stand in for the
-    # crossing. Groups without one (all older rows) keep the plain -to query.
     set fromcells {}
     if {[info exists ::cdc_group_from] && [dict exists $::cdc_group_from $group]} {
         set fromcells [lsort -unique [dict get $::cdc_group_from $group]]
@@ -202,27 +189,6 @@ foreach {dir f t} {cpu2core cpu_clk core_clk core2cpu core_clk cpu_clk} {
     }
 }
 
-#----------------------------------------------------------------
-# Per-pointer bit-skew (Cummings Gray-code criterion; bead j41m.5 option C).
-#
-# A gray pointer is safe across the boundary only if its bits arrive within a window narrower
-# than the time between two successive pointer updates. The pointer changes at most once per
-# SOURCE clock cycle, so the hard limit is skew < 1 source period (above that, the capture flop
-# can see bits of update k and update k+1 mixed, which is not a gray neighbour). The budget
-# above bounds the ABSOLUTE delay; this bounds the SPREAD, which is what makes gray coding
-# work, and it keeps holding when a future change makes the absolute delay small but uneven.
-#
-# Skew of a pointer = max - min over its bits of the data ARRIVAL at the stage-0 D pin (launch
-# clock latency + CK->Q + wire), measured with the launch/capture clocks PROPAGATED (set after
-# the budget reports above, because the budgets are deliberately timed on ideal clocks): with
-# ideal clocks the launch-tree skew between the bits' source flops would be invisible.
-#
-# Default limit = CDC_CHECK_SKEW_FRAC (0.25) x min(source, destination period). 0.25 is a 4x
-# derate of the 1-source-period hard limit for what this single-corner, SPEF-only measurement
-# cannot see (OCV between the bit paths, source-clock jitter, the ss/ff spread of the next
-# run). min() because the period that matters is whichever clock is faster; they are both 25 ns
-# here, so the limit is 6.25 ns. CDC_CHECK_SKEW_LIMIT (ns) overrides it absolutely.
-#----------------------------------------------------------------
 proc cdc_skew_report {} {
     set frac [cdc_env CDC_CHECK_SKEW_FRAC 0.25]
     set abs_limit [cdc_env CDC_CHECK_SKEW_LIMIT ""]

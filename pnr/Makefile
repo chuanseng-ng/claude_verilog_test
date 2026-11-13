@@ -5,6 +5,7 @@
 # Frequency: 75 MHz (13.333 ns period)
 #================================================================
 
+# Doc: tm:pd:makefile, cr:pd:makefile
 #----------------------------------------------------------------
 # Configuration
 #----------------------------------------------------------------
@@ -80,9 +81,6 @@ LIBRELANE_DIR       ?= $(HOME)/Downloads/Github/librelane
 # PDK root for manual-pdk flows (nangate45, asap7)
 MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 
-# OpenROAD-flow-scripts checkout — source of the real ASAP7 OpenRCX rules deck
-# (flow/platforms/asap7/rcx_patterns.rules) installed by install-asap7-rcx-rules.
-# See claude_verilog_test-e69.
 ORFS_ROOT            ?= $(HOME)/Downloads/Github/OpenROAD-flow-scripts
 
 # LibreLane config directories
@@ -98,9 +96,6 @@ LIBRELANE_ASAP7_DIR     := asap7/cpu
 LIBRELANE_ASAP7_GPU_DIR := asap7/gpu
 # SoC top-level design directory (Phase 5 M11)
 LIBRELANE_ASAP7_SOC_DIR := asap7/soc
-# Config file basename (relative to LIBRELANE_ASAP7_SOC_DIR) used by all
-# librelane-asap7-soc* targets. Override for the GH #96 multiclock variant:
-#   make librelane-asap7-soc-synth-only SOC_CONFIG=config_multiclock.json
 SOC_CONFIG ?= config.json
 # New designs: copy pnr/asap7/template/ as a starting point
 
@@ -110,82 +105,15 @@ ASAP7_MAX_RUNS          ?= 10
 # Number of threads for detailed routing
 DRT_THREADS         ?= 4
 
-#----------------------------------------------------------------
-# OpenROAD binary override for ASAP7 (bead claude_verilog_test-ocm)
-#----------------------------------------------------------------
-# LibreLane's own nix-shell provides OpenROAD edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6,
-# which CANNOT grant pin access to any ASAP7 pin. Measured matrix (bead ocm):
-#
-#                                        edf00dff        26Q2
-#   ASAP7 minimal 0-instance repro       FAIL DRT-0074   PASS
-#   ASAP7 real CPU checkpoint, 401 pins  FAIL 401/401    PASS
-#   Sky130 SoC known-good, 6562 pins     PASS 158/158    PASS
-#
-# That single failing cell is why every ASAP7 run in this project's history
-# committed ZERO routed wires (bead xy6) and why every "0 DRC / 0 antenna"
-# claim was withdrawn. Prepending a working OpenROAD to PATH inside LibreLane's
-# shell is the whole fix -- no PDK swap, no RTL change.
-#
-# Sky130 and FreePDK45 targets are deliberately NOT overridden: they route
-# correctly under LibreLane's own build, and changing their tool would
-# invalidate the Sky130 real-DRC/LVS sign-off (GH #102) for no benefit.
-#
-# Hardcoding a /nix/store path follows the existing SV2V precedent above. It is
-# a GC root risk, so check-asap7-openroad fails loudly if it disappears; to
-# re-resolve, run:  nix build --no-link --print-out-paths nixpkgs#openroad
 ASAP7_OPENROAD_BIN  ?= /nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/openroad
 
-# bead claude_verilog_test-zwc: the LibreLane 3.0.14 devshell (used for the
-# ocm ASAP7 routing bring-up) resolves the standalone `sta` binary it shells
-# out to (OpenROAD.STAPrePNR / STAMidPNR / STAPostPNR each invoke
-# `sta -no_splash -exit corner.tcl`, not just openroad's built-in STA) to
-# OpenSTA 2.7.0, which corrupts report_power to inf/NaN on this design.
-# 2.6.0 is clean -- confirmed independently by beads 86a and ocm on the same
-# inputs. This pins it to the known-good 2.6.0 store build, same GC-root
-# posture as ASAP7_OPENROAD_BIN above: re-resolve with
-#   nix build --no-link --print-out-paths nixpkgs#opensta
-# and confirm `<path>/bin/sta -version` prints 2.6.0 before repointing.
 ASAP7_STA_BIN       ?= /nix/store/q5ycjmn0d9awbcq05c75z2rmgwjgbc9g-opensta/bin/sta
 
-# We must override ONLY the openroad and sta binaries, each via its own
-# single-file symlink. The 26Q2 openroad store path's bin/ also contains a
-# `sta` (a *different* bad build than the 2.7.0 above), and putting that
-# whole directory on PATH silently replaces LibreLane's OpenSTA too -- which
-# fails every STA step with
-#   Error: corner.tcl, 47 invalid command name "sta::corners"
-# because that bin/'s OpenSTA does not define it. So check-asap7-openroad
-# builds a shim directory holding one symlink per binary (openroad, sta),
-# and that shim directory is what goes on PATH. Never prepend a store bin/
-# directly -- that is the trap both symlinks exist to avoid.
-#
-# PYTHONPATH: LibreLane's Odb.* steps run `openroad -python <script>`, and
-# 26Q2 embeds Python 3.13 where LibreLane's own is 3.11. A nix python env
-# exposes its packages through the interpreter's own prefix, not through
-# PYTHONPATH, so 26Q2's 3.13 sees none of them and every odbpy step dies
-# with ModuleNotFoundError: click. Adding the 3.11 site-packages directory
-# to PYTHONPATH fixes it -- click, rich and yaml are pure Python and import
-# cleanly under 3.13 (verified). ioplace_parser needs nothing: LibreLane
-# vendors it in scripts/odbpy/ and prepends that directory itself.
-# The path is derived from click at runtime rather than hardcoded, so it
-# follows whatever python the devshell actually provides.
 ASAP7_OR_SHIM_DIR   := $(abspath .openroad-shim)
 
 # Empty by default, so every non-ASAP7 flow keeps LibreLane's own OpenROAD.
-# Set per-target below. Two traps, both of which silently fall back to the
-# HOST python3.10 and kill librelane with ModuleNotFoundError: cloup:
-#   1. It must be an `export ...;` STATEMENT, not a `PATH=x cmd`
-#      command-prefix assignment.
-#   2. $PATH must be escaped (\$$PATH) so the INNER nix-shell expands it.
-#      Unescaped, make's own shell expands it first and nix-shell receives
-#      the host PATH, discarding the devshell's entirely.
 OR_PATH_PREFIX      :=
 
-# Synthesis undef-elaboration gate (bead gc0y). A project-local LibreLane plugin, activated purely
-# through PYTHONPATH (no edit to the shared LibreLane install, no config.json change): it runs
-# tools/verif/check_synth_undef.py on every Yosys.JsonHeader / Yosys.Synthesis step and aborts the
-# flow on a hit, and gives each Pyosys step a PRIVATE cwd so Surelog's slpp_all cache is never
-# shared with other projects/worktrees. Escape hatch: CVT_SYNTH_GATE=warn (report, do not abort)
-# or =off. Every librelane invocation below carries $(SYNTH_GATE_ENV).
 SYNTH_GATE_PLUGIN_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))plugins)
 SYNTH_GATE_ENV       := PYTHONPATH=$(SYNTH_GATE_PLUGIN_DIR):\$$PYTHONPATH
 
@@ -684,32 +612,6 @@ librelane-sky130:
 librelane-sky130-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_DIR))
 
-# Sky130 Stage 1: CPU standalone with REAL Magic DRC + Netgen LVS (GH #103)
-# Builds native sky130_rv32i_cpu_top.{lef,lib,nl.v} macro views.
-# Uses volare PDK auto-detection (same as librelane-sky130).
-###############################################################################
-# sv2v CPU macro pre-processing step (bead claude_verilog_test-dud4, 2026-10-11)
-#
-# Bead dud4 proved the Synlig/UHDM frontend (USE_SYNLIG:true) elaborated two port
-# connections of rv32i_core's u_hazard instance as 5'x
-# (`.if_id_rs1_addr(if_id_reg.instruction[19:15])` / rs2 `[24:20]`: "Range select
-# [639:608] out of bounds on signal if_id_reg: Setting all 32 result bits to undef"), so
-# the committed Sky130 CPU macro (RUN_2026-07-27_05-52-19) mis-forwards. User-approved
-# remedy (2026-10-10): sv2v switch for this macro AND the RTL part-select rewrite
-# (PR #259). This target mirrors asap7-cpu-sv2v: it converts the CPU cone to one
-# Verilog-2005 file so Yosys read_verilog handles it without Synlig. The SRAM stub
-# (sky130_sram_1kbyte_1rw1r_32x256_8_stub.v) is already plain Verilog and stays OUT of
-# this list; it is the only module left undefined (hard macro).
-#
-# Defines: sv2v resolves `ifdef ITSELF, so SRAM_SKY130 (selects the OpenRAM macro
-# instantiation in rv32i_icache/dcache) MUST be passed here. The PDK_/SCL_/__ defines
-# are the ones LibreLane hands the Synlig frontend; no CPU-cone file branches on them,
-# they are passed so the recipe equals the synthesis-only "arm V" of the dud4 experiment
-# (/nobackup/claude_sim_build/dud4/synth/NOTES.md) bit for bit. No rv32i_clock_gate.sv
-# here (unlike ASAP7): the Sky130 CPU has no ICG.
-#
-# Output: pnr/sky130/cpu/rv32i_cpu_top_sv2v.v (generated, gitignored). Do not hand-edit.
-###############################################################################
 SKY130_CPU_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/axi_pkg.sv \
 	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
@@ -770,7 +672,6 @@ sky130-cpu-sv2v-inputs:
 	@echo "DEFINES $(SKY130_CPU_SV2V_DEFINES)"
 	@for f in $(SKY130_CPU_SV_FILES); do echo "FILE $$f"; done
 
-# Same contract for the two SoC flows (bead j1b7): "DEFINES ..." then one absolute "FILE <path>" per line.
 .PHONY: sky130-soc-sv2v-inputs asap7-soc-sv2v-inputs
 sky130-soc-sv2v-inputs:
 	@echo "DEFINES $(SKY130_SOC_SV2V_DEFINES)"
@@ -793,13 +694,6 @@ librelane-sky130-cpu: sky130-cpu-sv2v
 		"$(OR_PATH_PREFIX) CVT_SCAN_OPENROAD=$(ASAP7_OPENROAD_BIN) PYTHONPATH=$(SYNTH_GATE_PLUGIN_DIR):$(SKY130_SOC_PLUGIN_DIR):\$$PYTHONPATH python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
 
-# Bead lu09: pin-coordinate lock for the Sky130 CPU macro. pnr/sky130/cpu/pin_template.def is derived from the
-# committed macro/rv32i_cpu_top.lef and fed to LibreLane as FP_DEF_TEMPLATE (strict), so appending a pin cannot re-space
-# an edge. This target needs no EDA tools: it fails if the template omits/moves a pin of the committed LEF, or if two
-# template pins overlap (LibreLane does not check that). After a harden, pass the fresh LEF to also prove no pin moved:
-#   make -C pnr sky130-cpu-pin-lock-check NEW_LEF=<run>/final/lef/rv32i_cpu_top.lef
-# To change the lock deliberately: edit pin_template.def, re-harden, commit the new LEF AND
-# `python3 tools/verif/pin_lock.py gen pnr/sky130/cpu/macro/rv32i_cpu_top.lef pnr/sky130/cpu/pin_template.def`.
 .PHONY: sky130-cpu-pin-lock-check
 sky130-cpu-pin-lock-check:
 	python3 $(PROJECT_ROOT)/tools/verif/pin_lock.py check \
@@ -809,39 +703,7 @@ sky130-cpu-pin-lock-check:
 librelane-sky130-cpu-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_CPU_DIR))
 
-# NOTE: the former `librelane-sky130-sram` target (standalone hardening of
-# rtl/soc/sram_controller.sv as a composite macro) was REMOVED. That approach
-# was abandoned: its hardened macro could never be PDN-stitched at SoC level
-# (unresolvable PSM-0069, ~1001 unconnected nodes). It was replaced by a real
-# OpenRAM-compiled macro (sky130_sram_4kbyte_1rw1r_32x1024_8) — see the Stage 2
-# SoC section below. Config/artifacts archived to
-# /nobackup/abandoned_sram_composite/.
 
-###############################################################################
-# Sky130 Stage 2: SoC (CPU hard macro + flat peripherals)  GH #104
-#
-# sv2v converts all SV files to Verilog-2005 so Yosys read_verilog handles
-# packages, structs, and generate blocks without Synlig UHDM.
-# GPU is a synthesisable tie-off stub (gpu_top_tieoff.sv); CPU is blackboxed
-# (rv32i_cpu_top_stub.sv); SRAM is now ALSO a blackboxed OpenRAM hard macro
-# (sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv, via +define+SRAM_SKY130 --
-# see below); boot_rom remains behavioural (ROM-only, no DFFs).
-#
-# GH #104 SCOPE DECISION (2026-07-23, REVERSES Option C): sram_controller's
-# backing store is a real sky130_sram_4kbyte_1rw1r_32x1024_8 OpenRAM hard
-# macro again (1024 x 32b, 4 KB), compiled fresh via OpenRAM (see
-# memory/pd/run_state.md, openram_sram4k_subtask). This is NOT the old
-# custom-hardened composite sram_controller macro (whole AXI4 wrapper +
-# behavioral array hardened as one block) that hit the unresolved
-# PSM-0069 PDN wall -- that approach is abandoned. Instead, only the raw
-# OpenRAM SRAM primitive is blackboxed (u_sram_macro, instantiated inside
-# the still-synthesisable rtl/soc/sram_controller.sv control-logic RTL
-# under `ifdef SRAM_SKY130`); its LEF is a standard OpenRAM PG abstract
-# (vccd1/vssd1 on met3+met4), already proven connectable via
-# rv32i_cpu_top's own 10 internal OpenRAM SRAMs (PSM-0040 clean). This
-# macro is also ~14x smaller in area (701.64 x 673.335 um) than the
-# failed composite block (2585 x 2595 um).
-###############################################################################
 SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/axi_pkg.sv \
 	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
@@ -907,13 +769,6 @@ SKY130_SOC_SV_FILES := \
 SKY130_SOC_SV2V_OUT := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v)
 # One definition, used by the sv2v recipe below AND by sky130-soc-sv2v-inputs (CI), so the gate
 # elaborates exactly what the flow elaborates.
-#
-# USE_SKY130_CLKCELLS (bead claude_verilog_test-j41m.4): hand-instantiate sky130_fd_sc_hd__sdlclkp_4 + buf_16
-# (rv32i_clock_gate, HARD_ROOT instances) and mux2_4 + buf_16 (dft_clk_mux; buf_16, not clkbuf_16, to avoid CTS-0105) on the two clock roots whose
-# behavioural form synthesis mapped to and2_2 / a21bo_2, failing CVT.MaxCapViolations on the CTS-owned nets
-# cpu_gated_clk and core_clk (RUN_2026-10-16_04-53-49). sv2v resolves the `ifdef itself, so it must be passed here;
-# config.json's VERILOG_DEFINES comes too late. NOT in SKY130_CPU_SV2V_DEFINES: the CPU hard macro is unchanged.
-# The three cells' black-box stubs are sky130_clkcells_stub.v in SKY130_SOC_SV_FILES.
 SKY130_SOC_SV2V_DEFINES := --define=__pnr__ --define=SRAM_SKY130 --define=USE_SKY130_CLKCELLS
 
 sky130-soc-sv2v:
@@ -935,11 +790,6 @@ sky130-soc-sv2v:
 	@echo "  DFF count (reg decls): $$(grep -c '^\s*reg\s' $(SKY130_SOC_SV2V_OUT))"
 	@echo "  GPU cells (should be 0): $$(grep -c 'gpu_top\b' $(SKY130_SOC_SV2V_OUT) || echo 0)"
 
-# DFT Stage 1a (bead claude_verilog_test-j41m.2): prove on the flattened Sky130 netlist that in scan mode every
-# async reset is tester-controlled and every flop is test-clocked. Needs yosys on PATH (or YOSYS=/path/to/yosys).
-# DFT Stage 1b (j41m.3): TAP-domain rules. scan mode is the OR of the 1a pin and the TAP, so name the net.
-# (tap_scan_en is an allowed TAP output since bead j41m.4: the CPU macro's scan_en_i is its first consumer, through
-# dft_ctrl's scan_en_o mux. Before that it had no consumer and the net was optimised away.)
 DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tck_cg \
 	--tap-prefix u_dft_ctrl.u_clk_sw --tap-prefix u_dft_ctrl.u_sw_rst --tap-alt-clock scan_clk_i \
 	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20 \
@@ -955,16 +805,6 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 	--tck-prefix u_mbist --expect-tck-flops 290 \
 	--tck-sink u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd --tck-sink u_mbist.u_xing_core.u_hold \
 	--tck-sink u_mbist.g_cpu.u_xing_cpu.u_fifo.u_wr_ptr_to_rd --tck-sink u_mbist.g_cpu.u_xing_cpu.u_hold
-# Bead c54a: mbist_force_o (run & dom_cpu, a quasi-static falling-edge TAP flop) is OR-ed into u_cpu_cg's enable when
-# MBIST_CPU = 1 (section 16.6), so it is a declared TAP output; the CPU-domain FIFO (u_mbist.g_cpu.u_xing_cpu) gets the
-# same --expect-reset-sync / --tck-sink treatment as the core one, and --expect-tck-flops covers both (290).
-# Bead j41m.14/j41m.10: the MBIST control-word FIFO (write side, TCK) and the status synchronisers (TCK side) are
-# TCK-domain flops identified by CLOCK under u_mbist (--tck-prefix). The three TAP outputs that feed the FIFO write
-# side are declared nets; --tck-sink names the only two non-TAP cells that may read a TCK-domain flop (the pointer
-# synchroniser and the holding register), so a bypassed synchroniser or any new TCK->core path fails.
-# Bead j41m.11: --expect-reset-sync finds the two trst_ni cdc_reset_sync chains independently by hierarchy and requires
-# that the TAP and the clock switch are reset from THEIR chain and that trst_ni reaches nothing else directly. The CDC
-# gate cannot do this (cdc_snitch's opt_merge folds the two chains into one and classes both OK1/OKX).
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
@@ -979,14 +819,6 @@ dft-scan-check-asap7: asap7-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
 		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS) --expect-clock-gates 1
 
-# Bead j41m.4: the same proof on the CPU hard macro itself (BLOCK MODE of check_scan_clk_rst.py). The SoC-level checks
-# above see the macro as a blackbox, so they say nothing about its 4.8k flops. Here: (1) every flop clock cone ends at
-# clk_i (the parent muxes the test clock onto it) or at a clock-gate latch whose enable contains scan_mode_i (ASAP7 arm:
-# the cache SRAM gates, test_en_i); (2) ZERO async reset/set pins exist, so there is no internal reset that needs a scan
-# override (the macro's only reset is the synchronous rst_n_i, forced by the parent); (3) >= 900 word-level sequential
-# cells were found (vacuity guard; the Sky130 macro has 944, the ASAP7 one 954); (4) every latch (clock gate) is FORCED open: with scan_mode_i = 1 its D is 1 whatever the enable (bead j41m.16; it used to need only
-# a scan_mode_i term somewhere in its D cone) even though its output clocks only an SRAM macro, which the clock-cone walk cannot reach;
-# the ASAP7 macro must contain >= 10 of them (5 per cache), the Sky130 macro none.
 .PHONY: dft-scan-check-cpu-macro dft-scan-check-cpu-macro-asap7
 dft-scan-check-cpu-macro: sky130-cpu-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
@@ -1001,77 +833,16 @@ dft-scan-check-cpu-macro-asap7: asap7-cpu-sv2v
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
 # Requires:  pnr/sky130/cpu/macro/rv32i_cpu_top.{lef,gds,spice,lib}  (Stage-1 outputs)
-# Outputs:   pnr/sky130/soc/runs/<RUN>/
-# ── Design-repair margins (bead claude_verilog_test-e45j) ─────────────────────
-# config.json raises GRT_DESIGN_REPAIR_MAX_{SLEW,CAP}_PCT 10 -> 30 and
-# DESIGN_REPAIR_MAX_{SLEW,CAP}_PCT 20 -> 40 (tool defaults 10/10 and 20/20).
-# Recorded here because config.json cannot carry comments -- librelane rejects
-# any unrecognised key outright ("Unknown key '...' provided", __main__.py:163).
-#
-# Why: every repair/resizer step librelane has is PRE-ROUTE
-# (RepairDesignPostGPL, RepairDesignPostGRT, ResizerTimingPostCTS/PostGRT), and
-# repair_design_postgrt.tcl uses `estimate_parasitics -global_routing` -- the GRT
-# estimate, never RCX's extracted parasitics. There is no post-RCX repair step at
-# all, so post-route STA is the first place real-parasitic slew/cap erosion is
-# visible and the last place nothing can act on it: measured 0/0 slew/cap at
-# steps 33/40/41, then 8623/346 at step 51.
-#
-# Adding a real post-RCX repair step would mean editing the SHARED external
-# librelane install, which every other flow here also uses -- rejected. The
-# Odb.InsertECOBuffers route (examples/hold_eco_demo) does do a genuine
-# route -> insert -> re-route, but it targets pins BY NAME and the offenders are
-# synthesis-generated (_49205_/D, net805, _12721_), so any committed list is
-# stale after the next re-synthesis.
-#
-# So instead: over-repair BEFORE routing so headroom survives extraction. Same
-# strategy that took hold 71 -> 3 via the hold margins (bead 00ef).
-#
-# Not yet tried, deliberately kept separate to preserve single-variable
-# attribution: DESIGN_REPAIR_MAX_WIRE_LENGTH (defaults to 0, which openroad.py
-# documents as "no buffers will be inserted"), and a real set_max_fanout in
-# sky130_soc.sdc -- absent today, which is why "max fanout violations = 0" is
-# VACUOUS rather than meaningful.
 
 # Extra --skip flags appended to the Sky130 SoC invocation. Empty by default, so
 # `librelane-sky130-soc` is unchanged and the adopted sign-off stays reproducible.
 SKY130_SOC_EXTRA_SKIP ?=
 
-# ── RC-calibrated pre-route repair variant (bead claude_verilog_test-e45j) ────
-# Same flow, but the four pre-route repair/resizer steps are replaced by the CVT.* steps of the
-# project-local plugin pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130 (picked up because
-# LibreLane imports every librelane_plugin_* on PYTHONPATH), which scale the GRT/placement wire-RC
-# estimate to what OpenRCX later extracts. The shared LibreLane install is NOT modified.
-#
-# ADOPTED AS THE DEFAULT 2026-10-09 (user decision, bead e45j): `make librelane-sky130-soc[-noklayout]` now runs
-# config_rccal.json. config.json is the pre-adoption (non-RC-calibrated) flow, kept for A/B comparison and
-# reached through the -norccal targets below. Override either way with SKY130_SOC_CONFIG=<file>; the override
-# is honoured by every target (the old -rccal-noklayout recipe that ignored it is now just an alias).
-#
-# config_rccal.json also substitutes Checker.MaxCapViolations with the plugin's CVT.MaxCapViolations, which
-# gates max-cap at ALL corners and waives only the named entries of constraints/max_cap_waivers.json (macro
-# load pin, ceiling, justification). The stock checker is skipped only for configs that lack that substitution
-# (config.json): un-skipped alone it is a no-op, because checker.py's corner_override=[""] makes it match no
-# corner, so it only logs a WARNING (measured, Doc: cr:defect:sky130-slew-cap-e45j section 7).
 SKY130_SOC_CONFIG ?= config_rccal.json
 SKY130_SOC_PLUGIN_DIR := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/plugin)
 SKY130_SOC_KLAYOUT_SKIP := --skip KLayout.DRC --skip Checker.KLayoutDRC
 SKY130_SOC_STOCK_MAXCAP_SKIP := $(if $(filter config.json,$(SKY130_SOC_CONFIG)),--skip Checker.MaxCapViolations,)
 
-# ── KLayout-DRC-free variant (bead claude_verilog_test-00ef) ──────────────────
-# RUN_2026-09-20_19-46-05 was killed by the host's memory reaper inside
-# 56-klayout-drc, which was holding 8.5 GB on a 15 GB machine. Steps 1-55 had
-# completed, but KLayout.DRC sits BEFORE Netgen.LVS in librelane's Classic flow
-# (librelane/flows/classic.py:106 KLayout.DRC -> :108 Checker.KLayoutDRC ->
-# :111 Netgen.LVS -> :112 Checker.LVS), so the kill cost us LVS -- the single
-# most important physical gate this node has -- for a check that is not on the
-# critical path to it.
-#
-# This target skips both KLayout steps so the flow reaches LVS on this host.
-# It does NOT touch pnr/sky130/soc/config.json: RUN_KLAYOUT_DRC stays true there
-# and the sign-off config remains byte-identical, so the skip is visible in the
-# command line rather than hidden in config state. KLayout DRC is then a
-# separate pass, not a silently dropped gate -- re-run plain
-# `librelane-sky130-soc` on a larger host to get it.
 librelane-sky130-soc-noklayout:
 	@echo "=========================================="
 	@echo "Sky130 SoC WITHOUT KLayout DRC (bead 00ef)"
@@ -1178,10 +949,6 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/$(SKY130_SOC_CONFIG)"
 
 # e45j: kept as an alias of the (now rccal-default) -noklayout target for existing notes and scripts.
-# Unlike the pre-adoption recipe it honours SKY130_SOC_CONFIG, e.g. for an A/B arm:
-#   make librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=<arm>.json
-# and confirm the key in <run>/resolved.json. (The wire-length arm config_rccal_wl1500.json was removed
-# 2026-10-28: GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500 is now in config_rccal.json, Doc: cr:defect:sky130-slew-cap-e45j section 9.)
 librelane-sky130-soc-rccal-noklayout:
 	@$(MAKE) librelane-sky130-soc-noklayout
 
@@ -1228,11 +995,6 @@ librelane-nangate45:
 librelane-nangate45-results:
 	$(call librelane_results,$(LIBRELANE_NANGATE45_DIR))
 
-# Every ASAP7 target runs with ASAP7_OPENROAD_BIN prepended to PATH. Target-
-# specific variables apply to the whole recipe, so this is the only place the
-# override is enumerated -- the invocation strings themselves are uniform and
-# expand to nothing for non-ASAP7 flows. See the ASAP7_OPENROAD_BIN block above
-# and bead claude_verilog_test-ocm.
 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc \
 librelane-asap7-soc-synth librelane-asap7-soc-synth-only \
 librelane-asap7-soc-multiclock librelane-asap7-soc-multiclock-hier \
@@ -1243,10 +1005,6 @@ librelane-asap7-valu-rtl librelane-asap7-valu-hls \
 librelane-asap7-valu-hls-comb: \
 	OR_PATH_PREFIX := export PATH=$(ASAP7_OR_SHIM_DIR):\$$PATH; export PYTHONPATH=\$$(python3 -c 'import click,os;print(os.path.dirname(os.path.dirname(click.__file__)))')\$${PYTHONPATH:+:\$$PYTHONPATH};
 
-# Fails loudly if the pinned OpenROAD is gone (nix GC) or is the known-bad
-# build. A silent fallback to LibreLane's own OpenROAD would silently restore
-# the zero-wire behaviour, which is exactly the failure mode bead xy6 exists to
-# prevent -- so this refuses rather than warns.
 check-asap7-openroad:
 	@if [ ! -x "$(ASAP7_OPENROAD_BIN)" ]; then \
 	  echo "ERROR: ASAP7_OPENROAD_BIN not executable: $(ASAP7_OPENROAD_BIN)"; \
@@ -1307,11 +1065,6 @@ check-asap7-openroad:
 	       exit 1 ;; \
 	  esac
 
-# Install the real ASAP7 OpenRCX extraction-rules deck, replacing the 0-byte
-# rcx_rules.pex stub the manual PDK tree ships with. ~/pdk/asap7 is NOT a git
-# repo and NOT vendored into this repo, so this must be re-run on every fresh
-# machine/clone that needs RUN_SPEF_EXTRACTION/RUN_MCSTA — see
-# claude_verilog_test-e69 and tools/setup/install_asap7_rcx_rules.py.
 install-asap7-rcx-rules:
 	@python3 $(abspath ../tools/setup/install_asap7_rcx_rules.py) \
 		--orfs-root $(ORFS_ROOT) --pdk-root $(MANUAL_PDK_ROOT)
@@ -1322,39 +1075,6 @@ check-asap7-rcx-rules:
 	@python3 $(abspath ../tools/setup/install_asap7_rcx_rules.py) \
 		--pdk-root $(MANUAL_PDK_ROOT) --check-only
 
-###############################################################################
-# sv2v CPU macro pre-processing step (bead claude_verilog_test-ma7, 2026-09-19)
-#
-# Beads u99+ma7 PROVED USE_SYNLIG:true (Synlig/UHDM) mis-elaborates
-# rv32i_cpu_top's runtime-indexed regfile read mux (OPT_MUXTREE, same class as
-# beads gcd/b0t) -- corruption reaches the APB debug-read port (u99) AND the
-# ID-stage rs1/rs2 reads that feed EX (ma7's branch-dependent-program GLS
-# proof). User-approved remedy: bypass Synlig for this macro too, mirroring
-# valu_hls (commit f2445ad) and the SoC's own asap7-soc-sv2v target. Converts
-# every SV file in rv32i_cpu_top's cone (packages, pipeline stages, caches,
-# core, top) to plain Verilog-2005 in one pass so Yosys read_verilog handles
-# it without Synlig. The two blackbox stub .v files (SRAM, ICG) are already
-# plain Verilog and stay OUT of this list, same split as the SoC target keeps
-# for its own macro stubs.
-#
-# Defines mirror config.json's VERILOG_DEFINES, but sv2v resolves `ifdef
-# ITSELF before Yosys ever runs (see asap7-soc-sv2v's SOC_SV2V_DEFINES note
-# above) -- so they MUST be passed here, not just left in config.json's
-# VERILOG_DEFINES, or sv2v bakes in the wrong branch:
-#   SRAM_ASAP7   -- selects the ASAP7 SRAM macro instantiation (rv32i_icache.sv
-#                   / rv32i_dcache.sv `elsif SRAM_ASAP7) over the sky130/
-#                   freepdk45 behavioural alternatives.
-#   USE_ICG_CELL -- selects the real ICGx1_ASAP7_75t_R clock-gate cell
-#                   (rv32i_clock_gate.sv `ifdef USE_ICG_CELL) over the
-#                   behavioural always_latch model, which Yosys cannot map to
-#                   any ASAP7 standard cell.
-# __pnr__ is NOT needed here (unlike the SoC target): grep confirms no file in
-# CPU_SV_FILES branches on it -- that macro only affects rtl/soc/* files
-# (boot_rom.sv etc.) which are not part of this macro's cone.
-#
-# Output: pnr/asap7/cpu/rv32i_cpu_top_sv2v.v (generated, gitignored). Do not
-# hand-edit -- regenerate via this target.
-###############################################################################
 CPU_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/axi_pkg.sv \
 	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
@@ -1422,9 +1142,6 @@ asap7-cpu-sv2v:
 
 # ASAP7: uses manually structured PDK under MANUAL_PDK_ROOT
 # Config directory pnr/asap7/ must exist with a valid config.json.
-# check-asap7-rcx-rules is a prerequisite ONLY here (the CPU config has
-# RUN_SPEF_EXTRACTION=true) — GPU/SoC configs still have it false and do not
-# need the real ruleset installed (claude_verilog_test-e69).
 librelane-asap7: check-asap7-rcx-rules check-asap7-openroad asap7-cpu-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7"
@@ -1466,20 +1183,6 @@ librelane-asap7: check-asap7-rcx-rules check-asap7-openroad asap7-cpu-sv2v
 
 # ---------------------------------------------------------------------------
 # LibreLane 3.0.14 runs (config_3014.json)
-#
-# These configs had no Makefile target at all, so every run was launched by
-# hand and the two flags below had to be rediscovered each time. Both are
-# mandatory: without --manual-pdk, 3.0.14 resolves PDKs through ciel and quits
-# with "The PDK asap7 was not found."
-#
-# The --skip list mirrors the proven 2.4.13 list above, minus the diode and
-# antenna steps -- those are now disabled in config_3014.json itself
-# (DIODE_ON_PORTS=none, RUN_HEURISTIC_DIODE_INSERTION=false,
-# RUN_ANTENNA_REPAIR=false, DRT_ANTENNA_REPAIR_ITERS=0), because ASAP7 SIMPLE
-# ships no antenna diode: DIODE_CELL is DECAPx1_ASAP7_75t_R with an empty
-# DIODE_CELL_PIN, and DECAPx1 has only VDD/VSS pins. Relying on --skip alone
-# is what let that bug stay latent (bead 4l8).
-# ---------------------------------------------------------------------------
 LIBRELANE_3014_DIR  ?= /nobackup/librelane-3.0.14
 
 LIBRELANE_3014_SKIPS := \
@@ -1529,29 +1232,6 @@ librelane-asap7-gpu-3014:
 librelane-asap7-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
 
-###############################################################################
-# sv2v GPU macro pre-processing step (bead claude_verilog_test-ma7, 2026-09-19)
-#
-# Config-switch companion to asap7-cpu-sv2v above -- see that target's header
-# comment for the full u99/ma7 rationale. warp_scheduler.sv:152
-# (`div_depth[exec_warp_id_i]`) uses the SAME runtime-indexed-mux idiom already
-# PROVEN corrupt under USE_SYNLIG:true for the CPU macro, untested for GPU but
-# same risk class, so the GPU config is switched for consistency. Unlike the
-# CPU, THE GPU RE-HARDEN ITSELF IS DEFERRED (host-gated: ~13.5h+ GRT, 14+ GiB
-# peak RSS, this host is 15.9 GB with no swap) -- this target exists so
-# `librelane-asap7-gpu` is ready to run correctly whenever someone has the
-# host budget, not because a GPU re-harden has happened.
-#
-# No `ifdef in any GPU RTL file (verified 2026-09-19: grep for ifdef/ifndef/
-# __pnr__/SRAM_ASAP7/USE_ICG_CELL across the whole gpu_pkg.sv..gpu_top.sv cone
-# returns zero hits), so no --define flags are needed, unlike the CPU/SoC
-# targets. gpu_pkg.sv is included so sv2v resolves the package import itself.
-# The SRAM blackbox stub (sram_1rw_128x32_asap7_stub.v) is already plain
-# Verilog and stays OUT of this list, same split as asap7-cpu-sv2v.
-#
-# Output: pnr/asap7/gpu/gpu_top_sv2v.v (generated, gitignored). Do not
-# hand-edit -- regenerate via this target.
-###############################################################################
 GPU_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/gpu/gpu_pkg.sv \
 	$(PROJECT_ROOT)/rtl/gpu/vector_register_file.sv \
@@ -1771,79 +1451,10 @@ SOC_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_SOC_DIR)/soc_top_sv2v.v)
 
 #----------------------------------------------------------------
 # sv2v defines for the ASAP7 SoC.
-#
-# sv2v resolves `ifdef ITSELF, before Yosys ever runs. config.json's
-# VERILOG_DEFINES is therefore TOO LATE for anything sv2v already decided:
-# whichever branch sv2v takes is baked into soc_top_sv2v.v as plain Verilog.
-#
-# USE_ICG_CELL: without it, rv32i_clock_gate.sv falls to its behavioural
-# `always_latch` model, which Yosys infers as $_DLATCH_N_ and cannot map to
-# any ASAP7 standard cell -- Checker.YosysUnmappedCells then aborts the flow
-# with "2 Unmapped Yosys instances found" (observed 2026-08-05,
-# RUN_2026-08-05_21-20-25). With it, the module instantiates the real
-# ICGx1_ASAP7_75t_R, which exists in both asap7sc7p5t_SEQ_RVT_TT liberty and
-# asap7sc7p5t_SIMPLE_RVT_1x.lef. This did not bite before 2026-08 because the
-# SoC had no clock gates until the PMU epic (GH #98) and GH #93 added them.
-#
-# __pnr__ (added 2026-08-15, bead claude_verilog_test-61v): boot_rom.sv keys
-# its ROM-preload branch off `ifndef __pnr__ -- without it, this target and
-# the sky130 SoC target (pnr/Makefile:693, which has always passed __pnr__)
-# elaborated DIFFERENT boot ROM RTL from the same source tree. Originally
-# withheld here because run 14 (RUN_2026-06-23_18-05-38, the single-clock M11 ASAP7
-# SoC signoff) was built WITHOUT it, and adding it mid-campaign would have
-# changed boot ROM contents relative to that PPA baseline. That reason has
-# now expired: GH #96 run 23 (RUN_2026-08-09_14-36-16) is the accepted
-# multi-clock ASAP7 SoC baseline, and it is driven by the separate
-# pnr/asap7/soc/config_multiclock.json, so run 14 / config.json stay
-# byte-reproducible regardless of this change. Adding __pnr__ makes this
-# target consistent with sky130 and removes the behavioural $readmemh /
-# MEM_INIT_FILE-as-string path from the synthesised ASAP7 netlist (the
-# `else` arm supplies the same zero-filled ROM synthesis always produced
-# anyway -- see rtl/soc/boot_rom.sv:33-41,102-111). Any future ASAP7 SoC
-# re-signoff run picks this up; there is no run built on config.json between
-# 2026-08-15 and the next full P&R that this could silently perturb.
-#
-# NOTE for whoever next diffs this netlist: boot_rom.sv is NOT the only file
-# affected. PR #152 (GH #116 item C) wired the same __pnr__ macro into the
-# non-synthesizable param-check initial/$fatal blocks in
-# axi_lite_register_bank.sv, apb4_register_bank.sv and axil_to_apb.sv, so
-# enabling it here drops those too. Measured delta on the 2026-08-15
-# regeneration: 43 lines. Do not attribute the whole change to the boot ROM.
-#
-# SRAM_ASAP7 IS passed here, as of Phase 6c (bead claude_verilog_test-f7vs.11).
-# It used to be deliberately omitted on the grounds that no file in
-# SOC_SV_FILES branched on it, so it mattered only to Yosys, which gets it
-# from config.json's VERILOG_DEFINES. rtl/npu/npu_weight_mem.sv is the first
-# file in this list that DOES branch on it: its 3-way `ifdef SRAM_SKY130 /
-# `elsif SRAM_ASAP7 / `else chain selects 1x sky130_sram_4kbyte_1rw1r_32x1024_8,
-# 4x sram_1rw_256x32_asap7, or 4x sram_1rw_256x32_freepdk45 respectively.
-# Because sv2v resolves `ifdef ITSELF, before Yosys ever runs, leaving this
-# define off would make the ASAP7 SoC netlist instantiate the FreePDK45
-# module -- which has no ASAP7 LEF, so sv2v+Yosys would SILENTLY BLACKBOX it:
-# unplaced, unconstrained, and undetectable by any cocotb suite. The ASAP7
-# stub/LEF/LIB were already registered in every ASAP7 SoC config
-# (VERILOG_FILES + EXTRA_LEFS + EXTRA_LIBS) and merely unused until now.
-#
-# The sky130 SoC target deliberately does NOT get USE_ICG_CELL: ICGx1 is an
-# ASAP7 cell, and sky130 has real latch cells for the behavioural model to
-# map onto.
-#----------------------------------------------------------------
 SOC_SV2V_DEFINES := --define=USE_ICG_CELL --define=__pnr__ --define=SRAM_ASAP7
 
 #----------------------------------------------------------------
 # asap7_soc_preflight: shared launch guards for every ASAP7 SoC P&R target.
-#
-# The `runs` symlink is NOT optional. Without it LibreLane writes its run
-# directory to pnr/asap7/soc/runs on `/`, which has ~8 GB free, while a single
-# SoC run is ~6 GB -- so the run dies on a full root filesystem partway
-# through. It also keeps run auto-discovery working for
-# check-cdc-timing-asap7-soc and makes prune-asap7-soc-runs effective.
-# Mirrors the sky130 SoC idiom above.
-#
-# The macro .lib guard matters because a missing .lib does not fail loudly:
-# pnr/scripts/check_cdc_timing.tcl skips absent macro libs with a "(skip, not
-# found)" note, and the macro ends up blackboxed rather than timed.
-#----------------------------------------------------------------
 define asap7_soc_preflight
 	mkdir -p /nobackup/asap7_soc_runs
 	@if [ -e "$(LIBRELANE_ASAP7_SOC_DIR)/runs" ] && [ ! -L "$(LIBRELANE_ASAP7_SOC_DIR)/runs" ]; then \
@@ -1929,33 +1540,6 @@ librelane-asap7-soc: asap7-soc-sv2v check-asap7-openroad
 	@$(MAKE) check-asap7-soc-routing
 	@$(MAKE) prune-asap7-soc-runs
 
-#----------------------------------------------------------------
-# librelane-asap7-soc-multiclock: GH #96 PD re-closure (bead 8nz).
-#
-# Same flow as librelane-asap7-soc, but driven by config_multiclock.json,
-# which points PNR/SIGNOFF/FALLBACK_SDC_FILE at
-# constraints/phase5_soc_multiclock.sdc (GH #94): two create_clock statements
-# -- sys_clk 1750 ps on port clk_i, cpu_clk 780 ps on port cpu_clk_i -- plus
-# set_clock_groups -asynchronous between them.
-#
-# The two CTS trees come from those two create_clock statements, NOT from
-# CLOCK_PORT/CLOCK_NET: librelane's CTS step only derives CLOCK_NET from
-# CLOCK_PORT when CLOCK_NET is unset, and cts.tcl's own use of $::env(CLOCK_NET)
-# is an informational `puts`, not a clock_tree_synthesis argument. OpenROAD
-# builds one tree per clock defined in the SDC.
-#
-# NO prune step here, unlike librelane-asap7-soc: /nobackup/asap7_soc_runs
-# holds exactly ASAP7_MAX_RUNS (10) runs today, so pruning would start aging
-# out runs the moment a #96 run lands. The run-14 sign-off baseline
-# (RUN_2026-06-23_18-05-38) must not be at the mercy of an `ls -td | tail`
-# heuristic across the iteration budget. /nobackup has ~570 GB free; prune
-# manually if that ever changes, and never delete RUN_2026-06-23_18-05-38.
-#
-# Usage:
-#   make librelane-asap7-soc-multiclock                       # full P&R, ~5 h
-#   make librelane-asap7-soc-multiclock LIBRELANE_EXTRA_ARGS='--to OpenROAD.STAPrePNR'
-#                                                             # preflight gate, ~75 min
-#----------------------------------------------------------------
 librelane-asap7-soc-multiclock: SOC_CONFIG = config_multiclock.json
 librelane-asap7-soc-multiclock: asap7-soc-sv2v check-asap7-openroad
 	@echo "=========================================="
@@ -2008,17 +1592,6 @@ librelane-asap7-soc-multiclock: asap7-soc-sv2v check-asap7-openroad
 		echo "      full flow (through DetailedRouting) has completed."; \
 	fi
 
-#----------------------------------------------------------------
-# librelane-asap7-soc-multiclock-hier: bead je8/2kn -- same flow as
-# librelane-asap7-soc-multiclock, but driven by config_multiclock_hier.json
-# (SYNTH_HIERARCHY_MODE deferred_flatten instead of flatten) to cut the yosys/
-# ABC peak RAM that OOM'd runs 6/7 (>13.4 GB, 15.9 GB host). Only the config
-# path differs; config_multiclock.json (run 23's sign-off basis) is untouched.
-#
-# Usage:
-#   make librelane-asap7-soc-multiclock-hier                  # full P&R
-#   make librelane-asap7-soc-multiclock-hier LIBRELANE_EXTRA_ARGS='--to OpenROAD.STAPrePNR'
-#----------------------------------------------------------------
 librelane-asap7-soc-multiclock-hier: SOC_CONFIG = config_multiclock_hier.json
 librelane-asap7-soc-multiclock-hier: asap7-soc-sv2v check-asap7-openroad
 	@echo "=========================================="
@@ -2076,38 +1649,6 @@ librelane-asap7-soc-results:
 
 #----------------------------------------------------------------
 # check-cdc-timing-asap7-soc: post-route CDC budget verification.
-# bead claude_verilog_test-k07 / GH #96. Runs pnr/scripts/check_cdc_timing.tcl
-# (standalone OpenSTA) with pnr/constraints/phase5_soc_multiclock_check.sdc
-# against a routed ASAP7 SoC netlist that actually contains the CDC modules
-# (async_axi_fifo / apb_cdc_bridge / second PLL) -- i.e. a run of
-# pnr/asap7/soc/config.json with PNR_SDC_FILE pointed at
-# phase5_soc_multiclock.sdc. That re-closure run is GH #96 scope; as of
-# 2026-08-02 it has not happened yet, so this target will correctly report
-# "Netlist not found" until it does. Deliberately separate from
-# `make sta` / 07_sta.tcl: this is CDC-boundary-only verification, not a
-# full-chip signoff sweep (see check_cdc_timing.tcl's header for why the
-# two cannot be combined in one SDC read).
-#
-# Usage: make check-cdc-timing-asap7-soc RUN_DIR=/nobackup/asap7_soc_runs/RUN_...
-#        (defaults to the latest run under /nobackup/asap7_soc_runs if unset)
-#
-# EXIT CODE (bead claude_verilog_test-dwp, 2026-08-03): check_cdc_timing.tcl
-# now exits 0/1/2 explicitly on its own (see that file's header) -- OpenSTA
-# batch mode does not propagate a Tcl `error` into the process exit code,
-# so the script never relies on that. This recipe ALSO greps the captured
-# log for the CDC-EXCEPTION-MISS / budget-VIOLATED / CDC-CHECK-RESULT: FAIL
-# markers the script emits and fails the make target on any hit,
-# independent of $?  from `sta` itself -- belt-and-braces in case a future
-# OpenSTA version's exit-code behaviour regresses again (bead dwp
-# rationale). NOTE: this recipe deliberately does NOT pipe `sta`'s output
-# through `tee` to get "live" console output -- this Makefile has no
-# SHELL override (default POSIX /bin/sh, e.g. dash), which has no
-# PIPESTATUS, so `$?` after a `cmd | tee log` pipeline would capture
-# tee's exit status (always 0) instead of sta's. Output is redirected
-# straight to a log file, `$?` is captured from that direct invocation,
-# and the full log is `cat`'d to the console afterwards -- readable, just
-# not streamed live.
-#----------------------------------------------------------------
 check-cdc-timing-asap7-soc:
 	@CDC_RUN_DIR="$(RUN_DIR)"; \
 	if [ -z "$$CDC_RUN_DIR" ]; then \
@@ -2148,27 +1689,6 @@ check-cdc-timing-asap7-soc:
 	fi; \
 	rm -f "$$CDC_LOG"
 
-#----------------------------------------------------------------
-# check-cdc-timing-sky130-soc: post-route CDC budget verification, Sky130 SoC (bead j41m.5).
-# Sky130 sibling of check-cdc-timing-asap7-soc: pnr/scripts/check_cdc_timing_sky130.tcl with
-# pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc against a finished Sky130 SoC run (netlist
-# + OpenRCX SPEF of the chosen corner). The budgets cannot live in sky130_soc.sdc (it declares
-# core_clk/cpu_clk asynchronous, and OpenSTA drops a set_max_delay across such a pair) -- see the
-# header of the check SDC.
-#
-# Usage: make check-cdc-timing-sky130-soc [RUN_DIR=/nobackup/sky130_soc_runs/RUN_...]
-#                                         [CDC_CORNERS="nom_tt_025C_1v80 max_ss_100C_1v60"] [CDC_CORNER=<one>]
-#        (RUN_DIR defaults to the newest run under /nobackup/sky130_soc_runs)
-# Corners (bead j41m.5, decision C): the DEFAULT is nom_tt AND max_ss, sequentially, one sta process at
-# a time, FAIL if ANY corner fails. A nom_tt-only default hid a 0.95 ns margin on RUN_2026-10-16_04-53-49
-# that became -0.715 ns at max_ss on the next run. CDC_CORNERS=all runs all nine; CDC_CORNER=<one> (the
-# old single-corner knob) still works and wins over CDC_CORNERS. Each corner also reports the per-pointer
-# gray-code bit skew (CDC_CHECK_SKEW_FRAC / CDC_CHECK_SKEW_LIMIT, see check_cdc_timing_sky130.tcl).
-# Exit: 0 only if every corner passes; 1 on any CDC-EXCEPTION-MISS / VIOLATED / FAIL / SETUP-ERROR marker in
-# a corner's log (grepped independent of sta's own exit code, as in the ASAP7 target); sta's exit otherwise.
-# Memory: ~3-5 GB per corner with SPEF on this SoC, corners run one after another; do not run next to a
-# LibreLane flow on a 15 GB host.
-#----------------------------------------------------------------
 CDC_CORNER ?=
 CDC_CORNERS ?= nom_tt_025C_1v80 max_ss_100C_1v60
 CDC_CORNERS_ALL := nom_tt_025C_1v80 nom_ss_100C_1v60 nom_ff_n40C_1v95 min_tt_025C_1v80 min_ss_100C_1v60 min_ff_n40C_1v95 max_tt_025C_1v80 max_ss_100C_1v60 max_ff_n40C_1v95
@@ -2217,8 +1737,6 @@ check-cdc-timing-sky130-soc:
 	echo "PASS: check-cdc-timing-sky130-soc -- all corners pass: $$CORNERS"
 
 # flop-count: DFF breakdown from any LibreLane run's synthesis log.
-# Usage: make flop-count RUN_DIR=asap7/gpu/runs/RUN_2026-05-24_09-12-00
-#        make flop-count RUN_DIR=asap7/runs/RUN_2026-05-20_06-27-10
 RUN_DIR ?=
 
 flop-count:
@@ -2244,22 +1762,6 @@ flop-count:
 #----------------------------------------------------------------
 
 # Deletes old run directories, keeping the newest ASAP7_MAX_RUNS.
-#
-# TWO PROTECTIONS, both added after this macro silently destroyed the ASAP7 CPU
-# sign-off runs (2026-09-09): a 10-run bring-up campaign in one night evicted
-# every pre-September run, including the one CLAUDE.md and
-# Doc: cr:run:phase5 cite. The macro-view archiving under
-# pnr/asap7/*/macro/ is what saved the netlists and abstracts; the run
-# directories -- step logs, per-step metrics, intermediate ODBs, the STA reports
-# behind the quoted numbers -- were lost and are not reproducible (different
-# LibreLane, different OpenROAD now).
-#
-#  1. A run directory containing a `.signoff` file is NEVER deleted, regardless
-#     of age or run count. Mark a run the moment its numbers are quoted anywhere:
-#         touch pnr/asap7/cpu/runs/RUN_<stamp>/.signoff
-#  2. Every deletion is PRINTED before it happens. The old macro reported only a
-#     count, so an eviction of something irreplaceable looked identical to
-#     cleaning up scratch runs.
 define prune_runs
 	@RUNS_DIR="$(1)/runs"; \
 	if [ ! -d "$$RUNS_DIR" ]; then exit 0; fi; \
@@ -2297,22 +1799,7 @@ prune-asap7-soc-runs:
 
 #----------------------------------------------------------------
 # Routing sign-off gate: fail loudly if detailed routing committed zero wires.
-#
-# bead claude_verilog_test-xy6. `pnr/scripts/openroad/drt.tcl` is a local
-# LibreLane patch that wraps `detailed_route` in a `catch {}` so a single
-# unresolved pin-access point does not abort the flow (see the DRT-0074 note
-# in memory/pd/knowledge.md). The catch is too broad: when the access-point
-# error fires before track assignment starts -- which is what has actually
-# happened on every ASAP7 run inspected to date, including the accepted M11
-# SoC sign-off (run 14) and both GPU 571 MHz sign-off runs -- the whole
-# `detailed_route` call throws immediately, the catch swallows it, and
-# `write_views` commits a DEF with ZERO routed nets. Every downstream
-# checker then reports 0 violations because nothing was routed to violate.
-#
 # This runs BEFORE the corresponding prune-asap7-*-runs target so a failing
-# run is never pruned away before it can be inspected. Run manually against
-# any specific run: python3 tools/verif/check_asap7_routing.py <run_dir>
-#----------------------------------------------------------------
 define check_routing
 	@LATEST=$$(ls -td $(1)/runs/RUN_* 2>/dev/null | head -1); \
 	if [ -z "$$LATEST" ]; then \
@@ -2335,37 +1822,6 @@ check-asap7-gpu-routing:
 check-asap7-soc-routing:
 	$(call check_routing,$(LIBRELANE_ASAP7_SOC_DIR),ASAP7 SoC)
 
-#----------------------------------------------------------------
-# ASAP7 macro views: abstract LEF + timing-model LIB + gate-level netlist
-#
-# Generates the three artifacts needed to instantiate a block (rv32i_cpu_top or
-# gpu_top) as a hard macro in a top-level (Phase-5 SoC) P&R run.  Mirrors the
-# SRAM macro convention: LEF (abstract) + LIB (timing model) + NL (blackbox
-# netlist).  BLOCK selects the design (cpu | gpu, default cpu).
-#
-# GDS is omitted: Magic has no ASAP7 tech file and the SRAM stub has no GDS
-# geometry — same reason the existing librelane-asap7 target skips streamout.
-#
-# Uses a standalone OpenROAD script (scripts/asap7_macro_views.tcl) against
-# the saved final/odb so no full flow re-run is needed.
-#
-# Usage:
-#   make macro-views-asap7                                   # latest CPU run
-#   make macro-views-asap7 BLOCK=gpu                         # latest GPU run
-#   make macro-views-asap7 BLOCK=gpu RUN=asap7/gpu/runs/RUN_… # specific run
-#
-# Output (cpu): pnr/asap7/cpu/macro/{rv32i_cpu_top.lef,
-#                           rv32i_cpu_top__nom_tt_025C_0p7V.lib,
-#                           rv32i_cpu_top.nl.v.gz}
-# Output (gpu): pnr/asap7/gpu/macro/{gpu_top.lef,
-#                           gpu_top__nom_tt_025C_0p7V.lib,
-#                           gpu_top.nl.v.gz}
-#
-# The flat post-route netlist is gzipped (gpu_top.nl.v is ~103 MB raw, over
-# GitHub's 100 MB limit; ~9.6 MB gzipped). LEF + LIB are read directly by P&R
-# tools and stay uncompressed; run `gunzip -k <design>.nl.v.gz` to restore the
-# netlist for full-flat sim/LEC. Raw .nl.v is gitignored.
-#----------------------------------------------------------------
 
 BLOCK ?= cpu
 
@@ -2410,26 +1866,6 @@ macro-views-asap7: check-asap7-openroad
 
 #----------------------------------------------------------------
 # Schematic viewer (yosys `show` -> SVG via graphviz)
-#----------------------------------------------------------------
-# Renders a schematic of the CPU or GPU design using the same Synlig
-# (read_systemverilog) front-end LibreLane uses, with the ASAP7 SRAM/ICG cells
-# as blackboxes. xdot is not available in the shell, so output is written as SVG.
-#
-# SCHEM_BLOCK selects the design (cpu | gpu, default gpu); SCHEM_MODULE selects
-# the module within it (defaults to the block's top: rv32i_cpu_top / gpu_top).
-# Default render is the RTL-elaboration view (hierarchy preserved: submodule
-# instances render as boxes) — compact and fast. SCHEM_SYNTH=1 gives the
-# gate-level synthesised view, which for any non-trivial module produces a very
-# large graph that graphviz `dot` lays out slowly (use only on small leaf modules).
-#
-#   make schematic                                  # gpu_top, RTL view
-#   make schematic SCHEM_BLOCK=cpu                  # rv32i_cpu_top, RTL view
-#   make schematic SCHEM_BLOCK=cpu SCHEM_MODULE=rv32i_alu
-#   make schematic SCHEM_MODULE=warp_scheduler
-#   make schematic SCHEM_MODULE=vector_alu SCHEM_SYNTH=1   # gate-level (slow/large)
-#   (gpu-schematic is kept as an alias for `schematic SCHEM_BLOCK=gpu`)
-#
-# Output: pnr/asap7/schematics/schematic_<module>.svg (+ .dot)
 SCHEM_BLOCK ?= gpu
 SCHEM_OUTDIR := asap7/schematics
 
@@ -2523,27 +1959,6 @@ clean:
 # End of Makefile
 #----------------------------------------------------------------
 
-# -- GH #119 Stage 2 (bead r8r): leaf-block PPA comparison ---------------------
-# Four small blocks -- two hand-RTL, two Bambu-HLS -- run to OpenROAD.STAPrePNR
-# ONLY. That step is where area, wns/tns/fmax AND power all first appear, so
-# placement, CTS and routing are needed for none of them: a few minutes and
-# ~1 GB per block instead of a full flow.
-#
-# check-asap7-routing is deliberately NOT invoked. On a partial run it returns
-# ERROR (exit 2), not FAIL, because there is no DetailedRouting log -- which
-# would abort the chain. The DRC axis is struck for this comparison anyway
-# (beads xy6/ocm): no ASAP7 run in this repo has ever completed detailed
-# routing, so a DRC column would compare two vacuous zeros.
-#
-# Caveat for any table built from these: pre-placement STA uses zero-parasitic
-# estimates, so fmax is optimistic in absolute terms. All four arms are treated
-# identically, so the COMPARISON holds.
-#
-# Checker.YosysSynthChecks is skipped on ALL FOUR so the flow stays identical --
-# but note WHY it has to be: Bambu's generated netlists contain undriven wires
-# (9 in the coalescer, 28 in the hazard unit: OUT_UNBOUNDED_* functional-unit
-# outputs and an undriven s_start_port0), while BOTH hand-RTL arms report zero.
-# That asymmetry is a result worth reporting, not something the skip should hide.
 
 .PHONY: librelane-asap7-coalescer-rtl
 librelane-asap7-coalescer-rtl: check-asap7-openroad
@@ -2730,19 +2145,6 @@ librelane-asap7-valu-rtl: check-asap7-openroad
 		 --skip Checker.MaxCapViolations \
 		 $(abspath asap7/valu_rtl)/config.json"
 
-# GH #119 r8r bead b0t remedy (2026-09-19, user-approved): the baseline FSM-arm
-# shim (hls/gpu/vector_alu/shim/vector_alu_hls.sv) uses the same ANSI-header
-# package-import module form that Synlig/UHDM (USE_SYNLIG) mis-elaborates for
-# the sdc_longclk combinational candidate (bead gcd). A gate-level simulation
-# (tools/verif/gls/run_hls_seq_check.py, bead b0t part B) proved the tracked
-# USE_SYNLIG:true netlist for THIS arm is also corrupt: it fails all 3 golden
-# vectors (VMUL partial-mask, VADD full-mask, VAND alternating-mask), while a
-# USE_SYNLIG:false + sv2v-preprocessed netlist of the identical RTL passes all
-# 3 bit-exact. Fix: bypass Synlig here too -- pre-process gpu_pkg.sv + the
-# shim through sv2v into plain Verilog-2005, then set USE_SYNLIG:false and
-# point valu_hls/config.json's VERILOG_FILES at the sv2v output instead of the
-# raw .sv + gpu_pkg.sv. Deterministic/reproducible via this target -- do not
-# hand-edit the generated .v. Mirrors egt-valu-hls-comb-sv2v above.
 R8R_VALU_HLS_SHIM_SV := \
 	$(PROJECT_ROOT)/rtl/gpu/gpu_pkg.sv \
 	$(PROJECT_ROOT)/hls/gpu/vector_alu/shim/vector_alu_hls.sv
@@ -2799,23 +2201,6 @@ librelane-asap7-valu-hls: check-asap7-openroad r8r-valu-hls-sv2v
 		 --skip Checker.MaxCapViolations \
 		 $(abspath asap7/valu_hls)/config.json"
 
-# GH #119 egt Bug 2 (bead gcd): the sdc_longclk combinational candidate's shim
-# (hls/gpu/vector_alu/shim/vector_alu_hls.sv) uses an ANSI-header package
-# import ("module vector_alu_hls import gpu_pkg::*; (...)") that Synlig/UHDM
-# (USE_SYNLIG) mis-elaborates for this design shape -- it silently produces a
-# netlist where the per-lane "output 0 when active_mask_i[lane]=0" select mux
-# (ui_cond_expr_FU, vector_alu_synth.v:346) loses its masking branch, leaking
-# raw rs1_i/rs2_i values into result_o for inactive lanes (proven by SAT miter
-# + eval against the real ASAP7-mapped netlist; see
-# Doc: tm:dec:cpp-to-rtl-hls-evaluation and bd show claude_verilog_test-gcd).
-# Root-caused to the Synlig frontend, not LibreLane's opt passes (SHARE and
-# SYNTH_TIE_UNDEFINED were both ruled out empirically). Fix: bypass Synlig for
-# this leaf -- pre-process gpu_pkg.sv + the shim through sv2v (already the
-# project's sanctioned fallback for Synlig-incompatible SV, see
-# sky130-soc-sv2v above) into plain Verilog-2005, then set USE_SYNLIG:false
-# and point valu_hls_comb/config.json's VERILOG_FILES at the sv2v output
-# instead of the raw .sv + gpu_pkg.sv. Deterministic/reproducible via this
-# target -- do not hand-edit the generated .v.
 EGT_VALU_HLS_COMB_SHIM_SV := \
 	$(PROJECT_ROOT)/rtl/gpu/gpu_pkg.sv \
 	$(PROJECT_ROOT)/hls/gpu/vector_alu/shim/vector_alu_hls.sv

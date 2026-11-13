@@ -17,6 +17,7 @@
 # Clock Definition
 #---------------------------------------------
 
+# Doc: cr:pd:phase1-cpu-enhanced-sdc
 # Create primary clock (100 MHz target)
 create_clock -name clk -period 10.0 [get_ports clk]
 
@@ -240,9 +241,3 @@ set_max_fanout 16 [current_design]
 
 # If certain signals are tied to constants in test mode
 # Example: set_case_analysis 0 [get_ports test_mode]
-
-#---------------------------------------------
-# End of SDC
-#---------------------------------------------
-# Generated for Phase 1 RV32I CPU
-# Last updated: 2026-01-22

@@ -1,6 +1,6 @@
 #================================================================
 # Load a finished Sky130 SoC (or CPU macro) LibreLane run into OpenSTA for ad-hoc post-route timing queries.
-# bead claude_verilog_test-j41m.8 (DFT Stage 2): used for the functional view vs scan view hold/setup comparison.
+# Doc: tm:pd:scripts-sta-load-sky130-soc-tcl
 #
 #   STA_RUN_DIR   (required) run directory
 #   STA_CORNER    default nom_tt_025C_1v80 (one of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95})

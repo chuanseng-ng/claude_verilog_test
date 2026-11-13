@@ -15,24 +15,9 @@
 
 ###############################################################################
 # phase5_soc.sdc — Timing constraints for soc_top on ASAP7 7nm predictive
-#
-# IMPORTANT: All time values are in PICOSECONDS.
-# ASAP7 stdcell Liberty declares time_unit: "1ps".
-# LibreLane passes CLOCK_PERIOD (ns) to create_clock internally; this SDC is
-# loaded raw by OpenROAD/OpenSTA which interprets values against the 1 ps unit.
-#
-# Clock topology (single-clock SoC):
-#   clk_i  = 100 MHz external reference input to pll_clkgen.
-#   core_clk = PLL output; in STUB mode core_clk == clk_i (pass-through).
-#   All SoC children (CPU, GPU, crossbar, peripherals) run on core_clk.
-#   pll_axil_regs runs on clk_i/rst_n_i (ref domain) — same frequency in STUB.
-#   NO CDC in this flow: GPU SDC note §6 carried false-paths are NOT brought in.
-#
-# SoC fmax target: 571 MHz (GPU-governed), period = 1750 ps.
-# CPU signed-off at 1282 MHz standalone; GPU at 571 MHz standalone.
-# SoC period = 1750 ps governs all blocks.
 ###############################################################################
 
+# Doc: tm:pd:phase5-soc-sdc
 ###############################################################################
 # 1. Primary clock — defined at the SoC top-level reference input
 ###############################################################################
@@ -188,17 +173,6 @@ set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *din0*"]
 set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *addr0*"]
 set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *csb0*"]
 
-###############################################################################
-# 9. Hard-macro timing budgets
-#    CPU and GPU hard macros are black-boxes; their internal timing is signed off
-#    in their own block-level runs.  The SoC SDC constrains only the interface
-#    paths:  SoC-logic → macro input, and macro output → SoC-logic.
-#
-#    Use set_multicycle_path 2 on AXI crossbar-to-macro paths to relax the
-#    interface constraint; the hard-macro output registers absorb one full cycle,
-#    so SoC logic has 2×1750 ps = 3500 ps for the launch+capture sequence.
-#    This is a conservative starting point; tighten after first timing report.
-###############################################################################
 set _cpu_inputs  [get_pins -hierarchical -filter "full_name =~ *u_cpu/*" -quiet]
 set _gpu_inputs  [get_pins -hierarchical -filter "full_name =~ *u_gpu/*" -quiet]
 

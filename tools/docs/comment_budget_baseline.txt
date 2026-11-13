@@ -21,112 +21,51 @@
 .github/workflows/soc_coverage.yml | ghpr | 9 |
 .github/workflows/soc_coverage.yml | wf | 6 | 95
 .github/workflows/synth-undef-gate.yml | bead | 1 |
-pnr/Makefile | bead | 49 |
-pnr/Makefile | date | 16 |
-pnr/Makefile | fline | 5 |
-pnr/Makefile | ghpr | 16 |
-pnr/Makefile | meas | 8 |
-pnr/Makefile | mk | 30 | 59
-pnr/Makefile | run | 11 |
-pnr/asap7/coalescer_hls/constraints/asap7.sdc | bead | 1 |
-pnr/asap7/coalescer_hls/constraints/asap7.sdc | ghpr | 1 |
+pnr/Makefile | meas | 2 |
 pnr/asap7/coalescer_hls/constraints/asap7.sdc | meas | 2 |
-pnr/asap7/coalescer_rtl/constraints/asap7.sdc | bead | 1 |
-pnr/asap7/coalescer_rtl/constraints/asap7.sdc | ghpr | 1 |
 pnr/asap7/coalescer_rtl/constraints/asap7.sdc | meas | 2 |
-pnr/asap7/cpu/constraints/asap7.sdc | bead | 5 |
-pnr/asap7/cpu/constraints/asap7.sdc | hdr | 1 | 28
-pnr/asap7/cpu/constraints/asap7.sdc | meas | 23 |
+pnr/asap7/cpu/constraints/asap7.sdc | meas | 14 |
 pnr/asap7/cpu/macro_placement.cfg | meas | 5 |
-pnr/asap7/cpu/macro_placement_3014.cfg | bead | 3 |
-pnr/asap7/cpu/macro_placement_3014.cfg | date | 3 |
-pnr/asap7/cpu/macro_placement_3014.cfg | hdr | 1 | 77
-pnr/asap7/cpu/macro_placement_3014.cfg | meas | 6 |
-pnr/asap7/gpu/constraints/asap7_gpu.sdc | meas | 7 |
-pnr/asap7/gpu/constraints/asap7_gpu.sdc | run | 1 |
+pnr/asap7/cpu/macro_placement_3014.cfg | bead | 1 |
+pnr/asap7/gpu/constraints/asap7_gpu.sdc | meas | 2 |
 pnr/asap7/gpu/macro_placement.cfg | meas | 3 |
-pnr/asap7/gpu/macro_placement_3014.cfg | run | 2 |
-pnr/asap7/hazard_hls/constraints/asap7.sdc | bead | 1 |
-pnr/asap7/hazard_hls/constraints/asap7.sdc | ghpr | 1 |
 pnr/asap7/hazard_hls/constraints/asap7.sdc | meas | 2 |
-pnr/asap7/hazard_rtl/constraints/asap7.sdc | bead | 1 |
-pnr/asap7/hazard_rtl/constraints/asap7.sdc | ghpr | 1 |
 pnr/asap7/hazard_rtl/constraints/asap7.sdc | meas | 2 |
 pnr/asap7/pdn_asap7.tcl | meas | 4 |
 pnr/asap7/pdn_asap7_orfs.tcl | bead | 1 |
-pnr/asap7/pdn_asap7_orfs.tcl | date | 1 |
-pnr/asap7/pdn_asap7_orfs.tcl | hdr | 1 | 46
-pnr/asap7/pdn_asap7_orfs.tcl | meas | 5 |
-pnr/asap7/pdn_asap7_orfs.tcl | run | 1 |
-pnr/asap7/soc/constraints/phase5_soc.sdc | bead | 1 |
-pnr/asap7/soc/constraints/phase5_soc.sdc | date | 2 |
-pnr/asap7/soc/constraints/phase5_soc.sdc | ghpr | 3 |
-pnr/asap7/soc/constraints/phase5_soc.sdc | hdr | 1 | 31
-pnr/asap7/soc/constraints/phase5_soc.sdc | meas | 13 |
-pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | bead | 11 |
-pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | date | 7 |
-pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | fline | 5 |
-pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | ghpr | 21 |
-pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | hdr | 1 | 80
-pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | meas | 32 |
-pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | run | 1 |
-pnr/asap7/soc/macro_placement.cfg | hdr | 1 | 32
-pnr/asap7/soc/macro_placement.cfg | meas | 13 |
+pnr/asap7/pdn_asap7_orfs.tcl | meas | 2 |
+pnr/asap7/soc/constraints/phase5_soc.sdc | meas | 8 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | bead | 1 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | ghpr | 2 |
+pnr/asap7/soc/constraints/phase5_soc_multiclock.sdc | meas | 1 |
+pnr/asap7/soc/macro_placement.cfg | meas | 9 |
 pnr/asap7/soc/pdn.tcl | meas | 1 |
-pnr/asap7/soc/pdn_orfs.tcl | date | 1 |
 pnr/asap7/soc/rv32i_cpu_top_stub.sv | bead | 2 |
 pnr/asap7/soc/soc_top_ports.v | ghpr | 3 |
-pnr/asap7/template/constraints/asap7.sdc | hdr | 1 | 28
-pnr/asap7/template/constraints/asap7.sdc | meas | 22 |
+pnr/asap7/template/constraints/asap7.sdc | meas | 13 |
 pnr/asap7/template/macro_placement.cfg | meas | 5 |
-pnr/asap7/valu_hls/constraints/asap7.sdc | bead | 1 |
-pnr/asap7/valu_hls/constraints/asap7.sdc | ghpr | 1 |
 pnr/asap7/valu_hls/constraints/asap7.sdc | meas | 2 |
-pnr/asap7/valu_hls_comb/constraints/asap7.sdc | bead | 2 |
-pnr/asap7/valu_hls_comb/constraints/asap7.sdc | ghpr | 1 |
 pnr/asap7/valu_hls_comb/constraints/asap7.sdc | meas | 3 |
-pnr/asap7/valu_rtl/constraints/asap7.sdc | bead | 1 |
-pnr/asap7/valu_rtl/constraints/asap7.sdc | ghpr | 1 |
 pnr/asap7/valu_rtl/constraints/asap7.sdc | meas | 2 |
-pnr/config/vsrc.tcl | bead | 2 |
+pnr/config/vsrc.tcl | bead | 1 |
 pnr/config/vsrc.tcl | ghpr | 1 |
 pnr/constraints/phase1_cpu.sdc | meas | 3 |
-pnr/constraints/phase1_cpu_enhanced.sdc | date | 1 |
 pnr/constraints/phase1_cpu_enhanced.sdc | meas | 5 |
-pnr/constraints/phase1_cpu_post_cts.sdc | date | 1 |
 pnr/constraints/phase1_cpu_post_cts.sdc | meas | 3 |
 pnr/constraints/phase2_cpu.sdc | meas | 5 |
-pnr/constraints/phase2_cpu.upf | hdr | 1 | 33
 pnr/constraints/phase3_cache.sdc | meas | 8 |
-pnr/constraints/phase3_cache.upf | hdr | 1 | 48
 pnr/constraints/phase5_soc.sdc | date | 1 |
 pnr/constraints/phase5_soc.sdc | ghpr | 2 |
-pnr/constraints/phase5_soc.sdc | hdr | 1 | 36
-pnr/constraints/phase5_soc.sdc | meas | 9 |
-pnr/constraints/phase5_soc.upf | bead | 3 |
-pnr/constraints/phase5_soc.upf | date | 1 |
-pnr/constraints/phase5_soc.upf | ghpr | 1 |
-pnr/constraints/phase5_soc.upf | hdr | 1 | 83
-pnr/constraints/phase5_soc_multiclock.sdc | bead | 13 |
-pnr/constraints/phase5_soc_multiclock.sdc | date | 6 |
-pnr/constraints/phase5_soc_multiclock.sdc | fline | 5 |
-pnr/constraints/phase5_soc_multiclock.sdc | ghpr | 20 |
-pnr/constraints/phase5_soc_multiclock.sdc | hdr | 1 | 76
-pnr/constraints/phase5_soc_multiclock.sdc | meas | 32 |
-pnr/constraints/phase5_soc_multiclock.sdc | run | 1 |
-pnr/constraints/phase5_soc_multiclock_check.sdc | bead | 36 |
-pnr/constraints/phase5_soc_multiclock_check.sdc | date | 13 |
-pnr/constraints/phase5_soc_multiclock_check.sdc | fline | 7 |
-pnr/constraints/phase5_soc_multiclock_check.sdc | ghpr | 6 |
-pnr/constraints/phase5_soc_multiclock_check.sdc | hdr | 1 | 183
-pnr/constraints/phase5_soc_multiclock_check.sdc | meas | 7 |
-pnr/constraints/phase5_soc_multiclock_check.sdc | run | 1 |
+pnr/constraints/phase5_soc.sdc | meas | 2 |
+pnr/constraints/phase5_soc.upf | bead | 1 |
+pnr/constraints/phase5_soc.upf | hdr | 1 | 30
+pnr/constraints/phase5_soc_multiclock.sdc | bead | 1 |
+pnr/constraints/phase5_soc_multiclock.sdc | ghpr | 2 |
+pnr/constraints/phase5_soc_multiclock.sdc | meas | 1 |
 pnr/freepdk45/constraints/freepdk45.sdc | meas | 1 |
 pnr/freepdk45/gen_via_stubs.py | meas | 7 |
 pnr/freepdk45/macro_placement.cfg | meas | 7 |
 pnr/librelane/Makefile | meas | 1 |
-pnr/librelane/macro_placement.cfg | hdr | 1 | 27
-pnr/librelane/macro_placement.cfg | meas | 7 |
 pnr/plugins/librelane_plugin_cvt_synthgate/__init__.py | bead | 2 |
 pnr/scripts/01_synth.tcl | meas | 2 |
 pnr/scripts/02_floorplan.tcl | meas | 6 |
@@ -136,63 +75,27 @@ pnr/scripts/05_route.tcl | meas | 1 |
 pnr/scripts/06_parasitics.tcl | meas | 1 |
 pnr/scripts/07_sta.tcl | meas | 2 |
 pnr/scripts/08_power.tcl | meas | 1 |
-pnr/scripts/asap7_macro_power.tcl | bead | 3 |
-pnr/scripts/asap7_macro_power.tcl | hdr | 1 | 71
-pnr/scripts/check_cdc_timing.tcl | bead | 19 |
-pnr/scripts/check_cdc_timing.tcl | date | 14 |
-pnr/scripts/check_cdc_timing.tcl | ghpr | 5 |
-pnr/scripts/check_cdc_timing.tcl | hdr | 1 | 59
-pnr/scripts/check_cdc_timing.tcl | meas | 2 |
-pnr/scripts/check_cdc_timing_sky130.tcl | bead | 4 |
-pnr/scripts/check_cdc_timing_sky130.tcl | date | 1 |
-pnr/scripts/check_cdc_timing_sky130.tcl | hdr | 1 | 39
-pnr/scripts/check_cdc_timing_sky130.tcl | meas | 2 |
-pnr/scripts/check_multiclock_sdc.tcl | bead | 2 |
-pnr/scripts/check_multiclock_sdc.tcl | date | 1 |
-pnr/scripts/check_multiclock_sdc.tcl | ghpr | 2 |
-pnr/scripts/check_multiclock_sdc.tcl | hdr | 1 | 41
-pnr/scripts/report_per_clock_timing.tcl | bead | 1 |
-pnr/scripts/report_per_clock_timing.tcl | ghpr | 1 |
-pnr/scripts/sta_load_sky130_soc.tcl | bead | 2 |
+pnr/scripts/asap7_macro_power.tcl | hdr | 1 | 39
+pnr/scripts/check_cdc_timing.tcl | bead | 1 |
+pnr/scripts/check_cdc_timing.tcl | date | 1 |
+pnr/scripts/check_cdc_timing_sky130.tcl | bead | 1 |
+pnr/scripts/check_cdc_timing_sky130.tcl | hdr | 1 | 29
+pnr/scripts/check_multiclock_sdc.tcl | bead | 1 |
+pnr/scripts/sta_load_sky130_soc.tcl | bead | 1 |
 pnr/scripts/sta_scan_queries_sky130_soc.tcl | bead | 1 |
-pnr/sky130/cpu/constraints/sky130_cpu.sdc | bead | 1 |
-pnr/sky130/cpu/constraints/sky130_cpu.sdc | hdr | 1 | 27
 pnr/sky130/cpu/constraints/sky130_cpu.sdc | meas | 8 |
 pnr/sky130/cpu/macro_placement.cfg | meas | 6 |
-pnr/sky130/soc/constraints/sky130_soc.sdc | bead | 26 |
-pnr/sky130/soc/constraints/sky130_soc.sdc | date | 16 |
-pnr/sky130/soc/constraints/sky130_soc.sdc | ghpr | 12 |
-pnr/sky130/soc/constraints/sky130_soc.sdc | hdr | 1 | 234
-pnr/sky130/soc/constraints/sky130_soc.sdc | meas | 57 |
-pnr/sky130/soc/constraints/sky130_soc.sdc | run | 20 |
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | bead | 9 |
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | date | 2 |
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | ghpr | 2 |
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | hdr | 1 | 52
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | meas | 10 |
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | run | 1 |
-pnr/sky130/soc/macro_placement.cfg | bead | 2 |
-pnr/sky130/soc/macro_placement.cfg | date | 3 |
-pnr/sky130/soc/macro_placement.cfg | ghpr | 2 |
-pnr/sky130/soc/macro_placement.cfg | hdr | 1 | 102
-pnr/sky130/soc/macro_placement.cfg | meas | 14 |
-pnr/sky130/soc/macro_placement.cfg | run | 1 |
+pnr/sky130/soc/constraints/sky130_soc.sdc | meas | 1 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | bead | 1 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | date | 1 |
+pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | meas | 1 |
+pnr/sky130/soc/macro_placement.cfg | meas | 1 |
 pnr/sky130/soc/openram_sram4k/config_sky130_sram_4kbyte_1rw1r_32x1024_8.py | ghpr | 1 |
-pnr/sky130/soc/pdn.tcl | bead | 2 |
-pnr/sky130/soc/pdn.tcl | date | 12 |
-pnr/sky130/soc/pdn.tcl | ghpr | 10 |
-pnr/sky130/soc/pdn.tcl | hdr | 1 | 153
-pnr/sky130/soc/pdn.tcl | meas | 15 |
-pnr/sky130/soc/pdn.tcl | run | 6 |
 pnr/sky130/soc/plugin/cvt_maxcap_waiver.py | bead | 1 |
 pnr/sky130/soc/plugin/cvt_maxcap_waiver.py | meas | 1 |
 pnr/sky130/soc/plugin/cvt_scan_step.py | bead | 3 |
 pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/cvt_wrap.tcl | bead | 1 |
-pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/rc_calibration.tcl | bead | 2 |
-pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/rc_calibration.tcl | meas | 2 |
-pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/rc_calibration.tcl | run | 1 |
 pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/scan_insert.tcl | bead | 2 |
-pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130/tcl/scan_insert.tcl | hdr | 1 | 30
 pnr/sky130/soc/rv32i_cpu_top_stub.sv | bead | 2 |
 pnr/sky130/soc/sky130_clkcells_stub.v | bead | 1 |
 pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | date | 2 |

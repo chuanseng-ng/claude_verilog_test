@@ -1,5 +1,3 @@
-# Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
-#
 # ALL TIME VALUES ARE PICOSECONDS (ASAP7 Liberty time_unit : "1ps").
 #
 # rv32i_hazard_unit is PURELY COMBINATIONAL: no clock port, no reset, no
@@ -12,6 +10,7 @@
 # fmax -- is this block's primary number, and it is compared against the HLS arm
 # on throughput (its period x 6-9 cycles). Same zero I/O budget as the clocked
 # arms so the two are measured on the same basis.
+# Doc: tm:pd:asap7-hazard-rtl-sdc
 
 set_units -time 1ps
 

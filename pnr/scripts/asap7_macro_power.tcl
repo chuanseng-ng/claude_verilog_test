@@ -1,38 +1,5 @@
 # asap7_macro_power.tcl — characterize lumped macro power for an ASAP7 hard
 # macro (rv32i_cpu_top / gpu_top) from its own flat gate-level netlist.
-#
-# Companion to (NOT a modification of) asap7_macro_views.tcl. write_timing_model
-# (used by that script) has no power-characterization code path — verified
-# zero 'power' hits in vendored OpenSTA MakeTimingModel.cc — so the abstracted
-# macro .lib it produces declares leakage_power_unit but never emits
-# cell_leakage_power / internal_power. That means report_power attributes
-# 0.00 W to the macro at every level above it (bead claude_verilog_test-86a,
-# root-caused while resolving bead ew3). This script does not touch
-# write_timing_model or the LEF/timing views it produces; it only computes a
-# power number to inject afterward with asap7_macro_power_inject.py.
-#
-# Tool: plain OpenSTA ("sta -exit ..."), NOT OpenROAD — no ODB/floorplan is
-# needed or used. This deliberately works from just the macro's own flat
-# post-route netlist + the same Liberty set used for synthesis/STA + its
-# block-level SDC. That also means there is no post-route SPEF/DEF in this
-# flow, so net parasitics are whatever OpenSTA infers from gate input-pin
-# capacitance alone (no wire RC) — see the header comment
-# asap7_macro_power_inject.py writes into the target .lib for the full
-# caveat; it is carried into the injected numbers, not hidden.
-#
-# Activity assumption: uniform toggle rate + duty, applied globally via
-# set_power_activity. Default 0.20 / 0.5 matches this repo's own established
-# convention for "no VCD available" power estimation (pnr/scripts/08_power.tcl,
-# Sky130 Phase 3 flow: "0.20 (20%) ... conservative ... errs on the side of
-# overestimating dynamic power, which is safe for thermal and IR-drop
-# budgeting"). It is NOT derived from any captured workload trace for this
-# design — no gate-level VCD/SAIF exists for either macro (same gap already
-# documented in this project's memory for other blocks: no SDF support in the
-# Verilator sim flow, no per-node switching capture). Override via
-# ACTIVITY_RATE / ACTIVITY_DUTY env vars, or point VCD_FILE at a real
-# simulation dump (with VCD_SCOPE set to the dut's instance path in that
-# testbench) to replace the flat default with measured activity.
-#
 # Invoked via: sta -exit scripts/asap7_macro_power.tcl
 #   (or through the MCP eda-opensta session: read_liberty/read_verilog/
 #    link_design/read_sdc by hand, then source this script's activity+
@@ -69,7 +36,7 @@
 # Leakage / Total, by group: Sequential / Combinational / Clock / Macro /
 # Pad, plus the Total row asap7_macro_power_inject.py parses). Redirect it:
 #   sta -exit pnr/scripts/asap7_macro_power.tcl > "$POWER_REPORT_OUT" 2>&1
-#----------------------------------------------------------------
+# Doc: tm:pd:scripts-asap7-macro-power-tcl
 
 set NETLIST         $::env(NETLIST_PATH)
 set DESIGN          $::env(DESIGN_NAME)
@@ -108,12 +75,6 @@ link_design $DESIGN
 puts "=== Reading SDC: $SDC_PATH ==="
 read_sdc $SDC_PATH
 
-# ── 4. Switching activity ─────────────────────────────────────────────────
-# NOTE: no SPEF/DEF is read here — this macro's post-route run directory is
-# gone (bead 86a), so this is Liberty-table power from gate input-pin
-# capacitance only, no post-route wire RC. That is a second, independent
-# approximation on top of the activity assumption; asap7_macro_power_inject.py
-# writes both into the target .lib's header comment.
 if {$VCD_FILE ne ""} {
     puts "=== Switching activity: VCD $VCD_FILE (scope: $VCD_SCOPE) ==="
     if {$VCD_SCOPE ne ""} {

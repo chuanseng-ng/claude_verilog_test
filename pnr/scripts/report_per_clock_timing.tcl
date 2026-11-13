@@ -1,8 +1,6 @@
 #=================================================================
 # report_per_clock_timing.tcl — per-clock-domain WNS / TNS / skew
 #
-# GH #96 / bead claude_verilog_test-8nz.
-#
 # WHY: LibreLane's final/metrics.json carries only GLOBAL timing keys
 # (timing__setup__ws, timing__setup__tns, ...). On a multi-domain design the
 # global WNS is the minimum across every domain, so a single failing domain
@@ -19,6 +17,7 @@
 # Defaults to the run's own final/sdc/soc_top.sdc — the constraints the run
 # was actually implemented with, not whatever is currently checked out.
 #=================================================================
+# Doc: tm:pd:scripts-report-per-clock-timing-tcl
 
 proc pc_env {name default} {
     if {[info exists ::env($name)] && $::env($name) ne ""} { return $::env($name) }

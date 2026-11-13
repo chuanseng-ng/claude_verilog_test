@@ -9,12 +9,6 @@
 # bead h3lm records the audit that rewrote it.  Nothing in the physical flow
 # reads it today (pnr/Makefile UPF_FILE points at phase3_cache.upf, unused).
 #
-# Rewritten 2026-10-17 (bead h3lm).  The previous revision named isolation
-# nets (cpu_iso_en, gpu_iso_en) and switch control ports (cpu_pg_ctrl,
-# gpu_pg_ctrl) that do not exist in soc_top, isolated every output where the
-# RTL clamps a handful of handshakes, used create_power_switch options no UPF
-# parser accepts, and passed a domain name where a supply set is required.
-#
 # Domains (4, as before; all on one nominal voltage, 0.7 V ASAP7 RVT):
 #
 #   PD_CPU    u_cpu     rv32i_cpu_top hard macro incl. L1 caches   switchable rail VDD_CPU
@@ -67,36 +61,6 @@
 # upf-check aon u_i2c               -- i2c_controller
 # upf-check aon u_crypto            -- crypto_accel
 # upf-check aon u_npu               -- npu_top (its weight SRAM macros are inside)
-#
-# Isolation (section 5) covers EXACTLY the signals soc_top clamps, not every
-# output.  A clamp forces a handshake to 0 while the domain is off:
-#
-#   ISO_CPU  6 signals, control pmu_cpu_iso_en_sync (cpu_core_clk, 2-FF from the PMU)
-#   ISO_GPU  8 signals, control pmu_gpu_iso_en      (core_clk, straight from the PMU)
-#
-# Every other output of u_cpu / u_gpu is deliberately unclamped and falls in one
-# of three classes (the checker requires each to be listed):
-#
-#   payload         AXI address/data/control buses.  Each is qualified by a
-#                   clamped valid, so it is don't-care downstream once valid=0;
-#                   clamping 32-bit buses buys nothing in this model.
-#   slave_response  slave-side response of u_gpu's AXI-Lite port and u_cpu's
-#                   debug APB port.  KNOWN GAP: with the supply really removed
-#                   these (rvalid, awready, pready ...) would drive X into the
-#                   always-on ring.  soc_top accepts a stalled access into a
-#                   gated domain (soc_top.sv "clamp-scope" note); full per-port
-#                   isolation is part of the deferred true-power-gating scope
-#                   (Doc: tm:pd:power-domain-evaluation:4-documented-gap-deferred-needs-new-tooling).
-#   observability   commit / trap / debug outputs to top-level pins; commit_valid_o
-#                   is clamped and qualifies the commit payload.  Also u_cpu's
-#                   scan_out_o (j41m.4): a test-only pin, meaningful only in the
-#                   SCAN power state where every domain is ON, and tied 0 by the
-#                   macro until Stage 2 stitches its chains, and its mbist_status_o
-#                   (c54a): a 69-bit test-only status block that is read only through
-#                   the TAP (mbist_status_sync) while the CPU domain is powered (the
-#                   MBIST precondition, Doc: tm:ch:dft-architecture 16.6); it is 0 while no
-#                   run is active, and nothing functional consumes it.
-#
 # upf-check unclamped payload: u_cpu/axi_awaddr_o u_cpu/axi_awlen_o u_cpu/axi_awsize_o u_cpu/axi_awburst_o
 # upf-check unclamped payload: u_cpu/axi_wdata_o u_cpu/axi_wstrb_o u_cpu/axi_wlast_o
 # upf-check unclamped payload: u_cpu/axi_araddr_o u_cpu/axi_arlen_o u_cpu/axi_arsize_o u_cpu/axi_arburst_o
@@ -108,24 +72,7 @@
 # upf-check unclamped observability: u_cpu/debug_rs1_data_o u_cpu/debug_rs2_data_o u_cpu/debug_branch_taken_o
 # upf-check unclamped observability: u_cpu/debug_take_branch_jump_o u_cpu/debug_pc_src_o u_cpu/debug_state_o u_cpu/debug_ebreak_o
 # upf-check unclamped observability: u_cpu/scan_out_o u_cpu/mbist_status_o
-#
-# Retention: NONE.  The old header said state is "rebuilt from SRAM on wakeup";
-# that was never true and nothing implements it.  pmu.sv emits ret_save /
-# ret_restore in order, but soc_top leaves those nets unconnected.  Across a
-# PMU off->on cycle the CPU keeps its flops only as a behavioural artefact
-# (synchronous reset asserted while its clock is gated) and the GPU loses state
-# (asynchronous reset); software must re-initialise both after power-up (bead
-# 4a7i, Doc: tm:pd:power-domain-evaluation:3-what-is-doable-now-the-scoped-go).  No set_retention appears
-# here because the RTL has no retention element to bind it to.
-#
-# Not expressed here (no RTL or library hook): macro PG-pin connections (done
-# by the PDN scripts, pnr/*/pdn*.tcl, with per-PDK pin names), level shifters
-# (single voltage), isolation/retention cell mapping (neither ASAP7 nor Sky130
-# ships an isolation cell; the clamp is plain AND logic in soc_top).
-#
-# Voltage: 0.7 V is the ASAP7 RVT nominal.  The same structure holds for the
-# Sky130 SoC (1.8 V); a Sky130 consumer must substitute the voltage literals.
-###############################################################################
+# Doc: tm:pd:phase5-soc-upf, cr:pd:phase5-soc-upf
 
 upf_version 3.0
 set_design_top soc_top
@@ -221,27 +168,6 @@ create_power_domain PD_GPU \
 ###############################################################################
 # 5. Isolation: exactly the signals soc_top clamps (functional AND logic in
 #    soc_top, in PD_PERIPH, i.e. -location parent, clamp value 0).
-#
-# Control nets are soc_top nets, checked to exist:
-#   pmu_cpu_iso_en_sync  u_cpu_iso_en_sync/q_o   (cpu_core_clk domain)
-#   pmu_gpu_iso_en       u_pmu/gpu_iso_en_o      (core_clk domain)
-# The CPU clamp sits at the CPU-domain face of u_cpu_axi_cdc (GH #93), which is
-# why its control is the synchronised copy.  The RTL clamp is already a mux, so
-# a flow that also INSERTS isolation cells from this strategy would double-clamp
-# (harmless: AND of two ANDs); the strategies document the RTL's clamps.
-#
-# Ordering (bead 3ogd, FIXED): the PMU spaces its actions one core_clk cycle apart:
-# iso, gate, reset on the way down; reset release, ungate, restore, de-isolate on
-# the way up.  The CPU domain's clamp control crosses into cpu_core_clk through a
-# 2-FF synchroniser while its reset asserts ASYNCHRONOUSLY, so with the actions
-# merely spaced in time "isolate before the reset asserts" held only while
-# 2 x cpu_core_clk period < 2 x core_clk period.  It is now a handshake:
-# u_cpu_iso_ack_sync returns pmu_cpu_iso_en_sync to the PMU (pmu_cpu_iso_ack), and
-# the CPU's DOM_PD_ISO state holds the clock gate and the reset until the clamp is
-# seen active (DOM_PU_ISO symmetrically waits for it to be seen released).  The
-# step order above is unchanged; only the wait between steps is now event-based.
-# The GPU needs none (same clock, the clamp control is the PMU flop itself).
-###############################################################################
 set_isolation ISO_CPU \
     -domain PD_CPU \
     -isolation_supply_set SS_AON \
