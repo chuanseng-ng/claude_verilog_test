@@ -1,5 +1,5 @@
 """
-test_mbist_tap.py -- beads claude_verilog_test-j41m.14 / j41m.10 (DFT Stage 4): MBIST driven END TO END
+test_mbist_tap.py -- (DFT Stage 4): MBIST driven END TO END
 through the JTAG TAP.
 
 DUT: tb_mbist_tap = dft_ctrl (jtag_tap) + soc_mbist (CPU_PRESENT = 1: two cdc_gray_fifo crossings, two status
@@ -21,6 +21,7 @@ What is proven (each also checked against mbist_golden.py, the independent golde
     overflow is reported in MBIST_STATUS bit 0 and cleared by an accepted run = 0 word; with a very fast TCK
     and a slow destination clock a word is NEVER silently lost (either the overflow flag is set or the final
     holding register equals the last word written).
+Run: make -C tb/cocotb/soc mbist_tap
 """
 
 import random
@@ -296,7 +297,8 @@ async def t_overflow_is_reported_and_cleared(dut, cfg):
 
 async def t_control_word_never_silently_lost(dut, cfg):
     """Random run = 0 words back to back: either the overflow flag is set, or the holding registers equal
-    the last word written. (cfg 3 is TCK 10 ns against a 97 ns destination clock: the case that overflows.)"""
+    the last word written. (cfg 3 is TCK period 10 against a destination clock period of 97: the
+    case that overflows.)"""
     t = await setup(dut, cfg)
     rng = random.Random(0xD00D + cfg[0])
     lost_seen = 0

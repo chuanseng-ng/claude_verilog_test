@@ -1,5 +1,5 @@
 // tb_cdc_sync.sv
-// Bead claude_verilog_test-xtaa -- directed testbench for cdc_sync's
+// Directed testbench for cdc_sync's
 // STAGES and RESET_VAL parameters.
 //
 // One simulation covers the whole matrix the cocotb test needs:

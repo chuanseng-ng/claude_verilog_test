@@ -1,131 +1,28 @@
 #!/usr/bin/env python3
 """
-gen_coherency_hex.py — generate coherency_fw.hex + kernel.hex for the M9
-software-managed-coherency test (bead claude_verilog_test-777).
+gen_coherency_hex.py -- generate coherency_fw.hex and coherency_kernel.hex for the M9
+software-managed-coherency test.
 
-Two separate images are produced:
+  1. coherency_fw.hex      CPU firmware loaded into boot ROM at 0x0000_1000
+  2. coherency_kernel.hex  GPU kernel that the firmware writes into SRAM at KERNEL_PC
 
-  1. coherency_fw.hex   — CPU firmware loaded into boot ROM @ 0x0000_1000
-  2. coherency_kernel.hex — GPU kernel loaded by the firmware into SRAM @ KERNEL_PC
+CPU firmware sequence:
+  [A] Write 8 source words SRAM[SRC_BASE..SRC_BASE+28] (cacheable)
+  [B] CSRW 0x7C0 (dcache_flush) + spin 2048 iters (flush dirty lines)
+  [C] Write the GPU kernel image into SRAM[KERNEL_PC..] via SW (also cacheable)
+  [D] CSRW 0x7C0 (dcache_flush) + spin 2048 iters (flush the kernel image)
+  [E] Program the GPU ctrl registers (KERNEL_PC, GRID_X, BLOCK_X, CTRL=launch)
+  [F] Poll GPU_STATUS[1] (done bit) up to POLL_LIMIT iters
+  [G] CSRW 0x7C1 (dcache_inval) + spin 2048 iters (drop stale cached copies)
+  [H] Load the 8 dst words and compare with the expected value (src+1)
+  [I] Jump to PASS or FAIL
 
-CPU firmware sequence
-──────────────────────────────────────────────────────────────────────
- [A] Write 8 source words  SRAM[SRC_BASE..SRC_BASE+28]    (cacheable)
- [B] CSRW 0x7C0 (dcache_flush)  + spin 2048 iters          (flush dirty lines)
- [C] Write GPU kernel image into SRAM[KERNEL_PC..] via SW   (also cacheable)
- [D] CSRW 0x7C0 (dcache_flush)  + spin 2048 iters          (flush kernel image)
- [E] Program GPU ctrl registers (KERNEL_PC, GRID_X, BLOCK_X, CTRL=launch)
- [F] Poll GPU_STATUS[1] (done bit) up to POLL_LIMIT iters
- [G] CSRW 0x7C1 (dcache_inval) + spin 2048 iters           (drop stale cached copies)
- [H] Load 8 dst words + compare against expected (src+1)
- [I] Jump to PASS / FAIL
-
-GPU kernel (1 warp, 8 lanes)
-──────────────────────────────────────────────────────────────────────
-  vmov_tid_x  r1          # r1[l] = lane id l (0..7)
-  vsll        r2, r1, 2   # r2[l] = l * 4  (byte stride)
-  vaddi       r3, r0, SRC_LO  # r3[l] = SRC_BASE (lo12)  ← x0 base + imm
-  # For addresses > 12-bit imm, we pre-load via a scalar instruction in the
-  # firmware and pass via ARG_PTR. But SRAM base 0x0000_2000 fits in 12 bits
-  # only if upper bits are 0 — gpu_pkg encodes I-type with 12-bit signed imm.
-  # 0x2000 = 8192 = 0b0010_0000_0000_0000. As signed 12-bit: overflows (>2047).
-  #
-  # Solution: use GPU_ARG_PTR register (0x2000_1024) to pass SRC_BASE and
-  # DST_BASE. But the GPU uses VLD/VST with base+imm; we need the base in a
-  # vector register.  Since all lanes share the same base, we broadcast it
-  # using VADDI r_base, x0, 0 with the upper bits pre-loaded via a second
-  # ARG_PTR word — this is complex for a simple kernel.
-  #
-  # Simpler: use SRAM addresses near 0x0000_2000 that are accessible with
-  # a 12-bit unsigned offset from x0 — but 0x2000 = 8192 > 2047 signed max.
-  #
-  # The right approach for the SoC level: place src and dst at the start of
-  # SRAM (0x0000_2000...) and encode base as a two-step GPU VLD: load a
-  # "pointer" word from a known small address into a register, then use that.
-  # But GPU has no indirect VLD-from-register-of-addresses.
-  #
-  # Simplest working approach: place SRC at SRAM offset 0 (byte addr 0x2000)
-  # and use ARG_PTR to hold the base.  The GPU kernel reads arg_ptr via a
-  # special VMOV_SPECIAL encoding (SREG_ARG_PTR).  In Phase 4 ISA this is
-  # actually not available — the VMOV_SPECIAL only covers tid/bid.
-  #
-  # Pragmatic resolution: offset SRC to a lower SRAM address that fits in a
-  # signed 12-bit immediate from 0 — not possible since SRAM starts at 0x2000.
-  #
-  # FINAL APPROACH: Use VADDI with a two-instruction LUI-style sequence.
-  # GPU instruction set has no LUI. But VADDI imm is 12-bit signed so max is
-  # 0x7FF=2047. SRAM starts at 0x2000=8192 which does not fit.
-  #
-  # The only clean solution is to pass the base address via a pre-loaded
-  # scalar register broadcast using a VADDI chain on x0:
-  #   vaddi r3, x0, upper_part * 2048 -- not possible, no shift-immediate
-  #
-  # Therefore: use a 2-instruction sequence with VST/VLD of a "constant" stored
-  # at the beginning of the ROM (0x1000 range) — also > 2047 so same problem.
-  #
-  # ROOT CAUSE: GPU I-type imm is 12 bits. SRAM @ 0x2000 cannot be reached
-  # from x0. Resolution: store BASE_SRC / BASE_DST as literal constants in
-  # SRAM word 0 (byte 0x2000) and SRAM word 1 (byte 0x2004) before launching,
-  # then GPU VLD word-0 → r_src_base, VLD word-1 → r_dst_base.
-  # With GPU r_base = mem[0x2000] = SRC_BASE and r_dst = mem[0x2004] = DST_BASE.
-  # But VLD base must also be a register — and we're back to needing 0x2000 in r.
-  #
-  # THE REAL SOLUTION: The GPU instruction VLD/VST encodes  addr = rs1 + imm.
-  # We need rs1 to hold 0x2000.  In RISC-V style: use VADDI r1, x0, 0 then
-  # shift — but no shift-immediate in GPU ISA for scalars.
-  # However: VADDI with imm=0 + VSLL can get powers-of-2 starting from small
-  # values. 0x2000 = 8192 = 2^13.  Via VSLL 13 times from 1 ... or in one
-  # shot: vaddi r1,x0,1 then vsll r1,r1,13 (shift by 13).
-  # VSLL rd, rs1, rs2 — rs2 is a register, not immediate.
-  # vaddi r2, x0, 13; vsll r1, r1, r2 — YES, this works.
-
-Address constants for the firmware and kernel:
-  SRC_BASE   = 0x0000_2100  (SRAM word index 64)
-  DST_BASE   = 0x0000_2140  (SRAM word index 80)
-  KERNEL_PC  = 0x0000_2200  (SRAM word index 128)
-
-  SRC_BASE = 0x2100 = 8448.  1 + 0x2100:
-    vaddi r5, x0, 1   # r5 = 1
-    vaddi r6, x0, 13  # r6 = 13 (shift amount)
-    vsll  r5, r5, r6  # r5 = 0x2000
-    vaddi r5, r5, 0x100  # r5 = 0x2100  (imm=256, fits in 12 bits)
-  Similarly DST_BASE = 0x2140:
-    (copy r5 to r7 using vaddi r7,r5,0)
-    vaddi r7, r5, 0x40   # r7 = 0x2140
-
-  GPU kernel (VLD-VADDI-VST per lane):
-    vmov_tid_x r1        # r1[l] = l
-    vaddi r2, x0, 2      # r2 = 2 (shift by 2 = multiply by 4)
-    vsll  r3, r1, r2     # r3[l] = l*4
-    vaddi r4, x0, 1      # r4 = 1 (base calc: shift by 13 = 0x2000)
-    vaddi r5, x0, 13     # r5 = 13
-    vsll  r4, r4, r5     # r4 = 0x2000
-    vaddi r4, r4, 0x100  # r4 = 0x2100 = SRC_BASE (imm 256 OK)
-    vadd  r6, r4, r3     # r6[l] = SRC_BASE + l*4
-    vld   r7, r6, 0      # r7[l] = mem[SRC_BASE + l*4]
-    vaddi r8, r7, 1      # r8[l] = r7[l] + 1
-    vaddi r9, x0, 1      # r9 = 1
-    vaddi r10, x0, 13    # r10 = 13
-    vsll  r9, r9, r10    # r9 = 0x2000
-    vaddi r9, r9, 0x140  # r9 = 0x2140 = DST_BASE (imm 320 OK)
-    vadd  r10, r9, r3    # r10[l] = DST_BASE + l*4
-    vst   r8, r10, 0     # mem[DST_BASE + l*4] = r8[l]
-    vret
-
-  14 instructions. Lane 0 reads 0x2100, writes 0x2140 (expected = src+1).
-
-GPU register allocation:
-  r0  = x0 (always 0)
-  r1  = lane id (tid.x)
-  r2  = shift amount for byte stride
-  r3  = byte offset (lane * 4)
-  r4  = src base ptr
-  r5  = shift amount 13
-  r6  = src element address
-  r7  = loaded src value
-  r8  = result (src + 1)
-  r9  = dst base ptr
-  r10 = dst element address
+GPU kernel (1 warp, 8 lanes, VLD-VADDI-VST per lane): lane l reads SRC_BASE + l*4 and writes
+src+1 to DST_BASE + l*4. The GPU I-type immediate is 12-bit signed, so it cannot reach SRAM at
+0x2000. The kernel builds 0x2000 with vaddi r,x0,1; vaddi r,x0,13; vsll r,r,r, then adds the low
+part.
+Addresses: SRC_BASE = 0x0000_2100, DST_BASE = 0x0000_2140, KERNEL_PC = 0x0000_2200.
+Doc: tm:suite:soc-coherency-fw-gen-coherency-hex
 """
 
 import os

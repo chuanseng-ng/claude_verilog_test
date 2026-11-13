@@ -1,4 +1,4 @@
-"""Bead ej6j -- boot_rom with MEM_INIT_FILE set: the $readmemh arm (boot_rom.sv `if (MEM_INIT_FILE != "")`).
+"""boot_rom with MEM_INIT_FILE set: the $readmemh arm (boot_rom.sv `if (MEM_INIT_FILE != "")`).
 
 Every other suite backdoor-loads the array, so the parameterised pre-load branch had never been taken.
 Built by `make boot_rom` as a second build point with -GMEM_INIT_FILE="boot_rom_init.hex".

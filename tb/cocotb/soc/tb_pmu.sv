@@ -1,5 +1,5 @@
 // tb_pmu.sv
-// GH #101 — standalone cocotb test wrapper for the behavioral PMU (rtl/soc/pmu.sv).
+// standalone cocotb test wrapper for the behavioral PMU (rtl/soc/pmu.sv).
 //
 // Directly instantiates pmu with exposed APB4 slave ports that the APB4Master
 // BFM drives, plus all ten per-domain sequencing outputs exposed as top-level
@@ -14,10 +14,10 @@
 // Register map under test (pmu.sv, ADDR_W=12):
 //   0x000  CTRL      [RW]  bits[1:0]=pmu_mode_req (WMASK=0x3)
 //   0x004  STATUS    [RO]  [0]=cpu_domain_on [1]=gpu_domain_on [2]=busy
-//                          [3]=cpu_iso_ack_timeout (sticky, bead 3ogd)
+//                          [3]=cpu_iso_ack_timeout (sticky)
 //   0x008  DOMAIN_EN [RO]  live per-signal bitmap (see pmu.sv header)
 //
-// CPU isolation-acknowledge model (bead 3ogd).  In soc_top the PMU's cpu_iso_ack_i is the CPU-domain
+// CPU isolation-acknowledge model.  In soc_top the PMU's cpu_iso_ack_i is the CPU-domain
 // clamp (pmu_cpu_iso_en_sync) synchronised back to core_clk.  Here a small behavioural model stands in
 // for that round trip, controlled from the test through three plain inputs:
 //   ack_lat_i    0 (default): ack = cpu_iso_en_o combinationally -- the ack is "already there", so

@@ -1,5 +1,5 @@
 """
-test_clock_gate_scan.py -- bead claude_verilog_test-j41m.2 (DFT Stage 1a).
+test_clock_gate_scan.py -- DFT Stage 1a.
 
 DUT: tb_clock_gate_scan -> rv32i_clock_gate (rtl/mem/rv32i_clock_gate.sv).
 

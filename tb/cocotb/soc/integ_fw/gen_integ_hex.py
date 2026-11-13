@@ -1,94 +1,29 @@
 #!/usr/bin/env python3
 """
-gen_integ_hex.py -- firmware images for the SoC-level integration suite
-(test_soc_integration.py, bead claude_verilog_test-oez2).
-
-One generator, three ROM images, all in the repo's existing hand-assembled style
-(two-pass label assembler + sim/riscv_encoder.py, same JAL trampoline + ISR-at-word-1
-layout as gpio_fw / cpu_gpu_irq_fw).  Every image is self-checking: it branches to
-FAIL (x31=-1, EBREAK) on any mismatch and ends at PASS (x31=1, EBREAK); the cocotb
-test scoreboards commit_pc_o for the marker PCs written to integ_fw_addrs.py.
-
-IMAGE 1  irq_spi.hex -- one interrupt phase per peripheral, CPU actually takes the trap
-  Phase 1 TIMER : timer (APB4 0x2000_4000) -> timer_irq -> CPU MTIP DIRECT (it is NOT an
-                  interrupt_controller source; irq_src_i[2] is tied 0), mcause 0x8000_0007.
-  Phase 2 UART  : loopback TX 0xA5, irq_rx_valid_en -> uart_irq -> interrupt_controller[0]
-                  -> ext_irq -> MEIP, mcause 0x8000_000B.  Handler pops RX.
-  Phase 3 SPI   : NON-loopback, CPOL=CPHA=0, CS asserted via SPI_CS_CTRL, TX 0x3C.  The
-                  testbench's SPI slave model drives spi_miso_i with 0xA6 (this is the
-                  suite's only spi_miso_i stimulus); irq_done_en -> spi_irq ->
-                  interrupt_controller[1].  Handler pops RX, which must read 0xA6.
-  Phase 4 DMA   : 16-byte copy with CTRL.irq_en -> dma_irq -> interrupt_controller[3].
-                  Handler soft-resets the engine (CTRL[2]), the only way to clear the
-                  sticky IRQ_STATUS.
-  The ISR is generic and phase-driven: it logs mcause, the interrupt_controller
-  IRQ_PENDING_MASKED value and (UART/SPI) the popped RX byte into SRAM slots indexed by
-  the PHASE word, clears the source, sets FLAG and bumps COUNT.  MAIN then checks COUNT ==
-  phase (a stuck-asserted line would re-vector and bump COUNT again), the logged mcause /
-  pending / data, and that IRQ_PENDING_MASKED reads 0 once the handler has run.
-
-IMAGE 2  pll_prog.hex -- both PLLs' divider fields programmed through the real fabric
-  PLL1 (0x2000_7000, via u_apb_pll_cdc) and PLL2 (0x2000_9000, via u_apb_pll2_cdc):
-  CONTROL[7:4]=div_n, [9:8]=post_div_sel are written, read back, STATUS.locked re-checked.
-  Marker PCs let the testbench read pll_fb_div / pll_post_div of BOTH instances after each
-  write and prove the other instance was untouched.
-
-IMAGE 3  gpu_iso.hex -- GPU power-down/up with a level-held gpu_irq_o
-  Launches the existing cpu_gpu_irq kernel with GPU_CTRL.irq_enable but interrupts masked,
-  so gpu_irq_o is HIGH and stays high.  PMU CTRL=GPU_OFF (0x2000_8000) walks ret_save ->
-  iso_en -> clock gate -> reset; PMU CTRL=NORMAL walks the reverse.  GPU registers are
-  never touched while isolated (gif_axil_arvalid is clamped, a read would hang).
-  FINDING: the GPU's flops are async-reset, so the domain reset clears ALL GPU state (irq
-  latch, irq_enable, done) even though its clock is gated -- unlike the CPU, the GPU does
-  not "survive by construction" as pmu.sv's header claims.  The image therefore checks
-  state-LOSS (irq_enable and done read 0 after power-up) and then proves the GPU works
-  again: a second launch on new data completes and gpu_irq_o rises through the released
-  isolation.  The clamp itself is observable only in the window between iso_en rising and
-  the reset asserting, where gpu_irq_raw is still 1.
-
-IMAGE 4  dma_walk.hex -- the DMA as the SoC's only software-programmable bus master walk
-  (beads 0ntg + xkw5).  No interrupts: the DMA is polled through its STATUS register.
-  Phase 1 ALIAS  : sixteen 16-byte copies whose SRC and DST each have one more high address bit
-                  set (bits 12..27, the whole 256 MB SRAM window).  The behavioural SRAM only
-                  realises 4 KB and aliases the rest (sram_controller.sv word_index), so every
-                  copy lands in the same 4 KB and is checkable by backdoor; the point is that
-                  each address bit of the crossbar, the SRAM slave port and the DMA master
-                  port is driven both ways on a transfer that really completes.
-  Phase 2 ROMWR  : nine copies SRAM -> boot-ROM window (len 4..128 B, varied word addresses).
-                  boot_rom has no write path by design (ej6j): every attempt must end in
-                  STATUS.error with ERR_INFO = SLVERR / write (0b010), and the ROM must be
-                  bit-identical afterwards.  This is the first SoC-level drive of
-                  crossbar -> boot_rom AW/W/B.
-  Phase 3 DECERR : DMA reads from, and writes to, four unmapped addresses (bits 28, 17 of the
-                  hole above the peripheral window, 30, 31).  The crossbar's default slave
-                  answers DECERR: read -> ERR_INFO = 0b111, write -> 0b011.
-
-  Phase 4 UNALIGN: four single-word DMA reads from byte offsets +1/+2/+3 and then +0 of an unmapped timer-window
-                  word.  Only a DMA can put a non-zero address[1:0] on the peripheral ring (the
-                  D-cache word-aligns uncached accesses), and apb_interconnect broadcasts paddr to
-                  every slave, so this one probe toggles paddr[1:0] of all peripherals.
-IMAGE 5  gpu_walk.hex -- the GPU's two bus masters walked through the fabric (bead xkw5)
-  The GPU is the only master that can put an arbitrary 32-bit address on the crossbar from a
-  software-written program, on BOTH of its ports: the instruction-fetch port (crossbar M1, the
-  kernel PC) and the data port (M2, VLD/VST addresses).  The CPU writes sixteen copies of a tiny kernel, each with
-  its own patched immediate, and launches them one after the other.
-  Phase A ALIAS  : launch k (k = 12..27) fetches the kernel from KERNEL_PC | (1 << k) and the
-                  kernel loads 8 words from, and stores 8 words to, (1 << k) | 0x2000 + offset.
-                  The behavioural SRAM realises 4 KB and aliases the rest, so every launch
-                  really completes on the same words; each launch stores src[lane] + k.
-  Phase B ROMRD  : 8 lanes read the first 8 boot-ROM words and copy them to SRAM.
-  Phase C PERIPH : 8 lanes write the timer's COMPARE register (one APB write per lane through
-                  M2 -> axi4_to_axilite -> ring), read it back and copy it to SRAM.
-  Phase D ROMWR  : 8 lanes store to the boot ROM; the ROM refuses every write with SLVERR.
-  Phase E DECERR : loads and stores to unmapped addresses, answered DECERR.
-  Phase F UNALIGN: loads from both PLL windows at byte offsets 0..3.  Only a bus master can put a
-                  non-zero address[1:0] on a peripheral behind the APB clock-domain bridges (the DMA
-                  walk reaches the timer window only); the register banks ignore it, so each
-                  unaligned load must equal the aligned one.
-  The GPU ignores read and write responses (gpu_top.sv leaves rresp/bresp unused), so a refused
-  or unmapped access never stalls it; the testbench scores the responses at the crossbar port.
-Registers: IMAGE 1 MAIN uses x1-x23 (x2=VAR_BASE x3=TIMER x4=UART x5=SPI x6=DMA x7=IRQ);
-the ISR uses only x24-x31.
+gen_integ_hex.py -- firmware images for the SoC-level integration suite (test_soc_integration.py).
+One generator, five ROM images (JAL trampoline and ISR at word 1). Every image is self-checking: it
+branches to FAIL (x31=-1, EBREAK) on a mismatch and ends at PASS (x31=1, EBREAK). The cocotb test
+scoreboards commit_pc_o for the marker PCs written to integ_fw_addrs.py.
+IMAGE 1 irq_spi.hex: one interrupt phase per peripheral, and the CPU takes the trap. TIMER (APB4
+0x2000_4000) reaches CPU MTIP DIRECT (not an interrupt_controller source, irq_src_i[2] is tied 0).
+SPI non-loopback, CPOL=CPHA=0, TX 0x3C; the testbench slave drives spi_miso_i with 0xA6, the suite's
+only spi_miso_i stimulus. DMA 16-byte copy; its handler soft-resets the engine (CTRL[2]), the only
+way to clear the sticky IRQ_STATUS. The ISR is generic and phase-driven. MAIN checks COUNT == phase
+(a stuck line would re-vector) and that PENDING_MASKED reads 0 afterwards.
+IMAGE 2 pll_prog.hex: both PLL divider fields (PLL1 0x2000_7000, PLL2 0x2000_9000) written and read
+back through the fabric.
+IMAGE 3 gpu_iso.hex: GPU power-down and power-up (PMU CTRL at 0x2000_8000) with a level-held
+gpu_irq_o. Never touch GPU registers while isolated: gif_axil_arvalid is clamped and a read would
+hang. The GPU flops are async-reset, so the domain reset clears ALL GPU state. The image checks
+state loss, then a second launch.
+IMAGE 4 dma_walk.hex: the DMA walks the fabric, polled through STATUS. Address-bit ALIAS copies, ROM
+writes (each must end in STATUS.error), DECERR reads and writes, UNALIGN reads of an unmapped
+timer word.
+IMAGE 5 gpu_walk.hex: the GPU's fetch port (M1) and data port (M2) walk the fabric: ALIAS, ROMRD,
+PERIPH, ROMWR, DECERR, UNALIGN. The GPU ignores rresp and bresp, so a refused access never
+stalls it.
+Registers: IMAGE 1 MAIN uses x1-x23. The ISR uses only x24-x31.
+Doc: tm:suite:soc-integ-fw-gen-integ-hex
 """
 
 import os
@@ -361,9 +296,9 @@ def build_pll_prog(asm):
         asm.label(marker)
         asm.emit(NOP)
 
-    # Data-pattern + address sweep through the whole fabric path (pwdata / paddr / prdata
-    # bits of the pll APB nets).  CONTROL's WMASK is 0x3F0 (bit0 pll_enable is non-clearable,
-    # GH #89), so the readback of every pattern is (pattern & 0x3F0) | 1; offsets beyond the
+    # Data-pattern and address sweep through the whole fabric path (pwdata / paddr / prdata
+    # bits of the pll APB nets).  CONTROL's WMASK is 0x3F0 (bit0 pll_enable is non-clearable),
+    # so the readback of every pattern is (pattern & 0x3F0) | 1; offsets beyond the
     # two registers read 0 (apb4_register_bank out-of-range policy).
     for base in (2, 3):
         for pat in (0xFFFFFFFF, 0xAAAAAAAA, 0x55555555, 0x0):

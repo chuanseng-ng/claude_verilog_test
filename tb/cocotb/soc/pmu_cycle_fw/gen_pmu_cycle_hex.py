@@ -1,46 +1,26 @@
 #!/usr/bin/env python3
 """
-gen_pmu_cycle_hex.py — generate pmu_cycle.hex for the GH #95 (Group C)
-PMU-driven live CPU-domain power-cycle test (test_soc_pmu_multiclock.py).
+gen_pmu_cycle_hex.py -- generate pmu_cycle.hex for the PMU-driven live CPU-domain power-cycle test
+(test_soc_pmu_multiclock.py).
 
-Firmware runs from ROM @ 0x0000_1000 (RESET_PC, same as every other _fw in
-this directory).
-
-Purpose: this firmware is the CPU-side half of a real, hardware-routed
-power-down trigger. The CPU cannot power itself back up once its own clock
-is gated by the PMU (rtl/soc/pmu.sv), so this firmware only ever programs
-the power-DOWN transition; test_soc_pmu_multiclock.py supplies the
-power-UP trigger externally (see that file's module docstring for why, and
-why that is a legitimate scope split rather than a shortcut).
-
-Mechanism: CPU cannot write PMU CTRL (0x2000_8000) directly and reliably
-survive doing so from software (the write may land on the same cycle the
-CPU's own clock is about to be gated, and in general "does software surve
-writing its own power-off register" is not the property under test here).
-Instead, the CPU programs the DMA engine (a fabric-domain, core_clk-driven
-AXI4 master, unaffected by the CPU's own domain state) to perform the
-write on its behalf:
+Firmware runs from ROM at 0x0000_1000. It is the CPU-side half of a hardware-routed power-down
+trigger. The CPU cannot power itself back up once the PMU gates its clock (rtl/soc/pmu.sv), so the
+firmware programs only the power-DOWN transition. test_soc_pmu_multiclock.py gives the power-UP
+trigger. The CPU does not write PMU CTRL (0x2000_8000) itself: the write could land as the CPU clock
+is about to be gated. It programs the DMA engine (a core_clk AXI4 master, unaffected by the CPU
+domain) to write MODE_CPU_OFF into PMU CTRL. Firmware steps:
   1. Store MODE_CPU_OFF (0x1) to SRAM word 0 (byte 0x2000).
-  2. D-cache flush (CSRW 0x7C0) + spin-wait, so the DMA's SRAM read (which
-     bypasses the D-cache) sees the just-written value (same pattern as
-     periph_fw/gen_periph_hex.py's DMA setup).
-  3. Program DMA: SRC=0x0000_2000 (SRAM word 0), DST=0x2000_8000 (PMU
-     CTRL), LEN=4 bytes; pulse CTRL.start.
-  4. Fall into an infinite busy-loop incrementing a free-running counter
-     at SRAM word 1 (byte 0x2004). This is deliberately NOT a
-     poll-then-EBREAK pattern: the whole point of this test is that the
-     CPU domain's own clock is gated out from under this loop mid-flight,
-     with no drain/quiesce step (a documented, pre-existing, non-blocking
-     gap — see soc_top.sv's PMU integration comments and
-     design_state.json's gh93_cdc_verification.residual_gaps). The
-     testbench (not this firmware) observes the counter continuing to
-     climb after the PMU sequences the CPU domain back to DOM_ON, proving
-     architectural state (PC + registers) survived the clock-gate-only
-     power cycle intact and the loop resumed exactly where it left off.
-
-No PASS/FAIL branch, no EBREAK: this firmware never terminates by design.
-test_soc_pmu_multiclock.py owns all pass/fail assertions via backdoor
-observation (PMU sequencer state, SRAM counter progression).
+  2. D-cache flush (CSRW 0x7C0) and a spin-wait, so the DMA's SRAM read (it bypasses the D-cache)
+     sees it.
+  3. Program the DMA: SRC=0x0000_2000, DST=0x2000_8000 (PMU CTRL), LEN=4 bytes. Pulse CTRL.start.
+  4. Fall into an infinite busy loop that increments a counter at SRAM word 1 (byte 0x2004). This is
+      NOT a poll-then-EBREAK pattern on purpose: the CPU clock is gated out from under the loop with
+      no drain step (a known non-blocking gap; see the PMU integration comments in soc_top.sv). The
+      testbench sees the counter climb again after the PMU returns the CPU domain to DOM_ON: PC and
+      registers survived.
+There is no PASS/FAIL branch and no EBREAK: the firmware never terminates.
+test_soc_pmu_multiclock.py owns every pass and fail check, by backdoor observation.
+Doc: tm:suite:soc-pmu-cycle-fw-gen-pmu-cycle-hex
 """
 
 import os
@@ -198,7 +178,7 @@ def build_firmware(asm: Assembler):
     # once the DMA write above lands; the loop resumes on the exact next
     # instruction once the PMU sequences the CPU domain back to DOM_ON.
     #
-    # bead claude_verilog_test-2k8 fix note: the loop body includes a
+    # Note: the loop body includes a
     # per-iteration CSRW dcache_flush (0x7C0). SRAM_BASE is below MMIO_BASE
     # (rv32i_dcache.sv's cacheable-address check), so without an explicit
     # flush the counter store only dirties the write-back D-cache's line —

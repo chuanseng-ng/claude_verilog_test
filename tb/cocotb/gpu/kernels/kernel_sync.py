@@ -1,50 +1,25 @@
 """
 Kernel test: VSYNC barrier between two warps inside the same block.
 
-Launch with BLOCK_X=16 → 2 warps (warp 0: lanes 0..7, warp 1: lanes 0..7 of second warp).
-
-Kernel:
-  0x000: vmov_tid_x r1    r1[l] = lane index (0..7 in each warp)
-  0x004: vmov_bid_x r2    r2[l] = warp_id (0 or 1)
-  0x008: vsync            barrier — both warps must reach here
-  0x00C: vadd r3, r1, r2  r3[l] = tid.x + warp_id
-  0x010: vaddi r4, r0, 2
-  0x014: vsll  r5, r1, r4  r5[l] = l*4
-  -- store r3 to OUT_BASE + warp_id*32 + l*4 (warp-separated output area) --
-  -- addr = r6[l] + 3; need r6[l] = base - 3 + l*4                        --
-  0x018: vaddi r6, r2, OUT_BASE - 3   r6[l] = OUT_BASE + warp_id - 3
-  Actually, the offset formula gets complex with warp_id in a register.
-  Simplify: each warp stores to OUT_BASE + warp_id*0x40 + l*4.
-  With warp_id in r2: warp_base = OUT_BASE + r2*0x40.
-
-  Use: vaddi r7, r0, 0x40; vmul r7, r2, r7  → warp_offset[l] = warp_id * 64
-       vaddi r8, r0, OUT_BASE
-       vadd  r8, r8, r7    → r8[l] = OUT_BASE + warp_id*64
-       vadd  r9, r8, r5    → r9[l] = OUT_BASE + warp_id*64 + l*4
-       vst(r3, r9, offset) ...
-
-  VST: vst(rs2_data=3, rs1_base=r9): imm=3 → addr=r9[l]+3; need r9[l]+3 = target
-       So r9[l] = target - 3 = OUT_BASE + warp_id*64 + l*4 - 3
-       Do the subtract after building r9.
-
-Simplified kernel (avoiding complex warp_id-indexed stores):
-  Each warp stores r3 (= tid.x + warp_id) to a flat array at OUT_BASE + warp_id*32 + l*4.
-  warp_id*32 = warp_id << 5 (shift left 5).
+Launch with BLOCK_X=16: 2 warps (warp 0 and warp 1, lanes 0..7 in each).
+Each warp stores r3 = tid.x + warp_id to a flat array at OUT_BASE + warp_id*32 + l*4.
+VST uses imm=3, so addr = r9[l] + 3 and r9[l] = OUT_BASE - 3 + warp_id*32 + l*4.
 
   0x000: vmov_tid_x r1      r1[l]=l
   0x004: vmov_bid_x r2      r2[l]=warp_id
-  0x008: vsync
-  0x00C: vadd r3, r1, r2    r3[l] = l + warp_id  (sum to verify both ran)
+  0x008: vsync              both warps must reach the barrier
+  0x00C: vadd r3, r1, r2    r3[l] = l + warp_id  (the sum shows that both ran)
   0x010: vaddi r4, r0, 5
   0x014: vsll  r6, r2, r4   r6[l] = warp_id*32
   0x018: vaddi r7, r0, 2
   0x01C: vsll  r5, r1, r7   r5[l] = l*4
   0x020: vadd  r6, r6, r5   r6[l] = warp_id*32 + l*4
-  -- vst rs2=r3(idx=3): addr = r9[l]+3; r9[l]=OUT_BASE-3+warp_id*32+l*4 --
   0x024: vaddi r9, r0, OUT_BASE-3
   0x028: vadd  r9, r9, r6   r9[l] = OUT_BASE-3+warp_id*32+l*4
   0x02C: vst(3, r9, 0)      mem[OUT_BASE+warp_id*32+l*4] = l+warp_id
   0x030: vret
+Run: cd sim && make gpu_kernels
+Doc: tm:suite:gpu-kernels-kernel-sync
 """
 import sys
 import os

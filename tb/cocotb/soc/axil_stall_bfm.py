@@ -1,4 +1,4 @@
-"""Stall-capable AXI4-Lite master + scripted slaves for the bead 8riq fabric tests.
+"""Stall-capable AXI4-Lite master + scripted slaves for the fabric tests.
 
 The shared ``bfm.axi4lite_master.AXI4LiteMaster`` keeps bready/rready high and asserts AW and W
 together, so it can never present backpressure or ordering.  These helpers exist so a test can

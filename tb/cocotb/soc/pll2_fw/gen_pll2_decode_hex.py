@@ -1,61 +1,27 @@
 #!/usr/bin/env python3
 """
-gen_pll2_decode_hex.py — generate pll2_decode.hex for GH #92 SoC-level PLL2
-APB slot decode test (test_pll2_decode.py, DUT tb_soc_pll).
-
-Why CPU-firmware based (not a live cocotb APB/AXI-Lite BFM against soc_top):
-  test_pll_regs.py's header documents that driving the SoC-internal AXI-Lite
-  ring signals from a cocotb BFM hangs under Verilator — those nets are
-  continuously driven by RTL (axi4_to_axilite's combinational assigns), so a
-  cocotb value-write is overridden by the next RTL eval in the same time
-  step.  The same applies to the downstream APB nets driven by axil_to_apb.
-  The only crash-proof way to exercise a real SoC-level MMIO access (through
-  the actual CPU -> D-cache-bypass -> AXI4 crossbar -> axi4_to_axilite ->
-  axi_lite_interconnect -> axil_to_apb -> apb_interconnect path) is to have
-  the CPU itself issue the loads/stores, exactly as test_periph_loopback.py
-  does for DMA/UART/SPI.
-
-Firmware runs from ROM @ 0x0000_1000 (RESET_PC), self-checking:
-
-  1. PLL   (existing instance, APB_PLL=4, 0x2000_7000) CONTROL[0] == 1
-     (pll_enable, reset default / non-clearable per GH #89).
-  2. PLL   STATUS[0] == 1 (locked — system PLL locks the SoC out of reset,
-     so by the time firmware runs this must already be 1).
-  3. PMU   (APB_PMU=5, 0x2000_8000) STATUS == 0x3 (cpu_domain_on=1,
-     gpu_domain_on=1, busy=0 — steady-state reset default, no CTRL writes
-     issued by this firmware) — spot-check that PMU's slot did not move
-     when APB_PLL2 was inserted after it in the map... actually PLL2 sits
-     AFTER PMU (index 6 > index 5) so PMU's own decode is unaffected by
-     construction, but this is a cheap regression tripwire in case a future
-     edit reorders the map.
-  4. PLL2  (APB_PLL2=6, 0x2000_9000) CONTROL == 0x0000_0001 exactly — the
-     new slot decodes and returns the pll_apb_regs RESET_VAL, not garbage /
-     DECERR / another slave's data (the AXI4 crossbar returns DECERR data
-     with no CPU trap — see docs; a wrong slave or open bus would show up
-     here as a data mismatch, not a hang).
-  5. PLL2  STATUS[0] == 1 (locked — cpu_pll_locked_o mirrors pll_locked_o
-     in the tied-clock tb_soc_pll config; the second stub lock counter
-     starts on the same reset de-assert edge as the first).
-  6. Anti-brick (GH #89 fix applies to instance 2 too, same pll_apb_regs
-     module): write CONTROL = 0x0000_0000 (attempt to clear pll_enable AND
-     the div_n/post_div_sel fields). Read back: must be exactly 0x1 — WMASK
-     bit[0]=0 keeps pll_enable pinned at its RESET_VAL, and the write DID
-     land on bits [9:4] (now 0, same value they already were) so the
-     readback matches CONTROL's true architectural state, not a stuck bus.
-  7. PLL2 STATUS[0] still == 1 after the CONTROL write (lock does not
-     glitch when the same-module register bank takes a write).
-
-Self-checking: branches to PASS_PC on full success, FAIL_PC on any failure.
-Testbench scoreboards commit_pc_o for PASS_PC/FAIL_PC (same pattern as
-test_periph_loopback.py / test_boot.py).
-
-Register allocation:
-  x2  = PLL  base  0x2000_7000
-  x3  = PMU  base  0x2000_8000
-  x4  = PLL2 base  0x2000_9000
-  x8  = scratch (register value read back)
-  x9  = scratch (expected value)
-  x31 = result marker (1=pass, -1=fail)
+gen_pll2_decode_hex.py -- generate pll2_decode.hex for the SoC-level PLL2 APB slot decode test
+(test_pll_lock.py test_pll2_apb_slot_decode and test_soc_multiclock_pll2.py, DUT tb_soc_pll).
+Why CPU firmware and not a cocotb APB/AXI-Lite BFM against soc_top: driving the
+SoC-internal AXI-Lite ring from a cocotb BFM hangs under Verilator (test_pll_regs.py documents it).
+RTL drives those nets continuously, so a cocotb write is overridden by the next RTL eval. The same
+holds for the APB nets from axil_to_apb. A real MMIO access needs the CPU to issue it, as
+test_periph_loopback.py does.
+Firmware runs from ROM at 0x0000_1000 and is self-checking (PASS_PC / FAIL_PC, scored
+  by commit_pc_o):
+  1. PLL (APB_PLL=4, 0x2000_7000) CONTROL[0] == 1 (pll_enable, non-clearable).
+  2. PLL STATUS[0] == 1 (locked: the system PLL locks out of reset).
+  3. PMU (APB_PMU=5, 0x2000_8000) STATUS == 0x3 (cpu_domain_on, gpu_domain_on, not busy). This is a
+     tripwire in case a later edit reorders the map. PLL2 sits after the PMU, so its decode is safe.
+  4. PLL2 (APB_PLL2=6, 0x2000_9000) CONTROL == 0x0000_0001: the slot returns the
+     pll_apb_regs RESET_VAL.
+     The crossbar returns DECERR data with no CPU trap, so a wrong slave shows as a data mismatch.
+  5. PLL2 STATUS[0] == 1 (cpu_pll_locked_o mirrors pll_locked_o in the tied-clock
+     tb_soc_pll config).
+  6. Anti-brick: write CONTROL = 0 to PLL2. It must read back 0x1: WMASK bit 0 pins pll_enable, and
+     the write does land on bits [9:4].
+  7. PLL2 STATUS[0] is still 1 after that write.
+Doc: tm:suite:soc-pll2-fw-gen-pll2-decode-hex
 """
 
 import os
@@ -159,7 +125,7 @@ def build_firmware(asm: Assembler):
     l4, a4 = lui_addi(4, 0x2000_9000)   # PLL2 base
     asm.emit(l4); asm.emit(a4)
 
-    # ── 1. PLL CONTROL[0] == 1 (existing instance untouched by GH #92) ──────
+    # ── 1. PLL CONTROL[0] == 1 (existing instance untouched) ──────
     _check_bit0_eq(asm, 2, 0x000, 1)
 
     # ── 2. PLL STATUS[0] == 1 (system PLL locked — SoC already booted) ──────

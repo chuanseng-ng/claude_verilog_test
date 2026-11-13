@@ -1,30 +1,24 @@
 """
-i2c_cov.py -- functional-coverage model of the I2C master (rtl/periph/i2c_controller.sv), bead h367.
+i2c_cov.py -- functional-coverage model of the I2C master (rtl/periph/i2c_controller.sv).
 
-This is the PILOT of the cocotb functional-coverage flow.  The model, the bin-by-bin rationale and
-the reachability notes are in ``Doc: tm:flow:i2c-functional-coverage-model``; how another
-peripheral adds one is in ``Doc: tm:flow:functional-coverage``.  Plumbing (coverpoint
-construction, YAML export) is ``func_cov.py``; the merge and the gate are
-``tools/verif/functional_coverage_report.py``.
+This is the PILOT of the cocotb functional-coverage flow. The model, the bin rationale and the
+reachability notes: ``Doc: tm:flow:i2c-functional-coverage-model``. How another peripheral adds a
+model: ``Doc: tm:flow:functional-coverage``. Plumbing is func_cov.py. The merge and the gate are
+tools/verif/functional_coverage_report.py.
 
-Where the samples come from -- nothing here touches the RTL or the DUT's signals
--------------------------------------------------------------------------------
-1. **The bus**: ``bfm/i2c_slave.py`` already decodes START / RSTART / ADDR / WR / RD / STOP.  This
-   module registers as a passive observer of that event stream (``I2CSlave.add_observer``), so a
-   bin is hit by what the master really put on the wire, not by what a test claims.  The BFM also
-   reports ("STRETCH", ...) when it starts holding SCL (it is NOT in ``slave.events``).
-2. **The register interface**: ``bfm/apb4_master.py`` calls its observers after every completed
-   transfer, so CMD / CLKDIV / TIMEOUT / CTRL / IRQ_EN / IRQ_CLR writes and STATUS / IRQ_STAT /
-   FIFO_STAT reads are sampled with the value the DUT really saw.  The tests' side-effect-free
-   ``_peek`` (the poke-the-prdata trick) feeds ``reg_read`` too.  A write whose byte strobes do not
-   cover the field is not sampled (the field's value is unknown).
-3. **Assertion-backed scenario samples** for the few facts the pins cannot show (WHICH arbitration
-   phase lost, WHICH wait timed out, WHICH ignored-command class): the test calls
-   ``COV.arb_loss(...)`` / ``COV.timeout(...)`` / ``COV.cmd_ignored(...)`` / ``COV.abort(...)``
-   only AFTER its own assertions for that scenario passed, so a failing scenario samples nothing.
-
-Sampling is a few dict updates per event; ``reg_read`` drops a repeat of the same (register,
-value) because a repeated poll cannot reach a new bin.
+Sample sources. Nothing here touches the RTL or the DUT's signals.
+1. The bus: ``bfm/i2c_slave.py`` decodes START / RSTART / ADDR / WR / RD / STOP. This module is a
+   passive observer (``I2CSlave.add_observer``). The BFM also reports ("STRETCH", ...) when it
+   starts holding SCL (not in ``slave.events``).
+2. The register interface: ``bfm/apb4_master.py`` calls its observers after every completed
+    transfer, so writes and reads carry the value the DUT saw. The tests' side-effect-free ``_peek``
+    feeds ``reg_read`` too. A write whose byte strobes do not cover the field is not sampled.
+3. Assertion-backed scenario samples for facts the pins cannot show (which arbitration phase lost,
+   which wait timed out, which ignored-command class): the test calls ``COV.arb_loss(...)``,
+   ``COV.timeout(...)``, ``COV.cmd_ignored(...)`` or ``COV.abort(...)`` only AFTER its own
+   assertions for the scenario passed, so a failing scenario samples nothing.
+``reg_read`` drops a repeat of the same (register, value): a repeated poll cannot reach a new bin.
+Doc: tm:suite:soc-i2c-cov
 """
 
 from __future__ import annotations

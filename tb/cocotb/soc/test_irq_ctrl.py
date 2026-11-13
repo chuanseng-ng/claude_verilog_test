@@ -44,7 +44,7 @@ SYNC_CYCLES = 3
 # ── Setup helper ──────────────────────────────────────────────────────────────
 
 async def _setup(dut):
-    """Start 2 ns clock, apply 5-cycle reset, wait 2 idle cycles.
+    """Start the clock, apply 5-cycle reset, wait 2 idle cycles.
     Returns an APB4Master pointed at the DUT slave port (bare prefix).
     """
     cocotb.start_soon(Clock(dut.clk, 2, units="ns").start())
@@ -249,7 +249,7 @@ async def test_multi_source_or(dut):
     dut._log.info("test_multi_source_or PASS")
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):

@@ -16,12 +16,12 @@
 //   the lock counter fires — roughly 16+1 = 17 ref_clk cycles after reset
 //   de-asserts.
 //
-// GH #92 (dual PLL): soc_top requires a second clock/reset pair
+// Dual PLL: soc_top requires a second clock/reset pair
 // (cpu_clk_i/cpu_rst_n_i) driving a second pll_subsystem instance; exposes
 // cpu_pll_locked_o alongside pll_locked_o so a test can observe both lock
 // signals independently.
 //
-// GH #93: cpu_clk_i/cpu_rst_n_i are now true top-level ports (previously
+// cpu_clk_i/cpu_rst_n_i are true top-level ports (previously
 // tied internally to clk_i/rst_n_i). test_pll_lock.py drives both pairs via
 // tb/cocotb/soc/soc_clocks.py at a 1:1 ratio (behaviourally unchanged);
 // only the new multiclock suite drives a genuinely independent cpu_clk_i.
@@ -39,12 +39,12 @@ module tb_soc_pll #(
     parameter string PLL_IMPL = "STUB"
 ) (
     // ── Clock / reset ─────────────────────────────────────────────────────────
-    // clk_i is the external reference clock (100 MHz in production; any
+    // clk_i is the external reference clock (the production reference rate; any
     // frequency in simulation — testbench sets the period).
     input  logic        clk_i,
     input  logic        rst_n_i,
 
-    // ── CPU-domain reference clock / reset (GH #93 — genuinely independent) ──
+    // ── CPU-domain reference clock / reset (genuinely independent) ──
     input  logic        cpu_clk_i,
     input  logic        cpu_rst_n_i,
 
@@ -74,7 +74,7 @@ module tb_soc_pll #(
     output logic [31:0] commit_insn_o,
     output logic        gpu_irq_o,
 
-    // ── PLL status (Phase 7 M-c; GH #92 adds the CPU-domain PLL) ──────────────
+    // ── PLL status (Phase 7 M-c; includes the CPU-domain PLL) ──────────────
     output logic        pll_locked_o,      // 1 when system PLL stub lock counter fires
     output logic        cpu_pll_locked_o,  // 1 when CPU-domain PLL stub lock counter fires
     // ── DFT test access (j41m.2). Inactive values: scan_mode_i=0, scan_en_i=0,
@@ -102,7 +102,7 @@ module tb_soc_pll #(
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),
-        // GH #93: genuinely independent CPU-domain reference — see header.
+        // Genuinely independent CPU-domain reference — see header.
         .cpu_clk_i      (cpu_clk_i),
         .cpu_rst_n_i    (cpu_rst_n_i),
 

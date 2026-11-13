@@ -1,10 +1,11 @@
-"""Cycle-accurate AXI4 / AXI4-Lite BFMs with stalls, scripted responses and protocol checks (bead ej6j).
+"""Cycle-accurate AXI4 / AXI4-Lite BFMs with stalls, scripted responses and protocol checks.
 
 The shared ``bfm.axi4_master.AXI4Master`` and ``AXI4SlaveModel`` always answer OKAY, keep bready/rready
 high and cannot hold a ready low for a chosen number of cycles, so they can never reach the error
-responses, stall arms and multi-beat bridge paths bead ej6j lists.  These helpers can.
+responses, stall arms and multi-beat bridge paths that the fabric tests must reach.  These helpers
+can.
 
-Sampling model (same as ``axil_stall_bfm.py`` from bead 8riq): a value read right after
+Sampling model (same as ``axil_stall_bfm.py``): a value read right after
 ``await RisingEdge`` is the value the RTL sampled AT that edge, and a write made right after it takes
 effect for the next edge.  A handshake happened at an edge where valid AND ready were both read as 1.
 

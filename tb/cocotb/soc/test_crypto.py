@@ -1,167 +1,35 @@
-"""test_crypto.py -- Phase 6b cocotb L1 verification for crypto_accel (rtl/periph/crypto_accel.sv
-+ rtl/periph/aes128_core.sv + rtl/periph/sha256_core.sv, bead claude_verilog_test-f7vs.10,
-Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "CRYPTO", whose "Register-map corrections" and "Acceptance
-criteria" blocks this suite is written to prove).
-
-STRICT TDD: the RTL DID NOT EXIST when this suite was written.  This is step 2 of the mandated
-workflow ("the verification orchestrator runs before the RTL orchestrator"): `make crypto` /
-`make crypto_lint` are EXPECTED to fail until the three RTL files match the contract below.  The
-assertions are therefore derived from the frozen microarchitecture contract, the plan's acceptance
-criteria and the standards (FIPS-197, FIPS-180-4, NIST SP 800-38A) -- never from reading an FSM.
-The golden models are tb/models/aes128_model.py (AES-128 encrypt + CTR, standard library only) and
-`hashlib.sha256`; requirements.txt gains nothing.
-
-THIS IS NOT PRODUCTION CRYPTO.  The DUT has no side-channel (timing / power / DPA) resistance, no
-fault-injection hardening, is not certified and not validated against any scheme; the key shadow
-is fully exposed through scan.  Nothing here claims otherwise.
-
-DUT: tb_crypto -- ONE wrapper, FOUR crypto_accel instances sharing clk / rst_n, each with its own
-flat APB4 face selected by a signal-name prefix (APB4Master(dut, prefix, ...)):
-
-    ""        u_dut     the build under test (ADDR_W=12, EN_AES=EN_SHA=1, SBOX_PARALLEL=16)
-    "v4_"     u_dut_v4  SBOX_PARALLEL = 4   (the pre-documented Gate A area fallback)
-    "noaes_"  u_dut_na  EN_AES = 0          (SHA-only)
-    "nosha_"  u_dut_ns  EN_SHA = 0          (AES-only)
-
-One simulation build therefore reaches both generate arms and both fold factors; tb_crypto's
-header says why.  crypto_accel has NO asynchronous input at all (clk / rst_n / APB4 in, irq_o out),
-so there is no CDC, no cdc_sync and no SDC exception to test.
-
-Register map (crypto_accel.sv, ADDR_W=12, N_REGS=32; byte offset = word index * 4):
-  0x000  CRYPTO_CTRL     [RW]  [1:0] mode (0 ECB, 1 CTR, 2 SHA-256, 3 reserved), [3] IRQ enable,
-                               [4] SHA_CONT.  [2] START is W1P: a WRITE-SNOOP pulse, not a stored
-                               bit -- it reads 0 forever (stored mask 0x1B).  Needs pstrb[0].
-  0x004  CRYPTO_STATUS   [RO]  [0] busy, [1] done, [2] key_valid, [3] key_write_rejected
-  0x008-0x014  KEY0-3    [WO]  AES-128 key into a SHADOW register; the bank words read 0 FOREVER
-  0x018-0x024  IV0-3     [RW]  CTR counter block (the one RW data register; HW increments IV3)
-  0x028-0x034  DIN0-3    [WO]  a 4-WORD APERTURE onto one 512-bit shift register; reads 0
-  0x038-0x044  DOUT0-3   [RO]  AES output block (the bank word IS the result register)
-  0x048-0x064  DIGEST0-7 [RO]  SHA-256 digest, which is ALSO the chaining value (CTRL[4] SHA_CONT)
-  0x068  CRYPTO_IRQ_STAT [RO]  [0] sticky done (the SAME flop as STATUS[1])
-  0x06C  CRYPTO_IRQ_CLR  [WO]  W1C by write-snoop: [0] clears done, [1] clears key_write_rejected
-  0x070-0x07C  reserved (read 0, writes dropped);  word index >= 32 (0x080..0xFFC): read 0,
-                               writes dropped, pslverr stays 0 (the bank's out-of-range policy)
-
-BYTE ORDER (frozen contract Sec.0).  FIPS big-endian everywhere: for a 128-bit block B[0..15],
-word 0 carries B0 in bits [31:24]; DIN0[31:24] = B0 ... DIN3[7:0] = B15; likewise KEY, IV, DOUT.
-DIGEST0[31:24] is the MSB of H0.  So the FIPS-197 hex strings and `hashlib.sha256().digest()`
-line up with NO byte swap in this suite.  DIN is a FIFO of words: software writes 4 words in order
-for AES (first word lands at msg[127:96]) and 16 words in order for SHA (first word = M0); WHICH of
-the four DIN addresses is written is irrelevant, the WRITE ORDER is the contract.
-
-Operation: write KEY0-3 once, push the block through DIN, write CTRL (mode), write CTRL again with
-START, poll STATUS.done (or take irq_o), read DOUT / DIGEST.  SHA multi-block: first block with
-SHA_CONT = 0 (starts from the FIPS-180-4 H0 constants), later blocks with SHA_CONT = 1 (continue
-from the current DIGEST).  PADDING AND LENGTH ARE SOFTWARE'S JOB, so `_sha_pad` below is the
-testbench doing the driver's work.
-
-Timing conventions this suite pins (frozen contract Sec.3).  "E" is the clock edge at which the
-START write's ACCESS phase is sampled; N counts edges INCLUDING E, so "N = 11" means STATUS.done
-first reads 1 after the 11th edge counting E as the 1st.
-  - AES ECB / CTR: N = 11 at SBOX_PARALLEL = 16 (1 whitening + 10 rounds), N = 41 at 4.
-  - SHA-256: N = 66 (1 load + 64 rounds + 1 final add).     - illegal op: N = 2.
-  - While running, STATUS reads busy = 1, done = 0 after every edge 1 .. N-1; after edge N it reads
-    busy = 0, done = 1.  STATUS and IRQ_STAT carry NEXT-STATE values (hw_wen every cycle), so a
-    read one transfer after the start always sees busy = 1 and a read after the completion edge
-    always sees done = 1 -- never a stale 0.
-  - DOUT / DIGEST / IV3 are written with the cores' COMBINATIONAL next-state result on that same
-    completion edge, so done and the data become visible together.
-  - irq_o = done & CTRL[3], combinational off flops: LEVEL-HELD, never a pulse (every IRQ crosses
-    into cpu_core_clk through a plain 2-FF sync in soc_top, which can miss a pulse).
-
-CYCLE-SAMPLING HAZARD (learned on PWM / WDT / TRNG / I2C): a value read straight after
-`await RisingEdge` is the PRE-edge value.  Every internal-state sample below therefore goes
-RisingEdge FIRST and then settles through Timer(1, "step") (inside `_Dev.peek`, which also drives
-an idle bus's paddr so it is side-effect free), so each sample is the settled post-edge state of a
-KNOWN edge and none is duplicated or skipped.  Crypto has no read-snoop registers, so plain APB
-reads are safe too; peek is simply the right tool for sampling STATUS mid-operation.  Tests that
-align an APB ACCESS phase with a specific internal edge (set-beats-clear, busy-boundary) drive the
-raw SETUP / ACCESS phases from `_Dev.timed_write`, counted from the edge E that `_Dev.start`
-returns on.
-
-DECISIONS the spec left open (or resolved inside the contract).  Writing the tests first is what
-pins them, so they are asserted HERE and the RTL implements what this file asserts:
-
-  D1. MODE AND START ARE NEVER WRITTEN IN ONE TRANSFER BY THIS SUITE.  The contract derives
-      mode_w from the bank register (regs_o[CTRL]), whose value during the START write's own
-      ACCESS cycle is the PRE-write one, so a single write that both changes the mode and sets
-      START would run the OLD mode.  The suite always writes CTRL (no start) first and CTRL|START
-      second (`_Dev.start`), and does NOT pin the single-write behaviour.  Reported to the
-      reviewer as a contract under-specification.
-  D2. DONE IS STICKY ACROSS A NEW START: a START does not clear it, so software must W1C
-      IRQ_CLR[0] before polling (every helper here does).  test_crypto_done_sticky_across_start.
-  D3. START WHILE BUSY IS SILENTLY IGNORED, INCLUDING ON THE COMPLETION EDGE ITSELF (the FSM is
-      still busy during that cycle); one edge later it is accepted.  No status bit, no pslverr.
-      test_crypto_start_while_busy_ignored, test_crypto_start_at_busy_boundary.
-  D4. ILLEGAL OPS ARE HANG-FREE: mode 3, an AES start with key_valid = 0, and a mode whose core is
-      compiled out all take the 2-edge zero-length path -- busy pulses for one edge, done and
-      IRQ_STAT set (so an enabled irq_o fires), and NO DOUT / DIGEST / IV writeback.  A start that
-      is silently dropped would satisfy "do not hang the FSM" but hang a `while (!done);` driver.
-      DONE DOES NOT IMPLY VALID DATA.  test_crypto_illegal_mode3_is_hang_free,
-      test_crypto_start_without_key_is_hang_free, test_crypto_compiled_out_core_is_hang_free.
-  D5. SHA does NOT need a key (key_valid gates only ECB/CTR).
-      test_crypto_start_without_key_is_hang_free.
-  D6. DOUT / DIGEST VALIDITY WINDOW: valid from one completion edge until the next, so a read
-      taken while a new operation is in flight returns the PREVIOUS result, never a partial round
-      state.  test_crypto_dout_digest_hold_previous_result_while_busy.
-  D7. A KEY WRITE WHILE BUSY IS REJECTED (any operation, SHA included): the shadow is unchanged,
-      STATUS[3] latches.  STATUS[3] clears on reset, on IRQ_CLR[1] and on an accepted key write;
-      IRQ_CLR[0] does not touch it and IRQ_CLR[1] does not touch done.
-      test_crypto_key_write_while_busy_is_rejected, test_crypto_key_rejected_clear_paths.
-  D8. DIN PUSHES WHILE BUSY AND PARTIAL-STROBE DIN WRITES ARE SILENTLY DROPPED, with NO status bit
-      (a documented asymmetry with key_write_rejected).  CTR is what forces the busy rule: the
-      plaintext is consumed at the COMPLETION edge.  test_crypto_din_push_while_busy_is_dropped,
-      test_crypto_din_partial_strobe_is_dropped.
-  D9. KEY HAS NO READBACK PATH, so key loading is provable ONLY through known-answer vectors:
-      the FIPS-197 tests are the key-load tests.  test_crypto_key_regs_read_zero_forever.
-  D10. key_valid = all four words written, in any order, cleared ONLY by reset: a partial rewrite
-      leaves it 1 over a mixed key (software's problem).  A zero-strobe key write is NOT pinned.
-      test_crypto_key_valid_semantics.
-  D11. IV same-cycle collision: a software write to IV3 on the completion edge BEATS the hardware
-      increment (IV is a real RW register; software is re-seeding), whereas software cannot beat
-      the hardware on the WMASK = 0 words (DOUT).  Writing IV3 mid-operation otherwise corrupts
-      the counter and is software's responsibility -- not asserted.
-      test_crypto_iv_sw_write_beats_hw_increment, test_crypto_ro_regs_ignore_writes.
-  D12. SBOX_PARALLEL = 4 is BIT-IDENTICAL to 16 and differs only in latency (41 vs 11).
-      test_crypto_sbox4_is_bit_identical_and_41_cycles.
-  D13. The elaboration-guard tests shell out to `verilator --lint-only -G<PARAM>=<bad>` and
-      require BOTH a non-zero exit AND the offending PARAMETER NAME in the output (the generate
-      block labels themselves are not printed by Verilator).  The RTL source list is NOT
-      hardcoded here: it is read from this directory's Makefile CRYPTO_SOURCES through
-      tools/verif/check_source_closure.py's own parser, so it cannot drift from `make crypto`;
-      tb_crypto.sv is swapped for a throwaway single-instance top generated at test time (a -G
-      override of tb_crypto's four-instance wrapper would put two identical instances in one
-      elaboration and draw a spurious VARHIDDEN -- see tb_crypto.sv).
-
-VECTORS PINNED HERE (hardcoded as literals, independently of tb/models/aes128_model.py, whose
-selftest() pins the same ones -- the double-pin tb/models/trng_lfsr_model.py / test_trng.py
-established, so a silent model edit cannot move the target this suite chases):
-  FIPS-197 Appendix B (key 2b7e1516..., pt 3243f6a8... -> 3925841d...), FIPS-197 Appendix C.1
-  (key 000102..0f, pt 00112233..ff -> 69c4e0d8...), NIST SP 800-38A F.5.1 CTR-AES128 (four
-  blocks), FIPS-180-4 "abc", "" and the 56-byte two-block message.  Every other expectation is
-  computed by the model or by hashlib.
-
-Tests (grouped; the name states the behaviour):
-  register file   reset_defaults, ctrl_stored_bits_and_start_reads_zero, out_of_range_and_reserved,
-                  ro_regs_ignore_writes, strobe_gating_of_start
-  AES ECB         fips197_appendix_b, fips197_appendix_c1, ecb_random_vs_model,
-                  sbox4_is_bit_identical_and_41_cycles
-  AES CTR         ctr_sp800_38a_roundtrip, ctr_inc32_rightmost_word_only,
-                  ctr_zero_din_is_raw_keystream, iv_rw_and_hw_increment_rules,
-                  iv_sw_write_beats_hw_increment
-  key handling    key_regs_read_zero_forever, key_valid_semantics, key_any_order_and_partial_strobe,
-                  key_write_while_busy_is_rejected, key_rejected_clear_paths
-  DIN             din_aperture_and_order, din_partial_strobe_is_dropped,
-                  din_push_while_busy_is_dropped, din_is_a_shift_register
-  SHA-256         sha256_fips_vectors, sha256_multiblock_vs_hashlib, sha256_cont_semantics
-  handshake       cycle_counts, done_sticky_across_start, done_irq_stat_mirror_and_w1c,
-                  set_beats_same_cycle_clear, irq_level_held_and_masked,
-                  start_while_busy_ignored, start_at_busy_boundary,
-                  dout_digest_hold_previous_result_while_busy, writeback_isolation,
-                  reset_mid_operation
-  illegal ops     illegal_mode3_is_hang_free, start_without_key_is_hang_free,
-                  compiled_out_core_is_hang_free
-  elaboration     elaboration_guards_reject_illegal_config, elaboration_legal_configs_pass
+"""
+test_crypto.py -- Phase 6b cocotb L1 verification for crypto_accel (rtl/periph/crypto_accel.sv,
+aes128_core.sv, sha256_core.sv; Doc: ds:ch:phase6-ip-expansion-plan "6b CRYPTO", whose acceptance
+criteria this suite proves). The assertions come from the frozen contract, the plan and the
+standards (FIPS-197, FIPS-180-4, NIST SP 800-38A), never from an FSM.
+NOT PRODUCTION CRYPTO: no side-channel resistance or fault-injection hardening, not certified, key
+shadow exposed through scan.
+DUT: tb_crypto, ONE wrapper, FOUR crypto_accel instances (prefixes "", v4_, noaes_, nosha_) sharing
+clk / rst_n. Map: crypto_accel.sv header.
+BYTE ORDER: FIPS big-endian everywhere (word 0 carries B0 in bits [31:24]; DIGEST0[31:24] is the MSB
+of H0), so FIPS hex and hashlib need NO byte swap. DIN is a FIFO of words (4 in order for AES, 16
+for SHA, first = M0); WHICH DIN address is written is irrelevant, the ORDER is the contract.
+PADDING IS SOFTWARE'S JOB. SHA_CONT = 0 on the first SHA block, 1 later.
+Timing ("E" = the edge where the START ACCESS is sampled; N counts edges INCLUDING E): AES N = 11 at
+SBOX_PARALLEL = 16 and 41 at 4; SHA-256 N = 66; illegal op N = 2. While running, busy=1 done=0 after
+edges 1..N-1, then busy=0 done=1. irq_o = done & CTRL[3] is LEVEL-HELD, never a pulse.
+Sampling: a read straight after `await RisingEdge` is the PRE-edge value; samples go RisingEdge,
+then Timer(1, "step") (`_Dev.peek`).
+DECISIONS the spec left open (asserted HERE, the RTL implements them): D1 MODE and START are never
+written in one transfer (write CTRL, then CTRL|START). D2 DONE is sticky across a new START: W1C
+IRQ_CLR[0] first. D3 START while busy is ignored, even on the completion edge. D4 Illegal ops (mode
+3, AES without key, compiled-out core) never hang: busy one edge, done set, NO writeback; DONE DOES
+NOT IMPLY VALID DATA. D5 SHA needs no key. D6 DOUT / DIGEST hold the PREVIOUS result while busy. D7
+A KEY write while busy is REJECTED (STATUS[3]). D8 DIN pushes while busy and partial-strobe DIN
+writes are silently dropped. D9 KEY has no readback (proven by known-answer vectors only). D10
+key_valid clears only on reset. D11 A software IV3 write on the completion edge BEATS the hardware
+increment. D12 SBOX_PARALLEL=4 is bit-identical, only slower. D13 Elaboration guards: `verilator
+--lint-only -G`.
+Vectors are literals (FIPS-197 App. B and C.1, SP 800-38A F.5.1 CTR, FIPS-180-4 "abc", "" and the
+56-byte message), independent of aes128_model.py.
+Run: make -C tb/cocotb/soc crypto
+Doc: tm:suite:soc-test-crypto
 """
 
 import hashlib
@@ -190,7 +58,7 @@ from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 
 from tb.models import aes128_model as aes  # noqa: E402
 
-CLK_PERIOD_NS = 10  # 100 MHz -- matches SoC reference clock (same convention as test_trng.py)
+CLK_PERIOD_NS = 10  # matches the SoC reference clock (same convention as test_trng.py)
 
 # -- register byte offsets ----------------------------------------------------
 CRYPTO_CTRL = 0x000
@@ -474,11 +342,11 @@ async def _reset(dut, rig: _Rig, cycles: int = 4) -> None:
 
 
 async def _start_clock_and_reset(dut) -> _Rig:
-    """Start the 100 MHz clock, build the four drivers and reset the DUTs."""
+    """Start the clock, build the four drivers and reset the DUTs."""
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
     dut.rst_n.value = 0
-    dut.scan_mode_i.value = 0  # DFT scan mode off (bead j41m.2)
+    dut.scan_mode_i.value = 0  # DFT scan mode off
     rig = _Rig(dut)
     await _reset(dut, rig)
     return rig
@@ -2033,7 +1901,7 @@ async def test_crypto_elaboration_legal_configs_pass(dut):
         assert r.returncode == 0, f"{args} must elaborate cleanly:\n{r.stdout}{r.stderr}"
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -2065,7 +1933,7 @@ async def test_register_w1p_w1c_semantics(dut):
     rep.assert_clean()
 
 
-# -- DFT scan-mode key mask (bead j41m.2, Doc: tm:ch:dft-architecture sec.7.3) --------------
+# -- DFT scan-mode key mask (Doc: tm:ch:dft-architecture) --------------
 # key_q (crypto_accel) and rk_q (aes128_core) are excluded from scan. Exclusion alone leaks the key:
 # a tester could shift in a state, pulse one capture and shift out f(state, key). So in scan mode
 # the two registers' READ side is forced to 0: key_eff = key_q & ~scan_mode (the aes core's key_i)
@@ -2094,8 +1962,8 @@ def _val(sig) -> int:
 
 
 
-# NOTE (bead j41m.6): every scan_mode_i edge now also wipes the key (see the SCAN WIPE section
-# below), so the two j41m.2 mask tests load their key AFTER the entry wipe has settled; the key
+# NOTE: every scan_mode_i edge now also wipes the key (see the SCAN WIPE section
+# below), so the two mask tests load their key AFTER the entry wipe has settled; the key
 # the mask is hiding is therefore one written while in scan mode, which is the case that matters
 # (key_q is excluded from scan, so a scan-mode key write is exactly what an attacker controls).
 
@@ -2173,7 +2041,7 @@ async def test_scan_mode_result_is_key_independent_and_matches_model(dut):
     )
 
 
-# -- DFT scan wipe (bead j41m.6, Doc: tm:ch:dft-architecture sec.14.3) -----------------------
+# -- DFT scan wipe (Doc: tm:ch:dft-architecture) -----------------------
 # crypto_accel zeroizes key-, round-, message- and digest-derived state on EVERY scan_mode_i edge
 # (entry and exit). scan_mode_i passes a 2-FF synchroniser plus an edge flop, so wipe_w is high in
 # the cycle after the 2nd edge that follows the change and the flops clear on the 3rd. Every check
@@ -2458,7 +2326,7 @@ async def test_reset_neither_creates_nor_hides_a_scan_edge(dut):
     assert _val(dut.u_dut.key_q) == 0, "exit edge after a scan-mode reset must still wipe"
 
 
-# -- DFT scan-entry wipe handshake (bead j41m.17, Doc: tm:ch:dft-architecture sec.14.14) -----
+# -- DFT scan-entry wipe handshake (Doc: tm:ch:dft-architecture) -----
 # scan_wipe_done_o is 1 iff scan_mode_i has been constant for the last three clock edges and still
 # equals that value now; it falls combinationally when scan_mode_i changes (no clock needed) and
 # rises right after the edge at which the wipe_w-qualified clears take effect. The model below

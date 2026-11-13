@@ -11,10 +11,10 @@ Register layout (N_REGS = 8, byte addr = idx*4):
     reg6 @0x18 : SW read-only, HW-writable (status)
     reg7 @0x1C : low-byte writable only (WMASK 0x000000FF), HW-writable via hw_aux_*
 
-Ownership rule (bead 6o8w): SW owns the WMASK bits, HW owns everything else.  The
+Ownership rule: SW owns the WMASK bits, HW owns everything else.  The
 RO-write vs same-cycle HW update and partial-WMASK merge tests pin that rule.
 
-Two build points (bead r5hu), selected by the `register_bank` Makefile target through the
+Two build points, selected by the `register_bank` Makefile target through the
 REGBANK_ADDR_W environment variable that mirrors the Verilator `-GADDR_W=` override:
   ADDR_W = 12 (default) -- 4 KB slot; WORDW = 10, N_REGS = 8 << 2**WORDW.
   ADDR_W =  5           -- WORDW = 3, so N_REGS == 2**WORDW.  The DUT's range gate must
@@ -160,7 +160,7 @@ async def test_out_of_range(dut):
 @cocotb.test(skip=not AT_BOUNDARY)
 async def test_nregs_equals_wordw_boundary(dut):
     """
-    Bead r5hu.  Runs only in the ADDR_W=5 build, where N_REGS == 2**WORDW (8 == 2**3).
+    Runs only in the ADDR_W=5 build, where N_REGS == 2**WORDW (8 == 2**3).
 
     The write-commit gate and the read mux compare the word address against N_REGS.  A
     truncating `WORDW'(N_REGS)` cast turns 8 into 0 at WORDW=3, so `word < 0` is false for
@@ -185,7 +185,7 @@ async def test_nregs_equals_wordw_boundary(dut):
 
 
 # ---------------------------------------------------------------------------
-# Bead 6o8w -- SW commit vs same-cycle HW write
+# SW commit vs same-cycle HW write
 #
 # Stimulus is applied on the FALLING edge so the DUT samples it on the next RISING
 # edge; the HW ramp acts on RisingEdge and has always finished updating by the next
@@ -246,7 +246,7 @@ async def _axil_drain(dut) -> None:
 @cocotb.test()
 async def test_ro_write_does_not_drop_hw_update(dut):
     """
-    Bead 6o8w, WMASK==0 case.  reg6 is SW read-only (WMASK=0) and HW-written.
+    WMASK==0 case.  reg6 is SW read-only (WMASK=0) and HW-written.
 
     SW owns the WMASK bits (none), HW owns everything else, so a write to reg6 is a
     pure no-op and must not interfere with the HW update landing on the same edge.
@@ -285,7 +285,7 @@ async def test_ro_write_does_not_drop_hw_update(dut):
 @cocotb.test()
 async def test_partial_wmask_hw_keeps_unmasked_bits(dut):
     """
-    Bead 6o8w, partial-WMASK case.  reg7 has WMASK=0x000000FF: SW owns [7:0], HW owns
+    Partial-WMASK case.  reg7 has WMASK=0x000000FF: SW owns [7:0], HW owns
     [31:8].  Same-edge write of 0x00000055 (wstrb=0xF) and HW write of 0xDEADBEEF must
     yield 0xDEADBE55.
 
@@ -323,7 +323,7 @@ async def test_partial_wmask_hw_keeps_unmasked_bits(dut):
 
 
 # ---------------------------------------------------------------------------
-# Bead 8riq (GH #216 coverage gap): AW/W arrival order and response backpressure.
+# AW/W arrival order and response backpressure.
 # Uses the stall-capable master in axil_stall_bfm.py -- the shared AXI4LiteMaster keeps AW and W
 # together and bready/rready high, so it can never reach these paths.
 # ---------------------------------------------------------------------------
@@ -412,7 +412,7 @@ async def test_response_backpressure_blocks_new_requests(dut):
 
 @cocotb.test()
 async def test_hw_write_every_register_every_bit(dut):
-    """AXI-Lite twin of the APB4 bank test (bead xkw5): a hardware write lands in each of the eight
+    """AXI-Lite twin of the APB4 bank test: a hardware write lands in each of the eight
     registers, whatever its WMASK, for every bit pattern (walking ones / zeros, alternating, all-ones,
     zero), and a software read returns it."""
     m = await _setup(dut)
@@ -442,7 +442,7 @@ async def test_hw_write_every_register_every_bit(dut):
 @cocotb.test()
 async def test_every_out_of_range_address_bit(dut):
     """A load or store at an address with only word-index bit k set (k above the 8 registers)
-    reads 0 and disturbs no register: the range gate sees every address bit (bead xkw5)."""
+    reads 0 and disturbs no register: the range gate sees every address bit."""
     if ADDR_W != 12:
         return  # needs the 4 KB window
     m = await _setup(dut)

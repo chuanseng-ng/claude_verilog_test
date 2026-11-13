@@ -1,41 +1,27 @@
 """
-reg_walk.py -- reusable cocotb register-walk helper (bead claude_verilog_test-7ovx, GH #216).
-
-Why: the GH #216 coverage review found that most of the missing toggle coverage on the SoC's
-register-bank peripherals (and on the soc_bus / axil / apb fabric) is upper data and address bits
-that never see BOTH a 0->1 and a 1->0, because the directed tests write small values to a few
-low offsets.  This helper walks every register of a peripheral with a fixed pattern set and
-checks the read-back against the DOCUMENTED register map, so the same stimulus that toggles the
-bits also proves behaviour: it is a checker first and a toggle generator second.
-
-What it checks, per register (see `Reg`):
-  * the value read straight after reset equals the documented idle value (live bits excepted);
-  * every pattern write is read back as   (model & ~wmask) | (written & wmask)   -- so writable
-    bits take the written value, and every NON-writable bit (RO status, reserved, WO/W1C/W1P
-    registers that read 0) provably keeps its value no matter what is written;
-  * byte-lane strobes: a write with pstrb = 1<<k changes only lane k, and only inside wmask;
-  * no APB transaction returns PSLVERR (these banks never signal one; `expect_err` overrides);
-  * unmapped words read 0 and writing them disturbs nothing (`walk_unmapped`), which is also the
-    only test that catches a snoop decoding too few address bits;
-  * after the walk every register is rewritten to its reset value, so the walk leaves the
-    peripheral as it found it.
-
-Pattern set (task spec): walking ones (32), 0xFFFFFFFF, 0x00000000, 0xA5A5A5A5, 0x5A5A5A5A, and
-optionally walking zeros.  Patterns are ANDed with `Reg.drive` before they are written: a bit
-outside `drive` is never driven to 1.  That is how a register with a side-effect bit stays safe
-(START, a power-mode request, a watchdog enable) while the rest of the register is still walked.
-
-What it does NOT do, by design (each is a per-register `skip` with a printed reason, never a
-silent omission): registers whose WRITE has a side effect that the walk cannot undo or that
-changes later registers -- FIFO pushes, key/data apertures, command pulses, watchdog feed.  The
-owning suite tests those.
-
-A mismatch is reported, not adapted to: the collected `Report.mismatches` are raised together
-by `Report.assert_clean()` so one run lists every disagreement between RTL and the register map.
-
-The helper only needs an object with `async write(addr, data, strb=0xF) -> ok` and
-`async read(addr) -> (data, ok)` (bfm.apb4_master.APB4Master), so the unit suites use it directly;
-`tb/cocotb/soc/soc_reg_fw.py` turns the same `Reg` tables into CPU firmware for the SoC level.
+reg_walk.py -- reusable cocotb register-walk helper.
+It walks every register of a peripheral with a fixed pattern set and checks the read-back against
+the DOCUMENTED register map. The stimulus that toggles the upper data and address bits also proves
+behaviour: a checker first and a toggle generator second.
+Per register (see `Reg`) it checks:
+  * the value right after reset equals the documented idle value (live bits excepted);
+  * every pattern write reads back as (model & ~wmask) | (written & wmask), so every NON-writable
+    bit keeps its value;
+  * byte lanes: a write with pstrb = 1<<k changes only lane k, and only inside wmask;
+  * no APB transaction returns PSLVERR (`expect_err` overrides);
+  * unmapped words read 0 and writing them disturbs nothing (`walk_unmapped`); only this catches a
+    snoop that decodes too few address bits;
+  * after the walk every register is back at its reset value.
+Patterns are ANDed with `Reg.drive` before the write, so a bit outside `drive` is never driven to 1
+(START, a power-mode request, a watchdog enable).
+It does NOT walk a register whose write has a side effect it cannot undo (FIFO push, key or data
+aperture, command pulse, watchdog feed). Each carries a `skip` with a printed reason. The owning
+suite tests it.
+A mismatch is reported, not adapted to: `Report.assert_clean()` raises all
+`Report.mismatches` together.
+It needs an APB4Master-like object (bfm.apb4_master.APB4Master). soc_reg_fw.py turns the same `Reg`
+tables into CPU firmware.
+Doc: tm:suite:soc-reg-walk
 """
 
 from __future__ import annotations

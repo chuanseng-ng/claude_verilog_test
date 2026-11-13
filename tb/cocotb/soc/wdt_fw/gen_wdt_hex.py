@@ -1,73 +1,29 @@
 #!/usr/bin/env python3
 """
-gen_wdt_hex.py — generate wdt_fw.hex and wdt_rst_fw.hex for the Phase 6a-3 SoC-level
-watchdog test (bead claude_verilog_test-f7vs.7 steps 4-5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
-
-Modelled directly on pwm_fw/gen_pwm_hex.py (itself a copy of gpio_fw/gen_gpio_hex.py) — same
-Assembler/lui_addi/CSRRW/MRET machinery, same commit_pc_o marker-PC synchronisation idiom. A
-committed pure-Python hand-assembler, so the suite needs no riscv32 cross toolchain and is
-CI-safe (a toolchain-dependent suite in soc_all_ci is what broke PR #195).
-
-Path exercised (confirmed from soc_top.sv):
-  CPU --AXI4--> axi4_crossbar --AXI4--> axi4_to_axilite --AXI-Lite-->
-  axi_lite_interconnect --AXI-Lite--> axil_to_apb --APB4--> apb_interconnect
-  --APB4--> APB_WDT slave 9 (watchdog_timer, base 0x2000_C000)
-
-WDT register map (rtl/periph/watchdog_timer.sv, word indices):
-  +0x00 WDT_CTRL     RW  [0] enable, [1] RST_EN, [2] window-mode enable
-  +0x04 WDT_RELOAD   RW  reload value, in prescaled ticks
-  +0x08 WDT_COUNT    RO  live down-counter
-  +0x0C WDT_WINDOW   RW  closed-window threshold (unused here)
-  +0x10 WDT_FEED     WO  0x5A5A_C0DE (pstrb 4'hF) feeds
-  +0x14 WDT_PRESCALE RW  [15:0] divider; one tick = (PRESCALE+1) core_clk cycles
-  +0x18 WDT_STATUS   RO  [0] bark, [1] bite, [2] window violation — sticky
-  +0x1C WDT_IRQ_CLR  W1C against WDT_STATUS
-
-Two images are emitted:
-
-=========================================================================================
-IMAGE A — wdt_fw.hex — feed, then starve: bark and bite through the real fabric, RST_EN = 0
-=========================================================================================
-  IRQ_READY   mtvec/IRQ_MASK bit 7 (WDT)/MEIE/MIE armed BEFORE the dog is enabled, so the
-              period measured from CONFIG_DONE is not eaten by interrupt set-up MMIO.
-  CONFIG_DONE PRESCALE/RELOAD/CTRL(EN) written; the dog is counting.
-              Firmware polls WDT_COUNT (an MMIO READ through the fabric) until it has fallen to
-              half the reload, then
-  FED         writes the magic to WDT_FEED and reads COUNT straight back: it must be back near
-              the reload value — proof the FEED write crossed the fabric and reloaded the
-              counter, not just that a bit somewhere changed. STATUS must still read 0.
-  From FED on firmware never feeds again. The dog barks (IRQ -> interrupt_controller[7] ->
-  CPU MEIP -> ISR #1), the ISR clears what it saw, the counter runs a second full period, and
-  the dog BITES (wdt_rst_req_o at the SoC boundary; IRQ again -> ISR #2). Bite is terminal.
-
-  ISR design — clear-what-you-saw. The ISR reads WDT_STATUS into a register and writes THAT
-  value to WDT_IRQ_CLR, rather than clearing a fixed mask or disabling the peripheral. Every
-  MMIO access here crosses the full fabric, so a status bit that becomes set between the read
-  and the clear (a bark racing the ISR) survives the clear instead of being silently swallowed,
-  and a bit that was never seen can never be cleared. This is what the PWM L2 suite's race
-  taught (it cleared status and then masked in two separate writes, leaving a window in which
-  the condition could re-fire); here there is no second write for a race to slip between, and
-  the ISR's last action is a WDT_STATUS read-back whose fabric round trip both proves the clear
-  landed and lets the level-held IRQ drain through the 2-FF ext_irq synchroniser before MRET
-  re-enables MIE (otherwise a stale ext_irq would re-vector). Exactly TWO traps are expected —
-  bark, then bite — and firmware checks ISR_COUNT == 2, LOG[0] == 0x1 (bark only) and
-  LOG[1] == 0x2 (bark already cleared by ISR #1, bite set).
-
-  Register allocation (MAIN):
-    x2 = WDT_BASE  x3 = IRQ_CTRL_BASE  x4 = ISR_BASE_ADDR (SRAM: count, log0, log1)
-    x5 = write staging  x14/x15 = poll counter/limit  x16-x21 = scratch  x31 = result marker
-  Register allocation (ISR, at ISR_PC = ROM_BASE + 4):
-    x28 = WDT_BASE  x29 = STATUS seen  x30 = ISR_BASE_ADDR  x31 = &log[count]  x1 = count
-
-==========================================================================================
-IMAGE B — wdt_rst_fw.hex — RST_EN = 1: the bite resets the CPU domain, and only that domain
-==========================================================================================
-  Enables the dog with CTRL = EN | RST_EN and a short period, then spins in a two-instruction
-  loop that commits LOOP_PC forever. Interrupts stay off. After the bite the CPU is held in
-  reset for good (wdt_rst_req_o is level-held until an external reset), so this image never
-  reaches a PASS marker — the cocotb test scores it from the boundary instead: cpu_domain_rst_n
-  falls, commits stop, while core_rst_n / cpu_core_rst_n stay high and the level-held
-  wdt_rst_req_o proves the WDT itself was NOT reset.
+gen_wdt_hex.py -- generate wdt_fw.hex and wdt_rst_fw.hex for the Phase 6a-3 SoC-level watchdog test.
+A pure-Python hand assembler: no riscv32 toolchain, so keep it (a toolchain-dependent suite in
+soc_all_ci breaks CI). Path: the fabric to APB_WDT slave 9 (watchdog_timer, base 0x2000_C000);
+registers: rtl/periph/watchdog_timer.sv header. FEED = 0x5A5A_C0DE with pstrb 4'hF.
+IMAGE A, wdt_fw.hex: feed, then starve; bark and bite through the real fabric, RST_EN = 0. IRQ_READY
+arms mtvec, IRQ_MASK bit 7, MEIE and MIE BEFORE the dog is enabled, so interrupt set-up MMIO does
+not eat the period measured from CONFIG_DONE. CONFIG_DONE writes PRESCALE, RELOAD and CTRL(EN);
+firmware polls WDT_COUNT (an MMIO READ) until it is half the reload, then FED writes the magic to
+WDT_FEED and reads COUNT back: it must be near the reload, which proves the FEED write crossed the
+fabric (STATUS must still read 0). From FED on firmware never feeds. The dog barks (IRQ ->
+interrupt_controller[7] -> CPU MEIP -> ISR #1), the counter runs a second full period, and the dog
+BITES (wdt_rst_req_o at the SoC boundary; ISR #2). Bite is terminal.
+ISR design, clear-what-you-saw: the ISR reads WDT_STATUS and writes THAT value to WDT_IRQ_CLR, not a
+fixed mask and not a disable. Every MMIO access crosses the fabric, so a bit set between the read
+and the clear (a bark racing the ISR) survives the clear, and a bit never seen is never cleared (the
+PWM L2 lesson). Its last action is a WDT_STATUS read-back: it proves the clear landed and lets the
+level drain through the 2-FF ext_irq synchroniser before MRET. Exactly TWO traps are expected:
+firmware checks ISR_COUNT == 2.
+IMAGE B, wdt_rst_fw.hex: RST_EN = 1, the bite resets the CPU domain only. It enables the dog with
+CTRL = EN | RST_EN and a short period and spins committing LOOP_PC, interrupts off. After the bite
+the CPU stays in reset (wdt_rst_req_o is level-held), so the image never reaches PASS: the cocotb
+test scores the boundary (cpu_domain_rst_n falls, commits stop, core_rst_n and cpu_core_rst_n stay
+high, wdt_rst_req_o stays high so the WDT itself was NOT reset).
+Doc: tm:suite:soc-wdt-fw-gen-wdt-hex
 """
 
 import os

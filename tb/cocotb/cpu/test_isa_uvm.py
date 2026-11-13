@@ -146,4 +146,3 @@ __all__ = [
 ]
 
 # Total: 54 tests covering all 37 RV32I instructions
-# Migration completed: 2026-02-01

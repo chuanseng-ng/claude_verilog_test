@@ -1,4 +1,4 @@
-"""Bead ej6j -- directed tests for rtl/soc/boot_rom.sv (behavioural AXI4 read-only boot ROM).
+"""Directed tests for rtl/soc/boot_rom.sv (behavioural AXI4 read-only boot ROM).
 
 boot_rom is the first-fetch target after reset.  Its read path is exercised by every SoC boot suite
 (which backdoor-load the array), but the WRITE path -- accept AW + W, never modify the ROM, answer

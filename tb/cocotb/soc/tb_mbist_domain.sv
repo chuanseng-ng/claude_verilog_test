@@ -1,8 +1,8 @@
 // tb_mbist_domain.sv
-// DFT Stage 4 (bead claude_verilog_test-j41m.14): mbist_ctrl + N mem_collar + N fault-injecting SRAM models
+// DFT Stage 4: mbist_ctrl + N mem_collar + N fault-injecting SRAM models
 // (sram_fi_core, Sky130 macro timing). Parameters are set per build with -G (N_MEM, AW, P1_MASK).
 // The functional-side ports let a test prove the collar is a pass-through when bist_en = 0.
-// LOCAL_CMP = 1 builds the collar-local compare (bead c54a): the collars compare their own macro's read data and
+// LOCAL_CMP = 1 builds the collar-local compare: the collars compare their own macro's read data and
 // return one registered mismatch strobe per port, the controller sees no read data. Default 0 (compare in the
 // controller, as in the SoC fabric instance).
 module tb_mbist_domain #(

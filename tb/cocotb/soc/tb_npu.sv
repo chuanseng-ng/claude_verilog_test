@@ -1,6 +1,6 @@
 // tb_npu.sv
 // Phase 6c -- standalone cocotb test wrapper for npu_top (rtl/npu/npu_top.sv, with its sub-modules
-// rtl/npu/npu_mac_array.sv and rtl/npu/npu_weight_mem.sv; bead claude_verilog_test-f7vs.11).
+// rtl/npu/npu_mac_array.sv and rtl/npu/npu_weight_mem.sv).
 //
 // STRICT TDD: the DUT does not exist when this wrapper is written (test_npu.py is the RED half of
 // the cycle). Every port and parameter name below is taken from the frozen interface contract in

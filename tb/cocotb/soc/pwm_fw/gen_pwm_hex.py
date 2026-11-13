@@ -1,101 +1,27 @@
 #!/usr/bin/env python3
 """
-gen_pwm_hex.py — generate pwm_fw.hex for the Phase 6a-2 SoC-level PWM test
-(bead claude_verilog_test-f7vs.6 item 5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
-
-Modelled directly on gpio_fw/gen_gpio_hex.py — same Assembler/lui_addi/CSRRW/MRET
-machinery, same commit_pc_o marker-PC synchronisation idiom, same ISR register
-convention (x28-x31, x1 scratch). See that file's header for the general pattern;
-this header covers only what differs for PWM.
-
-Path exercised (confirmed from soc_top.sv):
-  CPU --AXI4--> axi4_crossbar --AXI4--> axi4_to_axilite --AXI-Lite-->
-  axi_lite_interconnect --AXI-Lite--> axil_to_apb --APB4--> apb_interconnect
-  --APB4--> APB_PWM slave 8 (pwm_controller, base 0x2000_B000)
-
-PWM register map (rtl/periph/pwm_controller.sv, word indices):
-  +0x00 PWM_CTRL      RW  [3:0] per-channel enable, [7:4] per-channel polarity
-  +0x04 PWM_PERIOD    RW  [15:0] shared period, in prescaled ticks
-  +0x08 PWM_PRESCALE  RW  [15:0] core_clk divider; one tick = (PRESCALE+1) cycles
-  +0x0C PWM_DUTY01    RW  [15:0] ch0 duty, [31:16] ch1 duty
-  +0x10 PWM_DUTY23    RW  [15:0] ch2 duty, [31:16] ch3 duty
-  +0x14 PWM_IRQ_EN    RW  [3:0] per-channel period-wrap IRQ enable
-  +0x18 PWM_IRQ_STAT  RO  [3:0] sticky per-channel period-wrap
-  +0x1C PWM_IRQ_CLR   W1C always reads 0
-  +0x20 first out-of-range word (N_REGS=8) — read must return 0
-
-Unlike gpio_fw, PWM needs no cocotb-driven stimulus at all: pwm_o is a pure
-push-pull output (no oe, no async input — see pwm_controller.sv header), and
-the period-wrap interrupt is generated entirely by the peripheral's own free-
-running counters once channel 0 is configured and enabled. So there is only
-one cocotb synchronisation point instead of gpio_fw's three:
-
-  Phase 1 (CONFIG): firmware programs PRESCALE/PERIOD/DUTY01/CTRL (channel 0
-    enabled, active-high) then commits CONFIG_DONE_PC. From that point on,
-    pwm_o[0] free-runs at the SoC boundary with period
-    PERIOD_VAL * (PRESCALE_VAL + 1) core_clk cycles — cocotb watches this
-    directly on the tb_soc_top port with no firmware/testbench handshake
-    needed, unlike gpio_fw's OUTPUT_DONE_PC single-sample check.
-
-  Phase 2 (INTERRUPT, end to end): firmware unmasks the channel-0 period-wrap
-    IRQ (PWM_IRQ_EN bit 0), unmasks bit 6 (PWM) in interrupt_controller's
-    IRQ_MASK (base 0x2000_6000), enables MEIE/MIE, commits IRQ_READY_PC, and
-    enters a bounded WFI-style poll loop on an ISR_FLAG word in SRAM — the
-    period-wrap event fires on its own; no cocotb stimulus is required. The
-    ISR (installed at mtvec = ISR_PC) FIRST disables channel 0 entirely
-    (PWM_CTRL = 0), which stops the free-running counters from ever wrapping
-    again, THEN clears PWM_IRQ_CLR bit 0. Disabling the channel before
-    clearing status (rather than just clearing IRQ_EN, which only masks
-    irq_o) closes a real race: every MMIO access in this firmware crosses the
-    full fabric (CPU -> crossbar -> axi4_to_axilite -> axi_lite_interconnect
-    -> axil_to_apb -> apb_interconnect), so two back-to-back peripheral
-    writes can together take longer than one PWM_PERIOD_CYCLES period
-    (80 cycles here) — a naive "clear status, then mask enable" order was
-    observed to let a second period-wrap re-set PWM_IRQ_STAT before the
-    enable-mask write landed, re-asserting irq_o. Disabling the channel makes
-    a second wrap structurally impossible regardless of write latency. The
-    ISR then increments ISR_COUNT, sets ISR_FLAG, and MRETs. Firmware then
-    teeth-checks ISR_COUNT == 1 exactly and PWM_IRQ_STAT bit 0 == 0 (cleared
-    by the ISR's PWM_IRQ_CLR write). The cocotb test independently watches
-    commit_pc_o for ISR_PC (proof the CPU actually took the trap) and
-    directly samples the internal pwm_irq / ext_irq nets before and after the
-    ISR runs (proof of deassertion at the RTL level, not just firmware
-    self-report) — same technique as test_soc_gpio.py.
-
-  Phase 3 (register-bank policy, cheap teeth checks): PWM_IRQ_CLR always
-  reads 0; a read at word index 8 (first out-of-range offset, +0x20) returns
-  0 (apb4_register_bank's documented drop/return-0 OOR policy).
-
-Both PWM_BASE and IRQ_CTRL_BASE have bits[11:0]=0, so no LUI sign-extension
-compensation is needed for them (see gpio_fw's header) — lui_addi() handles
-the general case regardless.
-
-Register allocation (MAIN):
-  x1  = scratch (LUI/ADDI temporaries, CSR value staging)
-  x2  = PWM_BASE         0x2000_B000
-  x3  = IRQ_CTRL_BASE    0x2000_6000
-  x4  = ISR_FLAG_ADDR    (SRAM, word ISR_FLAG_WI)
-  x5  = scratch (write patterns)
-  x11 = channel-0 mask (1) — held live for the post-ISR teeth check
-  x13 = scratch (IRQ_MASK bit-6 value)
-  x14 = poll counter (WFI loop)
-  x15 = poll limit (WFI loop)
-  x16 = scratch (ISR_FLAG readback)
-  x17 = scratch (ISR_COUNT readback)
-  x18 = scratch (expected constant for ISR_COUNT compare)
-  x19 = scratch (PWM_IRQ_STAT readback / masked)
-  x20 = scratch (PWM_IRQ_CLR readback)
-  x21 = scratch (out-of-range readback)
-  x31 = result marker (1 = pass, -1 = fail)
-
-Register allocation (ISR, at ISR_PC = ROM_BASE + 4):
-  x28 = PWM_BASE (reconstructed independently of MAIN's x2, matching gpio_fw's
-        convention — ISR runs with MIE cleared, but MAIN's registers are still
-        architecturally live; rebuilding is defensive)
-  x29 = scratch (channel-0 mask / IRQ_CLR write value)
-  x30 = SRAM ISR_FLAG_ADDR (rebuilt in the ISR)
-  x31 = scratch (constant 1 / ISR_COUNT staging)
-  x1  = scratch (ISR_COUNT readback)
+gen_pwm_hex.py -- generate pwm_fw.hex for the Phase 6a-2 SoC-level PWM test. Path: the AXI4 and
+AXI-Lite fabric to APB_PWM slave 8 (pwm_controller, base 0x2000_B000). Registers: pwm_controller.sv
+header (PRESCALE: one tick = PRESCALE+1 cycles; IRQ_CLR W1C reads 0). Same ISR register convention
+as gpio_fw (x28-x31, x1).
+Unlike gpio_fw, PWM needs no cocotb stimulus: pwm_o is a push-pull output and the period-wrap
+interrupt comes from the peripheral's own counters. So there is one cocotb sync point.
+Phase 1 CONFIG: program PRESCALE, PERIOD, DUTY01 and CTRL (channel 0, active high), then commit
+CONFIG_DONE_PC. pwm_o[0] free-runs with period PERIOD_VAL * (PRESCALE_VAL + 1) core_clk cycles;
+cocotb watches it on the tb_soc_top port.
+Phase 2 INTERRUPT: unmask the channel-0 period-wrap (PWM_IRQ_EN bit 0) and bit 6 (PWM) in the
+  interrupt_controller IRQ_MASK (base 0x2000_6000), enable MEIE/MIE, commit IRQ_READY_PC,
+  poll ISR_FLAG.
+  The ISR (mtvec = ISR_PC) FIRST disables channel 0 (PWM_CTRL = 0), THEN clears PWM_IRQ_CLR bit 0.
+  Keep this order. Every MMIO access crosses the full fabric, so two back-to-back writes can take
+  longer than one PWM period. With clear-then-mask a second wrap set IRQ_STAT again and
+  re-asserted irq_o.
+  The ISR then increments ISR_COUNT, sets ISR_FLAG and MRETs. Firmware checks ISR_COUNT == 1 and
+  PWM_IRQ_STAT bit 0 == 0.
+Phase 3: PWM_IRQ_CLR reads 0, and word index 8 (+0x20) reads 0 (the register bank's
+out-of-range policy).
+Register use: the ISR touches only x1 and x28-x31 and rebuilds its own bases.
+Doc: tm:suite:soc-pwm-fw-gen-pwm-hex
 """
 
 import os

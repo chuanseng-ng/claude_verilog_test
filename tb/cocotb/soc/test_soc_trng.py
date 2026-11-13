@@ -1,54 +1,26 @@
 """
-test_soc_trng.py — Phase 6a-4 SoC-level TRNG test (bead claude_verilog_test-f7vs.8 steps 4-5,
-Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
-
-`test_trng` (tb_trng.sv / Makefile `trng` target) drives trng's APB4 face directly and has never
-exercised it through the real fabric path:
-
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-  axil_to_apb -> apb_interconnect -> APB slave 10 (APB_TRNG, 0x2000_D000)
-
-nor its IRQ into interrupt_controller bit 8. Firmware comes from a committed pure-Python
-hand-assembler (trng_fw/gen_trng_hex.py) — no riscv32 cross toolchain, so the suite is CI-safe.
-Synchronisation and scoring are by commit_pc_o marker PCs, the technique test_soc_wdt.py /
-test_soc_pwm.py use.
-
-One test, one image, two phases (see the generator header for the firmware side).
-
-PHASE 1 — polled, CTRL.IE = 0, SEED1
-  Firmware reads STATUS (must be exactly 0x8), reads DATA on the empty FIFO (0), checks the SEED
-  reset value, writes and reads back SEED1, enables, waits for FIFO-full (STATUS == 0xB) and pops
-  PHASE1_WORDS words into SRAM. Scored here:
-    * VALUE-EXACT: the words firmware popped equal tb/models/trng_lfsr_model.py for SEED1, in
-      order. The words are a pure function of the seed, so this pins the SEED write, the
-      enable-edge sampling, and every DATA read as a pop, all through the real fabric — not merely
-      "some data arrived".
-    * TRNG_STATUS[3] (INSECURE) read 1 in every STATUS value firmware saw. That bit is the only
-      marker that the default build is a deterministic LFSR rather than entropy; it must be
-      visible to firmware, and here it demonstrably is.
-    * the IE gate: the FIFO holds data for a long stretch of phase 1 (level_q >= THRESHOLD), the
-      interrupt path is armed the whole time, and trng_irq / ext_irq stay LOW — a single trap here
-      would mean CTRL.IE is not gating irq_o.
-
-PHASE 2 — interrupt driven, SEED2, THRESHOLD = 2
-  Firmware disables, writes SEED2, then ONE write CTRL = EN | IE | THRESHOLD<<2. Scored here:
-    * trng_irq rises exactly when the FIFO level reaches THRESHOLD (level_q == 2 on the rising
-      edge) — the threshold field crossed the fabric, and the IRQ is the level source, not a
-      pulse.
-    * trng_irq -> interrupt_controller[8] -> CPU MEIP: the CPU vectors (ISR_PC commits) with
-      trng_irq AND ext_irq asserted. EXACTLY ONE trap: the ISR clears the level source with a
-      single CTRL write (IE cleared), so there is no clear-then-disable window for the condition
-      to re-fire in (the PWM L2 lesson), and a stale level-held IRQ would produce a second trap.
-    * after the ISR, trng_irq and ext_irq deassert and stay low.
-    * VALUE-EXACT: the phase-2 words popped after the trap equal the model for SEED2 — which also
-      proves the enable edge restarted the session (fresh LFSR load, FIFO cleared) rather than
-      continuing phase 1's stream.
-    * backdoor SRAM: ISR_COUNT == 1; the STATUS the ISR saw had data-ready and INSECURE set.
-
-GOLDEN-MODEL NOTE (same as test_soc_gpio / test_soc_pwm / test_soc_wdt): SoCModel cannot be used
-here since it rejects 0x2000_xxxx MMIO. The firmware is self-checking and the testbench
-scoreboards commit_pc_o for the marker PCs / PASS_PC / FAIL_PC; the entropy words are checked
-against trng_lfsr_model.py instead.
+test_soc_trng.py -- Phase 6a-4 SoC-level TRNG test. `test_trng` (tb_trng.sv, Makefile `trng` target)
+drives trng's APB4 face directly. It never used the real fabric path to APB slave 10 (APB_TRNG,
+0x2000_D000), nor the IRQ into interrupt_controller bit 8. Scoring is by commit_pc_o marker PCs. One
+test, one image, two phases.
+PHASE 1, polled, CTRL.IE = 0, SEED1: the firmware reads STATUS (exactly 0x8), reads DATA on the
+empty FIFO (0), checks the SEED reset value, writes and reads back SEED1, enables, waits for
+FIFO-full (STATUS == 0xB) and pops PHASE1_WORDS words into SRAM. Scored: VALUE-EXACT: the popped
+words equal tb/models/trng_lfsr_model.py for SEED1, in order (the words are a pure function of the
+seed, so this pins the SEED write, the enable-edge sampling and every DATA read as a pop, through
+the real fabric); TRNG_STATUS[3] (INSECURE) is 1 in every STATUS the firmware saw (the only marker
+that the default build is a deterministic LFSR); the IE gate: while the FIFO holds data (level_q >=
+THRESHOLD) trng_irq and ext_irq stay LOW (a trap would mean CTRL.IE does not gate irq_o).
+PHASE 2, interrupt driven, SEED2, THRESHOLD = 2: the firmware disables, writes SEED2, then ONE write
+CTRL = EN | IE | THRESHOLD<<2. Scored: trng_irq rises exactly when the FIFO level reaches THRESHOLD
+(a level source, not a pulse); the CPU vectors (ISR_PC) with trng_irq AND ext_irq asserted, EXACTLY
+ONE trap: the ISR clears the level source with a single CTRL write (IE cleared), so there is no
+clear-then-disable window for the condition to re-fire in (the PWM L2 lesson); afterwards both lines
+deassert and stay low; VALUE-EXACT: the phase-2 words equal the model for SEED2, which also proves
+the enable edge restarted the session (fresh LFSR load, FIFO cleared); backdoor SRAM: ISR_COUNT == 1
+and the STATUS the ISR saw had data-ready and INSECURE set.
+Run: make -C tb/cocotb/soc soc_trng
+Doc: tm:suite:soc-test-soc-trng
 """
 
 import sys
@@ -94,7 +66,7 @@ from tb.models.trng_lfsr_model import TrngLfsrModel
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS = 2  # matches the other SoC tests
 
 _FW_HEX = str(Path(__file__).parent / "trng_fw" / "trng_fw.hex")
 

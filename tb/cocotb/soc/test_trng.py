@@ -1,172 +1,32 @@
-"""test_trng.py -- Phase 6a-4 cocotb verification for trng (rtl/periph/trng.sv, bead
-claude_verilog_test-f7vs.8, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG" + Sec.9).
-
-STRICT TDD: trng DOES NOT EXIST YET as of this suite's authorship. This is step 2 of the mandated
-workflow ("the verification orchestrator runs before the RTL orchestrator" -- Sec.9) --
-`make trng`/`make trng_lint` are EXPECTED to fail to elaborate until a separate RTL agent writes
-rtl/periph/trng.sv (+ rtl/periph/trng_lfsr_entropy.sv) to match the contract documented here and in
-tb/models/trng_lfsr_model.py (the authoritative, bit-exact specification of the entropy pipeline).
-
-DUT: tb_trng (standalone wrapper, directly instantiates trng, ADDR_W=12). The only port beyond the
-APB4 face is `irq_o`: the peripheral has NO top-level pins. There is no async input, hence no CDC of
-its own; the single clock domain is core_clk (== clk in tb_trng).
-
-Register map (trng.sv, ADDR_W=12 local byte offset, N_REGS=8):
-  0x000  TRNG_CTRL     [RW]   [0] enable, [1] IRQ enable, [5:2] FIFO threshold; [31:6] reserved
-  0x004  TRNG_STATUS   [RO]   [0] data ready (FIFO level >= 1), [1] FIFO full (level == 4),
-                              [2] health_fail (sticky), [3] INSECURE; [31:4] read 0
-  0x008  TRNG_DATA     [RO]   a read POPS one 32-bit word from the 4-deep FIFO (read-snoop, the
-                              SPI_RX idiom). The only RO register in this SoC with a read side effect.
-  0x00C  TRNG_SEED     [RW]   32-bit LFSR seed; sampled at the CTRL.ENABLE 0->1 edge
-  0x010  TRNG_IRQ_CLR  [WO]   W1C against STATUS.health_fail; reads 0
-  0x014, 0x018, 0x01C  reserved: write dropped, read 0
-  >=0x020 (word index >= 8)   out-of-range: writes dropped, reads return 0, pslverr=0
-
-ENTROPY SOURCE IS `ifdef-SWAPPED, NOT A PORT (Sec.7 "Key structural decision"):
-    `ifdef TRNG_RO_SKY130   rtl/periph/trng_ro_sky130.sv    (ring oscillator + blackbox stub)
-    `else                   rtl/periph/trng_lfsr_entropy.sv (default -- the arm this suite tests)
-trng.sv itself is 100 % portable (it sits in every file list and every PD flow); only the entropy-
-QUALITY claim is Sky130-exclusive. tb_trng does not define TRNG_RO_SKY130, so this suite always
-exercises the LFSR arm: three LFSRs on distinct primitive polynomials (31/29/23 bit) XOR-combined
-through a von Neumann debiaser. That arm is DETERMINISTIC and explicitly NOT CRYPTOGRAPHIC, and it
-must advertise the fact by forcing TRNG_STATUS.INSECURE = 1. Because it is deterministic from
-TRNG_SEED it can be golden-vectored: tb/models/trng_lfsr_model.py is a pure-Python model of the
-whole pipeline (seed slicing, LFSR step, raw XOR, von Neumann pairing, LSB-first word packing,
-stall-not-drop backpressure, repetition-count health test) and the suite requires the RTL's popped
-words to match it BIT-EXACTLY. `python3 tb/models/trng_lfsr_model.py` self-checks the model
-standalone (polynomial primitivity, an independent recurrence cross-check of the LFSR step, the
-stuck / late-trip seeds this suite depends on).
-
-INSECURE (STATUS[3]) MUST READ 1 IN THE DEFAULT BUILD. It is the only thing distinguishing a
-deterministic LFSR from real entropy behind a register named TRNG. test_trng_insecure_reads_one
-asserts it at reset, while enabled, after filling, after a health failure, after a W1C of every bit
-and after writes to STATUS -- it is constant, not a status that can be cleared or masked.
-
-DISTRIBUTION CHECKS ARE SANITY, NOT A RANDOMNESS-QUALITY CLAIM. Bit balance within +/-5 %, no
-repeated 32-word window, per-bit-lane balance and the debiaser's raw-samples-per-output-bit ratio
-(test_trng_distribution_sanity) are passed trivially by a von Neumann debiaser over LFSRs, and
-would be passed by many broken-but-plausible generators too. They exist to catch WIRING bugs (a
-stuck word-assembly bit, a FIFO that repeats a word, a debiaser that keeps both bits of a pair), not
-weak entropy. Real entropy quality is a Sky130 ring-oscillator / lab question, out of this phase.
-
-Timing/pipeline contract this suite pins (see the model's docstring for the full derivation):
-  - One raw sample per enabled, non-stalled core clock; sample 0 is consumed on the first edge
-    after the edge that commits CTRL.ENABLE ("E"). Fill latency is therefore a known function of
-    the seed: the k-th word is visible R_k .. R_k + FILL_SLACK edges after E, where R_k is
-    TrngLfsrModel(seed).raw_consumed_for_words(k). FILL_SLACK absorbs registered pipeline stages.
-  - The 4-deep FIFO applies BACKPRESSURE AS A STALL, never a drop: the sequence of popped words is
-    a pure function of the seed, independent of when or how fast software reads.
-  - The repetition-count health test (NIST SP 800-90B) runs on the RAW samples with cutoff C = 21.
-    Adaptive-proportion is a documented non-goal.
-  - STATUS/DATA are register-bank mirrors of internal state and may lag it by a cycle or two; the
-    suite tolerates POP_SETTLE = 2 idle cycles after a pop before trusting STATUS again, and never
-    pins an exact READY/FULL edge -- only the [R_k, R_k + FILL_SLACK] window.
-  - irq_o is LEVEL-HELD, never a pulse: every IRQ source crosses core_clk -> cpu_core_clk through a
-    plain 2-FF cdc_sync in soc_top, which can miss a pulse.
-  - The W1C clear is an APB write-snoop on TRNG_IRQ_CLR, NOT a WMASK path, honouring pstrb; a
-    hardware set beats a same-cycle clear so a health failure is never lost to a racing clear.
-  - Disabled (CTRL[0] == 0): no entropy accumulates and the FIFO does not fill.
-
-DECISIONS the spec left open. Writing the tests first is what settles them, so they are asserted
-here and the RTL implements what this file asserts, not the reverse:
-
-  D1. TRNG_DATA read on an EMPTY FIFO returns 0x0000_0000, sets NO error status (no sticky bit, no
-      pslverr -- consistent with the rest of this bus, where out-of-range reads also return 0
-      with pslverr=0), and does not underflow the FIFO. STATUS.data_ready is the ONLY validity
-      indicator. Rationale: the unsafe alternatives are (a) returning the last word again, which
-      hands firmware a REPEATED "random" word -- a key or nonce reused without any signal -- and
-      (b) returning whatever a stale read-data register happens to hold. A constant 0 is the value
-      no consumer mistakes for fresh entropy once it has checked ready, and the FIFO state is left
-      untouched (a phantom pop must not corrupt the level: the next fill must still deliver exactly
-      the golden four words). See test_trng_empty_read_returns_zero_no_error.
-  D2. A TRNG_SEED write while the TRNG is ENABLED updates the register ONLY. It does NOT reseed the
-      running LFSRs; the seed is sampled at the CTRL.ENABLE 0->1 edge, which also starts a fresh
-      session (FIFO flushed, word assembler and health run-length cleared). Rationale: an
-      immediate reseed would let any bus master force a known sequence at a chosen instant and
-      splices two streams in mid-word; sampling at the enable edge means forcing a known sequence
-      needs a VISIBLE disable->enable cycle, and it makes the seed's effect atomic with a flush of
-      the words produced under the old seed. (Deterministic replay by disable/enable is a feature
-      of the LFSR arm -- it is what makes the golden vectors possible -- and is exactly why
-      STATUS.INSECURE is forced to 1.) See test_trng_seed_write_while_enabled.
-  D3. health_fail HALTS entropy production and FLUSHES the FIFO. It is not just a status bit.
-      Rationale: SP 800-90B says the output of a source that failed its health test must not be
-      used, and the words already buffered were produced by the failing source. After the trip the
-      FIFO reads empty (READY=0, FULL=0, DATA reads 0 per D1) and stays that way. Writing
-      TRNG_IRQ_CLR bit 2 clears the sticky bit and RESUMES production from the current LFSR state
-      (no reseed) with the repetition-count run length restarted from empty; a persistently stuck
-      source simply trips again 21 samples later. Disabling / re-enabling does NOT clear
-      health_fail. See test_trng_health_fail_flushes_and_halts / _sticky_and_w1c.
-
-  Further decisions, made because the tests below cannot be written deterministically without them:
-  D4. FIFO threshold 0 behaves as 1. Read literally, `fifo_level >= 0` is always true and would hold
-      an enabled IRQ asserted forever (an interrupt storm from a reset-default field). Thresholds
-      1..4 fire at that level; thresholds 5..15 can never be reached by a 4-deep FIFO, so they mean
-      "IRQ on health failure only". See test_trng_threshold_irq.
-  D5. TRNG_IRQ_CLR is BIT-ALIGNED with TRNG_STATUS (the WDT/GPIO convention): health_fail is STATUS
-      bit 2, so it is cleared by writing 1 to IRQ_CLR bit 2 (0x4). Writes to the other bits (incl.
-      bit 0/1/3) do nothing. Spec: "W1C against STATUS.health_fail".
-  D6. Disabling RETAINS the FIFO contents (they are readable and still count toward the IRQ level);
-      only the next ENABLE edge flushes. irq_o depends on CTRL[1] but NOT on CTRL[0].
-  D7. TRNG_SEED resets to trng_lfsr_model.DEFAULT_SEED (0xACE1_2345), a value verified healthy;
-      a seed of 0 (or any seed whose low 31 bits are 0) is NOT rescued: it loads all-zero LFSRs,
-      trips the health test at raw sample 21, and is therefore reported rather than hidden.
-
-SAMPLING HAZARD (learned on PWM, test_pwm.py; repeated on WDT): outputs that are combinational off
-registered state return the PRE-edge value if read straight after a helper that settles with
-Timer(1, "step"). Every cycle-counting sampling loop below therefore does
-`await RisingEdge(dut.clk)` FIRST and only then reads (through _peek(), or through _next_cycle()
-for raw output pins), so each sample is the settled post-edge state of a known edge and no sample is
-silently duplicated or skipped.
-
-Tests:
-  test_trng_reset_defaults
-      CTRL 0, STATUS == 0x8 exactly (INSECURE only), DATA 0, SEED == DEFAULT_SEED, IRQ_CLR and the
-      reserved words read 0, irq_o == 0; quiescent for 200 idle cycles.
-  test_trng_insecure_reads_one
-      STATUS[3] == 1 in every state and cannot be cleared by any write.
-  test_trng_rw_roundtrip
-      CTRL round-trips [5:0] with reserved bits masked; SEED round-trips all 32 bits.
-  test_trng_ro_ignores_writes_wo_reads_zero
-      Writes to STATUS/DATA (also while the FIFO is filling) are ignored and neither pop nor
-      corrupt it; IRQ_CLR reads 0 whatever was written.
-  test_trng_out_of_range_access
-      Reserved + word index >= 8: write dropped (no aliasing onto IRQ_CLR/CTRL/SEED), read 0.
-  test_trng_pstrb_partial_word
-      Byte-strobed writes to SEED/CTRL/IRQ_CLR touch only the strobed bytes; strb=0 is a no-op.
-  test_trng_fifo_fills_when_enabled
-      READY then FULL rise inside the model-derived latency windows; exactly the four golden words;
-      the FIFO then stalls (holds, does not drop or repeat) for 1500 cycles.
-  test_trng_pop_on_read
-      Each APB read of DATA pops exactly one word, in order; peeks, writes and STATUS reads do not.
-  test_trng_empty_read_returns_zero_no_error
-      D1: empty read -> 0, no error, no stale repeat, no underflow.
-  test_trng_golden_words_default_seed
-      First 16 words after reset match the model bit-exactly.
-  test_trng_golden_words_custom_seeds
-      First 8 words for five other seeds match; seed bit 31 is unused.
-  test_trng_replay_independent_of_pop_timing
-      Eager reading and heavily-stalled reading give the SAME 12 words (stall, not drop).
-  test_trng_seed_write_while_enabled
-      D2: a SEED write mid-run does not disturb the stream; the next enable edge flushes and reseeds;
-      re-enable replays.
-  test_trng_threshold_irq
-      D4: irq_o == IRQ_EN & (level >= max(thr,1)) over the full level 0..4 x threshold 0..15 matrix.
-  test_trng_irq_enable_masks_output_only
-      CTRL[1]=0 drops irq_o (data and health paths) but leaves STATUS and production untouched.
-  test_trng_health_fail_on_stuck_source
-      Stuck/weak seeds trip health_fail at raw sample 21 (+ latency); nothing is produced; INSECURE.
-  test_trng_health_fail_flushes_and_halts
-      D3: a failure AFTER the FIFO has filled empties the FIFO and stops production.
-  test_trng_health_fail_sticky_and_w1c
-      Sticky across disable/enable; W1C (bit 2 only, D5) clears it and resumes production.
-  test_trng_set_beats_same_cycle_clear
-      A clear committing on exactly the trip edge leaves health_fail SET; one edge later clears it.
-  test_trng_irq_level_held
-      irq_o high on 100 consecutive cycles on both the health and the threshold path.
-  test_trng_disabled_is_inert
-      Disabled: nothing accumulates; a partly filled FIFO is retained and frozen (D6).
-  test_trng_distribution_sanity
-      128 words: bit balance, per-lane balance, no repeats, raw-per-bit ratio -- SANITY only.
+"""
+test_trng.py -- Phase 6a-4 cocotb verification for trng (rtl/periph/trng.sv; plan "6a-4 -- TRNG").
+The contract is here and in tb/models/trng_lfsr_model.py, the authoritative, bit-exact specification
+of the entropy pipeline.
+DUT: tb_trng (standalone wrapper, ADDR_W=12); beyond the APB4 face only `irq_o`. Register map:
+trng.sv header (N_REGS=8); a DATA read POPS one word from the 4-deep FIFO.
+This suite tests the LFSR arm (trng_lfsr_entropy.sv). It is DETERMINISTIC, NOT CRYPTOGRAPHIC, and
+must force STATUS.INSECURE = 1 (test_trng_insecure_reads_one).
+The popped words must match the Python model of the pipeline BIT-EXACTLY (`python3
+tb/models/trng_lfsr_model.py` self-checks the model).
+DISTRIBUTION CHECKS ARE SANITY, NOT A RANDOMNESS CLAIM: they catch WIRING bugs (stuck word bit,
+repeating FIFO, debiaser keeping both bits).
+Timing: one raw sample per enabled, non-stalled clock, sample 0 on the first edge after the edge E
+that commits CTRL.ENABLE; word k is visible R_k .. R_k + FILL_SLACK edges after E (R_k =
+TrngLfsrModel(seed).raw_consumed_for_words(k)). The 4-deep FIFO applies BACKPRESSURE AS A STALL,
+never a drop. Health test: repetition count (NIST SP 800-90B) on RAW samples, cutoff 21. STATUS and
+DATA may lag a cycle or two (POP_SETTLE = 2): never pin an exact READY/FULL edge. irq_o is
+LEVEL-HELD (a plain 2-FF sync can miss a pulse). W1C is an APB write-snoop.
+DECISIONS the spec left open (asserted here, the RTL follows): D1 DATA read on an EMPTY FIFO returns
+0, no error status, no underflow; STATUS.data_ready is the only validity flag (a repeated word would
+hand firmware a reused key). D2 A SEED write while ENABLED updates the register ONLY; the enable
+edge samples it and starts a fresh session (FIFO flushed). D3 health_fail HALTS production and
+FLUSHES the FIFO; IRQ_CLR bit 2 clears it and resumes from the current LFSR state; disable / enable
+does NOT clear it. D4 Threshold 0 behaves as 1; 5..15 mean "IRQ on health failure only". D5 IRQ_CLR
+is bit-aligned with STATUS (bit 2). D6 Disabling RETAINS the FIFO; only the next ENABLE flushes. D7
+SEED resets to DEFAULT_SEED (0xACE1_2345); an all-zero seed is NOT rescued (health trip at 21).
+Sampling: await RisingEdge(dut.clk) FIRST, then read (_peek() or _next_cycle()).
+Run: make -C tb/cocotb/soc trng
+Doc: tm:suite:soc-test-trng
 """
 
 import sys
@@ -202,7 +62,7 @@ from tb.models.trng_lfsr_model import (
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 10  # 100 MHz -- matches SoC reference clock (same convention as test_wdt.py)
+CLK_PERIOD_NS = 10  # matches the SoC reference clock (same convention as test_wdt.py)
 
 TRNG_CTRL = 0x000
 TRNG_STATUS = 0x004
@@ -254,7 +114,7 @@ def _idle_bus(dut) -> None:
 
 
 async def _start_clock_and_reset(dut) -> None:
-    """Start 100 MHz clock and apply synchronous reset with the APB4 bus idled. The TRNG has no
+    """Start the clock and apply synchronous reset with the APB4 bus idled. The TRNG has no
     top-level inputs beyond clk/rst_n/APB4 (no async pins, no CDC)."""
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
@@ -1320,7 +1180,7 @@ async def test_trng_distribution_sanity(dut):
     assert not stat & ST_HEALTH
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):

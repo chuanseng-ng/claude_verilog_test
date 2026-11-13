@@ -1,62 +1,26 @@
 """
-test_dft_clk_switch.py -- bead claude_verilog_test-j41m.3 (DFT Stage 1b), unit suite for
-rtl/soc/dft/dft_clk_switch.sv, the glitch-free enable-before-switch test-clock selector that
-replaced the plain mux `test_clk_o = serial ? tck_scan_gated : pin_test_clk` (open question Q-CLK).
-
-DUT: tb_dft_clk_switch -> (rv32i_clock_gate making A = gated TCK) + dft_clk_switch.
-    A = clk_a_o (gated TCK, idles low), B = clk_b_i (pin test clock, idles low), sel_a_i = 1 selects
-    A, rst_n_i is a level (reset state: B selected, A off).  en_a_o / en_b_o expose the two internal
-    enable latches.
-
-The same suite runs against `assign clk_o = sel_a_i ? clk_a_o : clk_b_i` (parameter PLAIN_MUX=1,
+test_dft_clk_switch.py -- unit suite for rtl/soc/dft/dft_clk_switch.sv (DFT Stage 1b), the
+glitch-free enable-before-switch test-clock selector that replaced `test_clk_o = serial ?
+tck_scan_gated : pin_test_clk`.
+DUT: tb_dft_clk_switch -> (rv32i_clock_gate making A = gated TCK) + dft_clk_switch; B = clk_b_i (pin
+test clock). The same suite runs against `assign clk_o = sel_a_i ? clk_a_o : clk_b_i` (PLAIN_MUX=1,
 make target dft_clk_switch_plainmux) as the RED negative control: it MUST fail there.
-
-How the checking works (jtag_driver.py, "Clock-pulse analysis")
-  Every scenario is a precomputed stimulus timeline (clocks, select, gate enable, reset) played
-  into the DUT while an edge-time log records both source clocks, the output, the select and the
-  two latches.  The checker then works on that log only, never on the RTL:
-    * every output pulse must be ONE WHOLE source pulse (same rise time and same fall time): no
-      runt, no truncation, no edge derived from nothing, no merge of an A and a B pulse;
-    * no output high pulse and no output low gap shorter than the shortest source phase;
-    * per select change: old-source pulses stop at once (the old enable drops without a clock
-      edge), new-source pulses start no earlier than the 3rd edge of the handshake clock and every
-      pulse from t_sw + bound on passes, none is skipped (contiguous suffix), old never returns;
-    * latch discipline: en_a_q changes only while raw tck_i is low, en_b_q only while clk_b_i is
-      low, and they are never both high (outside the declared async-reset merge window).
-  The checker itself is proved able to fail (test_checker_*): synthetic logs with each defect, and
-  a synthetic plain-mux log built from real clock waveforms.
-
-Contract (dft_clk_switch.sv header), each point tested here, not assumed
-  1. serial -> parallel (sel 1->0): en_a_q drops at once; B passes only from its 3rd rising edge
-     after the select change; until then the output stays LOW with NO extra edge.  B never runs ->
-     never completes (test_serial_to_parallel_waits_for_the_pin_clock).
-  2. parallel -> serial (sel 0->1): B is retired with no B edge if it idles LOW; A passes from the
-     3rd TCK rising edge after the select change (exactly the 3rd when B idles low,
-     test_parallel_to_serial_needs_no_pin_clock_edge).  LIMITATION (flagged): B stopped HIGH can
-     never complete (test_pin_clock_stopped_high_blocks_the_switch_limitation); TCK stopped never
-     completes either (test_tck_stopped_...).
-  3. reset (rst_n_i low) gives clk_o == clk_b_i whatever sel/A do (test_reset_state_selects_b);
-     assertion in the middle of a pulse may MERGE pulses but never shorten one
-     (test_reset_in_the_middle_of_pulses).
-  4. dwell: a select reversal after a full handshake is safe at every phase
-     (test_reversal_dwell).
-
-Tests
-  test_checker_detects_each_defect_class        vacuity guard: synthetic defective logs are flagged,
-                                                the plain-mux log built from real waveforms too
-  test_sweep_switching_<cfg>_<mode>             ~200 switches, both directions, both clocks
-                                                free-running at coprime periods (7/11, 13/5, 29/17
-                                                ns), select instants swept over the phases of both
-                                                (mode arb), launched like the TAP, 1 ps after a TCK
-                                                fall (tap), or with A randomly gated (gated)
-  test_serial_to_parallel_waits_for_the_pin_clock
-  test_parallel_to_serial_needs_no_pin_clock_edge
-  test_pin_clock_stopped_high_blocks_the_switch_limitation
-  test_tck_stopped_parallel_to_serial_goes_quiet_until_tck_toggles
-  test_a_gated_off_and_back
-  test_reset_state_selects_b
-  test_reset_in_the_middle_of_pulses
-  test_reversal_dwell
+The checker uses the edge-time log only, never the RTL: every output pulse is ONE WHOLE source pulse
+(no runt, no truncation, no invented edge, no A/B merge); no output pulse or gap is shorter than the
+shortest source phase; after a select change the old source stops at once, the new one starts no
+earlier than the 3rd edge of the handshake clock and then loses no pulse; en_a_q changes only while
+raw tck_i is low, en_b_q only while clk_b_i is low, never both high (outside the declared
+async-reset merge window). test_checker_* proves the checker can fail, with synthetic defective logs
+and a plain-mux log from real waveforms.
+Contract (dft_clk_switch.sv header): serial -> parallel drops en_a_q at once and B passes from its
+3rd rising edge, output LOW with no extra edge until then. Parallel -> serial retires B with no B
+edge if it idles LOW, A passes from the 3rd TCK rising edge. LIMITATION: B stopped HIGH, or TCK
+stopped, never completes the switch. Reset gives clk_o == clk_b_i; assertion mid-pulse may MERGE
+pulses but never shorten one. A select reversal after a full handshake is safe at every phase.
+Tests: the vacuity guard test_checker_detects_each_defect_class, the sweep tests
+sweep_switching_sweep_001..009 (TestFactory over CFGS x MODES) and one test per contract point.
+Run: make -C tb/cocotb/soc dft_clk_switch   (RED control: dft_clk_switch_plainmux)
+Doc: tm:suite:soc-test-dft-clk-switch
 """
 
 import random
@@ -249,8 +213,9 @@ def ub_to_b(ta, tb):
 # checker vacuity: it must detect every defect class (pure Python, synthetic logs)
 # ---------------------------------------------------------------------------
 def _synthetic_sources():
-    a = [(1000 + k * 20000, 11000 + k * 20000) for k in range(10)]  # period 20 ns, 10 ns high
-    b = [(3000 + k * 14000, 10000 + k * 14000) for k in range(14)]  # period 14 ns, 7 ns high
+    # period 20000, 10000 high (log time units)
+    a = [(1000 + k * 20000, 11000 + k * 20000) for k in range(10)]
+    b = [(3000 + k * 14000, 10000 + k * 14000) for k in range(14)]  # period 14000, 7000 high
     return a, b
 
 
@@ -282,7 +247,7 @@ async def test_checker_detects_each_defect_class(dut):
     log.  Also flags the log of a PLAIN mux built from real waveforms (the defect Q-CLK was)."""
     a, b = _synthetic_sources()
     mp = 7000  # shortest phase of either source
-    # clean: A pulses 0..3, then B pulses from the 8th on (switch around 70 ns)
+    # clean: A pulses 0..3, then B pulses from the 8th on (switch around time 70000)
     clean = a[:3] + [p for p in b if p[0] > 60000]
     lab, prob = label_output_pulses(clean, a, b, mp)
     assert prob == [] and lab[:3] == ["A"] * 3 and set(lab[3:]) == {"B"}, (lab, prob)
@@ -310,9 +275,9 @@ async def test_checker_detects_each_defect_class(dut):
     assert any("runt-low" in p for p in pr), pr
     # handover rules
     ta_rises = [p[0] for p in a]
-    sw = 61000  # select to B at 61 ns
+    sw = 61000  # select to B at time 61000
     b_after = [p for p in b if p[0] > sw]  # 66, 80, 94, 108, 122, ...
-    good = a[:3] + b_after[2:]  # B passes from its 3rd rise (94 ns)
+    good = a[:3] + b_after[2:]  # B passes from its 3rd rise (time 94000)
     lab, pr = label_output_pulses(good, a, b, mp)
     assert pr == []
     p, info = check_handover(good, lab, a, b, ta_rises, sw, "B", 200000, 90000)
@@ -329,7 +294,7 @@ async def test_checker_detects_each_defect_class(dut):
     lab, _ = label_output_pulses(late, a, b, mp)
     p, _i = check_handover(late, lab, a, b, ta_rises, sw, "B", 200000, 40000)
     assert any("not complete within the bound" in x for x in p), p
-    old_after = a[:3] + [a[4]] + b_after[2:]  # an A pulse (rise 81 ns) after the select left A
+    old_after = a[:3] + [a[4]] + b_after[2:]  # an A pulse (rise at 81000) after the select left A
     old_after = sorted(old_after)
     lab, _ = label_output_pulses(old_after, a, b, mp)
     p, _i = check_handover(old_after, lab, a, b, ta_rises, sw, "B", 200000, 90000)
@@ -341,7 +306,8 @@ async def test_checker_detects_each_defect_class(dut):
     assert any("after the handover completed" in x for x in p), p
     # latch discipline
     tck = a
-    lp = check_enable_latches([(5000, 1)], [], tck, b)  # en_a_q rises while tck high (1..11 ns)
+    # en_a_q rises while tck high (times 1000..11000)
+    lp = check_enable_latches([(5000, 1)], [], tck, b)
     assert any("while its clock is high" in x for x in lp), lp
     lp = check_enable_latches([(15000, 1)], [(15000, 1)], tck, b)  # both clocks low, both high
     assert any("both high" in x for x in lp), lp
@@ -378,7 +344,8 @@ def _plan_sweep(base, ta, tb, n_sw, mode, seed):
     target = "A"
     for _k in range(n_sw):
         t_c = t + rng.randrange(0, 2 * tmax)
-        if mode == "tap":  # launched like the TAP's falling-edge serial flop: 1 ps after a TCK fall
+        # launched like the TAP's falling-edge serial flop: one time step after a TCK fall
+        if mode == "tap":
             m = max(0, (t_c - (pha + ha)) // ta + 1)
             t_c = pha + ha + m * ta + 1
             while _near(t_c, tb, phb):
@@ -820,7 +787,7 @@ async def test_reset_in_the_middle_of_pulses(dut):
         t_sel = _clear_of(t, clocks)
         t_r = _clear_of(t_sel + 30 * TA + rng.randrange(0, 3 * TA), clocks, rng.randrange(7, 31))
         t_rel = _clear_of(t_r + 14 * TA + rng.randrange(0, TA), clocks)
-        short = i % 6 == 0  # var 0 only: a 1.5 ns reset pulse that no handshake clock edge sees
+        short = i % 6 == 0  # var 0 only: a 1500-unit reset pulse that no handshake clock edge sees
         if short:
             while _rise_within(clocks, t_r - 300, t_r + 1500 + 300):
                 t_r = _clear_of(t_r + 37, clocks)

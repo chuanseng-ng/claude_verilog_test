@@ -1,5 +1,5 @@
 // tb_apb_interconnect.sv
-// Phase 6 groundwork (bead claude_verilog_test-f7vs.4) — standalone cocotb test wrapper for
+// Phase 6 groundwork — standalone cocotb test wrapper for
 // apb_interconnect (rtl/soc/apb_interconnect.sv).
 //
 // apb_interconnect is PURELY COMBINATIONAL (no clock/reset port at all — see its own header

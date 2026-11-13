@@ -1,6 +1,6 @@
 // tb_trng.sv
-// Phase 6a-4 -- standalone cocotb test wrapper for trng (rtl/periph/trng.sv, bead
-// claude_verilog_test-f7vs.8). trng DOES NOT EXIST YET as of this wrapper's authorship -- this is
+// Phase 6a-4 -- standalone cocotb test wrapper for trng (rtl/periph/trng.sv).
+// trng DOES NOT EXIST YET as of this wrapper's authorship -- this is
 // step 2 of the mandated TDD order (Doc: ds:ch:phase6-ip-expansion-plan Sec.9: "the verification
 // orchestrator runs before the RTL orchestrator"). This file, and the `trng`/`trng_lint`
 // Makefile targets built on it, are EXPECTED TO FAIL TO ELABORATE until rtl/periph/trng.sv is

@@ -1,52 +1,24 @@
 """
-test_pll_lock.py — Phase 7 (M-c) PLL lock acquisition test.
-
-DUT: tb_soc_pll (wraps soc_top with PLL_IMPL="STUB")
-
+test_pll_lock.py -- Phase 7 (M-c) PLL lock acquisition test. DUT: tb_soc_pll (wraps soc_top with
+PLL_IMPL="STUB"). CLK_PERIOD_NS = 2 (the test_boot.py convention).
+Lock budget: LOCK_TIMEOUT_CYCLES = 60 cycles from reset de-assert (STUB_LOCK_CYCLES = 16, so lock
+comes at about cycle 17). core_rst_n = rst_n_i & pll_locked, so the first commit_valid_o comes after
+lock plus the pipeline fill (typically 5 to 10 more cycles).
 Tests:
-  test_pll_lock_asserts
-      Release reset; confirm pll_locked_o asserts within the stub lock-counter
-      budget (STUB_LOCK_CYCLES=16 ref edges + margin); confirm core_clk is
-      toggling (observed via commit_valid_o activity); confirm the SoC comes
-      out of reset (commit_pc_o stream advances from ROM_BASE=0x0000_1000).
-
-  test_pll_lock_held_after_boot
-      Confirm pll_locked_o remains asserted after boot completes; it must not
-      glitch to 0 once it rises.
-
-  test_pll_reset_clears_lock
-      Re-assert rst_n_i (active-low) while running; confirm pll_locked_o drops;
-      re-release; confirm it re-asserts within the same budget.
-
-Clock: 2 ns period (500 MHz ref) — matches test_boot.py convention.
-Lock budget: STUB_LOCK_CYCLES=16 + 8 cycles margin = 24 cycles from reset
-de-assert.  core_rst_n = rst_n_i & pll_locked, so the first commit_valid_o
-after lock fires + the pipeline fills (typically 5–10 additional cycles).
-
-GH #92 (dual PLL) additions:
-  test_cpu_pll_locked_asserts
-      cpu_pll_locked_o (second, CPU-domain stub PLL) must assert within the
-      same lock budget as pll_locked_o, and must not glitch once asserted.
-      Runs with the stock boot.hex firmware (no MMIO needed — this is a pure
-      signal-level check on the new tb_soc_pll port).
-
-  test_pll2_apb_slot_decode
-      Self-checking firmware (pll2_fw/pll2_decode.hex) verifies, via real
-      CPU MMIO through the crossbar -> axi4_to_axilite -> axi_lite_interconnect
-      -> axil_to_apb -> apb_interconnect path:
-        - PLL  (APB_PLL=4,  0x2000_7000) CONTROL[0]==1, STATUS[0]==1 (existing
-          slot unaffected by the map extension).
-        - PMU  (APB_PMU=5,  0x2000_8000) STATUS==0x3 (slot did not move).
-        - PLL2 (APB_PLL2=6, 0x2000_9000) CONTROL==0x0000_0001 (new slot
-          decodes to pll_apb_regs' RESET_VAL, not DECERR/garbage/another
-          slave), STATUS[0]==1 (second stub PLL locked).
-        - Anti-brick (GH #89, applies to instance 2 via the shared
-          pll_apb_regs module): writing CONTROL=0 does NOT clear bit[0];
-          readback stays 0x0000_0001, and STATUS[0] (lock) is unaffected.
-      See pll2_fw/gen_pll2_decode_hex.py for the full firmware listing and the
-      rationale for CPU-firmware-based MMIO (a live cocotb AXI-Lite/APB BFM
-      against soc_top's internal, continuously-RTL-driven nets hangs under
-      Verilator — documented in test_pll_regs.py's module docstring).
+  test_pll_lock_asserts: release reset; pll_locked_o asserts within the budget; core_clk toggles
+      (seen as commit_valid_o activity); the SoC leaves reset (commit_pc_o advances
+      from ROM_BASE=0x0000_1000).
+  test_pll_lock_held_after_boot: pll_locked_o stays asserted after boot and never glitches to 0.
+  test_pll_reset_clears_lock: re-assert rst_n_i while running; pll_locked_o drops; after release it
+      re-asserts within the same budget.
+  test_cpu_pll_locked_asserts: cpu_pll_locked_o (the second, CPU-domain stub PLL) asserts within the
+      same budget and does not glitch. It uses the stock boot.hex (a pure signal-level check,
+      no MMIO).
+  test_pll2_apb_slot_decode: the self-checking firmware pll2_fw/pll2_decode.hex checks PLL, PMU and
+      PLL2 APB slot decode by real CPU MMIO (see pll2_fw/gen_pll2_decode_hex.py). A live cocotb BFM
+      on soc_top's RTL-driven nets hangs under Verilator (see test_pll_regs.py).
+Run: make -C tb/cocotb/soc soc_pll
+Doc: tm:suite:soc-test-pll-lock
 """
 
 import sys
@@ -79,7 +51,7 @@ from tb.cocotb.soc.pll2_fw.pll2_decode_fw_addrs import (
 _BOOT_HEX  = Path(__file__).parent / "boot_fw" / "boot.hex"
 _BOOT_WORDS: list = []
 
-# GH #92: PLL2 APB-slot-decode self-checking firmware image.
+# PLL2 APB-slot-decode self-checking firmware image.
 _PLL2_HEX = Path(__file__).parent / "pll2_fw" / "pll2_decode.hex"
 _PLL2_WORDS: list = []
 
@@ -133,7 +105,7 @@ def _load_pll2_rom(dut) -> None:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS    = 2          # 500 MHz — matches test_boot.py
+CLK_PERIOD_NS    = 2          # matches test_boot.py
 ROM_BASE         = 0x0000_1000
 
 # STUB_LOCK_CYCLES=16; add a generous margin for pipeline latency.
@@ -206,7 +178,7 @@ def _force_pll_enable(dut, val: int = 1) -> None:
 async def _reset(dut, cycles: int = 8, rom_loader=None) -> None:
     """Drive active-low reset for *cycles* rising edges then release.
 
-    rom_loader defaults to _load_rom (stock boot.hex); GH #92 tests pass
+    rom_loader defaults to _load_rom (stock boot.hex); the PLL2 tests pass
     _load_pll2_rom to run the self-checking PLL2-decode firmware instead.
     """
     if rom_loader is None:
@@ -246,10 +218,10 @@ async def _wait_for_lock(dut, timeout_cycles: int) -> bool:
 async def _wait_for_cpu_lock(dut, timeout_cycles: int) -> bool:
     """
     Wait up to *timeout_cycles* rising edges of cpu_clk_i for cpu_pll_locked_o
-    == 1 (GH #92 second, CPU-domain stub PLL; its STUB_LOCK_CYCLES=16 counter
+    == 1 (the second, CPU-domain stub PLL; its STUB_LOCK_CYCLES=16 counter
     lives in the cpu_clk_i domain).
 
-    GH #93 fix: this budget is counted in cpu_clk_i edges, not clk_i edges —
+    Rule: this budget is counted in cpu_clk_i edges, not clk_i edges —
     polling on RisingEdge(dut.clk_i) here was a latent bug (harmless only
     because this suite keeps a 1:1 clk_i:cpu_clk_i ratio; at any other ratio
     a fixed clk_i-edge budget no longer covers 16 genuine cpu_clk_i edges).
@@ -390,7 +362,7 @@ async def test_pll_reset_clears_lock(dut):
 @cocotb.test()
 async def test_cpu_pll_locked_asserts(dut):
     """
-    GH #92: cpu_pll_locked_o (second, CPU-domain stub PLL, u_cpu_pll_sub) must
+    cpu_pll_locked_o (second, CPU-domain stub PLL, u_cpu_pll_sub) must
     assert within the same lock budget as pll_locked_o and must not glitch
     once asserted.  tb_soc_pll ties cpu_clk_i/cpu_rst_n_i to clk_i/rst_n_i
     (single-clock suite — see tb_soc_pll.sv header), so both stub lock
@@ -449,9 +421,9 @@ async def test_cpu_pll_locked_asserts(dut):
 @cocotb.test()
 async def test_pll2_apb_slot_decode(dut):
     """
-    GH #92: verify the new APB_PLL2 slot (0x2000_9000-0x2000_9FFF) decodes
+    Verify the APB_PLL2 slot (0x2000_9000-0x2000_9FFF) decodes
     correctly at the SoC level, that the pre-existing PLL (0x2000_7000) and
-    PMU (0x2000_8000) slots are unaffected, and that the GH #89 anti-brick
+    PMU (0x2000_8000) slots are unaffected, and that the anti-brick
     fix (CONTROL[0] non-clearable) holds for the second pll_apb_regs
     instance.  Driven entirely by real CPU MMIO (self-checking firmware —
     see pll2_fw/gen_pll2_decode_hex.py for the full check list and firmware

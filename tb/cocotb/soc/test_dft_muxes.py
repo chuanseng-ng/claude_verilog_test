@@ -1,5 +1,5 @@
 """
-test_dft_muxes.py -- bead claude_verilog_test-j41m.2 (DFT Stage 1a).
+test_dft_muxes.py -- DFT Stage 1a.
 
 DUT: tb_dft_muxes -> dft_clk_mux, dft_rst_mux, dft_ctrl_ports
 (rtl/soc/dft/). Each is combinational, so every check is exhaustive over the

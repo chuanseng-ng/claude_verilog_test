@@ -1,36 +1,28 @@
 """
-jtag_driver.py -- JTAG TAP driver, reference model and edge logger (bead j41m.3, DFT Stage 1b).
-
-Shared by test_jtag_tap.py (module jtag_tap alone), test_dft_ctrl.py (dft_ctrl) and
-test_soc_jtag.py (soc_top via tb_soc_pll).  Everything here is written from
-Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap (TAP rules 15.2, instruction map 15.3), NOT from the RTL,
-so the reference model is an independent second implementation of the spec.
-
-Pieces
-  NEXT / ENC / OP_*      the IEEE 1149.1 state graph, the standard 4-bit state encodings, the
-                         private opcode map of section 15.3
-  TapRef                 cycle-accurate reference model: rise(tms, tdi) = TCK rising edge,
-                         fall() = TCK falling edge, async_reset()/release() = TRST_N.  State and
-                         shift registers move on the rising edge; the update registers, TDO and
-                         every SoC-facing output move on the FALLING edge (section 15.2).
-  JtagDriver             drives tck/tms/tdi/trst_n, runs TapRef in lock step, and after EVERY tick
-                         compares whatever the bench's probe() returns (any subset of the TapRef
-                         output names plus 'state') against the model at three instants:
-                           pre_rise   half a period after the falling edge, with TMS/TDI already
-                                      changed  -> catches any output that depends combinationally
-                                      on TMS/TDI, or that drifts between edges
-                           post_rise  1 ps after the rising edge -> the falling-edge outputs must
-                                      NOT have moved; state/shift_clk_en must have
-                           post_fall  1 ps after the falling edge -> everything has its new value
-  EdgeLog                records every value change of a set of signals with its simulation time and
-                         the times of every TCK rising/falling edge and TRST_N assertion, so a test
-                         can prove "this output only ever changes at a TCK falling edge".
-
-Timeline of one tick (period T, half H, all in ps):
-  F   TCK falls (TMS/TDI of the next cycle are driven at F+1 ps, after the post_fall check)
-  F+H TDO is sampled (this is the bit the tester would capture at this rising edge), TCK rises
-  F+T TCK falls again
-Resolution is 1 ps; Verilator under cocotb runs at 1 ps precision.
+jtag_driver.py -- JTAG TAP driver, reference model and edge logger (DFT Stage 1b), shared by
+test_jtag_tap.py, test_dft_ctrl.py and test_soc_jtag.py. Everything here is written from the spec,
+NOT from the RTL, so the reference model is an independent second implementation of the spec (TAP
+rules and instruction map):
+Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap
+  NEXT / ENC / OP_* the IEEE 1149.1 state graph, the standard 4-bit state encodings, the
+  private opcodes.
+  TapRef       cycle-accurate model: rise(tms, tdi) = TCK rising edge, fall() = TCK falling edge,
+               async_reset() / release() = TRST_N. State and shift registers move on the rising
+               edge. The update registers, TDO and every SoC-facing output move on the FALLING edge.
+  JtagDriver   drives tck/tms/tdi/trst_n, runs TapRef in lock step, and after EVERY tick compares
+                 what the bench's probe() returns (any TapRef output name plus 'state') with the
+                 model at three instants:
+                 pre_rise   half a period after the falling edge, TMS/TDI already changed: catches
+                            an output that depends combinationally on TMS/TDI or drifts
+                            between edges
+                 post_rise  one time step after the rising edge: the falling-edge outputs must NOT
+                            have moved, state and shift_clk_en must have
+                 post_fall  one time step after the falling edge: everything has its new value
+  EdgeLog      records every value change of a set of signals with its time, and every TCK edge and
+               TRST_N assertion, so a test can prove "this output only changes at a TCK fall".
+One tick (period T, half H): F TCK falls (TMS/TDI for the next cycle are driven one time step later,
+after the post_fall check). F+H TDO is sampled and TCK rises. F+T TCK falls again.
+Doc: tm:suite:soc-jtag-driver
 """
 
 import bisect

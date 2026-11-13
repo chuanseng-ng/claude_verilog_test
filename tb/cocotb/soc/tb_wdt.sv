@@ -1,6 +1,6 @@
 // tb_wdt.sv
-// Phase 6a-3 -- standalone cocotb test wrapper for watchdog_timer (rtl/periph/watchdog_timer.sv,
-// bead claude_verilog_test-f7vs.7). watchdog_timer DOES NOT EXIST YET as of this wrapper's
+// Phase 6a-3 -- standalone cocotb test wrapper for watchdog_timer (rtl/periph/watchdog_timer.sv).
+// watchdog_timer DOES NOT EXIST YET as of this wrapper's
 // authorship -- this is step 2 of the mandated TDD order (Doc: ds:ch:phase6-ip-expansion-plan
 // Sec.9: "the verification orchestrator runs before the RTL orchestrator"). This file, and the
 // `wdt`/`wdt_lint` Makefile targets built on it, are EXPECTED TO FAIL TO ELABORATE until

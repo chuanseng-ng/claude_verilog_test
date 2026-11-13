@@ -1,5 +1,5 @@
 // tb_mbist_cpu_macro.sv
-// DFT Stage 4 (bead claude_verilog_test-c54a, Doc: tm:ch:dft-architecture 16.7): the REAL CPU hard-macro MBIST path.
+// DFT Stage 4 (Doc: tm:ch:dft-architecture): the REAL CPU hard-macro MBIST path.
 //
 //   dft_ctrl (jtag_tap) --MBIST_CTRL/STATUS--> soc_mbist (CPU_PRESENT = 1: cpu_core_clk control-word crossing,
 //       status return) --mbist_run_i / mbist_cfg_i--> rv32i_cpu_top --mbist_status_o--> soc_mbist

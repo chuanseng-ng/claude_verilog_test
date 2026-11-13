@@ -1,66 +1,28 @@
 #!/usr/bin/env python3
 """
-gen_trng_hex.py — generate trng_fw.hex and trng_fw_addrs.py for the Phase 6a-4 SoC-level TRNG
-test (bead claude_verilog_test-f7vs.8 steps 4-5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
-
-Modelled directly on wdt_fw/gen_wdt_hex.py — same Assembler/lui_addi/CSRRW/MRET machinery, same
-commit_pc_o marker-PC synchronisation idiom. A committed pure-Python hand-assembler, so the suite
-needs no riscv32 cross toolchain and is CI-safe (a toolchain-dependent suite in soc_all_ci is what
-broke PR #195).
-
-Path exercised (confirmed from soc_top.sv):
-  CPU --AXI4--> axi4_crossbar --AXI4--> axi4_to_axilite --AXI-Lite-->
-  axi_lite_interconnect --AXI-Lite--> axil_to_apb --APB4--> apb_interconnect
-  --APB4--> APB_TRNG slave 10 (trng, base 0x2000_D000)
-
-TRNG register map (rtl/periph/trng.sv, word indices):
-  +0x00 TRNG_CTRL    RW  [0] enable, [1] IRQ enable, [5:2] FIFO threshold
-  +0x04 TRNG_STATUS  RO  [0] data ready, [1] FIFO full, [2] health_fail, [3] INSECURE
-  +0x08 TRNG_DATA    RO  read POPS one word (0 when empty)
-  +0x0C TRNG_SEED    RW  reset 0xACE1_2345; sampled at the CTRL.EN 0->1 edge
-  +0x10 TRNG_IRQ_CLR WO  W1C against STATUS[2]
-
-One image, two phases. Every word the peripheral produces is a pure function of TRNG_SEED
-(tb/models/trng_lfsr_model.py), so the cocotb test can check the words firmware popped are
-VALUE-EXACT against the model — not merely "some data arrived".
-
-PHASE 1 — polled, IE = 0
-  * read STATUS before enabling: must be exactly 0x8 (INSECURE only). That is the marker that the
-    default build is a deterministic LFSR, and firmware can see it through the fabric.
-  * read DATA on the empty FIFO: must be 0 (and must not underflow).
-  * read SEED: must be the reset value 0xACE1_2345; write SEED1, read it back.
-  * enable (CTRL = EN); poll STATUS until FIFO full; STATUS must read 0xB (ready|full|insecure).
-  * pop PHASE1_WORDS words, polling STATUS[0] before each, storing each to SRAM.
-  The IRQ path is armed BEFORE this phase (interrupt_controller bit 8, MEIE, MIE) while CTRL.IE
-  stays 0: data is ready for the whole phase, so a single spurious trap here proves the IE gate is
-  not working. The test scores trng_irq low throughout phase 1 from the SoC boundary.
-
-PHASE 2 — interrupt driven
-  * disable (CTRL = 0), write SEED2, then ONE write CTRL = EN | IE | (THRESHOLD << 2): the enable
-    edge starts a fresh session from SEED2 and the IRQ level asserts when the FIFO reaches
-    THRESHOLD words.
-  * trng_irq -> interrupt_controller[8] -> CPU MEIP -> ISR.
-
-  ISR design — ONE write, no window. trng's irq_o is a LEVEL (IE & fifo_level >= threshold), so
-  "clear the status, then disable" would be two writes with a window in between (the PWM L2
-  lesson: every MMIO access crosses the full fabric, so the condition can re-fire between them).
-  Here the ISR reads STATUS (logged), then makes a SINGLE write, CTRL = EN | THRESHOLD<<2 with IE
-  cleared, which drops the source in one access; there is nothing to clear. Its last action is a
-  CTRL read-back: a fabric round trip that proves the write landed and lets the level-held IRQ
-  drain through the 2-FF ext_irq synchroniser before MRET re-enables MIE (otherwise a stale
-  ext_irq would re-vector). Exactly ONE trap is expected; firmware settles and checks that.
-  * main then pops PHASE2_WORDS words (polling data-ready) and stores them.
-
-Result area (SRAM word indices from RES_BASE_WI):
-   0 ISR_COUNT          1 ISR_STATUS (TRNG_STATUS the ISR saw)
-   2 STATUS_PRE         3 EMPTY_READ         4 SEED_RESET_READ    5 SEED_READBACK
-   6 STATUS_FULL        8.. phase-1 words    16.. phase-2 words
-
-Register allocation (MAIN):
-  x2 = TRNG_BASE  x3 = IRQ_CTRL_BASE  x4 = RES_BASE_ADDR  x5 = write staging
-  x14/x15 = poll counter/limit  x16-x24 = scratch  x31 = result marker (set only at the end)
-Register allocation (ISR, at ISR_PC = ROM_BASE + 4):
-  x28 = TRNG_BASE  x29 = STATUS seen  x30 = RES_BASE_ADDR  x31 = scratch  x1 = count
+gen_trng_hex.py -- generate trng_fw.hex and trng_fw_addrs.py for the Phase 6a-4 SoC-level TRNG test.
+A pure-Python hand assembler: no riscv32 toolchain, so keep it (a toolchain-dependent suite in
+soc_all_ci breaks CI). Path: the fabric to APB_TRNG slave 10 (trng, base 0x2000_D000). Registers:
+rtl/periph/trng.sv (DATA read POPS one word, 0 when empty; SEED reset 0xACE1_2345, sampled at the
+CTRL.EN 0->1 edge).
+One image, two phases. Every word is a pure function of TRNG_SEED (tb/models/trng_lfsr_model.py), so
+the test checks the popped words VALUE-EXACT.
+PHASE 1, polled, IE = 0: read STATUS before enabling (exactly 0x8, INSECURE only: the marker of a
+deterministic LFSR); read DATA on the empty FIFO (0, no underflow); read SEED, write SEED1 and read
+it back; enable, poll to FIFO full (STATUS 0xB); pop PHASE1_WORDS words, polling STATUS[0] before
+each. The IRQ path (interrupt_controller bit 8, MEIE, MIE) is armed BEFORE this phase with CTRL.IE =
+0: data is ready the whole phase, so one trap proves the IE gate broken.
+PHASE 2, interrupt driven: disable, write SEED2, then ONE write CTRL = EN | IE | (THRESHOLD << 2).
+The enable edge starts a fresh session from SEED2 and the IRQ level rises at THRESHOLD words:
+trng_irq -> interrupt_controller[8] -> CPU MEIP -> ISR.
+ISR design, ONE write, no window: irq_o is a LEVEL (IE & fifo_level >= threshold), so "clear, then
+disable" would be two writes with a window for the condition to re-fire (every MMIO access crosses
+the fabric; the PWM L2 lesson). The ISR reads STATUS (logged), then writes CTRL = EN | THRESHOLD<<2
+with IE cleared. Its last action is a CTRL read-back: it proves the write landed and lets the level
+drain through the 2-FF ext_irq synchroniser before MRET. Exactly ONE trap is expected.
+Registers: MAIN x2 TRNG_BASE, x3 IRQ_CTRL_BASE, x4 RES_BASE_ADDR, x14/x15 poll counter/limit, x31
+marker. ISR (ISR_PC = ROM_BASE + 4): x28 TRNG_BASE, x29 STATUS seen, x30 RES_BASE_ADDR, x1 count.
+Doc: tm:suite:soc-trng-fw-gen-trng-hex
 """
 
 import os

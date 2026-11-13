@@ -1,5 +1,5 @@
 // tb_cdc_reset_sync_scan.sv
-// Bead claude_verilog_test-07n — directed testbench for cdc_reset_sync's DFT
+// Directed testbench for cdc_reset_sync's DFT
 // scan bypass mux (scanmode_i / scan_rst_ni).
 //
 // Directly instantiates cdc_reset_sync and re-exports every port flat, so

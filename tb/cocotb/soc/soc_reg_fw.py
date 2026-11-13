@@ -1,32 +1,26 @@
 """
-soc_reg_fw.py -- CPU firmware for the SoC-level register walk (bead claude_verilog_test-7ovx).
+soc_reg_fw.py -- CPU firmware for the SoC-level register walk.
 
-The unit-level walks (reg_walk.py) drive each peripheral's APB face directly.  This module builds
-the same walk as RV32I firmware so every access travels the real path
+The unit walks (reg_walk.py) drive each peripheral's APB face directly. This module builds the same
+walk as RV32I firmware, so every access travels the real path: CPU, axi4_crossbar, axi4_to_axilite,
+axi_lite_interconnect, axil_to_apb, apb_interconnect (and apb_cdc_bridge for the PLLs), peripheral.
+The fabric buses (soc_bus, axil, apb) then see the walking-ones and alternating patterns and every
+peripheral window address.
 
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect -> axil_to_apb
-      -> apb_interconnect (-> apb_cdc_bridge for the PLLs) -> peripheral
-
-and the fabric data and address buses (soc_bus, axil, apb) see the walking-ones / alternating
-patterns and every peripheral window address, which no existing SoC test does (they write small
-values to a few offsets).
-
-The firmware is GENERATED at test time from the SAME `reg_maps` tables the unit walks use and
-loaded into the boot ROM through the testbench backdoor, exactly like the hex images of the other
-SoC suites; there is no committed binary, so nothing can go stale against the register map.
+The firmware is GENERATED at test time from the SAME `reg_maps` tables as the unit walks and loaded
+into the boot ROM through the testbench backdoor. No binary is committed, so none can go stale.
 
 Per table entry [addr, drive, wmask, check] (4 words), for each pattern p:
     w = p & drive;  *addr = w;  rb = *addr;
     model = ((model & ~wmask) | (w & wmask)) & check;   fail if (rb ^ model) & check
-model is seeded from the first read of the register (the unit suites already proved the reset
-values; here the question is whether the value survives the fabric).  Entries flagged "lanes" are
-also walked with SB stores, so the AXI4/AXI-Lite wstrb and APB pstrb lanes toggle.  Every register
-is restored to the value first read.
-
-Result protocol (self-checking, same as the other SoC firmware): x31 = 1 at PASS_PC, -1 at FAIL_PC
-(both EBREAK, which halts the CPU so the testbench can read the registers over the debug APB):
-    x30 = number of failing checks
-    x26..x29 = first failure: address, value written, value read, value expected
+model is seeded from the first read of the register: the unit suites proved the reset values,
+and here the question is whether the value survives the fabric. Entries flagged "lanes" are also
+walked with SB stores, so the wstrb and pstrb lanes toggle. Every register is restored to the value
+first read.
+Result protocol (as the other SoC firmware): x31 = 1 at PASS_PC, -1 at FAIL_PC (both EBREAK). x30
+= number of failing checks. x26..x29 = first failure: address, value written, value read,
+value expected.
+Doc: tm:suite:soc-soc-reg-fw
 """
 
 from __future__ import annotations

@@ -1,21 +1,16 @@
 """
-soc_clocks.py — shared dual-clock start/reset helper for tb_soc_top / tb_soc_pll.
+soc_clocks.py -- shared dual-clock start/reset helper for tb_soc_top / tb_soc_pll.
 
-GH #93 made cpu_clk_i/cpu_rst_n_i genuine top-level ports on both wrappers
-(previously tied internally to clk_i/rst_n_i under GH #92). Every pre-#93 SoC
-suite (test_boot / test_boot_diag / test_periph_loopback / test_soc_coherency /
-test_cpu_gpu_irq / test_soc_stress / test_l2_bench / test_pll_lock) now drives
-cpu_clk_i/cpu_rst_n_i through this module at a 1:1 ratio, identical phase,
-matching the old internal tie exactly — zero behaviour change for those
-suites. Only the new multiclock suite (test_soc_multiclock.py) passes a
-genuinely independent cpu_period_ns to exercise the CPU<->fabric CDC
-boundary (async_axi_fifo + apb_cdc_bridge + the pmu_cpu_*/ext_irq/timer_irq
-synchronisers) at a non-1:1 ratio.
+cpu_clk_i and cpu_rst_n_i are top-level ports on both wrappers. Most SoC suites drive cpu_clk_i at a
+1:1 ratio with identical phase. That matches the old internal tie to clk_i / rst_n_i, so
+those suites see no behaviour change. The multiclock suites
+(test_soc_multiclock*, test_soc_pmu_multiclock, test_soc_pmu_iso_ack) and one test_soc_dft_scan test
+pass an independent cpu_period_ns, to exercise the CPU<->fabric CDC boundary (async_axi_fifo,
+apb_cdc_bridge, the pmu_cpu_* / ext_irq / timer_irq synchronisers) at a non-1:1 ratio.
 
-Does not manage the module-level `_active_tasks` leakage guard used by each
-test file — callers append the returned handles to their own list exactly as
-they already do for the clk_i task (or ignore the return, mirroring whichever
-convention that file used before GH #93).
+It does not manage the module-level `_active_tasks` leakage guard of each test file. Callers append
+the returned handles to their own list, as they do for the clk_i task (or ignore the return value).
+Doc: tm:suite:soc-soc-clocks
 """
 
 import cocotb
@@ -23,7 +18,7 @@ from cocotb.clock import Clock
 
 
 def drive_dft_inactive(dut) -> None:
-    """Tie the DFT test-access ports (bead j41m.2) to their inactive values.
+    """Tie the DFT test-access ports to their inactive values.
 
     scan_mode_i=0 (functional), scan_en_i=0, scan_rst_ni=1 (scan reset not
     asserted), scan_clk_i=0, scan_in_i=0, and the JTAG TAP (j41m.3) held in reset
@@ -53,7 +48,7 @@ def drive_dft_inactive(dut) -> None:
 def start_soc_clocks(dut, period_ns, cpu_period_ns=None):
     """Start clk_i and cpu_clk_i as two independent Clock() coroutines.
 
-    cpu_period_ns defaults to period_ns (1:1 ratio — the pre-GH#93 baseline
+    cpu_period_ns defaults to period_ns (1:1 ratio, the baseline
     behaviour). Also ties the DFT test ports inactive (drive_dft_inactive).
     Returns (clk_task, cpu_clk_task).
     """

@@ -1,55 +1,27 @@
 """
-test_soc_crypto.py — Phase 6b-6 SoC-level CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10,
-Doc: ds:ch:phase6-ip-expansion-plan:9-per-item-workflow-and-acceptance-criteria step 6, L2 testability).
-
-`test_crypto` (tb_crypto.sv / Makefile `crypto` target) owns every behaviour of crypto_accel —
-FIPS-197 / FIPS-180-4 vectors, CTR, multi-block SHA, the sticky-IRQ and hang-free paths and the
-fault-mutation campaign — driving the APB4 face directly. It has never exercised the peripheral
-through the real fabric path:
-
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-  axil_to_apb -> apb_interconnect -> APB slave 12 (APB_CRYPTO, 0x2000_F000)
-
-nor its IRQ into interrupt_controller bit 10. This suite proves exactly that and nothing more: it
-re-proves NONE of the L1 behaviour (a handful of known-answer blocks is enough to show the data path
-is intact end to end). Firmware comes from a committed pure-Python hand-assembler
-(crypto_fw/gen_crypto_hex.py, sharing trng_fw's assembler) — no riscv32 cross toolchain, so the
-suite is CI-safe. Synchronisation and scoring are by commit_pc_o marker PCs, the technique
-test_soc_trng.py and test_soc_i2c.py use.
-
-One test, one image, three phases (see the generator header for the firmware side).
-
-PHASE 1 — polled ECB, FIPS-197 Appendix B, CTRL[3] (IRQ enable) = 0
-  Firmware reads reset values through the fabric, writes IV0 and reads it back (the RW word that a
-  mis-decoded slave index cannot return), loads key + block, starts, polls STATUS.done and compares
-  DOUT0-3 with the FIPS ciphertext. Scored here:
-    * the ciphertext, STATUS (key_valid -> done|key_valid -> key_valid after IRQ_CLR), IRQ_STAT, and
-      the read-as-zero KEY / DIN windows, all as read by the CPU over the bus;
-    * the IE gate: `done` is pending for a long stretch of phase 1 (done_q), and crypto_irq /
-      interrupt_controller.irq_src_i / ext_irq stay LOW the whole time.
-
-PHASE 2 — interrupt driven ECB, FIPS-197 Appendix C.1, CTRL[3] = 1
-  A different key, rewritten over the fabric with key_valid already set, and a different block.
-  `done` -> crypto_irq -> interrupt_controller.irq_src_i[10] -> ext_irq -> CPU MEIP. Scored here:
-    * irq_src_i of the interrupt controller equals EXACTLY `crypto_irq << 10` on every phase-2 cycle
-      (bit 10, and no other bit, is the crypto source) and crypto_irq rises with done_q set — a
-      level source, not a pulse — after the start was committed, never before;
-    * the CPU vectors (ISR_PC commits) with crypto_irq AND ext_irq asserted — EXACTLY ONE trap,
-      because the ISR drops the level source with a single IRQ_CLR[0] write;
-    * after the ISR both lines deassert and stay low (the 2-FF core_clk -> cpu_core_clk synchroniser
-      has drained; allowed for by DEASSERT_CHECK_DELAY_CYCLES, nothing here expects a pulse);
-    * backdoor SRAM: ISR_COUNT == 1, the ISR saw STATUS.done and IRQ_STAT, the interrupt
-      controller's PENDING_MASKED bit 10 was set (the controller really received the source), and
-      the App. C.1 ciphertext reads back through the fabric.
-
-PHASE 3 — one SHA-256 block (FIPS 180-4 "abc"), polled, CTRL[3] = 0 again
-  16 words through the DIN aperture (all four addresses), digest compared word by word, and the same
-  interrupt-gate observation as phase 1 for the SHA path.
-
-GOLDEN-MODEL NOTE (same as test_soc_gpio / test_soc_trng / test_soc_i2c): SoCModel cannot be used
-here since it rejects 0x2000_xxxx MMIO. The firmware is self-checking against the standards'
-literal vectors, and this test independently recomputes the expected values from tb/models/
-aes128_model.py and hashlib and compares what the firmware stored.
+test_soc_crypto.py -- Phase 6b-6 SoC-level CRYPTO FABRIC test (L2 testability). `test_crypto`
+(tb_crypto.sv, Makefile `crypto` target) owns every behaviour of crypto_accel through the APB4 face.
+It never used the real fabric path to APB slave 12 (APB_CRYPTO, 0x2000_F000), nor the IRQ into
+interrupt_controller bit 10. This suite proves exactly that and re-proves NONE of the L1 behaviour.
+Scoring is by commit_pc_o marker PCs. One test, one image, three phases.
+PHASE 1, polled ECB, FIPS-197 App. B, CTRL[3] (IRQ enable) = 0: the firmware reads reset values,
+writes and reads back IV0 (the RW word a mis-decoded slave index cannot return), loads key and
+block, starts, polls STATUS.done and compares DOUT0-3. Scored: the ciphertext and the IE gate: while
+`done` is pending, crypto_irq, irq_src_i and ext_irq stay LOW.
+PHASE 2, interrupt driven ECB, FIPS-197 App. C.1, CTRL[3] = 1, a different key rewritten with
+key_valid already set. Scored: irq_src_i equals EXACTLY `crypto_irq << 10` on every cycle, and
+crypto_irq rises with done_q set (a level, not a pulse) after the start commits; the CPU vectors
+(ISR_PC) with crypto_irq AND ext_irq asserted, EXACTLY ONE trap (the ISR drops the level with one
+IRQ_CLR[0] write); then both lines deassert and stay low (DEASSERT_CHECK_DELAY_CYCLES lets the 2-FF
+synchroniser drain); backdoor SRAM: ISR_COUNT == 1, the ISR saw done and IRQ_STAT, PENDING_MASKED
+bit 10 was set, and the App. C.1 ciphertext reads back.
+PHASE 3, one SHA-256 block ("abc"), polled, CTRL[3] = 0: 16 words through the DIN aperture, digest
+compared word by word, and the phase 1 interrupt-gate observation.
+Golden model: SoCModel cannot be used (it rejects 0x2000_xxxx MMIO). The firmware checks the
+standards' literal vectors; this test recomputes them from tb/models/aes128_model.py and hashlib and
+compares what the firmware stored.
+Run: make -C tb/cocotb/soc soc_crypto
+Doc: tm:suite:soc-test-soc-crypto
 """
 
 import hashlib
@@ -103,7 +75,7 @@ from tb.models import aes128_model  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS = 2  # matches the other SoC tests
 
 _FW_HEX = str(Path(__file__).parent / "crypto_fw" / "crypto_fw.hex")
 

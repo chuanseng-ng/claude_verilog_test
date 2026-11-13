@@ -1,5 +1,5 @@
 """
-test_periph_sync_stages.py -- bead claude_verilog_test-xtaa.
+test_periph_sync_stages.py.
 
 One cheap test per peripheral family proving that the SYNC_STAGES pass-through
 reaches the cdc_sync inside the peripheral: with SYNC_STAGES=EXPECT_STAGES

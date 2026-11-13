@@ -1,64 +1,25 @@
 #!/usr/bin/env python3
 """
-gen_npu_hex.py — generate npu_fw.hex and npu_fw_addrs.py for the Phase 6c SoC-level NPU FABRIC test
-(bead claude_verilog_test-f7vs.11, Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6c -- NPU", L2 testability).
-
-Scope, deliberately small. The L1 suite (test_npu.py, `make npu`) owns every behaviour of the
-peripheral itself: arithmetic, requantiser corner cases, FIFO depths, weight-write rejection, the
-sticky-IRQ and hang-free paths. This image only proves that npu_top is REACHABLE AND CORRECT THROUGH
-THE REAL SoC FABRIC — which nothing else drives — and that its interrupt reaches the CPU.
-
-Path exercised (soc_top.sv):
-  CPU --AXI4--> axi4_crossbar --AXI4--> axi4_to_axilite --AXI-Lite-->
-  axi_lite_interconnect --AXI-Lite--> axil_to_apb --APB4--> apb_interconnect
-  --APB4--> APB_NPU slave 13 (npu_top, base 0x2001_0000)
-  npu_top.irq_o --> interrupt_controller.irq_src_i[11] --> ext_irq --> CPU MEIP
-
-Reuses the pure-Python hand-assembler of trng_fw/gen_trng_hex.py (same Assembler / lui_addi /
-CSRRW / MRET machinery) and the structure of crypto_fw/gen_crypto_hex.py — no riscv32 cross
-toolchain, so the suite is CI-safe. Synchronisation and scoring are by commit_pc_o marker PCs.
-
-Register map (rtl/npu/npu_top.sv header — authoritative; word indices x 4):
-  +0x00 CTRL     [0] RELU_EN, [3] IRQ_EN, [2] START (W1P, not stored, reads 0)
-  +0x04 STATUS   RO live: [0] busy [1] done [2] ain_full [3] ain_empty [4] aout_valid
-                 [5] aout_full [6] cfg_rejected (sticky). Reset value 0x08.
-  +0x08 WADDR    RW [9:0], auto-increments on every accepted WDATA
-  +0x0C WDATA    WO (4 packed INT8 -> weight SRAM[WADDR]); reads 0
-  +0x10 TILEBASE RW [9:0]      +0x14 KLEN RW [5:0]      +0x18 SCALE RW [20:0]
-  +0x1C AIN      WO (4 packed INT8 activations -> AIN FIFO); reads 0
-  +0x20 AOUT     RO head of the AOUT FIFO (4 packed INT8); A READ POPS IT; empty reads 0
-  +0x24 IRQ_STAT RO [0] sticky done    +0x28 IRQ_CLR W1C [0] done, [1] cfg_rejected
-  +0x2C..        reserved (read 0)
-START is written in a SEPARATE transfer after the mode bits (the header's software contract).
-
-Weight tile (12 words written through WADDR=0 / WDATA, auto-increment), little-endian lanes:
-  words 0-3   DENSE    rows [1,2,3,4] [5,6,7,8] [-1,-2,-3,-4] [10,0,-10,5]
-  words 4-7   IDENTITY rows are the four unit vectors
-  words 8-11  DENSE    (a second copy, so run 1 exercises a non-zero TILEBASE)
-These are the hand-computed vectors pinned in tb/models/npu_model.py's selftest.
-
-PHASE 1 — polled, KLEN = 1, TILEBASE = 8 (DENSE), SCALE = (5 >> 0), no ReLU, IRQ_EN = 0
-  a = [1,2,3,4] -> acc = [48, 8, -32, 28] -> y = [127, 40, -128, 127]   (saturates both ways)
-  Scored: reset STATUS (0x08), reserved word, WADDR auto-increment read-back (12), WDATA reads 0,
-  STATUS after the AIN push, STATUS / IRQ_STAT at done, AOUT, STATUS after the popping read and
-  after IRQ_CLR. The interrupt lines must stay LOW while `done` is pending (the IE gate).
-
-PHASE 2 — interrupt driven, KLEN = 2, TILEBASE = 0 (DENSE then IDENTITY), SCALE = (3 >> 1), ReLU
-  a0 = [1,2,3,4], a1 = [1,-2,3,-4] -> acc = [49, 6, -29, 24] -> y = [73, 9, 0, 36] (ReLU: lane 2)
-  CTRL = RELU|IRQ_EN; done -> npu_irq -> irq_ctrl[11] -> CPU. The ISR reads STATUS / IRQ_STAT / the
-  interrupt controller's PENDING_MASKED, writes ONE IRQ_CLR[0], reads back, MRET. A bounded wait on
-  the ISR counter turns a missing interrupt into FAIL_PC rather than a hang. AOUT is read AFTER the
-  trap (the ISR must not pop it); a second AOUT read of the now-empty FIFO must return 0.
-
-PHASE 3 — ILLEGAL START (KLEN = 0), polled, IRQ_EN = 0
-  The 2-cycle zero-length path: done sets, STATUS[6] cfg_rejected latches, no AOUT word is pushed,
-  nothing hangs. STATUS must read done|ain_empty|cfg_rejected (0x4A); IRQ_CLR = 0b11 clears both.
-
-Result area (SRAM word indices from RES_BASE_WI) — see RES_NAMES below.
-
-Register allocation (MAIN): x2 = NPU_BASE  x3 = IRQ_CTRL_BASE  x4 = RES_BASE_ADDR  x5 = staging
-  x13 = scratch  x14/x15 = poll counter/limit  x16-x18 = scratch.  x1 is clobbered by the ISR.
-Register allocation (ISR, at ISR_PC = ROM_BASE + 4): x26 x27 x28 x29 x30 x31 and x1.
+gen_npu_hex.py -- generate npu_fw.hex and npu_fw_addrs.py for the Phase 6c SoC-level NPU FABRIC test
+(L2). Scope is small on purpose. The L1 suite (test_npu.py, `make npu`) owns every behaviour of the
+peripheral. This image proves only that npu_top (APB_NPU slave 13, base 0x2001_0000) is reachable
+and correct through the real SoC fabric and that its interrupt reaches the CPU (irq_src_i[11] ->
+ext_irq -> CPU MEIP). It reuses the hand assembler of trng_fw/gen_trng_hex.py, so no riscv32
+toolchain is needed. The test scores by commit_pc_o marker PCs.
+Register map: rtl/npu/npu_top.sv header (authoritative). Write START in a SEPARATE transfer after
+the mode bits. A read of AOUT POPS the FIFO. An empty AOUT reads 0.
+The weight tile (12 words through WADDR=0 / WDATA auto-increment: DENSE, IDENTITY, DENSE again, so
+run 1 uses a non-zero TILEBASE) and the hand-computed acc and y vectors are pinned in the
+tb/models/npu_model.py selftest.
+Phase 1, polled, KLEN = 1, TILEBASE = 8, no ReLU, IRQ_EN = 0. The interrupt lines must stay LOW
+while `done` is pending.
+Phase 2, interrupt driven, KLEN = 2, TILEBASE = 0, ReLU. The ISR reads STATUS, IRQ_STAT and
+PENDING_MASKED and writes ONE IRQ_CLR[0]. A bounded wait on the ISR counter turns a missing
+interrupt into FAIL_PC. AOUT is read AFTER the trap (the ISR must not pop it); a second AOUT read
+returns 0.
+Phase 3, illegal START (KLEN = 0), polled: done sets, STATUS[6] cfg_rejected latches, no AOUT word,
+no hang. STATUS must read 0x4A. IRQ_CLR = 0b11 clears both.
+Doc: tm:suite:soc-npu-fw-gen-npu-hex
 """
 
 import os

@@ -1,30 +1,27 @@
 """
-Bead claude_verilog_test-8riq (GH #216 coverage gap) -- AXI-Lite / APB control-fabric tests.
-
-DUT: tb_axil_apb_fabric -- the real chain axi_lite_interconnect -> axil_to_apb -> apb_interconnect
-(see the wrapper header for the address map), with a cocotb-scripted AXI-Lite slave on ring slot 0
-and a cocotb-scripted APB slave on APB slot 2.  The other APB slots are real apb4_register_bank
-instances.
-
-What this closes (none of it was reachable with the existing register-bank stub slaves, which are
-always ready and always OKAY):
-
-  * ready/valid backpressure on every channel of axi_lite_interconnect (AW / W / AR held low by
-    the slave, B / R held low by the master), including payload and valid stability while stalled;
-  * SLVERR and DECERR actually leaving the slave side, crossing the ring response mux and being
-    seen by the master, for writes and reads, with and without master stalls;
-  * the ring's own DECERR (unmapped address) under the same stalls, and proof that no slave sees
-    a beat of an unmapped access;
-  * APB SLVERR end to end: a scripted APB slave's pslverr, and apb_interconnect's own pslverr for
-    an in-window address no APB slave claims, both arriving as SLVERR at the AXI-Lite master;
+AXI-Lite / APB control-fabric tests.
+DUT: tb_axil_apb_fabric -- the real chain axi_lite_interconnect -> axil_to_apb ->
+apb_interconnect (the wrapper header has the address map), with a cocotb-scripted AXI-Lite slave on
+ring slot 0 and a cocotb-scripted APB slave on APB slot 2. The other APB slots are real
+apb4_register_bank instances.
+The register-bank stub slaves are always ready and always OKAY, so they could not reach:
+  * ready/valid backpressure on every channel of axi_lite_interconnect (AW / W / AR held low by the
+    slave, B / R held low by the master), including payload and valid stability while stalled;
+  * SLVERR and DECERR leaving the slave side, crossing the ring response mux and reaching the
+    master, for writes and reads, with and without master stalls;
+  * the ring's own DECERR (unmapped address) under the same stalls, and no slave seeing a beat of an
+    unmapped access;
+  * APB SLVERR end to end: a scripted APB slave's pslverr, and apb_interconnect's own pslverr for an
+    in-window address no APB slave claims, both arriving as SLVERR at the AXI-Lite master;
   * pwdata / pstrb / pwrite / paddr routing through axil_to_apb + apb_interconnect to the right
     slave only, with APB wait states.
-
-Spec / intent references: rtl/soc/axi_lite_interconnect.sv header ("Unmapped address -> DECERR ...
-a bad config access never stalls the CPU", depth-1 outstanding, slave latched for the life of the
-transaction), rtl/soc/axil_to_apb.sv header ("pslverr -> bresp/rresp = SLVERR"),
-rtl/soc/apb_interconnect.sv header ("psel_i=1 but no slave addressed -> pslverr_o=1, pready_o=1,
-prdata_o=0"), AMBA AXI valid-stability rule and APB4 SETUP/ACCESS phase rules.
+Spec references: the headers of rtl/soc/axi_lite_interconnect.sv (unmapped address -> DECERR, a bad
+config access never stalls the CPU, depth-1 outstanding, slave latched for the life of the
+transaction), axil_to_apb.sv (pslverr -> SLVERR) and apb_interconnect.sv (psel_i=1 but no slave
+addressed -> pslverr_o=1, pready_o=1, prdata_o=0), the AMBA AXI valid-stability rule and the APB4
+SETUP/ACCESS rules.
+Run: make -C tb/cocotb/soc axil_apb_fabric
+Doc: tm:suite:soc-test-axil-apb-fabric
 """
 
 import cocotb
@@ -352,10 +349,10 @@ async def test_ring_engines_independent(dut):
 
 @cocotb.test()
 async def test_ring_unmapped_read_single_beat(dut):
-    """REGRESSION GUARD for fixed RTL bug claude_verilog_test-3xtv.
+    """REGRESSION GUARD for a fixed RTL bug.
 
     One AR to an unmapped address with rready tied high must produce exactly ONE R beat (DECERR,
-    data 0), and the next legal read must return its own data.  Before the 3xtv fix
+    data 0), and the next legal read must return its own data.  Before the fix
     axi_lite_interconnect returned the DECERR beat twice (rvalid high on two consecutive cycles
     with no second request), and the phantom beat answered the next read.  The assertions below
     are the spec; do NOT weaken them.

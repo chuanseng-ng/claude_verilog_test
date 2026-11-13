@@ -1,46 +1,25 @@
 """
-Kernel test: GPU_BLOCK_X launch contract (beads a5ze, 47lf, 6hy6).
-
-The architecture is 8 warps x 8 lanes = 64 threads (CLAUDE.md "8 warps max; 64 total threads",
-PHASE4 spec "Warp size: 8 lanes").  Contract, user decision 2026-10-11 (bead 6hy6):
-
-  * BLOCK_X in 1..64 runs ceil(BLOCK_X / 8) warps and EXACTLY BLOCK_X threads take effect:
-    the last warp starts with only its valid lanes active (BLOCK_X=9: warp 0 all 8 lanes,
-    warp 1 lane 0 only).  An invalid lane never writes a register, shared memory or AXI.
-  * BLOCK_X == 0 or BLOCK_X > 64 raises the GPU ERROR condition at launch: no hang, no silent
-    truncation, no kernel instruction executes.  It reuses the q6w0 ERROR path: GPU_STATUS
-    reads ERROR, the GPU is halted, no done IRQ, and CTRL.reset then a legal launch recovers.
-
-Marker kernel (every warp writes warp_id + 1 to its own word):
-
-  vmov_bid_x r2           r2[l] = warp_id
-  vaddi r7, r2, 1         r7[l] = warp_id + 1          (marker, never 0)
-  vaddi r3, r0, 2
-  vsll  r4, r2, r3        r4[l] = warp_id * 4
-  vaddi r9, r4, OUT-7     r9[l] = OUT + warp_id*4 - 7
-  vst   r7 -> r9 + 7      mem[OUT + warp_id*4] = warp_id + 1
-  vret
-
+Kernel test: the GPU_BLOCK_X launch contract.
+The architecture is 8 warps x 8 lanes = 64 threads. Contract:
+  * BLOCK_X in 1..64 runs ceil(BLOCK_X / 8) warps and EXACTLY BLOCK_X threads take effect. The last
+    warp starts with only its valid lanes active (BLOCK_X=9: warp 0 all 8 lanes, warp 1 lane 0
+    only). An invalid lane never writes a register, shared memory or AXI.
+  * BLOCK_X == 0 or > 64 raises the GPU ERROR condition at launch: no hang, no silent truncation, no
+    kernel instruction executes. GPU_STATUS reads ERROR, the GPU is halted, no done IRQ, and
+    CTRL.reset then a legal launch recovers (the ERROR path of kernel_control_paths).
+Marker kernel: every warp writes warp_id + 1 to mem[OUT + warp_id*4].
 Tests:
-
   test_block_sizes_below_cap       BLOCK_X = 1, 8, 9, 16, 17, 55, 56: ceil(BLOCK_X / 8) warps
-  test_block_sizes_57_to_64        EVERY BLOCK_X in 57..64 runs all 8 warps (bead 47lf / GH #254:
-                                   the warp COUNT was held in 3 bits and saturated at 7)
-  test_lane_results_match_model    a per-LANE kernel; for every legal BLOCK_X the complete set of
-                                   stores equals the GpuRefModel union with per-warp lane masks:
-                                   no missing store, no extra store (one AXI write per thread,
-                                   counted), no wrong value
-  test_invalid_lanes_have_no_side_effects   register-file, shared-memory and global-memory write
-                                   strobes are checked every cycle against the valid-lane map,
-                                   and the surviving register / shared-memory state is read back
-                                   by a follow-up 64-thread kernel (partial warp leaves the
-                                   previous kernel's values in the invalid lanes)
-  test_partial_warp_divergence     a divergent branch counts only valid lanes: BLOCK_X=9 pushes
-                                   one divergence entry (warp 0), not two
-  test_illegal_block_x_raises_error  BLOCK_X in 0, 65, 72, 128, 1023: STATUS reads ERROR (only)
-                                   within a bounded time, nothing is fetched or stored, no IRQ,
-                                   then CTRL.reset + a legal launch gives the right results
+  test_block_sizes_57_to_64        EVERY BLOCK_X in 57..64 runs all 8 warps (it once saturated at 7)
+  test_lane_results_match_model    the stores equal the GpuRefModel union with per-warp lane masks
+  test_invalid_lanes_have_no_side_effects   register, shared and global write strobes, every cycle
+  test_partial_warp_divergence     BLOCK_X=9 pushes one divergence entry (warp 0), not two
+  test_illegal_block_x_raises_error   BLOCK_X in 0, 65, 72, 128, 1023: ERROR only, nothing
+                                   is fetched
+                                   or stored, no IRQ; CTRL.reset then a legal launch works
   test_illegal_block_x_after_done  the same from DONE (launch without reset), and 64 -> OK
+Run: cd sim && make gpu_kernels
+Doc: tm:suite:gpu-kernels-kernel-block-warps
 """
 import sys
 import os

@@ -1,169 +1,32 @@
-"""test_wdt.py -- Phase 6a-3 cocotb verification for watchdog_timer (rtl/periph/watchdog_timer.sv,
-bead claude_verilog_test-f7vs.7, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-3 -- WDT" + Sec.9).
-
-STRICT TDD: watchdog_timer DOES NOT EXIST YET as of this suite's authorship. This is step 2 of
-the mandated workflow ("the verification orchestrator runs before the RTL orchestrator" --
-Sec.9) -- `make wdt`/`make wdt_lint` are EXPECTED to fail to elaborate until a separate RTL
-agent writes rtl/periph/watchdog_timer.sv to match the contract documented here.
-
-DUT: tb_wdt (standalone wrapper, directly instantiates watchdog_timer, ADDR_W=12)
-
-Register map (watchdog_timer.sv, ADDR_W=12 local byte offset, N_REGS=8):
-  0x000  WDT_CTRL      [RW]   [0] enable, [1] RST_EN (reset value 0), [2] window mode enable
-  0x004  WDT_RELOAD    [RW]   32-bit counter reload value, in prescaled ticks
-  0x008  WDT_COUNT     [RO]   live 32-bit counter value
-  0x00C  WDT_WINDOW    [RW]   32-bit closed-window threshold; 0 disables the window check
-  0x010  WDT_FEED      [WO]   write 0x5A5A_C0DE to feed; any other value rejected; reads 0
-  0x014  WDT_PRESCALE  [RW]   [15:0] core_clk divider; one tick = (PRESCALE+1) core_clk cycles
-  0x018  WDT_STATUS    [RO]   [0] bark, [1] bite, [2] window violation -- all sticky
-  0x01C  WDT_IRQ_CLR   [WO]   W1C against WDT_STATUS; always reads 0
-  >=0x020 (word index >= 8)   out-of-range: writes dropped, reads return 0, pslverr=0
-
-Ports beyond the APB4 face: irq_o and wdt_rst_req_o (both outputs, both level-held). No inputs, so
-there is NO CDC in this module; its single clock domain is core_clk (== clk in tb_wdt).
-
-Timing contract (P = WDT_PRESCALE, R = WDT_RELOAD, "E" = the clock edge on which the APB write
-that sets WDT_CTRL[0] commits, i.e. the edge on which APB4Master.write() returns):
-  - Enabling (CTRL[0] 0 -> 1) loads the counter from RELOAD. The counter then decrements once per
-    tick, a tick being (P+1) core_clk cycles. It is a 32-bit DOWN counter: "timeout" is the
-    counter reaching 0.
-  - BARK: first timeout -> sticky WDT_STATUS[0]. Visible k edges after E, where
-    (P+1)*(R-1) <= k <= (P+1)*R + 6. The +6 / -1 tolerances absorb pipeline latency in the RTL
-    (a registered feed/reload decode, a registered status set) and the free-running prescaler
-    phase; the suite deliberately does NOT pin one latency constant because no RTL exists to
-    measure. What it DOES pin exactly is everything that must not depend on that constant:
-    the latency is IDENTICAL on every run from reset, so *differences* between runs
-    (R=40 vs R=16 -> exactly 24 cycles later at P=0) and set-beats-clear alignment (calibrate,
-    then land a clear on the calibrated edge) are exact.
-  - FEED LATENCY: a valid feed's effect (counter reloaded, or STATUS[2] set for a violation) must be
-    visible no later than 2 edges after the feed write's commit edge. Every feed check below
-    therefore waits `ClockCycles(dut.clk, 2)` before sampling. (W1C clears are different: the
-    write-snoop takes effect ON the commit edge, and the set-beats-clear test depends on it.)
-  - BITE: after the bark the counter reloads from RELOAD and runs a second full period; if it
-    times out again with no valid feed in between -> sticky WDT_STATUS[1] AND wdt_rst_req_o
-    asserted. Bite is visible `d` edges after the bark, max((P+1)*R,1) <= d <= (P+1)*(R+1)+3.
-    wdt_rst_req_o rises on the SAME edge as WDT_STATUS[1] (checked in lock-step every cycle).
-  - wdt_rst_req_o is LEVEL-HELD UNTIL RESET: it is a separate latch from WDT_STATUS[1]. W1C-clearing
-    the sticky bite bit, feeding, or disabling does NOT drop it; only rst_n does.
-  - WDT_CTRL.RST_EN (bit 1, reset value 0) governs ONLY whether the SoC-level cpu_domain_rst_n
-    AND-in is armed -- a soc_top integration concern, invisible at this L1 boundary. At the reset
-    default (RST_EN == 0) a bite STILL sets WDT_STATUS[1] and STILL asserts wdt_rst_req_o, and the
-    bite timing is identical with RST_EN == 1. test_wdt_rst_en_does_not_gate_wdt_rst_req asserts
-    that distinction so the RTL cannot conflate the two.
-  - irq_o is LEVEL-HELD, never a single-cycle pulse: every IRQ source crosses core_clk ->
-    cpu_core_clk through a plain 2-FF cdc_sync at rtl/soc/soc_top.sv, which can miss a pulse.
-  - The W1C clear is an APB write-snoop on WDT_IRQ_CLR (gpio_controller.sv:281-301 /
-    pwm_controller.sv idiom), NOT a WMASK path. A hardware set beats a same-cycle clear, so a
-    bark or bite can never be lost to a racing clear.
-  - WINDOWED MODE (CTRL[2]=1 AND WINDOW != 0): a feed arriving while COUNT > WINDOW (too early,
-    window still closed) is a violation: it sets WDT_STATUS[2] and does NOT reload the counter.
-    COUNT == WINDOW is already inside the open window (the closed window is strictly "above the
-    threshold"), so it is ACCEPTED. With WINDOW == 0, or with CTRL[2] == 0, a feed is accepted at
-    any time (default: window disabled).
-  - DISABLED (CTRL[0] == 0): the counter does not run and no bark/bite/violation accumulates,
-    no matter what is fed, what WINDOW says, or how small RELOAD is.
-
-DECISIONS the spec left open. Writing the tests first is what settles them, so they are asserted
-here and the RTL implements what this file asserts, not the reverse:
-
-  D1. WDT_RELOAD == 0 with the watchdog enabled FAILS TOWARD FIRING. The counter is loaded with 0,
-      so it has already timed out: bark fires within a few cycles of enable, the second (zero-
-      length) period expires immediately after, and the bite follows. It must NOT hang (a counter
-      that waits for a wrap of the 32-bit value would silently disarm the dog for ~2^32 ticks) and
-      the counter must NOT underflow to 0xFFFF_FFFF: COUNT reads 0 throughout. Rationale: the only
-      way to reach this state is a firmware that enabled the watchdog before programming it, and
-      the dangerous failure mode of a watchdog is silence -- a misconfigured one must be noisy.
-      (RELOAD resets to 0, so "enable with no RELOAD write" is this same case; the reset default
-      of every RW register is 0, matching gpio/pwm.) With RST_EN == 0 -- the reset default --
-      the only consequence is a set status bit and irq_o, so the safe choice cannot brick a boot.
-      See test_wdt_reload_zero_fails_toward_firing.
-  D2. A write to WDT_RELOAD while the watchdog is RUNNING does NOT touch the live counter. The new
-      value is picked up only at the next reload event (valid feed, bark->second-period reload,
-      or a fresh enable). Rationale: a stray/late store must not be able to shorten the running
-      period into an instant timeout or stretch it beyond what the last valid feed promised.
-      See test_wdt_reload_write_deferred_to_next_reload.
-  D3. WDT_COUNT is readable while the counter is running and shows the live value (it decrements
-      once per tick between reads). Reading it -- or reading WDT_FEED, WDT_STATUS or WDT_IRQ_CLR
-      -- perturbs NOTHING: no reload, no status change, no clear. The read side effect that is
-      forbidden is precisely "a read of the FEED register pets the dog".
-      See test_wdt_count_readable_without_side_effects.
-
-  Further decisions, made because the tests below cannot be written deterministically without
-  them (each is asserted in the test named):
-  D4. A feed requires pstrb == 0xF as well as the magic data: a byte-strobed store that happens to
-      carry parts of the magic word must not pet the dog (test_wdt_feed_wrong_value_rejected).
-  D5. There is no IRQ_EN register in the map, so irq_o = |WDT_STATUS[2:0] (any pending sticky
-      event; masking is the interrupt_controller's job). It is purely a level off the sticky
-      bits, so it is level-held by construction and drops when the bits are W1C-cleared.
-  D6. A valid feed clears the bark->bite escalation as well as reloading the counter: after a
-      bark, feeding within the second period defers the bite by a full two periods
-      (test_wdt_feed_after_bark_defers_bite). The sticky bark bit itself is left for software.
-  D7. Bite is TERMINAL. After it the counter is frozen at 0, no further status events accumulate,
-      and a later feed does not revive it; only rst_n does (test_wdt_bite_timing_and_rst_req_level_hold).
-  D8. Enabling always reloads the counter from RELOAD; a feed while disabled is a no-op; a window
-      violation is only a status bit -- it does not by itself escalate to a bite or assert
-      wdt_rst_req_o.
-  D9. Reserved bits read 0 / are not writable: CTRL is [2:0] wide, PRESCALE is [15:0] wide.
-
-SAMPLING HAZARD (learned on PWM, test_pwm.py): outputs that are combinational off registered state
-return the PRE-edge value if read straight after a helper that settles with Timer(1, "step").
-Every cycle-counting sampling loop below therefore does `await RisingEdge(dut.clk)` FIRST and only
-then reads (through _peek(), or through _next_cycle() for raw output pins), so each sample is the
-settled post-edge state of a known edge and no sample is silently duplicated or skipped.
-
-Tests:
-  test_wdt_reset_defaults
-      All RW regs 0 (CTRL incl. RST_EN, RELOAD, WINDOW, PRESCALE), COUNT 0, STATUS 0, FEED and
-      IRQ_CLR read 0, irq_o == 0, wdt_rst_req_o == 0.
-  test_wdt_rw_roundtrip_all_registers
-      Round trip on CTRL, RELOAD, WINDOW, PRESCALE incl. reserved-bit masking (D9).
-  test_wdt_ro_ignores_writes_wo_reads_zero
-      Writes to COUNT/STATUS are ignored; FEED and IRQ_CLR read 0 whatever was written.
-  test_wdt_out_of_range_access
-      Word index >= 8 (0x020 ...): write dropped (no aliasing onto CTRL/FEED), read 0, pslverr=0.
-  test_wdt_pstrb_partial_word
-      Byte-strobed writes to RELOAD/PRESCALE update only the strobed bytes; strb=0 is a no-op.
-  test_wdt_feed_magic_accepted
-      Magic value reloads the counter; feeding every half period keeps the dog quiet; when the
-      feeding stops it barks on schedule.
-  test_wdt_feed_wrong_value_rejected
-      Wrong values, and the magic value with a partial pstrb (D4), do not reload; then a real feed
-      does.
-  test_wdt_bark_timing
-      Bark visible within the latency window, exact cycle-shift with RELOAD, bite/rst_req clear.
-  test_wdt_bite_timing_and_rst_req_level_hold
-      Bite one full period after bark; wdt_rst_req_o lock-step with the bite bit, held level until
-      reset through W1C and feeds; bite terminal (D7).
-  test_wdt_rst_en_does_not_gate_wdt_rst_req
-      RST_EN=0 (default) and RST_EN=1 give identical bite timing; both assert wdt_rst_req_o.
-  test_wdt_feed_after_bark_defers_bite
-      After a bark, periodic valid feeds prevent the bite; stop feeding and it arrives ~2 periods
-      later (D6).
-  test_wdt_window_violation_no_reload
-      Early feed in window mode sets STATUS[2] and does NOT reload; in-window feed is accepted.
-  test_wdt_window_boundary
-      COUNT == WINDOW+1 -> violation; COUNT == WINDOW -> accepted (large prescaler holds each
-      value 16 cycles so the boundary is hit deterministically).
-  test_wdt_window_disabled_accepts_any_feed
-      WINDOW == 0 (with CTRL[2]=1) and CTRL[2] == 0 (with WINDOW != 0): early feed accepted.
-  test_wdt_prescaler_scaling
-      COUNT falls by exactly 10 in 10*(P+1) cycles for P = 0, 3, 7; bark->bite gap scales.
-  test_wdt_disabled_is_inert
-      Disabled: nothing accumulates whatever is fed/configured; COUNT holds; re-enable reloads.
-  test_wdt_reload_zero_fails_toward_firing
-      D1: RELOAD==0 fires promptly, never underflows.
-  test_wdt_reload_write_deferred_to_next_reload
-      D2: a RELOAD write mid-run does not touch the live counter; it takes effect at the next feed.
-  test_wdt_count_readable_without_side_effects
-      D3: repeated APB reads of COUNT/FEED/STATUS/IRQ_CLR leave a perfectly regular countdown.
-  test_wdt_status_sticky_and_w1c
-      STATUS bits are sticky, W1C clears exactly the written-1 bits, 0 is a no-op, and
-      wdt_rst_req_o survives the clears.
-  test_wdt_set_beats_same_cycle_clear
-      A WDT_IRQ_CLR commit landing exactly on the bark / bite set edge leaves the bit SET; the
-      same clear one edge later clears it (control that proves the alignment).
-  test_wdt_irq_level_held_across_cycles
-      irq_o low before the bark, then high on every one of 100 consecutive cycles (no pulse).
+"""
+test_wdt.py -- Phase 6a-3 cocotb verification for watchdog_timer (rtl/periph/watchdog_timer.sv; plan
+"6a-3 -- WDT"). DUT: tb_wdt (ADDR_W=12); beyond the APB4 face irq_o and wdt_rst_req_o (both
+level-held). Register map: watchdog_timer.sv header (N_REGS=8; FEED magic 0x5A5A_C0DE).
+Timing (P = PRESCALE, R = RELOAD, E = the edge where the CTRL[0] write commits): enabling loads the
+counter from RELOAD; it counts down once per tick (one tick = PRESCALE+1 cycles); timeout = 0. BARK
+(sticky STATUS[0]) is visible k edges after E, (P+1)*(R-1) <= k <= (P+1)*R + 6.
+The suite does NOT pin one latency constant, but pins what must not depend on it: the latency is
+IDENTICAL on every run from reset, so run-to-run differences (R=40 vs R=16 is exactly 24 cycles at
+P=0) and set-beats-clear alignment are exact. A FEED takes effect within 2 edges of its commit edge
+(feed checks wait ClockCycles(dut.clk, 2)); W1C clears act ON the commit edge.
+BITE: after the bark the counter reloads and runs a second period; a second timeout with no valid
+feed sets sticky STATUS[1] AND wdt_rst_req_o on the SAME edge, d edges after the bark,
+max((P+1)*R,1) <= d <= (P+1)*(R+1)+3. wdt_rst_req_o is LEVEL-HELD UNTIL RESET (a separate latch):
+W1C, feeding or disabling do NOT drop it. RST_EN gates only the SoC cpu_domain_rst_n AND-in
+(invisible at L1): a bite sets STATUS[1] and wdt_rst_req_o with RST_EN = 0 too. A hardware set beats
+a same-cycle clear.
+WINDOW MODE (CTRL[2]=1, WINDOW != 0): a feed while COUNT > WINDOW is a violation (STATUS[2], no
+reload); COUNT == WINDOW is accepted.
+DECISIONS the spec left open (asserted here, the RTL follows): D1 RELOAD == 0 while enabled FAILS
+TOWARD FIRING (bark within a few cycles, then bite; no hang, no underflow): a misconfigured watchdog
+must be noisy. D2 A RELOAD write while running does not touch the live counter. D3 Reading COUNT,
+FEED, STATUS or IRQ_CLR perturbs NOTHING (a FEED read must not pet the dog). D4 A feed needs pstrb
+== 0xF. D5 irq_o = |STATUS[2:0] (masking is the interrupt_controller's job). D6 A valid feed clears
+the bark->bite escalation. D7 Bite is TERMINAL (only rst_n revives it). D8 A disabled feed is a
+no-op; a window violation never escalates.
+Sampling: RisingEdge(dut.clk) FIRST, then read.
+Run: make -C tb/cocotb/soc wdt
+Doc: tm:suite:soc-test-wdt
 """
 
 import sys
@@ -184,7 +47,7 @@ from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 10  # 100 MHz -- matches SoC reference clock (same convention as test_pwm.py)
+CLK_PERIOD_NS = 10  # matches the SoC reference clock (same convention as test_pwm.py)
 
 WDT_CTRL = 0x000
 WDT_RELOAD = 0x004
@@ -235,7 +98,7 @@ def _idle_bus(dut) -> None:
 
 
 async def _start_clock_and_reset(dut) -> None:
-    """Start 100 MHz clock and apply synchronous reset with the APB4 bus idled. The WDT has no
+    """Start the clock and apply synchronous reset with the APB4 bus idled. The WDT has no
     top-level inputs beyond clk/rst_n/APB4 (no async pins, no CDC)."""
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
@@ -1256,7 +1119,7 @@ async def test_wdt_irq_level_held_across_cycles(dut):
     dut._log.info("irq_o level-held across 100 consecutive cycles -- confirmed")
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -1285,7 +1148,7 @@ async def test_register_w1c_semantics(dut):
     rep.assert_clean()
 
 
-# -- Full-width counter and prescaler (bead xkw5) -------------------------------------------------
+# -- Full-width counter and prescaler -------------------------------------------------
 
 @cocotb.test()
 async def test_wdt_counter_full_width_and_wide_prescaler(dut):

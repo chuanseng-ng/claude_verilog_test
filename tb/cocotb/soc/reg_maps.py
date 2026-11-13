@@ -1,6 +1,5 @@
 """
-reg_maps.py -- the DOCUMENTED register maps the register-walk (reg_walk.py) checks against
-(bead claude_verilog_test-7ovx).
+reg_maps.py -- the DOCUMENTED register maps the register-walk (reg_walk.py) checks against.
 
 Source of truth: Doc: ds:mm:memory-map and each module's header comment (register table,
 reset values, RO / W1C / W1P / WO classification).  The values here are transcribed from those
@@ -237,7 +236,7 @@ PMU = [
     # The mode field is never driven to non-zero; the other 30 bits are not SW-writable and must
     # stay 0 under all-ones writes.
     Reg("PMU_CTRL", _w(0), reset=0, wmask=0x3, drive=M32 & ~0x3),
-    # [3] cpu_iso_ack_timeout (sticky, bead 3ogd) is 0 from reset and only a power-down whose CPU
+    # [3] cpu_iso_ack_timeout (sticky) is 0 from reset and only a power-down whose CPU
     # iso-ack wait expired sets it, so the idle walk sees the same 0x3.
     Reg("PMU_STATUS", _w(1), reset=0x3, wmask=0),          # cpu_domain_on | gpu_domain_on
     Reg("PMU_DOMAIN_EN", _w(2), reset=0x33, wmask=0),      # clk_en / rst_n of both domains
@@ -247,7 +246,7 @@ PMU = [
 # PLL config (pll_apb_regs.sv header): CONTROL / STATUS / RSVD.
 # ---------------------------------------------------------------------------------------------
 PLL = [
-    # CONTROL[0] pll_enable is set-only (GH #89 anti-brick): wmask excludes it, so writing 0 to
+    # CONTROL[0] pll_enable is set-only (anti-brick): wmask excludes it, so writing 0 to
     # the register must leave it at 1 -- the walk's zero patterns are exactly that check.
     Reg("PLL_CONTROL", _w(0), reset=0x1, wmask=0x3F0),
     Reg("PLL_STATUS", _w(1), reset=0, wmask=0, live=0x1),  # [0] locked mirrors pll_locked_i

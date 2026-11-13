@@ -1,34 +1,25 @@
 """
-test_cdc_sync.py -- bead claude_verilog_test-xtaa cocotb verification for
-cdc_sync's STAGES and RESET_VAL parameters (rtl/soc/cdc/cdc_sync.sv),
-via the standalone wrapper tb_cdc_sync.sv.
+test_cdc_sync.py -- cocotb verification for cdc_sync's STAGES and RESET_VAL parameters
+(rtl/soc/cdc/cdc_sync.sv), via the standalone wrapper tb_cdc_sync.sv.
 
-DUT instances (all share clk_i / rst_n_i):
-  matrix i = 0..5   WIDTH=1, STAGES = 2 + i//2 (2,3,4), RESET_VAL = i % 2
-  mixed             WIDTH=4, STAGES=3, RESET_VAL=4'b1010
-
-The data inputs are driven to the OPPOSITE of each instance's reset value,
-so a reset value that leaks (or a latency that is off by one) is visible.
-
+DUT instances (all share clk_i / rst_n_i): matrix i = 0..5 with WIDTH=1, STAGES = 2 + i//2 (2,3,4),
+RESET_VAL = i % 2; and "mixed" with WIDTH=4, STAGES=3, RESET_VAL=4'b1010. The data inputs are driven
+to the OPPOSITE of each instance's reset value, so a leaking reset value or a latency off by one is
+visible.
 Tests:
-  test_reset_value_held_during_reset
-      With rst_n_i low every output shows its RESET_VAL, asynchronously at
-      time 0 and after several clock edges -- i.e. every one of the STAGES
-      ranks resets, not only the first.
-  test_latency_after_release
-      After release, a change on d_i first appears on q_o exactly STAGES
-      rising edges later and not one edge sooner, for every STAGES x
-      RESET_VAL combination and for the mixed pattern.
-  test_reset_value_is_async_clear
-      A mid-cycle assertion of rst_n_i returns every output to its reset
-      value with no clock edge in between.
-  test_reset_value_reasserted_after_activity
-      Drive data through, assert reset again: outputs return to RESET_VAL
-      and the next release re-synchronises with the same latency.
-
-The STAGES < 2 elaboration guard (negative control) is checked by the
-`cdc_sync_stages1_neg` Makefile step, since a failed elaboration cannot
-be observed from inside a simulation.
+  test_reset_value_held_during_reset: with rst_n_i low every output shows its RESET_VAL,
+      asynchronously at time 0 and after several clock edges, so every one of the STAGES ranks
+      resets.
+  test_latency_after_release: a change on d_i first appears on q_o exactly STAGES rising edges
+      later, not one sooner, for every STAGES x RESET_VAL combination and the mixed pattern.
+  test_reset_value_is_async_clear: a mid-cycle assertion of rst_n_i returns every output to its
+      reset value with no clock edge in between.
+  test_reset_value_reasserted_after_activity: drive data through, assert reset again: outputs return
+      to RESET_VAL and the next release re-synchronises with the same latency.
+The STAGES < 2 elaboration guard (negative control) is checked by the `cdc_sync_stages1_neg`
+Makefile step, because a failed elaboration cannot be observed from inside a simulation.
+Run: make -C tb/cocotb/soc cdc_sync
+Doc: tm:suite:soc-test-cdc-sync
 """
 
 import cocotb

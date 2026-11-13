@@ -1,5 +1,5 @@
 // tb_cdc_gray_fifo.sv
-// Bead claude_verilog_test-3snb -- standalone testbench wrapper for cdc_gray_fifo's
+// Standalone testbench wrapper for cdc_gray_fifo's
 // DEPTH=2 variant, with DEPTH=4 as the control.
 //
 // Two DUT instances share the two clocks and the two (per-domain) resets but have

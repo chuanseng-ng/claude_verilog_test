@@ -1,69 +1,27 @@
 """
-test_soc_multiclock_reset.py — GH #95 (Group A) SoC-level reset-asymmetry
-class: verification-orchestrator directed-test half of GH #95.
-
-DUT: tb_soc_top (same SOC_BOOT_SOURCES / soc_boot_lint as soc_boot / soc_periph
-/ soc_cpu_gpu / soc_multiclock — see tb/cocotb/soc/Makefile's soc_multiclock_reset
-target).
-
-Purpose: design_state.json's gh93_cdc_verification record documents that both
-RTL bugs GH #93 found (commit 4398c2e — soc_top.sv's cpu_gated_clk stopped
-during the CPU's own reset window; commit 7a9f9d4 — rtl/soc/cdc/cdc_gray_fifo.sv's
-wr_ready_o not gated by wr_rst_n_i) share one root signature: "a reset value
-that advertises availability while cross-domain readiness has not actually
-been established ... invisible whenever both domains reset together, which is
-every scenario before GH #93." test_soc_multiclock.py's own boot tests already
-exercise a *naturally* staggered release (cpu_domain_rst_n and core_rst_n each
-derive from an INDEPENDENT PLL-lock counter once cpu_clk_i != clk_i — see that
-file's BLOCKER NOTE #2 for the exact skew trace that found fr_280f3ac18c66),
-but only for the specific skew the PLL stub's fixed 16-cycle lock counters
-happen to produce. This file adds the complementary case those tests do not
-cover: holding one physical domain's reset input low FOR AN EXTENDED,
-DELIBERATE WINDOW (well beyond the PLL-lock skew) while the other domain is
-fully released and actively offering real traffic (CPU instruction fetch/
-SRAM store through u_cpu_axi_cdc, or fabric peripheral MMIO), proving:
-  (a) zero acceptance at the CDC bridge while either physical reset input is
-      low (the exact property 7a9f9d4 fixed, at full-SoC scale, through the
-      real CPU AXI master and real crossbar/SRAM path rather than a
-      standalone-DUT synthetic driver — see test_async_axi_fifo.py's
-      test_reset_asym_* for the unit-level version of this same property),
-  (b) zero corruption once the held domain finally releases — the complete
-      golden PC / SRAM-sentinel sequence lands exactly as it would from a
-      normal boot, proving the extended hold did not desynchronise anything.
-
-Firmware reuse ONLY (boot_fw/boot.hex, unmodified — same firmware and golden
-model as test_soc_multiclock.py's test_multiclock_boot_pc_scoreboard /
-test_multiclock_boot_sram_sentinels).
-
-Bug-class note (same as test_soc_multiclock.py): commit_valid_o / commit_pc_o
-are combinationally re-exported from the CPU-domain (cpu_gated_clk) commit bus
-— every polling loop here that observes them uses RisingEdge(dut.cpu_clk_i),
-never dut.clk_i.
-
-Internal (public-flat-rw, --top-module tb_soc_top) hierarchical signals used
-as backdoor observation points (all declared inside soc_top.sv, one level
-under dut.u_soc):
-  cpu_bridge_s_awready / cpu_bridge_s_wready / cpu_bridge_s_arready —
-    u_cpu_axi_cdc's s_* face ready outputs (CPU-domain side of the CDC
-    bridge) — the exact signals 7a9f9d4 fixed the gating on.
-  cpu_domain_rst_n / core_rst_n — the two composed per-domain reset trees
-    the CDC bridge's s_rst_n_i / m_rst_n_i are wired from (soc_top.sv:601-603).
-
-Metastability injection: corrected claim (bead claude_verilog_test-rvs). Earlier
-revisions of this docstring said this was "not modelable in Verilator/cocotb" --
-that is imprecise. A randomised EXTRA-CYCLE-OF-SETTLING-DELAY on a
-synchroniser's first stage IS modelable in a 2-state simulator (it is plain RTL,
-no timing control) and is exactly the fault model that reproduces the
-same-edge-assumption bug class GH #93 hit twice. What genuinely is NOT modelable
-here is analog metastability itself -- an intermediate, non-0/1 voltage on Q.
-No injector is implemented today (an attempt was reverted before merge; see
-rtl/soc/cdc/cdc_sync.sv's header and bead rvs), so these tests characterise
-the synchronised, deterministic RTL behaviour only
--- opting a synchroniser in here is future work, not something this file does
-today. What remains genuinely NOT modelable in a 2-state simulator (Verilator,
-or any cocotb-driven flow) is true analog metastability itself: an
-intermediate, non-01, potentially-oscillating flop output. The injector models
-a randomised settling DELAY, not that voltage-domain physics.
+test_soc_multiclock_reset.py -- SoC-level reset-asymmetry tests (the directed half of the
+reset-asymmetry work). DUT: tb_soc_top (same sources as soc_boot, soc_periph, soc_cpu_gpu and
+soc_multiclock; target soc_multiclock_reset).
+Purpose: both RTL bugs found in the CDC verification (soc_top.sv's cpu_gated_clk stopped during the
+CPU's own reset window; rtl/soc/cdc/cdc_gray_fifo.sv's wr_ready_o not gated by wr_rst_n_i) share one
+root signature: "a reset value that advertises availability while cross-domain readiness has not
+been established", invisible whenever both domains reset together. This file holds one physical
+domain's reset input low for an EXTENDED, DELIBERATE window while the other domain is released and
+offers real traffic (CPU fetch and SRAM stores through u_cpu_axi_cdc, or fabric peripheral MMIO). It
+proves (a) zero acceptance at the CDC bridge while either physical reset input is low (the property
+the cdc_gray_fifo fix gave, at full-SoC scale; test_async_axi_fifo.py's test_reset_asym_* is the
+unit-level version), and (b) zero corruption after the held domain releases: the full golden PC and
+SRAM-sentinel sequence lands as from a normal boot.
+Firmware: boot_fw/boot.hex, unmodified.
+Bug-class note: commit_valid_o and commit_pc_o come from the CPU-domain (cpu_gated_clk) commit bus,
+so every polling loop uses RisingEdge(dut.cpu_clk_i), never dut.clk_i. Backdoor points: see
+soc_top.sv (cpu_bridge_s_*ready, cpu_domain_rst_n, core_rst_n).
+Metastability: a randomised EXTRA SETTLING CYCLE on a synchroniser first stage is modelable in a
+2-state simulator and reproduces the same-edge-assumption bug class. No injector exists today (see
+rtl/soc/cdc/cdc_sync.sv), so these tests characterise the synchronised, deterministic RTL behaviour
+only. Analog metastability is not modelable in cocotb flows.
+Run: make -C tb/cocotb/soc soc_multiclock_reset
+Doc: tm:suite:soc-test-soc-multiclock-reset
 """
 
 import sys
@@ -153,8 +111,8 @@ async def _collect_boot_pcs(dut, timeout_cycles: int) -> list:
 # window while the CPU domain (cpu_clk_i) is fully released and free-running,
 # attempting real instruction fetch through u_cpu_axi_cdc.
 #
-# Ratio: CPU=3ns / fabric=13ns (~4.3x, wide per the GH #95 task's "at least
-# one wide (>=4x)" requirement, coprime with the established 3ns CPU period).
+# Ratio: CPU period 3 / fabric period 13 (~4.3x, a wide ratio: at least one wide (>=4x) ratio
+# is required, coprime with the established CPU period 3).
 # =============================================================================
 CPU_PERIOD_NS_WIDE = 3
 FABRIC_PERIOD_NS_WIDE = 13
@@ -165,8 +123,8 @@ FABRIC_PERIOD_NS_WIDE = 13
 # lock-latency artifact.
 FABRIC_HELD_CPU_CYCLES = 300
 
-# test_soc_multiclock.py's BOOT_TIMEOUT_CYCLES=12_000 @ 7ns fabric / 3ns cpu.
-# Converted to the wider 13ns fabric ratio (13/7 ~= 1.857x) and rounded up
+# test_soc_multiclock.py's BOOT_TIMEOUT_CYCLES=12_000 at fabric period 7 / cpu period 3.
+# Converted to the wider fabric period 13 (13/7 ~= 1.857x) and rounded up
 # generously, plus headroom for the extended fabric-held window above.
 BOOT_TIMEOUT_CYCLES_WIDE = 24_000 + FABRIC_HELD_CPU_CYCLES
 
@@ -271,7 +229,7 @@ async def test_soc_reset_asym_fabric_held_cpu_free(dut):
 # free-running. Zero CPU activity must be observable throughout; a clean full
 # boot must follow once cpu_rst_n_i finally releases.
 #
-# Ratio: the established CPU=3ns / fabric=7ns coprime pair (test_soc_multiclock.py's
+# Ratio: the established CPU period 3 / fabric period 7 coprime pair (test_soc_multiclock.py's
 # convention) -- ratio choice matters less here since the CPU is fully idle
 # for the whole held window.
 # =============================================================================

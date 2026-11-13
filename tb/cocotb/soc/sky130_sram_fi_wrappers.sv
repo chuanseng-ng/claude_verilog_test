@@ -1,5 +1,5 @@
 // sky130_sram_fi_wrappers.sv
-// DFT Stage 4 (bead claude_verilog_test-j41m.14): fault-injecting stand-ins that take the module NAMES of the
+// DFT Stage 4: fault-injecting stand-ins that take the module NAMES of the
 // real Sky130 macros, so the REAL wrappers (sram_controller, npu_weight_mem) can be simulated with
 // +define+SRAM_SKY130 against a macro model whose faults the suite controls. Used in place of
 // sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv (test_mbist_tap.py proves sram_fi_core equals that model).

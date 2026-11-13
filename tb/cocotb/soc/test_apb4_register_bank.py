@@ -1,45 +1,27 @@
 """
-Phase 5 (APB migration PR-1) — apb4_register_bank unit tests.
+Phase 5 (APB migration) -- apb4_register_bank unit tests.
 
-Verifies rtl/soc/apb4_register_bank.sv (via tb_apb4_register_bank) against the
-7 directed tests specified for bead claude_verilog_test-o4p.
-
-The register layout is IDENTICAL to tb_axi_lite_register_bank so that the
-pass/fail results here prove behavioral equivalence with the AXI-Lite bank —
-a prerequisite before PR-2..5 peripheral register-bank swaps are safe.
-
-Register layout (N_REGS = 8, byte addr = word_idx * 4):
-    reg0..reg5  @0x00..0x14 : fully SW-writable (WMASK = 0xFFFFFFFF)
-    reg6        @0x18       : SW read-only/status (WMASK = 0x00000000), HW-writable
-    reg7        @0x1C       : low-byte writable only (WMASK = 0x000000FF)
-
-Tests:
-    T1  test_apb_setup_access_protocol  — APB SETUP→ACCESS handshake; pready high only in ACCESS
-    T2  test_partial_pstrb_write        — pstrb=0b0101 leaves bytes 1,3 unchanged
-    T3  test_rw_roundtrip               — write→read round-trip; pslverr always 0
-    T4  test_out_of_range               — OOR write dropped, OOR read returns 0, pslverr=0
-    T5  test_hw_wen_bypasses_wmask      — HW injection to RO reg6 bypasses WMASK
-    T6  test_wmask_zero_ro_register     — SW write to WMASK=0 reg is silently dropped
-    T7  test_sw_hw_collision_sw_wins    — same-cycle SW+HW write: SW wins on the WMASK bits
-    T8  test_ro_write_does_not_drop_hw_update
-                                        — APB write to a WMASK=0 reg must not cancel a
-                                          same-cycle HW update (bead 6o8w)
-    T9  test_partial_wmask_hw_keeps_unmasked_bits
-                                        — same-cycle SW write + HW write on a partial-WMASK
-                                          reg: SW owns the WMASK bits, HW owns the rest
-    T10 test_nregs_equals_wordw_boundary
-                                        — ADDR_W=5 build only (bead r5hu): N_REGS == 2**WORDW
-                                          must not make the range gate wrap to "nothing in range"
-
-Ownership rule under test: SW owns the WMASK bits, HW owns everything else.
-
-Two build points (bead r5hu), selected by the `apb4_register_bank` Makefile target through the
-REGBANK_ADDR_W environment variable that mirrors the Verilator `-GADDR_W=` override:
-  ADDR_W = 12 (default) -- 4 KB slot; N_REGS = 8 << 2**WORDW.
-  ADDR_W =  5           -- WORDW = 3, N_REGS == 2**WORDW.  This module carries the GH #87 fix
-                           (zero-extend the ADDRESS rather than truncating N_REGS), so it is the
-                           positive control for the sibling axi_lite_register_bank defect.
-                           Tests that probe byte address 0x100 run in the default build only.
+Verifies rtl/soc/apb4_register_bank.sv (via tb_apb4_register_bank) with directed tests. The register
+layout is IDENTICAL to tb_axi_lite_register_bank, so the results prove behavioral equivalence
+with the AXI-Lite bank. Layout (N_REGS = 8, byte addr = word_idx * 4): reg0..reg5 @0x00..0x14
+fully SW-writable (WMASK = 0xFFFFFFFF); reg6 @0x18 SW read-only/status (WMASK = 0), HW-writable;
+reg7 @0x1C low byte writable only (WMASK = 0x000000FF). Ownership rule under test: SW owns the WMASK
+bits, HW owns the rest.
+  T1-T6 basic protocol, pstrb, round trip, out-of-range, HW bypass, WMASK=0
+  T7  test_sw_hw_collision_sw_wins    same-cycle SW+HW write: SW wins on the WMASK bits
+  T8  test_ro_write_does_not_drop_hw_update, T9 test_partial_wmask_hw_keeps_unmasked_bits:
+      a same-cycle
+      APB write must not cancel the HW update (WMASK=0 reg, partial-WMASK reg)
+  T10 test_nregs_equals_wordw_boundary: ADDR_W=5 build only; N_REGS == 2**WORDW must not make
+      the range gate wrap to "nothing in range" Also test_hw_write_every_register_every_bit (a HW
+      write lands in each of the eight registers for every bit pattern, whatever the WMASK) and
+      test_every_out_of_range_address_bit (an access with only one word-index bit above the
+      registers set reads 0 and disturbs no register).
+Two build points, set by the `apb4_register_bank` Makefile target through REGBANK_ADDR_W (it
+mirrors the Verilator `-GADDR_W=` override): ADDR_W = 12 (default, 4 KB slot) and ADDR_W = 5 (WORDW
+= 3). Tests that probe byte address 0x100 run in the default build only.
+Run: make -C tb/cocotb/soc apb4_register_bank
+Doc: tm:suite:soc-test-apb4-register-bank
 """
 
 import os
@@ -106,7 +88,7 @@ async def _setup(dut):
 
 
 # ---------------------------------------------------------------------------
-# Cycle-exact helpers (bead 6o8w)
+# Cycle-exact helpers
 #
 # All stimulus below is applied on the FALLING edge, so it is sampled by the DUT
 # on the very next RISING edge.  A coroutine that acts on RisingEdge (the HW ramp)
@@ -409,7 +391,7 @@ async def test_sw_hw_collision_sw_wins(dut):
 @cocotb.test()
 async def test_ro_write_does_not_drop_hw_update(dut):
     """
-    Bead 6o8w, WMASK==0 case.  reg6 is read-only to SW (WMASK=0) and HW-written.
+    WMASK==0 case.  reg6 is read-only to SW (WMASK=0) and HW-written.
 
     SW owns the WMASK bits (none), HW owns everything else, so an APB write to reg6
     is a pure no-op and must never interfere with the HW update that lands on the
@@ -463,7 +445,7 @@ async def test_ro_write_does_not_drop_hw_update(dut):
 @cocotb.test()
 async def test_partial_wmask_hw_keeps_unmasked_bits(dut):
     """
-    Bead 6o8w, partial-WMASK case.  reg7 has WMASK=0x000000FF: SW owns [7:0], HW
+    Partial-WMASK case.  reg7 has WMASK=0x000000FF: SW owns [7:0], HW
     owns [31:8].  Same-edge APB write of 0x00000055 (pstrb=0xF) and HW write of
     0xDEADBEEF must yield 0xDEADBE55.
 
@@ -510,17 +492,17 @@ async def test_partial_wmask_hw_keeps_unmasked_bits(dut):
 
 
 # ---------------------------------------------------------------------------
-# T10 — N_REGS == 2**WORDW boundary (bead r5hu); ADDR_W=5 build only
+# T10 — N_REGS == 2**WORDW boundary; ADDR_W=5 build only
 # ---------------------------------------------------------------------------
 @cocotb.test(skip=not AT_BOUNDARY)
 async def test_nregs_equals_wordw_boundary(dut):
     """
-    Bead r5hu positive control.  Runs only in the ADDR_W=5 build, where
+    Positive control.  Runs only in the ADDR_W=5 build, where
     N_REGS == 2**WORDW (8 == 2**3).
 
     A truncating `WORDW'(N_REGS)` cast would turn 8 into 0 at WORDW=3, making every address
     "out of range": writes dropped, reads 0, transactions still OKAY (pslverr=0) -- silent.
-    This module zero-extends the address instead (GH #87), so it must round-trip.  The same
+    This module zero-extends the address instead, so it must round-trip.  The same
     stimulus FAILS on the axi_lite_register_bank until that sibling gets the same fix; this
     passing here shows the test construction discriminates the two idioms.
     reg0 and reg5 are both checked so a reg0-only special case cannot satisfy it.
@@ -541,7 +523,7 @@ async def test_nregs_equals_wordw_boundary(dut):
 
 
 # ---------------------------------------------------------------------------
-# Every HW-write port, every bit, both edges; every out-of-range address bit (bead xkw5)
+# Every HW-write port, every bit, both edges; every out-of-range address bit
 # ---------------------------------------------------------------------------
 @cocotb.test()
 async def test_hw_write_every_register_every_bit(dut):

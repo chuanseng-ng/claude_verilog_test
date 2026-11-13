@@ -1,5 +1,5 @@
 """
-test_mbist_cpu_macro.py -- bead claude_verilog_test-c54a (DFT Stage 4, Doc: tm:ch:dft-architecture 16.7): MBIST on the ten
+test_mbist_cpu_macro.py -- (DFT Stage 4, Doc: tm:ch:dft-architecture): MBIST on the ten
 cache SRAMs INSIDE the CPU hard macro, driven end to end through the JTAG TAP.
 
 DUT: tb_mbist_cpu_macro = dft_ctrl + soc_mbist (CPU-domain control-word crossing and status return) + the REAL
@@ -21,6 +21,7 @@ What is proven (each record also checked against mbist_golden.py, the independen
   * the TAP-launched mbist_force opens a PMU-closed clock gate for the run and releases it afterwards, and the
     run only makes progress because of that (the macro clock really stops when the force is absent);
   * a functional reset of the CPU domain aborts a running test and can never start one.
+Run: make -C tb/cocotb/soc mbist_cpu_macro
 """
 
 import cocotb
@@ -183,8 +184,9 @@ async def test_interword_fault_in_each_macro(dut):
         rec = await record(drv, dict(base, mask_sel=i), i)
         for k in ("addr", "elem", "slot", "bg", "port"):
             assert rec[k] == exp[k], f"macro {i}: {k} TAP {rec[k]} golden {exp[k]}"
-        # Collar-local compare (bead c54a): the failing word never leaves the collar, so the XOR mask field is not
-        # provided. It reads 0 whatever mask_sel selects (golden's mask is non-zero for this fault).
+        # Collar-local compare: the failing word never leaves the collar, so the XOR mask field is
+        # not provided. It reads 0 whatever mask_sel selects (golden's mask is non-zero for this
+        # fault).
         assert rec["mask"] == 0 and exp["mask"] != 0
         await stop(dut, drv)
         st = await run(drv, **dict(base, mask_sel=i))
@@ -197,7 +199,8 @@ async def test_interword_fault_in_each_macro(dut):
 
 @cocotb.test()
 async def test_stuck_bit_attributed_to_the_right_collar(dut):
-    """Bead c54a fault-injection check for the collar-local compare: a stuck-at bit in ONE macro, for each of the
+    """Fault-injection check for the collar-local compare: a stuck-at bit in ONE macro, for each
+    of the
     ten, on three different bit positions (0, a middle bit, 31) and both polarities. Exactly that macro's go/no-go
     bit rises (the other nine strobes stay quiet), and the first-fail record (word address, element, slot,
     background, port) equals the independent golden model. A fault-free run right after clean-up passes, so the

@@ -1,5 +1,5 @@
 // tb_axil_apb_fabric.sv
-// Bead claude_verilog_test-8riq (GH #216 coverage gap) -- cocotb wrapper for the real SoC control
+// Cocotb wrapper for the real SoC control
 // fabric chain, with a scripted AXI-Lite slave and a scripted APB slave hanging off it so a test can
 // stall every channel and inject every error response:
 //

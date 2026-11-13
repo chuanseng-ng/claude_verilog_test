@@ -120,7 +120,7 @@ async def test_round_robin_ordering(dut):
 
 @cocotb.test()
 async def test_last_warp_gets_partial_mask(dut):
-    """Bead 6hy6: warps 0..n-2 start with init_mask, the LAST active warp with last_mask."""
+    """Warps 0..n-2 start with init_mask, the LAST active warp with last_mask."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     for n_warps in (1, 2, 5, 8):
         await _reset(dut)
@@ -309,7 +309,7 @@ async def test_div_push_pop_state(dut):
 async def test_eight_warps_issue_and_complete(dut):
     """n_warps_active_i = 8 (all warps; needs a 4-bit count) issues warps 0..7 and finishes.
 
-    Regression for bead 47lf / GH #254: the count was WARP_W = 3 bits wide, so 8 could not be
+    Regression: the count was WARP_W = 3 bits wide, so 8 could not be
     represented (it saturated to 7 in gpu_top, and would truncate to 0 here).  kernel_done_o
     must also wait for warp 7, not just warps 0..6.
     """

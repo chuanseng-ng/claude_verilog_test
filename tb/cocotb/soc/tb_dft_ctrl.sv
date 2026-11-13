@@ -1,5 +1,5 @@
 // tb_dft_ctrl.sv
-// Bead claude_verilog_test-j41m.3 (DFT Stage 1b): cocotb wrapper for dft_ctrl.
+// DFT Stage 1b: cocotb wrapper for dft_ctrl.
 //
 //   * u_dut  the TAP-driven dft_ctrl under test;
 //   * u_ref  a Stage 1a dft_ctrl_ports fed by the SAME four pin inputs: the golden reference for

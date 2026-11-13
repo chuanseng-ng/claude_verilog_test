@@ -1,32 +1,30 @@
 """
-test_mbist_ctrl.py -- bead claude_verilog_test-j41m.14 (DFT Stage 4), unit + fault-injection suite for
-rtl/soc/dft/mbist_ctrl.sv and rtl/soc/dft/mem_collar.sv.
-
-DUT: tb_mbist_domain = mbist_ctrl + N mem_collar + N sram_fi_core (fault-injecting model with the Sky130
-macro timing). Three build points, selected by the MBIST_CFG environment variable (Makefile target
-`mbist_ctrl`):
+test_mbist_ctrl.py -- unit and fault-injection suite for rtl/soc/dft/mbist_ctrl.sv and mem_collar.sv
+(DFT Stage 4).
+DUT: tb_mbist_domain = mbist_ctrl + N mem_collar + N sram_fi_core (fault-injecting model with the
+    Sky130 macro timing). Three build points, set by the MBIST_CFG environment variable (Makefile
+    target `mbist_ctrl`):
     small  N_MEM=4  AW=6   P1_MASK=0101  every algorithm x every fault class (fast)
     soc    N_MEM=2  AW=10  P1_MASK=01    the SoC-level shape: 1024 x 32 macros, port 1 on memory 0
     cpu    N_MEM=10 AW=8   P1_MASK=0     the CPU-macro shape: ten 256 x 32 cache SRAMs
-
-What makes this more than a smoke test (the failure to rule out is a BIST that always passes):
-  * every run is compared with an INDEPENDENT golden model (mbist_golden.py) executing the algorithm on a
-    Python mirror of the same faulty memory; the RTL must reproduce the first failure exactly: fail flag
-    per memory, word address, element, op slot, background, port, and the XOR mask;
+The failure to rule out is a BIST that always passes. So:
+  * every run is compared with an INDEPENDENT golden model (mbist_golden.py) that runs the algorithm
+    on a Python mirror of the same faulty memory. The RTL must reproduce the first failure exactly:
+    fail flag per memory, word address, element, op slot, background, port and XOR mask;
   * a fault goes into ONE memory of several; the others must report no failure;
-  * textbook claims are asserted separately from the golden agreement (March C- must detect every SAF, TF,
-    address-decoder fault and inter-word coupling fault; a full-word March must NOT see a write-mask lane
-    that is always written, the LANE algorithm must; a solid background must miss an intra-word coupling
-    fault that a non-solid background exposes; RETENTION must catch a decaying cell only when the pause
-    exceeds the decay time);
+  * textbook claims are asserted separately (March C- detects every SAF, TF, address-decoder fault
+    and inter-word coupling fault; a full-word March must NOT see a write-mask lane that is always
+    written, the LANE algorithm must; a solid background must miss an intra-word coupling fault that
+    a non-solid one exposes; RETENTION catches a decaying cell only when the pause exceeds the
+    decay time);
   * no-fault runs of every algorithm and background must pass (a BIST that always fails is excluded too).
-
-MBIST_LOCAL=1 (Makefile configs small_local / cpu_local, bead claude_verilog_test-c54a) builds the same bench with
-LOCAL_CMP = 1: every collar compares its own macro's read data and returns one registered mismatch strobe per
-port, the controller sees no read data. Every assertion above is kept (fail flag per memory, address, element, slot,
-background, port, all against the same golden model, every algorithm x every fault class) with two stated
-differences: the XOR mask field is not provided (reads 0, asserted), and the drain is two cycles longer per element
-(the cycle-count formula uses a read latency of 4 instead of 2: two more drain cycles per element).
+MBIST_LOCAL=1 (Makefile configs small_local and cpu_local) builds the bench with LOCAL_CMP = 1:
+every collar compares its own macro's read data and returns one registered mismatch strobe per port.
+Every assertion above stays, with two differences: the XOR mask field is not provided (reads 0,
+asserted), and the drain is two cycles longer per element (the cycle-count formula uses read latency
+4, not 2).
+Run: make -C tb/cocotb/soc mbist_ctrl
+Doc: tm:suite:soc-test-mbist-ctrl
 """
 
 import os

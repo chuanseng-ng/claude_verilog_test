@@ -1,5 +1,5 @@
 // tb_jtag_tap.sv
-// Bead claude_verilog_test-j41m.3 (DFT Stage 1b): cocotb wrapper for jtag_tap alone.
+// DFT Stage 1b: cocotb wrapper for jtag_tap alone.
 //
 //   * every jtag_tap port re-exported flat;
 //   * sys_clk_i / sys_cnt_o: a free-running "system clock" domain that is unrelated to TCK. The

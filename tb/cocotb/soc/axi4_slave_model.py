@@ -1,37 +1,22 @@
 """
 Behavioral AXI4 slave model for cocotb (Phase 5 crossbar testbench).
 
-A burst-capable AXI4 slave with a sparse word memory.  Echoes the id from
-AW/AR onto B/R so response steering can be checked.  Supports configurable
-ready/valid delays to exercise crossbar backpressure handling.
-
+A burst-capable AXI4 slave with a sparse word memory. It echoes the id from AW/AR onto B/R so
+response steering can be checked, and it supports configurable ready/valid delays to exercise
+crossbar backpressure. INCR bursts of 32-bit beats only.
 Signal naming: <prefix>_<channelfield>, e.g. prefix "s0" -> s0_awaddr.
-INCR bursts of 32-bit beats only (this SoC's geometry).
 
-Handshake conventions
----------------------
-cocotb enforces that signal writes happen only in the ACTIVE phase (triggered
-by RisingEdge), never in the ReadOnly phase.  The pattern used throughout:
-
-  READY channels (AW / W / AR)
-    1. Assert ready (active phase — always the first statement after either
-       a RisingEdge trigger or a break from a previous ReadOnly-based loop).
-    2. Poll: `await ReadOnly(); if valid: break; await RisingEdge`.
-    3. After the while loop (still in ReadOnly context), `await RisingEdge`
-       so the deassert and any next-state writes are in the active phase.
-
-  VALID channels (B / R)
-    1. Assert valid + data (active phase).
-    2. Poll: `await ReadOnly(); if ready: break; await RisingEdge`.
-       (Matches the BFM, which also samples starting at the current ReadOnly.)
-    3. After the while loop, `await RisingEdge` before deasserting valid.
-
-  Multi-beat R loop
-    Between beats, we are in ReadOnly context (the previous beat's rready
-    handshake broke from a ReadOnly).  Therefore the FIRST thing each new
-    beat does is `await RisingEdge` to re-enter the active phase before
-    driving rdata / rvalid / rlast.  For the first beat (i=0) this is
-    harmless (just one extra idle cycle).
+Handshake rule: cocotb allows signal writes only in the ACTIVE phase (after a RisingEdge), never in
+ReadOnly.
+  READY channels (AW / W / AR): assert ready first (active phase). Poll with
+    `await ReadOnly(); if valid: break; await RisingEdge`. After the loop, `await RisingEdge`, so
+    the deassert and the next-state writes are in the active phase.
+  VALID channels (B / R): assert valid and data (active phase). Poll for ready the same way (like
+    the BFM, starting at the current ReadOnly). After the loop, `await RisingEdge` before
+    deasserting valid.
+  Multi-beat R loop: between beats the code is in ReadOnly context. So each new beat first does
+    `await RisingEdge`, then drives rdata / rvalid / rlast. For beat 0 this costs one idle cycle.
+Doc: tm:suite:soc-axi4-slave-model
 """
 
 import cocotb

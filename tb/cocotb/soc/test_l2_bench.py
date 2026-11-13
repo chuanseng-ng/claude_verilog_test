@@ -1,50 +1,24 @@
 """
-test_l2_bench.py — Phase 5 M10 L2-cache decision benchmark harness.
+test_l2_bench.py -- Phase 5 M10 L2-cache decision benchmark harness.
 
-Loads bare-metal C benchmarks (hello / sweep / matmul) onto the full SoC,
-runs each to EBREAK, backdoor-reads the multi-slot perf-counter scratch
-region, and prints miss-rate tables that directly feed the A4 L2 go/no-go
-document.
-
-Testbench DUT: tb_soc_top (same as all M9 tests), instantiated with
-    SRAM_MEM_WORDS = 65536  (256 KB window 0x2000..0x42000)
-so the benchmarks' 64 KB sweep buffer + 27 KB matmul matrices fit without
-aliasing.
-
-Firmware contract (mirrored from sw/bench/bench.h and README.md):
-
-  ROM: trampoline.hex  → backdoor-loaded into u_soc.u_boot_rom.mem
-  SRAM: <prog>.hex     → backdoor-loaded into the SoC SRAM array
-                          (sram_backdoor.sram_mem) starting at word index 0 (byte 0x2000)
-
-  Scratch region SRAM word index:
-      BENCH_SCRATCH_BASE_WI = (0x41C00 - 0x2000) / 4 = 0x7F00
-      Word[0x7F00]       = N  (record count)
-      Word[0x7F01 + k*8] = slot k word 0  (BENCH_MAGIC | id)
-      ...
-      Word[0x7F01 + k*8 + 7] = slot k word 7  (pad)
-
-  Slot layout (8 words):
-      [0] BENCH_MAGIC | (id & 0xFF)
-      [1] checksum
-      [2] Δcycles
-      [3] Δinstret
-      [4] ΔI$-miss
-      [5] ΔD$-miss
-      [6] Δbranch-miss
-      [7] 0 (pad)
-
-Sweep ID encoding (from sweep.c):
-    bits [7:5]  size_idx  → SIZE_STEPS[size_idx] bytes
-    bit  [4]    pattern   → 0 = SEQ, 1 = STRIDE
-    bits [3:0]  reserved / zero
-
-    SIZE_STEPS: [512, 1024, 2048, 4096, 8192, 16384, 32768]  (7 entries; 65536 removed)
-
-Matmul ID: 0x01 (single record).
-
-__result cross-check: crt0.S parks main()'s return value in a0 before
-EBREAK; the sym file maps __result to the SRAM word at its address.
+Loads bare-metal C benchmarks (hello / sweep / matmul) onto the full SoC, runs each to EBREAK,
+backdoor-reads the multi-slot perf-counter scratch region and prints miss-rate tables that feed the
+A4 L2 go/no-go document.
+DUT: tb_soc_top with SRAM_MEM_WORDS = 65536 (256 KB window 0x2000..0x42000), so the 64 KB sweep
+buffer and the 27 KB matmul matrices fit without aliasing.
+Firmware contract (mirrored from sw/bench/bench.h and README.md): ROM = trampoline.hex,
+backdoor-loaded into u_soc.u_boot_rom.mem. SRAM = <prog>.hex, backdoor-loaded
+(sram_backdoor.sram_mem) from word index 0 (byte 0x2000).
+Scratch region (SRAM word index): BENCH_SCRATCH_BASE_WI = (0x41C00 - 0x2000) / 4 = 0x7F00.
+Word[0x7F00] = N (record count). Slot k starts at Word[0x7F01 + k*8] and has 8 words: [0]
+BENCH_MAGIC | (id & 0xFF), [1] checksum, [2] delta cycles, [3] delta instret, [4] delta I$-miss, [5]
+delta D$-miss, [6] delta branch-miss, [7] 0 (pad). Sweep ID (from sweep.c): bits [7:5] size_idx
+-> SIZE_STEPS[size_idx] bytes, bit [4] pattern (0 SEQ, 1 STRIDE), bits [3:0] zero. SIZE_STEPS =
+[512, 1024, 2048, 4096, 8192, 16384, 32768] (7 entries). Matmul ID: 0x01. __result cross-check:
+crt0.S parks main()'s return value in a0 before EBREAK; the sym file maps __result to the SRAM word
+at its address.
+Run: make -C tb/cocotb/soc l2_bench
+Doc: tm:suite:soc-test-l2-bench
 """
 
 import sys
@@ -67,7 +41,7 @@ _BENCH_BUILD = _ROOT / "sw" / "bench" / "build"
 _TRAMPOLINE_HEX = _BENCH_BUILD / "trampoline.hex"
 
 # ── SoC constants ─────────────────────────────────────────────────────────────
-CLK_PERIOD_NS = 2                   # 500 MHz — matches all other SoC tests
+CLK_PERIOD_NS = 2                   # matches all other SoC tests
 SRAM_BASE_ADDR = 0x2000             # byte address of SRAM word index 0
 
 # Scratch region: SRAM word index of BENCH_SCRATCH_ADDR (0x41C00)

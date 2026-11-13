@@ -1,5 +1,5 @@
 // tb_apb_cdc_bridge.sv
-// GH #93 — standalone cocotb test wrapper for the APB4 clock-domain-crossing
+// standalone cocotb test wrapper for the APB4 clock-domain-crossing
 // bridge (rtl/soc/apb_cdc_bridge.sv).
 //
 // Directly instantiates apb_cdc_bridge and re-exports both faces as flat
@@ -72,7 +72,7 @@ module tb_apb_cdc_bridge #(
     ) u_dut (
         // DFT scan bypass tied inert — this TB exercises functional CDC
         // behaviour only; scan-mux behaviour is covered by
-        // tb_cdc_reset_sync_scan.sv (bead claude_verilog_test-07n).
+        // tb_cdc_reset_sync_scan.sv.
         .scanmode_i  (1'b0),
         .scan_rst_ni (1'b1),
 

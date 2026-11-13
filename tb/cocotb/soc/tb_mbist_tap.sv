@@ -1,5 +1,5 @@
 // tb_mbist_tap.sv
-// DFT Stage 4 (beads claude_verilog_test-j41m.14 / j41m.10): the TAP-driven MBIST path end to end, i.e. the
+// DFT Stage 4: the TAP-driven MBIST path end to end, i.e. the
 // soc_top wiring without the rest of the SoC:
 //
 //   dft_ctrl (jtag_tap + pin leg)  --MBIST_CTRL/STATUS-->  soc_mbist (CPU_PRESENT = 1)

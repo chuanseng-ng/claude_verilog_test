@@ -62,7 +62,7 @@ async def _write_with_id(dut, addr, data, axid, strb=0xF):
     Timing: drives AW and polls awready; then drives W and polls wready; then
     collects B-channel response.
 
-    GH #104 fix (fr_null_20260724_051800_00) hardening: every poll now checks
+    Hardening: every poll now checks
     its ready/valid signal via `await ReadOnly()` **before** advancing to a
     new `RisingEdge` -- the same check-then-advance order the AXI4Master BFM
     uses (`await ReadOnly(); if ready: break; await edge()`), NOT
@@ -125,8 +125,7 @@ async def _read_with_id(dut, addr, axid):
     """Manual single-beat read that drives a non-zero ARID. Returns (data, rresp, rid).
 
     See _write_with_id's docstring for why every poll below checks via
-    ReadOnly() *before* advancing to a new RisingEdge (GH #104
-    fr_null_20260724_051800_00 hardening).
+    ReadOnly() *before* advancing to a new RisingEdge (hardening).
     """
     # AR channel
     dut.s_arid.value    = axid
@@ -431,7 +430,7 @@ async def test_burst_crosses_limit_slverr(dut):
 
 
 # ── Test 8: R-channel backpressure — no dropped/duplicated/early beats ───────
-# GH #104 Sky130 SoC Stage-2: added to close the one gap the existing suite
+# Sky130 SoC Stage-2: added to close the one gap the existing suite
 # left uncovered for the SRAM_SKY130 rework -- the AXI4Master BFM's read()
 # only supports a single `ready_delay` *before* the burst starts, never
 # toggles RREADY *within* a burst.  That leaves the read FSM's single-entry
@@ -538,7 +537,7 @@ async def test_read_backpressure_no_drop_no_dup(dut):
 
 
 # ── Test 9: read-after-write to the same address, back-to-back (no gap) ─────
-# Highest-risk scenario for the SRAM_SKY130 rework per GH #104: a read issued
+# Highest-risk scenario for the SRAM_SKY130 rework: a read issued
 # immediately after the write that produced its data, with zero idle cycles
 # in between, must observe the write.  This is where a stale-macro-latency
 # assumption (e.g. treating the write as visible 0 cycles after WLAST instead
@@ -571,7 +570,7 @@ async def test_read_after_write_no_gap(dut):
 
 # ── Test 11: burst-read throughput -- 1 beat/cycle once primed, no every-  ──
 # ── other-cycle degradation from the SRAM_SKY130 skid-buffer pipeline    ──
-# GH #104 fr_null_20260724_051800_00 fix review: the RTL fix adds pipeline
+# Fix review: the RTL fix adds pipeline
 # depth (rd_pend_q stage + 2-entry output skid buffer) to correct the
 # read-latency bug. The RTL orchestrator's claim is that steady-state
 # continuous-RREADY throughput is UNCHANGED at 1 beat/cycle once the pipeline
@@ -579,9 +578,9 @@ async def test_read_after_write_no_gap(dut):
 # does not take that on faith -- it manually drives an 8-beat INCR burst with
 # RREADY held high throughout and records the simulation time of every beat,
 # then asserts every inter-beat gap AFTER the first beat is exactly one clock
-# period (2 ns / 1 cycle). A degraded implementation (e.g. one that
+# period (1 cycle). A degraded implementation (e.g. one that
 # accidentally gates issuance on the full buffer being empty, rather than on
-# just slot 1 having room) would show every-other-cycle (4 ns) gaps instead
+# just slot 1 having room) would show every-other-cycle (2-cycle) gaps instead
 # once the buffer's second slot is needed for the skid function.
 
 @cocotb.test()
@@ -620,7 +619,7 @@ async def test_burst_read_throughput_1_beat_per_cycle(dut):
     # Check-before-advance (ReadOnly() first, THEN RisingEdge): this loop makes
     # no assumption about how many cycles elapse between the AR-accept edge
     # and the first RVALID -- burst-start latency is an implementation detail
-    # of the read FSM, not a protocol guarantee (bead ydw, 2026-09-17:
+    # of the read FSM, not a protocol guarantee (for example,
     # registering the flat array's read mux raised the default build's
     # burst-start latency from 1 cycle to 2; SRAM_SKY130 pays 3 for its own,
     # unrelated, macro-latency reason -- see sram_controller.sv's read-FSM
@@ -665,7 +664,7 @@ async def test_burst_read_throughput_1_beat_per_cycle(dut):
 
 
 # ── Test 12: FIXED burst read -- address never advances ─────────────────────
-# bead ydw follow-up (verification-orchestrator targeted-coverage task): every
+# Every
 # prior burst test uses BURST_INCR only. AXI_BURST_FIXED (2'b00) is a
 # supported burst type per both the write and read FSMs (`w_incr`/`r_incr`
 # gate the index increment on `s_awburst`/`s_arburst == AXI_BURST_INCR`) and
@@ -934,7 +933,7 @@ async def test_read_backpressure_random(dut):
 
 
 # ── Test 16: BVALID must never precede the write's actual landing in mem[] ──
-# bead rvb targeted coverage (verification-orchestrator, full regression task):
+# Targeted coverage:
 # pins the write pipeline's central ordering guarantee as a regression, not
 # just a design-review claim.
 #
@@ -949,7 +948,7 @@ async def test_read_backpressure_random(dut):
 #     timing from a "skip W_DRAIN, assert BVALID immediately" mutation for
 #     this particular design, because of a coincidence of latencies --
 #     worked out below -- so the whitebox check is what actually makes the
-#     bead rvb mutation check ("mutate B to skip W_DRAIN... confirm test (a)
+#     mutation check ("mutate B to skip W_DRAIN... confirm test (a)
 #     fails") meaningful. It is skipped (not failed) on the SRAM_SKY130
 #     build, where `mem` does not exist as a flat array and where the
 #     property does not apply in the same form (that FSM never enters
@@ -1106,7 +1105,7 @@ async def test_bvalid_never_precedes_write_landing(dut):
 
 # ── Test 17: write burst crossing the GROUP_WORDS boundary and the ──────────
 # ── MEM_WORDS wraparound, both with per-beat partial WSTRB ──────────────────
-# bead rvb targeted coverage: the stage-2 write pipeline splits MEM_WORDS
+# Targeted coverage: the stage-2 write pipeline splits MEM_WORDS
 # into NGROUPS groups of GROUP_WORDS=32 words, each with its own
 # grp_we_q/grp_wdata_q registers (sram_controller.sv). A burst whose beats
 # land in two different groups is the one scenario that could expose a
@@ -1187,7 +1186,7 @@ async def test_write_burst_group_and_wrap_boundary_partial_strb(dut):
 
 # ── Test 18: back-to-back write bursts, no idle gap, interleaved with a ─────
 # ── concurrent read on an unrelated address ──────────────────────────────────
-# bead rvb targeted coverage: the write and read FSMs are fully independent
+# Targeted coverage: the write and read FSMs are fully independent
 # (disjoint AW/W/B vs AR/R signal groups), and the write pipeline's own
 # throughput is governed by the W_IDLE <- W_RESP <- W_DRAIN chain -- this
 # test drives two write bursts back-to-back (zero added idle cycles, same
@@ -1234,7 +1233,7 @@ async def test_back_to_back_write_bursts_with_interleaved_read(dut):
 
 
 # ── Test 19: SLVERR write burst writes nothing, B arrives correctly ─────────
-# bead rvb targeted coverage: BRESP-SLVERR is driven directly off w_err
+# Targeted coverage: BRESP-SLVERR is driven directly off w_err
 # (combinational, unaffected by the write pipeline), but the stage-1 write
 # pipeline is ALSO gated by `!w_err` (wr_valid1_q <= beat_accept && !w_err,
 # sram_controller.sv) -- an independent gate that could regress separately
@@ -1273,7 +1272,7 @@ async def test_slverr_write_burst_writes_nothing(dut):
 
 
 # ── Test 20: WVALID gaps within a burst (non-contiguous beats) ──────────────
-# bead rvb targeted coverage: every prior write-burst test drives WVALID
+# Targeted coverage: every prior write-burst test drives WVALID
 # contiguously across all beats. WREADY is unconditional in W_DATA (never
 # gated on the write pipeline's own occupancy), so the FSM must simply wait
 # for WVALID rather than assume back-to-back beats -- this was never
@@ -1301,7 +1300,7 @@ async def test_write_burst_wvalid_gaps(dut):
     dut._log.info("test_write_burst_wvalid_gaps PASS")
 
 
-# ── bead ej6j: WRAP bursts are rejected (SLVERR), FIXED/INCR are not ─────────
+# ── WRAP bursts are rejected (SLVERR), FIXED/INCR are not ─────────
 #
 # Header of sram_controller.sv: "INCR and FIXED bursts supported; WRAP / out-of-range -> SLVERR".
 # FIXED is covered above; the WRAP rejection (`s_awburst == AXI_BURST_WRAP` -> w_err / r_err) never ran.

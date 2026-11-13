@@ -1,31 +1,25 @@
 """
-CSR-file access coverage for rv32i_cpu_top (bead a5ze, Zicsr / Phase 5 M7).
+CSR-file access coverage for rv32i_cpu_top (Zicsr).
 
 Every test runs a generated CSR instruction sequence on the DUT and compares each rd with the
-expected value from tb/models/csr_model.py, which is written from the project spec
-(Doc: ds:ch:phase2-architecture 4.2, PHASE5 M7 counter map), not from the RTL.  The
-GPR results are read back through the APB debug window, so no internal signal is touched.
+expected value from tb/models/csr_model.py. The model comes from the project spec, not from the
+RTL (Doc: ds:ch:phase2-architecture, and the Phase 5 counter map). GPR results are read back
+through the APB debug window, so no internal signal is touched.
 
-  test_mstatus_all_ops              CSRRW/RS/RC and the three immediate forms on mstatus, incl.
-                                    the rs1==x0 / uimm==0 write suppression and WARL masking
-  test_mie_mtvec_mepc_mcause_ops    the same op matrix on mie, mtvec (MODE forced to 0), mepc,
-                                    mcause, mcountinhibit (bit 1 and bits [31:6] read 0)
-  test_id_mip_and_readonly_csrs     mvendorid/marchid/mimpid/mhartid read values, mip following
-                                    timer_irq_i / ext_irq_i, writes to read-only CSRs ignored,
-                                    0x7C0 / 0x7C1 read back 0
-  test_counter_words_frozen         mcycle[h], minstret[h], mhpmcounter3-5 written and read back
-                                    with every op while mcountinhibit freezes them
-  test_counter_carry_into_high_word mcycle / minstret low-word wrap carries into the high word
-  test_dcache_flush_op_forms        0x7C0 fires only for non-suppressed forms (observed as a
-                                    write-back reaching the AXI memory)
-  test_dcache_inval_op_forms        0x7C1 likewise (observed as a dirty line being discarded)
-  test_mcycle_counts_every_clock_cycle           mcycle vs the testbench clock count (kiit)
-  test_counters_match_cycle_model_random         per-cycle counter state vs CsrModel.tick() over
-                                                 random programs with events coinciding with CSRs
-  test_counter_carry_vs_write_alignment          low/high-word carry against a write to the other
-                                                 half, swept over the alignment
-  test_counters_through_trap_and_mret            counters keep counting in trap-entry / MRET cycles
-  test_minstret_matches_retirements_between_reads  minstret delta == retire strobes between reads
+  mstatus, mie, mtvec (MODE forced to 0), mepc, mcause, mcountinhibit (bit 1 and bits [31:6]
+      read 0):
+      CSRRW/RS/RC and the three immediate forms, rs1==x0 / uimm==0 write suppression, WARL masking
+  id, mip and read-only CSRs: mvendorid/marchid/mimpid/mhartid values, mip follows timer_irq_i
+      and ext_irq_i, writes to read-only CSRs ignored, 0x7C0 / 0x7C1 read back 0
+  counters: mcycle[h], minstret[h], mhpmcounter3-5 written and read back with every op while
+      mcountinhibit freezes them; low-word wrap carries into the high word
+  0x7C0 / 0x7C1: fire only for non-suppressed forms (seen as a write-back to the AXI memory, and
+      as a dirty line being discarded)
+  mcycle against the testbench clock count; per-cycle counter state against CsrModel.tick() over
+      random programs; carry against a write to the other half, swept over the alignment;
+      counters keep counting in trap-entry and MRET cycles; minstret delta == retire strobes
+Run: make -C tb/cocotb/cpu MODULE=test_csr_access
+Doc: tm:suite:cpu-test-csr-access
 """
 
 import random
@@ -435,7 +429,7 @@ async def test_dcache_inval_op_forms(dut):
 
 
 # ---------------------------------------------------------------------------
-# Counter accuracy against the testbench's own cycle count (bead a5ze slice 2)
+# Counter accuracy against the testbench's own cycle count
 # ---------------------------------------------------------------------------
 N_FILLER = 8  # back-to-back legal CSR reads between the two counter samples
 CSR_PC_A, CSR_PC_M = 0x04, 0x08  # first mcycle / minstret sample (loop body start)
@@ -482,10 +476,9 @@ async def _sample_counters(dut, mem, dbg, filler_csr: int = CSR_MIMPID):
     return d_cycle, tb_cycles, d_inst, tb_commits
 
 
-# Regression test for bead kiit / GH #260 (was a strict expect_fail until the fix): the counters sat
-# in the else of "if (csr_access && !csr_illegal)", so every cycle a legal CSR instruction was in EX
-# dropped ALL increments.  Measured before the fix: 20 counted over 30 real cycles in a window of
-# 10 CSR instructions.  The +-1 tolerance below must not be widened.
+# Regression test: the counters sat in the else of "if (csr_access && !csr_illegal)", so every cycle
+#   a legal CSR instruction was in EX dropped ALL increments. The +-1 tolerance below must not be
+#   widened.
 @cocotb.test()
 async def test_mcycle_counts_every_clock_cycle(dut):
     """mcycle is a cycle counter: across a CSR-heavy window it must advance by the number of
@@ -578,7 +571,7 @@ class CounterMonitor:
         self.dut = dut
         self.csr = dut.u_core.u_csr
         # Program-order index of every CSR instruction that executes, in order (arch_csr_seqs()).
-        # Only a write to minstret / minstreth needs it (bead f7z3: the model must know which
+        # Only a write to minstret / minstreth needs it (the model must know which
         # older instructions are still in flight when the write executes).
         self.csr_seqs = list(csr_seqs) if csr_seqs is not None else None
         self.csr_done = 0  # CSR instructions that have left EX so far

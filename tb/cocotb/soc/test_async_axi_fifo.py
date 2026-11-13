@@ -1,35 +1,26 @@
 """
-test_async_axi_fifo.py — GH #91 cocotb verification for the dual-clock AXI4
-CDC bridge (rtl/soc/async_axi_fifo.sv), via the standalone wrapper
-tb_async_axi_fifo.sv.
+test_async_axi_fifo.py -- cocotb verification for the dual-clock AXI4 CDC bridge
+(rtl/soc/async_axi_fifo.sv), via the standalone wrapper tb_async_axi_fifo.sv.
 
-DUT: tb_async_axi_fifo (re-exports async_axi_fifo's s_*/m_* faces as flat
-top-level ports, BFM naming convention, no _i/_o suffix).
-
+DUT: tb_async_axi_fifo (the s_* and m_* faces as flat top-level ports, BFM naming, no _i/_o suffix).
 s_* face = CPU domain, AXI SLAVE port -> AXI4Master(dut, "s", dut.s_clk).
 m_* face = fabric domain, AXI MASTER port -> AXI4SlaveModel(dut, "m", dut.m_clk).
-Both faces are ID-LESS on the RTL; m_awid/m_arid/m_bid/m_rid are wrapper-only
-shim nets (see tb_async_axi_fifo.sv header) so axi4_slave_model.py's
-unconditional id touches have somewhere to land.
+Both faces are ID-LESS in the RTL. m_awid / m_arid / m_bid / m_rid are wrapper-only shim nets (see
+the tb_async_axi_fifo.sv header), so the unconditional id touches of axi4_slave_model.py have
+somewhere to land.
 
-**Two-Clock() mechanic** (a first for this repo, see the GH #91 plan): both
-s_clk and m_clk are true top-level input ports written via VPI, so two
-independent `Clock()` coroutines free-run with no HDL-internal timing
-involved (`--no-timing` in the Makefile disables only HDL specify/intra-
-assignment delays, not testbench-side Clock()/Timer()/RisingEdge()). cocotb
-+ Verilator has no ReadWrite() — every driving loop below follows the same
-RisingEdge-then-ReadOnly discipline as axi4_slave_model.py (never write a
-signal from a ReadOnly context).
-
-Every test is wrapped in `with_timeout(..., 50, "us")` (extended for the
-one intentionally long stress test) so a real CDC deadlock fails the test
-instead of hanging the whole `soc_all` regression.
-
-Clock pairs exercised across this suite (ns): 4/9 and 9/4 (~2.25 ratio,
-closest proxy for the real CPU:fabric ~1282:571 MHz split), 4/20 and 20/4
-(wide ratio), 10/10 (the PLL_IMPL="STUB" equal-clock case), 10/11 (coprime —
-edges slide continuously, the closest sim proxy for a violation-window
-sweep).
+**Two-Clock() mechanic**: s_clk and m_clk are top-level input ports written via VPI, so two
+independent `Clock()` coroutines free-run with no HDL-internal timing (`--no-timing` disables only
+HDL specify and intra-assignment delays, not testbench Clock()/Timer()/RisingEdge()). cocotb +
+Verilator has no ReadWrite(). Every driving loop follows the RisingEdge-then-ReadOnly rule of
+axi4_slave_model.py: never write a signal from a ReadOnly context.
+Every test runs under `with_timeout(..., 50, "us")` (longer for the one long stress test), so a CDC
+deadlock fails the test, not the whole `soc_all` regression.
+Clock pairs (s_clk/m_clk periods in ns): 4/9 and 9/4 (~2.25 ratio, the closest proxy for the real
+CPU:fabric split), 4/20 and 20/4 (wide), 10/10 (the PLL_IMPL="STUB" equal-clock case), 10/11
+(coprime: edges slide continuously, the closest sim proxy for a violation-window sweep).
+Run: make -C tb/cocotb/soc async_axi_fifo
+Doc: tm:suite:soc-test-async-axi-fifo
 """
 
 from types import SimpleNamespace
@@ -93,7 +84,7 @@ async def _setup(dut, s_ns, m_ns, m_mem=None, start_slave_loops=True,
     dut.m_rst_n.value = 0
     # A real-time hold (not clock-edge-counted) so it is correct regardless
     # of the s/m period ratio under test — always >> SYNC_STAGES(2)+1
-    # periods of the slower clock in this suite's matrix (max period 20 ns).
+    # periods of the slower clock in this suite's matrix (max period 20, in ns).
     await Timer(RESET_HOLD_NS, units="ns")
     dut.s_rst_n.value = 1
     dut.m_rst_n.value = 1
@@ -288,7 +279,7 @@ async def _count_handshakes_bg(clock, vsig, rsig, counter: _HandshakeCounter) ->
 
     This exists so "all N transactions have completed" can be gated on an
     explicit count of real handshakes rather than on a momentary snapshot of
-    idle-looking control signals (bead claude_verilog_test-5ej): a
+    idle-looking control signals: a
     sequentially-processed multi-beat drain can present a genuinely idle
     snapshot (VALID deasserted) in the GAP between two completions while
     further completions are still in flight, so "not VALID right now" is not
@@ -299,7 +290,7 @@ async def _count_handshakes_bg(clock, vsig, rsig, counter: _HandshakeCounter) ->
     condition (`count == expected`) can only become true once every
     expected handshake has truly occurred, regardless of how many idle gaps
     preceded it.
-    LIMITATION -- release writes must be synchronised to THIS clock (bead `nan`).
+    LIMITATION -- release writes must be synchronised to THIS clock.
     This counter samples at ReadOnly on each `clock` rising edge. If a test releases
     backpressure (e.g. `dut.s_bready.value = 1`) from a point that is asynchronous to
     `clock` -- typically right after an edge of the OTHER domain's clock -- and the
@@ -312,7 +303,7 @@ async def _count_handshakes_bg(clock, vsig, rsig, counter: _HandshakeCounter) ->
     This only becomes a hard stall when `clock` is SLOW relative to the other domain
     and the workload has zero slack (exact saturation): a fast `clock` self-corrects,
     because its rapid follow-up edges recover the miscount before the target is
-    exhausted. That is why bead `nan`'s sweep saw it only at reversed clock ratios.
+    exhausted. That is why a clock-ratio sweep saw it only at reversed clock ratios.
     The committed suite does not hit this -- its reversed-ratio tests use light
     round-trip workloads and the saturation test runs at 10/10 -- so this is latent,
     not active.
@@ -360,7 +351,7 @@ async def test_reset_defaults(dut):
 # --- 2. single 4-beat write+read (GATE test) --------------------------------
 
 async def _single_write_read_4beat_body(dut):
-    # 4/9 ns: the real ~2.25 CPU:fabric ratio — the gate test proves the
+    # 4/9: the real ~2.25 CPU:fabric ratio — the gate test proves the
     # two-Clock() mechanic on a genuine non-trivial ratio, not just 1:1.
     ctx = await _setup(dut, 4, 9)
     data_words = [0xAAAA0000, 0xBBBB1111, 0xCCCC2222, 0xDDDD3333]
@@ -572,7 +563,7 @@ async def _reset_while_busy_s_side_body(dut):
     master had in flight is discarded, and the bridge recovers cleanly for
     genuinely NEW transactions afterward.
 
-    Kill-timing note (fixed 2026-08-01, alongside the cdc_gray_fifo
+    Kill-timing note (fixed alongside the cdc_gray_fifo
     wr_ready_o reset-gating fix, commit 7a9f9d4): the interrupted master
     task is killed AT reset assertion, not after release+settling. A real
     AXI master is itself part of the domain this reset covers, so its own
@@ -742,7 +733,7 @@ async def test_clock_ratio_equal(dut):
 @cocotb.test()
 async def test_clock_ratio_coprime_phase_drift(dut):
     # >= 200 total AXI transactions (100 write + 100 read) at a coprime
-    # 10/11 ns pair -- edges slide continuously across the entire run,
+    # 10/11 pair -- edges slide continuously across the entire run,
     # the closest sim proxy for a real metastability-window sweep.
     await with_timeout(_ratio_sweep_workload(dut, 10, 11, n=100), 50, "us")
 
@@ -864,8 +855,7 @@ async def _no_deadlock_all_fifos_full_body(dut):
     dut.s_bready.value = 0
     dut.s_rready.value = 0
 
-    # Explicit handshake-based completion tracking (bead
-    # claude_verilog_test-5ej fix). Started before any stimulus so every B/R
+    # Explicit handshake-based completion tracking. Started before any stimulus so every B/R
     # completion is counted regardless of when s_bready/s_rready happen to
     # be raised. See _count_handshakes_bg for why a running count, not an
     # idle-signal snapshot, is the correct way to know "all N transactions
@@ -915,7 +905,7 @@ async def _no_deadlock_all_fifos_full_body(dut):
     # permanent wedge after release would be a real deadlock, and the
     # outer with_timeout(50us) is the ultimate detector for that.
     #
-    # bead claude_verilog_test-5ej: completion is gated on the explicit B/R
+    # Completion is gated on the explicit B/R
     # handshake COUNTS reaching their expected totals, NOT on a one-shot
     # snapshot of "everything looks idle right now". A sequentially-
     # processed drain of aw_depth/ar_depth queued transactions has real idle
@@ -951,7 +941,7 @@ async def _no_deadlock_all_fifos_full_body(dut):
         f"no-deadlock-all-full OK: saturated (wr pushes={n_wr}, rd pushes={n_rd}) then fully drained with no wedge"
     )
 
-    # Per-beat write-data integrity check (bead claude_verilog_test-5ej):
+    # Per-beat write-data integrity check:
     # this is the check that originally exposed the settle-timing race, and
     # it is kept permanently -- it is the only thing in this test (or
     # anywhere else in the suite) that verifies EVERY pushed write actually
@@ -1043,7 +1033,7 @@ async def test_no_combinational_crossing(dut):
 # --- 21. latency budget ---------------------------------------------------------
 
 async def _latency_budget_body(dut):
-    # s_clk=4ns / m_clk=9ns: the real ~2.25 CPU:fabric ratio (GH #93's
+    # s_clk period 4 / m_clk period 9: the real ~2.25 CPU:fabric ratio (the
     # eventual integration case), so this number is a usable budget input.
     ctx = await _setup(dut, 4, 9)
 
@@ -1066,7 +1056,7 @@ async def _latency_budget_body(dut):
     )
 
     # Loose sanity bound only (NOT a spec number): a single-beat round trip
-    # should not take more than ~50 slow-domain (9 ns) periods even with
+    # should not take more than ~50 slow-domain (period 9) periods even with
     # SYNC_STAGES=2 crossings on both legs of each of the 2 channels
     # involved (AW+W+B for the write, AR+R for the read).
     loose_bound_ns = 50 * 9
@@ -1115,21 +1105,21 @@ async def test_white_box_gray_pointer_single_bit_change(dut):
 
 
 # =============================================================================
-# GH #95 (Group A): reset-asymmetry test class.
+# Reset-asymmetry test class.
 #
 # design_state.json's gh93_cdc_verification record documents that BOTH RTL
-# bugs GH #93 found (commit 4398c2e -- soc_top.sv's cpu_gated_clk stopped
+# bugs found (soc_top.sv's cpu_gated_clk stopped
 # during the CPU's own reset window; commit 7a9f9d4 -- this module's
 # cdc_gray_fifo.sv wr_ready_o not gated by wr_rst_n_i) shared one root
 # signature: a reset value that advertises availability while cross-domain
 # readiness has not actually been established -- invisible whenever both
-# domains release reset together, which was every scenario before GH #93's
+# domains release reset together, which was every scenario before the
 # genuinely divergent-ratio SoC boot ever ran.
 #
 # async_axi_fifo.sv's reset strategy is "hard flush, common root": BOTH
 # s_rst_n_i and m_rst_n_i feed rst_both_n = s_rst_n_i & m_rst_n_i, which
 # feeds BOTH per-domain cdc_reset_sync instances (see async_axi_fifo.sv
-# header -- this is NOT decoupled the way apb_cdc_bridge's post-#93 fix is;
+# header -- this is NOT decoupled the way apb_cdc_bridge's asymmetric fix is;
 # see that file's tests below for the asymmetric case). Consequence: holding
 # EITHER physical reset input low holds BOTH domains' internal synchronised
 # resets (s_rst_sync_n AND m_rst_sync_n) low, regardless of which physical
@@ -1341,7 +1331,7 @@ async def _reset_asym_staggered_body(dut, s_ns, m_ns, order) -> None:
 async def test_reset_asym_staggered_s_then_m_coprime(dut):
     # s (CPU domain proxy) releases first, m held -- the exact ordering that
     # exposed fr_280f3ac18c66 at the SoC level -- swept over 3 stagger
-    # windows at a coprime 10ns/11ns ratio.
+    # windows at a coprime 10/11 ratio.
     await with_timeout(_reset_asym_staggered_body(dut, 10, 11, order="s_first"), 100, "us")
 
 
@@ -1351,7 +1341,7 @@ async def test_reset_asym_staggered_m_then_s_coprime(dut):
     await with_timeout(_reset_asym_staggered_body(dut, 10, 11, order="m_first"), 100, "us")
 
 
-# --- bead ej6j: error responses must cross the CDC intact ---------------------
+# --- error responses must cross the CDC intact ---------------------
 
 async def _error_response_crossing_body(dut, s_ns, m_ns):
     """Every other test here has an always-OKAY fabric slave, so s_bresp/s_rresp could never leave

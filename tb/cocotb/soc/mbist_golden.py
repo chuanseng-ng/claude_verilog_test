@@ -1,6 +1,7 @@
 """
 mbist_golden.py -- independent Python golden model of the MBIST algorithms and of the fault semantics of
-tb/cocotb/soc/sram_fi_core.sv (bead claude_verilog_test-j41m.14, Doc: tm:ch:dft-architecture:162-algorithms-encoding-and-architecture-decision).
+tb/cocotb/soc/sram_fi_core.sv (Doc:
+    tm:ch:dft-architecture:162-algorithms-encoding-and-architecture-decision).
 
 The algorithm element lists below are written from the algorithm DEFINITIONS in section 16.2 (March C-,
 retention, checkerboard + March C-, byte lane), NOT read from the RTL microcode ROM. A suite that compared

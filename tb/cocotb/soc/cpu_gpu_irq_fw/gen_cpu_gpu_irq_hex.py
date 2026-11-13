@@ -1,69 +1,27 @@
 #!/usr/bin/env python3
 """
-gen_cpu_gpu_irq_hex.py — generate cpu_gpu_irq_fw.hex + cpu_gpu_irq_kernel.hex
-for the M9 interrupt-driven CPU-GPU integration test (bead claude_verilog_test-ov2).
+gen_cpu_gpu_irq_hex.py -- generate cpu_gpu_irq_fw.hex and cpu_gpu_irq_kernel.hex for the M9
+interrupt-driven CPU-GPU integration test.
 
-This is the IRQ-driven counterpart to test_soc_coherency.py.  The key difference:
-instead of busy-polling GPU_STATUS[1], the CPU enables the GPU interrupt (MEIP via
-interrupt_controller[4]) and waits in a bounded spin loop until the ISR fires.
+The IRQ-driven counterpart of test_soc_coherency.py. The CPU does not poll GPU_STATUS[1]. It enables
+the GPU interrupt (MEIP via interrupt_controller[4]) and waits in a bounded spin loop for the ISR.
+IRQ path: gpu_top.gpu_irq_o -> interrupt_controller.irq_src_i[4] -> ext_irq ->
+    rv32i_cpu_top.ext_irq_i
+-> mip[11] (MEIP) -> trap with mcause = 0x8000_000B, jump to mtvec.
 
-IRQ wiring path (confirmed from soc_top.sv):
-  gpu_top.gpu_irq_o
-    → soc_top local signal gpu_irq_o (also exposed at top port)
-    → interrupt_controller.irq_src_i[4]   (bit 4 = GPU slot)
-    → interrupt_controller.irq_o = ext_irq  (OR of masked sources)
-    → rv32i_cpu_top.ext_irq_i
-    → rv32i_csr_file.ext_irq_i → mip[11] (MEIP)
-    → rv32i_interrupt_ctrl: irq_valid = mstatus_mie & mie_meie & ext_irq_i
-    → trap entry: mepc = PC after interrupt, mcause = 0x8000_000B, jump mtvec
+CPU firmware: INIT, MTVEC (ISR at ROM_BASE+ISR_OFFSET), IRQEN (MEIE in mie, MIE in mstatus, IRQ_MASK
+= 0x10 for GPU bit 4), SRC_WRITE (8 words, dirty in D-cache), FLUSH1, KWRITE (kernel image), FLUSH2,
+LAUNCH (CTRL = 0x05 = irq_en | launch), WFI_LOOP (spin up to POLL_LIMIT on the isr_ran flag, else
+FAIL), POST_ISR (isr_ran != 0, the teeth check), INVAL, VERIFY (each dst word == src+1), PASS or
+FAIL (EBREAK). Each flush or invalidate is CSRW 0x7C0 or 0x7C1 plus a 2048-iteration spin.
+ISR: read IRQ_PENDING_MASKED (irq_ctrl +0x08) to confirm the GPU bit, write 1 to GPU_IRQ_CLR (GPU
++0x028), write 1 to ISR_FLAG_ADDR (SRAM word 200), MRET.
 
-CPU firmware sequence
-──────────────────────────────────────────────────────────────────────────────
-  INIT       Materialise base registers.
-  MTVEC      Install ISR at ROM_BASE+ISR_OFFSET, set mtvec.
-  IRQEN      Enable MEIE in mie (CSR 0x304), enable MIE in mstatus (CSR 0x300).
-             Write 0x10 to IRQ_MASK (offset 0x04 of irq_ctrl AXI-Lite slave)
-             to enable GPU IRQ source (bit 4).
-  SRC_WRITE  Write 8 source words to SRAM[SRC_BASE..+28] (dirty in D-cache).
-  FLUSH1     CSRW 0x7C0 (dcache_flush) + spin 2048 iters.
-  KWRITE     Write GPU kernel image to SRAM[KERNEL_PC..].
-  FLUSH2     CSRW 0x7C0 + spin 2048 iters.
-  LAUNCH     Program GPU ctrl regs (KERNEL_PC, GRID, BLOCK, CTRL=0x05=irq_en|launch).
-  WFI_LOOP   Spin up to POLL_LIMIT cycles checking isr_ran flag at ISR_FLAG_ADDR.
-             The ISR sets this flag and clears gpu_irq via GPU_IRQ_CLR.
-             If the flag is not set within POLL_LIMIT, firmware jumps to FAIL.
-  POST_ISR   Assert ISR actually ran (teeth check: isr_ran != 0).
-  INVAL      CSRW 0x7C1 (dcache_inval) + spin 2048 iters.
-  VERIFY     Read 8 dst words; compare each against src+1.
-  PASS/FAIL  EBREAK at PASS_PC or FAIL_PC.
-
-ISR (at ROM_BASE + ISR_OFFSET):
-  - Reads IRQ_PENDING_MASKED from irq_ctrl (offset 0x08) to confirm GPU bit.
-  - Writes 1 to GPU_IRQ_CLR (GPU ctrl + 0x028) to deassert gpu_irq_o.
-  - Writes 1 to ISR_FLAG_ADDR in SRAM (word index 200) as "ISR ran" sentinel.
-  - MRET (restores PC and re-enables MIE from MPIE).
-
-Address constants
-──────────────────────────────────────────────────────────────────────────────
-  SRC_BASE    = 0x0000_2180  (SRAM word 96)  — deliberately different from coherency test
-  DST_BASE    = 0x0000_21C0  (SRAM word 112)
-  KERNEL_PC   = 0x0000_2280  (SRAM word 160)
-  ISR_FLAG_WI = 200           (SRAM word 200 = byte 0x0000_2320)
-  IRQ_CTRL_BASE = 0x2000_6000  (AXIL_IRQ slot in control ring)
-    IRQ_STATUS   = 0x000
-    IRQ_MASK     = 0x004
-    IRQ_PENDING  = 0x008
-  GPU_BASE    = 0x2000_1000
-    GPU_CTRL      = 0x000
-    GPU_STATUS    = 0x004
-    GPU_KERNEL_PC = 0x008
-    GPU_GRID_X    = 0x00C
-    GPU_GRID_Y    = 0x010
-    GPU_GRID_Z    = 0x014
-    GPU_BLOCK_X   = 0x018
-    GPU_BLOCK_Y   = 0x01C
-    GPU_BLOCK_Z   = 0x020
-    GPU_IRQ_CLR   = 0x028
+Addresses: SRC_BASE = 0x0000_2180 and DST_BASE = 0x0000_21C0 (deliberately different from
+the coherency test), KERNEL_PC = 0x0000_2280, ISR_FLAG_WI = 200, IRQ_CTRL_BASE = 0x2000_6000 (STATUS
++0x000, MASK +0x004, PENDING +0x008), GPU_BASE = 0x2000_1000 (CTRL, STATUS, KERNEL_PC, GRID_X/Y/Z,
+BLOCK_X/Y/Z at +0x000..+0x020, GPU_IRQ_CLR +0x028).
+Doc: tm:suite:soc-cpu-gpu-irq-fw-gen-cpu-gpu-irq-hex
 """
 
 import os

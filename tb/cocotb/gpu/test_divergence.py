@@ -1,33 +1,25 @@
 """
-Unit tests for gpu_compute_unit.sv — divergence stack and pipeline control.
+Unit tests for gpu_compute_unit.sv: divergence stack and pipeline control.
 
-The DUT is the full 4-stage pipeline (FETCH→DECODE→EX→WB).
-Instructions are injected via the AXI4-Lite instruction-fetch interface.
-The divergence stack state (div_stack_depth_i / div_stack_top_i) is
-managed manually by each test, simulating what warp_scheduler.sv would do.
+The DUT is the full 4-stage pipeline (FETCH, DECODE, EX, WB). Instructions come in through the
+AXI4-Lite instruction-fetch interface. Each test sets the divergence stack state (div_stack_depth_i,
+div_stack_top_i) by hand, as warp_scheduler.sv would.
 
 Pipeline timing (relative to issue):
-  posedge A : issue (warp_issue_i=1, arready_i=1)
-  posedge B : rvalid=1  →  if_id_q.instr captures rdata; instr_rdy_q latches
-  posedge C : instr_rdy_q=1  →  id_ex_q advances (decode + regfile read)
-  posedge D : ex_wb_q advances  (EX result computed)
-  posedge D + 1 ns : WB outputs stable (combinational from ex_wb_q)
+  posedge A: issue (warp_issue_i=1, arready_i=1)
+  posedge B: rvalid=1; if_id_q.instr captures rdata; instr_rdy_q latches
+  posedge C: instr_rdy_q=1; id_ex_q advances (decode + regfile read)
+  posedge D: ex_wb_q advances (EX result computed)
+  just after posedge D: WB outputs are stable (combinational from ex_wb_q)
+There is no same-cycle bypass at posedge B: instr_avail = instr_rdy_q only.
 
-Note: posedge B used to simultaneously advance id_ex_q (same-cycle bypass).
-The bypass was removed to eliminate the AXI rdata→decode combinational timing
-path (critical-path limiter in ASAP7 PD). instr_avail now = instr_rdy_q only.
+div_entry_t is a 40-bit packed struct, MSB first: bits[39:8] = return_pc, bits[7:0] = return_mask.
 
-div_entry_t packing  (40 bits, MSB-first packed struct):
-  bits[39:8] = return_pc[31:0]
-  bits[ 7:0] = return_mask[7:0]
-
-Tests:
-  1. All-lanes-agree branch (converging, all-not-taken)  — no div_push
-  2. All-lanes-agree branch (converging, all-taken)      — no div_push, next_pc = target
-  3. Divergent VBLT after VMOV_TID_X setup              — div_push, mask split
-  4. Stack overflow (5 nested divergent pushes)          — gpu_error_o asserted
-  5. VRET on empty stack                                 — warp_done_o asserted
-  6. VRET on non-empty stack                             — div_pop_o asserted
+Tests: all-lanes-agree branch (not taken, taken): no div_push. Divergent VBLT after VMOV_TID_X:
+div_push, mask split. Stack overflow (5 nested pushes): gpu_error_o. VRET on an empty stack:
+warp_done_o. VRET on a non-empty stack: div_pop_o.
+Run: cd sim && make gpu_diverge
+Doc: tm:suite:gpu-test-divergence
 """
 import cocotb
 from tb.cocotb.common.hier import pget, pset
