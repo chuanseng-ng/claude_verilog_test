@@ -1,53 +1,24 @@
 """
-test_soc_pwm.py — Phase 6a-2 SoC-level PWM test (bead claude_verilog_test-f7vs.6
-item 5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
-
-`test_pwm` (tb_pwm.sv / Makefile `pwm` target) drives pwm_controller's APB4 face
-directly and has never exercised it through the real fabric path:
-
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-  axil_to_apb -> apb_interconnect -> APB slave 8 (APB_PWM, 0x2000_B000)
-
-This test closes that gap using a self-checking RV32I firmware
-(pwm_fw/gen_pwm_hex.py) that runs entirely via CPU MMIO through that path,
-combined with a cocotb driver that observes the tb_soc_top boundary port
-(pwm_o) and the internal pwm_irq/ext_irq nets, synchronised via commit_pc_o
-marker PCs (CONFIG_DONE_PC, IRQ_READY_PC) — the same scoreboarding technique
-test_soc_gpio.py already uses.
-
-Unlike test_soc_gpio.py, PWM needs no cocotb-driven stimulus at all: pwm_o is
-a pure push-pull output (no oe, no async input pin) and the period-wrap
-interrupt is generated entirely by the peripheral's own free-running counters
-once channel 0 is configured and enabled — there is nothing for the
-testbench to drive.
-
-Coverage:
-  1. BOUNDARY TOGGLE: firmware configures PRESCALE/PERIOD/DUTY01/CTRL (channel
-     0 enabled) and commits CONFIG_DONE_PC. From that point cocotb samples
-     dut.pwm_o[0] every cycle for a window spanning more than two full PWM
-     periods and asserts it observed both logic levels and multiple 0->1 and
-     1->0 transitions — proving the configuration reached slave 8 through the
-     whole fabric and that the hardware free-runs at the SoC boundary exactly
-     as configured (PERIOD_VAL * (PRESCALE_VAL + 1) core_clk cycles/period).
-  2. INTERRUPT PATH, end to end: firmware unmasks the channel-0 period-wrap
-     IRQ, unmasks bit 6 (PWM) in interrupt_controller's IRQ_MASK, and enables
-     CPU MEIE/MIE. This test independently watches commit_pc_o for ISR_PC —
-     proof the CPU actually took the trap, not merely that a status bit got
-     set — then samples the internal pwm_irq/ext_irq nets both at trap entry
-     (must be asserted, the cause of the trap) and later (must be deasserted,
-     after the ISR's PWM_CTRL=0 channel-disable + PWM_IRQ_CLR writes) — proof
-     of deassertion at the RTL level, independent of firmware self-report.
-     Firmware itself teeth-checks ISR_COUNT == 1 (no spurious re-trigger
-     after MRET re-enables MIE, even though channel 0 keeps free-running) and
-     PWM_IRQ_STAT bit 0 cleared.
-  3. Cheap register-bank policy checks: PWM_IRQ_CLR always reads 0; the first
-     out-of-range word (offset 0x20, N_REGS=8) reads 0.
-
-GOLDEN-MODEL NOTE (same as test_soc_gpio): SoCModel cannot be used here since
-it rejects 0x2000_xxxx MMIO. The firmware is self-checking and the testbench
-scoreboards commit_pc_o for the marker PCs / PASS_PC / FAIL_PC. As an
-additional independent check, ISR_COUNT is backdoor-read from SRAM after PASS
-and compared against the value the firmware itself already verified.
+test_soc_pwm.py -- Phase 6a-2 SoC-level PWM test. `test_pwm` (tb_pwm.sv, Makefile `pwm` target)
+  drives pwm_controller's APB4 face directly. It never used the real fabric path to APB slave 8
+  (APB_PWM, 0x2000_B000). This test closes that gap with a self-checking RV32I firmware
+  (pwm_fw/gen_pwm_hex.py) that works only by CPU MMIO and a cocotb driver that observes the
+  tb_soc_top port pwm_o and the internal pwm_irq and ext_irq nets, synchronised by commit_pc_o
+  marker PCs (CONFIG_DONE_PC, IRQ_READY_PC). PWM needs no cocotb stimulus: pwm_o is a push-pull
+  output and the period-wrap interrupt comes from the peripheral's own counters.
+  1. BOUNDARY TOGGLE: the firmware configures PRESCALE, PERIOD, DUTY01 and CTRL (channel 0 enabled)
+     and commits CONFIG_DONE_PC. Then cocotb samples dut.pwm_o[0] every cycle for a window of more
+     than two PWM periods and asserts both levels and several 0->1 and 1->0 transitions: the
+     configuration reached slave 8 through the whole fabric and the hardware free-runs as configured
+     (PERIOD_VAL * (PRESCALE_VAL + 1) core_clk cycles per period).
+  2. INTERRUPT PATH, end to end: the firmware unmasks the channel-0 period-wrap IRQ and bit 6 (PWM)
+     in the interrupt_controller IRQ_MASK, and enables CPU MEIE/MIE. The test watches commit_pc_o
+     for ISR_PC (the CPU really took the trap), samples pwm_irq and ext_irq at trap entry (asserted)
+     and later (deasserted after the ISR's PWM_CTRL=0 channel disable and PWM_IRQ_CLR writes):
+     deassertion proven at the RTL level. The firmware checks ISR_COUNT == 1 (no re-trigger after
+     MRET, although channel 0 keeps running) and PWM_IRQ_STAT bit 0 cleared.
+Run: make -C tb/cocotb/soc soc_pwm
+Doc: tm:suite:soc-test-soc-pwm
 """
 
 import sys
@@ -76,7 +47,7 @@ from tb.cocotb.soc.pwm_fw.pwm_fw_addrs import (
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS = 2  # matches the other SoC tests
 
 _FW_HEX = str(Path(__file__).parent / "pwm_fw" / "pwm_fw.hex")
 

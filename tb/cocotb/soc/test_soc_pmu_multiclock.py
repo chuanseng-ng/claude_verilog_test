@@ -1,98 +1,29 @@
 """
-test_soc_pmu_multiclock.py — GH #95 (Group C): PMU-driven live CPU-domain
-power-cycle at a divergent clock ratio (bead claude_verilog_test-2k8).
-
-DUT: tb_soc_top (same SOC_BOOT_SOURCES / soc_boot_lint as soc_boot / soc_periph
-/ soc_multiclock / soc_multiclock_reset — see tb/cocotb/soc/Makefile's
-soc_pmu_multiclock target).
-
-Purpose: every prior GH #93/#95 suite exercises the CPU<->fabric CDC boundary
-via the two PHYSICAL reset inputs (rst_n_i / cpu_rst_n_i) or via natural
-PLL-lock skew at boot. None of them exercise the PMU (rtl/soc/pmu.sv)
-actually POWERING DOWN and BACK UP the live CPU domain through its own
-sequencer while the fabric domain keeps running at a genuinely asynchronous
-ratio — the residual gap design_state.json's gh93_cdc_verification record and
-this repo's rtl-design-orchestrator history both explicitly flag ("no suite
-exercises a live PMU-driven CPU power-cycle at a divergent clock ratio").
-This file closes that gap.
-
-Mechanism (see pmu_cycle_fw/gen_pmu_cycle_hex.py's own docstring for the full
-rationale):
-  - The CPU CANNOT power itself back on once its own clock is gated by the
-    PMU, so this test splits the trigger: the CPU's firmware programs the
-    DMA engine (a fabric-domain AXI4 master, unaffected by the CPU domain's
-    own state) to write MODE_CPU_OFF into PMU CTRL (0x2000_8000) on its
-    behalf, then falls into a free-running busy-loop that increments a
-    counter in SRAM. The PMU sequencer gates the CPU's clock out from under
-    that loop mid-flight — by design, exercising exactly the "no
-    drain/quiesce step" gap documented in soc_top.sv/CLAUDE.md as a known,
-    accepted, non-blocking residual risk (not something this test is meant
-    to fix).
-  - The power-UP trigger is supplied directly by this testbench: a backdoor
-    deposit into the PMU's own CTRL register storage flip-flop
-    (u_soc.u_pmu.u_regbank.regs[0], the exact array apb4_register_bank.sv's
-    `always_ff` writes on a real APB4 SW write — see that file's register
-    file block). This is a deliberate scope split, not a shortcut: it
-    decouples "does the PMU sequencer correctly walk the CPU domain back up
-    under real cross-domain traffic conditions" (novel, the actual subject
-    of this test) from "can an AXI4 master reach the PMU's APB slot with a
-    correctly-masked write" (already exhaustively covered — DMA already
-    writes to every other register on this same APB ring in
-    test_periph_loopback, and PMU's own APB write/WMASK/read-only semantics
-    are already covered end-to-end by test_pmu.py's standalone suite). The
-    backdoor deposit hits the identical storage cell address 0 in a real APB
-    write would, so the sequencer FSM downstream reacts identically either
-    way.
-
-Ratio: CPU=3ns / fabric=7ns, the established coprime pair from
-test_soc_multiclock.py/test_soc_multiclock_reset.py (test 2). The PMU itself
-(rtl/soc/pmu.sv) runs on core_clk (== clk_i / the fabric domain here), so all
-dom_state_q observation below polls RisingEdge(dut.clk_i); cpu_clk_i keeps
-free-running the entire test (only the DERIVED gated clock inside u_cpu_cg
-stops — the PLL-driven cpu_core_clk reference and cpu_clk_i itself never
-stop), matching every other suite's "Clock() coroutines are never
-reset/gate-gated, only the RTL's internal state is" convention.
-
-Known hazards under test:
-  - pmu.sv's power-up ordering (rst-release-before-clk-ungate) was closed in
-    soc_top.sv (commit 30beab3) by gating u_cpu_cg with the CPU-domain-native
-    pmu_cpu_rst_n_cpu_sync. This test's power-up ordering assertion is the
-    first live exercise of that fix under real cross-domain traffic.
-  - u_cpu_axi_cdc's reset-semantics asymmetry (bead claude_verilog_test-2k8,
-    FIXED — see the "BEAD claude_verilog_test-2k8" note below
-    @cocotb.test): u_cpu_axi_cdc's s_rst_n_i used to be wired to
-    cpu_domain_rst_n, which folds in the PMU's own retention-hold reset —
-    every PMU power-down therefore hard-flushed the CDC bridge's in-flight
-    state even though u_cpu itself (synchronous reset, gated clock) was
-    correctly RETAINING its own state across the same event. The fix
-    rewires s_rst_n_i to cpu_core_rst_n (the CPU domain's true POR/PLL-lock
-    reset), so the bridge now retains, not flushes, across a PMU power-
-    cycle, matching u_cpu's own contract. This test is what regression-
-    guards that fix.
-  - The PMU power-down path still has NO drain/quiesce step (soc_top.sv:
-    83-93) — a mid-burst CPU AXI transaction or D-cache writeback in flight
-    when the clock gates is a pre-existing, documented, non-blocking gap,
-    DISTINCT from the bead-2k8 fix above (that gap is about the crossbar's
-    per-slave engine having no drain FSM at all, not about this CDC
-    bridge's reset semantics). This test's firmware is deliberately minimal
-    (a 2-word SRAM working set, no fabric AXI traffic after the DMA-trigger
-    write) specifically to stay clear of that gap rather than exercise it.
-
-Metastability injection: corrected claim (bead claude_verilog_test-rvs). Earlier
-revisions of this docstring said this was "not modelable in Verilator/cocotb" --
-that is imprecise. A randomised EXTRA-CYCLE-OF-SETTLING-DELAY on a
-synchroniser's first stage IS modelable in a 2-state simulator (it is plain RTL,
-no timing control) and is exactly the fault model that reproduces the
-same-edge-assumption bug class GH #93 hit twice. What genuinely is NOT modelable
-here is analog metastability itself -- an intermediate, non-0/1 voltage on Q.
-No injector is implemented today (an attempt was reverted before merge; see
-rtl/soc/cdc/cdc_sync.sv's header and bead rvs), so these tests characterise
-the synchronised, deterministic RTL behaviour only
--- opting a synchroniser in here is future work, not something this file does
-today. What remains genuinely NOT modelable in a 2-state simulator (Verilator,
-or any cocotb-driven flow) is true analog metastability itself: an
-intermediate, non-01, potentially-oscillating flop output. The injector models
-a randomised settling DELAY, not that voltage-domain physics.
+test_soc_pmu_multiclock.py -- PMU-driven live CPU-domain power-cycle at a divergent clock ratio.
+DUT: tb_soc_top (target soc_pmu_multiclock). It exercises the PMU (rtl/soc/pmu.sv) POWERING DOWN and
+BACK UP the live CPU domain through its own sequencer while the fabric runs at an
+asynchronous ratio.
+Mechanism (rationale: pmu_cycle_fw/gen_pmu_cycle_hex.py): the CPU CANNOT power itself back on once
+the PMU gates its clock, so the trigger is split. The CPU firmware programs the DMA engine (a
+fabric-domain AXI4 master) to write MODE_CPU_OFF into PMU CTRL (0x2000_8000), then spins in a loop
+that increments an SRAM counter. The PMU gates the CPU clock out from under that loop, by design:
+the "no drain/quiesce step" gap is a known, accepted, non-blocking risk (soc_top.sv) that this test
+does not fix. The power-UP trigger is a backdoor deposit into the PMU CTRL storage flop
+(u_soc.u_pmu.u_regbank.regs[0], the cell apb4_register_bank.sv writes on an APB write).
+Ratio: CPU period 3 / fabric period 7, as test_soc_multiclock.py. The PMU runs on core_clk, so
+dom_state_q polling uses RisingEdge(dut.clk_i). cpu_clk_i free-runs; only the DERIVED gated clock in
+u_cpu_cg stops.
+Hazards under test: (1) pmu.sv power-up ordering (reset release before clock ungate), closed in
+soc_top.sv by gating u_cpu_cg with the CPU-native pmu_cpu_rst_n_cpu_sync; the ordering assertion is
+its first live check. (2) u_cpu_axi_cdc's s_rst_n_i is wired to cpu_core_rst_n (the CPU domain's
+true POR / PLL-lock reset) and NOT to cpu_domain_rst_n, which folds in the PMU retention-hold reset.
+The bridge therefore keeps its state across a PMU power-cycle, like u_cpu; this test
+regression-guards that wiring. (3) The PMU power-down has NO drain/quiesce step: a CPU AXI
+transaction or D-cache writeback in flight when the clock gates is a documented non-blocking gap.
+The firmware is minimal (2-word SRAM working set, no fabric AXI traffic after the DMA trigger) to
+stay clear of it. No settling-delay injector exists.
+Run: make -C tb/cocotb/soc soc_pmu_multiclock
+Doc: tm:suite:soc-test-soc-pmu-multiclock
 """
 
 import sys
@@ -173,7 +104,7 @@ DOM_CPU = 0  # pmu.sv N_DOM index for the CPU domain
 POWERDOWN_TIMEOUT_CLK_I_CYCLES = 6_000
 POWERUP_TIMEOUT_CLK_I_CYCLES = 6_000
 FROZEN_WINDOW_CPU_CLK_CYCLES = 200
-DIAG_RESUME_WINDOW_CPU_CLK_CYCLES = 2_500  # bead 2k8: >2x the measured
+DIAG_RESUME_WINDOW_CPU_CLK_CYCLES = 2_500  # more than 2x the measured
                                             # first-SRAM-visible-increment
                                             # latency (~1000 cycles, see the
                                             # note above this constant's use)
@@ -272,7 +203,7 @@ async def _pmu_live_cycle_body(dut) -> None:
     # commit activity, and the busy-loop counter frozen (clock genuinely
     # gated, not merely stalled).
     #
-    # Bead claude_verilog_test-2k8 fix note: this block used to assert
+    # Note: this block used to assert
     # cpu_bridge_s_{aw,w,ar}ready == 0 as its "zero acceptance" proxy. That
     # was correct ONLY under the pre-fix hard-flush wiring (s_rst_n_i =
     # cpu_domain_rst_n), where those *_ready signals read 0 purely as a
@@ -340,12 +271,12 @@ async def _pmu_live_cycle_body(dut) -> None:
         f"{FROZEN_WINDOW_CPU_CLK_CYCLES} cpu_clk_i cycles while the CPU domain was "
         "PMU-gated OFF -- the gated clock leaked through"
     )
-    # DIAGNOSTIC (bead claude_verilog_test-2k8, wedge-hypothesis evidence): snapshot
+    # DIAGNOSTIC (wedge-hypothesis evidence): snapshot
     # the CPU's own AXI request/stall state at the moment the OFF window is
     # sampled -- if a request was left outstanding (valid asserted, no ready/
     # response) when the domain froze, that is the strongest available signal
     # (short of a full waveform) that the no-drain/quiesce gap
-    # (soc_top.sv:83-93) left the CPU's cache/arbiter FSM parked waiting on a
+    # (see soc_top.sv) left the CPU's cache/arbiter FSM parked waiting on a
     # response the fabric will never deliver.
     frozen_axi_snapshot = {
         "ic_stall": int(dut.u_soc.u_cpu.u_core.ic_stall.value),
@@ -396,7 +327,7 @@ async def _pmu_live_cycle_body(dut) -> None:
     # registers) survived the live, clock-gate-only power cycle intact and
     # the loop resumed on the exact next instruction, not from RESET_PC.
     #
-    # Bead claude_verilog_test-2k8 fix note on DIAG_RESUME_WINDOW_CPU_CLK_CYCLES's
+    # Note on DIAG_RESUME_WINDOW_CPU_CLK_CYCLES's
     # size: the loop body's per-iteration CSRW dcache_flush (see
     # pmu_cycle_fw/gen_pmu_cycle_hex.py's LOOP note) is what makes the
     # counter observable via the backdoor SRAM read below at all (SRAM_BASE
@@ -406,7 +337,7 @@ async def _pmu_live_cycle_body(dut) -> None:
     # itself. Measured: the first post-resume SRAM-visible increment lands
     # ~1000 cpu_clk_i cycles after DOM_ON (one-time settle cost: draining
     # any beat the fabric-side CDC bridge retained in flight across the
-    # power-cycle, per the bead 2k8 fix above, plus the loop's own first
+    # power-cycle, per the reset rewiring above, plus the loop's own first
     # flush), then roughly every ~300 cycles thereafter in steady state.
     # DIAG_RESUME_WINDOW_CPU_CLK_CYCLES is sized with margin above the
     # measured first-increment latency so this assertion is not flaky.
@@ -442,7 +373,7 @@ async def _pmu_live_cycle_body(dut) -> None:
                 int(dut.u_soc.pmu_cpu_rst_n_cpu_sync.value),
                 int(dut.u_soc.cpu_domain_rst_n.value),
                 int(dut.u_soc.pmu_cpu_iso_en_sync.value) if hasattr(dut.u_soc, "pmu_cpu_iso_en_sync") else -1,
-                # bead 2k8 evidence trail: CPU-side stall + AXI request/
+                # Evidence trail: CPU-side stall + AXI request/
                 # response valid state across resume, kept as a regression
                 # trace even though the wedge hypothesis this originally
                 # tested for is now fixed (see u_cpu_axi_cdc's s_rst_n_i
@@ -493,7 +424,7 @@ async def _pmu_live_cycle_body(dut) -> None:
 
 
 #
-# BEAD claude_verilog_test-2k8 (P1): FIXED. This test used to fail against
+# FIXED. This test used to fail against
 # RTL prior to the fix below, and was pinned @cocotb.test(expect_fail=True)
 # while the root cause was open. Root cause was NOT in this test's subject
 # (pmu.sv's sequencer): the diagnostic trace proved the sequencer was correct

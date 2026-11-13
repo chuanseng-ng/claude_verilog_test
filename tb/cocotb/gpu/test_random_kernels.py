@@ -1,32 +1,26 @@
 """
-Phase 4 random-kernel regression — broadened scope (B1/B2/B3).
+Phase 4 random-kernel regression, classes B1, B2 and B3.
 
-Generates many randomized GPU kernels, runs each on gpu_top, and compares the
-resulting global memory against the GpuRefModel reference interpreter
-(gpu_ref_model.py, which matches the RTL/gpu_asm opcode encoding). A per-kernel
-watchdog (gpu_wait_done timeout) detects deadlocks.
+Generates randomized GPU kernels, runs each on gpu_top and compares global memory with the
+GpuRefModel reference interpreter (gpu_ref_model.py, which matches the RTL / gpu_asm encoding).
+A per-kernel watchdog (gpu_wait_done timeout) detects deadlocks.
 
-Kernel classes (mixed probabilistically, all in one pass):
-  straight-line : R/I-type ALU + global stores only (original baseline).
-  B1 global-load: seed an INPUT_REGION in global memory; emit VLD from it into
-                  working regs; feed loaded values into compute+store phase.
-  B2 shared-mem : emit VSTS (write scratchpad) → VSYNC → VLDS (read back) →
-                  use result in compute → final VST to global.
-  B3 divergent  : emit one guaranteed-reconverging single-level diamond:
-                    VBLT rd=0, rs1=working_reg, rs2=r0, target=true_path
-                    false-path: vaddi + VST + VRET
-                    true-path : vaddi + VST + VRET
-                  The ref model's SIMT stack handles reconvergence exactly as
-                  gpu_compute_unit.sv does.
+Kernel classes, mixed probabilistically in one pass:
+  straight-line: R/I-type ALU + global stores only (the baseline).
+  B1 global-load: seed an INPUT_REGION in global memory; VLD from it into working regs; use
+  the values.
+  B2 shared-mem: VSTS (write scratchpad), VSYNC, VLDS (read back), use the result, final VST
+  to global.
+  B3 divergent: one guaranteed-reconverging single-level diamond. VBLT rd=0, rs1=working_reg,
+      rs2=r0, target=true_path. Each path is vaddi + VST + VRET. The ref model's SIMT stack
+      reconverges exactly as gpu_compute_unit.sv does.
+The RNG picks the extensions per kernel and always keeps the straight-line ALU + store skeleton.
+Every kernel ends with VRET (two VRETs in the divergent diamond).
 
-All four classes co-exist in a single test loop; the RNG picks which extensions
-to apply per kernel while always preserving the core straight-line ALU+store
-skeleton.  Every kernel ends with VRET (or two VRETs in the divergent diamond).
-
-Config (env):
-  RANDOM_KERNELS        number of kernels (default 1000)
-  RANDOM_KERNELS_SMOKE  if set, use 25 kernels (quick CI/smoke)
-  RANDOM_KERNELS_SEED   base seed (default 0xC0DE)
+Config (env): RANDOM_KERNELS (kernel count, default 1000), RANDOM_KERNELS_SMOKE (if set,
+25 kernels), RANDOM_KERNELS_SEED (base seed, default 0xC0DE).
+Run: cd sim && make gpu_random   (quick smoke: make gpu_random_smoke)
+Doc: tm:suite:gpu-test-random-kernels
 """
 import os
 import sys

@@ -1,73 +1,26 @@
 #!/usr/bin/env python3
 """
-gen_stress_hex.py — generate stress_fw.hex for the Phase 5 M9 SoC stress + benchmark test.
-
-This firmware performs a long, multi-master exerciser designed to drive ≥1 000 000 sim
-cycles of sustained SoC activity while remaining self-checking.  It runs entirely in
-CPU firmware so there is no dependency on a Python scoreboard model for MMIO addresses
-(which cannot be modelled by soc_model.py).
-
-Firmware sequence (looped STRESS_ITER times)
-─────────────────────────────────────────────
-  [A] SRAM burst write: CPU writes BURST_N_WORDS (32) words to SRAM at BUF_A using
-      a tight store loop (simple, deterministic write traffic to the data crossbar).
-
-  [B] SRAM burst read + verify: CPU reads the words back and compares against the
-      expected pattern (word_idx XOR MAGIC).  Any mismatch → FAIL.
-
-  [C] DMA mem→mem: program the DMA engine (SRC=BUF_A, DST=BUF_B, LEN), pulse start,
-      poll STATUS.done (bounded by DMA_POLL_MAX), verify DST matches SRC.
-
-  [D] GPU vector kernel: flush D-cache (CSR 0x7C0), write src+1 kernel to SRAM,
-      flush again, program GPU registers (KERNEL_PC, GRID, BLOCK, launch), poll
-      GPU_STATUS.done (bounded by GPU_POLL_MAX), inval D-cache (CSR 0x7C1), read
-      back GPU output words and verify src+1.
-
-  [E] UART + SPI internal loopback: write one byte each via CTRL[4]=loopback, poll
-      rx_valid (bounded by PERIPH_POLL_MAX), verify byte matches.
-
-  [F] Timer read: read TIMER_CNT0 (offset 0x00 in timer AXI-Lite slave) and store
-      in a scratch SRAM word.  No assertion on value — just exercises the AXI-Lite
-      path to the timer; the cocotb monitor checks it is non-zero after iteration 0.
-
-After STRESS_ITER loops the firmware jumps to PASS_PC + EBREAK.
-Any check failure jumps to FAIL_PC + EBREAK.
-
-Benchmarks embedded in the firmware
-────────────────────────────────────
-The firmware records a "before" cycle count from mcycle CSR at each benchmark entry
-point and an "after" count at exit, storing results in SRAM scratch words:
-  BM_CPU_WI   — mcycle delta for the CPU 32-word store+load loop
-  BM_DMA_WI   — mcycle delta for the DMA mem→mem transfer
-  BM_GPU_WI   — mcycle delta for the GPU kernel (incl. cache flush/inval)
-
-These are backdoor-read by the cocotb test and logged.
-
-Memory layout
-─────────────
-  ROM_BASE   = 0x0000_1000  (boot ROM)
-  SRAM_BASE  = 0x0000_2000  (SRAM)
-
-  BUF_A      = 0x0000_2000  (word 0..31, 32 words × 4 bytes = 128 bytes)
-  BUF_B      = 0x0000_2080  (word 32..63, 128 bytes)
-  GPU_SRC    = 0x0000_2100  (word 64..71, 8 words)
-  GPU_DST    = 0x0000_2140  (word 80..87, 8 words)
-  KERNEL_PC  = 0x0000_2200  (word 128..159, GPU kernel image)
-  SCRATCH    = 0x0000_2400  (word 256, timer + benchmark words)
-
-  BM_CPU_WI  = 256   (SRAM word index)
-  BM_DMA_WI  = 257
-  BM_GPU_WI  = 258
-  TIMER_WI   = 259
-
-Peripheral MMIO (all ≥ 0x2000_0000, D-cache bypass)
-───────────────────────────────────────────────────
-  GPU    = 0x2000_1000
-  UART   = 0x2000_2000
-  SPI    = 0x2000_3000
-  TIMER  = 0x2000_4000
-  DMA    = 0x2000_5000
-  IRQ    = 0x2000_6000
+gen_stress_hex.py -- generate stress_fw.hex for the Phase 5 M9 SoC stress and benchmark test.
+A long, multi-master, self-checking exerciser for sustained SoC activity. It runs entirely in CPU
+firmware, so it needs no Python scoreboard model for MMIO addresses (soc_model.py cannot
+model them).
+Loop body, STRESS_ITER times:
+  [A] SRAM burst write: BURST_N_WORDS (32) words to SRAM at BUF_A in a tight store loop.
+  [B] SRAM burst read and verify against word_idx XOR MAGIC. A mismatch is a FAIL.
+  [C] DMA mem-to-mem (SRC=BUF_A, DST=BUF_B), poll STATUS.done (bound DMA_POLL_MAX), verify DST.
+  [D] GPU vector kernel: flush D-cache (CSR 0x7C0), write the src+1 kernel to SRAM, flush again,
+  launch, poll GPU_STATUS.done (bound GPU_POLL_MAX), inval D-cache (CSR 0x7C1), verify the words
+  are src+1.
+  [E] UART and SPI internal loopback (CTRL[4]), poll rx_valid (bound PERIPH_POLL_MAX), verify
+  the byte.
+  [F] Read TIMER_CNT0 (offset 0x00 of the timer AXI-Lite slave) into a scratch word. The firmware
+  does not assert on it; the cocotb monitor checks it is non-zero after iteration 0.
+After STRESS_ITER loops it jumps to PASS_PC + EBREAK. A failed check jumps to FAIL_PC + EBREAK.
+Benchmarks: the mcycle delta of the CPU 32-word store+load loop (BM_CPU_WI), the DMA transfer
+(BM_DMA_WI) and the GPU kernel with cache flush and inval (BM_GPU_WI) go to SRAM scratch words,
+which the cocotb test backdoor-reads and logs. The memory and peripheral addresses are constants in
+this file.
+Doc: tm:suite:soc-stress-fw-gen-stress-hex
 """
 
 import os

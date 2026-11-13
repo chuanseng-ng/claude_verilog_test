@@ -13,9 +13,8 @@
 // All signals are direct renames of soc_top ports — zero logic, exactly
 // the pattern of tb_axi4_crossbar.sv.
 //
-// GH #93 (real CPU-domain clock): cpu_clk_i/cpu_rst_n_i are now true
-// top-level ports (previously tied internally to clk_i/rst_n_i under GH
-// #92). Every existing cocotb suite (test_boot / test_periph_loopback /
+// cpu_clk_i/cpu_rst_n_i are true top-level ports of the real CPU-domain clock (previously tied
+// internally to clk_i/rst_n_i). Every existing cocotb suite (test_boot / test_periph_loopback /
 // test_soc_coherency / test_cpu_gpu_irq / test_soc_stress / test_l2_bench)
 // drives both clock/reset pairs via tb/cocotb/soc/soc_clocks.py at a 1:1
 // ratio and identical phase, which is behaviourally unchanged from the old
@@ -44,7 +43,7 @@ module tb_soc_top #(
     input  logic        clk_i,
     input  logic        rst_n_i,
 
-    // ── CPU-domain reference clock / reset (GH #93 — genuinely independent) ──
+    // ── CPU-domain reference clock / reset (genuinely independent) ──
     input  logic        cpu_clk_i,
     input  logic        cpu_rst_n_i,
 
@@ -68,18 +67,18 @@ module tb_soc_top #(
     input  logic        spi_miso_i,
     output logic        spi_cs_n_o,
 
-    // ── GPIO (Phase 6a, bead claude_verilog_test-8qn4) ────────────────────────
+    // ── GPIO (Phase 6a) ────────────────────────
     output logic [31:0] gpio_out_o,
     output logic [31:0] gpio_oe_o,
     input  logic [31:0] gpio_in_i,
 
-    // ── PWM (Phase 6a-2, bead f7vs.6 — tied off until the peripheral lands) ──
+    // ── PWM (Phase 6a-2, tied off until the peripheral lands) ──
     output logic [3:0]  pwm_o,
 
-    // ── Watchdog (Phase 6a-3, bead f7vs.7 — tied off until the peripheral lands) ──
+    // ── Watchdog (Phase 6a-3, tied off until the peripheral lands) ──
     output logic        wdt_rst_req_o,
 
-    // ── I2C (Phase 6a-5, bead f7vs.9 — tied off until the peripheral lands) ──
+    // ── I2C (Phase 6a-5, tied off until the peripheral lands) ──
     output logic        i2c_scl_o,
     output logic        i2c_scl_oe_o,
     input  logic        i2c_scl_i,
@@ -117,7 +116,7 @@ module tb_soc_top #(
     output logic        tdo_oe_o
 );
 
-    // GH #92: this single-clock wrapper does not expose cpu_pll_locked_o to
+    // This single-clock wrapper does not expose cpu_pll_locked_o to
     // cocotb (soc_boot/soc_periph/soc_coherency/soc_cpu_gpu do not observe
     // it — see tb_soc_pll.sv for the wrapper that does). Sink it to a local
     // net rather than an empty port connection.
@@ -129,7 +128,7 @@ module tb_soc_top #(
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),
-        // GH #93: genuinely independent CPU-domain reference — see header.
+        // Genuinely independent CPU-domain reference — see header.
         .cpu_clk_i      (cpu_clk_i),
         .cpu_rst_n_i    (cpu_rst_n_i),
 
@@ -184,7 +183,7 @@ module tb_soc_top #(
         .tdo_o          (tdo_o),
         .tdo_oe_o       (tdo_oe_o),
         .pll_locked_o   (pll_locked_o),
-        // GH #92: CPU-domain PLL lock, not observed by this single-clock
+        // CPU-domain PLL lock, not observed by this single-clock
         // wrapper's tests (soc_boot/soc_periph/soc_coherency/soc_cpu_gpu).
         .cpu_pll_locked_o (cpu_pll_locked_unused)
     );

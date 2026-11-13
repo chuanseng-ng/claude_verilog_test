@@ -1,41 +1,26 @@
 """
-gpu_top control-plane and error paths (bead a5ze, slice 2).
-
-DUT = gpu_top.  What each test pins (spec: Doc: ds:ch:phase4-gpu-architecture "Control Interface":
-GPU_CTRL = start / reset, GPU_STATUS = idle / done / error; "nested branches NOT supported in
-Phase 4 (kernel must avoid)" with a 4-deep per-warp divergence stack, gpu_pkg::DIV_STACK_DEPTH):
-
-  test_register_file_paths      BLOCK_Y / BLOCK_Z / IRQ_STATUS read back; writes to unmapped
-                                offsets change nothing and unmapped reads return 0
-  test_done_returns_to_idle     a finished kernel (STATUS.done) goes back to idle on a second
-                                CTRL.launch, and on CTRL.reset; the IRQ latch clears on reset
+gpu_top control-plane and error paths.
+DUT = gpu_top. Spec: Doc: ds:ch:phase4-gpu-architecture, "Control Interface": GPU_CTRL = start /
+  reset, GPU_STATUS = idle / done / error. Nested branches are NOT supported in Phase 4 (the kernel
+  must avoid them); the per-warp divergence stack is 4 deep (gpu_pkg::DIV_STACK_DEPTH).
+  test_register_file_paths      BLOCK_Y / BLOCK_Z / IRQ_STATUS read back; unmapped writes change
+                                nothing, unmapped reads return 0
+  test_done_returns_to_idle     a finished kernel goes back to idle on a second CTRL.launch and on
+                                CTRL.reset; the IRQ latch clears on reset
   test_four_deep_nesting_ok     four nested divergent branches fit the stack and finish
-  test_stack_overflow_sets_error   a fifth nested divergence overflows the stack: STATUS.error,
-                                not idle, not done, no interrupt, and it stays there
-  test_soft_reset_recovers_from_error   CTRL.reset leaves ERROR for idle and a fresh kernel then
-                                runs to the correct result
-  test_error_halts_then_reset_then_divergent_kernel_matches_model   (bead q6w0) ERROR halts the
-                                errored kernel (no fetch, no memory traffic), CTRL.reset from the
-                                halted ERROR returns to IDLE, and a divergent kernel then
-                                matches gpu_ref_model on every lane
-  test_error_halts_issue_and_memory_traffic   (bead q6w0, halt-on-ERROR) 56 error-injection
-                                offsets: after ERROR nothing new starts, the in-flight fetch /
-                                VST / shared-memory access completes legally, then the GPU is
-                                quiescent in ERROR (STATUS stays error, nothing advances)
-  test_error_injected_mid_traffic_halts_and_drains   (bead q6w0, halt-on-ERROR) the error flop is
-                                forced at 100 offsets into VST/VSTS/VLDS streams, so a burst /
-                                shared-memory access / fetch IS in flight at ERROR: it completes
-                                legally, nothing new starts, then quiescent; reset recovers
-  test_error_reset_while_inflight_drains   (bead q6w0, halt-on-ERROR) CTRL.reset written the
-                                moment ERROR is entered, with a burst still in flight, waits for
-                                the drain; relaunch is correct
-  test_soft_reset_during_running_is_protocol_clean   (bead q6w0) CTRL.reset while RUNNING aborts
-                                the kernel only after the in-flight AXI beat completes: no
-                                dropped valid, no orphan R/B beat, nothing issued after IDLE
-  test_soft_reset_contract_config_irq_perf   (bead q6w0) reset keeps the config registers, the
-                                CTRL.irq_en bit it was written with and the perf counters; it
-                                clears the IRQ latch; reset from IDLE and DONE is harmless
-  test_hardware_reset_clears_error_and_config   (bead q6w0) rst_n still clears everything
+  test_stack_overflow_sets_error   a fifth nested divergence: STATUS.error, not idle, not done, no
+                                   interrupt, and it stays there
+  test_soft_reset_recovers_from_error   CTRL.reset leaves ERROR for idle; a fresh kernel then
+                                        runs correctly
+  Halt-on-ERROR tests: ERROR stops instruction issue and memory requests, in-flight beats finish
+  legally, and the GPU stays quiescent until CTRL.reset. They inject the error at many offsets,
+  including mid VST / VSTS / VLDS streams, and write CTRL.reset while a burst drains; a relaunch is
+  then correct.
+  CTRL.reset contract tests: reset while RUNNING aborts only after the in-flight AXI beat completes.
+  Reset keeps the config registers, CTRL.irq_en and the perf counters, clears the IRQ latch, and is
+  harmless from IDLE and DONE. rst_n still clears everything.
+Run: cd sim && make gpu_kernels
+Doc: tm:suite:gpu-kernels-kernel-control-paths
 """
 import sys
 import os
@@ -224,9 +209,9 @@ async def test_stack_overflow_sets_error(dut):
         t.kill()
 
 
-# Bead q6w0 / GH #261: gpu_compute_unit's gpu_error_o used to be cleared only by rst_n, so after
-# CTRL.reset the next launch went straight back to ERROR.  Fixed by the synchronous soft-reset
-# clear (see Doc: ds:mm:memory-map "GPU_CTRL.RESET").
+# gpu_compute_unit's gpu_error_o must clear on CTRL.reset (the synchronous soft-reset clear), not
+# only on rst_n. Otherwise the next launch goes straight back to ERROR (see Doc:
+# ds:mm:memory-map "GPU_CTRL.RESET").
 @cocotb.test()
 async def test_soft_reset_recovers_from_error(dut):
     """CTRL.reset leaves ERROR for IDLE, after which a fresh kernel gives the right result."""
@@ -290,7 +275,7 @@ async def test_reset_after_done_then_new_kernel_runs(dut):
 
 
 # ---------------------------------------------------------------------------------------------
-# Bead q6w0: CTRL.reset contract.  Helpers first.
+# CTRL.reset contract.  Helpers first.
 # ---------------------------------------------------------------------------------------------
 LOOP_OUT = 0x500
 SPIN_BASE = 0x2000
@@ -770,7 +755,7 @@ async def test_soft_reset_during_shared_memory_loop(dut):
 
 
 # ---------------------------------------------------------------------------------------------
-# Bead q6w0, halt-on-ERROR.  ERROR must stop the GPU issuing instructions and memory requests,
+# Halt-on-ERROR.  ERROR must stop the GPU issuing instructions and memory requests,
 # let in-flight bus beats drain, and then sit quiescent until software writes CTRL.reset.
 # ---------------------------------------------------------------------------------------------
 STORM_OUT = 0x700

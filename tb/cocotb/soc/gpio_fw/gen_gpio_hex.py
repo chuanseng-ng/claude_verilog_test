@@ -1,109 +1,25 @@
 #!/usr/bin/env python3
 """
-gen_gpio_hex.py — generate gpio_fw.hex for the Phase 6a SoC-level GPIO test
-(bead claude_verilog_test-8qn4 item 1).
-
-Unlike periph_fw / cpu_gpu_irq_fw, this firmware is NOT fully self-checking in
-isolation: two of its three phases require the cocotb testbench to observe or
-drive the tb_soc_top boundary ports (gpio_out_o/gpio_oe_o, gpio_in_i) at the
-right moment. Synchronisation between firmware progress and the cocotb driver
-is done the same way test_periph_loopback / test_cpu_gpu_irq already do it —
-via commit_pc_o scoreboarding — except here cocotb watches three additional
-marker PCs (OUTPUT_DONE, INPUT_READY, IRQ_READY), not just PASS_PC/FAIL_PC.
-
-Path exercised (confirmed from soc_top.sv):
-  CPU --AXI4--> axi4_crossbar --AXI4--> axi4_to_axilite --AXI-Lite-->
-  axi_lite_interconnect --AXI-Lite--> axil_to_apb --APB4--> apb_interconnect
-  --APB4--> APB_GPIO slave 7 (gpio_controller, base 0x2000_A000)
-
-GPIO register map (rtl/periph/gpio_controller.sv, word indices):
-  +0x00 GPIO_DATA_IN   RO
-  +0x04 GPIO_DATA_OUT  RW
-  +0x08 GPIO_DIR       RW   (1 = output)
-  +0x0C GPIO_IRQ_EN    RW
-  +0x10 GPIO_IRQ_TYPE  RW   (0 = level, 1 = edge)
-  +0x14 GPIO_IRQ_POL   RW   (0 = low/falling, 1 = high/rising)
-  +0x18 GPIO_IRQ_STAT  RO   (sticky in edge mode, live in level mode)
-  +0x1C GPIO_IRQ_CLR   WO   (always reads 0)
-  +0x20 first out-of-range word (N_REGS=8) — read must return 0
-
-Three test phases, each gated by a distinct marker PC the cocotb test
-watches via commit_pc_o:
-
-  Phase 1 (OUTPUT): firmware writes GPIO_DIR=TEST_DIR_VAL and
-    GPIO_DATA_OUT=TEST_DATA_VAL, then commits OUTPUT_DONE_PC. cocotb samples
-    gpio_oe_o/gpio_out_o at that point and asserts they equal the written
-    values — proving the write reached slave 7 through the whole fabric.
-
-  Phase 2 (INPUT): firmware commits INPUT_READY_PC just before entering a
-    bounded poll loop reading GPIO_DATA_IN. cocotb, on seeing that PC, drives
-    gpio_in_i = INPUT_MASK (bits INPUT_PIN_A/INPUT_PIN_B). The poll loop
-    naturally tolerates the pin's 3-clock-edge synchroniser latency (2-stage
-    cdc_sync + 1 register-bank cycle) because each iteration costs several
-    cycles and the loop simply retries until it observes the new value or
-    times out (a real synchronisation bug would show as a poll-limit FAIL).
-
-  Phase 3 (INTERRUPT, end to end): firmware configures pin IRQ_PIN_IDX for a
-    rising-edge interrupt, clears any stale sticky status, unmasks it in
-    GPIO_IRQ_EN, unmasks bit 5 (GPIO) in interrupt_controller's IRQ_MASK
-    (base 0x2000_6000), enables MEIE/MIE, then commits IRQ_READY_PC and enters
-    a bounded WFI-style poll loop on an ISR_FLAG word in SRAM. cocotb, on
-    seeing IRQ_READY_PC, raises gpio_in_i bit IRQ_PIN_IDX (0->1). The ISR
-    (installed at mtvec = ISR_PC) clears GPIO_IRQ_CLR for that pin, increments
-    an ISR_COUNT word, sets ISR_FLAG, and MRETs. Firmware then teeth-checks:
-    ISR_COUNT == 1 exactly (no spurious re-trigger after MRET re-enables MIE —
-    this is the firmware-side proof that the interrupt actually deasserted,
-    since a stuck-asserted level would immediately re-vector) and
-    GPIO_IRQ_STAT bit IRQ_PIN_IDX == 0 (edge-sticky bit cleared). The cocotb
-    test independently watches commit_pc_o for ISR_PC (proof the CPU actually
-    took the trap, not merely that a status bit got set) and directly samples
-    the internal gpio_irq / ext_irq nets before and after the ISR runs (proof
-    of deassertion at the RTL level, not just firmware self-report).
-
-  Phase 4 (register-bank policy, cheap teeth checks): GPIO_IRQ_CLR always
-  reads 0; a read at word index 8 (first out-of-range offset, +0x20) returns
-  0 (apb4_register_bank's documented drop/return-0 OOR policy).
-
-All peripheral base addresses used here (GPIO_BASE, IRQ_CTRL_BASE) have
-bits[11:0]=0, so no LUI sign-extension compensation is needed for them (see
-periph_fw/gen_periph_hex.py's header) — lui_addi() handles the general case
-regardless.
-
-Register allocation (MAIN):
-  x1  = scratch (LUI/ADDI temporaries, CSR value staging)
-  x2  = GPIO_BASE       0x2000_A000
-  x3  = IRQ_CTRL_BASE   0x2000_6000
-  x4  = ISR_FLAG_ADDR   (SRAM, word ISR_FLAG_WI)
-  x5  = scratch (write patterns)
-  x6  = INPUT_MASK      (bits INPUT_PIN_A | INPUT_PIN_B)
-  x7  = poll counter (input phase)
-  x8  = poll limit (input phase)
-  x9  = scratch (GPIO_DATA_IN readback)
-  x10 = scratch (masked readback)
-  x11 = IRQ_PIN bit mask (1 << IRQ_PIN_IDX) — held live across phase 3
-  x12 = scratch (register read-modify-write staging)
-  x13 = scratch (IRQ_MASK bit-5 value / small constants)
-  x14 = poll counter (WFI loop)
-  x15 = poll limit (WFI loop)
-  x16 = scratch (ISR_FLAG readback)
-  x17 = scratch (ISR_COUNT readback / expected constant)
-  x18 = scratch (expected constant for ISR_COUNT compare)
-  x19 = scratch (GPIO_IRQ_STAT readback / masked)
-  x20 = scratch (GPIO_IRQ_CLR readback)
-  x21 = scratch (out-of-range readback)
-  x31 = result marker (1 = pass, -1 = fail)
-
-Register allocation (ISR, at ISR_PC = ROM_BASE + 4):
-  x28 = GPIO_BASE (reconstructed independently of MAIN's x2 — ISR runs with
-        MIE cleared, but MAIN's registers are still architecturally live;
-        rebuilding is defensive, matching cpu_gpu_irq_fw's convention)
-  x29 = IRQ_PIN bit mask (rebuilt in the ISR — see below)
-  x30 = SRAM ISR_FLAG_ADDR (rebuilt in the ISR)
-  x31 = scratch (constant 1 / ISR_COUNT staging)
-  x1  = scratch (ISR_COUNT readback)
-  Only x1, x28-x31 are touched by the ISR; MAIN uses x1-x21 before entering
-  the WFI loop and does not rely on any of those values surviving a trap, so
-  this is safe scratch (same reasoning as cpu_gpu_irq_fw's ISR register note).
+gen_gpio_hex.py -- generate gpio_fw.hex for the Phase 6a SoC-level GPIO test.
+Unlike periph_fw and cpu_gpu_irq_fw, this firmware is NOT self-checking in isolation. The cocotb
+test must observe or drive the tb_soc_top ports (gpio_out_o, gpio_oe_o, gpio_in_i) at the right
+moment. It synchronises by commit_pc_o scoreboarding, with three extra marker PCs (OUTPUT_DONE,
+INPUT_READY, IRQ_READY) besides PASS_PC and FAIL_PC. Path: the AXI4 and AXI-Lite fabric to APB_GPIO
+slave 7 (gpio_controller, base 0x2000_A000; registers: rtl/periph/gpio_controller.sv).
+Phase 1 OUTPUT: write GPIO_DIR=TEST_DIR_VAL and GPIO_DATA_OUT=TEST_DATA_VAL, commit OUTPUT_DONE_PC.
+Phase 2 INPUT: commit INPUT_READY_PC, then poll GPIO_DATA_IN in a bounded loop. cocotb drives
+gpio_in_i = INPUT_MASK. The loop tolerates the 3-clock synchroniser latency. A real sync bug shows
+as a poll-limit FAIL.
+Phase 3 INTERRUPT: pin IRQ_PIN_IDX, rising edge. Clear stale sticky status, unmask in GPIO_IRQ_EN
+and bit 5 in the interrupt_controller IRQ_MASK (base 0x2000_6000), enable MEIE/MIE, commit
+IRQ_READY_PC, poll ISR_FLAG. The ISR (mtvec = ISR_PC) clears GPIO_IRQ_CLR, increments ISR_COUNT,
+sets ISR_FLAG, MRETs. Firmware checks ISR_COUNT == 1 (no re-trigger, so the interrupt deasserted)
+and IRQ_STAT bit == 0.
+Phase 4: GPIO_IRQ_CLR reads 0, and word index 8 (+0x20) reads 0 (the register bank's
+out-of-range policy).
+Register use: the ISR touches only x1 and x28-x31 and rebuilds its own bases. MAIN uses x1-x21 and
+does not rely on them surviving a trap.
+Doc: tm:suite:soc-gpio-fw-gen-gpio-hex
 """
 
 import os

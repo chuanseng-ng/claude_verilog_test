@@ -1,133 +1,27 @@
-"""test_pwm.py -- Phase 6a-2 cocotb verification for pwm_controller (rtl/periph/pwm_controller.sv,
-bead claude_verilog_test-f7vs.6, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-2 -- PWM" + Sec.9).
-
-STRICT TDD: pwm_controller DOES NOT EXIST YET as of this suite's authorship. This is step 2 of
-the mandated workflow ("the verification orchestrator runs before the RTL orchestrator" --
-Sec.9) -- `make pwm`/`make pwm_lint` are EXPECTED to fail to elaborate until a separate RTL
-agent writes rtl/periph/pwm_controller.sv to match the contract documented here.
-
-DUT: tb_pwm (standalone wrapper, directly instantiates pwm_controller, N_CH=4 default, ADDR_W=12)
-
-Register map (pwm_controller.sv, ADDR_W=12 local byte offset, N_REGS=8):
-  0x000  PWM_CTRL       [RW]   [3:0] per-channel enable, [7:4] per-channel output polarity
-                                (polarity: 0 = active-high, 1 = inverted)
-  0x004  PWM_PERIOD     [RW]   [15:0] shared period, in prescaled ticks
-  0x008  PWM_PRESCALE   [RW]   [15:0] core_clk divider; one tick = (PRESCALE+1) clocks
-  0x00C  PWM_DUTY01     [RW]   [15:0] ch0 duty, [31:16] ch1 duty
-  0x010  PWM_DUTY23     [RW]   [15:0] ch2 duty, [31:16] ch3 duty
-  0x014  PWM_IRQ_EN     [RW]   [3:0] per-channel period-wrap IRQ enable (masks irq_o ONLY)
-  0x018  PWM_IRQ_STAT   [RO]   [3:0] sticky per-channel period-wrap (HW-written)
-  0x01C  PWM_IRQ_CLR    [WO]   W1C against PWM_IRQ_STAT; always reads 0
-  >=0x020 (word index >= 8)    out-of-range: writes dropped, reads return 0, pslverr=0
-
-N_CH defaults to 4 in tb_pwm, matching the register map's fixed [3:0]/[7:4] nibble split above
-(the elaboration-time N_CH guard, 1 <= N_CH <= 8, is a `generate`-scope $fatal per
-Doc: ds:ch:phase6-ip-expansion-plan Sec.10 item 1 / gpio_controller.sv precedent -- not exercised
-here, matching test_gpio.py's own precedent of not driving an elaboration-time $fatal via cocotb).
-
-Timing contract, one shared period counter for ALL channels (Doc: ds:ch:phase6-ip-expansion-plan
-Sec.7: "Shared period, per-channel duty"), left/edge-aligned only (no centre-alignment, no
-dead-time -- both explicit non-goals):
-  - A tick occurs every (PRESCALE+1) core_clk cycles.
-  - The shared tick counter counts 0 .. PERIOD-1 and wraps back to 0 (period-wrap event).
-  - Channel ch's "active condition" is (tick_count < DUTY[ch]) while ch is enabled
-    (PWM_CTRL[ch] == 1); pwm_o[ch] = active_condition XOR PWM_CTRL[4+ch] (polarity), i.e.
-    polarity=0 (active-high) drives pwm_o[ch]=1 during the active condition and 0 otherwise;
-    polarity=1 (inverted) drives pwm_o[ch]=0 during the active condition and 1 otherwise.
-  - A DISABLED channel (PWM_CTRL[ch] == 0) drives its inactive level continuously and its
-    PWM_IRQ_STAT bit never accumulates a period-wrap event, regardless of its DUTY value (see
-    test_pwm_disabled_channel_no_output_no_irq) -- this is a real datapath gate, not merely an
-    irq_o mask (contrast with PWM_IRQ_EN, which masks irq_o only and does not affect
-    accumulation -- see test_pwm_irq_en_masks_output_only).
-
-This suite SPECIFIES (not empirically measures, since no RTL exists yet) three corner cases the
-golden spec calls out by name and leaves to the implementer without a chosen answer -- documented
-here so the RTL agent implements what this suite asserts, not the reverse:
-  DUTY == 0            : a TRUE 0% duty cycle -- pwm_o[ch] must NEVER read the active level, not
-                          even for a single clock cycle (the classic one-cycle PWM glitch bug).
-                          See test_pwm_duty_zero_is_true_zero_percent.
-  DUTY >= PERIOD        : a TRUE 100% duty cycle -- pwm_o[ch] must be continuously active across
-                          every sampled cycle, INCLUDING the exact tick-wrap-to-0 instant (no
-                          one-tick low glitch at wraparound). See
-                          test_pwm_duty_ge_period_is_true_100_percent.
-  PERIOD == 0           : no valid period exists. This suite specifies that the active condition
-                          must be forced FALSE unconditionally (pwm_o[ch] holds at its inactive
-                          level) and that no period-wrap IRQ event may ever fire -- the design
-                          decision that avoids both an output glitch and a spurious/runaway
-                          interrupt storm from an ill-defined free-running compare. See
-                          test_pwm_period_zero_defined_behavior.
-
-Periodicity-based synchronisation (used by several tests below instead of any assumed
-wrap-to-STAT-visible latency constant, since no RTL exists yet to measure one empirically the way
-test_gpio.py's test_gpio_data_in_sync_latency did): with PRESCALE=0, one tick equals exactly one
-core_clk cycle, so consecutive period-wrap-visible events recur exactly PERIOD clock cycles apart
--- this holds regardless of whatever fixed internal pipeline latency separates the true wrap
-instant from its visibility in PWM_IRQ_STAT, because that constant is identical every period and
-cancels out of the *difference* between two consecutive visible events. `_wait_for_irq_stat()`
-locates one such event by direct polling (never assumed/hardcoded), and tests that need a
-phase-aligned sampling window (test_pwm_per_channel_independence, test_pwm_polarity_inversion)
-rely on a further invariant: any period-clock-cycle-long contiguous sampling window taken from a
-steady-state periodic 0/1 signal with a fixed on-time per period contains exactly that same
-on-time count of active samples, regardless of the window's phase offset within the period (it is
-a cyclic rotation of one period's worth of samples). This lets those two tests assert an exact
-active-cycle COUNT without needing to know or assume the wrap's exact internal latency.
-test_pwm_irq_set_beats_same_cycle_clear additionally uses the periodicity invariant to predict a
-SPECIFIC future edge (the next period-wrap's visible edge, exactly PERIOD cycles after an
-observed one) and lands a raw APB write's ACCESS/commit edge on it cycle-exact, mirroring
-gpio_controller's proven test_gpio_edge_set_beats_same_cycle_clear methodology.
-
-irq_o = |(PWM_IRQ_STAT & PWM_IRQ_EN), purely combinational and level-held (never a pulse) -- same
-contract and same underlying reason as gpio_controller.sv (every IRQ source feeding
-interrupt_controller crosses core_clk -> cpu_core_clk through a plain 2-FF cdc_sync at
-rtl/soc/soc_top.sv:637-644, which can only safely observe a level held for multiple destination-
-clock cycles).
-
-Tests:
-  test_pwm_reset_defaults
-      All RW regs 0 (CTRL/PERIOD/PRESCALE/DUTY01/DUTY23/IRQ_EN), IRQ_STAT == 0 (PERIOD==0 and
-      every channel disabled at reset -- no wrap can occur), IRQ_CLR reads 0, pwm_o == 0 (all
-      channels disabled -> inactive level at default polarity), irq_o == 0.
-  test_pwm_rw_roundtrip_all_registers
-      Write/read-back round trip on CTRL, PERIOD, PRESCALE, DUTY01, DUTY23, IRQ_EN.
-  test_pwm_irq_clr_reads_as_zero
-      PWM_IRQ_CLR always reads back 0, regardless of what was last written to it.
-  test_pwm_out_of_range_access
-      Word index >= 8 (byte offset >= 0x020): write silently dropped, read returns 0, pslverr=0.
-  test_pwm_duty01_pstrb_partial_word
-      A strobed PWM_DUTY01 write (byte0+1 only) updates ch0's duty and leaves ch1's duty (upper
-      16 bits, non-strobed bytes) untouched.
-  test_pwm_duty_zero_is_true_zero_percent
-      DUTY==0: pwm_o never shows the active level, sampled every cycle across 3 full periods.
-  test_pwm_duty_ge_period_is_true_100_percent
-      DUTY==PERIOD and DUTY>PERIOD: pwm_o is continuously active every sampled cycle, including
-      across the tick-wrap boundary (no dropout glitch).
-  test_pwm_period_zero_defined_behavior
-      PERIOD==0: pwm_o holds inactive and PWM_IRQ_STAT never sets, for an enabled+IRQ_EN channel
-      with a nonzero DUTY that would normally be active.
-  test_pwm_prescaler_change_mid_period
-      Changing PWM_PRESCALE partway through an in-progress period does not lock up or run away --
-      a period-wrap IRQ is still observed within a generous bounded cycle budget afterwards.
-  test_pwm_polarity_inversion
-      PWM_CTRL[7:4]: an inverted-polarity channel's active-cycle count over one phase-aligned
-      period window equals (PERIOD - DUTY), the exact complement of the non-inverted case.
-  test_pwm_per_channel_independence
-      4 distinct duties across all 4 channels simultaneously: each channel's active-cycle count
-      over one phase-aligned period window equals exactly its own configured DUTY.
-  test_pwm_disabled_channel_no_output_no_irq
-      A disabled channel (PWM_CTRL[ch]==0) holds its inactive level and never accumulates
-      PWM_IRQ_STAT, across 3 confirmed period wraps on a separate enabled reference channel --
-      even with its own DUTY configured to a value that would normally be active and its own
-      PWM_IRQ_EN bit set.
-  test_pwm_irq_period_wrap_sticky_and_clear
-      PWM_IRQ_STAT stays set (sticky) across further period wraps with no CLR write, then clears
-      on a PWM_IRQ_CLR write.
-  test_pwm_irq_set_beats_same_cycle_clear
-      A PWM_IRQ_CLR write whose ACCESS-phase commit edge coincides EXACTLY with a fresh
-      period-wrap event leaves the bit SET, not cleared.
-  test_pwm_irq_en_masks_output_only
-      PWM_IRQ_EN gates irq_o only; PWM_IRQ_STAT accumulation is unaffected by it.
-  test_pwm_irq_level_held_across_cycles
-      irq_o stays asserted across many consecutive cycles once its condition is enabled (no pulse).
+"""
+test_pwm.py -- Phase 6a-2 cocotb verification for pwm_controller (rtl/periph/pwm_controller.sv; plan
+"6a-2 -- PWM"). DUT: tb_pwm (standalone wrapper, N_CH=4 default, ADDR_W=12). Register map:
+pwm_controller.sv header (N_REGS=8). The N_CH $fatal guard is not exercised.
+Timing contract, ONE shared period counter for ALL channels, left-aligned only (no centre alignment,
+no dead time): a tick every PRESCALE+1 core_clk cycles; the counter runs 0..PERIOD-1 and wraps (the
+period-wrap event); channel ch is active while enabled and tick_count < DUTY[ch]; pwm_o[ch] = active
+XOR PWM_CTRL[4+ch].
+A DISABLED channel drives its inactive level and its IRQ_STAT bit never accumulates, whatever its
+DUTY. That is a real datapath gate, unlike IRQ_EN, which only masks irq_o.
+The suite SPECIFIES three corner cases the spec left open, so the RTL implements what it asserts:
+DUTY == 0 is a TRUE 0% duty (pwm_o never shows the active level, not even for one cycle: the classic
+one-cycle glitch bug); DUTY >= PERIOD is a TRUE 100% duty (continuously active, including the
+wrap-to-0 instant); PERIOD == 0 forces the active condition FALSE and no period-wrap IRQ ever fires
+(no output glitch, no interrupt storm).
+Synchronisation uses periodicity, not an assumed wrap-to-STAT latency. With PRESCALE=0 consecutive
+visible period-wrap events recur exactly PERIOD clocks apart, because the fixed pipeline latency
+cancels in the difference. A period-long window of a steady periodic signal holds the same on-time
+count at any phase, so the independence and polarity tests assert an exact active-cycle COUNT.
+irq_o = |(IRQ_STAT & IRQ_EN), combinational and level-held (never a pulse): every IRQ source crosses
+core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in rtl/soc/soc_top.sv, which can only observe
+a held level safely.
+Run: make -C tb/cocotb/soc pwm
+Doc: tm:suite:soc-test-pwm
 """
 
 import sys
@@ -148,7 +42,7 @@ from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 10  # 100 MHz -- matches SoC reference clock (same convention as test_gpio.py)
+CLK_PERIOD_NS = 10  # matches the SoC reference clock (same convention as test_gpio.py)
 
 PWM_CTRL = 0x000
 PWM_PERIOD = 0x004
@@ -182,7 +76,7 @@ def _kill_active_tasks() -> None:
 
 
 async def _start_clock_and_reset(dut) -> None:
-    """Start 100 MHz clock and apply synchronous reset with the APB4 bus idled. PWM has no
+    """Start the clock and apply synchronous reset with the APB4 bus idled. PWM has no
     additional top-level inputs beyond clk/rst_n/APB4 (no async pins, unlike tb_gpio's
     gpio_in_i)."""
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
@@ -865,7 +759,7 @@ async def test_pwm_irq_en_masks_output_only(dut):
 async def test_pwm_irq_level_held_across_cycles(dut):
     """irq_o stays asserted across many consecutive clock cycles once its condition holds --
     level-held, never a single-cycle pulse (required so the SoC's plain 2-FF IRQ synchroniser at
-    rtl/soc/soc_top.sv:637-644 can observe it), mirroring test_gpio_irq_level_held_across_cycles."""
+    rtl/soc/soc_top.sv can observe it), mirroring test_gpio_irq_level_held_across_cycles."""
     _kill_active_tasks()
     await _start_clock_and_reset(dut)
     bfm = _make_apb_bfm(dut)
@@ -897,7 +791,7 @@ async def test_pwm_irq_level_held_across_cycles(dut):
     dut._log.info("irq_o level-held across 50 consecutive cycles -- confirmed")
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -929,7 +823,7 @@ async def test_register_w1c_semantics(dut):
     rep.assert_clean()
 
 
-# -- Full-width tick counter and prescaler (bead xkw5) -------------------------------------------
+# -- Full-width tick counter and prescaler -------------------------------------------
 
 @cocotb.test()
 async def test_pwm_full_width_period_and_prescaler(dut):

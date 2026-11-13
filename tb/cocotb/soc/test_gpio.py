@@ -1,84 +1,27 @@
-"""test_gpio.py -- Phase 6a cocotb verification for gpio_controller (rtl/periph/gpio_controller.sv,
-bead claude_verilog_test-ckc).
-
-DUT: tb_gpio (standalone wrapper, directly instantiates gpio_controller, N_PINS=32 default)
-
-Register map (gpio_controller.sv, ADDR_W=12 local byte offset):
-  0x000  GPIO_DATA_IN   [RO]   live synchronised pin levels (HW-written)
-  0x004  GPIO_DATA_OUT  [RW]   output-drive value per pin (WMASK=PIN_MASK)
-  0x008  GPIO_DIR       [RW]   1 = pin driven as output, 0 = input (WMASK=PIN_MASK)
-  0x00C  GPIO_IRQ_EN    [RW]   1 = pin's IRQ event masked into irq_o (WMASK=PIN_MASK)
-  0x010  GPIO_IRQ_TYPE  [RW]   0 = level-sensitive, 1 = edge-sensitive (WMASK=PIN_MASK)
-  0x014  GPIO_IRQ_POL   [RW]   0 = active-low/falling, 1 = active-high/rising (WMASK=PIN_MASK)
-  0x018  GPIO_IRQ_STAT  [RO]   per-pin pending: sticky in edge mode, live in level mode (HW-written)
-  0x01C  GPIO_IRQ_CLR   [W1C]  APB-write-snoop clear (edge pins only); always reads 0
-  >=0x020 (word index >= 8)    out-of-range: writes dropped, reads return 0, pslverr=0
-
-N_PINS defaults to 32 in tb_gpio, so PIN_MASK == 0xFFFF_FFFF and every RW register's WMASK
-covers the full 32 bits used below (elaboration guard in gpio_controller.sv separately rejects
-N_PINS == 0 or N_PINS > 32; not exercised here -- no other suite in this Makefile tests an
-elaboration-time $fatal guard via cocotb either).
-
-Sync / edge latency contract (see gpio_controller.sv header for the RTL's own description, and
-test_gpio_data_in_sync_latency's docstring for the exact empirical calibration against this
-cocotb/Verilator environment): gpio_in_i is synchronised by a 2-stage cdc_sync per pin, and
-apb4_register_bank's own HW-write path is itself a further registered mirror of the synchronised
-wire before a pin change is visible through an APB read of GPIO_DATA_IN or (via edge/level
-detection built on the same synchronised wire) GPIO_IRQ_STAT. Measured directly against this RTL
-by sampling every single intervening edge (test_gpio_data_in_sync_latency below): a pin change is
-visible through the register bank exactly 3 clock edges after it is driven -- one per flop in
-on-paper trace of the 2 sync flops + 1 register-bank stage would suggest (see that test's
-docstring for the extra edge's likely source). All latency-sensitive tests below peek the live
-register value combinationally (see _peek()) rather than going through an APB read transaction,
-so the edge count asserted is exact and not conflated with the BFM's own SETUP/ACCESS overhead.
-
-GPIO_IRQ_STAT capture rule, by GPIO_IRQ_TYPE (see gpio_controller.sv header):
-  edge  (TYPE=1): STICKY. stat = (stat & ~clr) | edge_event -- a GPIO_IRQ_CLR write landing the
-                  same edge as a fresh qualifying transition leaves the bit SET (set beats clear,
-                  falls out of the OR with edge_event).
-  level (TYPE=0): LIVE. stat = level_event -- GPIO_IRQ_CLR has NO effect on a level-mode bit.
-At reset (TYPE=0 level, POL=0 active-low, gpio_in_i driven all-zero by _start_clock_and_reset) every
-pin's level condition is true, so GPIO_IRQ_STAT reads all-ones a couple of cycles out of reset --
-test_gpio_reset_defaults asserts that deliberately, matching the RTL header's own rationale.
-
-irq_o = |(GPIO_IRQ_STAT & GPIO_IRQ_EN), purely combinational and level-held (never a pulse).
-
-Tests:
-  test_gpio_reset_defaults
-      All RW regs 0, GPIO_IRQ_STAT == all-ones (level defaults + all-zero pins), irq_o == 0
-      (GPIO_IRQ_EN == 0 masks it), gpio_out_o/gpio_oe_o == 0.
-  test_gpio_rw_roundtrip_all_registers
-      Write/read-back round trip on DATA_OUT, DIR, IRQ_EN, IRQ_TYPE, IRQ_POL.
-  test_gpio_output_pins_mirror_data_out_and_dir
-      gpio_out_o mirrors DATA_OUT, gpio_oe_o mirrors DIR, visible immediately after the write.
-  test_gpio_data_in_sync_latency
-      Cycle-exact: DATA_IN is stale through edges 1-2, matches the new pin value at edge 3.
-  test_gpio_edge_capture_rising
-      TYPE=edge, POL=rising: STAT bit sets exactly 4 edges after a 0->1 pin transition.
-  test_gpio_edge_capture_falling
-      TYPE=edge, POL=falling (default): STAT bit sets exactly 4 edges after a 1->0 transition.
-  test_gpio_level_high
-      TYPE=level (default), POL=rising: STAT bit tracks the pin level live (set when high).
-  test_gpio_level_low
-      TYPE=level, POL=falling (default): STAT bit tracks the pin level live (set when low).
-  test_gpio_edge_sticky_and_clear
-      Edge-mode STAT bit stays set until a GPIO_IRQ_CLR write targets it.
-  test_gpio_edge_set_beats_same_cycle_clear
-      A GPIO_IRQ_CLR write landing on the SAME edge as a fresh qualifying transition leaves the
-      bit SET, not cleared.
-  test_gpio_level_clr_has_no_effect
-      GPIO_IRQ_CLR does not affect a level-mode bit; only the level condition (or GPIO_IRQ_EN)
-      controls it.
-  test_gpio_irq_clr_pstrb_partial_word
-      A strobed GPIO_IRQ_CLR write clears only the strobed byte's bits.
-  test_gpio_irq_en_masks_output_only
-      GPIO_IRQ_EN gates irq_o only; GPIO_IRQ_STAT capture is unaffected by it.
-  test_gpio_irq_level_held_across_cycles
-      irq_o stays asserted across many consecutive cycles once its condition is enabled (no pulse).
-  test_gpio_irq_clr_reads_as_zero
-      GPIO_IRQ_CLR always reads back 0, regardless of what was last written to it.
-  test_gpio_out_of_range_access
-      Word index >= 8 (byte offset >= 0x020): write silently dropped, read returns 0, pslverr=0.
+"""
+test_gpio.py -- Phase 6a cocotb verification for gpio_controller (rtl/periph/gpio_controller.sv).
+DUT: tb_gpio (standalone wrapper, N_PINS=32 default, so PIN_MASK == 0xFFFF_FFFF and every RW WMASK
+covers all 32 bits). The elaboration guard against N_PINS == 0 or > 32 is not exercised: no suite
+here tests an elaboration-time $fatal through cocotb.
+Register map: gpio_controller.sv header; every RW WMASK = PIN_MASK. Word index >= 8 is out of range:
+writes dropped, reads 0, pslverr=0.
+Sync latency (calibration: test_gpio_data_in_sync_latency): gpio_in_i goes through a 2-stage
+cdc_sync per pin and then the register bank's HW-write mirror. A pin change is visible through the
+bank exactly 3 clock edges after it is driven. Latency-sensitive tests peek the live register value
+combinationally (_peek()), not through an APB read, so the edge count is exact and not mixed with
+the BFM's SETUP/ACCESS overhead.
+IRQ_STAT capture rule by IRQ_TYPE: edge (TYPE=1) is STICKY, stat = (stat & ~clr) | edge_event, so an
+IRQ_CLR write on the same edge as a fresh transition leaves the bit SET. Level (TYPE=0) is LIVE,
+stat = level_event, and IRQ_CLR has NO effect. At reset (level, POL=0, pins driven 0) every pin's
+level condition is true, so IRQ_STAT reads all-ones; test_gpio_reset_defaults asserts that on
+purpose, as the RTL header explains.
+irq_o = |(IRQ_STAT & IRQ_EN), purely combinational and level-held (never a pulse).
+Tests: reset defaults, RW round trips, output pins mirror DATA_OUT and DIR, DATA_IN sync latency
+(stale through edges 1-2, new at edge 3), edge capture (STAT sets exactly 3 edges after the
+transition, the same latency as DATA_IN), level high and low, edge sticky and clear, set beats a
+same-cycle clear, partial-pstrb IRQ_CLR, IRQ_EN gates irq_o only, irq_o held.
+Run: make -C tb/cocotb/soc gpio
+Doc: tm:suite:soc-test-gpio
 """
 
 import sys
@@ -99,7 +42,7 @@ from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 10  # 100 MHz -- matches SoC reference clock (same convention as test_pmu.py)
+CLK_PERIOD_NS = 10  # matches the SoC reference clock (same convention as test_pmu.py)
 
 GPIO_DATA_IN = 0x000
 GPIO_DATA_OUT = 0x004
@@ -133,7 +76,7 @@ def _kill_active_tasks() -> None:
 
 
 async def _start_clock_and_reset(dut) -> None:
-    """Start 100 MHz clock and apply synchronous reset. Idle the APB4 bus and drive every
+    """Start the clock and apply synchronous reset. Idle the APB4 bus and drive every
     GPIO pin low (the DUT contract's own reset scenario assumes gpio_in_i is all-zero)."""
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
@@ -165,7 +108,7 @@ async def _peek(dut, addr: int) -> int:
     register value with NO APB transaction and NO side effects: no write can occur since access
     (psel & penable) is 0.
 
-    Bug found + fixed during development (bead claude_verilog_test-ckc): a bare synchronous
+    Bug found + fixed during development: a bare synchronous
     version of this helper (set paddr/pwrite, read prdata immediately, no intervening trigger)
     read STALE prdata whenever the target address differed from whatever address a real clock
     edge had last settled prdata against -- cocotb's VPI signal write does not itself force
@@ -174,9 +117,9 @@ async def _peek(dut, addr: int) -> int:
     peeking GPIO_DATA_IN returned GPIO_DATA_IN's value instead of GPIO_IRQ_TYPE's), and it
     happened to go unnoticed wherever a real RisingEdge already separated two peeks of different
     addresses (the common case) -- only a same-instant, back-to-back multi-address peek exposed
-    it. `await Timer(1, units="step")` (a single simulator time step -- 1 ps at this suite's
-    1ns/1ps timescale, i.e. 1/10000 of one clock period) forces that settle without disturbing
-    any clock-edge-relative cycle count elsewhere in this file."""
+    it. `await Timer(1, units="step")` (a single simulator time step, 1/10000 of one clock period
+    at this suite's timescale) forces that settle without disturbing any clock-edge-relative cycle
+    count elsewhere in this file."""
     dut.pwrite.value = 0
     dut.paddr.value = addr
     await Timer(1, units="step")
@@ -515,7 +458,7 @@ async def test_gpio_edge_sticky_and_clear(dut):
     assert ok3
 
     dut.gpio_in_i.value = mask
-    await ClockCycles(dut.clk, 10)  # comfortably past the 4-edge capture latency
+    await ClockCycles(dut.clk, 10)  # comfortably past the 3-edge capture latency
 
     stat_set = await _peek(dut, GPIO_IRQ_STAT)
     assert stat_set & mask == mask, f"IRQ_STAT bit must be set (sticky) after the edge, got 0x{stat_set:08x}"
@@ -752,7 +695,7 @@ async def test_gpio_out_of_range_access(dut):
     dut._log.info("out-of-range access policy (drop write, read 0, pslverr=0) confirmed")
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):

@@ -1,48 +1,22 @@
 """
-test_soc_gpio.py — Phase 6a SoC-level GPIO test (bead claude_verilog_test-8qn4 item 1).
-
-`test_gpio` (tb_gpio.sv / Makefile `gpio` target) drives gpio_controller's APB4
-face directly and has never exercised it through the real fabric path:
-
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-  axil_to_apb -> apb_interconnect -> APB slave 7 (APB_GPIO, 0x2000_A000)
-
-This test closes that gap using a self-checking RV32I firmware
-(gpio_fw/gen_gpio_hex.py) that runs entirely via CPU MMIO through that path,
-combined with a cocotb driver that observes/drives the tb_soc_top boundary
-ports (gpio_out_o, gpio_oe_o, gpio_in_i) at three points synchronised via
-commit_pc_o marker PCs (OUTPUT_DONE_PC, INPUT_READY_PC, IRQ_READY_PC) — the
-same scoreboarding technique test_periph_loopback / test_cpu_gpu_irq already
-use for PASS_PC/FAIL_PC.
-
-Coverage:
-  1. OUTPUT PATH: firmware writes GPIO_DIR/GPIO_DATA_OUT; test asserts
-     gpio_oe_o/gpio_out_o at the SoC boundary match — proves the write
-     reached slave 7 through the whole fabric.
-  2. INPUT PATH: test drives gpio_in_i; firmware reads GPIO_DATA_IN back and
-     self-checks in a bounded poll loop (naturally tolerant of the pin's
-     3-clock-edge synchroniser latency: 2-stage cdc_sync + 1
-     register-bank cycle).
-  3. INTERRUPT PATH, end to end: firmware unmasks a rising-edge interrupt on
-     one GPIO pin, unmasks bit 5 (GPIO) in interrupt_controller's IRQ_MASK,
-     and enables CPU MEIE/MIE. The test toggles gpio_in_i and this test
-     independently watches commit_pc_o for ISR_PC — proof the CPU actually
-     took the trap, not merely that a status bit got set — then samples the
-     internal gpio_irq/ext_irq nets both at trap entry (must be asserted,
-     the cause of the trap) and ~50 cycles later (must be deasserted, after
-     the ISR's GPIO_IRQ_CLR write) — proof of deassertion at the RTL level,
-     independent of firmware self-report. Firmware itself teeth-checks
-     ISR_COUNT == 1 (no spurious re-trigger after MRET re-enables MIE) and
-     GPIO_IRQ_STAT bit cleared.
-  4. Cheap register-bank policy checks: GPIO_IRQ_CLR always reads 0; the
-     first out-of-range word (offset 0x20, N_REGS=8) reads 0.
-
-GOLDEN-MODEL NOTE (same as test_periph_loopback): SoCModel cannot be used
-here since it rejects 0x2000_xxxx MMIO. The firmware is self-checking and
-the testbench scoreboards commit_pc_o for the marker PCs / PASS_PC / FAIL_PC.
-As an additional independent check, ISR_COUNT is backdoor-read from SRAM
-after PASS and compared against the value the firmware itself already
-verified.
+test_soc_gpio.py -- Phase 6a SoC-level GPIO test. `test_gpio` (tb_gpio.sv, Makefile `gpio` target)
+  drives gpio_controller's APB4 face directly. It never used the real fabric path to APB slave 7
+  (APB_GPIO, 0x2000_A000). This test closes that gap with a self-checking RV32I firmware
+  (gpio_fw/gen_gpio_hex.py) that works only by CPU MMIO, and a cocotb driver that observes or drives
+  the tb_soc_top ports (gpio_out_o, gpio_oe_o, gpio_in_i) at three points synchronised by
+  commit_pc_o marker PCs (OUTPUT_DONE_PC, INPUT_READY_PC, IRQ_READY_PC).
+  1. OUTPUT: the firmware writes GPIO_DIR and GPIO_DATA_OUT; the test checks gpio_oe_o
+     and gpio_out_o.
+  2. INPUT: the test drives gpio_in_i; the firmware reads GPIO_DATA_IN in a bounded poll loop, which
+     tolerates the 3-clock-edge pin synchroniser latency (2-stage cdc_sync + 1 register-bank cycle).
+  3. INTERRUPT: the firmware unmasks a rising-edge interrupt on one pin, bit 5 (GPIO) in the
+     interrupt_controller IRQ_MASK, and CPU MEIE/MIE. The test toggles gpio_in_i, watches
+     commit_pc_o for ISR_PC (the CPU really took the trap), and samples gpio_irq and ext_irq at trap
+     entry (asserted) and about 50 cycles later (deasserted after the ISR's GPIO_IRQ_CLR write):
+     deassertion is proven at the RTL level, not by firmware self-report. The firmware checks
+     ISR_COUNT == 1 (no re-trigger after MRET) and the GPIO_IRQ_STAT bit cleared.
+Run: make -C tb/cocotb/soc soc_gpio
+Doc: tm:suite:soc-test-soc-gpio
 """
 
 import sys
@@ -75,7 +49,7 @@ from tb.cocotb.soc.gpio_fw.gpio_fw_addrs import (
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS = 2  # matches the other SoC tests
 
 _FW_HEX = str(Path(__file__).parent / "gpio_fw" / "gpio_fw.hex")
 

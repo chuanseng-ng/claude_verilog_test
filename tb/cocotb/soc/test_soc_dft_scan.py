@@ -1,58 +1,29 @@
 """
-test_soc_dft_scan.py -- bead claude_verilog_test-j41m.2 (DFT Stage 1a), SoC level.
-
-DUT: tb_soc_pll -> soc_top (PLL_IMPL=STUB). soc_top is exercised through its new
-test-access ports (scan_mode_i, scan_en_i, scan_rst_ni, scan_clk_i, scan_in_i /
-scan_out_o). What is OBSERVABLE at a port is checked at the port (pll_locked_o,
-cpu_pll_locked_o, scan_out_o); what is internal is read through hierarchy
-(--public-flat-rw is on for every suite in this Makefile).
-
-What this proves, and what it does not:
-  * PROVES  the test controls reach the right places: both PLL reference roots
-    run on scan_clk_i in scan mode (functional clocks held stopped), the derived
-    resets inside pll_subsystem follow the scan reset and ignore the functional
-    pins, the CPU clock gate opens in scan mode while its functional enable is
-    closed, gpu_domain_rst_n follows the scan reset, and the scan_out placeholder
-    is a defined 0.
-  * DOES NOT prove that EVERY async reset and clock in the netlist is
-    controllable: that is an all-nets property and is checked structurally by
-    tools/dft/check_scan_clk_rst.py on the synthesised netlist (see
-    Doc: tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl).
-  * Functional-mode bit-identity is established by the existing suites, which
-    run with these ports tied inactive by soc_clocks.drive_dft_inactive().
-
-Tests:
-  test_functional_baseline_locks            scan ports inactive: both PLLs lock on clk_i
-  test_scan_mode_runs_on_test_clk_only      scan mode, clk_i/cpu_clk_i STOPPED: PLL lock
-                                            counters advance on scan_clk_i alone
-  test_functional_clocks_ignored_in_scan    scan mode: toggling clk_i/cpu_clk_i moves nothing
-  test_scan_reset_overrides_functional      scan mode: rst_n_i/cpu_rst_n_i low is ignored,
-                                            scan_rst_ni low resets (async)
-  test_internal_resets_follow_scan_reset    core/cpu_core/cpu_domain/gpu_domain resets
-                                            equal scan_rst_ni in scan mode
-  test_cpu_clock_gate_forced_open           cpu_gated_clk toggles in scan mode while the
-                                            functional enable is 0
-  test_scan_out_placeholder_is_zero         defined 0 until Stage 2 insertion
-  test_exit_scan_restores_functional        scan_mode back to 0: functional reset works again
-  test_cpu_macro_scan_boundary              (j41m.4) CPU macro scan pins: bit-exact
-                                            scan_in[7:6] map, control nets, pin leg
-                                            (dft_ctrl nets == raw ports here)
-  test_cpu_macro_scan_boundary_tap_leg      (j41m.4) same boundary under TAP serial scan
-                                            with the PINS at 0: macro scan_mode/scan_en
-                                            follow dft_scan_mode/dft_scan_en, not the
-                                            raw ports (kills mutants b and e)
-  test_scan_gpu_reset_with_pmu_gpu_off      PMU holds the GPU domain in reset (real CPU-firmware
-                                            power-down), THEN scan mode: gpu_domain_rst_n must
-                                            follow scan_rst_ni (j41m.9, mutant g)
-  test_scan_cpu_reset_with_pmu_cpu_off      same for the CPU domain: PMU holds the CPU in reset
-                                            (firmware -> DMA -> PMU CTRL), then scan mode:
-                                            cpu_domain_rst_n must follow scan_rst_ni
-
-The last two tests exist because every other reset check here runs with the PMU idle, where
-the functional reset already equals scan_rst_ni and a mux that ignores scan mode is invisible
-(j41m.9, mutant g). The PMU is driven by the same CPU-firmware path the PMU SoC suites use;
-nothing is deposited on a net. scan_rst_ni stays 1 across scan entry so the PMU keeps its
-power-down state (it is reset by core_rst_n, which equals scan_rst_ni in scan mode).
+test_soc_dft_scan.py -- DFT Stage 1a, SoC level. DUT: tb_soc_pll -> soc_top (PLL_IMPL=STUB),
+exercised through its test-access ports. What is observable at a port is checked there. Internal
+nets are read through the hierarchy (--public-flat-rw is on in this Makefile).
+PROVES that the test controls reach the right places: both PLL reference roots run on scan_clk_i in
+scan mode (functional clocks stopped), the derived resets in pll_subsystem follow the scan reset and
+ignore the functional pins, the CPU clock gate opens in scan mode while its functional enable is
+closed, gpu_domain_rst_n follows the scan reset, and scan_out is a defined 0.
+DOES NOT prove that EVERY async reset and clock in the netlist is controllable. That all-nets
+property is checked structurally by tools/dft/check_scan_clk_rst.py on the synthesised netlist, see
+Doc: tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl
+Functional-mode bit-identity comes from the existing suites, which tie these ports inactive
+(soc_clocks.drive_dft_inactive()).
+Tests: functional baseline; scan mode with clk_i / cpu_clk_i STOPPED (lock counters advance on
+scan_clk_i alone); functional clocks ignored; scan reset overrides the functional resets (async);
+internal resets equal scan_rst_ni; cpu_gated_clk toggles with the functional enable 0; scan_out is 0
+until Stage 2; exit restores functional reset; CPU macro scan boundary (bit-exact scan_in[7:6] map,
+control nets, pin leg), also under TAP serial scan with the PINS at 0; the crypto key wipe on scan
+entry and exit, through soc_top.
+test_scan_gpu_reset_with_pmu_gpu_off and test_scan_cpu_reset_with_pmu_cpu_off power the domain down
+through the PMU by CPU firmware first (the CPU case through DMA to PMU CTRL), then enter scan mode:
+the domain reset must follow scan_rst_ni (with the PMU idle the functional reset already equals it,
+so a mux that ignores scan mode would be invisible). Nothing is deposited on a net. scan_rst_ni
+stays 1 across scan entry so the PMU keeps its state.
+Run: make -C tb/cocotb/soc soc_dft_scan
+Doc: tm:suite:soc-test-soc-dft-scan
 """
 
 import sys

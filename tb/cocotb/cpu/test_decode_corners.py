@@ -1,5 +1,5 @@
 """
-Decode / MEM-stage corner cases for rv32i_cpu_top (bead a5ze).
+Decode / MEM-stage corner cases for rv32i_cpu_top.
 
   test_load_extraction_all_offsets   LB/LBU at byte offsets 0-3 and LH/LHU at halfword offsets
                                      0-1, on a word with the sign bit set in every byte/half
@@ -93,7 +93,7 @@ ILLEGAL_WORDS = [
     ("FENCE.I rd!=0", _fence_i(rd=1)),
     ("FENCE.I rs1!=0", _fence_i(rs1=1)),
     ("FENCE.I imm!=0", _fence_i(imm=1)),
-    # MISC-MEM funct3 other than 000 (FENCE) / 001 (FENCE.I) is reserved: rv32i_decode.sv:510-512
+    # MISC-MEM funct3 other than 000 (FENCE) / 001 (FENCE.I) is reserved (see rv32i_decode.sv)
     ("MISC-MEM funct3=010", (0b010 << 12) | 0b0001111),
     ("MISC-MEM funct3=111", (0b111 << 12) | 0b0001111),
 ]

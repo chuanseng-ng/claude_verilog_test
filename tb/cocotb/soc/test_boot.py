@@ -8,15 +8,11 @@ Asserts final SRAM state matches reference sentinels.
 Boot-stability gate: repeated boot attempts (default 100) with varied
 reset-phase offset and per-attempt seed — all must pass with 0 failures.
 
-BLOCKER NOTE (2026-06-03):
-  This test is written and structurally correct, but cannot pass until
-  fix_request fr_null_20260603_052800_00 is resolved:
-    - CPU resets at PC=0x0000_0000 (hardcoded in rv32i_pipeline_if.sv:65)
-    - Boot ROM is at 0x0000_1000
-    - First CPU fetch goes to unmapped address → DECERR → CPU spins at mtvec=0
-  Required RTL fix: add RESET_PC parameter to rv32i_pipeline_if / rv32i_core /
-  rv32i_cpu_top and set it to 0x0000_1000 in soc_top.
-  See design_state.json fix_requests[] for full details.
+Reset PC: soc_top sets the CPU RESET_PC to the boot ROM base 0x0000_1000. The rv32i_cpu_top default
+is 0x0000_0000, which is unmapped in the SoC (DECERR, then the CPU spins at mtvec=0).
+
+Run: make -C tb/cocotb/soc soc_boot
+Doc: tm:suite:soc-test-boot
 """
 
 import os
@@ -39,7 +35,7 @@ from sram_backdoor import sram_mem
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS   = 2          # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS   = 2          # matches the other SoC tests
 ROM_BASE        = 0x0000_1000
 SRAM_BASE       = 0x0000_2000
 SENTINEL_0      = 0xDEAD_BEEF
@@ -312,8 +308,8 @@ async def test_boot_sram_sentinels(dut):
         await RisingEdge(dut.clk_i)
     await ReadOnly()
 
-    # DUT-side SRAM backdoor readback — same handle as test_soc_stress.py:202
-    # and test_soc_coherency.py:128.  mem[] is word-indexed (32-bit words);
+    # DUT-side SRAM backdoor readback — same handle as test_soc_stress.py
+    # and test_soc_coherency.py.  mem[] is word-indexed (32-bit words);
     # word_index = (byte_addr - SRAM_BASE) >> 2.
     sram = sram_mem(dut)
     dut_w0 = int(sram[_SENTINEL_0_WI].value)

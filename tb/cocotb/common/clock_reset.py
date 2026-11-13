@@ -13,7 +13,7 @@ async def setup_clock(dut, clock_period_ns: int = 10):
 
     Args:
         dut: Device under test
-        clock_period_ns: Clock period in nanoseconds (default 10ns = 100MHz)
+        clock_period_ns: Clock period in nanoseconds (default 10)
 
     Returns:
         Clock coroutine

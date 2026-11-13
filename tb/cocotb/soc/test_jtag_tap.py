@@ -1,54 +1,26 @@
 """
-test_jtag_tap.py -- bead claude_verilog_test-j41m.3 (DFT Stage 1b), unit suite for jtag_tap.
-
-DUT: tb_jtag_tap -> jtag_tap (rtl/soc/dft/jtag_tap.sv) alone.
-Specification: Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap (15.2 TAP rules, 15.3 instruction map).
-
-How the checking works
-  Every test drives the TAP through jtag_driver.JtagDriver, which runs an independent spec model
-  (jtag_driver.TapRef) in lock step and compares ALL outputs plus the state and the IR/TDR update
-  registers against it at three instants of every TCK cycle: half a period after the falling edge
-  with TMS/TDI already changed (pre_rise), 1 ps after the rising edge (post_rise: falling-edge
-  outputs must NOT have moved) and 1 ps after the falling edge (post_fall).  So every directed
-  test below is also a lock-step scoreboard run, and each test adds explicit, independently
-  written assertions on the property it is named for (they do not read the model).
-
-Every test is generated once per (TCK period, system clock period) pair in CFGS: the TAP is
-exercised with a free-running 'system clock' toggling next to it whose period is coprime to TCK
-(7/5, 13/3, 29/5 ns) to show that nothing in the TAP depends on any other clock.
-
-Tests (each x3 configurations, suffix _tck_NNN)
-  test_state_encodings_and_all_32_transitions   all 16 states reached, state_o == the standard
-                                               encoding, both TMS edges out of each taken
-  test_trst_is_asynchronous_from_every_state    TRST_N low with TCK stopped, in each of the 16
-                                               states while in SCAN with nonzero TDRs: state and
-                                               every output clear at once, TDRs/IR back to reset,
-                                               release needs 2 TCK edges before the FSM moves
-  test_trst_in_the_middle_of_a_cycle            TRST_N pulsed while TCK is high
-  test_five_tms_ones_reach_tlr_from_every_state exactly the distance, never later than 5, 4 are
-                                               not enough from Pause-DR (negative control)
-  test_ir_capture_and_update_timing             Capture-IR = 0001 (LSB first); a shifted IR takes
-                                               effect only on the FALLING edge of Update-IR;
-                                               short/long IR shifts; all 16 opcodes round-trip
-  test_bypass_is_a_one_bit_delay                BYPASS: capture 0, output = input delayed 1 bit
-  test_idcode_after_reset_without_loading_ir    IDCODE readback after TRST_N and after 5xTMS,
-                                               value 0x15C01001, LSB first, 32 bits
-  test_tdr_write_and_readback                   SCAN_SEL (3b) and SCAN_RST (1b): updated at the
-                                               falling edge of Update-DR, read back at Capture-DR
-  test_tdrs_reset_by_tlr_and_trst               both TDRs return to 0 on TLR and on TRST_N
-  test_scan_stub_is_a_one_bit_delay             SCAN data register: 1 bit, BYPASS timing
-  test_every_opcode_decodes_as_specified        all 16 opcodes: DR length, capture value,
-                                               unimplemented/reserved/unknown -> BYPASS
-  test_tdo_and_oe_per_state                     tdo_oe_o == (Shift-IR | Shift-DR), TDO 0 elsewhere
-  test_scan_mode_only_from_ir_scan              every SCAN_SEL x SCAN_RST value written with
-                                               IR != SCAN leaves ALL outputs 0, every tick
-  test_scan_outputs_per_spec                    serial/parallel/rst_assert/chain_grp/scan_en/
-                                               shift_clk_en in every DR state, every TDR value
-  test_outputs_change_only_on_tck_falling_edge  event log: falling-edge outputs only ever change
-                                               at a TCK falling edge (or at the TRST_N instant);
-                                               negative controls prove the log can fail
-  test_random_walk_lock_step                    seeded random TMS/TDI incl. TRST_N pulses, model
-                                               compared every cycle; coverage of states/edges
+test_jtag_tap.py -- unit suite for jtag_tap (DFT Stage 1b). DUT: tb_jtag_tap -> jtag_tap
+(rtl/soc/dft/jtag_tap.sv) alone. Specification (the TAP rules and the instruction map):
+Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap
+Checking: every test drives the TAP through jtag_driver.JtagDriver. It runs an independent spec
+model (jtag_driver.TapRef) in lock step and compares ALL outputs, the state and the IR/TDR update
+registers at three instants of every TCK cycle: pre_rise (half a period after the falling edge,
+TMS/TDI already changed), post_rise (one time step after the rising edge; falling-edge outputs must
+NOT have moved) and post_fall. So every directed test is also a lock-step scoreboard run, and each
+adds explicit assertions on the property it is named for, written independently (they do not read
+the model).
+Every test is generated once per (TCK period, system clock period) pair in CFGS (suffix _tck_NNN): a
+free-running 'system clock' toggles next to the TAP at a period coprime to TCK (7/5, 13/3, 29/5), to
+show that nothing in the TAP depends on another clock.
+Tests: all 16 states and 32 transitions. TRST_N is asynchronous from every state (TCK stopped,
+release needs 2 TCK edges) and mid-cycle. Five TMS ones reach TLR from every state (4 are not enough
+from Pause-DR: negative control). A shifted IR takes effect on the FALLING edge of Update-IR.
+BYPASS, IDCODE, SCAN_SEL / SCAN_RST access and the opcode decode follow the specification. Scan mode
+only from IR = SCAN (with IR != SCAN every SCAN_SEL x SCAN_RST value leaves ALL outputs 0). Outputs
+change only at a TCK falling edge or at the TRST_N instant (an event log, with negative controls). A
+seeded random walk in lock step.
+Run: make -C tb/cocotb/soc jtag_tap
+Doc: tm:suite:soc-test-jtag-tap
 """
 
 import random
@@ -613,7 +585,7 @@ async def t_scan_outputs_per_spec(dut, cfg):
                 assert s["shift_clk_en"] == gate, (
                     f"sel={sel} state={state}: shift_clk_en_o={s['shift_clk_en']}, expected {gate}"
                 )
-                # falling-edge property: at 1 ps after the rising edge scan_en_o is still the
+                # falling-edge property: one time step after the rising edge scan_en_o is still the
                 # previous state's value
                 assert drv.snaps["rise"]["scan_en"] == prev_scan_en, (
                     f"scan_en_o changed on the RISING edge into {state}"

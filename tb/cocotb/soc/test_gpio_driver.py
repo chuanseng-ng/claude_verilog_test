@@ -1,86 +1,27 @@
 """
-test_gpio_driver.py — Phase 6a GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2).
-
-Proves sw/drivers/gpio.h works by RUNNING it on the full SoC, not merely by
-compiling it. Loads sw/bench/build/gpio_demo.hex (built from sw/bench/gpio_demo.c,
-which calls only sw/drivers/gpio.h + sw/drivers/riscv_csr.h) onto tb_soc_top via
-the same backdoor-load / run-to-EBREAK technique as test_l2_bench.py, and
-independently scoreboards the driver's three phases through commit_pc_o and
-the tb_soc_top boundary ports/internal nets — the same scoreboarding
-philosophy test_soc_gpio.py already established for the hand-assembled
-gpio_fw firmware, but here retargeted at compiler-generated marker-function
-addresses (resolved from build/gpio_demo.sym) instead of a fixed hex layout.
-
-This is DELIBERATELY NOT a duplicate of test_soc_gpio.py: that suite proves
-the gpio_controller RTL works through the fabric using hand-assembled
-firmware; this suite proves the *driver API* (sw/drivers/gpio.h) works,
-using a normal C program built through the existing sw/bench toolchain.
-
-Coverage (mirrors gpio_demo.c's own phase structure):
-  1. OUTPUT: gpio_dir_write()/gpio_out_write() -> marker_output_done(). Test
-     asserts gpio_oe_o/gpio_out_o at the SoC boundary match at that PC.
-  2. INPUT: marker_input_ready() -> gpio_poll_in(). Test drives gpio_in_i on
-     seeing that PC; the driver's own bounded poll (not the test) absorbs
-     the pin's 3-clock-edge synchroniser latency.
-  3. INTERRUPT: gpio_irq_configure()/gpio_irq_enable() + interrupt_controller
-     unmask + mtvec/mie/mstatus setup -> marker_irq_ready() -> bounded poll
-     on g_isr_flag. Test raises gpio_in_i's IRQ_PIN_IDX bit on seeing that PC,
-     independently watches commit_pc_o for gpio_isr's own entry address
-     (proof the CPU actually took the trap), samples dut.u_soc.gpio_irq /
-     dut.u_soc.ext_irq both at trap entry (must be asserted) and polls,
-     within a bounded window (DEASSERT_CHECK_WINDOW_CYCLES), for both to
-     deassert (proving gpio_irq_clear_edge() inside the ISR actually worked
-     at the RTL level) -- see the window-sizing note below.
-
-ROOT-CAUSE NOTE (bead 8qn4 item 2, 2026-09-27): this suite originally checked
-deassertion at a SINGLE fixed point, isr_seen_at_cycle + 50, copied verbatim
-from test_soc_gpio.py's hand-assembled-firmware suite. It failed here every
-time -- not because gpio_controller.sv or gpio_irq_clear_edge() are wrong,
-but because 50 cycles is the wrong budget for a *compiled* interrupt handler.
-Instrumented with a temporary cycle-by-cycle probe on gpio_isr's commit_pc_o
-stream and on u_gpio's psel/penable/pwrite/paddr/clr_w/stat_next_w, the
-actual trace showed: the GCC `interrupt`-attribute prologue pushes 6
-registers onto stack slots main() had never touched before (genuinely cold
-D$ lines) and gpio_isr itself sits in a colder I$ region than the tiny
-hand-assembled ROM image test_soc_gpio.py uses (whose whole ISR+MAIN fits in
-a handful of already-warm cache lines) -- so almost every one of the first
-~10 instructions after trap entry stalls for a full D$/I$ miss round trip
-through the CPU<->fabric CDC + crossbar + SRAM controller (this project's own
-documented ~20-30-cycle full-fabric MMIO round trip, see GPIO_DRIVER_TEST_TIMEOUT_CYCLES's
-comment below). Measured: the GPIO_IRQ_CLR write's APB ACCESS phase (psel &&
-penable && pwrite, paddr=0x01c) does not land at u_gpio until cycle 134 after
-gpio_isr's entry PC commits; GPIO_IRQ_STAT/irq_o/gpio_irq are observed
-correctly deasserted by cycle ~150 (stat_next_w transitions
-0xfffaffff -> 0xfefaffff exactly at the clear, matching bit 24 cleared). The
-clear write is functionally correct throughout -- it is simply ~3x slower to
-arrive than the leaner hand-assembled program's, which is exactly what a
-compiled ISR's cold-cache prologue predicts, not a hang or an RTL defect.
-DEASSERT_CHECK_WINDOW_CYCLES below is sized off that measurement with
-~3x headroom, and the check itself polls for eventual deassertion across the
-whole window (rather than sampling once at a single point) so it still
-catches a genuine "never clears" RTL regression while tolerating the real,
-bounded, compiled-code latency this suite legitimately exercises.
-
-Unlike test_soc_gpio.py's hand-assembled firmware (which parks on a FAIL_PC
-loop), gpio_demo.c always falls through to crt0.S's normal halt sequence
-(D$ flush -> FENCE -> EBREAK) regardless of which phase failed, reporting
-pass/fail via __result (0 = PASS) instead. So this test does not need a
-FAIL_PC watch: it runs to the FENCE sentinel exactly like test_l2_bench.py,
-then backdoor-reads __result and g_isr_count from SRAM (both are guaranteed
-flushed out of D$ by crt0.S's CSRW 0x7C0 before EBREAK, so a plain SRAM read
-is coherent -- no D$-aware read path like test_l2_bench.py's
-_dcache_read_word is needed here) and cross-checks g_isr_count against its
-own independent commit_pc_o/gpio_irq observation of the interrupt.
-
-Firmware is pre-built by
-    nix develop ~/Downloads/Github/claude_verilog_test#bench --command make -C sw/bench
-this target consumes sw/bench/build/gpio_demo.{hex,sym,dis} -- it does NOT
-rebuild the C code (same contract as l2_bench).
-
-DUT: tb_soc_top with SRAM_MEM_WORDS=65536 (same override l2_bench uses),
-because gpio_demo.c links via the shared sw/bench/rv32i.ld, whose stack top
-(0x41C00) assumes that window; a smaller SRAM would alias the stack down
-onto the program's own code/data.
+test_gpio_driver.py -- Phase 6a GPIO DRIVER test. Proves sw/drivers/gpio.h works by RUNNING it on
+the full SoC. It loads sw/bench/build/gpio_demo.hex onto tb_soc_top by the backdoor-load and
+run-to-EBREAK technique of test_l2_bench.py. It scoreboards the three phases through commit_pc_o and
+the tb_soc_top ports and nets at compiler-generated marker-function addresses (from
+build/gpio_demo.sym). It is NOT a duplicate of test_soc_gpio.py: that suite proves the RTL through
+the fabric, this one proves the driver API.
+Phases: 1 OUTPUT: the test checks gpio_oe_o and gpio_out_o at marker_output_done(). 2 INPUT: the
+test drives gpio_in_i at marker_input_ready() and the driver's bounded poll absorbs the synchroniser
+latency. 3 INTERRUPT: the test raises the IRQ_PIN_IDX bit, watches commit_pc_o for gpio_isr's entry
+(the CPU really took the trap), samples dut.u_soc.gpio_irq and ext_irq at trap entry (asserted),
+then polls within DEASSERT_CHECK_WINDOW_CYCLES for both to deassert (gpio_irq_clear_edge() worked).
+Window rule: do not check deassertion at one fixed point. A compiled ISR is slower than
+hand-assembled code (the GCC `interrupt` prologue hits cold D$ lines, gpio_isr sits in a cold I$
+region, and each early instruction waits for a fabric round trip). So the check polls across
+DEASSERT_CHECK_WINDOW_CYCLES and still catches a "never clears" bug.
+gpio_demo.c ends in crt0.S's halt sequence (D$ flush, FENCE, EBREAK) and reports through __result (0
+= PASS), so there is no FAIL_PC watch. The test runs to FENCE, reads __result and g_isr_count from
+SRAM, and cross-checks g_isr_count.
+Firmware is pre-built by `make -C sw/bench`; this target consumes
+sw/bench/build/gpio_demo.{hex,sym,dis} and does NOT rebuild the C code (the l2_bench contract). DUT:
+tb_soc_top with SRAM_MEM_WORDS=65536 (as l2_bench): sw/bench/rv32i.ld puts the stack top at 0x41C00.
+Run: make -C tb/cocotb/soc gpio_driver
+Doc: tm:suite:soc-test-gpio-driver
 """
 
 import sys
@@ -103,7 +44,7 @@ _PROG = "gpio_demo"
 # ---------------------------------------------------------------------------
 # Constants (mirror sw/bench/gpio_demo.c exactly)
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches every other SoC suite
+CLK_PERIOD_NS = 2  # matches every other SoC suite
 SRAM_BASE_ADDR = 0x2000
 
 INPUT_PIN_A = 16
@@ -120,15 +61,11 @@ TEST_DATA_VAL = 0x00000050
 GPIO_DRIVER_TEST_TIMEOUT_CYCLES = 400_000
 DRAIN_CYCLES = 200
 
-# Bounded window (from gpio_isr's own entry-PC commit) within which
-# dut.u_soc.gpio_irq/ext_irq must deassert. Measured actual latency for the
-# compiled gpio_demo.c ISR is ~150 cycles (clear write's APB ACCESS phase
-# lands at cycle 134; STAT/irq_o/gpio_irq settle to 0 by ~150) -- see the
-# ROOT-CAUSE NOTE in this file's module docstring for how that was measured
-# and why it is legitimately larger than test_soc_gpio.py's 50-cycle figure
-# for its hand-assembled firmware. 500 gives ~3x headroom over the measured
-# figure without materially lengthening the suite (500 cycles = 1000 ns out
-# of a ~55000 ns run).
+# Bounded window (from gpio_isr's own entry-PC commit) within which dut.u_soc.gpio_irq / ext_irq
+# must deassert.
+# The compiled gpio_demo.c ISR needs far more cycles than test_soc_gpio.py's hand-assembled firmware
+# (see the window rule in this file's module docstring). 500 cycles leave about 3x headroom over the
+# measured latency without materially lengthening the suite.
 DEASSERT_CHECK_WINDOW_CYCLES = 500
 
 

@@ -1,5 +1,5 @@
 // sram_fi_core.sv
-// DFT Stage 4 (bead claude_verilog_test-j41m.14): fault-injecting behavioural model of the Sky130 OpenRAM
+// DFT Stage 4: fault-injecting behavioural model of the Sky130 OpenRAM
 // 1RW1R macros, for the MBIST fault-injection suites. SIMULATION ONLY (lives under tb/).
 //
 // With fi_kind = 0 it is cycle-equivalent to sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv and

@@ -1,6 +1,6 @@
 // tb_pwm.sv
-// Phase 6a-2 -- standalone cocotb test wrapper for pwm_controller (rtl/periph/pwm_controller.sv,
-// bead claude_verilog_test-f7vs.6). pwm_controller DOES NOT EXIST YET as of this wrapper's
+// Phase 6a-2 -- standalone cocotb test wrapper for pwm_controller (rtl/periph/pwm_controller.sv).
+// pwm_controller DOES NOT EXIST YET as of this wrapper's
 // authorship -- this is step 2 of the mandated TDD order (Doc: ds:ch:phase6-ip-expansion-plan
 // Sec.9: "the verification orchestrator runs before the RTL orchestrator"). This file, and the
 // `pwm`/`pwm_lint` Makefile targets built on it, are EXPECTED TO FAIL TO ELABORATE until

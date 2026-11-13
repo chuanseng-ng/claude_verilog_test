@@ -1,191 +1,30 @@
 """
-test_soc_multiclock.py — GH #93 multiclock SoC CDC exercise.
-Bead: feat/cpu-domain-cdc-gh93 verification task.
-
-DUT: tb_soc_top (same SOC_BOOT_SOURCES as soc_boot / soc_periph / soc_cpu_gpu).
-
-STATUS (2026-08-02): this suite (and soc_pll_multiclock) now PASS. Both bugs
-found and root-caused during GH #93 verification are fixed; the two notes
-below are kept as the historical record of what they were and how they were
-caught, not a description of current (red) behaviour.
-
-BLOCKER NOTE #1 (2026-08-01, commit 66a9af1) — RESOLVED by commit 4398c2e
-("[Fix] GH #93: keep cpu_gated_clk running through cpu_domain_rst_n"). The
-original symptom (0 committed instructions on every ratio including 1:1,
-`make soc_boot` itself red) was a CPU clock-gate/synchronous-reset race:
-u_cpu_clk_en_sync (a cdc_sync, reset-to-0) gated cpu_gated_clk directly,
-so the CPU saw zero clock edges during its own reset window and its
-synchronous reset was never sampled. Fixed by synchronising the INVERTED
-enable (pmu_cpu_clk_dis_sync) so the synchroniser's reset-to-0 state means
-"not disabled" instead of "disabled". `make soc_boot` now passes 3/3
-(100/100 stability); see design_state.json fix_requests[]
-fr_57f49b7f9b29_20260801_000000_00 (status: fixed).
-
-BLOCKER NOTE #2 (2026-08-01) — RESOLVED by commit 7a9f9d4 ("[Fix] GH #93:
-gate cdc_gray_fifo wr_ready_o on wr_rst_n_i (accept-and-drop bug)"). A
-SECOND, DISTINCT bug, found by running this suite after fix #1 landed: this
-suite (and soc_pll_multiclock) still FAILed, but no longer with the BLOCKER
-NOTE #1 symptom -- pc_q correctly loaded RESET_PC=0x1000 (confirmed via a
-cpu_gated_clk free-running Timer probe: toggled normally, ~1333 edges/2000ns
-at the 3 ns CPU period; pc_q held exactly 0x1000, never advancing). The
-failure was a genuine CDC-bridge bug, reproduced and root-caused via a
-throwaway diagnostic (not committed) that scanned cpu_domain_rst_n /
-core_rst_n / the AR-channel handshake signals with 1 ns free-running
-Timer() sampling from t=0:
-
-  t=0ns:  cpu_domain_rst_n=0 core_rst_n=0                       (both in reset)
-  t=33ns: cpu_domain_rst_n=1 core_rst_n=0                       (CPU domain releases FIRST --
-                                                                  its PLL locks in 16 * 3ns = 48ns,
-                                                                  fabric's PLL needs 16 * 7ns = 112ns)
-  t=45ns: cpu_axi_arvalid_raw=1 s_arvalid=1 s_arready=1          (CPU's first I$-miss AR fires;
-                                                                  u_cpu_axi_cdc's s_arready_o reads
-                                                                  1 -- "ready" -- even though
-                                                                  core_rst_n is STILL 0)
-  t=48ns: cpu_axi_arvalid_raw=0                                 (arvalid&&arready on the previous
-                                                                  edge = AXI4-legal completed
-                                                                  handshake; CPU never re-asserts)
-  t=98ns: core_rst_n=1                                          (fabric reset finally releases --
-                                                                  40ns too late; the request is gone)
-
-  Root cause: rtl/soc/cdc/cdc_gray_fifo.sv's `assign wr_ready_o = !full_q;`
-  with `full_q <= 1'b0` on `!wr_rst_n_i` (async reset default). wr_rst_n_i is
-  s_rst_sync_n, itself gated by rst_both_n = s_rst_n_i & m_rst_n_i (see
-  async_axi_fifo.sv). While core_rst_n (m_rst_n_i) is still low, rst_both_n
-  and therefore s_rst_sync_n are ALSO still low -- the write-pointer/push
-  logic in cdc_gray_fifo's `always_ff @(posedge wr_clk_i or negedge
-  wr_rst_n_i) if (!wr_rst_n_i) ... else if (push) ...` can only take the
-  reset branch, so no push ever happens -- yet wr_ready_o already reads 1
-  (not-full is a true statement about an empty, reset FIFO, but it is NOT a
-  safe thing to expose externally as "ready" while the write side is still
-  held in an unreleased cross-coupled reset). The CPU's AXI master sees
-  arvalid && arready complete on that cycle, which is a legal, final AXI4
-  handshake -- it never re-issues the request, but the data was silently
-  dropped. This was a genuine accept-and-drop CDC bridge bug; the fix
-  (commit 7a9f9d4) gates `wr_ready_o` on `wr_rst_n_i` directly:
-  `assign wr_ready_o = wr_rst_n_i && !full_q;`. `rd_valid_o` needed no
-  equivalent fix -- `empty_q` already resets to 1'b1, confirmed by
-  inspection, not assumed.
-
-  Why this is NEW and could not have been caught by any 1:1-ratio suite,
-  including async_axi_fifo's own 22/22 unit tests: at a 1:1 clock ratio
-  (the only ratio ever exercised end-to-end pre-GH#93, since cpu_clk_i and
-  clk_i were the same net), both domains' PLL-lock-based resets release in
-  lockstep -- there is no window where one side is out of reset while the
-  other is still in it. Only a genuinely asynchronous ratio (this suite's
-  entire reason for existing) can expose a release-order/skew hazard like
-  this. async_axi_fifo.sv's own header explicitly documents the "common
-  root" reset assumption (`rst_both_n = s_rst_n_i & m_rst_n_i`) but that
-  assumption is violated at the SoC level: cpu_domain_rst_n and core_rst_n
-  are each derived from an INDEPENDENT PLL lock counter (16 cycles of EACH
-  PLL's own, different-period reference clock), so they do not actually
-  release simultaneously once the two clocks genuinely differ.
-
-  apb_cdc_bridge (GH #93's other new CDC primitive, exercised by
-  soc_pll_multiclock) did NOT share this exact `!full_q`-only-default
-  defect -- its s_pready_o was `assign s_pready_o = (s_state_q == S_DONE);`,
-  and s_state_q resets to S_IDLE (!= S_DONE), so its APB4 "ready" output
-  correctly read 0 (NOT ready) while held in the cross-coupled reset. It
-  did, however, turn out to have a DIFFERENT, real availability bug of its
-  own once the CPU could boot far enough to actually exercise it: an APB
-  access to the PLL2 window while ONLY the destination (m_rst_n_i) side was
-  in reset used to wedge the source FSM in S_IDLE forever (rst_both_n held
-  s_rst_sync_n low for as long as m_rst_n_i stayed low), hanging the entire
-  fabric APB tree with no timeout. Fixed in commit cb5c780 -- see
-  test_apb_cdc_bridge.py's availability-fix tests (test_availability_*) for
-  the dedicated escape-path coverage this added.
-
-  Both bugs above are fixed; `make soc_multiclock` / `make soc_pll_multiclock`
-  now pass. soc_boot / soc_periph / soc_coherency / soc_cpu_gpu also
-  continued to pass throughout (the CPU's own D$/I$ traffic through
-  u_cpu_axi_cdc at the 1:1 ratio never hit the reset-skew window that
-  exposed bug #2). See design_state.json fix_requests[] for the full
-  resolved-bug records.
-
-Purpose: every pre-existing SoC-level cocotb suite drives clk_i (fabric
-domain) and cpu_clk_i (CPU domain, GH #93) at a 1:1 ratio via
-soc_clocks.start_soc_clocks() — see that module's header. At 1:1, the two
-Clock() coroutines start in phase and never drift apart, so the CPU<->fabric
-CDC boundary (rtl/soc/async_axi_fifo.sv's u_cpu_axi_cdc bridge, plus the
-cdc_sync/cdc_reset_sync instances synchronising the PMU control signals
-and ext_irq/timer_irq into the CPU domain — see soc_top.sv's GH #93 header
-comment) is exercised only in its degenerate synchronous-clock case. This
-suite is the one place in the regression that drives a genuinely
-asynchronous ratio, to prove the CDC primitives (registered-gray-pointer
-2-FF sync, cdc_sync level synchronisers, cdc_reset_sync) work when the
-two domains are NOT clock-aligned.
-
-Clock periods (see also soc_clocks.py's module docstring):
-  CPU_PERIOD_NS    = 3   (CPU domain, cpu_clk_i)
-  FABRIC_PERIOD_NS = 7   (fabric/GPU/peripheral domain, clk_i)
-
-  Reasoning:
-    - This repo's real target split is CPU ~1282 MHz (~0.780 ns) vs
-      fabric/GPU ~571 MHz (~1.751 ns) — a ratio of ~2.245, CPU faster than
-      fabric. 7/3 ~= 2.333 preserves that same direction (CPU faster) at a
-      ratio close to the real target, while staying small enough that a sim
-      run completes in a reasonable time.
-    - 3 and 7 are coprime (gcd=1), so the two clock edges are never in a
-      small-integer-multiple relationship (e.g. 2:1, 4:1) that would let a
-      lucky fixed-phase alignment quietly paper over a CDC bug — the
-      relative phase between clk_i and cpu_clk_i edges only repeats every
-      LCM(3,7) = 21 ns, walking through 7 distinct cpu_clk_i-edge phases
-      relative to each clk_i edge (and vice versa) before it does. Every
-      async_axi_fifo AR/AW/W/B/R handshake and every cdc_sync sample in
-      this suite therefore lands at a genuinely different, non-repeating
-      phase offset rather than a single fixed one.
-    - Both values are deliberately small (single-digit ns) so total wall
-      simulation time for boot / periph-loopback / cpu-gpu-irq traffic stays
-      comparable to the existing 1:1 SoC suites (all of which use a 2 ns
-      period) rather than blowing up runtime — this is a functional
-      CDC-correctness check, not a timing/performance benchmark.
-
-Firmware reuse ONLY (no new firmware/C source is written here):
-  1. boot_fw/boot.hex + tb.models.soc_model.SoCModel — CPU->SRAM
-     instruction fetch (I$ refill, AXI4 AR/R channel) and data write
-     (D$ writeback, AXI4 AW/W/B channel) through u_cpu_axi_cdc, exactly the
-     pattern in test_boot.py (test_boot_pc_scoreboard /
-     test_boot_sram_sentinels), adapted to poll cpu_clk_i.
-  2. periph_fw/periph_loopback.hex — DMA mem->mem + UART/SPI MMIO issued by
-     the CPU over the crossbar -> axi4_to_axilite path (test_periph_loopback.py
-     pattern), all CPU-issued traffic through u_cpu_axi_cdc's AW/W/B and
-     AR/R channels for MMIO reads/writes, adapted to poll cpu_clk_i.
-  3. cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex — GPU (fabric domain) completion IRQ
-     crossing into the CPU domain via u_ext_irq_sync (cdc_sync),
-     triggering a real trap/ISR (test_cpu_gpu_irq.py positive-path pattern),
-     adapted to poll cpu_clk_i. Only the positive path is included here — see
-     the module-level "scope decisions" note near the bottom of this file.
-
-Bug-class note (see also test_pll_lock.py's _wait_for_cpu_lock docstring):
-  commit_valid_o / commit_pc_o are combinationally re-exported from the
-  CPU-domain (cpu_gated_clk) commit bus inside soc_top (see
-  `assign commit_valid_o = pmu_cpu_iso_en_sync ? 1'b0 : cpu_commit_valid_raw;`)
-  — every polling loop in this file that observes them MUST use
-  RisingEdge(dut.cpu_clk_i), never dut.clk_i, or at this non-1:1 ratio the
-  poll would alias/miss single-cycle commit pulses. Loops that only touch
-  fabric-domain bus/reset timing (e.g. the post-commit SRAM-writeback drain
-  wait, or the initial reset hold) use dut.clk_i, which is fine because
-  reset is a level, not a pulse, and the drain wait only needs to outlast
-  the fabric-domain burst FSM.
-
-Timeout budgets (all expressed in cpu_clk_i cycles, since every scoreboard
-loop below polls RisingEdge(dut.cpu_clk_i)):
-  The pre-existing 1:1 suites' cycle constants were counted against a clock
-  that was simultaneously the CPU-instruction-retirement clock AND the
-  fabric/peripheral-FSM clock. Splitting the domains means a bound that
-  used to cover both jobs with one number now has to separately cover:
-    (a) CPU-domain instruction/poll-loop cycles (unchanged in count, just a
-        different period), and
-    (b) fabric-domain FSM cycles (AXI burst beats, UART/SPI bit dividers,
-        GPU kernel execution, CDC synchroniser latency) — unchanged in
-        *cycle* count (these are cycle-based dividers/FSMs, not real-time
-        based), but each such cycle now costs FABRIC_PERIOD_NS/CPU_PERIOD_NS
-        = 7/3 ~= 2.33x as many cpu_clk_i edges to "wait out" as it did at
-        the old 1:1, 2 ns/2 ns ratio.
-  Each budget below is therefore the old bound's cycle count converted from
-  its historical clk_i-cycle-cost basis into cpu_clk_i-cycle-cost via that
-  ~2.33x factor, then rounded up generously (this suite runs once per
-  target, not 100x like test_boot.py's stability gate, so a generous
-  constant is cheap).
+test_soc_multiclock.py -- multiclock SoC CDC exercise. DUT: tb_soc_top (same SOC_BOOT_SOURCES as
+soc_boot, soc_periph and soc_cpu_gpu).
+Resolved blockers (root causes: cr:suite:soc-test-soc-multiclock): a CPU clock-gate /
+synchronous-reset race, and a cdc_gray_fifo accept-and-drop bug (wr_ready_o read 1 while the write
+side was still in reset). Only a genuinely asynchronous ratio exposes this release-skew hazard; no
+1:1 suite could.
+Purpose: most SoC-level cocotb suites drive clk_i (fabric) and cpu_clk_i (CPU) at 1:1 through
+soc_clocks.start_soc_clocks(), so the CPU<->fabric CDC boundary (u_cpu_axi_cdc, and the cdc_sync /
+cdc_reset_sync instances for the PMU control signals, ext_irq and timer_irq) runs only in its
+degenerate synchronous case. This suite drives an asynchronous ratio.
+Clock periods: CPU_PERIOD_NS = 3 (cpu_clk_i) and FABRIC_PERIOD_NS = 7 (clk_i; fabric, GPU,
+peripherals). 7/3 ~= 2.33 keeps the real direction (CPU faster) near the real split, with small
+periods for runtime. 3 and 7 are coprime, so no small-integer relationship lets a lucky fixed phase
+hide a CDC bug; the relative phase repeats only every LCM(3,7) = 21 time units, through 7
+distinct phases.
+Firmware reuse ONLY (adapted to poll cpu_clk_i): boot_fw/boot.hex + SoCModel,
+periph_fw/periph_loopback.hex, cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex (positive path only).
+RULE: commit_valid_o and commit_pc_o come from the CPU-domain (cpu_gated_clk) commit bus, so every
+loop that observes them MUST use RisingEdge(dut.cpu_clk_i), never dut.clk_i, or the poll aliases
+single-cycle commit pulses at this ratio. Loops on fabric-domain timing (the SRAM-writeback drain,
+the initial reset hold) use dut.clk_i.
+Timeout budgets are in cpu_clk_i cycles. One fabric-domain FSM cycle costs FABRIC_PERIOD_NS /
+CPU_PERIOD_NS ~= 2.33 cpu_clk_i edges, so each old 1:1 bound is converted by that factor and rounded
+up generously.
+Run: make -C tb/cocotb/soc soc_multiclock
+Doc: tm:suite:soc-test-soc-multiclock
 """
 
 import sys
@@ -336,8 +175,8 @@ SENTINEL_1     = 0x1234_5678
 _SENTINEL_0_WI = 0   # SRAM[0x2000]
 _SENTINEL_1_WI = 1   # SRAM[0x2004]
 
-# test_boot.py's BOOT_TIMEOUT_CYCLES=5000 @ CLK_PERIOD_NS=2 ns is a
-# clk_i-cycle bound (10,000 ns of wall budget at the old 1:1 ratio).
+# test_boot.py's BOOT_TIMEOUT_CYCLES=5000 is a
+# clk_i-cycle bound at the old 1:1 ratio.
 # Converted to cpu_clk_i cycles at the new ratio (7/3 ~= 2.33x) and rounded
 # up generously: 5000 * 2.33 ~= 11,667 -> 12,000 cpu_clk_i cycles.
 BOOT_TIMEOUT_CYCLES = 12_000
@@ -360,7 +199,7 @@ async def test_multiclock_boot_pc_scoreboard(dut):
     mismatches: list = []
     n_expected = len(_GOLDEN_PCS)
 
-    # CodeRabbit PR #132 finding: breaking out of the loop the instant
+    # Breaking out of the loop the instant
     # len(collected) reached n_expected made the "extra commit" branch below
     # dead code -- it could never actually fire, so this scoreboard could
     # never detect over-execution (the CPU spuriously committing one more
@@ -447,11 +286,11 @@ async def test_multiclock_boot_sram_sentinels(dut):
     )
 
     # Drain wait for the final dirty-line writeback burst to fully settle in
-    # the backing store. test_boot.py uses 20 clk_i cycles @ 2 ns (40 ns) at
+    # the backing store. test_boot.py uses 20 clk_i cycles at
     # the 1:1 ratio; the burst itself completes entirely in the fabric
     # domain (u_cpu_axi_cdc's m_* face -> crossbar -> sram_controller), so
     # this wait is counted in fabric-domain (dut.clk_i) cycles, not
-    # cpu_clk_i. Bumped to 40 fabric cycles (280 ns) — generous margin for
+    # cpu_clk_i. Bumped to 40 fabric cycles — generous margin for
     # the extra registered-gray-pointer 2-FF sync latency the CDC bridge
     # adds on top of the plain 4-beat AXI burst that test_boot.py budgeted
     # for.
@@ -488,7 +327,7 @@ async def test_multiclock_boot_sram_sentinels(dut):
 _PERIPH_HEX = str(Path(__file__).parent / "periph_fw" / "periph_loopback.hex")
 DMA_N_WORDS = 4
 
-# test_periph_loopback.py's PERIPH_TIMEOUT_CYCLES=200_000 @ 2 ns is a
+# test_periph_loopback.py's PERIPH_TIMEOUT_CYCLES=200_000 is a
 # clk_i-cycle bound dominated by UART/SPI bit-banging (16 clk cycles/bit —
 # a cycle-count-based divider, unaffected by the literal ns value of the
 # period it's counted against). Converted to cpu_clk_i cycles at the new
@@ -561,7 +400,7 @@ async def test_multiclock_periph_loopback(dut):
 # =============================================================================
 _IRQ_HEX = str(Path(__file__).parent / "cpu_gpu_irq_fw" / "cpu_gpu_irq_fw.hex")
 
-# test_cpu_gpu_irq.py's TIMEOUT_CYCLES=800_000 @ 2 ns covers the WORST-CASE
+# test_cpu_gpu_irq.py's TIMEOUT_CYCLES=800_000 covers the WORST-CASE
 # (negative) path; its own docstring estimates the POSITIVE path (the only
 # one reused here) completes in ~100,000 clk_i cycles. Converted to
 # cpu_clk_i cycles at the new ratio (7/3 ~= 2.33x) and rounded up
@@ -672,7 +511,7 @@ async def test_multiclock_cpu_gpu_irq_pass(dut):
 #   ratio. A single multiclock boot (this file's two boot tests) already
 #   exercises the CDC's AR/AW/W/B/R channels end-to-end; repeating it 100x
 #   would mostly re-prove the same crossing at the same phase-cycling
-#   pattern (LCM(3,7)=21 ns) for a large runtime cost.
+#   pattern (LCM(3,7)=21) for a large runtime cost.
 # - The PLL2/apb_cdc_bridge MMIO test (test_pll_lock.py's
 #   test_pll2_apb_slot_decode) is intentionally NOT included in this file —
 #   see test_soc_multiclock_pll2.py (separate DUT: tb_soc_pll, separate

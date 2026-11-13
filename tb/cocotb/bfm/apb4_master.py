@@ -43,7 +43,7 @@ class APB4Master:
         self.dut    = dut
         self.clock  = clock
         self.reset  = reset
-        # Passive listeners (bead h367 functional coverage), see add_observer().
+        # Passive listeners (functional coverage), see add_observer().
         self._observers: list = []
 
         # Master-driven outputs

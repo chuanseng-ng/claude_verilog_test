@@ -2,7 +2,7 @@
 Phase 5 (APB migration PR-1) — axil_to_apb bridge unit tests.
 
 Verifies rtl/soc/axil_to_apb.sv (via tb_axil_to_apb) against the 6 directed
-tests specified for bead claude_verilog_test-o4p.
+tests.
 
 The DUT is the AXI4-Lite → APB4 bridge wired to an apb4_register_bank slave.
 Tests drive the AXI4-Lite port via AXI4LiteMaster BFM and observe:
@@ -293,12 +293,12 @@ async def test_back_to_back_write_read(dut):
 
 
 # ---------------------------------------------------------------------------
-# T7 — GH #85 regression guard: concurrent AR + AW + W in S_IDLE
+# T7 — regression guard: concurrent AR + AW + W in S_IDLE
 # ---------------------------------------------------------------------------
 @cocotb.test()
 async def test_concurrent_ar_aw_w_write_priority(dut):
     """
-    GH #85 regression: simultaneous AR + AW + W presented while the bridge is
+    Regression: simultaneous AR + AW + W presented while the bridge is
     in S_IDLE.
 
     Pre-fix RTL (s_axil_arready had no !s_axil_awvalid/!s_axil_wvalid gate):
@@ -318,7 +318,7 @@ async def test_concurrent_ar_aw_w_write_priority(dut):
       the bridge returns to S_IDLE with awvalid=wvalid=0 and accepts AR.
 
     This test FAILS against pre-fix RTL (timeout on bvalid) and PASSES after
-    the GH #85 fix.
+    the fix.
     """
     await _setup(dut)
 
@@ -399,7 +399,7 @@ async def test_concurrent_ar_aw_w_write_priority(dut):
 
 
 # ---------------------------------------------------------------------------
-# Bead 8riq (GH #216 coverage gap): S_WRESP / S_RRESP held by a stalled master.
+# S_WRESP / S_RRESP held by a stalled master.
 # The shared AXI4LiteMaster keeps bready/rready high, so these states were never held.
 # ---------------------------------------------------------------------------
 async def _watch(dut, samples):

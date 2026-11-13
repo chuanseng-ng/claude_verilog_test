@@ -1,32 +1,23 @@
 """
 Unit tests for vector_alu.sv
 
-Packed 2D ports ([N_LANES-1:0][REG_WIDTH-1:0]) are a single integer in
-Verilator+cocotb. Lane 0 occupies bits [31:0] (LSB).
+Packed 2D ports ([N_LANES-1:0][REG_WIDTH-1:0]) are a single integer in Verilator+cocotb.
+Lane 0 occupies bits [31:0] (LSB).
 
-Tests:
-  1. All 9 R-type arithmetic/logic opcodes (all 8 lanes active)
-  2. All 4 I-type immediate opcodes
-  3. Partial active mask — inactive lanes produce 0
-  4. VMUL lower-32-bit overflow
-  5. VSRA arithmetic sign extension
-  6. Negative immediate sign extension
-  7. Branch conditions (VBEQ, VBNE, VBLT, VBGE) — per-lane taken bits
+Tests: the 9 R-type arithmetic/logic opcodes (all 8 lanes active), the 4 I-type immediate opcodes,
+partial active mask (inactive lanes produce 0), VMUL lower-32-bit overflow, VSRA sign extension,
+negative immediate sign extension, and the branch conditions (VBEQ, VBNE, VBLT, VBGE) as per-lane
+taken bits.
 
-GH #119 bead `gg8` adds a second arm: a Bambu-HLS implementation behind a
-wire-only shim, vector_alu_hls (hls/gpu/vector_alu/shim/vector_alu_hls.sv).
-The reference block (rtl/gpu/vector_alu.sv) is purely combinational -- no
-clock, no reset, no registers. Bambu cannot emit combinational logic: it
-wraps every design in a clk/rst_n/start_i/done_o handshake, and this one is
-an 81-state FSM with 11-21 cycles of latency.
-
-This file branches on that protocol difference in exactly one place --
-VectorAluDriver.setup() / .settle() -- detected at runtime via
-hasattr(dut, "clk"), the same pattern used in
-tb/cocotb/cpu/test_hazard_unit.py for rv32i_hazard_unit. Every vector,
-every expected value, and every assertion after that point is identical
-for both arms. The hand-RTL arm is NOT wrapped in a handshake -- the
-interface difference is real and stays visible.
+Two arms. The reference block rtl/gpu/vector_alu.sv is purely combinational: no clock, reset or
+registers. The second arm is a Bambu-HLS design behind a wire-only shim, vector_alu_hls
+(hls/gpu/vector_alu/shim/vector_alu_hls.sv). Bambu wraps every design in a clk/rst_n/start_i/done_o
+handshake. This file branches on that difference in one place, VectorAluDriver.setup() / .settle(),
+detected at runtime with hasattr(dut, "clk"), as in tb/cocotb/cpu/test_hazard_unit.py. Every vector,
+expected value and assertion after that is identical for both arms. The hand-RTL arm is NOT wrapped
+in a handshake: the interface difference stays visible.
+Run: cd sim && make gpu_alu   (HLS arm: gpu_alu_hls)
+Doc: tm:suite:gpu-test-vector-alu
 """
 import cocotb
 from cocotb.clock import Clock
@@ -72,7 +63,7 @@ def _unpack(val: int) -> list:
 
 
 # ---------------------------------------------------------------------------
-# The one protocol branch (GH #119 decision: do not wrap the hand-RTL arm in
+# The one protocol branch (decision: do not wrap the hand-RTL arm in
 # a handshake). Same pattern as tb/cocotb/cpu/test_hazard_unit.py's
 # HazardUnitDriver.
 # ---------------------------------------------------------------------------
@@ -362,7 +353,7 @@ async def test_branch_vblt(dut):
 
 @cocotb.test()
 async def test_branch_vbne(dut):
-    """VBNE: branch_taken_o[lane]=1 iff rs1[lane]!=rs2[lane] (bead a5ze: never exercised)."""
+    """VBNE: branch_taken_o[lane]=1 iff rs1[lane]!=rs2[lane]."""
     drv = await make_driver(dut)
     rs1 = [0, 5, 0xFFFF_FFFF, 0x8000_0000, 7, 0, 1, 0x7FFF_FFFF]
     rs2 = [0, 6, 0xFFFF_FFFF, 0x7FFF_FFFF, 0, 0, 0x1_0000, 0x7FFF_FFFF]

@@ -1,68 +1,26 @@
 #!/usr/bin/env python3
 """
-gen_i2c_hex.py — generate i2c_fw.hex and i2c_fw_addrs.py for the Phase 6a-5 SoC-level I2C FABRIC
-test (bead claude_verilog_test-f7vs.9, Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6a-5 -- I2C" / L2).
-
-Scope, deliberately small. The L1 suite (test_i2c.py, `make i2c`) owns every protocol behaviour,
-with a real bus BFM. At the SoC suites' CLK_PERIOD_NS = 2 a full protocol BFM over thousands of
-cycles is expensive and brittle, so this image only proves the FABRIC PATH, using the DUT's internal
-loopback (I2C_CTRL[1], the SPI_CTRL[4] precedent). No bus BFM, no protocol traffic at this level.
-
-Path exercised (soc_top.sv):
-  CPU --AXI4--> axi4_crossbar --AXI4--> axi4_to_axilite --AXI-Lite-->
-  axi_lite_interconnect --AXI-Lite--> axil_to_apb --APB4--> apb_interconnect
-  --APB4--> APB_I2C slave 11 (i2c_controller, base 0x2000_E000)
-  i2c_controller.irq_o --> interrupt_controller.irq_src_i[9] --> ext_irq --> CPU MEIP
-
-Reuses the pure-Python hand-assembler of trng_fw/gen_trng_hex.py (same Assembler / lui_addi /
-CSRRW / MRET machinery) — no riscv32 cross toolchain, so the suite is CI-safe (a toolchain-dependent
-suite in soc_all_ci is what broke PR #195). Synchronisation and scoring are by commit_pc_o marker
-PCs.
-
-I2C register map (rtl/periph/i2c_controller.sv, word indices):
-  +0x00 CTRL (EN[0] LOOPBACK[1])  +0x04 STATUS  +0x08 CLKDIV (reset 0xFF)  +0x0C ADDR ([7] R/W)
-  +0x10 TX_DATA (push)  +0x14 RX_DATA (pop)  +0x18 CMD  +0x1C FIFO_STAT (reset 0xA00)
-  +0x20 TIMEOUT (reset 0xFFFF)  +0x24 IRQ_EN  +0x28 IRQ_STAT  +0x2C IRQ_CLR (W1C)
-
-PHASE 1 — polled, I2C_IRQ_EN = 0 (the interrupt path is ARMED, so any trap is a gate failure)
-  * read the reset values through the fabric: CTRL 0, CLKDIV 0xFF, TIMEOUT 0xFFFF, FIFO_STAT 0xA00,
-    and a reserved word (0x030) 0. These distinguish slot 11 from every neighbouring slot, so a
-    mis-decoded APB index fails here.
-  * CLKDIV = 3 (read back), ADDR = 0x2A, CTRL = EN | LOOPBACK, push 0x5A, CMD = START|WRITE|STOP
-    (count 1); poll IRQ_STAT.done; IRQ_STAT must be exactly `done`.
-  * W1C, ADDR = 0x2A | 0x80, CMD = START|READ|STOP|NACK_LAST (count 1); poll done; RX_DATA must
-    read back the byte written (the loopback slave returns the last byte written): 0x5A.
-  The test scores i2c_irq / ext_irq LOW for the whole phase while `done` is pending — the
-  IRQ_EN gate crossing the fabric — and the pad oe pins quiet for the whole run (loopback must not
-  disturb a real bus).
-
-PHASE 2 — interrupt driven
-  * W1C, IRQ_EN = done, push 0x77, CMD = START|WRITE|STOP. done -> i2c_irq -> irq_ctrl[9] -> CPU.
-  * ISR: read IRQ_STAT and the interrupt controller's PENDING_MASKED (bit 9 must be set — the
-    controller really received irq_src_i[9]), then ONE write, IRQ_CLR = done, which drops the
-    level-held source in a single access (nothing to race), then a read-back round trip so the
-    level drains through the ext_irq synchroniser before MRET re-enables MIE. Exactly ONE trap.
-
-SECOND IMAGE (i2c_pad_fw.hex, bead 4pl8) -- the REAL pads.  The image above stays in loopback so the
-pad oe pins never move; nothing at SoC level ever drove i2c_{scl,sda}_oe_o or took i2c_{scl,sda}_i
-low.  This image runs three polled transactions with CTRL.LOOPBACK = 0 against the register-file
-slave BFM tb/cocotb/bfm/i2c_slave.py (address 0x2A) closing the wired-AND on the tb_soc_top pins:
-  T1  START | WRITE | STOP, count 2     bytes 0x10 (register pointer) then 0xA5, both ACKed
-  T2  START | WRITE (no STOP) 0x10, then repeated START | READ | STOP | NACK_LAST: reads back the
-      0xA5 T1 stored, so the data path is proven in both directions through the pads
-  T3  address 0x55 (no such slave), START | WRITE | STOP: the address byte is NACKed, IRQ_STAT must
-      read done | nack
-The firmware scores IRQ_STAT / RX_DATA itself; the testbench independently scores the slave's own
-event log and register file.
-
-Result area (SRAM word indices from RES_BASE_WI):
-   0 ISR_COUNT  1 ISR_I2C_STAT  2 ISR_IRQC_PENDING  3 CTRL_RESET  4 CLKDIV_RESET  5 TIMEOUT_RESET
-   6 FIFO_STAT_RESET  7 RESERVED_READ  8 CLKDIV_READBACK  9 P1_WRITE_STAT  10 P1_READ_STAT
-   11 P1_RX_DATA  12 P1_STATUS
-
-Register allocation (MAIN): x2 = I2C_BASE  x3 = IRQ_CTRL_BASE  x4 = RES_BASE_ADDR  x5 = staging
-  x13 = scratch  x14/x15 = poll counter/limit  x16-x18 = scratch.  x1 is clobbered by the ISR.
-Register allocation (ISR, at ISR_PC = ROM_BASE + 4): x26 x27 x28 x29 x30 x31 and x1.
+gen_i2c_hex.py -- generate i2c_fw.hex, i2c_pad_fw.hex and i2c_fw_addrs.py for the Phase 6a-5
+SoC-level I2C FABRIC test (L2).
+Scope is small on purpose. The L1 suite (test_i2c.py, `make i2c`) owns every protocol behaviour,
+with a real bus BFM, which is too expensive and brittle at the SoC suites' short clock period. So
+i2c_fw.hex proves only the FABRIC PATH (APB_I2C slave 11, base 0x2000_E000, and irq_src_i[9] ->
+ext_irq -> CPU MEIP), through the DUT's internal loopback (I2C_CTRL[1]). It reuses the hand
+assembler of trng_fw/gen_trng_hex.py, so no riscv32 toolchain is needed. Keep it that way: a
+toolchain-dependent suite in soc_all_ci breaks CI. The test scores by commit_pc_o marker PCs.
+Register map: rtl/periph/i2c_controller.sv.
+Phase 1, polled, I2C_IRQ_EN = 0 (any trap is a gate failure): the reset values (CLKDIV 0xFF,
+FIFO_STAT 0xA00, TIMEOUT 0xFFFF) tell slot 11 from its neighbours, so a mis-decoded APB index fails
+here. Then a loopback write of 0x5A to ADDR 0x2A and a read: RX_DATA must read 0x5A. The test scores
+i2c_irq and ext_irq LOW while `done` is pending, and the pad oe pins quiet.
+Phase 2, interrupt driven: the ISR reads IRQ_STAT and PENDING_MASKED (bit 9 must be set), writes ONE
+IRQ_CLR = done, then reads back so the level drains through the ext_irq synchroniser before MRET.
+Exactly ONE trap.
+Second image, i2c_pad_fw.hex: the REAL pads (CTRL.LOOPBACK = 0) against bfm/i2c_slave.py (address
+0x2A). T1 write 0x10 (register pointer) and 0xA5. T2 write 0x10 without STOP, repeated START, read
+0xA5. T3 address 0x55 (no such slave): NACK, IRQ_STAT = done | nack. The testbench also scores the
+slave log.
+Doc: tm:suite:soc-i2c-fw-gen-i2c-hex
 """
 
 import os

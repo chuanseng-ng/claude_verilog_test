@@ -202,7 +202,7 @@ async def test_concurrent_ar_aw_same_slave(dut):
 
         t_wr = cocotb.start_soon(wr())
         t_rd = cocotb.start_soon(rd())
-        # 2 µs >> any legal completion at 2 ns/cycle; converts a deadlock into
+        # a long timeout, far above any legal completion; converts a deadlock into
         # a clean test failure instead of a simulator-level timeout.
         await with_timeout(Combine(t_wr, t_rd), 2, "us")
 

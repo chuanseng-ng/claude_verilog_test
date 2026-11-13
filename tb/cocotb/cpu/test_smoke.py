@@ -303,9 +303,8 @@ class APBDebugInterface:
     async def _apb_read(self, addr):
         """APB read: setup → enable → wait for pready → sample → idle.
 
-        GH #96 bead cyb: rv32i_cpu_top.apb_prdata_o is now a registered
-        output and the slave inserts one APB3 wait state on reads (writes
-        are unaffected — still single-cycle), so this polls apb_pready_o
+        rv32i_cpu_top.apb_prdata_o is a registered output and the slave inserts one APB3
+        wait state on reads (writes stay single-cycle), so this polls apb_pready_o
         instead of assuming prdata is valid the cycle penable asserts.
         """
         await RisingEdge(self.dut.clk_i)

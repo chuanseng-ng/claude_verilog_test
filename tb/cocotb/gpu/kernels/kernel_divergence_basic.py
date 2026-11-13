@@ -1,31 +1,23 @@
 """
-Kernel test: divergent branch — if(tid.x < 4) r5=100 else r5=200; store to mem.
+Kernel test: divergent branch, if(tid.x < 4) r5=100 else r5=200; store to mem.
 
-Branch encoding constraint: VBLT rs1=r1, rs2=r4 → rs2_idx=4 → offset[4:0]=4.
-Smallest useful offset ≥ 4 with low 5 bits = 4: 36 (= 32+4 = 0x24).
+Branch encoding constraint: VBLT rs1=r1, rs2=r4 gives rs2_idx=4, so offset[4:0]=4.
+The smallest useful offset >= 4 with low 5 bits = 4 is 36 (= 32+4 = 0x24).
 
 Kernel layout (base_pc=0):
   0x000: vmov_tid_x r1         r1[l]=l
   0x004: vaddi r4, r0, 4       r4[l]=4 (threshold)
   0x008: vaddi r2, r0, 2       r2[l]=2 (shift amount, precomputed before diverge)
   0x00C: vsll  r3, r1, r2      r3[l]=l*4
-  0x010: vblt  r1, r4, target=0x034  (offset=36, rs2_idx=4 ✓)
-  -- false-path (lanes 4..7, l≥4) starts here --
-  0x014: vaddi r5, r0, 200
-  0x018: vaddi r10, r0, BASE_OUT-5   (r10[l]=BASE_OUT-5)
-  0x01C: vadd  r10, r10, r3          (r10[l]=BASE_OUT-5+l*4)
-  0x020: vst   r5(idx=5), r10, 0    (addr=r10[l]+5=BASE_OUT+l*4)
-  0x024: vret
-  -- padding PCs 0x028, 0x02C, 0x030 are never executed --
-  -- true-path (lanes 0..3, l<4) starts here --
-  0x034: vaddi r5, r0, 100
-  0x038: vaddi r10, r0, BASE_OUT-5
-  0x03C: vadd  r10, r10, r3
-  0x040: vst   r5(idx=5), r10, 0
-  0x044: vret
+  0x010: vblt  r1, r4, target=0x034  (offset=36, rs2_idx=4)
+  false path (lanes 4..7, l>=4), 0x014..0x024:
+    vaddi r5, r0, 200; vaddi r10, r0, BASE_OUT-5; vadd r10, r10, r3; vst r5(idx=5), r10, 0; vret
+  PCs 0x028, 0x02C and 0x030 are padding and never run.
+  true path (lanes 0..3, l<4), 0x034..0x044: the same five instructions with r5=100.
 
-VST: vst(rs2_data=5, rs1_base=10, base_offset=0)
-     imm=5 → addr = r10[l]+5 = BASE_OUT+l*4
+VST: vst(rs2_data=5, rs1_base=10, base_offset=0), imm=5, so addr = r10[l]+5 = BASE_OUT+l*4.
+Run: cd sim && make gpu_kernels
+Doc: tm:suite:gpu-kernels-kernel-divergence-basic
 """
 import sys
 import os

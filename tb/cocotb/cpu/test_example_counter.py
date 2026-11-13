@@ -25,7 +25,7 @@ async def test_counter_basic(dut):
     """Test basic counter functionality."""
     log = dut._log
 
-    # Create a 10ns period clock (100MHz)
+    # Create the clock
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 

@@ -1,32 +1,25 @@
 """
-Standalone unit tests for rv32i_hazard_unit — GH #119 bead `gvr`.
+Standalone unit tests for rv32i_hazard_unit.
 
-The DUT (rtl/cpu/core/rv32i_hazard_unit.sv) is purely combinational: no clock,
-no reset, no always_ff. Nothing in the repo drove it standalone before this
-file (tb/cocotb/cpu/test_pipeline_hazards.py is full-core level).
+The DUT (rtl/cpu/core/rv32i_hazard_unit.sv) is purely combinational: no clock, no reset, no
+always_ff. tb/cocotb/cpu/test_pipeline_hazards.py tests it at full-core level.
 
 Two layers, run as one cocotb test module:
+  (a) Directed tests. The oracle is the DUT's header comment, NOT the implementation body. Expected
+      stall, flush and forward values come by hand from the documented 9-item priority list and
+      the forwarding encoding. Where the header does not fully determine an answer (see the
+      "SPEC AMBIGUITY" comments), the test asserts only the determined part, or is skipped.
+  (b) Randomised cross-arm differential (test_random_cross_arm). It dumps (inputs, outputs) for N
+      biased-random vectors to a JSON trace file named after TOPLEVEL.
+      tools/verif/compare_hazard_traces.py diffs two such files (hand-RTL vs HLS arm).
+      The directed tests check one arm against the spec.
 
-  (a) Directed tests — oracle is the DUT's header comment (lines 1-26 of the
-      RTL), NOT the implementation body. Expected stall/flush/forward values
-      below are derived by hand from that documented 9-item priority list and
-      the forwarding encoding. Where the header does not fully determine an
-      answer (see "SPEC AMBIGUITY" comments), the test asserts only the part
-      that IS determined, or is skipped.
-
-  (b) Randomised cross-arm differential (test_random_cross_arm) — dumps
-      (inputs, outputs) for N biased-random vectors to a JSON trace file
-      named after TOPLEVEL. tools/verif/compare_hazard_traces.py diffs two
-      such trace files (hand-RTL vs HLS arm) to provide the actual
-      cross-arm equivalence evidence; the directed tests above only check
-      one arm against the spec.
-
-GH #119 decision: the two arms have genuinely different protocols (hand-RTL
-is pure combinational; the Bambu HLS arm is wrapped in a clock/reset/
-start_port/done_port handshake by construction). This file branches on that
-difference in exactly one place -- HazardUnitDriver.__init__ / .apply() --
-detected at runtime via hasattr(dut, "clk"). Every vector, every expected
-value, and every assertion after that point is identical for both arms.
+The arms have different protocols: the hand-RTL arm is purely combinational, and the Bambu HLS arm
+is wrapped in a clock/reset/start_port/done_port handshake. The file branches on this in one place,
+HazardUnitDriver.__init__ and .apply(), detected at runtime with hasattr(dut, "clk"). Every vector,
+expected value and assertion after that is identical for both arms.
+Run: cd sim && make cpu_hazard_unit   (HLS arm: cpu_hazard_unit_hls)
+Doc: tm:suite:cpu-test-hazard-unit
 """
 
 from __future__ import annotations
@@ -44,9 +37,8 @@ from cocotb.triggers import ReadOnly, RisingEdge, Timer
 # Port name tables
 # ---------------------------------------------------------------------------
 
-# All hand-RTL / HLS-shim input port names (identical on both arms per the
-# GH #119 shim contract -- the shim re-exposes the repo's port names verbatim
-# plus the HLS handshake).
+# All hand-RTL / HLS-shim input port names (identical on both arms: the shim re-exposes the repo's
+# port names verbatim plus the HLS handshake).
 INPUT_FIELDS = [
     "id_ex_rs1_addr",
     "id_ex_rs2_addr",
@@ -114,7 +106,7 @@ def default_inputs() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# The one protocol branch (GH #119 decision: do not wrap the hand-RTL arm)
+# The one protocol branch (decision: do not wrap the hand-RTL arm)
 # ---------------------------------------------------------------------------
 
 

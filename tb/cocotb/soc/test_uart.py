@@ -1,10 +1,8 @@
 # test_uart.py
-# Phase 5 (M4) — cocotb directed-test suite for uart_controller.sv
+# Phase 5 (M4) -- cocotb directed-test suite for uart_controller.sv
 #
 # DUT:  uart_controller  (TOPLEVEL=uart_controller)
-# BFM:  APB4Master (bfm/apb4_master.py) drives APB4 slave ports
-#        APB migration PR-2: converted from AXI4LiteMaster (s_axil_*) to
-#        APB4Master (bare psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr).
+# BFM:  APB4Master (bfm/apb4_master.py) drives the APB4 slave ports
 # Side-inputs: uart_rx_i driven to idle (1) before reset
 #
 # Register byte addresses
@@ -18,12 +16,12 @@
 #   0x10  UART_BAUD   RW [15:0] D: 1 oversample tick = (D+1) clocks
 #                               1 bit = 16 os_ticks = 16*(D+1) clocks
 #
-# A4 TIMING (BREAKING CHANGE):
-#   BAUD register now sets the OVERSAMPLE period, not the bit period.
-#   With D=0: os_tick every 1 clock; 1 bit = 16 clocks.
-#   1 frame = 10 bits × 16 = 160 clocks (D=0).
+# TIMING: the BAUD register sets the OVERSAMPLE period, not the bit period.
+#   With D=0: os_tick every 1 clock; 1 bit = 16 clocks; 1 frame = 10 bits x 16 = 160 clocks.
 #   All tests in this file use D=0 (BAUD=0) unless otherwise noted.
 #   WAIT_FRAME_D0 = 200 (generous margin over 160 clocks at D=0).
+# Run: make -C tb/cocotb/soc uart
+# Doc: tm:suite:soc-test-uart
 
 import cocotb
 from cocotb.clock import Clock
@@ -72,7 +70,7 @@ WAIT_LOOPBACK_D0 = 300
 # ── Setup helper ──────────────────────────────────────────────────────────────
 
 async def _setup(dut):
-    """Start 2 ns clock, drive uart_rx_i=1 (idle), apply 5-cycle reset,
+    """Start the clock, drive uart_rx_i=1 (idle), apply 5-cycle reset,
     wait 2 idle cycles. Returns an APB4Master.
 
     APB migration PR-2: BFM changed from AXI4LiteMaster (s_axil_* prefix)
@@ -665,7 +663,7 @@ async def test_byte_lane_snoop(dut):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Bead 05wf — directed gap-closure tests (byte lanes 2/3, FIFO full, RX false
+# Directed gap-closure tests (byte lanes 2/3, FIFO full, RX false
 # start, slow-baud os_tick gaps).  Everything below checks documented behaviour
 # (UART_STATUS flags, frame timing, FIFO order / drop-newest semantics), not just
 # that a line was reached.
@@ -1090,7 +1088,7 @@ async def test_slow_baud_loopback(dut):
         assert st & STATUS_RX_EMPTY and not st & STATUS_FRAMING_ERROR, f"{st:#010x}"
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -1101,7 +1099,7 @@ async def test_register_walk(dut):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Bead shm5 — back-to-back RX framing.  The receiver must re-synchronise on the
+# Back-to-back RX framing.  The receiver must re-synchronise on the
 # START falling edge of EVERY frame; an 8N1 stream with no idle gap and a
 # bit-clock error of up to +/-3.5 % must be received byte-exact with no
 # framing error.  Before the fix the receiver returned to idle only at the END
@@ -1142,7 +1140,7 @@ async def _rx_stream_check(dut, m, data, d_val, err=0.0, stop_bits=1, lead=0):
     driver = cocotb.start_soon(_drive_levels(dut, levels))
 
     got, fe = [], False
-    t_end = get_sim_time("ns") + 2 * (len(levels) + 20 * bc)   # 2 ns clock
+    t_end = get_sim_time("ns") + 2 * (len(levels) + 20 * bc)   # clock period 2
     while get_sim_time("ns") < t_end:
         st = await _status(m)
         fe |= bool(st & STATUS_FRAMING_ERROR)

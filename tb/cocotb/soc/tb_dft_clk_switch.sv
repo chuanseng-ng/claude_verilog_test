@@ -1,5 +1,5 @@
 // tb_dft_clk_switch.sv
-// Bead claude_verilog_test-j41m.3 (DFT Stage 1b): cocotb wrapper for dft_clk_switch.
+// DFT Stage 1b: cocotb wrapper for dft_clk_switch.
 //
 //   * tck_i / a_en_i   the raw TCK and a clock-gate enable.  The A clock the switch sees is
 //                      clk_a_o = tck_i gated by a_en_i through the SAME rv32i_clock_gate dft_ctrl

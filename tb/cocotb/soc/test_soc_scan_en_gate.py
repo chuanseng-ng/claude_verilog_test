@@ -1,56 +1,30 @@
 """
-test_soc_scan_en_gate.py -- bead claude_verilog_test-j41m.17 (epic j41m, GH #244), SoC level.
-
-DUT: tb_soc_pll -> soc_top (PLL_IMPL=STUB), the same wrapper test_soc_dft_scan / test_soc_jtag use.
-
-THE PROPERTY UNDER TEST (Doc: tm:ch:dft-architecture 14.14)
-  crypto_accel zeroizes its key and state on every scan_mode edge through functional D logic, and a
-  scan mux sits AFTER that logic, so an edge with scan_en = 1 would load scan_in over the cleared
-  value. soc_top therefore gates the shift enable:
-
-      dft_scan_en = dft_scan_en_req & crypto_wipe_done
-      (crypto_wipe_done = u_crypto.scan_wipe_done_o)
-
-  scan_wipe_done_o falls combinationally when scan_mode changes and rises just after the third
-  clock edge (the edge at which the wipe_w-qualified clears take effect). The net named dft_scan_en
-  still feeds the CPU macro (scan_en_i) and the Stage 2 SE pins.
-
-WHAT "NO KEY-DERIVED BIT REACHES scan_out" MEANS HERE
-  The RTL has no scan flops before Stage 2 insertion (scan_out_o is tied 0), so the property is
-  modelled, not observed on a pin. A scan flop shifts its Q out at the first edge with scan_en = 1,
-  and a chain's last flop already shows its Q on scan_out before that edge. So the value a scan flop
-  would shift out at the FIRST shift edge is the flop's value at the instant dft_scan_en first
-  rises, and every test below samples every scanned crypto flop class at that instant (and at every
-  later sample with dft_scan_en = 1) and requires 0. key_q and rk_q are excluded from the chains
-  and masked on their read side; they are sampled too (they must read 0 as wiped, and the masked
-  read nets must be 0). The residue is DEPOSITED (fresh random values per run, so a stale register
-  can never produce a false pass) except in test_gate_after_real_firmware_run, where the residue
-  comes from CPU firmware that runs a real AES and SHA-256 operation over the bus.
-
-TIMELINE (edge k = k-th rising edge of the test clock after the scan_mode change)
-    scan_mode rises  done 1 -> 0 at once, dft_scan_en -> 0 at once (no clock needed)
-    edges 1, 2       capture-type: done 0, dft_scan_en 0 even if the tester holds scan_en_i
-    edge 3           clears take effect; done 0 -> 1 right after it, dft_scan_en rises with it
-    edge 4           FIRST EDGE THAT CAN SHIFT (the protocol keeps scan_en low through edge 4 as a
-                     spare; the hardware guarantee is only "no shift before edge 4")
-
-Tests
-  test_gate_withholds_scan_en_until_wipe_applied[_en_first]
-        pin mode, adversarial tester (scan_en_i raised together with / before scan_mode_i)
-  test_no_residue_visible_when_scan_en_first_rises   5 random keys, every class sampled
-  test_gate_after_real_firmware_run                  residue from a real AES + SHA run by firmware
-  test_tap_serial_direct_shift_is_capture_until_wipe_applied
-  test_tap_serial_documented_protocol_shifts
-  test_done_and_scan_en_change_once_at_the_right_edge
-  test_short_scan_mode_pulse_keeps_done_low_until_pipeline_flushes
-  test_scan_exit_withholds_scan_en
-  test_scan_reset_does_not_fake_or_hide_done
-  test_functional_reset_leaves_done_high_after_three_edges
-  test_functional_mode_is_a_pass_through
-
-Verilator is two-state and zero-delay: "glitch free" below means "no change at any simulation
-timestep other than the legitimate one", which is all a zero-delay model can show. The real
-glitch argument is the monotonic NOR of 14.14 item 4 plus the netlist STA; neither is claimed here.
+test_soc_scan_en_gate.py -- crypto scan-enable gating, SoC level (DFT Stage 2 preparation). DUT:
+tb_soc_pll -> soc_top (PLL_IMPL=STUB).
+PROPERTY (Doc: tm:ch:dft-architecture): crypto_accel zeroizes its key and state on every scan_mode
+edge through functional D logic, and a scan mux sits AFTER that logic, so an edge with scan_en = 1
+would load scan_in over the cleared value. soc_top therefore gates the shift enable: dft_scan_en =
+dft_scan_en_req & crypto_wipe_done (= u_crypto.scan_wipe_done_o). It falls combinationally when
+scan_mode changes and rises just after the third clock edge (the edge at which the wipe_w-qualified
+clears take effect).
+"NO KEY-DERIVED BIT REACHES scan_out": there are no scan flops before Stage 2 insertion (scan_out_o
+is tied 0), so the property is modelled, not observed on a pin. A scan flop shifts its Q out at the
+first edge with scan_en = 1, so the value it shifts first is its value when dft_scan_en first rises.
+Every test samples every scanned crypto flop class at that instant (and at each later sample with
+dft_scan_en = 1) and requires 0. key_q and rk_q are off the chains and masked on their read side;
+they are sampled too. The residue is DEPOSITED with fresh random values per run, so a stale register
+cannot give a false pass, except in test_gate_after_real_firmware_run, where CPU firmware runs a
+real AES and SHA-256 operation.
+TIMELINE (edge k = k-th rising edge of the test clock after the scan_mode change): scan_mode rises:
+done 1 -> 0 and dft_scan_en -> 0 at once. Edges 1, 2: capture-type, done 0 and dft_scan_en 0 even if
+the tester holds scan_en_i. Edge 3: clears take effect, done 0 -> 1 right after, dft_scan_en rises
+with it. Edge 4: FIRST EDGE THAT CAN SHIFT (the protocol keeps scan_en low through edge 4 as a
+spare; the hardware guarantee is only "no shift before edge 4").
+Verilator is two-state and zero-delay: "glitch free" here means "no change at any timestep other
+than the legitimate one". The real glitch argument (the monotonic NOR plus the netlist STA) is not
+claimed here.
+Run: make -C tb/cocotb/soc soc_scan_en_gate
+Doc: tm:suite:soc-test-soc-scan-en-gate
 """
 
 import random

@@ -1,7 +1,6 @@
 // tb_crypto.sv
 // Phase 6b -- standalone cocotb test wrapper for crypto_accel (rtl/periph/crypto_accel.sv, with
-// its sub-cores rtl/periph/aes128_core.sv and rtl/periph/sha256_core.sv; bead
-// claude_verilog_test-f7vs.10).
+// its sub-cores rtl/periph/aes128_core.sv and rtl/periph/sha256_core.sv).
 //
 // STRICT TDD: the DUT does not exist when this wrapper is written (test_crypto.py is the RED half
 // of the cycle). Every port and parameter name below is taken from the frozen microarchitecture
@@ -57,7 +56,7 @@ module tb_crypto (
     input  logic clk,
     input  logic rst_n,
 
-    // DFT scan mode (bead j41m.2) -- main instance only; the other three are tied 0. 0 = functional.
+    // DFT scan mode -- main instance only; the other three are tied 0. 0 = functional.
     input  logic scan_mode_i,
 
     // -- u_dut: APB4 slave port (BFM-facing, flat APB4 names) ---------------
@@ -72,7 +71,7 @@ module tb_crypto (
     output logic              pslverr,
     output logic              irq_o,
 
-    // DFT wipe handshake (bead j41m.17): main instance only (the others see scan_mode_i = 0).
+    // DFT wipe handshake: main instance only (the others see scan_mode_i = 0).
     output logic              scan_wipe_done_o,
 
     // -- u_dut_v4: SBOX_PARALLEL = 4 ----------------------------------------

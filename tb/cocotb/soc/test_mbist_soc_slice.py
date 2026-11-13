@@ -1,5 +1,5 @@
 """
-test_mbist_soc_slice.py -- beads claude_verilog_test-j41m.14 / j41m.10: MBIST through the JTAG TAP on the REAL
+test_mbist_soc_slice.py -- MBIST through the JTAG TAP on the REAL
 SoC-level wrappers.
 
 DUT: tb_mbist_soc_slice = dft_ctrl + soc_mbist + the real sram_controller and npu_top, built with

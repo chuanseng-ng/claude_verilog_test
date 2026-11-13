@@ -1,59 +1,27 @@
 """
-test_pll_regs.py — Phase 7 (M-c) PLL AXI-Lite register interface test.
+test_pll_regs.py -- Phase 7 (M-c) PLL AXI-Lite register interface test.
 
-DUT: tb_pll_axil_regs (standalone wrapper, directly instantiates pll_axil_regs)
-
-Register map (pll_axil_regs at local byte offset, 12-bit address):
-  0x000  CONTROL [RW]
-           [0]    pll_enable   (1 = de-assert PLL reset)
-           [7:4]  div_n[3:0]
-           [9:8]  post_div_sel
-  0x004  STATUS  [RO]
-           [0]    locked       (mirrors pll_locked_i)
-  0x008  RSVD    [RO]          reads 0, writes ignored
-
-Design note — why standalone TB (not tb_soc_pll):
-  The original test_pll_regs.py (commit dacba91) tried to drive the SoC
-  internal periph_axil_* nets from the AXI4LiteMaster BFM.  Those signals are
-  continuously driven by axi4_to_axilite continuous-assign statements:
-
-      assign m_axil_arvalid = (rs_q == RS_AR);   // 0 when bridge is idle
-
-  In Verilator simulation, RTL evaluation overrides cocotb value-writes in the
-  same time step.  The BFM wrote arvalid=1; the bridge's assign immediately
-  drove it back to 0; the interconnect's R_IDLE state never saw arvalid=1; the
-  AR handshake never fired; the BFM's while-loop spun forever.  This is the
-  root cause of the test_pll_regs_status_locked hang.
-
-  Fix: use a standalone tb_pll_axil_regs.sv wrapper (same pattern as tb used
-  for timer, uart, spi, dma, irq) where the BFM's s_axil_* signals are true
-  top-level input ports — not driven by any RTL assigns — so the BFM owns them
-  cleanly.
-
-  Companion RTL fix: soc_addr_map_pkg.sv PERIPH_LIMIT extended from
-  0x2000_6FFF to 0x2000_7FFF so that CPU firmware reads of PLL registers via
-  MMIO are correctly routed to the axi4_to_axilite bridge (not DECERR'd by the
-  AXI4 crossbar).
-
-AXI-Lite access path (this file):
-  cocotb AXI4LiteMaster → tb_pll_axil_regs.s_axil_* → pll_axil_regs
-
-Tests:
-  test_pll_regs_status_locked
-      Inject pll_locked_i=1 at the DUT port; read STATUS at offset 0x004;
-      confirm bit[0]==1 (locked bit mirrors the injected signal).
-
-  test_pll_regs_control_write_readback
-      Write CONTROL with pll_enable=1, div_n=0xA, post_div_sel=2'b01;
-      read back; verify only WMASK=0x03F1 bits are stored.
-
-  test_pll_regs_status_readonly
-      Write all-ones to STATUS address; confirm STATUS does not change (RO).
-
-  test_pll_regs_slave_index_6 (renamed: test_pll_regs_decode_and_enable)
-      Write+read CONTROL at offset 0x000 with pll_enable=1;
-      verify bresp and rresp are OKAY (no DECERR — register bank covers all
-      in-range offsets).
+SUPERSEDED by test_pll_apb_regs.py. pll_axil_regs no longer exists, so this file cannot
+elaborate and no Make target runs it. The `pll_regs` target is an alias for pll_apb_regs.
+Historical DUT:
+tb_pll_axil_regs (standalone wrapper, instantiated pll_axil_regs directly).
+Register map (local byte offset, 12-bit address): 0x000 CONTROL [RW] ([0] pll_enable, [7:4] div_n,
+[9:8] post_div_sel); 0x004 STATUS [RO] ([0] locked, mirrors pll_locked_i); 0x008 RSVD [RO] reads
+0, writes ignored. Why a standalone wrapper and not tb_soc_pll: driving the SoC-internal
+periph_axil_* nets from the AXI4LiteMaster BFM hangs under Verilator. axi4_to_axilite drives those
+nets by continuous assigns (e.g. `assign m_axil_arvalid = (rs_q == RS_AR);`), and RTL evaluation
+overrides a cocotb write in the same time step. The BFM wrote arvalid=1, the assign drove it back to
+0, the AR handshake never fired, and the BFM's loop spun forever (the test_pll_regs_status_locked
+hang). The fix is a standalone wrapper (the pattern of the timer, uart, spi, dma and irq
+benches) whose s_axil_* signals are true top-level inputs, so the BFM owns them. A companion RTL
+change extended soc_addr_map_pkg.sv PERIPH_LIMIT to 0x2000_7FFF, so CPU reads of the PLL registers
+route to the axi4_to_axilite bridge and the AXI4 crossbar does not DECERR them.
+Tests: status_locked (inject pll_locked_i=1, read STATUS at 0x004, bit 0 == 1);
+control_write_readback (write CONTROL with pll_enable=1, div_n=0xA, post_div_sel=2'b01; only the
+WMASK=0x03F1 bits are stored); status_readonly (writing all-ones to STATUS changes nothing);
+test_pll_regs_decode_and_enable (renamed from test_pll_regs_slave_index_6: write and read CONTROL at
+0x000, bresp and rresp OKAY, no DECERR).
+Doc: tm:suite:soc-test-pll-regs
 """
 
 import sys
@@ -72,7 +40,7 @@ from bfm.axi4lite_master import AXI4LiteMaster
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 10      # 100 MHz — same as SoC reference clock
+CLK_PERIOD_NS = 10      # same as the SoC reference clock
 
 # Local byte offsets (pll_axil_regs uses 12-bit local address)
 CTRL_OFFSET  = 0x000   # CONTROL register

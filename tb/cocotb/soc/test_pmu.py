@@ -1,69 +1,26 @@
 """
-test_pmu.py — GH #101 cocotb verification for the behavioral PMU (rtl/soc/pmu.sv).
-
-DUT: tb_pmu (standalone wrapper, directly instantiates pmu)
-
-Register map (pmu.sv, ADDR_W=12 local byte offset):
-  0x000  CTRL      [RW]  [1:0] pmu_mode_req (WMASK=0x3); reset 0x0 (NORMAL)
-  0x004  STATUS    [RO]  [0] cpu_domain_on [1] gpu_domain_on [2] busy [3] cpu_iso_ack_timeout (sticky)
-  0x008  DOMAIN_EN [RO]  live per-signal bitmap (see pmu.sv header for bit map)
-
-Mode encoding: 00 NORMAL, 01 CPU_OFF, 10 GPU_OFF, 11 IDLE.
-
-Per-domain FSM (9-state linear chain, one action per clock):
-  DOM_ON -> PD_SAVE -> PD_ISO -> PD_GATE -> DOM_OFF
-         -> PU_RST -> PU_CLK -> PU_RESTORE -> PU_ISO -> DOM_ON
-
-Timing contract exercised by every test below (empirically calibrated
-against this RTL + the APB4Master BFM under Verilator; see the diagnostic
-trace captured during development in test_pmu_mid_sequence_mode_change_no_reversal):
-  Immediately after `await bfm.write(CTRL, ...)` returns, the domain
-  sequencer is STILL showing its pre-write state, and it remains there for
-  one further `RisingEdge` (i.e. two full cycles of no visible change)
-  before the FSM's next-state logic reacts to the new target and begins
-  walking the down/up sequence one state per cycle thereafter. Every
-  ordering test below accounts for this two-cycle hold explicitly in its
-  expected sample list (e.g. `[ON, ON, PD_SAVE, PD_ISO, PD_GATE, OFF, OFF]`)
-  rather than assuming the FSM reacts on the very next edge.
-
-Tests:
-  test_pmu_reset_defaults
-      CTRL=0, STATUS=0x3, GPU/CPU un-isolated/un-reset at reset.
-  test_pmu_cpu_power_down_ordering / test_pmu_gpu_power_down_ordering
-      Per-cycle ordering assertion (not end-state): ret_save -> iso_en ->
-      clk-gate -> reset-assert, one action per cycle, no collapsing/reorder.
-  test_pmu_cpu_power_up_ordering / test_pmu_gpu_power_up_ordering
-      Per-cycle ordering assertion: reset-release -> clk-ungate ->
-      ret_restore -> iso de-assert.
-  test_pmu_idle_both_domains_ordering
-      Both domains sequence down and back up in lockstep under IDLE.
-  test_pmu_busy_semantics
-      STATUS.busy tracks "either domain mid-sequence"; 0 once both settled.
-  test_pmu_ctrl_wmask
-      CTRL WMASK=0x3: writing 0xFFFF_FFFF leaves only bits[1:0].
-  test_pmu_status_domain_en_readonly
-      STATUS/DOMAIN_EN SW writes are no-ops (WMASK=0).
-  test_pmu_mid_sequence_mode_change_no_reversal
-      GH #101 documented intent: CTRL write mid-descent does not reverse
-      the in-flight sequence; it completes to OFF, then powers back up.
-
-Isolation handshake (bead 3ogd).  tb_pmu models the CPU-domain ack round trip with a
-configurable latency (ack_lat_i; 0 = pass-through, which is what every test above runs at),
-a stuck ack (ack_stuck_i) and a forced ack (ack_force_i / ack_force_val_i):
-  test_pmu_cpu_power_down_waits_for_ack
-      DOM_PD_ISO lasts exactly ack_lat+1 cycles, the clock gate / reset follow the ack by one /
-      two cycles, never precede it (latency sweep 0..10).
-  test_pmu_cpu_power_up_waits_for_ack_release
-      DOM_PU_ISO lasts exactly ack_lat+1 cycles (the 4-phase return-to-zero wait).
-  test_pmu_back_to_back_no_stale_ack
-      A power-down requested right after a power-up still waits its full ack latency.
-  test_pmu_iso_ack_timeout_*
-      A dead ack does not hang the sequencer: it proceeds after ISO_ACK_TIMEOUT cycles in either
-      wait, sets sticky STATUS[3], and the next CPU power-down clears it.
-  test_pmu_gpu_ignores_cpu_ack
-      The GPU walk is bit-identical whatever the CPU ack does.
-  test_pmu_reset_during_iso_wait / test_pmu_mid_wait_mode_flip_no_reversal
-      A reset restarts the wait counter; a mode flip during the wait does not reverse the walk.
+test_pmu.py -- cocotb verification for the behavioral PMU (rtl/soc/pmu.sv). DUT: tb_pmu. Register
+map: pmu.sv header (CTRL WMASK=0x3; STATUS and DOMAIN_EN read-only). Mode: 00 NORMAL, 01 CPU_OFF, 10
+GPU_OFF, 11 IDLE.
+Per-domain FSM (9 states, one action per clock): DOM_ON -> PD_SAVE -> PD_ISO -> PD_GATE -> DOM_OFF
+-> PU_RST -> PU_CLK -> PU_RESTORE -> PU_ISO -> DOM_ON.
+Timing contract of every test (calibrated against this RTL and the APB4Master BFM under Verilator;
+see test_pmu_mid_sequence_mode_change_no_reversal): right after `await bfm.write(CTRL, ...)`
+returns, the sequencer still shows its pre-write state and stays there for one more `RisingEdge`
+(two cycles of no visible change). Then it walks one state per cycle. Every ordering test lists the
+hold in its expected samples (e.g. `[ON, ON, PD_SAVE, PD_ISO, PD_GATE, OFF, OFF]`).
+Tests: reset defaults. Power-down and power-up ordering per domain, per cycle and not only the end
+state (ret_save -> iso_en -> clk-gate -> reset-assert and the reverse, no collapse or reorder). A
+CTRL write mid-descent does not reverse the in-flight sequence: it completes to OFF, then powers up.
+Isolation handshake: tb_pmu models the CPU-domain ack round trip with a configurable latency
+(ack_lat_i, 0 = pass-through as in the tests above), a stuck ack (ack_stuck_i) and a forced ack
+(ack_force_i, ack_force_val_i). Power-down: DOM_PD_ISO lasts exactly ack_lat+1 cycles, and the clock
+gate and reset follow the ack by one and two cycles, never before it. Power-up: DOM_PU_ISO lasts
+ack_lat+1 cycles (4-phase return-to-zero wait). A dead ack does not hang: the sequencer proceeds
+after ISO_ACK_TIMEOUT cycles in either wait, sets sticky STATUS[3], and the next CPU power-down
+clears it. The GPU walk ignores the CPU ack. A reset restarts the wait counter.
+Run: make -C tb/cocotb/soc pmu
+Doc: tm:suite:soc-test-pmu
 """
 
 import sys
@@ -84,7 +41,7 @@ from reg_walk import walk_bank  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 10  # 100 MHz — matches SoC reference clock
+CLK_PERIOD_NS = 10  # matches the SoC reference clock
 
 CTRL_OFFSET      = 0x000
 STAT_OFFSET      = 0x004
@@ -131,7 +88,7 @@ def _kill_active_tasks() -> None:
 # ---------------------------------------------------------------------------
 
 async def _start_clock_and_reset(dut) -> None:
-    """Start 100 MHz clock and apply synchronous reset. Idle the APB4 bus."""
+    """Start the clock and apply synchronous reset. Idle the APB4 bus."""
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
 
@@ -479,7 +436,7 @@ async def test_pmu_status_domain_en_readonly(dut):
 
 @cocotb.test()
 async def test_pmu_mid_sequence_mode_change_no_reversal(dut):
-    """GH #101 documented design intent: a domain's target is only
+    """Design intent: a domain's target is only
     re-sampled while settled at DOM_ON or DOM_OFF. Writing CTRL=NORMAL while
     the CPU domain is mid-descent (fired at PD_SAVE, the earliest possible
     point) must NOT reverse the in-flight power-down — it must complete
@@ -546,7 +503,7 @@ async def test_pmu_mid_sequence_mode_change_no_reversal(dut):
     )
 
 # ---------------------------------------------------------------------------
-# Isolation handshake (bead 3ogd)
+# Isolation handshake
 # ---------------------------------------------------------------------------
 
 ISO_ACK_TIMEOUT = 16  # tb_pmu's ISO_ACK_TIMEOUT parameter default
@@ -823,7 +780,7 @@ async def test_pmu_mid_wait_mode_flip_no_reversal(dut):
 
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -835,7 +792,7 @@ async def test_register_walk(dut):
 
 
 # ---------------------------------------------------------------------------
-# DOMAIN_EN read-back across a full power cycle (bead xkw5)
+# DOMAIN_EN read-back across a full power cycle
 # ---------------------------------------------------------------------------
 
 def _domain_en_bitmap(cpu: tuple, gpu: tuple) -> int:

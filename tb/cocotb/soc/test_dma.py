@@ -10,7 +10,7 @@
 #   AXI4SlaveModel: prefix="m"      → dut.m_awid, dut.m_araddr etc.
 #
 # TOPLEVEL=dma_engine (flat ports — no wrapper needed).
-# Clock 2 ns, reset 5 cycles low, 2 idle cycles after release (matches soc pattern).
+# Soc clock period, reset 5 cycles low, 2 idle cycles after release (matches soc pattern).
 
 from dataclasses import dataclass
 from functools import partial
@@ -1031,7 +1031,7 @@ async def test_dma_recovers_after_read_error(dut):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Directed coverage closure (bead bq2o, GH #216 / nkj7): burst clamp, channel stalls, write-response
+# Directed coverage closure: burst clamp, channel stalls, write-response
 # errors and descriptor-queue back-pressure.  These use the cycle-accurate AxiSlave of
 # axi4_fabric_bfm.py (ready/valid stalls, scripted responses, protocol-violation log) instead of the
 # always-ready AXI4SlaveModel.
@@ -1530,7 +1530,7 @@ async def test_dma_queue_full_drops_start_silently(dut):
     dut._log.info("test_dma_queue_full_drops_start_silently PASS")
 
 
-# ── Register walk: address/length registers, RO words, unmapped words (bead xkw5) ────────────
+# ── Register walk: address/length registers, RO words, unmapped words ────────────
 
 
 @cocotb.test()
@@ -1577,7 +1577,7 @@ async def test_dma_register_walk(dut):
     assert (await axil.read(REG_LENGTH))[0] == 0x1234, "a store at byte offset +2 must land in LENGTH"
 
 
-# ── Bead 0oc4: CTRL hardware-write flops must have a reset value ─────────────
+# ── CTRL hardware-write flops must have a reset value ─────────────
 #
 # dma_engine drives hw_wen_i/hw_wdata_i[REG_CTRL] from flops (the "clear start / soft-reset after
 # consume" writeback).  They used to be assigned only in the non-reset branch of the FSM always_ff,

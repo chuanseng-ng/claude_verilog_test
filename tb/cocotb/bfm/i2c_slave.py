@@ -1,84 +1,26 @@
 """
-I2C Slave / Bus BFM (Bus Functional Model)
+I2C slave and bus BFM for testbenches that drive the open-drain master rtl/periph/i2c_controller.sv.
+Companion to apb4_master.py: that BFM speaks the register bus, this one speaks the pins.
 
-Models the PHYSICAL I2C BUS and one register-file slave sitting on it, for testbenches that drive
-an open-drain I2C *master* (rtl/periph/i2c_controller.sv).  Companion to apb4_master.py: that BFM
-speaks the register bus, this one speaks the pins.
+Samples <prefix>scl_oe_o, scl_o, sda_oe_o, sda_o and drives <prefix>scl_i, sda_i (prefix "i2c_" in
+tb_i2c and tb_soc_top). One register-file slave answers at `address` (7-bit).
 
-Signals sampled (DUT master outputs, open-drain triplets, `<prefix>` is "i2c_" in tb_i2c /
-tb_soc_top):
-  <prefix>scl_oe_o, <prefix>scl_o, <prefix>sda_oe_o, <prefix>sda_o
-Signals driven (DUT master inputs, the sensed pad levels):
-  <prefix>scl_i, <prefix>sda_i
+The wired-AND lives here, not in the RTL. oe = 1 pulls the line low, oe = 0 releases it, and `*_o`
+is a dead pin that must read 0. Every tick the BFM builds the bus from the DUT oe, slave_drive and
+forced_low, and drives it back on the `_i` pins. Clock stretching, arbitration loss and a stuck bus
+are slave_drive / forced_low values. No RTL hook is used.
 
-The wired-AND lives HERE, not in the RTL
-----------------------------------------
-The DUT's pad-ring contract is: oe = 1 drives the line LOW, oe = 0 releases it, an external pull-up
-makes a released line high, and `*_o` is a dead hard-tied-0 pin that exists only for pad symmetry
-with GPIO.  The bus is therefore reconstructed in the testbench, every clock:
+RULE: read and drive the bus on the FALLING edge. The DUT samples `_i` and registers oe on
+the rising edge. A BFM that reads and writes in one rising-edge callback races the DUT and fakes
+RTL faults.
+Do not change this to RisingEdge.
 
-    sda_bus = (dut.i2c_sda_oe_o ? dut.i2c_sda_o : 1) & slave_drive & ~forced_low
-    scl_bus = (dut.i2c_scl_oe_o ? dut.i2c_scl_o : 1) & slave_drive & ~forced_low
-
-and driven back into dut.i2c_sda_i / dut.i2c_scl_i.  Because the BFM is the only thing that closes
-the loop, clock stretching (the slave holds SCL low), arbitration loss (another master holds SDA
-low while this master releases it) and a stuck bus are all just "slave_drive" / "forced_low"
-values -- no RTL hook is needed or used.  The BFM also asserts, every tick, that the DUT's dead
-`*_o` pins read 0 (`protocol_errors`), so a regression that starts using `*_o` as data is caught.
-
-!!! TRAP (already hit once, do not rediscover): DRIVE THE BUS ON THE NEGEDGE !!!
--------------------------------------------------------------------------------
-The DUT samples `i2c_scl_i` / `i2c_sda_i` (through its 2-FF synchronisers) and registers its own
-oe outputs on the clock's RISING edge.  A BFM that reads the oe pins and writes the `_i` pins in
-the SAME rising-edge callback races the DUT: cocotb/Verilator then hands the DUT either the old or
-the new bus level depending on scheduling order, and the failure looks exactly like an RTL fault
--- during the RTL bring-up it produced two spurious read-back failures that were not RTL faults.
-This BFM therefore does ALL of its reading and driving on the FALLING edge of the clock, half a
-period away from every DUT sampling edge.  Every `_i` value the DUT sees is stable for a whole
-clock before it is sampled, and every oe value this BFM reads has fully settled after the
-preceding rising edge.  Do not "optimise" this to RisingEdge.  The consequence is that the slave
-reacts with zero delay at the sampling tick, which is indistinguishable (to a master whose tick is
->= 4 clk) from a real slave that responds inside the SCL-low interval.
-
-Slave behaviour
----------------
-One slave at `address` (7-bit), register-file style (like an EEPROM / sensor):
-  * address phase: ACK iff the 7-bit address matches and `ack_address` is set, else NACK and the
-    slave ignores the transaction until the next START/STOP;
-  * write: the FIRST data byte after an address-write is the register pointer (not stored); every
-    later byte is stored at mem[ptr++].  `data_acks` is a per-byte ACK(True)/NACK(False) script
-    consumed in order for write DATA bytes (exhausted = ACK).  A NACKed byte is not stored;
-  * read: returns `read_queue` bytes first (if any), otherwise mem[ptr++]; stops driving after the
-    master NACKs.
-Everything the slave observes is appended to `events`:
-    ("START",)  ("RSTART",)  ("ADDR", addr7, rw, acked)  ("WR", byte, acked)
-    ("RD", byte, master_acked)  ("STOP",)
-A START with no preceding STOP is logged as RSTART (repeated START), which is how a test tells a
-genuine repeated START from a STOP followed by a START.
-
-Hooks (all take effect on the next negedge; all are optional)
--------------------------------------------------------------
-  stretch_at_fall(index, cycles)  hold SCL low for `cycles` clk right after SCL FALL number `index`
-  stretch_every_fall(cycles)      same, after every SCL fall
-  hold_scl_low(flag)              hold SCL low until released (stuck / dead slave)
-  contend_at_fall(index, cycles)  drive SDA low for `cycles` clk right after SCL fall `index` --
-                                  a second master driving a 0 while this master sends a 1
-  hold_sda_low(flag)              hold SDA low until released (bus busy / stuck SDA)
-SCL fall numbering: the count restarts at every START/repeated START; the master's pull-down right
-after the START condition is fall 0, and the next SCL-high pulse is bit `index`.  So for byte
-number n (0 = the address byte) bit i (0 = MSB) the preceding fall is 9*n + i, and byte n's ACK slot
-is 9*n + 8.
-
-Built-in checks (collected, not raised, so a test decides)
-----------------------------------------------------------
-  protocol_errors  the master advanced (moved SDA, or pulled SCL low again) while the slave was
-                   stretching SCL and the master had released it -- i.e. it did not honour clock
-                   stretching; or a dead `*_o` pin read 1;
-  abandoned        a START/STOP that arrived mid-byte (bit count in parentheses) -- a master that
-                   lost arbitration or timed out walks away mid-byte, so this is informational
-                   there and a hard error everywhere else (assert_clean() checks both).
-Timing records for rate checks: scl_rise_cycles / scl_fall_cycles (BFM clock-tick timestamps of
-every SCL edge on the bus), plus `scl_low_cycles` / `scl_high_cycles` / `scl_periods`.
+Slave: ACK only on an address match with `ack_address`. The first write byte is the
+register pointer.
+A read returns `read_queue` first, then mem[ptr++]. `events` logs START, RSTART, ADDR, WR, RD, STOP.
+Hooks: stretch_at_fall, stretch_every_fall, hold_scl_low, contend_at_fall, hold_sda_low.
+Checks are collected, not raised: protocol_errors, abandoned (see assert_clean).
+Doc: tm:suite:bfm-i2c-slave
 """
 
 import cocotb
@@ -126,7 +68,7 @@ class I2CSlave:
         self.mem = bytearray(mem_size)
         self.ptr = 0
         self.register_mode = True
-        # Passive listeners (bead h367 functional coverage): each is called as cb(event) with the
+        # Passive listeners (functional coverage): each is called as cb(event) with the
         # same tuple that is appended to `events`.  Configuration, so reset_state() keeps them.
         self._observers: list = []
 

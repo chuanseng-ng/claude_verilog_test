@@ -1,5 +1,5 @@
 // tb_dft_muxes.sv
-// Bead claude_verilog_test-j41m.2 (DFT Stage 1a): one wrapper holding the three
+// DFT Stage 1a: one wrapper holding the three
 // small DFT leaf modules, re-exported flat so a single cocotb module can drive
 // each independently.
 

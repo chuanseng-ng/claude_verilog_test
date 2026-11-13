@@ -10,7 +10,7 @@
 //   reg0..reg5 : fully SW-writable  (WMASK = 0xFFFFFFFF)
 //   reg6       : SW read-only/status (WMASK = 0x00000000), HW-writable
 //   reg7       : low-byte writable   (WMASK = 0x000000FF), HW-writable via
-//                hw_aux_wen / hw_aux_wdata (bead 6o8w: partial-WMASK HW path)
+//                hw_aux_wen / hw_aux_wdata (partial-WMASK HW path)
 
 module tb_axi_lite_register_bank #(
     parameter int unsigned ADDR_W = 12,
@@ -50,7 +50,7 @@ module tb_axi_lite_register_bank #(
     input  logic [31:0]       hw_aux_wdata,
 
     // Hardware injection -> registers 0..5 (fully SW-writable): one enable per register, one
-    // shared data word.  Lets a test drive every HW-write port of the bank (bead xkw5).
+    // shared data word.  Lets a test drive every HW-write port of the bank.
     input  logic [5:0]        hw_gen_wen,
     input  logic [31:0]       hw_gen_wdata
 );

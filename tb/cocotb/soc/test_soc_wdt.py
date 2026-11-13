@@ -1,56 +1,31 @@
 """
-test_soc_wdt.py — Phase 6a-3 SoC-level watchdog test (bead claude_verilog_test-f7vs.7
-steps 4-5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
-
-`test_wdt` (tb_wdt.sv / Makefile `wdt` target) drives watchdog_timer's APB4 face directly and has
-never exercised it through the real fabric path:
-
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-  axil_to_apb -> apb_interconnect -> APB slave 9 (APB_WDT, 0x2000_C000)
-
-nor the two things that only exist once the WDT is inside soc_top: its IRQ into
-interrupt_controller bit 7, and its bite feeding the CPU-domain reset. Firmware comes from a
-committed pure-Python hand-assembler (wdt_fw/gen_wdt_hex.py) — no riscv32 cross toolchain, so the
-suite is CI-safe. Synchronisation and scoring are by commit_pc_o marker PCs, the technique
-test_soc_pwm.py / test_soc_gpio.py use.
-
-Two tests, one image each:
-
-test_soc_wdt  (image A, RST_EN = 0 — the reset default)
-  Firmware arms the interrupt path, enables the dog, polls WDT_COUNT over the fabric until it has
-  halved, FEEDS it, reads COUNT straight back (must be a reload) — then stops feeding. The dog
-  barks, IRQ -> interrupt_controller[7] -> CPU MEIP -> ISR #1; the counter runs a second full
-  period; the dog bites, wdt_rst_req_o rises at the SoC boundary, ISR #2. Scored here, from the
-  boundary, independently of the firmware's own self-checks:
-    * wdt_irq / wdt_rst_req_o stay LOW through the feed and until the (fed) bark. The bark lands
-      about a full period after the FEED, not after the enable — i.e. the un-fed deadline was
-      really passed and survived. Timing of the bark relative to the feed pins the FEED write
-      having reached slave 9 through the whole fabric.
-    * bark -> bite is exactly (PRESCALE+1)*RELOAD + 1 core_clk edges, the RTL contract at the
-      SoC boundary — which pins the PRESCALE and RELOAD writes too.
-    * the CPU takes EXACTLY TWO traps (ISR_PC commits twice): the first with wdt_irq/ext_irq
-      asserted and wdt_rst_req_o low, the second with wdt_rst_req_o high. After each, wdt_irq and
-      ext_irq deassert (clear-what-you-saw ISR; see the generator header), and no third trap
-      follows (a stale level-held IRQ would produce one).
-    * wdt_rst_req_o is level-held after the bite (the WDT was not reset, and W1C of STATUS[1]
-      does not drop it).
-    * THE RST_EN = 0 CLAIM: with a bite having happened, cpu_domain_rst_n never falls, and the
-      internal reset-request flop and the RST_EN shadow stay 0 — the new reset path is inert by
-      default, so it cannot have perturbed any other suite.
-    * backdoor SRAM read: ISR_COUNT == 2, LOG[0] == 0x1 (bark only), LOG[1] == 0x2 (bite only).
-
-test_soc_wdt_rst_en  (image B, RST_EN = 1)
-  Firmware enables the dog with CTRL = EN | RST_EN and spins committing LOOP_PC. Scored here:
-    * before the bite the CPU commits normally and cpu_domain_rst_n is high;
-    * once wdt_rst_req_o rises, cpu_domain_rst_n falls within a few cycles and the CPU stops
-      committing for good;
-    * the reset is CPU-DOMAIN-ONLY: core_rst_n and cpu_core_rst_n never fall, and wdt_rst_req_o
-      stays high — a whole-SoC reset would have cleared the WDT and dropped it;
-    * this is a bite, not a bark: nothing happens at the bark.
-
-GOLDEN-MODEL NOTE (same as test_soc_gpio / test_soc_pwm): SoCModel cannot be used here since it
-rejects 0x2000_xxxx MMIO. Image A is self-checking and the testbench scoreboards commit_pc_o for
-the marker PCs / PASS_PC / FAIL_PC.
+test_soc_wdt.py -- Phase 6a-3 SoC-level watchdog test. `test_wdt` (tb_wdt.sv, Makefile `wdt` target)
+drives watchdog_timer's APB4 face directly. It never used the real fabric path to APB slave 9
+(APB_WDT, 0x2000_C000), nor the two things that exist only inside soc_top: its IRQ into
+interrupt_controller bit 7 and its bite feeding the CPU-domain reset. Scoring by commit_pc_o marker
+PCs, as in test_soc_pwm.py. Three tests.
+test_soc_wdt (image A, RST_EN = 0, the reset default): the firmware arms the interrupt path, enables
+the dog, polls WDT_COUNT until it has halved, FEEDS it, reads COUNT back (must be a reload), then
+stops feeding. The dog barks (IRQ -> interrupt_controller[7] -> CPU MEIP -> ISR #1), the counter
+runs a second full period, the dog bites (wdt_rst_req_o rises at the SoC boundary, ISR #2). Scored
+from the boundary, independently of the firmware: wdt_irq and wdt_rst_req_o stay LOW through the
+feed and until the bark, which lands about a full period after the FEED and not after the enable
+(this pins the FEED write through the fabric); bark -> bite is exactly (PRESCALE+1)*RELOAD + 1
+core_clk edges (+/-1 sample tolerance, BARK_TO_BITE_TOL; this pins the PRESCALE and RELOAD writes
+too); EXACTLY TWO traps (ISR_PC twice: first with wdt_irq and ext_irq asserted and wdt_rst_req_o
+low, second with wdt_rst_req_o high), after each wdt_irq and ext_irq deassert (clear-what-you-saw
+ISR, see the generator header) and no third trap follows; wdt_rst_req_o is level-held after the bite
+(W1C of STATUS[1] does not drop it); RST_EN = 0 CLAIM: after a bite cpu_domain_rst_n never falls and
+the reset-request flop and RST_EN shadow stay 0, so the reset path is inert by default.
+test_soc_wdt_rst_en (image B, RST_EN = 1): the firmware enables the dog with CTRL = EN | RST_EN and
+spins committing LOOP_PC. Scored: before the bite the CPU commits and cpu_domain_rst_n is high; once
+wdt_rst_req_o rises cpu_domain_rst_n falls within a few cycles and the CPU stops committing for
+good; the reset is CPU-DOMAIN-ONLY (core_rst_n and cpu_core_rst_n never fall and wdt_rst_req_o stays
+high: a whole-SoC reset would clear the WDT); nothing happens at the bark.
+test_soc_wdt_rst_en_release (image B): after the bite, an external SoC reset clears wdt_rst_req_o
+and wdt_cpu_rst_req_q, and the CPU re-boots and commits the configuration marker again.
+Run: make -C tb/cocotb/soc soc_wdt
+Doc: tm:suite:soc-test-soc-wdt
 """
 
 import sys
@@ -86,7 +61,7 @@ from tb.cocotb.soc.wdt_fw.wdt_fw_addrs import (
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS = 2  # matches the other SoC tests
 
 _FW_DIR = Path(__file__).parent / "wdt_fw"
 _FW_A_HEX = str(_FW_DIR / "wdt_fw.hex")
@@ -248,7 +223,7 @@ async def test_soc_wdt(dut):
                     f"wdt_cpu_rst_n_cpu_sync low at cycle {cycle_idx} while cpu_core_rst_n was "
                     f"high, with RST_EN == 0 — the WDT term delayed the CPU-domain reset release"
                 )
-        # wdt_rst_en_w is watchdog_timer's rst_en_o port (bead f7vs.14 replaced the
+        # wdt_rst_en_w is watchdog_timer's rst_en_o port (a real port replaced the
         # earlier bus-snooped wdt_rst_en_shadow_q with a real port; the assertion's
         # intent -- the WDT reset term stays inert with RST_EN == 0 -- is unchanged).
         if _i(dut.u_soc.wdt_cpu_rst_req_q) or _i(dut.u_soc.wdt_rst_en_w):
@@ -471,7 +446,7 @@ async def test_soc_wdt_rst_en(dut):
 async def test_soc_wdt_rst_en_release(dut):
     """RST_EN = 1: a bite holds the CPU domain in reset until an external reset releases it.
 
-    Bead 4pl8.  `test_soc_wdt_rst_en` stops at the silence window, so wdt_cpu_rst_req_q never
+    `test_soc_wdt_rst_en` stops at the silence window, so wdt_cpu_rst_req_q never
     fell at SoC level.  Here, once the CPU domain is held in reset by the bite, the whole SoC is
     reset and released, and the testbench checks the full reset-then-release recovery:
 

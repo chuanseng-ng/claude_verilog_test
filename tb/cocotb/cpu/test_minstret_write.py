@@ -1,34 +1,27 @@
-"""Directed tests for a CSR write to minstret / minstreth (bead f7z3).
+"""Directed tests for a CSR write to minstret / minstreth.
 
-RISC-V privileged spec: a write to minstret takes effect as if every older instruction had
-already retired, and the writing instruction's own retirement does not increment the counter.  The
-core applies the write in EX while the retirement strobe trails EX by five stages, so before the
-fix older in-flight instructions and the writer itself retired on top of the written value.
+RISC-V privileged spec: a write to minstret takes effect as if every older instruction had already
+retired, and the writing instruction's own retirement does not increment the counter. The core
+applies the write in EX while the retirement strobe trails EX by five stages. Older in-flight
+instructions and the writer itself must not retire on top of the written value.
 
 Expected values come from the spec, not from the RTL:
 
-* ``V <= minstret read <= V + n`` where ``n`` is the number of instructions that retired between
-  the writer and the reader (read from the commit stream), and the read is exactly ``V`` when the
-  reader directly follows the writer (``n == 0``);
-* a read may trail by at most ONE retirement (the reader's immediate predecessor has not
-  retired yet when the reader executes in EX).  That read lag is separate from f7z3 and is pinned
-  by ``test_minstret_matches_retirements_between_reads``; it is allowed for here, never more;
-* every test also runs the per-cycle ``CounterMonitor`` against ``CsrModel.tick()``, which models
+* ``V <= minstret read <= V + n``, where ``n`` is the number of instructions that retired between
+  the writer and the reader (from the commit stream). The read is exactly ``V`` when ``n == 0``.
+* A read may trail by at most ONE retirement: the reader's immediate predecessor has not retired
+  yet when the reader executes in EX.
+  ``test_csr_access.py::test_minstret_matches_retirements_between_reads`` pins this lag. Allow it
+  here, never more.
+* Every test also runs the per-cycle ``CounterMonitor`` against ``CsrModel.tick()``, which models
   the in-flight absorption by program-order index (tb/models/csr_model.py).
 
-  test_write_read_back_at_distance          write, then a read 0..3 instructions later, at four
-                                            instruction-cache alignments
-  test_write_with_older_instruction_in_flight  ALU / CSR / load hit / load miss / load-use / taken
-                                            branch in front of the write, and a branch behind it
-  test_zeroing_both_halves_back_to_back     csrw minstret ; csrw minstreth reads (0, 0)
-  test_low_half_wrap_carries_only_younger_retirements   write 0xFFFFFFFF, no spurious carry
-  test_high_half_write_keeps_counting_the_low_half
-  test_read_only_forms_are_not_writes       CSRRS/CSRRC rs1=x0, CSRRSI/CSRRCI uimm=0
-  test_set_clear_forms_write_with_nonzero_source
-  test_wrong_path_write_is_ignored          CSR writes in a taken branch / JAL shadow
-  test_write_with_older_trap_taken_while_in_flight   writer in flight across an exception
-  test_mcycle_write_wins_and_counts_on      mcycle / mcycleh analysis (no in-flight term)
-  test_hpm_event_of_older_load_lands_after_write   mhpmcounter4 analysis (time-ordered event)
+Cases: a read 0..3 instructions after the write at four cache alignments, an older instruction in
+flight (ALU, CSR, load hit or miss, load-use, taken branch), zeroing both halves, low-half wrap,
+read-only forms (rs1=x0, uimm=0), set and clear forms, wrong-path writes, an older trap in flight,
+an mcycle write, and the mhpmcounter4 event of an older load.
+Run: make -C tb/cocotb/cpu MODULE=test_minstret_write
+Doc: tm:suite:cpu-test-minstret-write
 """
 
 import cocotb

@@ -1,5 +1,5 @@
 // tb_clock_gate_scan.sv
-// Bead claude_verilog_test-j41m.2 (DFT Stage 1a): standalone wrapper for the
+// DFT Stage 1a: standalone wrapper for the
 // rv32i_clock_gate test-enable (test_en) added for scan. Re-exports every
 // port flat so cocotb can drive en / test_en independently and watch gclk.
 

@@ -1,62 +1,27 @@
 """
-test_cpu_gpu_irq.py — Phase 5 (M9) interrupt-driven CPU-GPU integration test.
-Bead: claude_verilog_test-ov2
+test_cpu_gpu_irq.py -- Phase 5 (M9) interrupt-driven CPU-GPU integration test.
 
-Verifies the complete interrupt-driven CPU-GPU data-plane handoff through
-tb_soc_top:
-
-  1. CPU programs mtvec to point at the ROM ISR, enables MEIE (mie[11])
-     and MIE (mstatus[3]), and writes 0x10 to interrupt_controller IRQ_MASK
-     to enable GPU IRQ source (bit 4).
-  2. CPU writes 8 source words to SRAM (dirty in D-cache), flushes, writes
-     and flushes the GPU kernel image.
-  3. CPU launches GPU via AXI-Lite GPU ctrl register write.
-  4. CPU waits in a bounded spin loop polling a flag in SRAM at ISR_FLAG_WI
-     (word 200 = 0x0000_2320).  When the GPU completes, gpu_irq_o asserts,
-     propagates through interrupt_controller (irq_src_i[4]) → ext_irq →
-     rv32i_interrupt_ctrl (irq_valid) → trap entry: MIE cleared, mepc saved,
-     mcause = 0x8000_000B (MEIP), PC → mtvec.
-  5. ISR at mtvec (ROM_BASE):
-       a. Clears GPU IRQ via GPU_IRQ_CLR register (deasserts gpu_irq_o).
-       b. Writes 1 to ISR_FLAG_ADDR in SRAM.
-       c. MRET — restores PC from mepc, MIE from MPIE.
-  6. Main firmware detects the flag set, verifies ISR actually ran (teeth
-     check), performs dcache_inval, reads 8 dst words, checks each == src+1.
-
-IRQ wiring path (soc_top.sv confirmed):
-  gpu_top.gpu_irq_o
-    → irq_src_i[4] of interrupt_controller
-    → irq_o = ext_irq (when IRQ_MASK[4]=1)
-    → rv32i_cpu_top.ext_irq_i
-    → rv32i_csr_file: mip[11] = MEIP
-    → rv32i_interrupt_ctrl: irq_valid when mstatus_mie & mie_meie & ext_irq_i
-    → trap_entry: mcause=0x8000_000B, mepc=next_PC, PC→mtvec
-
-Teeth checks:
-  - If GPU never completes (irq never fires), WFI_LOOP times out →
-    firmware jumps to FAIL_PC.  The test asserts PASS_PC, so it fails.
-  - If the ISR flag at SRAM word 200 is 0 after ISR_DONE, firmware
-    jumps to FAIL_PC explicitly.  This rules out a spurious path where
-    the loop exits due to a flag already non-zero from a prior test run
-    (we zero the flag before launch).
-  - Negative test: IRQ path disabled — confirms FAIL_PC is reached within
-    timeout when the GPU IRQ cannot reach the CPU.
-
-Negative test variants:
-  test_cpu_gpu_irq_no_irq_enable:
-    Firmware with IRQ mask left at 0 (GPU bit not enabled in irq_ctrl).
-    GPU completes and sets gpu_irq_o, but interrupt_controller gates it
-    (IRQ_MASK[4]=0 → masked=0 → irq_o=0 → CPU never gets MEIP).
-    ISR never runs; WFI_LOOP times out; firmware reaches FAIL_PC.
-    Pass criterion: FAIL_PC committed.
-
-Architecture notes:
-  - GPU_BASE = 0x2000_1000  (AXIL_GPU slot in control ring).
-  - IRQ_CTRL_BASE = 0x2000_6000 (AXIL_IRQ slot).
-  - SRAM addresses used here (SRC=0x2180, DST=0x21C0, KERNEL=0x2280)
-    are distinct from the coherency test (SRC=0x2100, DST=0x2140,
-    KERNEL=0x2200) to avoid cross-test SRAM contamination in soc_all.
-  - ISR_FLAG_ADDR = SRAM word 200 = 0x0000_2320.
+Verifies the interrupt-driven CPU-GPU data-plane handoff through tb_soc_top:
+  1. The CPU points mtvec at the ROM ISR, enables MEIE (mie[11]) and MIE (mstatus[3]), and writes
+     0x10 to the interrupt_controller IRQ_MASK (GPU source, bit 4).
+  2. It writes 8 source words to SRAM (dirty in D-cache), flushes, then writes and flushes the
+     kernel image.
+  3. It launches the GPU through the AXI-Lite GPU ctrl register and polls ISR_FLAG_WI (word 200
+     = 0x0000_2320).
+  4. GPU completion raises gpu_irq_o -> irq_src_i[4] -> ext_irq -> rv32i_interrupt_ctrl -> trap (MIE
+     cleared, mepc saved, mcause 0x8000_000B).
+  5. The ISR at mtvec (ROM_BASE) clears the GPU IRQ through GPU_IRQ_CLR, writes 1 to
+     ISR_FLAG_ADDR, MRET.
+  6. The main firmware sees the flag, checks the ISR ran (teeth check), does dcache_inval, reads
+     8 dst words and checks each == src+1.
+Teeth: if the GPU never completes, WFI_LOOP times out and the firmware jumps to FAIL_PC; a zero ISR
+flag after ISR_DONE also jumps to FAIL_PC. The flag is zeroed before launch, so a stale flag cannot
+pass. Negative test test_cpu_gpu_irq_no_irq_enable: IRQ mask left at 0, so the ISR never runs and
+the firmware reaches FAIL_PC (pass: FAIL_PC).
+Addresses: GPU_BASE 0x2000_1000, IRQ_CTRL_BASE 0x2000_6000; SRC 0x2180, DST 0x21C0, KERNEL 0x2280
+differ from the coherency test.
+Run: make -C tb/cocotb/soc soc_cpu_gpu
+Doc: tm:suite:soc-test-cpu-gpu-irq
 """
 
 import sys

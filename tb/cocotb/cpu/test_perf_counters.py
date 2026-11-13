@@ -1,30 +1,23 @@
 """
-Phase 5 M7 — Performance counter directed tests for rv32i_cpu_top.
+Phase 5 M7 performance counter directed tests for rv32i_cpu_top.
 
 Subtests:
-  a. test_a_mcycle_increments      — mcycle advances each cycle; frozen with mcountinhibit[0]
-  b. test_b_minstret_counts_retires— minstret increments once per committed instruction
-  c. test_c_mcountinhibit_freeze   — inhibit[0] freezes mcycle; inhibit[2] freezes minstret
-  d. test_d_hpm3_icache_miss       — mhpmcounter3 counts I-cache misses (cold-start misses)
-  e. test_e_hpm4_dcache_miss       — mhpmcounter4 counts D-cache misses (cold-start load misses)
-  f. test_f_hpm5_branch_mispred    — mhpmcounter5 counts branch mispredictions
-  g. test_g_mimpid_phase5          — mimpid reads 0x00000005 (Phase 5 implementation ID)
+  a. test_a_mcycle_increments      -- mcycle advances each cycle; frozen with mcountinhibit[0]
+  b. test_b_minstret_counts_retires-- minstret increments once per committed instruction
+  c. test_c_mcountinhibit_freeze   -- inhibit[0] freezes mcycle; inhibit[2] freezes minstret
+  d. test_d_hpm3_icache_miss       -- mhpmcounter3 counts I-cache misses (cold-start misses)
+  e. test_e_hpm4_dcache_miss       -- mhpmcounter4 counts D-cache misses (cold-start load misses)
+  f. test_f_hpm5_branch_mispred    -- mhpmcounter5 counts branch mispredictions
+  g. test_g_mimpid_phase5          -- mimpid reads 0x00000005 (Phase 5 implementation ID)
 
-Observability: all counter values are captured into GPRs via CSRRS, then read back through
-the APB debug window (0x010 + reg*4). No internal RTL signals are accessed directly.
+Observability: counter values are captured into GPRs via CSRRS, then read back through the APB
+debug window (0x010 + reg*4). No internal RTL signal is accessed.
 
-Setup strategy: each test calls _setup_perf_test(dut, program) which:
-  1. Starts the 10 ns clock
-  2. Initialises DUT inputs (clears stale AXI/APB/IRQ values)
-  3. Creates ConfigurableAXIMemory (starts AXI handlers)
-  4. Writes the program into the AXI memory dict before reset fires
-     — this guarantees the CPU fetches valid instructions from address 0x0000
-       even for the very first fetch after reset deasserts.
-  5. Resets the DUT (rst_n_i low for 10 cycles, then deasserts)
-  6. Returns (mem, dbg) for use by the caller.
-
-This is the only difference from phase2_test_utils._setup_test: program is in memory
-before reset, so no race between reset deassert and first fetch.
+Setup: each test calls _setup_perf_test(dut, program). It writes the program into the AXI memory
+before reset fires, so the CPU fetches valid instructions from address 0x0000 even on the first
+fetch after reset deasserts. This is the only difference from phase2_test_utils._setup_test.
+Run: make -C tb/cocotb/cpu MODULE=test_perf_counters
+Doc: tm:suite:cpu-test-perf-counters
 """
 
 import cocotb
@@ -75,7 +68,7 @@ async def _setup_perf_test(dut, program_insns):
     """Set up a perf-counter test: load program before reset so no cold-fetch race.
 
     Steps:
-      1. Start 10 ns clock
+      1. Start the clock
       2. _init_inputs() — clear stale AXI/APB/IRQ values
       3. Create ConfigurableAXIMemory (handlers start here)
       4. Write all program words into mem.mem dict (no await — synchronous)

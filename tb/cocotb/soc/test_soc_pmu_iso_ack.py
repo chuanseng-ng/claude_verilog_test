@@ -1,56 +1,34 @@
 """
-test_soc_pmu_iso_ack.py -- bead 3ogd: PMU / soc_top isolation-before-reset ordering.
-
-DUT: tb_soc_top (same SOC_BOOT_SOURCES / soc_boot_lint as soc_pmu_multiclock -- see the
-soc_pmu_iso_ack target in tb/cocotb/soc/Makefile).
-
+test_soc_pmu_iso_ack.py -- PMU / soc_top isolation-before-reset ordering. DUT: tb_soc_top
+(as soc_pmu_multiclock).
 THE PROPERTY (UPF order, pmu.sv header): on a CPU power-down the isolation clamp must be ACTIVE IN
-THE CPU DOMAIN before that domain's reset asserts, and before its clock gate closes.
-
-Before bead 3ogd this held only by accident of ratio.  pmu_cpu_iso_en reaches the clamp through a
-2-flop cdc_sync clocked by cpu_core_clk, while pmu_cpu_rst_n reaches u_cpu_pmu_rst_sync's ASYNC
-clear directly: the reset takes effect on the very core_clk edge the PMU drops it, the clamp two
-cpu_core_clk edges after it was raised.  The PMU spaces the two by 2 core_clk cycles, so the order
-held only while 2 x cpu_core_clk period < 2 core_clk periods; with the CPU clock slower than the
-fabric clock the reset beat the clamp.  The fix is an iso-ack handshake: the CPU-domain clamp
-(pmu_cpu_iso_en_sync) is synchronised back to core_clk (u_cpu_iso_ack_sync -> pmu_cpu_iso_ack) and
-the PMU sequencer waits in DOM_PD_ISO for it before it gates the clock / asserts reset, and waits in
-DOM_PU_ISO for it to drop (the 4-phase return-to-zero half) before a new power-down may start.
-
-Tests (all drive the power cycle by a backdoor deposit into the PMU CTRL storage cell, exactly as
-test_soc_pmu_multiclock's power-up leg does; the CPU runs whatever the all-zero boot ROM makes it
-run, which keeps its AXI request lines busy so the clamp has something to clamp):
-
-  test_iso_before_reset_{cpu_3x_slower,cpu_8x_slower,ratio_1_1,cpu_faster}
-      The invariant monitor (below) runs through a full CPU off->on cycle at that ratio.  The two
-      slow-CPU ratios FAIL on origin/main (the reset asserts with the clamp still open) and are the
-      regression test for part 1 of the bead.
-  test_back_to_back_power_cycle_no_stale_ack
-      Power the CPU off, on, and off again with no idle gap, at the 3x-slower ratio.  The second
-      power-down must not be satisfied by the first cycle's still-high ack.
-  test_dead_cpu_clock_does_not_hang_pmu
-      cpu_rst_n_i held low (the CPU PLL domain is dead, the case a firmware write of PLL2
-      pll_enable=0 produces): the ack can never arrive.  The PMU must not hang; it proceeds after
-      ISO_ACK_TIMEOUT cycles, sets STATUS[3], and the GPU domain is unaffected.  Releasing the
-      reset and power-cycling again clears the flag and takes the normal (acked) path.
-  test_gpu_isolation_clamps_follow_pmu_iso_en
-      Part 2 of the bead: every ISO_GPU handshake clamp in soc_top -- including
-      m_axil_if_rready, added by PR #301 (h3lm) and until now untested -- equals
-      `raw & ~pmu_gpu_iso_en` on every cycle of a GPU power cycle, and the GPU needs no ack
-      (same clock domain: its iso/reset are both PMU flops on core_clk).
-
-THE INVARIANT MONITOR (sampled after every clk_i AND every cpu_clk_i rising edge, ReadOnly):
-  INV1  pmu_cpu_rst_n_cpu_sync == 0  ->  pmu_cpu_iso_en_sync == 1   (reset implies clamp active)
-  INV2  cpu_gated_clk_en == 0        ->  pmu_cpu_iso_en_sync == 1   (clock gated implies clamp)
-  INV4  pmu_cpu_iso_ack changes only on clk_i edges (it is a synchroniser output into core_clk)
-  INV3  pmu_cpu_iso_en_sync == 0     ->  pmu_cpu_rst_n_cpu_sync == 1  (power-UP: clamp not released
-        while the PMU reset is still observed asserted).  NOMINAL-ONLY: in this zero-delay model both
-        release paths are 2-flop syncs on the same clock so the order is deterministic; in silicon a
-        metastable first stage can swap them by one cpu_core_clk edge.  That is benign by structure
-        (see the power-up note in pmu.sv): the clamp consumers are clocked by cpu_gated_clk, which
-        cannot tick before reset release is observed.  The check is kept as a nominal-order guard.
-The monitor is armed only after the synchroniser chains have filled (their pre-fill 0s are not
-violations).
+THE CPU DOMAIN before that domain's reset asserts and before its clock gate closes. This held only
+by accident of ratio: pmu_cpu_iso_en reaches the clamp through a 2-flop cdc_sync on cpu_core_clk,
+while pmu_cpu_rst_n reaches u_cpu_pmu_rst_sync's ASYNC clear directly. The PMU spaces the two by 2
+core_clk cycles, so with the CPU clock slower than the fabric clock the reset beat the clamp. The
+fix is an iso-ack handshake: the CPU-domain clamp (pmu_cpu_iso_en_sync) is synchronised back to
+core_clk (u_cpu_iso_ack_sync -> pmu_cpu_iso_ack). The PMU sequencer waits in DOM_PD_ISO for it
+before it gates the clock or asserts reset, and waits in DOM_PU_ISO for it to drop (the 4-phase
+return-to-zero half) before a new power-down may start.
+Tests drive the power cycle by a backdoor deposit into the PMU CTRL cell (as
+  test_soc_pmu_multiclock's power-up leg).
+  test_iso_before_reset_{cpu_3x_slower,cpu_8x_slower,ratio_1_1,cpu_faster}: the invariant monitor
+      runs through a full CPU off->on cycle at that ratio. The two slow-CPU ratios fail without the
+      ack handshake.
+  test_back_to_back_power_cycle_no_stale_ack: off, on, off with no idle gap; the 2nd power-down must
+      not use the old ack.
+  test_dead_cpu_clock_does_not_hang_pmu: cpu_rst_n_i held low, so the ack never arrives; the PMU
+      proceeds after ISO_ACK_TIMEOUT cycles, sets STATUS[3], and the GPU domain is unaffected.
+  test_gpu_isolation_clamps_follow_pmu_iso_en: every ISO_GPU clamp in soc_top equals `raw &
+      ~pmu_gpu_iso_en` on every cycle of a GPU power cycle. The GPU needs no ack (same
+      clock domain).
+INVARIANT MONITOR (after every clk_i and cpu_clk_i rising edge, ReadOnly; armed once the
+synchroniser chains fill): INV1 pmu_cpu_rst_n_cpu_sync == 0 -> pmu_cpu_iso_en_sync == 1. INV2
+cpu_gated_clk_en == 0 -> pmu_cpu_iso_en_sync == 1. INV3 pmu_cpu_iso_en_sync == 0 ->
+pmu_cpu_rst_n_cpu_sync == 1 (power-UP; NOMINAL-ONLY, silicon can swap the order by one edge, benign
+by structure, see pmu.sv). INV4 pmu_cpu_iso_ack changes only on clk_i edges.
+Run: make -C tb/cocotb/soc soc_pmu_iso_ack
+Doc: tm:suite:soc-test-soc-pmu-iso-ack
 """
 
 import sys
@@ -443,7 +421,7 @@ async def test_dead_cpu_clock_does_not_hang_pmu(dut):
 
 
 # ---------------------------------------------------------------------------------------------
-# Part 2: ISO_GPU clamps, including m_axil_if_rready (PR #301 / h3lm)
+# Part 2: ISO_GPU clamps, including m_axil_if_rready
 # ---------------------------------------------------------------------------------------------
 GPU_CLAMPS = (
     # (clamped net in soc_top, raw net, human name)
@@ -461,7 +439,7 @@ GPU_CLAMPS = (
 async def test_gpu_isolation_clamps_follow_pmu_iso_en(dut):
     """Every ISO_GPU clamp is `raw & ~pmu_gpu_iso_en` on EVERY cycle of a GPU power cycle.
 
-    m_axil_if_rready (gif_axil_rready) is the clamp PR #301 added: the GPU ifetch R-channel accept
+    m_axil_if_rready (gif_axil_rready) is the newest clamp: the GPU ifetch R-channel accept
     is a constant 1 in gpu_compute_unit, so it is the one handshake output that is HIGH while the
     GPU is idle -- the only clamp whose action (raw=1, out=0) is visible with no GPU traffic.  The
     other six are checked against the same equation on every cycle (they read 0 when idle).  The

@@ -1,71 +1,28 @@
 #!/usr/bin/env python3
 """
-gen_crypto_hex.py — generate crypto_fw.hex and crypto_fw_addrs.py for the Phase 6b SoC-level
-CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10, Doc: ds:ch:phase6-ip-expansion-plan:9-per-item-workflow-and-acceptance-criteria step 6,
-L2 testability).
+gen_crypto_hex.py -- generate crypto_fw.hex and crypto_fw_addrs.py for the Phase 6b SoC-level
+CRYPTO FABRIC test (L2 testability).
 
-Scope, deliberately small. The L1 suite (test_crypto.py, `make crypto`) owns every behaviour of the
-peripheral itself: FIPS-197 / FIPS-180-4 vectors, CTR, multi-block SHA, sticky-IRQ and hang-free
-paths, a fault-mutation campaign. This image only proves that crypto_accel is REACHABLE AND CORRECT
-THROUGH THE REAL SoC FABRIC — which nothing else drives — and that its interrupt reaches the CPU.
+The scope is small on purpose. The L1 suite (test_crypto.py, `make crypto`) owns every behaviour of
+the peripheral. This image proves only that crypto_accel is reachable and correct through the real
+SoC fabric and that its interrupt reaches the CPU. Path: CPU, axi4_crossbar, axi4_to_axilite,
+axi_lite_interconnect, axil_to_apb, apb_interconnect, APB_CRYPTO slave 12 (base 0x2000_F000).
+Interrupt: crypto_accel.irq_o -> interrupt_controller.irq_src_i[10] -> ext_irq -> CPU MEIP.
+It reuses the pure-Python hand assembler of trng_fw/gen_trng_hex.py, so no riscv32 cross toolchain
+is needed. Keep it that way: a toolchain-dependent suite in soc_all_ci breaks CI. The test scores
+by commit_pc_o marker PCs. Register map: rtl/periph/crypto_accel.sv header (authoritative).
+Write the mode in a SEPARATE transfer before START.
 
-Path exercised (soc_top.sv):
-  CPU --AXI4--> axi4_crossbar --AXI4--> axi4_to_axilite --AXI-Lite-->
-  axi_lite_interconnect --AXI-Lite--> axil_to_apb --APB4--> apb_interconnect
-  --APB4--> APB_CRYPTO slave 12 (crypto_accel, base 0x2000_F000)
-  crypto_accel.irq_o --> interrupt_controller.irq_src_i[10] --> ext_irq --> CPU MEIP
-
-Reuses the pure-Python hand-assembler of trng_fw/gen_trng_hex.py (same Assembler / lui_addi /
-CSRRW / MRET machinery) — no riscv32 cross toolchain, so the suite is CI-safe (a toolchain-dependent
-suite in soc_all_ci is what broke PR #195). Synchronisation and scoring are by commit_pc_o marker
-PCs.
-
-Register map (rtl/periph/crypto_accel.sv header — authoritative; word indices x 4):
-  +0x00 CTRL    [1:0] mode (0 ECB, 1 CTR, 2 SHA), [2] START (W1P, reads 0), [3] IRQ_EN, [4] SHA_CONT
-  +0x04 STATUS  [0] busy [1] done [2] key_valid [3] key_write_rejected
-  +0x08..0x14 KEY0-3 (WO, read 0)   +0x18..0x24 IV0-3 (RW)   +0x28..0x34 DIN0-3 (WO aperture)
-  +0x38..0x44 DOUT0-3 (RO)          +0x48..0x64 DIGEST0-7 (RO)
-  +0x68 IRQ_STAT [0] sticky done    +0x6C IRQ_CLR (W1C) [0] done, [1] key_write_rejected
-  +0x70..0x7C reserved (read 0)
-Mode is written in a SEPARATE transfer before START (the header's software contract).
-
-PHASE 1 — polled, IRQ_EN = 0 (the interrupt path is ARMED in the CPU, so any trap is a gate failure)
-  * read the reset values through the fabric (CTRL 0, STATUS 0, reserved word 0x070 0); write IV0
-    and read it back — IV is the one RW data word, so a mis-decoded APB index cannot return it;
-  * FIPS-197 App. B: KEY0-3, DIN0-3 (an aperture: the four addresses are DIN0..DIN3 in order),
-    STATUS must read exactly key_valid (0x4), the key and DIN windows must read back 0;
-    CTRL = ECB (0), then CTRL = START; poll STATUS.done; STATUS must be done|key_valid (0x6),
-    IRQ_STAT 1, DOUT0-3 must equal the FIPS-197 App. B ciphertext 3925841d 02dc09fb dc118597
-    196a0b32; IRQ_CLR = done; STATUS must drop back to key_valid (0x4).
-  The test scores crypto_irq / irq_src_i / ext_irq LOW for the whole phase while `done` is pending —
-  the IRQ_EN gate crossing the fabric.
-
-PHASE 2 — interrupt driven, IRQ_EN = 1  (marker P2_ARMED: IE set, done = 0, START not yet issued)
-  * FIPS-197 App. C.1 (a DIFFERENT key, rewritten over the fabric while key_valid was already 1,
-    and a different block): CTRL = IRQ_EN, CTRL = IRQ_EN|START.
-    done -> crypto_irq -> irq_ctrl[10] -> CPU.
-  * ISR: read STATUS, IRQ_STAT and the interrupt controller's PENDING_MASKED (bit 10 must be set —
-    the controller really received irq_src_i[10]), then ONE write, IRQ_CLR = done, which drops the
-    level-held source in a single access (nothing to race), then a read-back round trip so the level
-    drains through the ext_irq synchroniser before MRET re-enables MIE. Exactly ONE trap.
-  * after the ISR: DOUT0-3 must equal the App. C.1 ciphertext 69c4e0d8 6a7b0430 d8cdb780 70b4c55a
-    and STATUS must read key_valid only.
-
-PHASE 3 — one SHA-256 block, polled, IRQ_EN = 0 again
-  * CTRL = SHA (mode 2, IRQ_EN cleared), 16 words "abc"+padding via DIN0-3 round-robin (M0 first),
-    CTRL = SHA|START, poll done, DIGEST0-7 must equal FIPS 180-4 ba7816bf 8f01cfea 414140de 5dae2223
-    b00361a3 96177a9c b410ff61 f20015ad. The test again scores the interrupt lines LOW (done is
-    pending, IRQ_EN is 0 — the gate in the SHA path too).
-
-Result area (SRAM word indices from RES_BASE_WI):
-   0 ISR_COUNT  1 ISR_STATUS  2 ISR_IRQC_PENDING  3 ISR_IRQ_STAT  4 CTRL_RESET  5 STATUS_RESET
-   6 RESERVED_READ  7 IV_READBACK  8 KEY_READ  9 DIN_READ  10 P1_STATUS_ARMED  11 P1_STATUS_DONE
-   12 P1_IRQ_STAT  13 P1_STATUS_CLR  14-17 P1_DOUT0-3  18-21 P2_DOUT0-3  22 P2_STATUS
-   23-30 P3_DIGEST0-7  31 P3_STATUS
-
-Register allocation (MAIN): x2 = CRYPTO_BASE  x3 = IRQ_CTRL_BASE  x4 = RES_BASE_ADDR  x5 = staging
-  x13 = scratch  x14/x15 = poll counter/limit  x16-x18 = scratch.  x1 is clobbered by the ISR.
-Register allocation (ISR, at ISR_PC = ROM_BASE + 4): x26 x27 x28 x29 x30 x31 and x1.
+Phase 1, polled, IRQ_EN = 0 (the interrupt path is armed in the CPU, so any trap is a gate failure):
+  reset values, IV0 write and readback, FIPS-197 App. B encryption. The test scores crypto_irq,
+  irq_src_i and ext_irq LOW while `done` is pending.
+Phase 2, interrupt driven, IRQ_EN = 1 (marker P2_ARMED): FIPS-197 App. C.1 with a different key
+  rewritten while key_valid = 1. The ISR reads STATUS, IRQ_STAT and PENDING_MASKED (bit 10 must be
+  set), writes IRQ_CLR = done, then reads back so the level drains through the ext_irq synchroniser
+  before MRET re-enables MIE. Exactly ONE trap.
+Phase 3, one SHA-256 block of "abc", polled, IRQ_EN = 0: DIGEST0-7 equals the FIPS 180-4 digest.
+Results are in SRAM from RES_BASE_WI (the RES_* constants). x1 is clobbered by the ISR.
+Doc: tm:suite:soc-crypto-fw-gen-crypto-hex
 """
 
 import hashlib

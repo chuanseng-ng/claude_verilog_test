@@ -1,52 +1,27 @@
 """
-test_apb_cdc_bridge.py — GH #93 cocotb verification for the APB4
-clock-domain-crossing bridge (rtl/soc/apb_cdc_bridge.sv), via the standalone
-wrapper tb_apb_cdc_bridge.sv.
-
-DUT: tb_apb_cdc_bridge (re-exports apb_cdc_bridge's s_*/m_* faces as flat
-top-level ports).
-
-s_* face = source domain, APB4 SLAVE port -> bfm.apb4_master.APB4Master
-  attaches as APB4Master(dut, "s_", dut.s_clk).
-m_* face = destination domain, APB4 MASTER port (apb_cdc_bridge drives
-  m_psel/m_penable/m_pwrite/m_paddr/m_pwdata/m_pstrb and expects
-  m_pready/m_prdata/m_pslverr back) -> there is no ready-made APB4 SLAVE BFM
-  in tb/cocotb/bfm/ (only masters: apb3_master.py / apb4_master.py), so this
-  file provides a small local `ApbSlaveResponder` to play that role, with
-  configurable wait-states and pslverr injection.
-
-apb_cdc_bridge is a depth-1 (one outstanding transfer) 4-phase RZ
-(return-to-zero) handshake bridge -- converted from a 2-phase NRZ toggle
-handshake by bead claude_verilog_test-rfz (2026-08-12; PULP/OpenTitan/ARM/
-Hazard3/OpenDAP precedent for why NRZ is unsafe under one-sided async
-reset -- see the RTL header). See the RTL module header
-(rtl/soc/apb_cdc_bridge.sv) for the full protocol and CDC argument before
-reading the tests below. Internal backdoor register names below reflect the
-RZ rename: req_toggle_q/ack_toggle_q (source/destination "toggle" bits) are
-now req_q/ack_q (source/destination request/ack LEVELS); req_toggle_m/
-ack_toggle_s (their synchronised copies) are now req_m/ack_s.
-
-**Two-Clock() mechanic**: both s_clk and m_clk are true top-level input ports
-written via VPI, so two independent `Clock()` coroutines free-run with no
-HDL-internal timing involved (`--no-timing` in the Makefile disables only
-HDL specify/intra-assignment delays). cocotb + Verilator has no ReadWrite()
--- every driving loop below (both the responder and any raw pokes) follows
-the same RisingEdge-then-ReadOnly discipline as axi4_slave_model.py /
-test_async_axi_fifo.py (read DUT-driven signals only in a ReadOnly context;
-write our own signals only in the active/Normal phase immediately following
-a RisingEdge).
-
-Every test is wrapped in `with_timeout(..., 50, "us")` so a real CDC
-deadlock fails the test instead of hanging the whole `soc_all` regression.
-
-Clock pairs exercised across this suite (ns, all in the 4-20 ns range per
-the GH #93 verification task): 4/9 (~2.25 ratio, mirrors the same proxy for
-the real CPU:fabric split used by test_async_axi_fifo.py; also reused for
-the latency-budget test), 18/4 (wide ratio, slow-s/fast-m), 10/10 (equal),
-7/11 (coprime -- edges slide continuously, the closest sim proxy for a
-metastability-window sweep), and 7/13 (coprime, used only for the long
-randomized stream so it is a genuinely different ratio from the sweep
-above).
+test_apb_cdc_bridge.py -- cocotb verification for the APB4 clock-domain-crossing bridge
+(rtl/soc/apb_cdc_bridge.sv), via the standalone wrapper tb_apb_cdc_bridge.sv.
+DUT: tb_apb_cdc_bridge. The s_* face (source domain, APB4 SLAVE) is driven by
+bfm.apb4_master.APB4Master(dut, "s_", dut.s_clk); the m_* face (destination domain, APB4 MASTER) is
+answered by a local `ApbSlaveResponder` (configurable wait states and pslverr injection).
+apb_cdc_bridge is a depth-1 (one outstanding transfer) 4-phase RZ (return-to-zero) handshake bridge.
+Read the RTL module header for the protocol and the CDC argument before the tests. Backdoor names
+use the RZ naming: req_q / ack_q (request and ack LEVELS) and their synchronised copies req_m
+/ ack_s.
+Two-Clock() mechanic: s_clk and m_clk are top-level input ports written via VPI, so two independent
+`Clock()` coroutines free-run with no HDL-internal timing (`--no-timing` disables only HDL specify
+and intra-assignment delays). cocotb + Verilator has no ReadWrite(). Every driving loop follows the
+RisingEdge-then-ReadOnly rule of axi4_slave_model.py and test_async_axi_fifo.py: read DUT-driven
+signals only in ReadOnly, write our own signals only in the active phase right after a RisingEdge.
+Every test runs under `with_timeout(..., 50, "us")`, so a CDC deadlock fails the test,
+not `soc_all`.
+Clock pairs (s_clk/m_clk periods in ns, all from 4 to 20): 4/9 (ratio about 2.25, the proxy for the
+CPU:fabric split of test_async_axi_fifo.py, also the latency-budget test), 18/4 (wide, slow-s
+fast-m), 10/10 (equal), 7/11 (coprime: edges slide continuously, the closest sim proxy for a
+metastability-window sweep), 7/13 (coprime, only the long randomized stream, so it differs from
+the sweep).
+Run: make -C tb/cocotb/soc apb_cdc_bridge
+Doc: tm:suite:soc-test-apb-cdc-bridge
 """
 
 import random
@@ -61,7 +36,8 @@ from cocotb.utils import get_sim_time
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-RESET_HOLD_NS = 300  # generous vs. SYNC_STAGES(2)+1 periods of any clock used here (max period 18 ns)
+# generous vs. SYNC_STAGES(2)+1 periods of any clock used here (max period 18, in ns)
+RESET_HOLD_NS = 300
 
 
 def _post_reset_recovery_cycles(dut) -> int:
@@ -74,12 +50,11 @@ def _post_reset_recovery_cycles(dut) -> int:
     SYNC_STAGES_TO_M, read back from the RTL via sync_stages_to_{s,m}_o
     rather than hardcoded a second time -- see tb_apb_cdc_bridge.sv
     header) whose NOMINAL settling latency is STAGES cycles. Under the
-    RAND_CDC_DELAY_EN settling-delay injector (bead
-    claude_verilog_test-rvs; default OFF, not shipped), either
+    RAND_CDC_DELAY_EN settling-delay injector (default OFF, not shipped), either
     synchroniser can legitimately take one extra cycle. A recovery wait
     pinned to the bare nominal STAGES is exactly-tight against the
     synchroniser's own worst case, not generously tight against it --
-    that is precisely what bead claude_verilog_test-0eh found: a literal
+    that is precisely what was found: a literal
     `ClockCycles(dut.m_clk, 3)` (== STAGES+1) in
     test_availability_never_forwarded failed deterministically once the
     injector's one-extra-cycle fault model was active, because the
@@ -208,7 +183,7 @@ class ApbSlaveResponder:
             # -- Enter ACCESS phase, then hold for ws extra cycles, checking
             #    after EVERY edge (via ReadOnly, safe against NBA-settling
             #    races -- see the note below) whether this transfer has been
-            #    abandoned: either m_psel dropped (the GH #93 availability
+            #    abandoned: either m_psel dropped (the availability
             #    fix force-completed the SOURCE side with a bounded error
             #    before this destination ever answered -- see
             #    apb_cdc_bridge.sv's req_fwd_q / S_REQ-abort logic) or this
@@ -219,7 +194,7 @@ class ApbSlaveResponder:
             #    write the real bridge never asked for -- exactly what the
             #    "no destination-side write lands after an aborted request"
             #    property (see test_availability_* below) needs to be false
-            #    to hold. CodeRabbit PR #132 finding — this responder used to
+            #    to hold. This responder used to
             #    have no such check at all.
             #
             #    Deliberately does NOT read anything in the plain active
@@ -292,11 +267,11 @@ async def _setup(dut, s_ns, m_ns, wait_states=0, err_addrs=None, mem=None) -> Si
     dut.m_rst_n.value = 0
     # A real-time hold (not clock-edge-counted) so it is correct regardless
     # of the s/m period ratio under test -- always >> SYNC_STAGES(2)+1
-    # periods of the slower clock in this suite's matrix (max period 18 ns).
+    # periods of the slower clock in this suite's matrix (max period 18, in ns).
     await Timer(RESET_HOLD_NS, units="ns")
     dut.s_rst_n.value = 1
     dut.m_rst_n.value = 1
-    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- every
+    # Post-reset recovery margin -- every
     # test builds on this baseline wait before issuing its first
     # transaction, so it must cover the synchronisers' worst case, not
     # just their nominal latency.
@@ -305,7 +280,8 @@ async def _setup(dut, s_ns, m_ns, wait_states=0, err_addrs=None, mem=None) -> Si
     await ClockCycles(dut.m_clk, n)
     # Step off the clock edge: at a coprime ratio the m_clk edge this returns on can coincide with an s_clk
     # edge, and the master's first writes would then race that edge's flop sampling in Xcelium (the bridge
-    # saw the ACCESS phase without ever seeing SETUP).  Verilator is indifferent to the 1 ps.
+    # saw the ACCESS phase without ever seeing SETUP). Verilator is indifferent to the
+    # one-step offset.
     await Timer(1, units="step")
 
     return SimpleNamespace(
@@ -431,10 +407,10 @@ async def _pready_wait_states_body(dut):
     assert ok, "write completed with pslverr during wait-state test"
     assert ctx.responder.mem.get(0x200) == 0xCAFEBABE, "destination-side mem did not receive the write"
 
-    # The destination inserts ws=15 extra 9 ns ACCESS cycles before
+    # The destination inserts ws=15 extra ACCESS cycles (m_clk period 9) before
     # asserting m_pready -- if s_pready were NOT correctly held low across
     # that whole stall (e.g. a bug that let the s-side complete early), the
-    # elapsed wall-clock time would fall well short of ws*9 ns.
+    # elapsed wall-clock time would fall well short of ws times the m_clk period.
     min_expected_ns = 0.9 * ws * 9
     assert elapsed_ns >= min_expected_ns, (
         f"elapsed {elapsed_ns} ns is less than the expected minimum {min_expected_ns} ns for "
@@ -519,14 +495,14 @@ async def _ratio_sweep_workload(dut, s_ns, m_ns, n=8):
 
 @cocotb.test()
 async def test_clock_ratio_fast_s_slow_m(dut):
-    # 4/9 ns (~2.25 ratio) -- same proxy for the real CPU:fabric split used
+    # 4/9 (~2.25 ratio) -- same proxy for the real CPU:fabric split used
     # by test_async_axi_fifo.py's gate test.
     await with_timeout(_ratio_sweep_workload(dut, 4, 9), 50, "us")
 
 
 @cocotb.test()
 async def test_clock_ratio_slow_s_fast_m(dut):
-    # 18/4 ns -- wide ratio, opposite direction (slow source, fast destination).
+    # 18/4 -- wide ratio, opposite direction (slow source, fast destination).
     await with_timeout(_ratio_sweep_workload(dut, 18, 4), 50, "us")
 
 
@@ -537,7 +513,7 @@ async def test_clock_ratio_equal(dut):
 
 @cocotb.test()
 async def test_clock_ratio_coprime(dut):
-    # 7/11 ns -- coprime, edges slide continuously across the whole run,
+    # 7/11 -- coprime, edges slide continuously across the whole run,
     # the closest sim proxy for a real metastability-window sweep.
     await with_timeout(_ratio_sweep_workload(dut, 7, 11, n=20), 50, "us")
 
@@ -546,11 +522,11 @@ async def test_clock_ratio_coprime(dut):
 
 async def _reset_mid_transaction_s_side_body(dut):
     """s-only reset while a transfer is mid-flight must still be a hard
-    flush (this leg is UNCHANGED by the GH #93 availability fix, commit
+    flush (this leg is UNCHANGED by the availability fix, commit
     cb5c780 -- see apb_cdc_bridge.sv's header: an s_rst_n_i-only event still
     drops rst_both_n and flushes both domains together).
 
-    Kill-timing note (CodeRabbit PR #132 finding, same reasoning already
+    Kill-timing note (review finding, same reasoning already
     applied to test_async_axi_fifo.py's test_reset_while_busy_s_side): the
     interrupted master task is killed AT reset assertion, not after
     release+settling. A real APB master is itself part of the domain this
@@ -574,7 +550,7 @@ async def _reset_mid_transaction_s_side_body(dut):
     _idle_s_side(dut)
     await ClockCycles(dut.s_clk, 5)
     dut.s_rst_n.value = 1
-    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # Post-reset recovery margin -- the
     # post-recovery write below assumes success, so this must cover the
     # reset-status synchronisers' worst case, not just their nominal
     # latency.
@@ -603,7 +579,7 @@ async def test_reset_mid_transaction_s_side(dut):
 # --- 13. reset mid-transaction, m side (single-sided; rst_both_n hard flush) --
 
 async def _reset_mid_transaction_m_side_body(dut):
-    """GH #93 availability fix (commit cb5c780): an m-only reset while a
+    """Availability fix: an m-only reset while a
     request has already been FORWARDED and is genuinely in flight (S_REQ,
     req_fwd_q=1) no longer wedges s_pready forever. The bridge's S_REQ exit
     condition (`ack_s || !req_fwd_q || !m_rst_n_s`) force-completes with
@@ -617,8 +593,8 @@ async def _reset_mid_transaction_m_side_body(dut):
     the PLL2 window raced an m-only reset, wedging the entire upstream APB
     tree. See apb_cdc_bridge.sv's "Reset strategy" header for the full
     asymmetric-reset justification (m_rst_sync_n deliberately stays coupled
-    to rst_both_n as a conservative, reviewed choice (bead
-    claude_verilog_test-rfz's RZ conversion removed the parity invariant this
+    to rst_both_n as a conservative, reviewed choice (the
+    RZ conversion removed the parity invariant this
     coupling used to protect -- see apb_cdc_bridge.sv header); m_rst_n_s + req_fwd_q + the
     bounded S_REQ exit are what make this direction safe without that
     coupling).
@@ -669,7 +645,7 @@ async def _reset_mid_transaction_m_side_body(dut):
 
     await ClockCycles(dut.m_clk, 5)
     dut.m_rst_n.value = 1
-    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # Post-reset recovery margin -- the
     # post-recovery write further below assumes success, so this must
     # cover the reset-status synchronisers' worst case, not just their
     # nominal latency.
@@ -693,7 +669,7 @@ async def _reset_mid_transaction_m_side_body(dut):
     # window after m_rst_n_i has actually released) that the aborted request
     # produced no destination-side completion -- closes the "no stray write
     # lands once m_rst_n_i deasserts" / no-stale-level-collision property
-    # (bead claude_verilog_test-rfz: RZ has no parity register to protect,
+    # (RZ has no parity register to protect,
     # but the req_q clamp-to-0 must still hold -- see apb_cdc_bridge.sv
     # header "No fabricated destination-side write, RZ argument"):
     # if req_q's clamp-to-0 (while !m_rst_n_s) had NOT correctly held it at
@@ -731,7 +707,7 @@ async def test_reset_mid_transaction_m_side(dut):
 # --- 14. no lost/duplicated transactions, long randomized stream -------------
 
 async def _no_lost_or_duplicated_stream_body(dut):
-    # 7/13 ns -- coprime and deliberately different from the ratio sweep
+    # 7/13 -- coprime and deliberately different from the ratio sweep
     # above, so this stress run is a genuinely independent non-1:1 ratio.
     ctx = await _setup(dut, 7, 13)
     rng = random.Random(0xC0FFEE)
@@ -777,9 +753,9 @@ async def test_no_lost_or_duplicated_stream(dut):
 # --- 15. latency budget --------------------------------------------------------
 
 async def _latency_budget_body(dut):
-    # s_clk=4ns / m_clk=9ns -- same proxy ratio as the GH #93 integration
+    # s_clk period 4 / m_clk period 9 -- same proxy ratio as the SoC integration
     # case (see module docstring), so this number is a usable budget input.
-    # Bound once (CodeRabbit PR #132 finding): previously `_setup(dut, 4, 9)`
+    # Bound once (review finding): previously `_setup(dut, 4, 9)`
     # and `slow_ns = max(4, 9)` repeated the same two literals independently,
     # so changing one without the other would silently desynchronize the
     # derived bound from the ratio actually under test.
@@ -802,7 +778,7 @@ async def _latency_budget_body(dut):
     assert data == 0xFEEDFACE, f"latency-budget readback mismatch: {data:#x}"
     read_latency_ns = t3 - t2
 
-    # Derived bound (not just measured), bead claude_verilog_test-rfz update:
+    # Derived bound (not just measured):
     # apb_cdc_bridge.sv's s_pready_o now gates on the FULL 4-phase round
     # trip (assert AND deassert), not just the assert half -- APB is
     # master-driven, so pready must not pulse until this bridge is actually
@@ -825,7 +801,7 @@ async def _latency_budget_body(dut):
     # same trip taken twice. Expressed conservatively in the SLOWER of the
     # two periods, with a 2x safety margin for scheduling slop between two
     # independently free-running Clock() coroutines (not a tight bound, but
-    # a real, derived one -- see the GH #94 STA action item in
+    # a real, derived one -- see the STA action item in
     # apb_cdc_bridge.sv's header for the eventual set_max_delay treatment
     # of these same paths).
     slow_ns = max(s_ns, m_ns)
@@ -851,7 +827,7 @@ async def test_latency_budget(dut):
     await with_timeout(_latency_budget_body(dut), 50, "us")
 
 
-# --- 16-18. GH #93 availability-fix escape-path coverage (commit cb5c780) ----
+# --- 16-18. availability-fix escape-path coverage ----
 #
 # apb_cdc_bridge.sv's availability fix closes a hang where an APB access to
 # the PLL2 window while ONLY the destination (m_rst_n_i) domain was in reset
@@ -862,7 +838,7 @@ async def test_latency_budget(dut):
 # structural invariants the fix's own header commits to: no destination
 # write ever lands for an aborted/errored request, and req_q's
 # clamp-to-0 prevents a stale-level collision across repeated m-only
-# resets (bead claude_verilog_test-rfz: RZ removed the "toggle-parity"
+# resets (RZ removed the "toggle-parity"
 # concept these comments used to invoke -- see apb_cdc_bridge.sv header).
 # test_reset_mid_transaction_m_side above already covers the
 # "forwarded, then aborted mid-S_REQ" path with an explicit req_fwd_q/
@@ -915,8 +891,8 @@ async def _availability_never_forwarded_body(dut):
 
     # Recover and confirm clean transactions afterward.
     dut.m_rst_n.value = 1
-    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- THIS is
-    # the site the bead was filed against: the old bare `ClockCycles(dut.
+    # Post-reset recovery margin -- THIS is
+    # the site of the original failure: the old bare `ClockCycles(dut.
     # m_clk, 3)` (== SYNC_STAGES+1) was exactly-tight against the
     # m_rst_n_i-status synchroniser into the s domain's own nominal
     # latency, not generously tight against its worst case, so it failed
@@ -981,7 +957,7 @@ async def _availability_ack_race_wins_body(dut):
     after observing ack_q assert before asserting m_rst_n_i, on a fresh
     transaction each time, until it observes (via safe ReadOnly reads of
     ack_s / m_in_rst_s -- ack_s is ack_q's synchronised copy in the s
-    domain, renamed from ack_toggle_s by bead claude_verilog_test-rfz) that
+    domain, renamed from ack_toggle_s) that
     both actually changed on the same s_clk edge, then checks the response
     from that specific run. Only the FIRST assert (0->1) is tracked here --
     under the old NRZ encoding this was ack_toggle_q's only meaningful
@@ -1011,7 +987,7 @@ async def _availability_ack_race_wins_body(dut):
             prev_ack_q = cur
         assert flip_seen, f"wait_edges={wait_edges}: ack_q never asserted at the destination"
 
-        # Advance wait_edges more m_clk edges (== s_clk edges here, 10/10 ns
+        # Advance wait_edges more m_clk edges (== s_clk edges here, 10/10
         # phase-aligned) before writing m_rst_n_i -- the earliest possible
         # write is 1 edge after the ReadOnly-based detection above (cocotb
         # cannot write in the same timestep it just read via ReadOnly), so
@@ -1086,7 +1062,7 @@ async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
     req_q's continuous clamp-to-0 (while !m_rst_n_s) re-establishes req_q's
     level matching req_m's own reset default (0) across EACH pulse
     independently, so back-to-back resets never leave a stale-level
-    collision (bead claude_verilog_test-rfz: RZ has no parity register, but
+    collision (RZ has no parity register, but
     the clamp invariant this test proves is unchanged from the old NRZ
     scheme's toggle-parity property -- see apb_cdc_bridge.sv header) that
     corrupts or hangs a later, genuinely new transaction. Also confirms no
@@ -1099,7 +1075,7 @@ async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
     dut.m_rst_n.value = 0
     await ClockCycles(dut.m_clk, 5)
     dut.m_rst_n.value = 1
-    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # Post-reset recovery margin -- the
     # write below assumes success, so this must cover the reset-status
     # synchronisers' worst case, not just their nominal latency. Applies
     # to both pulses below.
@@ -1152,12 +1128,12 @@ async def test_availability_back_to_back_resets_equal(dut):
 
 @cocotb.test()
 async def test_availability_back_to_back_resets_wide_ratio(dut):
-    # 18ns/4ns (slow-s/fast-m) -- explicitly called out: this exact ratio
+    # 18/4 (slow-s/fast-m) -- explicitly called out: this exact ratio
     # caught a regression in the RTL agent's own first attempt at this fix.
     await with_timeout(_availability_back_to_back_resets_workload(dut, 18, 4), 50, "us")
 
 
-# --- 19. RZ 4-phase structural proof (bead claude_verilog_test-rfz) ----------
+# --- 19. RZ 4-phase structural proof ----------
 #
 # Every test above proves FUNCTIONAL correctness -- data integrity, bounded
 # completion, no fabricated writes -- and all of it holds for EITHER
@@ -1166,7 +1142,7 @@ async def test_availability_back_to_back_resets_wide_ratio(dut):
 # instead proves the ENCODING itself: that apb_cdc_bridge.sv actually
 # executes a 4-phase return-to-zero round trip (assert req, assert ack,
 # DEASSERT req, DEASSERT ack) and not a 2-phase toggle. It is the one test
-# in this suite that is EXPECTED TO FAIL against the pre-bead-rfz 2-phase
+# in this suite that is EXPECTED TO FAIL against the earlier 2-phase
 # NRZ RTL, not just a regression check against the current (already-RZ)
 # RTL -- see the docstring below for exactly why.
 
@@ -1306,14 +1282,14 @@ async def test_rz_four_phase_structural_proof(dut):
 
 
 # =============================================================================
-# GH #95 (Group A): reset-asymmetry test class.
+# Reset-asymmetry test class.
 #
 # The existing availability tests above (test_availability_never_forwarded,
 # test_reset_mid_transaction_m_side, test_availability_back_to_back_resets_*)
 # already cover the m_rst_n_i-held direction thoroughly. Two things they do
 # NOT cover, which these tests add:
 #   1. The MIRROR direction (s_rst_n_i held, m_clk free-running) -- per the
-#      post-#93 asymmetric reset fix, s_rst_sync_n is rooted in s_rst_n_i
+#      asymmetric reset fix, s_rst_sync_n is rooted in s_rst_n_i
 #      ALONE (not rst_both_n -- see apb_cdc_bridge.sv's "Reset strategy"
 #      header), so this direction fully holds the source FSM at S_IDLE
 #      regardless of the destination. m_rst_sync_n stays coupled to
@@ -1323,11 +1299,11 @@ async def test_rz_four_phase_structural_proof(dut):
 #   2. A staggered RELEASE-ORDER sweep with CONTINUOUS offered traffic
 #      during the asymmetric window (existing tests hold m_rst_n_i low
 #      from before _setup()'s reset even starts, i.e. release order is not
-#      exercised) -- the actual GH #93 SoC bug (fr_280f3ac18c66) was a
+#      exercised) -- the actual SoC bug was a
 #      release-SKEW defect, not a simultaneous-both-held one.
 #
 # Both classes explicitly respect the documented, reviewed
-# "Availability-gating exception (PR #132 review, m_rst_n_s)" in
+# "Availability-gating exception (m_rst_n_s)" in
 # apb_cdc_bridge.sv (m_rst_n_s reads "alive" for up to SYNC_STAGES_TO_S
 # s_clk_i cycles after s_rst_sync_n releases, even if m_rst_n_i is already
 # low) by asserting only the properties the module's own header proves hold
@@ -1370,7 +1346,7 @@ async def _apb_reset_asym_s_held_m_free_body(dut, s_ns, m_ns) -> None:
     await RisingEdge(dut.m_clk)
 
     dut.s_rst_n.value = 1
-    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # Post-reset recovery margin -- the
     # post-recovery write below assumes success, so this must cover the
     # reset-status synchronisers' worst case, not just their nominal
     # latency.
@@ -1393,7 +1369,7 @@ async def _apb_reset_asym_s_held_m_free_body(dut, s_ns, m_ns) -> None:
 
 @cocotb.test()
 async def test_reset_asym_s_held_m_free(dut):
-    # Coprime ratio (7ns/13ns), matching the suite's existing convention for
+    # Coprime ratio (7/13), matching the suite's existing convention for
     # its "genuinely different ratio" coprime pair.
     await with_timeout(_apb_reset_asym_s_held_m_free_body(dut, 7, 13), 50, "us")
 
@@ -1481,7 +1457,7 @@ async def _apb_reset_asym_staggered_body(dut, s_ns, m_ns, order) -> None:
             await RisingEdge(dut.s_clk)  # land back in a writable phase before the release write below
 
         getattr(dut, f"{second}_rst_n").value = 1
-        # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+        # Post-reset recovery margin -- the
         # post-recovery write below assumes success, so this must cover
         # the reset-status synchronisers' worst case, not just their
         # nominal latency.
@@ -1507,7 +1483,7 @@ async def _apb_reset_asym_staggered_body(dut, s_ns, m_ns, order) -> None:
 async def test_reset_asym_staggered_s_then_m(dut):
     # s (source domain) releases first, m held -- offered traffic during the
     # window must bounded-error-complete, never fabricate a destination
-    # write. Wide ratio (18ns/4ns), the same ratio already flagged in this
+    # write. Wide ratio (18/4), the same ratio already flagged in this
     # file as having caught a real RTL regression.
     await with_timeout(_apb_reset_asym_staggered_body(dut, 18, 4, order="s_first"), 100, "us")
 

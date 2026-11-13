@@ -1,5 +1,5 @@
 // tb_mbist_soc_slice.sv
-// DFT Stage 4 (beads claude_verilog_test-j41m.14 / j41m.10): the SoC-level MBIST integration on the REAL
+// DFT Stage 4: the SoC-level MBIST integration on the REAL
 // wrappers. Same wiring as soc_top (dft_ctrl -> soc_mbist -> sram_controller + npu_top), simulated with
 // +define+SRAM_SKY130 so both wrappers instantiate their mem_collar and the Sky130 macro (here the
 // fault-injecting stand-in with the real macro's name). sram_controller is driven over AXI4 by the BFM

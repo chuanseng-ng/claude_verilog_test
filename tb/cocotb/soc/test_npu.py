@@ -1,133 +1,39 @@
-"""test_npu.py -- Phase 6c cocotb L1 verification for npu_top (rtl/npu/npu_top.sv +
-rtl/npu/npu_mac_array.sv + rtl/npu/npu_weight_mem.sv, bead claude_verilog_test-f7vs.11,
-Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU", whose register map, software contract and
-eight acceptance criteria this suite is written to prove).
-
-STRICT TDD: the RTL DID NOT EXIST when this suite was written.  This is step 2 of the mandated
-workflow ("the verification orchestrator runs before the RTL orchestrator"): `make npu` /
-`make npu_lint` are EXPECTED to fail to elaborate (npu_top not found) until the three RTL files
-match the contract below.  The assertions are derived from the plan's register map, its software
-contract, its acceptance criteria and the golden model tb/models/npu_model.py (standard library
-only; requirements.txt gains nothing) -- never from reading an FSM.  Every arithmetic expectation
-is either (a) a HAND-COMPUTED literal written into this file, independent of the model, or (b) the
-model's output; the model is itself pinned by tb/tests/test_npu_model.py.
-
-DUT: tb_npu -- ONE wrapper, TWO npu_top instances sharing clk / rst_n, each with its own flat APB4
-face selected by a signal-name prefix (APB4Master(dut, prefix, ...)):
-
-    ""      u_dut      the build under test (ADDR_W=12, WEIGHT_WORDS=1024, GRID=4, EN_NPU=1)
-    "off_"  u_dut_off  EN_NPU = 0   (the SoC tie-off arm: APB must still terminate cleanly)
-
-npu_top has NO asynchronous input (clk / rst_n / APB4 in, irq_o out), so there is no CDC, no
-cdc_sync and no SDC exception to test.
-
-Register map (npu_top.sv, ADDR_W=12, N_REGS=16; byte offset = word index * 4):
-  0x00 CTRL      [RW]  [0] RELU_EN, [3] IRQ_EN.  [2] START is W1P: a WRITE-SNOOP pulse, not a stored
-                       bit -- it reads 0 forever (stored mask 0x09).
-  0x04 STATUS    [RO]  [0] busy [1] done [2] ain_full [3] ain_empty [4] aout_valid [5] aout_full
-                       [6] cfg_rejected (sticky).  Reset value 0x08 (the AIN FIFO is empty).
-  0x08 WADDR     [RW]  [9:0] weight-SRAM word address; auto-increments on every WDATA write
-  0x0C WDATA     [WO]  4 packed INT8 weights -> SRAM[WADDR]; reads 0 forever
-  0x10 TILEBASE  [RW]  [9:0] SRAM word address of the first weight word of the next inference
-  0x14 KLEN      [RW]  [5:0] number of 4-element chunks (each = 4 SRAM words + 1 AIN word)
-  0x18 SCALE     [RW]  [15:0] requantise multiplier, [20:16] right shift
-  0x1C AIN       [WO]  4 packed INT8 activations -> AIN FIFO (depth 4); reads 0 forever
-  0x20 AOUT      [RO]  head of the AOUT FIFO (depth 4); a READ POPS it
-  0x24 IRQ_STAT  [RO]  [0] sticky done (the SAME flop as STATUS[1])
-  0x28 IRQ_CLR   [WO]  W1C by write-snoop: [0] clears done, [1] clears cfg_rejected
-  0x2C-0x3C reserved (read 0, writes dropped);  word index >= 16 (0x40..0xFFC): read 0, writes
-                       dropped, pslverr stays 0 (the register bank's out-of-range policy)
-
-BYTE ORDER / ARITHMETIC (the model's contract, restated because the RTL implements it).
-  * LITTLE-ENDIAN lanes for WDATA, AIN and AOUT alike: element / lane 0 is bits [7:0], lane 3 is
-    bits [31:24]; each byte a two's-complement INT8.
-  * y[j] = requant( SUM_c SUM_i W[c][i][j] * a[c][i] ); one chunk = one AIN word (a[c][0..3]) plus
-    the four SRAM words SRAM[TILEBASE + 4c + i] (row i, lane j in byte j).
-  * requant(acc) = sat_int8( (acc * SCALE[15:0]) >> SCALE[20:16] ), the multiplier UNSIGNED, the
-    shift an ARITHMETIC shift = FLOOR (not round-half-up, not toward zero), the product NOT
-    truncated to 32 bits; then max(0, .) if CTRL[0].
-  * The INT32 accumulator saturates, but |acc| <= 2**22 for every legal run, so it never fires.
-  * Accumulators are zeroed at START.
-
-DECISIONS the spec left open (or resolved inside the contract).  Writing the tests first is what
-pins them, so they are asserted HERE and the RTL implements what this file asserts:
-
-  D1. RELU_EN / IRQ_EN ARE NEVER CHANGED IN THE SAME TRANSFER AS START.  The contract derives
-      relu from the bank register, whose value during the START write's own ACCESS cycle is the
-      PRE-write one (see crypto_accel's identical D1).  The suite writes CTRL (no start) first and
-      CTRL|START second (`_Dev.start`), and does NOT pin the single-write behaviour.
-  D2. THE WEIGHT SRAM HAS NO READBACK, so weights are proven ONLY by inference results.  Every
-      test loads every weight word it consumes (SRAM content is not reset, and the suite never
-      relies on an unloaded word).  `_Dev.mem` mirrors what the suite loaded.
-  D3. AIN PROTOCOL.  The AIN FIFO is depth 4.  A START with fewer than KLEN AIN words queued is
-      STARVED, not illegal: the engine stays busy (done 0) until KLEN words have been consumed, so
-      software may START first and stream AIN afterwards (KLEN > 4 REQUIRES it).  An AIN write
-      while the FIFO is FULL is DROPPED silently (FIFO unchanged, no cfg_rejected).
-      test_npu_ain_backpressure, test_npu_starved_start_waits_for_ain.
-  D4. AOUT.  Depth 4.  An empty AOUT reads 0 and a read of it pops nothing (no underflow, no
-      stale duplicate).  The result is visible no later than done: whenever STATUS.done reads 1
-      after a legal run STATUS.aout_valid is already 1, so `while (!done); read AOUT` is safe.
-      test_npu_aout_pops_on_read, test_npu_aout_empty_reads_zero_no_stale_duplicate.
-  D5. LEGAL-RUN LATENCY IS NOT PINNED, but it must be DETERMINISTIC: identical runs with the AIN
-      FIFO pre-filled take the same number of edges N (counted from the START write's ACCESS edge E,
-      inclusive), and busy is high on every edge 1..N-1.  The set-beats-clear alignment calibrates
-      itself on N.  The ILLEGAL path IS pinned: N = 2 exactly.
-  D6. ILLEGAL START (KLEN == 0, KLEN > 63 as stored, or TILEBASE + 4*KLEN > 1024): busy for one
-      edge, done on the second, cfg_rejected latched, NO AOUT push, the bus never stalls (pready is
-      sampled high on every edge).  The AIN FIFO content around an illegal start is not specified;
-      the suite never queues AIN words before one.
-  D7. cfg_rejected CLEARS on reset, on IRQ_CLR[1] and on an accepted WDATA write.  IRQ_CLR[0] does
-      not touch it and IRQ_CLR[1] does not touch done.  (Whether an accepted WADDR write clears it
-      is NOT pinned.)
-  D8. A WADDR or WDATA WRITE WHILE BUSY IS REJECTED: WADDR is unchanged, nothing reaches the SRAM,
-      cfg_rejected latches.
-  D9. WADDR IS A 10-BIT COUNTER: the auto-increment past 1023 wraps to 0 and WADDR never reads
-      outside [9:0] (the bank's HW write bypasses WMASK, so the RTL must mask the increment).
-  D10. KLEN[5:0] CANNOT HOLD 64.  The plan says "1..64"; the register holds 0..63, writing 64
-      stores 0, and START with KLEN == 0 is illegal.  The register-reachable maximum is 63 and the
-      suite tests 63.  FLAGGED to the plan's owner -- the model supports 1..64 arithmetic.
-  D11. SAME-CYCLE WADDR COLLISION.  The auto-increment fires on the WDATA write's own cycle and one
-      APB master cannot complete two transfers in one cycle (the earliest next ACCESS is E + 2), so
-      a literal same-cycle SW-vs-HW WADDR collision is UNREACHABLE at L1.  What is provable, and
-      pinned: a WADDR write issued BACK-TO-BACK after a WDATA write lands exactly (never old + 1,
-      never SW + 1), and the next WDATA goes to that address.  test_npu_waddr_sw_write_wins.
-  D12. THE WEIGHT_WORDS ELABORATION GUARD: any value other than 1024 is a $fatal naming
-      WEIGHT_WORDS (plan Sec.7, "a parameter sweep cannot silently fall back to flops").  Lint-only.
-  D13. Partial-strobe WDATA / AIN / START writes, START while busy (legal and illegal), a
-      zero-strobe weight write while busy, done being sticky across a new START, and AOUT-FIFO
-      overflow (a fifth unpopped result) ARE pinned, each by its own test (start_partial_strobe_
-      ignored, partial_strobe_wdata_ain_dropped, start_while_busy_ignored, zero_strobe_weight_
-      write_while_busy_not_rejected, done_sticky_across_start, aout_overflow_drops_fifth).  The
-      shared helpers still clear done before a START and pop every result they do not
-      deliberately queue, so these tests deliberately bypass that convention.  They were added
-      after a 65-mutant campaign on rtl/npu left exactly these behaviours unkilled.
-
-CYCLE-SAMPLING HAZARD (learned on PWM / WDT / TRNG / I2C / CRYPTO): a value read straight after
-`await RisingEdge` is the PRE-edge value.  Every internal-state sample therefore goes RisingEdge
-FIRST and then settles through Timer(1, "step") (inside `_Dev.peek`, which also points an idle
-bus's paddr at the word so the sample is SIDE-EFFECT FREE -- a psel = 0 bus never pops AOUT).
-Plain APB reads are used only where the side effect (the AOUT pop) is the point.
-
-Tests (grouped; the name states the behaviour):
-  register file   reset_defaults_and_reserved, wmask_enforcement, ctrl_start_reads_zero,
-                  wdata_ain_irqclr_read_zero_forever, scale_strobe_merging
-  weights         waddr_autoincrement, waddr_wraps_at_1023, waddr_sw_write_wins
-  inference       klen1_hand_vectors, multichunk_hand_vector, multichunk_random_vs_model,
-                  klen_register_max_63, tilebase_selects_tile_and_accumulators_clear
-  requantise      relu_on_off, scale_hand_table, scale_floor_rounding, scale_random_sweep,
-                  scale_product_not_32_bit
-  FIFOs           aout_pops_on_read, aout_empty_reads_zero_no_stale_duplicate, ain_backpressure,
-                  starved_start_waits_for_ain
-  handshake       irq_level_held_and_masked, set_beats_same_cycle_clear, status_not_stale,
-                  reset_mid_operation
-  illegal / reject illegal_start_is_hang_free, legal_boundaries_accepted, cfg_rejected_clear_paths,
-                  weight_write_while_busy_is_rejected
-  strobes / START start_partial_strobe_ignored, partial_strobe_wdata_ain_dropped,
-                  start_while_busy_ignored, zero_strobe_weight_write_while_busy_not_rejected,
-                  done_sticky_across_start, aout_overflow_drops_fifth
-  EN_NPU = 0      en_npu_off_terminates_cleanly
-  elaboration     elaboration_guard_rejects_bad_weight_words, elaboration_legal_configs_pass
-39 tests in all.
+"""test_npu.py -- Phase 6c cocotb L1 verification for npu_top (rtl/npu/npu_top.sv, npu_mac_array.sv,
+npu_weight_mem.sv; Doc: ds:ch:phase6-ip-expansion-plan "6c -- NPU", whose register map, software
+contract and eight acceptance criteria this suite proves).
+The assertions come from the plan and from tb/models/npu_model.py (pinned by
+tb/tests/test_npu_model.py), never from an FSM. Each arithmetic expectation is a HAND-COMPUTED
+literal in this file or the model's output.
+DUT: tb_npu, ONE wrapper, TWO npu_top instances sharing clk / rst_n, each with its own flat APB4
+face selected by a prefix: "" = u_dut (ADDR_W=12, WEIGHT_WORDS=1024, GRID=4, EN_NPU=1), "off_" =
+u_dut_off (EN_NPU=0: APB must still terminate cleanly). No asynchronous input, so no CDC. Register
+map (N_REGS=16): the rtl/npu/npu_top.sv header.
+Arithmetic (the model's contract): LITTLE-ENDIAN lanes for WDATA, AIN and AOUT (lane 0 = bits
+[7:0]), INT8 two's complement. y[j] = requant(SUM_c SUM_i W[c][i][j]*a[c][i]); a chunk is one AIN
+word plus SRAM[TILEBASE+4c+i].
+requant(acc) = sat_int8((acc * SCALE[15:0]) >> SCALE[20:16]): multiplier UNSIGNED, shift ARITHMETIC
+(FLOOR), product NOT truncated to 32 bits, then max(0, .) if CTRL[0]. Accumulators are zeroed
+at START.
+DECISIONS the spec left open (asserted HERE; the RTL implements what this file asserts):
+D1 RELU_EN / IRQ_EN are NEVER changed in the same transfer as START (write CTRL, then CTRL|START).
+D2 The weight SRAM has no readback: weights are proven by inference only, so each test loads every
+word it uses.
+D3 A START with fewer than KLEN AIN words is STARVED, not illegal; an AIN write to a FULL FIFO is
+dropped. D4 An empty AOUT reads 0 and a read pops nothing. D5 Latency must be DETERMINISTIC; the
+ILLEGAL path is pinned (2 edges).
+D6 ILLEGAL START (KLEN == 0, KLEN > 63, or TILEBASE + 4*KLEN > 1024): busy one edge, done on
+the second, cfg_rejected latched, NO AOUT push, no bus stall. D7 cfg_rejected clears on reset,
+IRQ_CLR[1] and an accepted WDATA write. D8 A WADDR or WDATA write while busy is REJECTED. D9 WADDR
+is a 10-bit counter and wraps. D10 KLEN[5:0] cannot hold 64 (the plan says 1..64): the maximum is
+63, FLAGGED to the plan's owner. D11 A WADDR write back-to-back after a WDATA write lands exactly (a
+same-cycle collision is unreachable at L1). D12 WEIGHT_WORDS != 1024 is an elaboration $fatal. D13
+START is decoded from byte lane 0 only; WDATA and AIN need a full strobe; START while busy is
+ignored; a zero-strobe WDATA or WADDR write while busy is not a write attempt; DONE is sticky across
+START; a result into a full AOUT FIFO is dropped.
+Sampling: a read straight after `await RisingEdge` is the PRE-edge value, so samples settle through
+Timer(1, "step").
+Run: make -C tb/cocotb/soc npu
+Doc: tm:suite:soc-test-npu
 """
 
 import random
@@ -154,7 +60,7 @@ from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 
 from tb.models import npu_model as npu  # noqa: E402
 
-CLK_PERIOD_NS = 10  # 100 MHz -- matches SoC reference clock (same convention as test_crypto.py)
+CLK_PERIOD_NS = 10  # matches the SoC reference clock (same convention as test_crypto.py)
 
 # -- register byte offsets ----------------------------------------------------
 CTRL = 0x00
@@ -492,7 +398,7 @@ async def _reset(dut, rig: _Rig, cycles: int = 4) -> None:
 
 
 async def _start_clock_and_reset(dut) -> _Rig:
-    """Start the 100 MHz clock, build the two drivers and reset the DUTs."""
+    """Start the clock, build the two drivers and reset the DUTs."""
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
     dut.rst_n.value = 0
@@ -1746,7 +1652,7 @@ async def test_npu_elaboration_legal_configs_pass(dut):
         assert r.returncode == 0, f"{args} must elaborate cleanly:\n{r.stdout}{r.stderr}"
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -1783,7 +1689,7 @@ async def test_register_w1p_w1c_semantics(dut):
 
 @npu_test
 async def test_npu_aout_fifo_every_slot_every_bit(dut):
-    """Every bit of every AOUT FIFO slot rises and falls (bead xkw5): with the identity tile and
+    """Every bit of every AOUT FIFO slot rises and falls: with the identity tile and
     SCALE 1/0 the result word equals the activation word, so four 0xFFFFFFFF results fill the depth-4
     FIFO (a result queued in each of the four slots), four reads drain them in order, then four
     0x00000000 and four 0xFFFFFFFF results do the same -- each slot goes 0 -> 1 -> 0 -> 1 as a

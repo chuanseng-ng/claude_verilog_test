@@ -6,7 +6,7 @@ backdoor-loaded into tb_soc_top.u_soc.u_boot_rom.mem, the SoC is reset, and a bi
 model drives `uart_rx_i` with framed protocol traffic (tools/fw/uart_load.py is the single
 source of the framing/CRC).  A second bit-level model decodes `uart_tx_o`.  What is checked:
 
-  * banner + INFO handshake, at the shipped default divisor (50 MHz / 115200 -> D=26) and at
+  * banner + INFO handshake, at the shipped default divisor (115200 baud, D=26) and at
     the shortened simulation divisor;
   * a multi-packet load of a real RV32I program (testprog.c) into SRAM, target-side CRC verify,
     JUMP, and that the program then *runs* (UART signature + commit-PC trace in SRAM).  The
@@ -42,8 +42,8 @@ LOAD_HI = 0x0000_2E00  # SRAM 4 KB, top 512 B are bootloader .bss/stack
 PREBUILT = _ROOT / "sw" / "bootloader" / "prebuilt"
 
 SIM_DIV = 5  # must match DEFS_sim in sw/bootloader/Makefile
-DEFAULT_DIV = 26  # 50 MHz / 115200, bl_config.h default
-IDLE_CYCLES_SIM = 20_000  # BL_IDLE_MS(20) * BL_CPU_HZ(1 MHz)/1000
+DEFAULT_DIV = 26  # 115200 baud, bl_config.h default
+IDLE_CYCLES_SIM = 20_000  # BL_IDLE_MS(20) * BL_CPU_HZ(1000000)/1000
 
 TESTPROG = (PREBUILT / "testprog.bin").read_bytes()
 TABLE_SUM = 0x106B0960  # sum32 of testprog_table.inc, re-derived in test_table_sum_is_independent
@@ -107,7 +107,8 @@ class Env:
 
         Default (`gap_bits=None` -> `self.stop_gap`, 1) is 8N2, matching the default of
         tools/fw/uart_load.py.  8N2 is kept as the host-loader default for margin and was the
-        workaround for bead shm5 (the receiver used to lose framing after ~7 back-to-back 8N1
+        workaround for an earlier receiver defect (the receiver used to lose framing after ~7
+        back-to-back 8N1
         bytes); that RTL defect is fixed, so `gap_bits=0` (plain 8N1, no idle) works too and
         test_load_verify_8n1_back_to_back covers it.  See README "UART RX".
         """
@@ -234,7 +235,7 @@ async def test_banner_and_info_sim_divisor(dut):
 
 @cocotb.test()
 async def test_banner_and_info_default_115200_at_50mhz(dut):
-    """The image intended for MEM_INIT_FILE: D=26 -> 432 clocks/bit (115741 baud at 50 MHz)."""
+    """The image intended for MEM_INIT_FILE: D=26 -> 432 clocks/bit."""
     env = await setup(dut, "uart_boot_default.hex", div=DEFAULT_DIV)
     banner = await env.wait_rx(len(ul.BANNER), 400_000)
     assert banner == ul.BANNER
@@ -270,7 +271,7 @@ async def test_load_verify_jump_and_run(dut):
 
 @cocotb.test()
 async def test_load_verify_8n1_back_to_back(dut):
-    """Plain 8N1 (no extra stop bit, no idle between bytes) works since bead shm5: the whole
+    """Plain 8N1 (no extra stop bit, no idle between bytes) works: the whole
     program loads in several packets and its CRC and SRAM contents are right."""
     env = await setup(dut, "uart_boot_sim.hex")
     env.stop_gap = 0
@@ -398,4 +399,3 @@ async def test_autoboot_refuses_empty_sram_and_stays_serviceable(dut):
     assert not any(SRAM_BASE <= pc < LOAD_HI for pc in env.pcs), "jumped into empty SRAM"
     resp = await env.cmd(ul.CMD_INFO)
     assert resp.ok
-

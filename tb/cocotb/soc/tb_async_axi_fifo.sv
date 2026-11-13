@@ -1,5 +1,5 @@
 // tb_async_axi_fifo.sv
-// GH #91 — standalone cocotb test wrapper for the dual-clock AXI4 CDC bridge
+// standalone cocotb test wrapper for the dual-clock AXI4 CDC bridge
 // (rtl/soc/async_axi_fifo.sv).
 //
 // Re-exports every DUT port as a true top-level port using the BFM naming
@@ -11,7 +11,7 @@
 // there is no multiple-driver conflict.
 //
 // ID SHIM (wrapper-only — async_axi_fifo itself is ID-LESS on both faces,
-// mirroring the crossbar's master-facing port; see axi4_crossbar.sv:55-86):
+// mirroring the crossbar's master-facing port; see axi4_crossbar.sv):
 // axi4_slave_model.py unconditionally reads captured awid/arid and writes
 // bid/rid. m_awid/m_arid are free-standing wrapper inputs (never connected
 // to u_dut, never driven by cocotb — read as 0) purely so the slave model
@@ -156,7 +156,7 @@ module tb_async_axi_fifo #(
     ) u_dut (
         // DFT scan bypass tied inert — this TB exercises functional CDC
         // behaviour only; scan-mux behaviour is covered by
-        // tb_cdc_reset_sync_scan.sv (bead claude_verilog_test-07n).
+        // tb_cdc_reset_sync_scan.sv.
         .scanmode_i  (1'b0),
         .scan_rst_ni (1'b1),
 

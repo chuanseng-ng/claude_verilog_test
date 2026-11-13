@@ -401,7 +401,7 @@ async def _start_lookup_then_abort(dut, first: int, second: int | None, invalida
     else:
         assert second is not None
         dut.ic_addr_i.value = second
-    await RisingEdge(dut.clk)  # CS_SRAM_LATCH sees the abort -> CS_IDLE (rv32i_icache.sv:498)
+    await RisingEdge(dut.clk)  # CS_SRAM_LATCH sees the abort -> CS_IDLE (rv32i_icache.sv)
     dut.ic_invalidate_i.value = 0
 
 

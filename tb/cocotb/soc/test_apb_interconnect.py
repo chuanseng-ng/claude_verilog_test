@@ -1,72 +1,25 @@
-"""test_apb_interconnect.py -- Phase 6 groundwork cocotb verification for apb_interconnect
-(rtl/soc/apb_interconnect.sv, bead claude_verilog_test-f7vs.4).
-
-DUT: tb_apb_interconnect (standalone wrapper, directly instantiates apb_interconnect; see
-tb_apb_interconnect.sv's header for the full flattened-port rationale and the OVERLAP_TEST knob).
-
-apb_interconnect is PURELY COMBINATIONAL -- it has no clock or reset port at all (see its own
-header and soc_bus.sv's "5. APB interconnect" comment). This suite therefore does not start a
-clock or use bfm/apb4_master.py (whose SETUP/ACCESS protocol is built on
-`await RisingEdge(clock)`); it drives the flattened inputs directly and settles with a plain
-`Timer` before sampling outputs. There are no wait states to model either -- pready_o is always
-combinationally 1 in every reachable state of this DUT (see apb_interconnect.sv's response mux:
-both the matched-slave branch and the DECERR branch drive it from a registered-free expression),
-so a single settle delay is sufficient.
-
-Decode windows under test: this wrapper generates SLV_BASE[i]/SLV_LIMIT[i] as contiguous,
-non-overlapping SLV_WINDOW-byte (default 0x1000) blocks starting at address 0 -- i.e.
-slave i owns [i*SLV_WINDOW, i*SLV_WINDOW + SLV_WINDOW - 1] -- mirroring the real
-soc_periph_map_pkg.sv convention. N_SLAVES and the OVERLAP_TEST knob are Verilator `-G`
-elaboration-time overrides (see the `apb_interconnect` Makefile target); this module reads what
-the CURRENT build elaborated with via two environment variables the Makefile sets to match:
-  APB_IC_N_SLAVES  -- the N_SLAVES this build was elaborated with (default 8 if unset, matching
-                       tb_apb_interconnect.sv's own parameter default).
-  APB_IC_OVERLAP   -- "1" when this build set OVERLAP_TEST=1 (the dedicated first-match-wins
-                       elaboration), "0" otherwise (default).
-
-Why a parameter SWEEP needs multiple elaborations, not one cocotb run: N_SLAVES is an
-elaboration-time SystemVerilog parameter (it changes SEL_W/IDXW and the generated decode-window
-array sizes), so Verilator must re-elaborate the design for each value -- a single cocotb
-process cannot change it at runtime. The `apb_interconnect` Makefile target therefore builds and
-runs THIS SAME module once per N_SLAVES in {1, 2, 7, 8, 9, 13, 14, 15, 16, 17} (each into its own
-SIM_BUILD directory, to avoid exactly the stale-Verilator-cache hazard documented in
-Doc: ds:ch:phase6-ip-expansion-plan Sec.10 "Operational hazards"), plus one more elaboration at
-N_SLAVES=2/OVERLAP_TEST=1 for test_first_match_wins. test_basic_decode / test_response_mux /
-test_idle / test_unmapped_slverr therefore implicitly run at -- and must pass at -- every sweep
-point; that repetition IS the sweep coverage for item 6 of the suite spec (SEL_W/IDXW differ
-exactly when N_SLAVES is a power of two, so 1/2/8/16 bracket the historical WIDTHTRUNC trap at
-N_SLAVES=8 and the presently-unproven-safe boundary at N_SLAVES=16, while 7/9/13/14/15/17 sample
-around it).
-
-Tests:
-  test_idle
-      psel=0 -> pready=1, pslverr=0, prdata=0, no psel_o_flat bit asserted.
-  test_basic_decode
-      For every slave index i (0..N_SLAVES-1), an address inside [BASE[i], LIMIT[i]] asserts
-      psel_o_flat bit i and no other bit. Skipped in the OVERLAP_TEST build (slave 0/1
-      exclusivity is deliberately broken there -- see test_first_match_wins).
-  test_response_mux
-      For every slave index i, a unique prdata_i/pready_i/pslverr_i pattern on slave i's flat
-      response inputs is observed unchanged on prdata_o/pready_o/pslverr_o when slave i is
-      addressed, and is NOT observed when any other slave is addressed. Skipped under
-      OVERLAP_TEST for the same reason as test_basic_decode.
-  test_unmapped_slverr
-      psel=1 at the first address past the last generated slave's window (N_SLAVES*SLV_WINDOW)
-      -> pready=1, pslverr=1, prdata=0, and no psel_o_flat bit asserted. This is the assertion
-      bead f7vs.2's test_reserved_slot_in_window (test_axil_interconnect.py) could only reach a
-      register-bank stub for; this DUT instantiates the real decode, so this is the first place
-      in the tree the SLVERR-not-hang behaviour is verified end-to-end.
-  test_write_fanout_reaches_every_slave
-      Bead 8riq. pwdata / pstrb / pwrite / penable / paddr are broadcast: for each addressed slave i
-      and a set of data / strobe patterns that toggle every bit both ways, EVERY slave index's
-      copy of those signals equals the master's, while psel_o_flat selects slave i alone (a
-      non-selected slave sees the data but must not see psel). SETUP (penable low) is also seen
-      on every copy.
-  test_first_match_wins
-      Only runs in the OVERLAP_TEST=1 (N_SLAVES=2) build: an address inside slave 1's normal
-      window, which OVERLAP_TEST also folds into slave 0's extended window, selects slave 0 (the
-      lower index), confirming apb_interconnect's documented "first-match (lowest index wins)"
-      decode order.
+"""
+test_apb_interconnect.py -- Phase 6 groundwork cocotb verification for apb_interconnect
+(rtl/soc/apb_interconnect.sv).
+DUT: tb_apb_interconnect (standalone wrapper; its header has the flattened-port rationale and the
+OVERLAP_TEST knob). apb_interconnect is PURELY COMBINATIONAL: no clock or reset port. The suite
+starts no clock and does not use bfm/apb4_master.py (its SETUP/ACCESS protocol needs `await
+RisingEdge(clock)`). It drives the flattened inputs and settles with a plain `Timer` before
+sampling. There are no wait states: pready_o is combinationally 1 in every reachable state.
+N_SLAVES and OVERLAP_TEST are Verilator `-G` elaboration overrides (see the `apb_interconnect`
+Makefile target). The Makefile passes them to this module in two environment variables:
+APB_IC_N_SLAVES (default 8) and APB_IC_OVERLAP ("1" for the OVERLAP_TEST=1 build, "0" otherwise).
+N_SLAVES changes SEL_W, IDXW and the array sizes, so each value needs its own elaboration. The
+target runs THIS module once per N_SLAVES in {1, 2, 7, 8, 9, 13, 14, 15, 16, 17}, each in its own
+SIM_BUILD directory (stale-Verilator-cache hazard), plus one build at N_SLAVES=2 with
+OVERLAP_TEST=1. The repetition IS the sweep coverage: SEL_W/IDXW differ at powers of two, so
+1/2/8/16 bracket the WIDTHTRUNC trap at 8.
+Tests: test_idle, test_basic_decode and test_response_mux (skipped under OVERLAP_TEST),
+test_unmapped_slverr (the first address past the last window: pready=1, pslverr=1, prdata=0, no
+psel), test_write_fanout_reaches_every_slave, test_first_match_wins (OVERLAP_TEST=1 only: the lowest
+index wins).
+Run: make -C tb/cocotb/soc apb_interconnect
+Doc: tm:suite:soc-test-apb-interconnect
 """
 
 import os

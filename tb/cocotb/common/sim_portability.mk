@@ -1,52 +1,9 @@
-# sim_portability.mk -- let the cocotb Makefiles in this repo drive Synopsys VCS and Cadence
-# Xcelium (xrun) as well as Verilator.
-#
-# Included by tb/cocotb/soc/Makefile, tb/cocotb/cpu/Makefile and sim/Makefile, immediately BEFORE
-# their `include $(shell cocotb-config --makefiles)/Makefile.sim`.  It only defines variables (no
-# targets, so it can never change a Makefile's default goal).
-#
-# INVARIANT: with SIM=verilator (the default, and what CI runs) this file changes nothing the
-# including Makefile does.  It defines one identity helper (`sp_lint`) and leaves every other
-# variable alone; `make -n` output of every target is byte-identical with and without the include
-# (checked with `cmp -s`, see the commit that introduced this file).
-#
-# Inputs the including Makefile may set BEFORE the include (all optional):
-#   SIM_PORT_KEYED_BUILD=1  give each distinct build recipe its own SIM_BUILD dir, keyed by content
-#                           (the soc Makefile's scheme; the Verilator key lives in that Makefile).
-#   SIM_PORT_DEFINES        `+define+` names that the Makefile adds only inside its `ifeq ($(SIM),verilator)`
-#                           block but that the RTL needs under every simulator (e.g. SIMULATION).
-# Inputs from the caller's command line:
-#   SIM_RESULTS_IN_BUILD=1  write cocotb's results.xml to $(SIM_BUILD)/results__<MODULE>.xml instead of the
-#                           shared ./results.xml.  Needed to run several targets of one directory
-#                           concurrently, and to keep each build point's verdict (several soc targets
-#                           run two build points back to back; ./results.xml keeps only the last).
-#   VCS_LINT_FLAGS          default +lint=TFIPC-L (port-connection width/type mismatches become warnings).
-#   VCS_EXTRA_COMPILE       extra raw vcs compile flags (e.g. -kdb for Verdi).
-#
-# What it does when SIM is vcs or xcelium
-# ---------------------------------------
-#  * EXTRA_ARGS and COMPILE_ARGS are translated, never forwarded raw (VCS and xrun reject or silently
-#    misread most Verilator flags):
-#        -G<P>=<v>        -> VCS   -pvalue+<TOPLEVEL>.<P>=<v>      Xcelium  -defparam <TOPLEVEL>.<P>=<v>
-#                            (a quoted string value such as -GMEM_INIT_FILE=\"path\" is kept as written)
-#        -D<X> / +define+ -> +define+<X>                          (native to both)
-#        -I<d> / +incdir+ -> +incdir+<d>                          (native to both)
-#        -W*  --*  -O*  -j*  and the value-taking Verilator flags (-CFLAGS, --output-split, ...)
-#                         -> dropped (Verilator-only: lint switches, tracing, coverage, optimisation)
-#        anything else (e.g. `-y dir`, a native +plusarg) -> passed through untouched.
-#    The result goes into COMPILE_ARGS.  EXTRA_ARGS is UNDEFINED afterwards: it arrives from the sub-make
-#    command line, where cocotb's own `EXTRA_ARGS += ...` (VCS: -full64, Xcelium: the whole
-#    -top/-xmlibdirpath/-licqueue block) would otherwise be silently ignored, and cocotb's VCS rule
-#    also hands EXTRA_ARGS to the simv run line, where -pvalue/-defparam do not belong.
-#  * Xcelium gets -nocopyright, -nohistory and a per-build log (-l $(SIM_BUILD)/xrun.log) so concurrent
-#    builds in one directory do not trample xrun.log / xrun.history.
-#  * `$(call sp_lint,<lint targets>)` is empty, so a `foo: foo_lint` prerequisite becomes a no-op:
-#    Verilator --lint-only has no VCS/xrun equivalent run here; compile cleanliness is judged from the
-#    VCS/xrun compile logs instead (every warning triaged by hand, see the bring-up report).
-#  * COVERAGE=1: SIM=vcs instruments with `-cm line+cond+fsm+tgl+branch+assert` (section "VCS code
-#    coverage" at the end of this file); SIM=xcelium REFUSES it (no imc on the host to merge/report
-#    with -- a collected-but-unreportable database is worse than a clear error).
-#  * SIM_BUILD is keyed by SIM so Verilator, VCS and Xcelium objects can never collide.
+# sim_portability.mk -- lets the cocotb Makefiles drive VCS and Xcelium as well as Verilator.
+# Included before Makefile.sim by the soc and cpu cocotb Makefiles and by sim/Makefile.
+# It defines variables only (no targets), so it never changes a default goal.
+# INVARIANT: with SIM=verilator it changes nothing except the identity helper sp_lint.
+# For vcs and xcelium it translates EXTRA_ARGS and COMPILE_ARGS and keys SIM_BUILD by simulator.
+# Doc: tm:suite:common-sim-portability-mk
 
 ifeq ($(SIM),verilator)
 
@@ -125,7 +82,7 @@ COMPILE_ARGS := $(SP_BASE) $(call sp_uniq,$(SP_DEFS)) $(SP_INCS) $(SP_PARAMS) $(
 # --- VCS code coverage (compile side) -----------------------------------------------------------
 # Metrics: line, condition, FSM, toggle, branch, SVA assertion.  Everything is in COMPILE_ARGS, so it is
 # part of the SIM_BUILD content key below and an instrumented model can never share a build dir with a
-# plain one (the stale-simv false-pass class of PR #142).  The scope file (-cm_hier) is generated here at
+# plain one (the stale-simv false-pass class).  The scope file (-cm_hier) is generated here at
 # parse time; see the runtime half at the end of this file.
 ifeq ($(SIM)$(if $(COVERAGE),-cov),vcs-cov)
   VCS_COV_METRICS ?= line+cond+fsm+tgl+branch+assert
@@ -134,13 +91,12 @@ ifeq ($(SIM)$(if $(COVERAGE),-cov),vcs-cov)
   ifeq ($(wildcard $(SP_COV_REPO)/rtl/soc),)
     $(error sim_portability.mk: cannot find rtl/ under $(SP_COV_REPO) for the VCS coverage scope)
   endif
-  # Scope = the rtl/ files this build actually compiles: its VERILOG_SOURCES plus whatever the -I/-y
-  # library lookup can pull in (a module found only through -y, e.g. rv32i_clock_gate.sv, is RTL too).
-  # Testbench wrappers (tb_*), cocotb glue and the behavioural simulation models under sim/ are not
-  # listed, so they are excluded at COMPILE time (a leading +filelist rule excludes everything else),
-  # not by filtering the report afterwards.  Listing only files this build uses keeps VCS from warning
-  # (VCM-HFUFF) about every unused rtl/ file.  The list is content-addressed (name carries a hash of
-  # it), so builds with different sources never share or race on a file.
+  # Scope = the rtl/ files this build compiles: VERILOG_SOURCES plus whatever the -I/-y library lookup
+  # can pull in (a module found only through -y, e.g. rv32i_clock_gate.sv, is RTL too).
+  # Testbench wrappers (tb_*), cocotb glue and the sim/ models are not listed, so a leading +filelist
+  # rule excludes them at COMPILE time, not by filtering the report afterwards.
+  # Listing only used files keeps VCS from warning (VCM-HFUFF) about every unused rtl/ file.
+  # The list name carries a hash of its content, so builds with different sources never share a file.
   define sp_nl
 
 
@@ -192,16 +148,12 @@ ifeq ($(SIM)$(if $(strip $(SIM_BUILD)),,-nobuild),xcelium)
   COMPILE_ARGS += -l $(SIM_BUILD)/xrun.log
 endif
 
-# --- VCS code coverage (run side) ---------------------------------------------------------------
-# Every simulation runs with the SAME -cm metrics as the compile, into the build's own simv.vdb
-# (-cm_dir; the compile wrote the static design there) under a UNIQUE -cm_name:
-#     <build dir>__<MODULE>[__tc<TESTCASE hash>]__<hash of the abs build dir>
-# MODULE is in the name because suites that share a build dir (soc_integration_batch, the soc_top
-# chains of tools/eda/regress_specs.py) share one simv.vdb, and the hash of the build dir keeps names
-# unique when per-job vdbs from different SIM_BUILD_ROOTs are merged by one urg call.  Two simulations
-# with the same -cm_name in one vdb would OVERWRITE silently.  -cm_dir/-cm_name are run-only options, so
-# they go in SIM_ARGS (cocotb puts SIM_ARGS on the simv line only; PLUSARGS/EXTRA_ARGS also reach the
-# compile line).  Merge + report: tools/eda/vcs_coverage.py (urg).
+# Every simulation runs with the same -cm metrics as the compile, into the build's own simv.vdb
+# (-cm_dir) under a UNIQUE -cm_name: <build dir>__<MODULE>[__tc<TESTCASE hash>]__<hash of abs build dir>.
+# MODULE is in the name because suites that share a build dir share one simv.vdb. The hash keeps names
+# unique when urg merges vdbs from different SIM_BUILD_ROOTs. Two runs with one -cm_name in one vdb
+# OVERWRITE silently. -cm_dir and -cm_name go in SIM_ARGS: cocotb puts SIM_ARGS only on the simv line.
+# Merge and report: tools/eda/vcs_coverage.py (urg).
 ifeq ($(SIM)$(if $(COVERAGE),-cov),vcs-cov)
   SP_COV_VDB := $(abspath $(SIM_BUILD))/simv.vdb
   SP_COV_TCHASH := $(if $(TESTCASE),__tc$(shell printf '%s' '$(TESTCASE)' | sha256sum | cut -c1-8))

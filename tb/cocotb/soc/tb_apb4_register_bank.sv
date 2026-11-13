@@ -15,7 +15,7 @@
 // Hardware injection ports: hw_status_wen / hw_status_wdata -> reg6 (WMASK=0),
 //                           hw_aux_wen    / hw_aux_wdata    -> reg7 (WMASK=0xFF).
 // The reg7 port exists so tests can drive a HW write into a register whose
-// WMASK is partial (SW owns [7:0], HW owns [31:8]) -- bead 6o8w.
+// WMASK is partial (SW owns [7:0], HW owns [31:8]).
 
 `default_nettype none
 
@@ -48,7 +48,7 @@ module tb_apb4_register_bank #(
     input  logic [31:0]       hw_aux_wdata,
 
     // Hardware injection -> registers 0..5 (fully SW-writable): one enable per register, one
-    // shared data word.  Lets a test drive every HW-write port of the bank (bead xkw5).
+    // shared data word.  Lets a test drive every HW-write port of the bank.
     input  logic [5:0]        hw_gen_wen,
     input  logic [31:0]       hw_gen_wdata
 );

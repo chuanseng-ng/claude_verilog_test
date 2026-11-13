@@ -1,6 +1,5 @@
 // tb_i2c.sv
-// Phase 6a-5 -- standalone cocotb test wrapper for i2c_controller (rtl/periph/i2c_controller.sv,
-// bead claude_verilog_test-f7vs.9).
+// Phase 6a-5 -- standalone cocotb test wrapper for i2c_controller (rtl/periph/i2c_controller.sv).
 //
 // Directly instantiates i2c_controller with true top-level input ports for clk/rst_n, the whole
 // APB4 slave face, and BOTH sensed pad levels (i2c_scl_i / i2c_sda_i), and re-exports the

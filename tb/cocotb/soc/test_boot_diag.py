@@ -19,7 +19,7 @@ from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
 
-CLK_PERIOD_NS = 2   # 500 MHz
+CLK_PERIOD_NS = 2   # same as the other SoC tests
 
 ICACHE = "tb_soc_top.u_soc.u_cpu.u_core.u_icache"
 BOOT_ROM = "tb_soc_top.u_soc.u_boot_rom"

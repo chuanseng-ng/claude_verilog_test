@@ -1,5 +1,5 @@
 """
-test_sram_fi_equiv.py -- bead claude_verilog_test-j41m.14: the fault-injecting SRAM model
+test_sram_fi_equiv.py -- the fault-injecting SRAM model
 (sram_fi_core.sv) with NO fault armed is cycle-equivalent to the real simulation model
 sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv.
 

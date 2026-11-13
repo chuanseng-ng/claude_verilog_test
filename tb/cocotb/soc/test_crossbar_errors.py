@@ -1,4 +1,4 @@
-"""Bead ej6j -- axi4_crossbar: decode-error bursts, stalls and slave error responses.
+"""axi4_crossbar: decode-error bursts, stalls and slave error responses.
 
 test_crossbar.py only ever sends single-beat DECERR and always-OKAY slaves.  These tests use the
 cycle-accurate BFMs in axi4_fabric_bfm.py (stalls, scripted responses, protocol checks) and check AXI4

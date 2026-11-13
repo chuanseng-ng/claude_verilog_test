@@ -1,6 +1,5 @@
 // tb_gpio.sv
-// Phase 6a — standalone cocotb test wrapper for gpio_controller (rtl/periph/gpio_controller.sv,
-// bead claude_verilog_test-ckc).
+// Phase 6a — standalone cocotb test wrapper for gpio_controller (rtl/periph/gpio_controller.sv).
 //
 // Directly instantiates gpio_controller with true top-level input ports for clk/rst_n and the
 // whole APB4 slave face, plus a true top-level gpio_in_i input the BFM/test can drive directly

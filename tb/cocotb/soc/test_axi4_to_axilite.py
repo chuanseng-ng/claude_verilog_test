@@ -1,4 +1,4 @@
-"""Bead ej6j -- directed tests for rtl/soc/axi4_to_axilite.sv (AXI4 burst -> AXI4-Lite bridge).
+"""Directed tests for rtl/soc/axi4_to_axilite.sv (AXI4 burst -> AXI4-Lite bridge).
 
 The bridge serialises an AXI4 burst into N single-beat AXI4-Lite transactions on the peripheral ring.
 Until now only single-beat OKAY traffic reached it (through the SoC suites), so multi-beat bursts, the

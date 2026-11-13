@@ -1,50 +1,22 @@
 #!/usr/bin/env python3
 """
-gen_periph_hex.py — generate periph_loopback.hex for the M9 DMA+peripheral loopback test.
+gen_periph_hex.py -- generate periph_loopback.hex for the M9 DMA and peripheral loopback test.
 
-Firmware runs from ROM @ 0x0000_1000 (RESET_PC after RTL fix).
-Tests:
-  1. DMA mem->mem copy: SRAM[0x2000..0x200C] -> SRAM[0x2040..0x204C]  (4 words = 16 bytes)
-  2. UART internal loopback: TX=0xA5 -> poll STATUS[5] -> read RX -> compare
-  3. SPI  internal loopback: TX=0x3C -> poll STATUS[4] -> read RX -> compare
+Firmware runs from ROM at 0x0000_1000. It is self-checking: PASS_PC on full success, FAIL_PC on any
+failure. The testbench scoreboards commit_pc_o and backdoor-reads the SRAM dst region.
+Tests: 1. DMA mem-to-mem copy SRAM[0x2000..0x200C] -> SRAM[0x2040..0x204C] (4 words).
+  2. UART internal loopback: TX=0xA5, poll STATUS[5], read RX, compare.
+  3. SPI internal loopback: TX=0x3C, poll STATUS[4], read RX, compare.
 
-Self-checking: branches to PASS_PC on full success, FAIL_PC on any failure.
-Testbench scoreboards commit_pc_o and backdoor-reads SRAM dst region.
-
-Address map (verified against rtl/soc/soc_periph_map_pkg.sv):
-  SRAM base   : 0x0000_2000  (crossbar S1, sram_controller u_sram)
-  DMA ctrl    : 0x2000_5000  regs: SRC@+0x00, DST@+0x04, LEN@+0x08, CTRL@+0x0C, STATUS@+0x10
-  UART ctrl   : 0x2000_2000  regs: TX@+0x00, RX@+0x04, STATUS@+0x08, CTRL@+0x0C, BAUD@+0x10
-  SPI  ctrl   : 0x2000_3000  regs: TX@+0x00, RX@+0x04, STATUS@+0x08, CTRL@+0x0C, CLK_DIV@+0x10
-
-All peripheral base addresses have bits[11:0]=0x000 so no LUI sign-extension compensation needed.
-
-DMA SRC region : SRAM word index 0  (byte addr 0x2000 - SRAM_BASE=0x2000) / 4 = 0
-DMA DST region : SRAM word index 16 (byte addr 0x2040 - SRAM_BASE=0x2000) / 4 = 16
-
-Register config:
-  UART CTRL = 0x13  : tx_en[0]=1, rx_en[1]=1, loopback[4]=1
-  UART BAUD = 0     : 1 bit = 16*(0+1) = 16 clocks (fastest legal)
-  SPI  CTRL = 0x11  : enable[0]=1, loopback[4]=1  (CPOL=CPHA=0)
-  SPI  CLK_DIV = 2  : SCLK half-period = (2+1)=3 clocks
-  DMA  start pulse  : write CTRL=1 then CTRL=0
-
-Poll limit: 100000 iterations (100000 * pipeline_overhead >> UART 160 cycles, DMA ~100 cycles).
-
-Register allocation:
-  x2  = SRAM base  0x0000_2000
-  x5  = DMA base   0x2000_5000
-  x6  = UART base  0x2000_2000
-  x7  = SPI base   0x2000_3000
-  x8  = scratch (patterns, temporaries)
-  x9  = scratch (readback, comparison)
-  x10 = scratch (src load for DMA compare)
-  x11 = scratch (dst load for DMA compare)
-  x12 = loop bound (16 bytes)
-  x13 = poll counter
-  x14 = poll limit (100000)
-  x15 = loop byte offset (DMA compare loop)
-  x31 = result marker (1=pass, -1=fail)
+Address map (rtl/soc/soc_periph_map_pkg.sv): SRAM 0x0000_2000 (crossbar S1). DMA 0x2000_5000:
+SRC +0x00, DST +0x04, LEN +0x08, CTRL +0x0C, STATUS +0x10. UART 0x2000_2000 and SPI 0x2000_3000: TX
++0x00, RX +0x04, STATUS +0x08, CTRL +0x0C, BAUD or CLK_DIV +0x10. All peripheral bases have
+bits[11:0] = 0, so no LUI sign-extension compensation is needed.
+Config: UART CTRL = 0x13 (tx_en, rx_en, loopback), UART BAUD = 0, SPI CTRL = 0x11 (enable, loopback,
+CPOL=CPHA=0), SPI CLK_DIV = 2, DMA start = write CTRL=1 then CTRL=0.
+Poll limit: 100000 iterations, far above the UART and DMA latency.
+Run: python tb/cocotb/soc/periph_fw/gen_periph_hex.py
+Doc: tm:suite:soc-periph-fw-gen-periph-hex
 """
 
 import os

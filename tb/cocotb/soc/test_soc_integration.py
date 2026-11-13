@@ -1,41 +1,31 @@
 """
-test_soc_integration.py -- SoC-level directed tests for the soc_top integration gaps
-found by the GH #216 coverage run (bead claude_verilog_test-oez2).
-
-DUT: tb_soc_top (the whole SoC, one Vtop build shared by every test below).
-
-Each gap is exercised end to end with a BEHAVIOURAL check, not just a toggle:
-
-  test_soc_irq_traps_and_spi_miso   firmware (integ_fw irq_spi.hex) programs timer / UART /
-      SPI / DMA so each raises its IRQ; interrupt_controller routes it (timer bypasses it
-      and goes to MTIP); the CPU takes the trap (ISR_PC committed, mcause / pending logged
-      and checked by firmware, the RTL nets sampled at trap entry and again after the
-      handler); the handler clears the source.  The SPI phase is NON-loopback against a
-      testbench slave model, so spi_miso_i is driven and the received byte is checked
-      (firmware: 0xA6), and the slave checks the MOSI byte and CS framing.
-  test_soc_pll_register_programming  firmware (pll_prog.hex) writes both PLLs' CONTROL
-      dividers through the fabric (PLL1 via u_apb_pll_cdc, PLL2 via u_apb_pll2_cdc); the
-      testbench reads pll_fb_div / pll_post_div of BOTH instances after every write and
-      proves the other instance was untouched.  pll_clkgen_stub is a pass-through by design
-      (it accepts but ignores the dividers, see its header), so the observable
-      "PLL output" is the divider ports at pll_clkgen plus the lock flag staying asserted.
-  test_soc_gpu_isolation_via_pmu    firmware (gpu_iso.hex) leaves gpu_irq_o level-high, the
-      PMU powers the GPU domain off then on; the testbench checks the PMU sequence order,
-      the isolation clamp (gpu_irq_o == gpu_irq_raw & !gpu_iso_en on EVERY cycle, with
-      raw=1 / out=0 in the iso-before-reset window), that the GPU loses its state (async
-      reset flops -- see the FINDING in gen_integ_hex.py) and that a relaunch works.
-  test_soc_debug_apb_halt_gpr_step  the external APB debug master (tb_soc_top apb_* ports)
-      halts the CPU, reads / writes GPRs, the PC and breakpoint registers, single-steps and
-      resumes, all through u_apb_dbg_cdc.
-  test_soc_debug_apb_ro_write_pslverr  a write to each read-only CSR debug register
-      (0x200-0x214) returns PSLVERR at the SoC port (CPU debug pslverr carried through the
-      bridge); legal writes and the gap above the range do not.
-  test_soc_debug_apb_dest_reset_pslverr  the bridge's force-complete path: the CPU-domain
-      reset (the bridge's destination) is held low, the debug access must COMPLETE with
-      PSLVERR instead of hanging; also with the reset asserted while a request is in flight.
-
-GOLDEN-MODEL NOTE: as in test_soc_gpio / test_periph_loopback, SoCModel rejects 0x2000_xxxx
-MMIO, so firmware is self-checking and the testbench scoreboards commit_pc_o.
+test_soc_integration.py -- SoC-level directed tests for soc_top integration gaps found by a coverage
+  run. DUT: tb_soc_top (one Vtop build shared by every test). Each gap is exercised end to end with
+  a BEHAVIOURAL check.
+  test_soc_irq_traps_and_spi_miso: firmware (integ_fw irq_spi.hex) makes timer, UART, SPI and DMA
+      each raise an IRQ; the CPU takes the trap (ISR_PC committed, mcause and pending checked by
+      firmware, RTL nets sampled at trap entry and after the handler) and the handler clears the
+      source. The SPI phase is NON-loopback against a testbench slave model, the suite's only
+      spi_miso_i stimulus.
+  test_soc_pll_register_programming: firmware (pll_prog.hex) writes both PLLs' CONTROL dividers
+      through the fabric; the testbench reads the divider ports of BOTH instances after each write
+      and proves the other was untouched. pll_clkgen_stub ignores the dividers by design, so the
+      observable "PLL output" is the divider ports plus the lock flag staying asserted.
+  test_soc_gpu_isolation_via_pmu: firmware (gpu_iso.hex) leaves gpu_irq_o level-high and the PMU
+      powers the GPU domain off and on. Checked: the PMU order, the clamp (gpu_irq_o == gpu_irq_raw
+      & !gpu_iso_en on EVERY cycle), that the GPU loses its state and that a relaunch works.
+  test_soc_debug_apb_halt_gpr_step, test_soc_debug_apb_ro_write_pslverr: the APB debug master halts,
+  steps and resumes the CPU; a write to each read-only CSR debug register returns PSLVERR.
+  test_soc_debug_apb_dest_reset_pslverr: with the CPU-domain reset (the bridge destination) held
+      low, a debug access COMPLETES with PSLVERR and does not hang, also when reset
+      asserts mid-request.
+  test_soc_register_walk, test_soc_dma_walk_rom_write_and_decode_errors,
+  test_soc_gpu_walk_both_masters: the CPU register walk, and the DMA and GPU fabric walks (IMAGES 4
+  and 5 of gen_integ_hex.py).
+Golden model: SoCModel rejects 0x2000_xxxx MMIO, so the firmware is self-checking and the test
+scoreboards commit_pc_o.
+Run: make -C tb/cocotb/soc soc_integration
+Doc: tm:suite:soc-test-soc-integration
 """
 
 import sys
@@ -610,7 +600,7 @@ async def test_soc_debug_apb_dest_reset_pslverr(dut):
 
 
 # ---------------------------------------------------------------------------
-# Test: SoC-level register walk (bead 7ovx)
+# Test: SoC-level register walk
 # ---------------------------------------------------------------------------
 @cocotb.test()
 async def test_soc_register_walk(dut):
@@ -674,7 +664,7 @@ def _rom_snapshot(soc) -> list:
 async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
     """The DMA walks the SRAM window, is refused by the boot ROM, and hits the default slave.
 
-    Beads 0ntg (crossbar -> boot_rom write channel) and xkw5 (upper address bits of the
+    Covers the crossbar -> boot_rom write channel and (the upper address bits of the
     crossbar).  Firmware (integ_fw dma_walk.hex) is self-checking; the testbench adds the
     observations the firmware cannot make:
 
@@ -776,7 +766,7 @@ async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
 
 
 # ---------------------------------------------------------------------------
-# Test: GPU walk -- both GPU bus masters through the fabric (bead xkw5)
+# Test: GPU walk -- both GPU bus masters through the fabric
 # ---------------------------------------------------------------------------
 GW_SRC_VALS = (0xDEADBEEF, 0x12345678, 0xA5A5A5A5, 0x5A5A5A5A,
                0xFFFFFFFF, 0x00000000, 0xAAAAAAAA, 0x55555555)
@@ -800,7 +790,7 @@ def _bit(sig, master: int) -> int:
 async def test_soc_gpu_walk_both_masters(dut):
     """The GPU walks the address space with its ifetch (M1) and data (M2) crossbar ports.
 
-    Bead xkw5.  Firmware (integ_fw gpu_walk.hex) launches a tiny kernel; the testbench scores every
+    Firmware (integ_fw gpu_walk.hex) launches a tiny kernel; the testbench scores every
     handshake at the crossbar master ports:
 
       * phase A: launch k fetches the kernel from KERNEL_PC | 1<<k (M1) and its 8 lanes load from /

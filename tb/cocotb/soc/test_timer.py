@@ -50,7 +50,7 @@ RESP_OKAY = True
 # ── Setup helper ──────────────────────────────────────────────────────────────
 
 async def _setup(dut):
-    """Start 2 ns clock, apply 5-cycle reset, wait 2 idle cycles.
+    """Start the clock, apply 5-cycle reset, wait 2 idle cycles.
     Returns an APB4Master pointed at the DUT slave port (bare prefix).
     """
     cocotb.start_soon(Clock(dut.clk, 2, units="ns").start())
@@ -302,7 +302,7 @@ async def test_disable_freezes_counter(dut):
     dut._log.info(f"test_disable_freezes_counter PASS  frozen at count={count_a}")
 
 
-# ── Register walk (bead 7ovx): reset values, RO/RW masks, byte lanes, unmapped words ─────────
+# ── Register walk: reset values, RO/RW masks, byte lanes, unmapped words ─────────
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -313,7 +313,7 @@ async def test_register_walk(dut):
     await walk_bank(m, regs, first, log=dut._log)
 
 
-# ── Counter carry chain and full-width compare (bead xkw5) ───────────────────────────────────
+# ── Counter carry chain and full-width compare ───────────────────────────────────
 
 @cocotb.test()
 async def test_counter_carry_chain_and_wide_compare(dut):

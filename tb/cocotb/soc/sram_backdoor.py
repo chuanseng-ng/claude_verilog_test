@@ -1,29 +1,22 @@
 """sram_backdoor.py -- the one place that knows where the SoC SRAM array lives in simulation.
 
 Every SoC-level cocotb suite that preloads or inspects SRAM through the Verilator
-``--public-flat-rw`` hierarchy goes through :func:`sram_mem` instead of spelling the path out.
-The array's hierarchical name depends on which ``sram_controller`` arm was elaborated
-(rtl/soc/sram_controller.sv):
+``--public-flat-rw`` hierarchy goes through :func:`sram_mem`. The array's name depends on the
+``sram_controller`` arm that is elaborated (rtl/soc/sram_controller.sv):
+  default (no SRAM_SKY130 or FPGA)  ``u_soc.u_sram.mem``                        served, tried first
+  ``FPGA``                          ``u_soc.u_sram.u_fpga_mem.mem``             served, tried second
+  ``SRAM_SKY130``                   ``u_soc.u_sram.u_sram_macro.mem`` (model)   NOT served
 
-==============================  =========================================  ======================
-build                           array                                      served by this helper
-==============================  =========================================  ======================
-default (no SRAM_SKY130/FPGA)   ``u_soc.u_sram.mem``                        yes (tried first)
-``FPGA``                        ``u_soc.u_sram.u_fpga_mem.mem``             yes (tried second)
-``SRAM_SKY130``                 ``u_soc.u_sram.u_sram_macro.mem`` (model)   NO -- see below
-==============================  =========================================  ======================
+``SRAM_SKY130`` is deliberately not served. No SoC-level cocotb build defines it
+(tb/cocotb/soc/Makefile wires it only into the standalone ``sram_controller`` unit-test target,
+which has no ``u_soc``), so a path for it could not be checked against a real elaboration. The macro
+model also launches read data on the negedge and sits behind a two-cycle write pipeline, so a
+backdoor access there needs its own timing review. The helper raises for that build and names every
+path it tried.
 
-``SRAM_SKY130`` is deliberately not served.  No SoC-level cocotb build defines it (tb/cocotb/soc
-/Makefile wires ``SRAM_SKY130`` only into the standalone ``sram_controller`` unit-test target,
-which has no ``u_soc``), so a path for it could not be verified against a real elaboration.  The
-macro model (sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv) also launches its read data on the
-negedge and sits behind a two-cycle write pipeline, so a backdoor access there would need its own
-timing review before anyone trusts it.  Rather than guess, the helper raises for that build and
-names every path it tried.
-
-The returned object is the raw simulator array handle, unchanged: callers index it with
-``sram_mem(dut)[word_index]`` exactly as they did with ``dut.u_soc.u_sram.mem[word_index]``.
-Indexing is by 32-bit word in both served arms (``MEM_WORDS`` words of 32 bits).
+The returned object is the raw simulator array handle: index it as ``sram_mem(dut)[word_index]``, by
+32-bit word in both served arms (``MEM_WORDS`` words).
+Doc: tm:suite:soc-sram-backdoor
 """
 
 from __future__ import annotations

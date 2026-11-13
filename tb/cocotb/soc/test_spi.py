@@ -65,7 +65,7 @@ TRANSFER_WAIT_EXT = 16 * 2 * (CLK_DIV_EXT + 1) + 40  # 16 edges × 16 clks + mar
 # ── Setup helper ──────────────────────────────────────────────────────────────
 
 async def _setup(dut):
-    """Start 2 ns clock, drive spi_miso_i=0, apply 5-cycle reset,
+    """Start the clock, drive spi_miso_i=0, apply 5-cycle reset,
     wait 2 idle cycles. Returns an APB4Master.
 
     APB migration PR-3: BFM changed from AXI4LiteMaster (s_axil_* prefix)
@@ -599,7 +599,7 @@ async def test_byte_lane_snoop(dut):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# Bead 05wf — directed gap-closure tests (byte lanes 2/3, TX FIFO full).
+# Directed gap-closure tests (byte lanes 2/3, TX FIFO full).
 # These check documented behaviour (lowest-asserted-lane priority, drop-newest
 # FIFO semantics, STATUS flags, MSB-first MOSI on the pin), not just line hits.
 # ═════════════════════════════════════════════════════════════════════════════
@@ -786,7 +786,7 @@ async def test_clk_div_wide_first_edge(dut):
         f"first SCLK edge after {n} clocks, expected ~{DIV + 1} (half-period = DIV+1)")
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
@@ -796,7 +796,7 @@ async def test_register_walk(dut):
     await walk_bank(m, regs, first, log=dut._log)
 
 
-# ── RX FIFO: every slot, every data bit, both edges (bead xkw5) ──────────────────────────────
+# ── RX FIFO: every slot, every data bit, both edges ──────────────────────────────
 
 @cocotb.test()
 async def test_rx_fifo_every_slot_every_bit(dut):

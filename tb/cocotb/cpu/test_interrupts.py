@@ -684,7 +684,7 @@ async def test_csr_mstatus_mie_gate(dut):
     Post-halt checks: x10==1 (handler ran), trap_taken_o seen once.
 
     NOTE: DBG_MSTATUS (APB 0x200) is READ-ONLY in the RTL design
-    (rv32i_cpu_top.sv:228).  Testing that MIE=0 blocks interrupts from a
+    (rv32i_cpu_top.sv).  Testing that MIE=0 blocks interrupts from a
     fresh CPU context is covered by test_irq_mie_disabled (which programs
     the CPU with enable_mie=False).  A runtime "set then clear MIE" test
     would require a CPU-program-based approach; that is deferred.

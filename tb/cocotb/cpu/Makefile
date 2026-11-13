@@ -1,18 +1,16 @@
 # Makefile for CPU cocotb testbench
-# Cocotb tests must be run via 'make', NOT via 'pytest'
-#
-# Usage:
-#   make                    - Run default test (smoke tests)
-#   make MODULE=test_smoke  - Run smoke tests
-#   make usage              - Show available targets
+# Run cocotb tests via 'make', NOT via 'pytest'.
+# Usage: make                    run the default module test_smoke_uvm (pyuvm smoke tests)
+#        make MODULE=test_smoke  run the smoke tests
+#        make usage              show the available targets
+# Doc: tm:suite:cpu-makefile
 
 # Simulator selection
 SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
-# Bead claude_verilog_test-f97: base directory for the build dir.  Defaults to
-# `.`, so an unset environment behaves exactly as before.  Point it at scratch
-# when the root filesystem is tight:
+# Base directory for the build dir.  Defaults to `.`, so with the variable unset the
+# build dir stays in this directory.  Point it at scratch when the root filesystem is tight:
 #   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/cpu
 SIM_BUILD_ROOT ?= .
 ifeq ($(strip $(SIM_BUILD_ROOT)),)
@@ -40,7 +38,7 @@ endif
 # RTL source files (packages must come first)
 # Kept in sync with pnr/asap7/cpu/config.json's VERILOG_FILES import order —
 # see tools/verif/check_source_closure.py, which verifies this list closes
-# over every `import <pkg>::*` used by the files it lists (bead claude_verilog_test-50t).
+# over every `import <pkg>::*` used by the files it lists.
 VERILOG_SOURCES += $(PWD)/../../../rtl/soc/axi_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/soc/soc_addr_map_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv
@@ -480,8 +478,7 @@ usage info:
 	@echo "  - cocotb Python package installed"
 
 # Custom clean target to avoid conflicts with cocotb's clean
-# Bead claude_verilog_test-f97: also sweep $(SIM_BUILD_ROOT) so a relocated
-# build dir is actually reclaimed rather than orphaned on the scratch FS.
+# Also sweep $(SIM_BUILD_ROOT), so a relocated build dir is reclaimed and not orphaned on the scratch FS.
 .PHONY: clean-sim-builds
 clean-sim-builds:
 	rm -rf $(SIM_BUILD_ROOT)/sim_build ./sim_build

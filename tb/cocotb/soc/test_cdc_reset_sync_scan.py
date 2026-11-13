@@ -1,47 +1,36 @@
 """
-test_cdc_reset_sync_scan.py — bead claude_verilog_test-07n cocotb
-verification for cdc_reset_sync's DFT scan bypass mux
-(rtl/soc/cdc/cdc_reset_sync.sv), via the standalone wrapper
-tb_cdc_reset_sync_scan.sv.
-
-DUT: tb_cdc_reset_sync_scan (STAGES=2, re-exports cdc_reset_sync's ports
-flat: clk_i, rst_n_i, scanmode_i, scan_rst_ni, rst_n_o).
-
-This module's ONLY new behaviour vs. the pre-07n RTL is the async-clear
-source mux:
-    rst_n_async = scanmode_i ? scan_rst_ni : rst_n_i
-feeding every `negedge` in the STAGES-deep flop chain (see the RTL header
-for why the chain is one always_ff per stage). Every test below is a
-DIRECTED proof of one edge of that mux, not a CDC/metastability test --
-there is no clock-domain crossing in this module, just an async-assert /
-sync-deassert chain.
-
+test_cdc_reset_sync_scan.py -- cocotb verification for cdc_reset_sync's DFT scan bypass mux
+(rtl/soc/cdc/cdc_reset_sync.sv), via the standalone wrapper tb_cdc_reset_sync_scan.sv.
+DUT: tb_cdc_reset_sync_scan (STAGES=2; the ports of cdc_reset_sync flat: clk_i, rst_n_i, scanmode_i,
+    scan_rst_ni, rst_n_o). The scan behaviour is the async-clear source mux rst_n_async = scanmode_i
+    ? scan_rst_ni : rst_n_i feeding every `negedge` in the STAGES-deep flop chain (the RTL header
+    says why the chain is one always_ff per stage). Every test is a DIRECTED proof of one edge of
+    that mux, not a CDC test: the module has no clock-domain crossing, only an async-assert /
+    sync-deassert chain.
 Tests:
-  test_functional_reset_baseline
-      scanmode_i=0 (scan inactive): rst_n_i alone controls rst_n_o exactly
-      as before this bead (async assert, STAGES-cycle sync deassert). Proves
-      the mux is a transparent pass-through in the default (no-DFT-flow)
-      tie-off configuration used at every soc_top call site today.
-  test_scan_rst_controls_when_scanmode_asserted
-      scanmode_i=1, rst_n_i held HIGH (functional reset inactive) the whole
-      time: scan_rst_ni alone asserts/deasserts rst_n_o. Proves scan_rst_ni
-      is a REAL, live async clear source under scanmode_i, not decorative.
-  test_rst_n_i_ignored_when_scanmode_asserted
-      scanmode_i=1, scan_rst_ni held HIGH (scan reset inactive): pulsing
-      rst_n_i low must NOT clear rst_n_o. Proves rst_n_i is genuinely
-      bypassed while scanmode_i=1, not just OR'd/AND'd with scan_rst_ni.
-  test_mux_reverts_when_scanmode_deasserted
-      Enter scan mode, confirm scan_rst_ni control, drop scanmode_i back to
-      0 with rst_n_i already low: rst_n_o must clear immediately (async),
-      proving control reverts cleanly to rst_n_i the instant scanmode_i
-      deasserts.
+  test_functional_reset_baseline: scanmode_i=0, rst_n_i alone controls rst_n_o (async assert,
+      STAGES-cycle sync deassert). The mux is a transparent pass-through in the default tie-off used
+      at every soc_top site.
+  test_scan_rst_controls_when_scanmode_asserted: scanmode_i=1, rst_n_i HIGH: scan_rst_ni alone
+      asserts and deasserts rst_n_o (a real async clear source).
+  test_rst_n_i_ignored_when_scanmode_asserted: scanmode_i=1, scan_rst_ni HIGH: pulsing rst_n_i low
+      must NOT clear rst_n_o, so rst_n_i is bypassed, not OR'd or AND'd with scan_rst_ni.
+  test_mux_reverts_when_scanmode_deasserted: from scan mode with rst_n_i already low, dropping
+      scanmode_i clears rst_n_o at once (async).
+  test_output_is_scan_reset_even_when_chain_flops_are_zero: entering scan mode with the chain flops
+      at 0 delivers rst_n_o=1 at once.
+  test_no_pulse_while_chain_flops_run_in_scan_mode: across many clocks in scan mode rst_n_o
+      never moves.
+  test_functional_mode_still_retimed_by_the_chain: scanmode_i=0, rst_n_o is still the chain output.
+Run: make -C tb/cocotb/soc cdc_reset_sync_scan
+Doc: tm:suite:soc-test-cdc-reset-sync-scan
 """
 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge, Timer, with_timeout
 
-CLK_PERIOD_NS = 10  # 100 MHz, arbitrary — no CDC in this DUT
+CLK_PERIOD_NS = 10  # arbitrary period: no CDC in this DUT
 STAGES = 2
 SETTLE_NS = 1  # small delta after driving an async control signal
 

@@ -1,59 +1,17 @@
 """
-ISA Compliance Tests for RV32I CPU - Phase 1
+ISA compliance tests for the RV32I CPU, Phase 1.
 
-Tests all 37 RV32I base integer instructions in isolation to verify
-ISA compliance. Each instruction is tested with various operands and
-edge cases, with results validated against the Python reference model
-via the scoreboard.
+Tests all 37 RV32I base integer instructions in isolation. Each instruction runs with several
+operands and edge cases. The CPUScoreboard checks every commit against the RV32IModel reference.
 
-================================================================================
-PYUVM MIGRATION WAIVER
-================================================================================
+This file uses raw cocotb, not pyuvm, although the Phase 1 verification plan asks for pyuvm
+sequences and scoreboards (Doc: ds:ch:verification-plan). The migration is deferred.
+Keep this file as the golden reference until a pyuvm version covers all 37 instructions.
+Port the tests one at a time and validate each.
 
-STATUS: This test currently uses raw cocotb instead of pyuvm UVM infrastructure.
-
-JUSTIFICATION:
-  Phase 1 verification plan (Doc: ds:ch:verification-plan) specifies
-  that tests should use pyuvm sequences and scoreboards for better methodology
-  and reusability. However, this test file contains 1875 lines of working,
-  validated ISA compliance tests that provide critical verification coverage.
-
-  Migrating to pyuvm would require:
-  1. Implementing uvm_sequence for instruction generation
-  2. Creating uvm_driver to interface with AXI/APB protocols
-  3. Implementing uvm_monitor to observe commit interface
-  4. Converting CPUScoreboard to uvm_scoreboard
-  5. Creating uvm_agent to encapsulate driver/monitor/sequencer
-  6. Building uvm_env with agent + scoreboard
-  7. Implementing uvm_test top-level
-  8. Re-validating all 37 instruction tests
-
-  This is a significant refactoring effort (estimated 3-5 days) with risk of
-  introducing regressions in working tests.
-
-CURRENT APPROACH:
-  - Raw cocotb provides direct DUT access and fast test development
-  - CPUScoreboard validates commits against RV32IModel reference
-  - All 37 RV32I instructions have passing tests
-  - Tests are maintainable and well-documented
-
-MIGRATION PLAN (DEFERRED TO PHASE 2):
-  When migrating to pyuvm (recommended for Phase 2+):
-  1. Create separate pyuvm-based test infrastructure in parallel
-  2. Implement UVM components (driver, monitor, agent, scoreboard)
-  3. Port individual tests incrementally, validating each
-  4. Keep raw cocotb tests as golden reference until migration complete
-  5. Remove cocotb version only after full pyuvm coverage verified
-
-REFERENCES:
-  - Phase 1 Verification Plan: Doc: ds:ch:verification-plan
-  - pyuvm Documentation: https://github.com/pyuvm/pyuvm
-  - Current test coverage: All 37 RV32I instructions ✓
-
-DECISION: Accept raw cocotb for Phase 1, plan pyuvm migration for Phase 2
-DATE: 2026-01-30
-APPROVED BY: Architecture review (deferred migration)
-================================================================================
+The module is in legacy/, and the `isa` target of tb/cocotb/cpu/Makefile does not find it there,
+so that target cannot run it.
+Doc: tm:suite:cpu-legacy-test-isa-compliance
 """
 
 import cocotb

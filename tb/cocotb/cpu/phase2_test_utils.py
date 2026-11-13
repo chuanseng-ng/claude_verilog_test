@@ -89,9 +89,8 @@ class APBDebug:
     async def _read(self, addr):
         """APB read: setup → enable → wait for pready → sample → idle.
 
-        GH #96 bead cyb: rv32i_cpu_top.apb_prdata_o is now a registered
-        output and the slave inserts one APB3 wait state on reads (writes
-        are unaffected — still single-cycle), so this polls apb_pready_o
+        rv32i_cpu_top.apb_prdata_o is a registered output and the slave inserts one APB3
+        wait state on reads (writes stay single-cycle), so this polls apb_pready_o
         instead of assuming prdata is valid the cycle penable asserts.
         """
         await RisingEdge(self.dut.clk_i)
@@ -120,7 +119,7 @@ class APBDebug:
 
         The pipeline drains (up to ~5 cycles) before halted is signalled.
         Each poll iteration costs 3 base APB clock cycles plus one extra
-        wait-state cycle on the read (GH #96 bead cyb); `polls` below is
+        wait-state cycle on the read; `polls` below is
         sized off the pre-wait-state 3-cycle figure, which only shortens
         the effective timeout margin slightly — timeout_cycles is generous
         enough that this does not affect pass/fail.
@@ -201,7 +200,7 @@ def _init_inputs(dut):
 
     Called before reset on every test to clear stale signal values left
     by cancelled background handlers from the previous test.
-    See project memory: 'Stale AXI Signals Between cocotb Tests (2026-02-16)'.
+    Doc: tm:suite:cpu-phase2-test-utils
     """
     # AXI read channel
     dut.axi_arready_i.value = 0
@@ -235,16 +234,16 @@ async def _setup_test(dut):
     """Common Phase 2 test setup.
 
     Steps:
-      1. Start 10 ns clock
+      1. Start the clock
       2. _init_inputs() — clear stale AXI/APB/IRQ values from previous test
       3. reset_dut() — assert rst_n_i low for a few cycles then deassert
       4. Create ConfigurableAXIMemory — starts read/write handler tasks in __init__
       5. Yield one rising edge so handler tasks begin executing
 
-    ConfigurableAXIMemory starts its handler tasks in __init__ (axi_models.py:72-73).
+    ConfigurableAXIMemory starts its handler tasks in __init__ (axi_models.py).
     cocotb 2.0 cancels them automatically at test end.  _init_inputs() clears
-    stale signal values between tests (project memory: Stale AXI Signals 2026-02-16).
-    mem.stop() is available if a test needs to cancel handlers mid-test (axi_models.py:75).
+    stale signal values between tests.
+    mem.stop() is available if a test needs to cancel handlers mid-test (axi_models.py).
 
     Returns:
         (mem, dbg) tuple — ConfigurableAXIMemory instance and APBDebug instance.

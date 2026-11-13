@@ -1,55 +1,24 @@
 """
-rv32i_cache_arbiter unit tests — Phase 5 M2 AXI4 burst arbiter (GH #119 bead 2ft)
-DUT: rv32i_cache_arbiter
+rv32i_cache_arbiter unit tests: the AXI4 burst arbiter between the I$ and D$ ports.
+DUT: rv32i_cache_arbiter. The memory side is a Python AXI slave (ArbiterAXIMem), with
+no rv32i_cpu_top.
 
-This block had no standalone unit test before this suite -- `soc_all` only
-exercised it indirectly through full-SoC traffic. There is no HLS arm here:
-this is a plain standalone testbench for the hand-written RTL.
-
-Contract under test (from the RTL header comment + `always_ff` grant FSM):
+Contract under test:
   - Priority: D$ write > D$ read > I$ read.
-  - A grant is held for the whole burst. Read grants release on RLAST;
-    write grants release on the B response (one B per burst) -- NOT on
-    WLAST.
-  - AR/AW are only forwarded to the memory-side AXI master the cycle AFTER
-    the grant register captures the winner (never combinationally out of
-    GRANT_NONE), because the read-data/response routing is gated on the
+  - A grant holds for the whole burst. Read grants release on RLAST. Write grants release on the B
+    response (one B per burst), NOT on WLAST.
+  - AR and AW reach the memory side one cycle AFTER the grant register captures the winner, never
+    combinationally out of GRANT_NONE, because read-data and response routing use the
     registered grant.
 
-Tests:
-  - I$-only 4-beat read burst
-  - D$-only 4-beat read burst (refill)
-  - D$ writeback burst (AW + 4 W beats + B)
-  - Priority: D$ write beats D$ read + I$ read simultaneously
-  - Priority: D$ read beats I$ read (no write contending)
-  - Grant hold: I$ mid-burst is not preempted by a D$ read request
-  - Write grant releases only on the B response, not on WLAST
-  - Read-data routing isolation, both directions (D$ holds / I$ holds)
-  - Back-to-back grants: exact, minimal I$-release -> D$-grant latency
-  - One-cycle registered-grant AR-forwarding delay out of GRANT_NONE
-  - One-cycle registered-grant AW-forwarding delay out of GRANT_NONE
-  - rresp/bresp passthrough (pure mux, no remapping)
-  - Reset mid-burst clears the grant and the arbiter recovers cleanly
-  - Idle bus: no spurious AXI activity with no requester valid
+Tests: I$ and D$ read bursts, D$ writeback burst, the priority orders, grant hold, write release
+on B, read-data routing isolation, back-to-back grant latency, the AR and AW forwarding delay,
+rresp and bresp passthrough, reset mid-burst, and an idle bus with no spurious AXI activity.
 
-AXI slave modelled directly in Python (no rv32i_cpu_top).
-
-NOTE on cocotbext-axi: the task briefing for this suite asked for
-cocotbext-axi's AXI4 slave/RAM model on the memory side. That library's
-`AxiRam`/`AxiBus` hard-require id-bearing channels (awid/arid/bid/rid --
-see cocotbext/axi/axi_channels.py's `signals=[...]` lists, which are NOT
-optional) and `len(bus.awid)` is read unconditionally in AxiSlaveWrite/
-AxiSlaveRead. This arbiter's memory-side AXI4 master port has NO id field
-by design -- axi_pkg.sv: "Existing Phase 1-4 blocks use flat per-channel
-ports with NO id field and (today) single-beat transfers" -- and it IS
-burst-capable (arlen/arsize/arburst), so it is neither AxiLite-shaped (no
-burst fields) nor full AxiBus-shaped (needs id). cocotbext-axi cannot bind
-to this port without an id-synthesizing wrapper. The two closest sibling
-suites (test_icache.py, test_dcache.py) hit exactly this and both already
-hand-roll their AXI slave in Python instead of using cocotbext-axi; this
-suite follows that established, proven pattern (ArbiterAXIMem below is a
-direct adaptation of test_dcache.py's SimpleDCacheAXIMem, whose signal
-names match this DUT's axi_* port exactly).
+Do not switch to cocotbext-axi: AxiRam and AxiBus need id channels, and this memory port has no id
+field. ArbiterAXIMem is adapted from SimpleDCacheAXIMem in test_dcache.py.
+Run: cd sim && make mem_cache_arbiter
+Doc: tm:suite:mem-test-cache-arbiter
 """
 
 import sys

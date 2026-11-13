@@ -1,39 +1,26 @@
 """
-func_cov.py -- functional-coverage (covergroup) plumbing for the cocotb suites (bead h367).
-
-The cocotb flow had no covergroup mechanism; ``tools/verif/coverage_report.py`` measures Verilator
-*code* coverage only.  This module is the thin glue over ``cocotb-coverage`` (PyPI, pinned in
-``requirements.txt``): it builds coverpoints/crosses idempotently, and writes one YAML file per
-simulator process that ``tools/verif/functional_coverage_report.py`` merges and gates.
+func_cov.py -- functional-coverage (covergroup) plumbing for the cocotb suites.
+tools/verif/coverage_report.py measures Verilator *code* coverage only. This module is glue over
+``cocotb-coverage``: it builds coverpoints and crosses idempotently and writes one YAML file per
+simulator process. tools/verif/functional_coverage_report.py merges and gates those files.
 Evaluation and how a peripheral adds a model: ``Doc: tm:flow:functional-coverage``.
-
-Design rules
-------------
-* **Never a hard dependency of the simulation.**  If ``cocotb_coverage`` cannot be imported every
-  sampler is a no-op and ``export`` does nothing, so a developer without the package still runs
-  every suite.  The CI gate is what fails (it requires the model's data to exist), so a missing
-  package cannot turn the gate green.
-* **Sampling is pure Python on values the test already has.**  No simulator handle is read here,
-  so a sample can never race the DUT; the cost is a dict update per sample.
-* **One export per process, at process exit.**  cocotb runs every test of a MODULE in one
-  simulator process and ``cocotb_coverage.coverage_db`` is a process-wide singleton, so the
-  database is cumulative across the tests of a suite.  ``export`` is registered with ``atexit``
-  by :func:`enable_export` and is idempotent.
-* **Export is opt-in** through ``FUNC_COV_DIR`` (a directory).  Unset means: sample in memory,
-  write nothing, so an ordinary local run leaves no files behind.
-
-Sampler API
------------
-``point(name, bins, labels=None, rel=None)`` -> ``sample(value)``
-    A coverpoint.  Bins are matched with ``rel(value, bin)`` (default ``==``); the FIRST match
-    wins (``inj``), so ordered range bins are mutually exclusive by construction.
-``ranges(name, spec)`` -> ``sample(value)``
-    A coverpoint over inclusive integer ranges: ``spec`` is ``[(label, lo, hi), ...]``.
-``pair(cross_name, a, b, ignore=())`` -> ``sample(a_value, b_value)``
-    Two coverpoints and their cross, sampled together.  ``a`` and ``b`` are
-    ``(name, bins, labels)`` triples.  ``ignore`` lists cross bins (label tuples) that are
-    impossible by construction; an unreachable-but-legal combination belongs in the waiver file
-    instead, where it carries a reason.
+Design rules:
+* Never a hard dependency of the simulation. If ``cocotb_coverage`` cannot be imported, every
+  sampler is a no-op and ``export`` does nothing. The CI gate then fails (it needs the model's
+  data), so a missing package cannot turn the gate green.
+* Sampling is pure Python on values the test already has. No simulator handle is read, so a sample
+  cannot race the DUT.
+* One export per process, at exit. cocotb runs every test of a MODULE in one simulator process and
+  ``coverage_db`` is a process-wide singleton, so the database is cumulative. :func:`enable_export`
+  registers ``export`` with ``atexit``. ``export`` is idempotent.
+* Export is opt-in through FUNC_COV_DIR (a directory). Unset: sample in memory, write nothing.
+Sampler API: ``point(name, bins, labels=None, rel=None)`` matches bins with ``rel(value, bin)``
+(default ==), and the FIRST match wins. ``ranges(name, spec)`` takes inclusive ``[(label,
+lo, hi)]``.
+``pair(cross_name, a, b, ignore=())`` samples two coverpoints and their cross; ``a`` and ``b`` are
+``(name, bins, labels)``. ``ignore`` lists cross bins impossible by construction. A legal but
+unreachable combination goes in the waiver file, with a reason.
+Doc: tm:suite:soc-func-cov
 """
 
 from __future__ import annotations

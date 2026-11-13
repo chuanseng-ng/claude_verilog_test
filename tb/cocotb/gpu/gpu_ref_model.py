@@ -1,34 +1,27 @@
 """
-Lightweight reference interpreter for the Phase 4 GPU ISA — matches the actual
-RTL/gpu_asm opcode encoding (gpu_pkg.sv), NOT tb/models/gpu_kernel_model.py
-(which uses a different, RISC-V-style encoding and has no shared-mem ops).
+Lightweight reference interpreter for the Phase 4 GPU ISA. It matches the RTL / gpu_asm opcode
+encoding (gpu_pkg.sv), NOT tb/models/gpu_kernel_model.py (RISC-V-style encoding, no shared-mem ops).
 
-Scope: single warp of N_LANES lanes, straight-line and single-level-divergent
-execution (ALU R/I-type, VMOV_TID_X/BID_X, VLD/VST global, VLDS/VSTS shared,
-VSYNC barrier, VRET terminate, and VBLT/VBGE/VBEQ/VBNE/VJMP branch opcodes for
-single-level SIMT divergence).
+Scope: one warp of N_LANES lanes, straight-line and single-level divergent execution (ALU R/I-type,
+VMOV_TID_X/BID_X, VLD/VST global, VLDS/VSTS shared, VSYNC, VRET, VBLT/VBGE/VBEQ/VBNE/VJMP).
 
-SIMT divergence semantics (single-level stack, matches gpu_compute_unit.sv):
-  - Branch: split lanes into taken/not-taken masks.
-    * If both masks non-zero: divergent → push (reconverge_pc=fall_through_pc+branch,
-      false_mask=not_taken) onto stack; execute true-path lanes (taken mask).
-    * If only taken: converging taken → next_pc = branch_target, same mask.
-    * If only not-taken: converging not-taken → next_pc = fall-through (pc+4).
-  - VRET with non-empty stack → pop stack; continue at (return_pc, return_mask)
-    (implements false-path execution after true-path VRET).
-  - VRET with empty stack → terminate.
-  - VJMP: unconditional PC-relative jump (all active lanes).
+SIMT divergence (single-level stack, matches gpu_compute_unit.sv):
+  - Branch: split the lanes into taken and not-taken masks.
+    * Both non-zero: push (reconverge_pc=fall_through_pc+branch, false_mask=not_taken), run the
+        taken lanes.
+    * Only taken: next_pc = branch_target, same mask. Only not-taken: next_pc = pc+4.
+  - VRET with a non-empty stack pops it and continues at (return_pc, return_mask): the false path.
+  - VRET with an empty stack terminates. VJMP is an unconditional PC-relative jump.
+The random generator emits only guaranteed-reconverging single-level diamonds and modelled ops, so
+any mismatch is a real datapath bug.
 
-Random generator only emits guaranteed-reconverging single-level diamond patterns
-and modeled subset ops, so any mismatch is a real datapath bug.
-
-Launch contract (bead 6hy6, user decision 2026-10-11) -- block-level helpers below the class:
-  - GPU_BLOCK_X must be 1..MAX_BLOCK_THREADS (64 = N_WARPS x N_LANES).  0 or > 64 is a launch
-    ERROR (GPU_STATUS reads ERROR, no kernel instruction executes): ``launch_is_error``.
-  - A block of BLOCK_X threads runs ceil(BLOCK_X / N_LANES) warps; the last warp starts with
-    ONLY its valid lanes active (BLOCK_X=9: warp 0 all 8 lanes, warp 1 lane 0 only):
-    ``warp_lane_mask`` -> ``GpuRefModel(init_mask=...)``.  Invalid lanes never write registers,
-    shared memory or global memory.
+Launch contract (block-level helpers below the class):
+  - GPU_BLOCK_X must be 1..MAX_BLOCK_THREADS (64 = N_WARPS x N_LANES). 0 or > 64 is a launch ERROR:
+    GPU_STATUS reads ERROR and no kernel instruction executes (``launch_is_error``).
+  - A block runs ceil(BLOCK_X / N_LANES) warps. The last warp starts with ONLY its valid lanes
+      active (BLOCK_X=9: warp 0 all 8 lanes, warp 1 lane 0 only): ``warp_lane_mask``, then
+    ``GpuRefModel(init_mask=...)``. Invalid lanes never write registers, shared or global memory.
+Doc: tm:suite:gpu-gpu-ref-model
 """
 from gpu_asm import (
     N_LANES,
@@ -88,7 +81,7 @@ class GpuRefModel:
                       original.
         init_mask:    initial active-lane bitmask (bit l = lane l); default all
                       n_lanes.  Use ``warp_lane_mask`` for a partially filled
-                      last warp (bead 6hy6).
+                      last warp.
     """
 
     def __init__(self, n_lanes: int = N_LANES, warp_id: int = 0,

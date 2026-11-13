@@ -1,30 +1,17 @@
 """
-test_soc_stress.py — Phase 5 M9 SoC stress + benchmark test.
-
-Drives tb_soc_top with self-checking stress firmware (stress_fw/stress_fw.hex) that
-exercises the complete SoC through STRESS_ITER (10) outer iterations, each containing:
-
-  [A] CPU 32-word SRAM burst write + read-back verify
-  [B] DMA mem→mem (BUF_A → BUF_B) + word-by-word verify
-  [C] GPU vector kernel (8 lanes, src+1) with D-cache flush/inval + verify
-  [D] UART internal loopback byte + verify
-  [E] SPI internal loopback byte + verify
-  [F] Timer register read (AXI-Lite path exercise)
-
-Stress invariants checked continuously by this testbench:
-  - commit_pc_o never reaches FAIL_PC
-  - PASS_PC is committed within STRESS_TIMEOUT_CYCLES
-  - No X/Z on commit bus (Verilator booleans: cocotb sees 0/1 cleanly)
-
+test_soc_stress.py -- Phase 5 M9 SoC stress and benchmark test.
+Drives tb_soc_top with the self-checking stress firmware (stress_fw/stress_fw.hex) through
+STRESS_ITER (10) outer iterations, each: [A] CPU 32-word SRAM burst write and read-back verify, [B]
+DMA mem-to-mem (BUF_A -> BUF_B) and word-by-word verify, [C] GPU vector kernel (8 lanes, src+1) with
+D-cache flush and inval and verify, [D] UART loopback byte and verify, [E] SPI loopback byte and
+verify, [F] timer register read (AXI-Lite path exercise).
+Invariants checked continuously: commit_pc_o never reaches FAIL_PC; PASS_PC is committed within
+STRESS_TIMEOUT_CYCLES; no X/Z on the commit bus (Verilator booleans: cocotb sees 0/1 cleanly).
 Benchmark results are backdoor-read from SRAM scratch words after PASS and logged.
-
-Simulation is run without --trace (EXTRA_ARGS="") in the soc_stress Makefile target
-to avoid a multi-GB VCD dump at 1M+ cycles.
-
-Design note: the stress firmware performs STRESS_ITER = 10 outer loops.  Each outer
-loop takes approximately 110 000 sim cycles (measured at 6-iter run).
-Total expected sim cycles: ~1 100 000.  STRESS_TIMEOUT_CYCLES is set to 4 000 000
-to give ample headroom.
+The soc_stress target does not pass --trace, to avoid a multi-GB VCD dump.
+STRESS_TIMEOUT_CYCLES is far above the expected run length.
+Run: make -C tb/cocotb/soc soc_stress
+Doc: tm:suite:soc-test-soc-stress
 """
 
 import sys
@@ -59,13 +46,12 @@ from tb.cocotb.soc.stress_fw.stress_fw_addrs import (
 )
 
 # ── Constants ────────────────────────────────────────────────────────────────
-CLK_PERIOD_NS = 2                    # 500 MHz — matches all other SoC tests
+CLK_PERIOD_NS = 2                    # matches all other SoC tests
 
 # Path to stress firmware hex image
 _FW_HEX = str(Path(__file__).parent / "stress_fw" / "stress_fw.hex")
 
-# Maximum cycles before we declare a hang (4M cycles @ 500 MHz = 8 ms wall-clock)
-# This far exceeds the expected ~1M–1.5M for 6 stress iterations.
+# Maximum cycles before we declare a hang. This far exceeds the expected run length.
 STRESS_TIMEOUT_CYCLES = 4_000_000
 
 # ── Firmware loader (same pattern as test_periph_loopback, test_boot, etc.) ──

@@ -1,67 +1,29 @@
 """
-test_dft_ctrl.py -- bead claude_verilog_test-j41m.3 (DFT Stage 1b), suite for dft_ctrl.
-
-DUT: tb_dft_ctrl -> dft_ctrl (jtag_tap + the unchanged 1a pin leg dft_ctrl_ports + TCK scan-clock
-gate + combiner, Doc: tm:ch:dft-architecture:154-what-the-tap-drives-and-how-it-combines-with-the-1a-pins).  The wrapper also instantiates the
-Stage 1a dft_ctrl_ports on the same four pins (outputs ref_*): the golden
-"TAP idle == 1a" reference.
-
-Section 15.4 combiner, which these tests check from the pins (independent of the RTL text):
+test_dft_ctrl.py -- suite for dft_ctrl (DFT Stage 1b). DUT: tb_dft_ctrl -> dft_ctrl. The wrapper
+also instantiates the 1a dft_ctrl_ports on the same four pins (outputs ref_*): the golden "TAP idle
+== 1a" reference.
+The combiner, checked from the pins (independent of the RTL text):
     scan_mode_o, test_en_o = pin_scan_mode | tap_scan          (tap_scan = IR == SCAN)
     scan_rst_no            = pin_scan_rst_n & ~(tap_scan & SCAN_RST)
     scan_en_o              = serial ? tap_scan_en (Shift-DR only) : pin_scan_en
     test_clk_o             = serial ? TCK gated to Capture-DR/Shift-DR : pin_scan_clk
-    serial = tap_scan & ~SCAN_SEL[0]
-
-Tests
-  test_pins_only_identical_to_dft_ctrl_ports   all 16 pin combinations x TAP held in reset / TAP in
-                                              TLR with TCK toggling: outputs == pins == 1a module
-  test_tap_serial_scan_entry                   IR=SCAN: scan_mode/test_en 1, scan_rst_no = pin AND
-                                              NOT SCAN_RST (all 4 combos), scan_en_o only in
-                                              Shift-DR, IDCODE through dft_ctrl's tdo/tdo_oe
-  test_test_clk_pulses_only_for_capture_and_shift
-                                              every test_clk_o pulse is a TCK rising edge ending
-                                              Capture-DR or a Shift-DR cycle, and every such
-                                              edge pulses (set equality), width = TCK high time;
-                                              none in RTI/Pause/Exit/Update/IR states
-  test_parallel_hands_clock_and_scan_en_to_the_pins
-                                              SCAN_SEL.PARALLEL=1: test_clk_o == scan_clk_i and
-                                              scan_en_o == scan_en_i, TCK never appears
-  test_tap_idle_with_tck_toggling_changes_nothing
-                                              TLR, RTI, IDCODE/BYPASS/SCAN_SEL traffic, every
-                                              SCAN_SEL x SCAN_RST value written: outputs == 1a leg
-                                              every cycle, test_clk_o never moves from TCK
-  test_pin_path_works_in_every_tap_state       all 16 TAP states: pins reach the outputs (IR !=
-                                              SCAN: identical to 1a; IR=SCAN parallel: clock/en)
-  test_tap_wins_when_pins_and_tap_both_active  serial scan with scan_en_i=1, scan_mode_i=1 and a
-                                              free-running scan_clk_i: TAP value of scan_en_o,
-                                              pulses only from TCK; negative control: leave SCAN
-                                              and the pins take over again
-
-Glitch-free test-clock switch (dft_clk_switch replaced the plain test_clk mux; its own unit suite is
-test_dft_clk_switch.py; here it is checked in situ with the same edge-time pulse analysis)
-  test_serial_entry_minimal_path_*            IR=SCAN, then Update-IR -> Select-DR -> Capture-DR,
-                                              NO Run-Test/Idle: the capture edge and every shift
-                                              edge still reach test_clk_o.  The TAP leaves exactly
-                                              two TCK rises for the cross-coupled handshake; en_a_q
-                                              rises between the 2nd and the capture edge (zero
-                                              margin, asserted).  Variants: scan_clk_i stopped /
-                                              free-running x power-up reset state / after an
-                                              asynchronous TRST_N cycle
-  test_serial_entry_with_pin_clock_parked_high_limitation
-                                              documented limitation: scan_clk_i parked HIGH blocks
-                                              the switch; recovers once it is low
-  test_pin_clock_propagates_edge_for_edge_with_tap_idle
-                                              TAP in reset / TLR / RTI / IDCODE traffic, TCK
-                                              running: test_clk_o == scan_clk_i edge for edge
-  test_serial_parallel_serial_with_pin_clock_toggling
-                                              serial <-> parallel switching 3x with scan_clk_i
-                                              running: no runt, no extra edge, exact handover
-  test_serial_parallel_with_pin_clock_stopped test_clk_o stays low and silent after serial ->
-                                              parallel until scan_clk_i toggles; parallel -> serial
-                                              needs no pin-clock edge
-  test_trst_in_the_middle_of_a_scan_pulse     TRST_N inside an A pulse: pulses may merge, never
-                                              shorten; scan_clk_i takes over
+    serial                 = tap_scan & ~SCAN_SEL[0]
+Tests: pins only equal dft_ctrl_ports (all 16 pin combinations, TAP in reset or in TLR with TCK
+toggling); TAP serial scan entry (scan_mode and test_en 1, scan_rst_no = pin AND NOT SCAN_RST,
+scan_en_o only in Shift-DR, IDCODE through tdo and tdo_oe); test_clk_o pulses exactly for TCK rising
+edges that end Capture-DR or a Shift-DR cycle; parallel mode hands clock and scan_en to the pins;
+TAP idle with TCK toggling changes nothing; the pin path works in every TAP state; the TAP wins when
+pins and TAP are both active (negative control: leave SCAN and the pins take over).
+Glitch-free test-clock switch (unit suite: test_dft_clk_switch.py; here in situ with the same
+edge-time pulse analysis): serial entry on the minimal path (Update-IR, Select-DR, Capture-DR, NO
+Run-Test/Idle) still delivers the capture edge and every shift edge. The TAP leaves exactly two TCK
+rises for the cross-coupled handshake, and en_a_q rises between the 2nd and the capture edge (zero
+margin, asserted). Limitation: scan_clk_i parked HIGH blocks the switch and recovers once it is low.
+Also: the pin clock passes edge for edge with the TAP idle, serial <-> parallel 3 times with
+scan_clk_i running, serial -> parallel with the pin clock stopped, and TRST_N in the middle of a
+scan pulse (pulses may merge, never shorten).
+Run: make -C tb/cocotb/soc dft_ctrl
+Doc: tm:suite:soc-test-dft-ctrl
 """
 
 import cocotb
@@ -438,7 +400,8 @@ async def test_tap_wins_when_pins_and_tap_both_active(dut):
             "although scan_en_i=1"
         )
         assert int(dut.scan_mode_o.value) == 1 and int(dut.test_en_o.value) == 1
-    # pulses only at TCK edges ending Capture-DR/Shift-DR; scan_clk_i edges (3 ns) do not show
+    # pulses only at TCK edges ending Capture-DR/Shift-DR; scan_clk_i edges (period PIN_CLK_NS = 3,
+    # in ns) do not show
     expected = _expected_pulse_times(drv, first)
     got_rise = [t for (n, t, old, new) in log.events if n == "test_clk" and new == 1]
     assert got_rise == expected, (
@@ -456,8 +419,9 @@ async def test_tap_wins_when_pins_and_tap_both_active(dut):
     n0 = log.count("test_clk")
     clk_task = await _free_clock(dut.scan_clk_i, PIN_CLK_NS)
     # serial -> parallel through the glitch-free switch: the pin clock's first two rising edges
-    # (6 ns here) are consumed by the enable handshake and pass from the 3rd, so the window is
-    # 60 ns rather than the 30 ns of the plain-mux version (which passed pin edges at once)
+    # (the first 6, in ns) are consumed by the enable handshake and pass from the 3rd, so the
+    # window is Timer(60, "ns") rather than the 30 of the plain-mux version (which passed pin edges
+    # at once)
     await Timer(60, "ns")
     clk_task.kill()
     assert log.count("test_clk") - n0 > 25, (
@@ -615,8 +579,9 @@ async def test_serial_entry_minimal_path_pin_clock_stopped_after_trst(dut):
 
 @cocotb.test()
 async def test_serial_entry_minimal_path_pin_clock_running(dut):
-    """Same with scan_clk_i free-running at 3 ns: the pin clock is retired before the first TCK
-    rise (its enable drops in the next low phase), no pin pulse reaches the scan flops."""
+    """Same with scan_clk_i free-running (period PIN_CLK_NS = 3, in ns): the pin clock is
+    retired before the first TCK rise (its enable drops in the next low phase), no pin pulse
+    reaches the scan flops."""
     await _serial_entry_variant(dut, after_trst=False, with_pin_clock=True)
 
 
@@ -701,7 +666,8 @@ async def test_pin_clock_propagates_edge_for_edge_with_tap_idle(dut):
 # ---------------------------------------------------------------------------
 @cocotb.test()
 async def test_serial_parallel_serial_with_pin_clock_toggling(dut):
-    """serial -> parallel -> serial three times with scan_clk_i free-running (3 ns, coprime to TCK):
+    """serial -> parallel -> serial three times with scan_clk_i free-running (period PIN_CLK_NS = 3,
+    in ns, coprime to TCK):
     across every select change the output has no runt and no extra edge, the old source stops at
     once, the new one passes from the 3rd handshake-clock rise and then every pulse, whole.  In the
     serial windows test_clk_o is exactly the TCK capture/shift edges, in the parallel windows it is

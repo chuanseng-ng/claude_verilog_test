@@ -1,52 +1,27 @@
 """
-test_soc_i2c.py — Phase 6a-5 SoC-level I2C FABRIC test (bead claude_verilog_test-f7vs.9,
-Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6a-5 -- I2C", L2 testability).
-
-`test_i2c` (tb_i2c.sv / Makefile `i2c` target) owns every I2C protocol behaviour with a real bus
-BFM, driving i2c_controller's APB4 face directly. It has never exercised the controller through the
-real fabric path:
-
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-  axil_to_apb -> apb_interconnect -> APB slave 11 (APB_I2C, 0x2000_E000)
-
-nor its IRQ into interrupt_controller bit 9. This suite proves exactly that, CHEAPLY: at
-CLK_PERIOD_NS = 2 a protocol BFM over thousands of cycles is expensive and brittle, so firmware
-drives the DUT's internal LOOPBACK mode (I2C_CTRL[1], the SPI_CTRL[4] precedent) and NO bus BFM and
-NO protocol traffic runs at this level. Firmware comes from a committed pure-Python hand-assembler
-(i2c_fw/gen_i2c_hex.py, sharing trng_fw's assembler) — no riscv32 cross toolchain, so the suite is
-CI-safe. Synchronisation and scoring are by commit_pc_o marker PCs, the technique test_soc_trng.py
-uses.
-
-One test, one image, two phases (see the generator header for the firmware side).
-
-PHASE 1 — polled, I2C_IRQ_EN = 0
-  Firmware reads the I2C reset values through the fabric (CTRL, CLKDIV, TIMEOUT, FIFO_STAT, and a
-  reserved word — values that differ from every neighbouring APB slot, so a mis-decoded slave index
-  fails), writes CLKDIV and reads it back, then runs a loopback write (0x5A) and a loopback read.
-  Scored here:
-    * the controller completed both transfers (IRQ_STAT exactly `done`) and the loopback slave
-      returned the byte written (RX_DATA == 0x5A) — registers, TX push snoop, CMD snoop, RX pop
-      snoop and the engine all work through the fabric;
-    * the IE gate: `done` is pending for a long stretch of phase 1 (done_q), the interrupt path is
-      armed the whole time, and i2c_irq / the interrupt controller's irq_src_i[9] / ext_irq stay
-      LOW;
-    * the loopback leaves the REAL pads alone: i2c_*_oe_o and the dead i2c_*_o pins never move
-      for the whole run.
-
-PHASE 2 — interrupt driven, I2C_IRQ_EN = done
-  One loopback write; `done` -> i2c_irq -> interrupt_controller.irq_src_i[9] -> ext_irq -> CPU MEIP.
-  Scored here:
-    * irq_src_i[9] of the interrupt controller equals i2c_irq on EVERY phase-2 cycle (the bit-9
-      wiring) and i2c_irq rises with done_q set (a level source, not a pulse);
-    * the CPU vectors (ISR_PC commits) with i2c_irq AND ext_irq asserted — EXACTLY ONE trap, because
-      the ISR drops the level source with a single IRQ_CLR write;
-    * after the ISR both lines deassert and stay low;
-    * backdoor SRAM: ISR_COUNT == 1, the ISR saw `done`, and the interrupt controller's
-      PENDING_MASKED bit 9 was set (the controller really received the source).
-
-GOLDEN-MODEL NOTE (same as test_soc_gpio / test_soc_trng): SoCModel cannot be used here since it
-rejects 0x2000_xxxx MMIO. The firmware is self-checking and the testbench scoreboards commit_pc_o
-for the marker PCs / PASS_PC / FAIL_PC.
+test_soc_i2c.py -- Phase 6a-5 SoC-level I2C FABRIC test (L2 testability). `test_i2c` (tb_i2c.sv,
+Makefile `i2c` target) owns every I2C protocol behaviour with a real bus BFM on the APB4 face. It
+never used the real fabric path to APB slave 11 (APB_I2C, 0x2000_E000), nor the IRQ into
+interrupt_controller bit 9.
+This suite proves exactly that, CHEAPLY: at CLK_PERIOD_NS = 2 a protocol BFM over thousands of
+cycles is expensive and brittle, so the firmware uses the DUT's internal LOOPBACK mode (I2C_CTRL[1],
+the SPI_CTRL[4] precedent) and the first test runs NO bus BFM. Scoring is by commit_pc_o marker PCs.
+Two tests: test_soc_i2c (i2c_fw.hex, internal loopback, two phases) and test_soc_i2c_real_pads
+(i2c_pad_fw.hex, CTRL.LOOPBACK = 0, real pads against bfm/i2c_slave.py).
+PHASE 1, polled, I2C_IRQ_EN = 0: the firmware reads the reset values (CTRL, CLKDIV, TIMEOUT,
+FIFO_STAT, a reserved word; they differ from every neighbouring slot, so a mis-decoded slave index
+fails), writes CLKDIV and reads it back, then runs a loopback write (0x5A) and a loopback read.
+Scored: both transfers completed (IRQ_STAT exactly `done`) and RX_DATA == 0x5A (registers, TX push
+snoop, CMD snoop, RX pop snoop and the engine work through the fabric); the IE gate: while `done` is
+pending the interrupt path is armed and i2c_irq, irq_src_i[9] and ext_irq stay LOW; the loopback
+leaves the REAL pads alone (i2c_*_oe_o and the dead i2c_*_o pins never move).
+PHASE 2, interrupt driven, I2C_IRQ_EN = done: one loopback write. Scored: irq_src_i[9] equals
+i2c_irq on EVERY cycle (the bit-9 wiring) and i2c_irq rises with done_q set (a level, not a pulse);
+the CPU vectors (ISR_PC) with i2c_irq AND ext_irq asserted, EXACTLY ONE trap (the ISR drops the
+level with a single IRQ_CLR write); afterwards both lines deassert and stay low; backdoor SRAM:
+ISR_COUNT == 1, the ISR saw `done`, PENDING_MASKED bit 9 was set.
+Run: make -C tb/cocotb/soc soc_i2c
+Doc: tm:suite:soc-test-soc-i2c
 """
 
 import sys
@@ -108,7 +83,7 @@ from tb.cocotb.soc.i2c_fw.i2c_fw_addrs import (  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS = 2  # matches the other SoC tests
 
 _FW_HEX = str(Path(__file__).parent / "i2c_fw" / "i2c_fw.hex")
 
@@ -371,13 +346,13 @@ async def test_soc_i2c(dut):
     )
     assert res(RES_P1_STATUS) & 0x1F == 0, f"STATUS after phase 1: 0x{res(RES_P1_STATUS):x}"
 
-    # Functional coverage (bead h367): each fact below was asserted above.
+    # Functional coverage: each fact below was asserted above.
     for path in ("reset_values", "loopback_write", "loopback_read", "irq_to_cpu"):
         COV.soc(path)
 
 
 # ---------------------------------------------------------------------------
-# Real-pad transactions (bead 4pl8)
+# Real-pad transactions
 # ---------------------------------------------------------------------------
 _PAD_FW_HEX = str(Path(__file__).parent / "i2c_fw" / "i2c_pad_fw.hex")
 
@@ -391,7 +366,7 @@ async def test_soc_i2c_real_pads(dut):
     """Drive the real open-drain pads through the whole SoC against a register-file slave.
 
     `test_soc_i2c` stays in loopback, so until now no SoC test ever moved i2c_*_oe_o or took
-    i2c_*_i low (bead 4pl8).  Here CTRL.LOOPBACK = 0 and tb/cocotb/bfm/i2c_slave.py closes the
+    i2c_*_i low.  Here CTRL.LOOPBACK = 0 and tb/cocotb/bfm/i2c_slave.py closes the
     wired-AND on the tb_soc_top pins.  Firmware (i2c_pad_fw.hex) runs a 2-byte register write, a
     pointer write + repeated-START read-back, and a NACKed address, scoring IRQ_STAT / RX_DATA
     itself.  The testbench independently scores:
@@ -404,7 +379,7 @@ async def test_soc_i2c_real_pads(dut):
     """
     await _setup(dut, _PAD_FW_HEX)
     slave = I2CSlave(dut, "i2c_", dut.clk_i, address=PAD_ADDR)
-    COV.attach(None, slave)  # bus-level functional coverage of the real-pad traffic (bead h367)
+    COV.attach(None, slave)  # bus-level functional coverage of the real-pad traffic
     _active_tasks.append(slave.start())
 
     seen = {"ready": False, "t1": False, "t2": False, "t3": False}
@@ -492,6 +467,6 @@ async def test_soc_i2c_real_pads(dut):
     assert res(PAD_RES_T3_STAT) & 0xF == 0x3, f"T3 IRQ_STAT 0x{res(PAD_RES_T3_STAT):x} (done|nack)"
     assert res(PAD_RES_T3_STATUS) & 0x7 == 0x4, f"T3 STATUS 0x{res(PAD_RES_T3_STATUS):x} (nack only)"
 
-    # Functional coverage (bead h367): the events, register file and IRQ_STAT checks above passed.
+    # Functional coverage: the events, register file and IRQ_STAT checks above passed.
     for path in ("real_pad_write", "real_pad_read", "real_pad_addr_nack"):
         COV.soc(path)

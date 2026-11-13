@@ -1,66 +1,32 @@
 """
-test_soc_jtag.py -- bead claude_verilog_test-j41m.3 (DFT Stage 1b), SoC level.
-
-DUT: tb_soc_pll -> soc_top (PLL_IMPL=STUB), driven through the new JTAG pins tck_i / tms_i / tdi_i /
-trst_ni / tdo_o / tdo_oe_o, in the style of test_soc_dft_scan.py (Stage 1a, NOT modified and
-keeps proving the pin path).  What is observable at a port is checked at the port (pll_locked_o,
-cpu_pll_locked_o, tdo_o, tdo_oe_o, commit_valid_o); internal nets are read through hierarchy
-(--public-flat-rw is on for every suite in this Makefile).
-
-What this proves, and what it does not
-  * PROVES  the TAP is wired into soc_top: IDCODE comes out of tdo_o with tdo_oe_o framing;
-    selecting
-    SCAN through the TAP gives the SAME clock/reset control as the 1a pins (PLL lock counters
-    advance
-    on the TAP-generated test clock with clk_i / cpu_clk_i stopped and are deaf to them, the four
-    domain resets equal the scan reset and ignore the functional pins, the CPU clock gate is forced
-    open, the crypto key read nets are masked); and that the TAP cannot disturb functional
-    mode: with
-    the TAP held in reset, with TRST_N high and TCK toggling in Test-Logic-Reset, and with arbitrary
-    SCAN_SEL / SCAN_RST contents written while IR != SCAN, the CPU keeps committing and every
-    DFT net
-    stays at its functional value.
-  * DOES NOT prove the structural all-nets claims (tools/dft/check_scan_clk_rst.py) or any chain
-    behaviour: there are no chains until Stage 2.  The two 1a PMU-power-down scan tests are not
-    re-run through the TAP: they exercise dft_rst_mux, which is driven by the same dft_scan_mode /
-    dft_scan_rst_n nets proven here.
-
-Timing contract (Doc: tm:ch:dft-architecture 15.4): the TAP's scan clock exists only on TCK
-edges that end Capture-DR and Shift-DR, so "N test clocks" below means one DR scan of N-1 bits (1
-capture + N-1 shifts), counted from the dft_test_clk net.
-
-Tests
-  test_jtag_idcode_and_oe_through_the_soc      IDCODE on tdo_o, tdo_oe_o framing, vs model
-  test_boot_with_tap_held_in_reset             CPU commits, DFT nets functional (trst_ni = 0)
-  test_boot_with_tck_toggling_in_tlr           trst_ni = 1, TCK toggling with TMS=1: same
-  test_tdr_contents_cannot_disturb_functional_mode
-                                               all SCAN_SEL x SCAN_RST values written with
-                                               IR != SCAN while the CPU runs: clocks, resets, key
-                                               mask unchanged, commits continue; negative control:
-                                               IR=SCAN flips them; exit via TLR restores and the
-                                               CPU re-boots
-  test_tap_scan_runs_on_the_tap_test_clock_only
-                                               clk_i/cpu_clk_i stopped: 11 test clocks leave both
-                                               PLL lock counters short, 22 lock them
-  test_tap_scan_ignores_functional_clocks      running clk_i/cpu_clk_i move nothing in TAP scan
-  test_tap_parallel_select_uses_scan_clk_i     SCAN_SEL.PARALLEL: TCK ignored, scan_clk_i counts
-  test_tap_scan_reset_follows_pin_and_tap      4 domain resets == scan_rst_ni AND NOT SCAN_RST
-  test_cpu_clock_gate_forced_open_via_tap      gated CPU clock edges == test clock edges, enable 0
-  test_crypto_key_mask_follows_tap_scan_mode   key_eff = 0 in TAP scan, key_q untouched, restored
-  test_exit_scan_restores_functional_via_tlr_and_trst
-                                               5xTMS, IR change and async TRST_N all hand the
-                                               resets back to the functional pins
-  test_serial_parallel_switching_is_glitch_free_in_the_soc
-                                               serial <-> parallel x3 with scan_clk_i running: no
-                                               short pulse on dft_test_clk (glitch-free switch)
-
-Note on the glitch-free test-clock switch (dft_clk_switch, replaced the plain test_clk mux): no
-count above had to change.  Every existing test either never goes serial -> parallel with the pin
-clock counted afterwards, or enters PARALLEL from the reset state where the pin clock is already
-selected, so the pin clock's first two rising edges are not consumed by a handshake.  The one
-consequence that matters, for new tests: after serial -> parallel the pin clock needs about 3 cycles
-before its first pulse reaches dft_test_clk (and with the pin clock stopped throughout, none is
-consumed), so lock-counter tests count edges from the dft_test_clk log, not from pin toggles.
+test_soc_jtag.py -- DFT Stage 1b, SoC level. DUT: tb_soc_pll -> soc_top (PLL_IMPL=STUB), driven
+through the JTAG pins, in the style of test_soc_dft_scan.py (Stage 1a, not modified, still proves
+the pin path). What is observable at a port is checked there; internal nets by hierarchy.
+PROVES the TAP is wired into soc_top: IDCODE comes out of tdo_o with tdo_oe_o framing. SCAN through
+the TAP gives the SAME clock and reset control as the 1a pins (PLL lock counters advance on the TAP
+test clock with clk_i / cpu_clk_i stopped and ignore them, the four domain resets equal the scan
+reset, the CPU clock gate is forced open, the crypto key read nets are masked). The TAP cannot
+disturb functional mode (held in reset, TRST_N high with TCK toggling in Test-Logic-Reset, or
+arbitrary SCAN_SEL / SCAN_RST written while IR != SCAN: the CPU keeps committing and every DFT net
+stays functional).
+DOES NOT prove the structural all-nets claims (tools/dft/check_scan_clk_rst.py) or chain behaviour
+(none before Stage 2). The two 1a PMU-power-down scan tests are not re-run through the TAP: they
+exercise dft_rst_mux, which the same nets drive.
+Timing contract (Doc: tm:ch:dft-architecture): the TAP scan clock exists only on TCK edges that end
+Capture-DR and Shift-DR, so "N test clocks" means one DR scan of N-1 bits (1 capture + N-1 shifts),
+counted on dft_test_clk.
+Tests: IDCODE and tdo_oe framing against the model; boot with the TAP held in reset and with TCK
+toggling in TLR; TDR contents cannot disturb functional mode (negative control: IR=SCAN flips them,
+exit via TLR restores and the CPU re-boots); TAP scan runs on the TAP test clock only (11 test
+clocks leave both PLL lock counters short, 23 lock them); functional clocks ignored;
+SCAN_SEL.PARALLEL uses scan_clk_i and ignores TCK; the 4 domain resets follow scan_rst_ni; gated CPU
+clock edges == test clock edges; crypto key mask; exit via 5xTMS, IR change or TRST_N; serial <->
+parallel x3 glitch-free; MBIST over the TAP in soc_top.
+Rule for new tests: after serial -> parallel the pin clock needs about 3 cycles before its first
+pulse reaches dft_test_clk, so lock-counter tests count edges from the dft_test_clk log, not
+pin toggles.
+Run: make -C tb/cocotb/soc soc_jtag
+Doc: tm:suite:soc-test-soc-jtag
 """
 
 import sys

@@ -1,4 +1,4 @@
-"""Bead ej6j -- directed tests for rtl/soc/axilite_to_axi4.sv (GPU ifetch AXI4-Lite -> AXI4 adapter).
+"""Directed tests for rtl/soc/axilite_to_axi4.sv (GPU ifetch AXI4-Lite -> AXI4 adapter).
 
 The adapter's AR skid buffer is the Phase 5 M9 handshake fix: the GPU compute unit raises
 m_axil_if_arvalid for exactly ONE cycle (a scheduler pulse), but AXI4 rule A3-38 requires the AR

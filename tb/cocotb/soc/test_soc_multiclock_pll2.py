@@ -1,55 +1,24 @@
 """
-test_soc_multiclock_pll2.py — GH #93 multiclock APB_PLL2 / apb_cdc_bridge
-exercise (bonus item 4 of the GH #93 multiclock verification task).
-
-DUT: tb_soc_pll (NOT tb_soc_top — separate TOPLEVEL/VERILOG_SOURCES; see
-tb/cocotb/soc/Makefile's PLL_SOURCES / soc_pll target, which test_pll_lock.py
-uses). Kept in its own module + Makefile target (soc_pll_multiclock) rather
-than folded into test_soc_multiclock.py, because this Makefile's convention
-is one VERILOG_SOURCES/TOPLEVEL pair per recursive `make` invocation and one
-MODULE (= one cocotb Python file) drives exactly one compiled DUT binary
-(sim_build/Vtop, always named Vtop regardless of TOPLEVEL — see every other
-target's "clean first" comment). Mixing tb_soc_top and tb_soc_pll traffic in
-one cocotb test module would need two different VERILOG_SOURCES elaborated
-under one MODULE, which this Makefile has no mechanism for without a second
-`make clean && make` sub-invocation — against the grain of every existing
-target here.
-
-STATUS (2026-08-02): this suite PASSES. Two bugs were found and fixed during
-GH #93 verification before it could: (1) a CPU clock-gating/sync-reset race
-that blocked the CPU from booting at all (fixed 4398c2e; this suite's
-firmware never executed a single instruction until then), and (2) a
-cdc_gray_fifo reset-release-skew accept-and-drop bug that blocked the boot
-firmware's SRAM traffic once (1) was fixed (fixed 7a9f9d4). A third,
-apb_cdc_bridge-specific availability bug (an m_rst_n_i-only reset could wedge
-the source-side APB FSM forever) was also found and fixed (cb5c780) — see
-test_apb_cdc_bridge.py's test_availability_* tests for the dedicated
-escape-path coverage that added. See test_soc_multiclock.py's BLOCKER NOTE
-#1/#2 for the full root-cause analysis of the first two, and
-design_state.json fix_requests[] for all three resolved-bug records.
-
-Purpose: verify rtl/soc/apb_cdc_bridge.sv (u_apb_pll2_cdc, the 2-phase
-toggle-handshake APB4 bridge in front of the APB_PLL2 slot at 0x2000_9000 —
-the CPU-domain pll_apb_regs instance, soc_top.sv's u_cpu_pll_sub) works at a
-genuinely asynchronous CPU<->fabric clock ratio, not just the 1:1 ratio every
-other suite (including test_pll_lock.py's test_pll2_apb_slot_decode, which
-this test reuses the firmware from) exercises it at.
-
-Clock periods: same CPU_PERIOD_NS=3 / FABRIC_PERIOD_NS=7 as
-test_soc_multiclock.py — see that module's docstring for the full ratio
-rationale (7/3 ~= 2.33, coprime, matches the real CPU-faster-than-fabric
-target direction).
-
-Firmware reuse: pll2_fw/pll2_decode.hex (test_pll_lock.py's
-test_pll2_apb_slot_decode firmware, unmodified) — self-checking CPU MMIO
-that verifies APB_PLL (0x2000_7000), APB_PMU (0x2000_8000, slot unaffected),
-and APB_PLL2 (0x2000_9000, the new CDC-bridged slot) all decode correctly,
-plus the GH #89 anti-brick invariant (CONTROL[0] non-clearable) on the
-second pll_apb_regs instance. No new firmware/C source is written here.
-
-Bug-class note: commit_valid_o / commit_pc_o are CPU-domain signals (see
-test_soc_multiclock.py's docstring) — every polling loop here uses
+test_soc_multiclock_pll2.py -- multiclock APB_PLL2 / apb_cdc_bridge exercise.
+DUT: tb_soc_pll, NOT tb_soc_top (a separate TOPLEVEL / VERILOG_SOURCES; see PLL_SOURCES and the
+soc_pll target of tb/cocotb/soc/Makefile, which test_pll_lock.py uses). It has its own module and
+Makefile target (soc_pll_multiclock), not a case in test_soc_multiclock.py: this Makefile has one
+VERILOG_SOURCES / TOPLEVEL pair per recursive `make` and one MODULE per compiled binary
+(sim_build/Vtop, always named Vtop). Mixing tb_soc_top and tb_soc_pll in one module would need a
+second `make clean && make`.
+Purpose: verify that rtl/soc/apb_cdc_bridge.sv (u_apb_pll2_cdc, in front of the APB_PLL2 slot at
+0x2000_9000, the CPU-domain pll_apb_regs instance u_cpu_pll_sub of soc_top.sv) works at a genuinely
+asynchronous CPU<->fabric clock ratio, not only the 1:1 ratio of every other suite.
+Clock periods: CPU_PERIOD_NS=3 and FABRIC_PERIOD_NS=7, as in test_soc_multiclock.py (see its
+docstring for the ratio rationale: 7/3 ~= 2.33, coprime, CPU faster than the fabric).
+Firmware: pll2_fw/pll2_decode.hex, unmodified (the firmware of test_pll_lock.py's
+test_pll2_apb_slot_decode). It is self-checking CPU MMIO that checks APB_PLL (0x2000_7000), APB_PMU
+(0x2000_8000, slot unaffected) and APB_PLL2 (0x2000_9000, the CDC-bridged slot), plus the anti-brick
+invariant (CONTROL[0] non-clearable) on the second pll_apb_regs.
+Bug-class note: commit_valid_o and commit_pc_o are CPU-domain signals, so every polling loop uses
 RisingEdge(dut.cpu_clk_i), never dut.clk_i.
+Run: make -C tb/cocotb/soc soc_pll_multiclock
+Doc: tm:suite:soc-test-soc-multiclock-pll2
 """
 
 import sys
@@ -165,7 +134,7 @@ async def _reset(dut, cycles: int = 5) -> None:
     drive_soc_reset(dut, False)
 
 
-# test_pll_lock.py's PLL2_TIMEOUT_CYCLES=5000 @ CLK_PERIOD_NS=2 ns covers a
+# test_pll_lock.py's PLL2_TIMEOUT_CYCLES=5000 at CLK_PERIOD_NS=2 covers a
 # short (~35-word) self-checking firmware plus PLL lock + pipeline fill.
 # Converted to cpu_clk_i cycles at the new ratio (7/3 ~= 2.33x) and rounded
 # up generously, same methodology as test_soc_multiclock.py's
@@ -177,7 +146,7 @@ PLL2_TIMEOUT_CYCLES = 12_000
 async def test_multiclock_pll2_apb_slot_decode(dut):
     """
     Self-checking firmware verifies PLL/PMU/PLL2 APB slot decode + the
-    GH #89 anti-brick invariant, driven entirely through the CPU's real MMIO
+    anti-brick invariant, driven entirely through the CPU's real MMIO
     path — for PLL2 specifically, through apb_cdc_bridge (u_apb_pll2_cdc) at
     the multiclock CPU<->fabric ratio. Pass criterion: PASS_PC committed,
     FAIL_PC never seen.

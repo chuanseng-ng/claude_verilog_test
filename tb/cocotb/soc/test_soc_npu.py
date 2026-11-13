@@ -1,51 +1,30 @@
 """
-test_soc_npu.py — Phase 6c-5 SoC-level NPU FABRIC test (bead claude_verilog_test-f7vs.11,
-Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6c -- NPU", L2 testability).
-
-`test_npu` (tb_npu.sv / Makefile `npu` target) owns every behaviour of npu_top — arithmetic,
-requantiser corners, FIFO depths, weight-write rejection, sticky-IRQ and hang-free paths — driving
-the APB4 face directly. It has never exercised the peripheral through the real fabric path:
-
-  CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-  axil_to_apb -> apb_interconnect -> APB slave 13 (APB_NPU, 0x2001_0000)
-
-nor its IRQ into interrupt_controller bit 11. This suite proves exactly that and nothing more: it
-re-proves NONE of the L1 behaviour (three small inferences are enough to show the weight, AIN, AOUT
-and control paths are intact end to end). Firmware comes from a committed pure-Python
-hand-assembler (npu_fw/gen_npu_hex.py, sharing trng_fw's assembler) — no riscv32 cross toolchain,
-so the suite is CI-safe. Synchronisation and scoring are by commit_pc_o marker PCs, the technique
-test_soc_crypto.py / test_soc_trng.py / test_soc_i2c.py use.
-
-One test, one image, three phases (see the generator header for the firmware side).
-
-PHASE 1 — polled, KLEN = 1, TILEBASE = 8, SCALE (5 >> 0), IRQ_EN = 0
-  Firmware loads a 12-word weight tile through WADDR/WDATA, pushes one AIN word, starts, polls
-  STATUS.done, pops AOUT. Scored here:
-    * the stored AOUT against tb/models/npu_model.py (recomputed here from int8 element lists);
-    * STATUS / IRQ_STAT / WADDR auto-increment / write-only WDATA, as read by the CPU over the bus;
-    * the IE gate: `done` is pending for a long stretch and npu_irq / irq_src_i[11] / ext_irq stay
-      LOW the whole time.
-
-PHASE 2 — interrupt driven, KLEN = 2, TILEBASE = 0, SCALE (3 >> 1), ReLU, IRQ_EN = 1
-  `done` -> npu_irq -> interrupt_controller.irq_src_i[11] -> ext_irq -> CPU MEIP. Scored here:
-    * irq_src_i of the interrupt controller equals EXACTLY `npu_irq << 11` on EVERY cycle of the
-      run (bit 11, and no other bit, is the NPU source) and npu_irq rises with done set — a level
-      source, not a pulse — after the start was committed, never before phase 2 was armed;
-    * the CPU vectors (ISR_PC commits) with npu_irq AND ext_irq asserted — EXACTLY ONE trap, because
-      the ISR drops the level source with a single IRQ_CLR[0] write;
-    * after the ISR both lines deassert and stay low;
-    * backdoor SRAM: ISR_COUNT == 1, the ISR saw STATUS.done and IRQ_STAT, the interrupt
-      controller's PENDING_MASKED bit 11 was set, and the AOUT word read after the trap equals the
-      model (the ISR itself does not pop AOUT).
-
-PHASE 3 — illegal START (KLEN = 0), polled, IRQ_EN = 0
-  The 2-cycle zero-length path: `done` sets with STATUS[6] cfg_rejected, nothing hangs, no AOUT
-  word is pushed; the interrupt lines stay LOW while done is pending (the IE gate again).
-
-GOLDEN-MODEL NOTE (same as test_soc_gpio / test_soc_trng / test_soc_i2c / test_soc_crypto): SoCModel
-cannot be used here since it rejects 0x2000_xxxx MMIO. The firmware is self-checking against
-hand-computed literals (pinned in npu_model's selftest), and this test independently recomputes the
-expected values from tb/models/npu_model.py and compares what the firmware stored.
+test_soc_npu.py -- Phase 6c-5 SoC-level NPU FABRIC test (L2 testability). `test_npu` (tb_npu.sv,
+Makefile `npu` target) owns every behaviour of npu_top through the APB4 face. It never used the real
+fabric path to APB slave 13 (APB_NPU, 0x2001_0000), nor the IRQ into interrupt_controller bit 11.
+This suite proves exactly that and re-proves NONE of the L1 behaviour (three small inferences show
+the weight, AIN, AOUT and control paths are intact end to end). Scoring is by commit_pc_o marker
+PCs. One test, one image, three phases.
+PHASE 1, polled, IRQ_EN = 0: the firmware loads a 12-word weight tile through WADDR/WDATA, pushes
+one AIN word, starts, polls STATUS.done and pops AOUT. Scored: the stored AOUT against
+tb/models/npu_model.py (recomputed from int8 lists); STATUS, IRQ_STAT, WADDR auto-increment and
+write-only WDATA as the CPU read them; the IE gate: while `done` is pending npu_irq, irq_src_i[11]
+and ext_irq stay LOW.
+PHASE 2, interrupt driven, ReLU, IRQ_EN = 1: `done` -> npu_irq -> irq_src_i[11] -> ext_irq -> CPU
+MEIP. Scored: irq_src_i equals EXACTLY `npu_irq << 11` on EVERY cycle and npu_irq rises with done
+set (a level, not a pulse) after the start commits; the CPU vectors (ISR_PC) with npu_irq AND
+ext_irq asserted, EXACTLY ONE trap (the ISR drops the level with one IRQ_CLR[0] write); afterwards
+both lines deassert and stay low; backdoor SRAM: ISR_COUNT == 1, the ISR saw STATUS.done and
+IRQ_STAT, PENDING_MASKED bit 11 was set, and the AOUT word read after the trap equals the model (the
+ISR does not pop AOUT).
+PHASE 3, illegal START (KLEN = 0), polled, IRQ_EN = 0: the 2-cycle zero-length path. `done` sets
+with STATUS[6] cfg_rejected, nothing hangs, no AOUT word is pushed, and the interrupt lines stay LOW
+while done is pending.
+Golden model: SoCModel cannot be used (it rejects 0x2000_xxxx MMIO). The firmware checks
+hand-computed literals (pinned in npu_model's selftest); this test recomputes the values from
+npu_model.py and compares what the firmware stored.
+Run: make -C tb/cocotb/soc soc_npu
+Doc: tm:suite:soc-test-soc-npu
 """
 
 import sys
@@ -105,7 +84,7 @@ from tb.models import npu_model  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 2  # 500 MHz — matches other SoC tests
+CLK_PERIOD_NS = 2  # matches the other SoC tests
 
 _FW_HEX = str(Path(__file__).parent / "npu_fw" / "npu_fw.hex")
 

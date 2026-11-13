@@ -1,67 +1,31 @@
-"""test_i2c.py -- Phase 6a-5 cocotb L1 protocol verification for i2c_controller
-(rtl/periph/i2c_controller.sv, bead claude_verilog_test-f7vs.9, Doc: ds:ch:phase6-ip-expansion-plan
-Sec.7 "6a-5 -- I2C").
-
-WRITTEN AFTER THE RTL -- READ THIS BEFORE TRUSTING A GREEN RUN.  Every other peripheral in this
-tree had its suite written first.  The I2C bit engine could not be: the bus BFM
-(tb/cocotb/bfm/i2c_slave.py) cannot be developed without a DUT to talk to.  A suite written
-against an implementation can simply encode what the implementation does, bugs included, so a
-green run proves nothing by itself.  The assertions below are therefore derived from the I2C
-specification and from the DUT header's CONTRACT (register map, command semantics, timing rules),
-never from reading the FSM, and the suite was then PROVEN NON-VACUOUS by mutation testing: the
-RTL was broken one fault at a time (ACK polarity, clock-stretch wait, arbitration compare,
-repeated-START path, sticky set-vs-clear precedence, plus further faults) and each mutant was
-shown to be caught by a named test.  The mutation table lives in the bead notes / PR description;
-the tests most responsible for each kill carry a "MUTATION TARGET" line in their docstring so a
-future edit that weakens one is visible.
-
-DUT: tb_i2c (standalone wrapper around i2c_controller, ADDR_W=12, CLKDIV_MIN=3).  The pad inputs
-are plain top-level inputs: tb/cocotb/bfm/i2c_slave.py closes the loop (wired-AND of master oe,
-slave drive, forced-low hooks, driven back on the clock's FALLING edge -- see its docstring for
-the negedge trap), so the wrapper cannot mask a polarity bug.
-
-Register map (word index * 4): CTRL 0x00, STATUS 0x04, CLKDIV 0x08, ADDR 0x0C, TX_DATA 0x10,
-RX_DATA 0x14, CMD 0x18, FIFO_STAT 0x1C, TIMEOUT 0x20, IRQ_EN 0x24, IRQ_STAT 0x28, IRQ_CLR 0x2C;
-word index >= 12 (0x030..0xFFC) reads 0, writes are dropped, pslverr stays 0.
-
-Timing conventions used by the checks below.  A "tick" is CLKDIV_eff + 1 clk; one SCL period is
-four ticks plus the synchroniser wait the bit engine inserts after it releases SCL (it must see
-the SYNCHRONISED SCL high before it starts the high interval, so a bit costs 4 ticks + about
-SYNC_STAGES + 1 clk).  The header's "f_scl = f_clk / (4 * (CLKDIV + 1))" is the no-stretch,
-zero-latency ideal; test_i2c_clkdiv_100k_400k pins the measured behaviour and bounds the
-difference.  Most protocol tests run at CLKDIV = 3 (the hardware minimum, tick = 4 clk) for speed
-AND because it is the worst case for the synchroniser-latency margin.
-
-Cycle-sampling hazard (learned on GPIO, repeated here): a value read straight after
-`await RisingEdge` can be the PRE-edge value.  Every internal-state read below goes
-RisingEdge -> Timer(1, "step") first (the settled post-edge state), and register reads that must
-be side-effect free use _peek() (documented in test_gpio.py).
-
-Tests (grouped; the name states the behaviour):
-  register file   reset_defaults, rw_roundtrip_and_masks, pstrb_partial_word, out_of_range_access,
-                  clkdiv_clamp_to_min, clkdiv_min_guard_rejects_elaboration
-  data transfer   byte_write, byte_read, multibyte_write, multibyte_read,
-  repeated_start_register_read,
-                  back_to_back_transactions, cmd_count_zero_means_one, cmd_write_wins_over_read
-  errors          address_nack, data_nack, nack_without_stop_holds_bus
-  command accept  cmd_ignored_when_disabled_busy_or_illegal, en_disable_aborts_and_flushes,
-                  reset_mid_transaction
-  clock stretch   clock_stretch_honoured, clock_stretch_every_bit
-  timeout         timeout_stuck_scl, timeout_scales_with_clkdiv_and_value, timeout_bus_busy_wait,
-                  timeout_fifo_starvation, timeout_zero_disables
-  arbitration     arbitration_loss_address_bit, arbitration_loss_data_bit,
-                  arbitration_loss_read_nack_slot, arbitration_no_false_loss_when_sending_zero,
-                  arbitration_loss_repeated_start_setup
-  FIFOs           tx_fifo_fill_drain_and_stat, tx_fifo_refill_during_transfer,
-                  rx_fifo_fill_drain_and_stat, rx_fifo_full_holds_scl_low, rx_empty_read_is_zero
-  IRQ             rx_threshold_irq, irq_sources_and_w1c, sticky_set_wins_over_clear
-  rate / loopback clkdiv_100k_400k, loopback_write_then_read, status_reflects_bus_levels
-  bead pnfw       stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec,
-                  fsm_illegal_state_recovers_to_idle,
-                  loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter
-  bead gecv       start_stop_condition_times_meet_spec, busy_covers_bus_free_time,
-                  condition_tick_reloads_at_clkdiv_ffff
-                  (+ stop_to_start_bus_free_time_meets_spec above)
+"""
+test_i2c.py -- Phase 6a-5 cocotb L1 protocol verification for i2c_controller
+(rtl/periph/i2c_controller.sv, Doc: ds:ch:phase6-ip-expansion-plan "6a-5 -- I2C").
+WRITTEN AFTER THE RTL -- READ THIS BEFORE TRUSTING A GREEN RUN. The bus BFM
+(tb/cocotb/bfm/i2c_slave.py) could not be developed without a DUT, so this suite did not come first.
+A suite written against an implementation can encode what the implementation does, bugs included. So
+the assertions come from the I2C specification and the DUT header's CONTRACT (register map, command
+semantics, timing rules), never from the FSM. The suite was PROVEN NON-VACUOUS by mutation testing:
+the RTL was broken one fault at a time (ACK polarity, clock-stretch wait, arbitration compare,
+repeated-START path, sticky set-vs-clear precedence, more) and a named test caught each mutant.
+Tests that carry a kill have a "MUTATION TARGET" line in their docstring, so an edit that weakens
+one is visible.
+DUT: tb_i2c (ADDR_W=12, CLKDIV_MIN=3). The pad inputs are plain top-level inputs.
+tb/cocotb/bfm/i2c_slave.py closes the loop (wired-AND of master oe, slave drive and forced-low
+hooks, driven back on the clock's FALLING edge; see its docstring for the negedge trap), so the
+wrapper cannot mask a polarity bug.
+Register map: i2c_controller.sv header; word index >= 12 reads 0, writes are dropped, pslverr
+stays 0.
+Timing: a "tick" is CLKDIV_eff + 1 clk. One SCL period is four ticks plus the synchroniser wait
+after the bit engine releases SCL (it must see the SYNCHRONISED SCL high first). The header's f_scl
+= f_clk / (4 * (CLKDIV + 1)) is the no-stretch, zero-latency ideal; test_i2c_clkdiv_100k_400k pins
+the measured behaviour. Most tests run at CLKDIV = 3 (the minimum, tick = 4 clk) for speed and
+because it is the worst case for the margin.
+Sampling hazard: a value read straight after `await RisingEdge` can be the PRE-edge value.
+Internal-state reads go RisingEdge -> Timer(1, "step") first. Side-effect-free register reads use
+_peek() (see test_gpio.py).
+Run: make -C tb/cocotb/soc i2c
+Doc: tm:suite:soc-test-i2c
 """
 
 import subprocess
@@ -84,7 +48,7 @@ from i2c_cov import COV  # noqa: E402  (functional coverage, bead h367)
 
 _PROJ_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
-CLK_PERIOD_NS = 10  # 100 MHz -- matches SoC reference clock (same convention as test_gpio.py)
+CLK_PERIOD_NS = 10  # matches the SoC reference clock (same convention as test_gpio.py)
 
 I2C_CTRL = 0x000
 I2C_STATUS = 0x004
@@ -138,7 +102,7 @@ def cmd(start=0, write=0, read=0, stop=0, nack_last=0, count=0) -> int:
 
 
 async def _start_clock_and_reset(dut, address: int = SLAVE_ADDR):
-    """Start the 100 MHz clock, idle the APB4 bus, release the pads, start the bus BFM and apply
+    """Start the clock, idle the APB4 bus, release the pads, start the bus BFM and apply
     synchronous reset. Returns (apb, slave)."""
     _kill_active_tasks()
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
@@ -159,7 +123,7 @@ async def _start_clock_and_reset(dut, address: int = SLAVE_ADDR):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 4)  # let the pad synchronisers fill with the released bus
     apb = APB4Master(dut, "", dut.clk)
-    COV.attach(apb, slave)  # passive functional-coverage observers (bead h367)
+    COV.attach(apb, slave)  # passive functional-coverage observers
     return apb, slave
 
 
@@ -1874,7 +1838,7 @@ async def test_i2c_clkdiv_scl_period_linear(dut):
 
 @cocotb.test()
 async def test_i2c_clkdiv_100k_400k(dut):
-    """Standard-mode and Fast-mode rates from CLKDIV at the 100 MHz test clock, against the DUT
+    """Standard-mode and Fast-mode rates from CLKDIV at the test clock, against the DUT
     header's contract: "One bit = 4 ticks ... f_scl = f_clk / (4*(CLKDIV+1))" and the bead's
     "Standard 100 kHz and Fast 400 kHz via a 16-bit I2C_CLKDIV". CLKDIV = 249 is the 100 kHz divisor
     (1000-clk period) and CLKDIV = 62 the largest-rate Fast-mode divisor not over 400 kHz (252 clk;
@@ -2017,7 +1981,7 @@ async def test_i2c_stop_to_start_gap_is_measured(dut):
 @cocotb.test()
 async def test_i2c_stop_to_start_bus_free_time_meets_spec(dut):
     """STOP-to-START bus-free time against the I2C specification minimum (4.7 us Standard-mode
-    at CLKDIV=249, 1.3 us Fast-mode at CLKDIV=62, 100 MHz clk), measured with the tightest
+    at CLKDIV=249, 1.3 us Fast-mode at CLKDIV=62), measured with the tightest
     possible back-to-back command issue (see _measure_tbuf).  The limits are the spec's, not the
     RTL's.  Every divisor is measured before any is asserted, so one failure still reports both."""
     results = [(await _measure_tbuf(dut, div), mode, spec) for div, mode, spec in _TBUF_CASES]
@@ -2037,9 +2001,9 @@ _COND_CASES = ((249, "Standard", 4.0, 4.7, 4.0), (62, "Fast", 0.6, 0.6, 0.6))
 @cocotb.test()
 async def test_i2c_start_stop_condition_times_meet_spec(dut):
     """The three START/STOP condition times against the I2C specification minimum at both standard
-    divisors (100 MHz clk): tSU;STO (SCL rise -> STOP; 4.0 us Standard / 0.6 us Fast), tHD;STA
+    divisors: tSU;STO (SCL rise -> STOP; 4.0 us Standard / 0.6 us Fast), tHD;STA
     (START -> SCL fall, measured on the first START AND on the repeated START; 4.0 / 0.6 us) and
-    tSU;STA (SCL rise -> repeated START; 4.7 / 0.6 us).  Bead gecv: each used to last ONE tick.
+    tSU;STA (SCL rise -> repeated START; 4.7 / 0.6 us).  Each used to last ONE tick.
     Every figure is measured before any is asserted so one miss still reports all of them."""
     rows = []
     for div, mode, hd, su_sta, su_sto in _COND_CASES:
@@ -2069,12 +2033,12 @@ async def test_i2c_start_stop_condition_times_meet_spec(dut):
 
 @cocotb.test()
 async def test_i2c_busy_covers_bus_free_time(dut):
-    """Bead gecv semantics: the bus-free interval after a STOP is INSIDE STATUS.busy.  STATUS.busy
+    """Semantics: the bus-free interval after a STOP is INSIDE STATUS.busy.  STATUS.busy
     (and the DONE event) therefore drop only after >= 3 ticks of bus-free time, so a command written
     on the first APB access after busy drops already meets tBUF (that is what the strict-limit
     tBUF test measures), AND a command written DURING the bus-free interval is ignored like any
     busy-time command -- it neither queues nor starts a second transaction.
-    SCOPE: CLKDIV=62 and 249 at 100 MHz; the 3-tick count is asserted to within a few clk."""
+    SCOPE: CLKDIV=62 and 249; the 3-tick count is asserted to within a few clk."""
     for div in (62, 249):
         n = div + 1
         m = await _measure_tbuf(dut, div)
@@ -2361,7 +2325,7 @@ async def test_i2c_status_reflects_bus_levels(dut):
         assert await _peek(dut, I2C_STATUS) & (ST_SCL | ST_SDA) == ST_SCL | ST_SDA
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 
 # Engine state encodings used below (i2c_bit_engine.state_e).
@@ -2399,7 +2363,7 @@ async def test_i2c_condition_tick_reloads_at_clkdiv_ffff(dut):
 
 
 # ---------------------------------------------------------------------------
-# Functional-coverage closure tests (bead h367): scenarios the I2C coverage model
+# Functional-coverage closure tests: scenarios the I2C coverage model
 # (Doc: tm:flow:i2c-functional-coverage-model) showed no other test reached.
 # ---------------------------------------------------------------------------
 
@@ -2570,7 +2534,7 @@ async def test_register_walk(dut):
 
 
 # ---------------------------------------------------------------------------
-# Full-width data / count / timeout paths (bead xkw5)
+# Full-width data / count / timeout paths
 # ---------------------------------------------------------------------------
 
 

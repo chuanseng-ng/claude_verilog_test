@@ -1,45 +1,26 @@
 """
-test_pll_apb_regs.py — Phase 7 (APB migration PR-6) PLL APB4 register interface test.
+test_pll_apb_regs.py -- Phase 7 (APB migration) PLL APB4 register interface test.
 
-DUT: tb_pll_apb_regs (standalone wrapper, directly instantiates pll_apb_regs)
-
-Register map (pll_apb_regs at local byte offset, 12-bit address):
-  0x000  CONTROL [RW]
-           [0]    pll_enable   (1 = de-assert PLL reset)
-           [7:4]  div_n[3:0]
-           [9:8]  post_div_sel
-  0x004  STATUS  [RO]
-           [0]    locked       (mirrors pll_locked_i)
-  0x008  RSVD    [RO]          reads 0, writes ignored
-
-Design note — why standalone TB:
-  The APB4 register block is driven directly through top-level APB4 ports.
-  The BFM owns psel/penable/pwrite/paddr/pwdata/pstrb cleanly — no RTL assign
-  conflicts (same rationale as tb_pll_axil_regs.sv for the AXI-Lite version).
-
-APB4 access path:
-  cocotb APB4Master → tb_pll_apb_regs.<apb4 ports> → pll_apb_regs → apb4_register_bank
-
-APB4 BFM API (apb4_master.APB4Master):
-  write(addr, data, strb=0xF) → bool  (True = OKAY, False = SLVERR)
-  read(addr)                  → (int, bool)  (data, ok)
-
-Tests (same coverage as test_pll_regs.py, bus protocol updated to APB4):
-  test_pll_apb_regs_status_locked
-      Inject pll_locked_i=1; read STATUS at 0x004; confirm bit[0]==1.
-
-  test_pll_apb_regs_control_write_readback
-      Write CONTROL (div_n=0xA, post_div_sel=0b01); readback; verify
-      SW-writable bits (WMASK=0x03F0, bits[9:4]) are stored correctly.
-      GH #89 sub-check: write CONTROL=0x0000 (clear attempt on bit[0]);
-      assert bit[0] stays 1 and pll_enable_o stays asserted (non-clearable).
-
-  test_pll_apb_regs_status_readonly
-      Write all-ones to STATUS; confirm STATUS unchanged (RO).
-
-  test_pll_apb_regs_decode_and_enable
-      Write+read CONTROL; confirm pslverr=0 (OKAY), pll_enable_o always 1
-      (non-clearable by design, GH #89 anti-brick).
+DUT: tb_pll_apb_regs (standalone wrapper, instantiates pll_apb_regs directly). The BFM owns
+psel/penable/pwrite/paddr/pwdata/pstrb cleanly, with no RTL assign conflicts (same rationale as
+tb_pll_axil_regs.sv for the AXI-Lite version). Path: cocotb APB4Master -> tb_pll_apb_regs ports ->
+pll_apb_regs -> apb4_register_bank. BFM API (apb4_master.APB4Master): write(addr, data, strb=0xF) ->
+bool (True = OKAY, False = SLVERR); read(addr) -> (data, ok).
+Registers (local byte offset, 12-bit address): 0x000 CONTROL [RW] ([0] pll_enable, 1 de-asserts
+PLL reset; [7:4] div_n; [9:8] post_div_sel); 0x004 STATUS [RO] ([0] locked, mirrors pll_locked_i);
+0x008 RSVD [RO] reads 0, writes ignored.
+Tests (same coverage as test_pll_regs.py, bus protocol APB4):
+  status_locked: inject pll_locked_i=1, read STATUS at 0x004, bit 0 == 1.
+  control_write_readback: write CONTROL (div_n=0xA, post_div_sel=0b01), read back, check the
+      SW-writable bits (WMASK=0x03F0, bits [9:4]). Anti-brick sub-check: write CONTROL=0x0000, bit 0
+      stays 1 and pll_enable_o stays asserted (non-clearable).
+  status_readonly: write all-ones to STATUS, STATUS unchanged.
+  decode_and_enable: write and read CONTROL, pslverr=0, pll_enable_o always 1 (non-clearable
+  by design).
+  byte_offset_ignored: paddr[1:0] is not decoded; every byte address of CONTROL and of
+      STATUS reaches that register.
+Run: make -C tb/cocotb/soc pll_apb_regs
+Doc: tm:suite:soc-test-pll-apb-regs
 """
 
 import sys
@@ -60,15 +41,15 @@ from reg_walk import walk_bank  # noqa: E402
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CLK_PERIOD_NS = 10      # 100 MHz — matches SoC reference clock
+CLK_PERIOD_NS = 10      # matches the SoC reference clock
 
 # Local byte offsets (pll_apb_regs uses 12-bit local address)
 CTRL_OFFSET  = 0x000   # CONTROL register
 STAT_OFFSET  = 0x004   # STATUS  register
 RSVD_OFFSET  = 0x008   # RSVD    register
 
-# CONTROL software-writable bit mask (pll_apb_regs WMASK[0] = 32'h0000_03F0, GH #89)
-#   bit[0]    = pll_enable — NOT in WMASK; non-clearable by design (GH #89 anti-brick).
+# CONTROL software-writable bit mask (pll_apb_regs WMASK[0] = 32'h0000_03F0)
+#   bit[0]    = pll_enable — NOT in WMASK; non-clearable by design (anti-brick).
 #               RESET_VAL[0]=1, WMASK[0]=0 → firmware writes to this bit are ignored;
 #               pll_enable stays 1 at all times so firmware cannot deadlock the SoC.
 #   bits[7:4] = div_n (feedback_div)   — writable
@@ -94,7 +75,7 @@ def _kill_active_tasks() -> None:
 
 async def _start_clock_and_reset(dut) -> None:
     """
-    Start 100 MHz clock and apply synchronous reset.
+    Start the clock and apply synchronous reset.
     Initialise all APB4 master-driven inputs to idle (psel=0).
     """
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
@@ -162,7 +143,7 @@ async def test_pll_apb_regs_control_write_readback(dut):
     """
     Write CONTROL with div_n=0xA, post_div_sel=2'b01 and verify:
       (a) SW-writable bits (WMASK=0x03F0: bits[9:4]) are stored correctly.
-      (b) GH #89 non-clearable invariant: bit[0] (pll_enable) stays 1
+      (b) Non-clearable invariant: bit[0] (pll_enable) stays 1
           even when firmware writes 0 to it (WMASK[0]=0, RESET_VAL[0]=1).
 
     Pass 1 — write with bit[0]=1 (div_n=0xA, post_div_sel=/2):
@@ -209,7 +190,7 @@ async def test_pll_apb_regs_control_write_readback(dut):
         f"post_div_sel={(data >> 8) & 3} — PASS"
     )
 
-    # --- Pass 2: GH #89 non-clearable invariant ---
+    # --- Pass 2: non-clearable invariant ---
     # Writing all-zeros tries to clear pll_enable. WMASK[0]=0 must suppress the
     # clear; bit[0] must remain 1 (RESET_VAL); pll_enable_o must stay asserted.
     ok2 = await bfm.write(CTRL_OFFSET, 0x0000_0000)
@@ -289,7 +270,7 @@ async def test_pll_apb_regs_decode_and_enable(dut):
     """
     Explicit register-bank decode verification: write+read CONTROL at offset
     0x000 and confirm no SLVERR (pslverr=0).  Verifies pll_enable_o is always
-    1 (non-clearable by design, GH #89 anti-brick): WMASK[0]=0 means firmware
+    1 (non-clearable by design, anti-brick): WMASK[0]=0 means firmware
     writes to CONTROL[0] are ignored; pll_enable_o stays 1 regardless of what
     value is written to bit[0].
 
@@ -331,11 +312,12 @@ async def test_pll_apb_regs_decode_and_enable(dut):
     )
 
 
-# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+# -- Register walk: reset/idle values, RO/RW masks, byte lanes, unmapped words ------
 
 @cocotb.test()
 async def test_register_walk(dut):
-    """Walk the PLL config registers (reg_maps.PLL); CONTROL[0] pll_enable is set-only, so every zero pattern must leave it 1 (GH #89)."""
+    """Walk the PLL config registers (reg_maps.PLL); CONTROL[0] pll_enable is set-only, so every
+    zero pattern must leave it 1."""
     await _start_clock_and_reset(dut)
     m = _make_apb_bfm(dut)
     regs, first = reg_maps.BANKS["pll"]
@@ -346,7 +328,7 @@ async def test_register_walk(dut):
 async def test_pll_apb_regs_byte_offset_ignored(dut):
     """paddr[1:0] is not decoded (word-aligned register file, module header): a write to byte
     offset +3 of CONTROL lands in CONTROL, and every one of the four byte addresses of CONTROL and of
-    STATUS reads that register -- never a neighbour.  Bead xkw5: the only way to move paddr[1:0]."""
+    STATUS reads that register -- never a neighbour.  The only way to move paddr[1:0]."""
     _kill_active_tasks()
     await _start_clock_and_reset(dut)
     bfm = _make_apb_bfm(dut)
