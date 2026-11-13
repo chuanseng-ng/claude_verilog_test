@@ -22,7 +22,7 @@
 // reuses this for per-domain PMU resets).
 //
 // Reset: asynchronous assert, synchronous deassert, active-low (new-module
-// discipline, docs/development/CODING_GUIDELINES.md §1.4).
+// discipline, Doc: um:guide:coding-guidelines §1.4).
 //
 // ── Scan bypass (DFT, beads claude_verilog_test-07n and j41m.2) ────────────
 // Two muxes, both selected by scanmode_i, make this reset fully owned by the

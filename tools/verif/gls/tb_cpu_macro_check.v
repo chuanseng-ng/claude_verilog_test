@@ -230,7 +230,7 @@ module tb_cpu_macro_check #(
 
   // One-shot APB debug sequencer: after the program has had plenty of time
   // to retire and park at its self-loop, (1) write DBG_CTRL[0]=1 (halt
-  // request, address 0x000) -- docs/readme/DEBUG_INTERFACE.md documents
+  // request, address 0x000) -- Doc: um:guide:debug-interface documents
   // GPR reads alongside "debug writes only allowed when halted", and an
   // unhalted read empirically returned a value (0x30) that did not match
   // any expected register, suggesting reads are also halt-gated -- then

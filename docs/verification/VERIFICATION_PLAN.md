@@ -938,7 +938,7 @@ All duplicate helper classes (`APBDebugInterface`, `SimpleAXIMemory`) have been 
 
 Complete migration documentation available at:
 - **Migration Plan**: `docs/pyuvm_migration/MIGRATION_PLAN.md`
-- **Migration Status**: `docs/pyuvm_migration/MIGRATION_STATUS.md`
+- **Migration Status**: `Doc: cr:status:pyuvm-migration`
 - **Lessons Learned**: `docs/pyuvm_migration/LESSONS_LEARNED.md`
 - **pyuvm Infrastructure Guide**: `tb/cpu_uvm/README.md`
 - **Test Guide**: `tb/cocotb/cpu/README.md`

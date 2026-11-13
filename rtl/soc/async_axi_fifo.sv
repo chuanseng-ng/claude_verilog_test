@@ -71,7 +71,7 @@
 // core_clk == clk_i (rtl/soc/pll/pll_subsystem.sv:19-21).
 //
 // Coding rules: no sequential logic in this file — structural instantiation
-// + payload assign only (docs/development/CODING_GUIDELINES.md).
+// + payload assign only (Doc: um:guide:coding-guidelines).
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module async_axi_fifo #(

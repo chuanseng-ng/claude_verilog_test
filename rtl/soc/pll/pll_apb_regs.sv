@@ -36,7 +36,7 @@
 //   * No logic — structural instantiation + assign only
 //   * Always-on domain (clk_i): config bus runs at ref clock
 //   * No `timescale directive
-//   * No `default_nettype` directive (Spyglass IND, CODING_GUIDELINES.md §1.3)
+//   * No `default_nettype` directive (Spyglass IND, Doc: um:guide:coding-guidelines §1.3)
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
@@ -143,4 +143,3 @@ module pll_apb_regs #(
     assign post_div_sel_o = regs_out[0][9:8];
 
 endmodule : pll_apb_regs
-

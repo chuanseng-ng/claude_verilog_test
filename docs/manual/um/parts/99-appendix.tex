@@ -1,5 +1,128 @@
 \appendix
 
-\chapter{Cleanup recommendations}\label{um:app:cleanup-recommendations}
+\chapter{Cleanup recommendations}\label{um:guide:cleanup-recommendations}
 
-This appendix lists the recommended cleanup actions for the repository.
+This appendix lists twelve cleanup actions for the repository, ranked by value against risk. Nobody has done any of them. Each entry gives the action, the evidence, the risk, the effort and the state of the decision. The evidence was measured on the working tree of this branch. Effort is S (under one hour), M (up to one day) or L (more than one day). Every action is an open decision of the owner.
+
+Four numbers differ from the first estimate: the size of \code{pnr/commercial} is larger, the count of tracked files that match an ignore pattern is smaller, the count of instruction files is smaller, and the \code{sim/Makefile} duplication is thinner than first reported. The entries below give the new values.
+
+\section{Remove the stray second beads instance}\label{um:guide:cleanup-recommendations:stray-beads}
+
+\begin{itemize}
+\item \textbf{What:} Delete \code{pnr/.beads/}, \code{pnr/AGENTS.md} and \code{pnr/CLAUDE.md}.
+\item \textbf{Evidence:} Git tracks 12 files there: 10 under \code{pnr/.beads/} (five hook scripts, a config, a metadata file, an interaction log, a README and an ignore file) and the two instruction files. \code{pnr/AGENTS.md} is the unedited beads template. It says that the issue database syncs through the \code{refs/dolt/data} ref of the git remote. The root instructions say that no such sync exists on this machine and that one database lives in the primary worktree. The two statements conflict.
+\item \textbf{Risk:} Low. An agent that starts in \code{pnr/} can read the stray files and follow the wrong sync rule. Check first that no hook in \code{pnr/.beads/hooks/} is active in any clone.
+\item \textbf{Effort:} S.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Change the LEC line-number seds to pattern addresses}\label{um:guide:cleanup-recommendations:lec-seds}
+
+\begin{itemize}
+\item \textbf{What:} In \code{pnr/commercial/signoff/lec/formality/Makefile}, replace the four line-number \code{sed} commands by commands that find the line by its text.
+\item \textbf{Evidence:} Lines 54 and 147 apply \code{sed '535s/...'} to \code{rtl/cpu/core/rv32i\_core.sv}. Lines 55 and 148 apply \code{sed "335s/..."} to \code{rtl/cpu/core/rv32i\_pipeline\_pkg.sv}. Line 535 of the core file is today the line \code{fwd\_store\_sel\_r <= fwd\_b\_sel\_pre\_w;}, so the mutants still apply. The pinned-text check holds all 170 anchors. Any edit that moves a line in these two files silently breaks the mutants.
+\item \textbf{Risk:} Medium. The change touches the commercial flow, which is out of scope for the documentation work, and the Formality run cannot be checked on this host.
+\item \textbf{Effort:} M. It needs the EDA host.
+\item \textbf{Gain:} The two RTL files stop being frozen against comment edits.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Replace the Copilot instructions and decide on the instruction files}\label{um:guide:cleanup-recommendations:copilot-instructions}
+
+\begin{itemize}
+\item \textbf{What:} Make \code{.github/copilot-instructions.md} a pointer to \code{AGENTS.md}. Decide whether to keep, trim or remove the other instruction files.
+\item \textbf{Evidence:} \code{.github/copilot-instructions.md} is 29 lines and describes an analog and RF workspace with 16 domains. This repository is a digital design. The directory \code{.github/instructions/} holds 16 files (the first estimate said 17). \code{.github/code-review-graph.instruction.md} is a further tool file. These files are out of scope of the documentation work.
+\item \textbf{Risk:} Low for the pointer. The 16 files may serve the chip-design agent plugins, so ask their owner before you delete them.
+\item \textbf{Effort:} S.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Untrack the output of the L2 benchmark test}\label{um:guide:cleanup-recommendations:l2-bench-results}
+
+\begin{itemize}
+\item \textbf{What:} Remove \code{tb/cocotb/soc/l2\_bench\_results.md} from git and add it to \code{.gitignore}.
+\item \textbf{Evidence:} Git tracks the file. \code{tb/cocotb/soc/test\_l2\_bench.py} writes it at line 525 and following, so each run rewrites it. Other documents cite it as a result, so keep a copy of the current values in the Changes record before you remove it.
+\item \textbf{Risk:} Low.
+\item \textbf{Effort:} S.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Delete or keep the archived Phase 1 tree}\label{um:guide:cleanup-recommendations:micro-p}
+
+\begin{itemize}
+\item \textbf{What:} Delete \code{micro\_p/} (git keeps the history) or keep it and say why.
+\item \textbf{Evidence:} Git tracks 90 files there. The last commit that touched the directory is dated 2026-02-16. Five files still name it: \code{AGENTS.md}, \code{README.md}, the Phase 2 architecture specification, \code{micro\_p/README.md} and one documentation test.
+\item \textbf{Risk:} Low to medium. The Phase 2 architecture specification mentions it. Update the five references in the same change.
+\item \textbf{Effort:} S.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Move the commercial-flow reports out of git}\label{um:guide:cleanup-recommendations:commercial-reports}
+
+\begin{itemize}
+\item \textbf{What:} Move the reports under \code{pnr/commercial/} to release assets or to Git LFS.
+\item \textbf{Evidence:} Git tracks 2242 files there with a total size of 60.0 MB (the first estimate said 56 MB). Of these, 211 files (11.6 MB) are in directories named \code{superseded\_*} or \code{runs\_diag\_*}. Moving only those 211 files saves less than a fifth of the size.
+\item \textbf{Risk:} Medium. Documents cite report paths. \code{pnr/commercial/**} is out of scope of the documentation work, and a move breaks every citation that is not updated.
+\item \textbf{Effort:} L.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Review the tracked files that match an ignore pattern}\label{um:guide:cleanup-recommendations:ignored-tracked}
+
+\begin{itemize}
+\item \textbf{What:} Decide for each group whether git should track it.
+\item \textbf{Evidence:} The command \code{git ls-files -ci --exclude-standard} lists 250 files (the first estimate said 254). They are: 206 under \code{pnr/commercial}, 39 under \code{memory/}, two analog report files, two SRAM LEF files in \code{pnr/asap7/} and one entry \code{pnr/asap7/cpu/runs}. The files in \code{memory/} are tracked on purpose, because the project rules require \code{git add -f} for them.
+\item \textbf{Risk:} Medium. Some files may be the only copy of a result.
+\item \textbf{Effort:} M.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Retire the old Sky130 flows}\label{um:guide:cleanup-recommendations:legacy-flows}
+
+\begin{itemize}
+\item \textbf{What:} Remove the Make targets for \code{pnr/librelane/} and \code{pnr/openlane1/}, and then the two directories.
+\item \textbf{Evidence:} Git tracks 7 files there: six under \code{pnr/librelane/} and \code{pnr/openlane1/config.json}. The last commit that touched them is dated 2026-08-15. The live flows are \code{pnr/sky130/cpu/} and \code{pnr/sky130/soc/}. The file \code{pnr/Makefile} still has the targets \code{librelane-sky130}, \code{docker-check} and \code{docker-run}. The two directories carry a known gap in their source file lists.
+\item \textbf{Risk:} Low. A person who needs the old flow can read git history.
+\item \textbf{Effort:} S.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Merge the duplicate soc\_all targets}\label{um:guide:cleanup-recommendations:soc-all-duplicate}
+
+\begin{itemize}
+\item \textbf{What:} Remove the SoC targets in \code{sim/Makefile} or make \code{tb/cocotb/soc/Makefile} the only place for them.
+\item \textbf{Evidence:} This item is weaker than the first estimate. \code{sim/Makefile} has 8 \code{soc\_*} targets (including \code{soc\_all} at line 945), and they are thin wrappers: the file has 11 calls of the form \code{make -C ../tb/cocotb/soc}. The test logic exists once, in \code{tb/cocotb/soc/Makefile} (33 \code{soc\_*} targets, including \code{soc\_all} and \code{soc\_all\_ci}). The cost is two entry points with the same name.
+\item \textbf{Risk:} Low. Some documents and habits use the \code{sim/} name.
+\item \textbf{Effort:} S.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Unify the constraint locations and the DFT, FPGA and HLS split}\label{um:guide:cleanup-recommendations:layout}
+
+\begin{itemize}
+\item \textbf{What:} Pick one rule for where constraints, DFT, FPGA and HLS files live.
+\item \textbf{Evidence:} Constraint files sit in three kinds of place: \code{pnr/constraints/} (20 files, including SDC, UPF and five Markdown guides), 11 per-block directories \code{pnr/asap7/*/constraints/}, \code{pnr/freepdk45/constraints/}, \code{pnr/sky130/cpu/constraints/}, \code{pnr/sky130/soc/constraints/} and \code{pnr/commercial/constraints/}. Git tracks 41 \code{.sdc} files. DFT files are in \code{dft/tessent/} (57 files) and \code{tools/dft/}. FPGA files are in \code{fpga/nexys\_video/} (15 files) and \code{rtl/fpga/} (3 files). HLS files are in \code{hls/}.
+\item \textbf{Risk:} High. Many scripts, configuration files and tests cite these locations.
+\item \textbf{Effort:} L.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Commit an MCP template and untrack the per-clone file}\label{um:guide:cleanup-recommendations:mcp-json}
+
+\begin{itemize}
+\item \textbf{What:} Commit \code{.mcp.json.template}, ignore \code{.mcp.json}, and let \code{make setup} write the file.
+\item \textbf{Evidence:} Git tracks \code{.mcp.json}. It holds absolute paths of one machine (for example the \code{cwd} of the code-review-graph server and the database path of the hdl-kgraph server). \code{make setup} rewrites these paths in each clone (target \code{setup-mcp}), so the tracked file differs from the clone after setup.
+\item \textbf{Risk:} Low. Do the change in a branch and run \code{make verify-tooling}.
+\item \textbf{Effort:} S.
+\item \textbf{Owner decision:} Open.
+\end{itemize}
+
+\section{Move the LibreLane JSON comment keys to the Technical Manual}\label{um:guide:cleanup-recommendations:json-comments}
+
+\begin{itemize}
+\item \textbf{What:} Move the keys whose names start with \code{//} out of the LibreLane configuration files and into the Technical Manual.
+\item \textbf{Evidence:} 22 configuration files under \code{pnr/} hold 177 such keys. They carry the dated history of tuning decisions, for example the notes on the \code{USE\_SYNLIG} setting.
+\item \textbf{Risk:} High. LibreLane stores the configuration in each run, so a change in the file changes the reproducibility record of past claims. This work belongs to the physical-design owner. Out of scope of the documentation work.
+\item \textbf{Effort:} M.
+\item \textbf{Owner decision:} Open.
+\end{itemize}

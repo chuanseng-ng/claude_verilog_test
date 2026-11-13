@@ -1090,4 +1090,4 @@ Recorded so they are decisions rather than omissions:
 | `docs/design/MEMORY_MAP.md` | Address and register reference, updated per item |
 | `docs/CPP_TO_RTL_HLS_EVALUATION.md` | HLS-vs-hand-RTL evidence behind the 6c decision |
 | `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` | Gate B context |
-| `docs/development/CODING_GUIDELINES.md` | SystemVerilog house style for all new RTL |
+| `Doc: um:guide:coding-guidelines` | SystemVerilog house style for all new RTL |

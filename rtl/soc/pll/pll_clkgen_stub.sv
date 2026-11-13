@@ -25,7 +25,7 @@
 // Coding rules:
 //   * No #delays, no initial blocks, no real types
 //   * All registers synchronous reset (active-low)
-//   * No `default_nettype` directive (Spyglass IND, CODING_GUIDELINES.md §1.3)
+//   * No `default_nettype` directive (Spyglass IND, Doc: um:guide:coding-guidelines §1.3)
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
@@ -69,4 +69,3 @@ module pll_clkgen_stub #(
     assign out_clk_o  = ref_clk_i;
 
 endmodule : pll_clkgen_stub
-

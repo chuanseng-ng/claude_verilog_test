@@ -87,7 +87,7 @@ See `../../cpu_uvm/tests/` for full test implementations.
 
 Full migration documentation available at:
 - **Migration Plan**: `docs/pyuvm_migration/MIGRATION_PLAN.md`
-- **Migration Status**: `docs/pyuvm_migration/MIGRATION_STATUS.md`
+- **Migration Status**: `Doc: cr:status:pyuvm-migration`
 - **Lessons Learned**: `docs/pyuvm_migration/LESSONS_LEARNED.md`
 - **Phase Summaries**: `docs/pyuvm_migration/PHASES_A_E_SUMMARY.md`
 

@@ -187,13 +187,16 @@ bd prime                 # full command reference
 
 ## 9. Commits and pull requests
 
+- An agent can write RTL, tests, flows and documents.
+- A human approves each specification, each architecture decision, each hard-macro change and each merge.
+- When a task needs one of these approvals, stop and ask the owner.
 - Never commit to `main`. Create a branch. Open a pull request.
 - Write the commit subject as `[Category] Brief description`.
 - Categories: `[Fix]`, `[Feature]`, `[Code]` (refactor), `[Env]` (build), `[Doc]`, `[Test]`, `[Spec]`, `[RTL]`, `[PD]`, `[Analog]`, `[Chore]`.
 - Make one commit for one purpose. Do not mix a conversion pass with a rewrite pass in one pull request.
 - Run the checks of section 5 that apply to your change before you push.
 - Push your branch at the end of a work session. Do not leave work only on your machine.
-- Follow `docs/development/CODING_GUIDELINES.md` for all new and changed code.
+- Follow `Doc: um:guide:coding-guidelines` for all new and changed code.
 
 ## 10. Documentation rules
 
@@ -212,7 +215,7 @@ Markdown files under `docs/` that are not converted yet stay valid until their c
 - Cite a label or a symbol name. Never cite a file and line number, a page or a section number.
 - Do not put these in a source comment: bead IDs, `GH #` or `PR #` numbers, run names, ISO dates, measured values with units.
 - Put history, measurements and rejected alternatives in the books. Keep the contract and the reason in the file.
-- Keep source comments inside the budgets in `docs/development/CODING_GUIDELINES.md` (section "Source comments").
+- Keep source comments inside the budgets in `Doc: um:guide:coding-guidelines` (section "Source comments").
 - Do not edit the words inside a `record` environment of the Changes record.
 - Write new text in ASD-STE100 style. Use `python tools/docs/ste_check.py <file>` for hints. It cannot prove compliance.
 - Check your edit: `python tools/docs/check_doc_labels.py`, `python tools/docs/check_comment_budget.py`

@@ -13,7 +13,7 @@
 // as a generic AXI4 slave.
 //
 // Coding conventions: no `default_nettype` directive (Spyglass IND,
-// CODING_GUIDELINES.md sec 1.3), synchronous reset, no #delays, no initial
+// Doc: um:guide:coding-guidelines sec 1.3), synchronous reset, no #delays, no initial
 // blocks in synthesisable path.  $readmemh is in an initial block
 // (behavioral ROM pre-load, identical pattern to sram_controller.sv).
 //

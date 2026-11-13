@@ -103,4 +103,4 @@ exclude_lines = [
 ]
 
 # Pylint config lives in .pylintrc (single source of truth — bare `pylint`
-# invocations in CI auto-load it). See docs/development/CODING_GUIDELINES.md.
+# invocations in CI auto-load it). See Doc: um:guide:coding-guidelines.

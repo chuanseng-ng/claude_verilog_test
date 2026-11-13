@@ -32,7 +32,7 @@
 // Coding rules:
 //   * No #delays, no initial blocks, no real types
 //   * Wire-only: zero registers, zero always blocks
-//   * No `default_nettype` directive (Spyglass IND, CODING_GUIDELINES.md §1.3)
+//   * No `default_nettype` directive (Spyglass IND, Doc: um:guide:coding-guidelines §1.3)
 //
 // Lint target: verilator -Wall -Wno-DECLFILENAME 0 errors 0 warnings on
 //              this file (the wrapped HLS core is machine-generated and is

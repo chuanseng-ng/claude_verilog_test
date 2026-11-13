@@ -645,11 +645,11 @@ cr:run:phase5:run-campaign	docs/manual/cr/parts/02-run-histories.tex	192	Run cam
 cr:run:phase5:sign-off-result-run-14-accepted	docs/manual/cr/parts/02-run-histories.tex	125	Sign-off result (run 14 --- accepted)
 cr:run:phase5:the-synthesis-blocker-and-fix-the-central-m11-problem	docs/manual/cr/parts/02-run-histories.tex	500	The synthesis blocker and fix (the central M11 problem)
 cr:run:phase5:what-made-cpu-clk-hard-measured-not-inferred	docs/manual/cr/parts/02-run-histories.tex	462	\texorpdfstring{What made \code{cpu_clk} hard (measured, not inferred)}{What made hard (measured, not inferred)}
-cr:status:ai-human-boundaries	docs/manual/cr/parts/01-phase-and-status-history.tex	4914	AI/Human Boundaries
-cr:status:ai-human-boundaries:ai-may-assist-with	docs/manual/cr/parts/01-phase-and-status-history.tex	4916	AI MAY assist with
-cr:status:ai-human-boundaries:human-must	docs/manual/cr/parts/01-phase-and-status-history.tex	4933	Human MUST
-cr:status:claude-md-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	3760	Project Overview
-cr:status:claude-md-overview:project-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	4046	Project Phases
+cr:status:ai-human-boundaries	docs/manual/cr/parts/01-phase-and-status-history.tex	8332	AI/Human Boundaries
+cr:status:ai-human-boundaries:ai-may-assist-with	docs/manual/cr/parts/01-phase-and-status-history.tex	8334	AI MAY assist with
+cr:status:ai-human-boundaries:human-must	docs/manual/cr/parts/01-phase-and-status-history.tex	8351	Human MUST
+cr:status:claude-md-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	7178	Project Overview
+cr:status:claude-md-overview:project-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	7464	Project Phases
 cr:status:phase-history	docs/manual/cr/parts/01-phase-and-status-history.tex	8	Phase History
 cr:status:phase-history:implemented-features	docs/manual/cr/parts/01-phase-and-status-history.tex	228	Implemented Features
 cr:status:phase-history:in-progress-dft-and-fpga-status-2026-10-15	docs/manual/cr/parts/01-phase-and-status-history.tex	202	In Progress: DFT and FPGA (status 2026-10-15)
@@ -662,70 +662,239 @@ cr:status:phase-history:phase-3-complete-white-check-mark-2026-05-21	docs/manual
 cr:status:phase-history:phase-4-complete-white-check-mark-2026-05-27	docs/manual/cr/parts/01-phase-and-status-history.tex	114	\texorpdfstring{Phase 4 Complete \ok{} (2026-05-27)}{Phase 4 Complete (2026-05-27)}
 cr:status:phase-history:phase-5-complete-white-check-mark-2026-06-24	docs/manual/cr/parts/01-phase-and-status-history.tex	140	\texorpdfstring{Phase 5 Complete \ok{} (2026-06-24)}{Phase 5 Complete (2026-06-24)}
 cr:status:phase-history:phase-6-complete-white-check-mark-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	168	\texorpdfstring{Phase 6 Complete \ok{} (2026-10-05)}{Phase 6 Complete (2026-10-05)}
-cr:status:phase-status	docs/manual/cr/parts/01-phase-and-status-history.tex	295	Project Phase Status
-cr:status:phase-status:2026-01-16-project-restart	docs/manual/cr/parts/01-phase-and-status-history.tex	2013	2026-01-16: Project Restart
-cr:status:phase-status:2026-01-17-phase-0-documentation-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1977	2026-01-17: Phase 0 Documentation Complete
-cr:status:phase-status:2026-01-17-specification-alignment	docs/manual/cr/parts/01-phase-and-status-history.tex	1997	2026-01-17: Specification Alignment
-cr:status:phase-status:2026-01-18-phase-0-approved-ready-for-phase-1-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1885	\texorpdfstring{2026-01-18: Phase 0 APPROVED - Ready for Phase 1 \ok{}}{2026-01-18: Phase 0 APPROVED - Ready for Phase 1 }
-cr:status:phase-status:2026-01-18-phase-0-implementation-complete-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	1909	\texorpdfstring{2026-01-18: Phase 0 Implementation Complete \ok{}}{2026-01-18: Phase 0 Implementation Complete }
-cr:status:phase-status:2026-01-26-task-2-complete-isa-compliance-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1869	\texorpdfstring{2026-01-26: Task 2 Complete --- ISA Compliance Tests \ok{}}{2026-01-26: Task 2 Complete --- ISA Compliance Tests }
-cr:status:phase-status:2026-01-28-task-3-complete-random-instruction-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1849	\texorpdfstring{2026-01-28: Task 3 Complete --- Random Instruction Tests \ok{}}{2026-01-28: Task 3 Complete --- Random Instruction Tests }
-cr:status:phase-status:2026-02-07-task-4-complete-axi-protocol-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1829	\texorpdfstring{2026-02-07: Task 4 Complete --- AXI Protocol Tests \ok{}}{2026-02-07: Task 4 Complete --- AXI Protocol Tests }
-cr:status:phase-status:2026-02-13-phase-1-verification-complete-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1805	\texorpdfstring{2026-02-13: Phase 1 Verification COMPLETE \ok{}}{2026-02-13: Phase 1 Verification COMPLETE }
-cr:status:phase-status:2026-02-14-phase-2-architecture-approved-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1777	\texorpdfstring{2026-02-14: Phase 2 Architecture Approved \ok{}}{2026-02-14: Phase 2 Architecture Approved }
-cr:status:phase-status:2026-02-16-phase-2-rtl-implementation-complete-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	1749	\texorpdfstring{2026-02-16: Phase 2 RTL Implementation COMPLETE \ok{}}{2026-02-16: Phase 2 RTL Implementation COMPLETE }
-cr:status:phase-status:2026-02-27-phase-2-comprehensive-verification-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1692	2026-02-27: Phase 2 Comprehensive Verification COMPLETE
-cr:status:phase-status:2026-03-08-phase-3-rtl-implementation-started	docs/manual/cr/parts/01-phase-and-status-history.tex	1649	2026-03-08: Phase 3 RTL Implementation Started
-cr:status:phase-status:2026-05-21-phase-3-complete-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	1605	\texorpdfstring{2026-05-21: Phase 3 COMPLETE \ok{}}{2026-05-21: Phase 3 COMPLETE }
-cr:status:phase-status:2026-06-20-phase-7-mixed-signal-pll-m-am-c-complete-m-d-docs	docs/manual/cr/parts/01-phase-and-status-history.tex	1564	2026-06-20: Phase 7 Mixed-Signal PLL --- M-a..M-c complete, M-d docs
-cr:status:phase-status:aihuman-responsibilities-for-phase-0-remaining-tasks	docs/manual/cr/parts/01-phase-and-status-history.tex	2196	AI/Human Responsibilities for Phase 0 Remaining Tasks
-cr:status:phase-status:architecture-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	2287	Architecture Decisions
-cr:status:phase-status:arrows-counterclockwise-current-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	2070	\texorpdfstring{\wip{} Current Issues}{ Current Issues}
-cr:status:phase-status:cocotb-infrastructure-setup	docs/manual/cr/parts/01-phase-and-status-history.tex	2235	cocotb Infrastructure Setup
-cr:status:phase-status:contact	docs/manual/cr/parts/01-phase-and-status-history.tex	2329	Contact
-cr:status:phase-status:current-phase	docs/manual/cr/parts/01-phase-and-status-history.tex	303	Current Phase
-cr:status:phase-status:deferred-host-blocked-not-phase-6-work	docs/manual/cr/parts/01-phase-and-status-history.tex	2128	Deferred / host-blocked (not Phase 6 work)
-cr:status:phase-status:documentation-structure	docs/manual/cr/parts/01-phase-and-status-history.tex	2173	Documentation Structure
-cr:status:phase-status:final-specification-review	docs/manual/cr/parts/01-phase-and-status-history.tex	2267	Final Specification Review
-cr:status:phase-status:immediate-dft-j41m-and-fpga-hlrm	docs/manual/cr/parts/01-phase-and-status-history.tex	2081	\texorpdfstring{Immediate --- DFT (\code{j41m}) and FPGA (\code{hlrm})}{Immediate --- DFT () and FPGA ()}
-cr:status:phase-status:key-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	2285	Key Decisions
-cr:status:phase-status:known-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	2030	Known Issues
-cr:status:phase-status:next-actions	docs/manual/cr/parts/01-phase-and-status-history.tex	2078	Next Actions
-cr:status:phase-status:phase-0-foundations-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	699	\texorpdfstring{Phase 0: Foundations \ok{}}{Phase 0: Foundations }
-cr:status:phase-status:phase-1-minimal-rv32i-core-white-check-mark-verification-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	783	\texorpdfstring{Phase 1: Minimal RV32I Core \ok{} VERIFICATION COMPLETE}{Phase 1: Minimal RV32I Core VERIFICATION COMPLETE}
-cr:status:phase-status:phase-2-pipelined-cpu-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	904	\texorpdfstring{Phase 2: Pipelined CPU \ok{} COMPLETE}{Phase 2: Pipelined CPU COMPLETE}
-cr:status:phase-status:phase-3-memory-system-caches-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1075	\texorpdfstring{Phase 3: Memory System \& Caches \ok{} COMPLETE}{Phase 3: Memory System \& Caches COMPLETE}
-cr:status:phase-status:phase-4-gpu-lite-compute-engine-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	1189	\texorpdfstring{Phase 4: GPU-Lite Compute Engine \ok{} COMPLETE}{Phase 4: GPU-Lite Compute Engine COMPLETE}
-cr:status:phase-status:phase-5-soc-integration-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	1333	\texorpdfstring{Phase 5: SoC Integration \ok{}}{Phase 5: SoC Integration }
-cr:status:phase-status:phase-6-ip-expansion-white-check-mark-complete-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	1394	\texorpdfstring{Phase 6: IP Expansion \ok{} COMPLETE (2026-10-05)}{Phase 6: IP Expansion COMPLETE (2026-10-05)}
-cr:status:phase-status:phase-7-mixed-signal-pll-clock-generator-construction	docs/manual/cr/parts/01-phase-and-status-history.tex	1493	\texorpdfstring{Phase 7: Mixed-Signal PLL Clock Generator \wip{}}{Phase 7: Mixed-Signal PLL Clock Generator }
-cr:status:phase-status:phase-progress	docs/manual/cr/parts/01-phase-and-status-history.tex	696	Phase Progress
-cr:status:phase-status:process-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	2309	Process Decisions
-cr:status:phase-status:python-reference-model-implementation	docs/manual/cr/parts/01-phase-and-status-history.tex	2198	Python Reference Model Implementation
-cr:status:phase-status:recent-project-changes	docs/manual/cr/parts/01-phase-and-status-history.tex	1561	Recent Project Changes
-cr:status:phase-status:white-check-mark-resolved-2026-01-17	docs/manual/cr/parts/01-phase-and-status-history.tex	2033	\texorpdfstring{\ok{} Resolved (2026-01-17)}{ Resolved (2026-01-17)}
-cr:status:phase5-workflow	docs/manual/cr/parts/01-phase-and-status-history.tex	4108	Current Workflow (Phase 5 --- SoC Integration)
-cr:status:roadmap	docs/manual/cr/parts/01-phase-and-status-history.tex	2339	Project Roadmap
-cr:status:roadmap:6a-additional-peripherals-apb4-slaves-on-the-phase-5-apb-sub-tree	docs/manual/cr/parts/01-phase-and-status-history.tex	3321	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
-cr:status:roadmap:6b-aes-128-sha-256-accelerator	docs/manual/cr/parts/01-phase-and-status-history.tex	3413	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
-cr:status:roadmap:6c-npu-minimal-int8-inference-engine	docs/manual/cr/parts/01-phase-and-status-history.tex	3508	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
-cr:status:roadmap:back-end-flow-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	2386	Back-End Flow Overview
-cr:status:roadmap:openroad-back-end-integration-strategy	docs/manual/cr/parts/01-phase-and-status-history.tex	2362	OpenROAD Back-End Integration Strategy
-cr:status:roadmap:phase	docs/manual/cr/parts/01-phase-and-status-history.tex	2506	Phase
-cr:status:roadmap:phase-0-foundations-white-check-mark-complete-2026-01-18	docs/manual/cr/parts/01-phase-and-status-history.tex	2509	\texorpdfstring{Phase 0 --- Foundations \ok{} COMPLETE (2026-01-18)}{Phase 0 --- Foundations COMPLETE (2026-01-18)}
-cr:status:roadmap:phase-1-minimal-rv32i-core-white-check-mark-complete-2026-02-13	docs/manual/cr/parts/01-phase-and-status-history.tex	2590	\texorpdfstring{Phase 1 --- Minimal RV32I core \ok{} COMPLETE (2026-02-13)}{Phase 1 --- Minimal RV32I core COMPLETE (2026-02-13)}
-cr:status:roadmap:phase-2-pipelined-cpu-white-check-mark-complete-2026-03-08	docs/manual/cr/parts/01-phase-and-status-history.tex	2736	\texorpdfstring{Phase 2 --- Pipelined CPU \ok{} COMPLETE (2026-03-08)}{Phase 2 --- Pipelined CPU COMPLETE (2026-03-08)}
-cr:status:roadmap:phase-3-memory-system-caches-white-check-mark-complete-2026-05-21	docs/manual/cr/parts/01-phase-and-status-history.tex	2862	\texorpdfstring{Phase 3 --- Memory system \& caches \ok{} COMPLETE (2026-05-21)}{Phase 3 --- Memory system \& caches COMPLETE (2026-05-21)}
-cr:status:roadmap:phase-4-gpu-lite-compute-engine-research-level	docs/manual/cr/parts/01-phase-and-status-history.tex	3010	Phase 4 --- "GPU-lite" compute engine (research-level)
-cr:status:roadmap:phase-5-soc-integration-ai-shines-again-white-check-mark-complete-2026-06-24-asap7-soc-571-mhz-629-mw-sign-off-warning-timingpower-unvalidated-post-bead-8f3-current-rtl-re-measured-on-the-fixed-flow-2026-09-18-bead-0d0-727-ps-781-violators-hold-clean-2836-mw-still-not-closed-see-docsphase5-run-historymd	docs/manual/cr/parts/01-phase-and-status-history.tex	3152	\texorpdfstring{Phase 5 --- SoC integration (AI shines again) --- \ok{} COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off \warn{} timing/\allowbreak{}power unvalidated post-bead-\code{8f3}; current RTL re-measured on the fixed flow 2026-09-18, bead \code{0d0}: −727 ps / 781 violators / hold clean / 283.6 mW, still not closed --- see \cref{cr:run:phase5})}{Phase 5 --- SoC integration (AI shines again) --- COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off timing/power unvalidated post-bead-; current RTL re-measured on the fixed flow 2026-09-18, bead : −727 ps / 781 violators / hold clean / 283.6 mW, still not closed --- see )}
-cr:status:roadmap:phase-6-ip-expansion-technology-node-exploration-white-check-mark-6a6c-complete-gate-b-white-check-mark-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	3300	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
-cr:status:roadmap:phase-7-mixed-signal-pll-clock-generator	docs/manual/cr/parts/01-phase-and-status-history.tex	3715	Phase 7 --- Mixed-Signal PLL Clock Generator
-cr:status:roadmap:post-phase-6-tracks-dft-and-fpga-not-numbered-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	3692	Post-Phase-6 tracks: DFT and FPGA (not numbered phases)
-cr:status:roadmap:power-aware-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	2418	Power-Aware Verification
-cr:status:roadmap:project-expectations	docs/manual/cr/parts/01-phase-and-status-history.tex	2341	Project Expectations
-cr:status:roadmap:target-technologies	docs/manual/cr/parts/01-phase-and-status-history.tex	2489	Target Technologies
-cr:status:roadmap:technology-node-cross-comparison-pd-results-estimates	docs/manual/cr/parts/01-phase-and-status-history.tex	3587	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
-cr:status:roadmap:timing-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	2452	Timing Verification
+cr:status:phase-status	docs/manual/cr/parts/01-phase-and-status-history.tex	3713	Project Phase Status
+cr:status:phase-status:2026-01-16-project-restart	docs/manual/cr/parts/01-phase-and-status-history.tex	5431	2026-01-16: Project Restart
+cr:status:phase-status:2026-01-17-phase-0-documentation-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	5395	2026-01-17: Phase 0 Documentation Complete
+cr:status:phase-status:2026-01-17-specification-alignment	docs/manual/cr/parts/01-phase-and-status-history.tex	5415	2026-01-17: Specification Alignment
+cr:status:phase-status:2026-01-18-phase-0-approved-ready-for-phase-1-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	5303	\texorpdfstring{2026-01-18: Phase 0 APPROVED - Ready for Phase 1 \ok{}}{2026-01-18: Phase 0 APPROVED - Ready for Phase 1 }
+cr:status:phase-status:2026-01-18-phase-0-implementation-complete-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	5327	\texorpdfstring{2026-01-18: Phase 0 Implementation Complete \ok{}}{2026-01-18: Phase 0 Implementation Complete }
+cr:status:phase-status:2026-01-26-task-2-complete-isa-compliance-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	5287	\texorpdfstring{2026-01-26: Task 2 Complete --- ISA Compliance Tests \ok{}}{2026-01-26: Task 2 Complete --- ISA Compliance Tests }
+cr:status:phase-status:2026-01-28-task-3-complete-random-instruction-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	5267	\texorpdfstring{2026-01-28: Task 3 Complete --- Random Instruction Tests \ok{}}{2026-01-28: Task 3 Complete --- Random Instruction Tests }
+cr:status:phase-status:2026-02-07-task-4-complete-axi-protocol-tests-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	5247	\texorpdfstring{2026-02-07: Task 4 Complete --- AXI Protocol Tests \ok{}}{2026-02-07: Task 4 Complete --- AXI Protocol Tests }
+cr:status:phase-status:2026-02-13-phase-1-verification-complete-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	5223	\texorpdfstring{2026-02-13: Phase 1 Verification COMPLETE \ok{}}{2026-02-13: Phase 1 Verification COMPLETE }
+cr:status:phase-status:2026-02-14-phase-2-architecture-approved-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	5195	\texorpdfstring{2026-02-14: Phase 2 Architecture Approved \ok{}}{2026-02-14: Phase 2 Architecture Approved }
+cr:status:phase-status:2026-02-16-phase-2-rtl-implementation-complete-tada	docs/manual/cr/parts/01-phase-and-status-history.tex	5167	\texorpdfstring{2026-02-16: Phase 2 RTL Implementation COMPLETE \ok{}}{2026-02-16: Phase 2 RTL Implementation COMPLETE }
+cr:status:phase-status:2026-02-27-phase-2-comprehensive-verification-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	5110	2026-02-27: Phase 2 Comprehensive Verification COMPLETE
+cr:status:phase-status:2026-03-08-phase-3-rtl-implementation-started	docs/manual/cr/parts/01-phase-and-status-history.tex	5067	2026-03-08: Phase 3 RTL Implementation Started
+cr:status:phase-status:2026-05-21-phase-3-complete-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	5023	\texorpdfstring{2026-05-21: Phase 3 COMPLETE \ok{}}{2026-05-21: Phase 3 COMPLETE }
+cr:status:phase-status:2026-06-20-phase-7-mixed-signal-pll-m-am-c-complete-m-d-docs	docs/manual/cr/parts/01-phase-and-status-history.tex	4982	2026-06-20: Phase 7 Mixed-Signal PLL --- M-a..M-c complete, M-d docs
+cr:status:phase-status:aihuman-responsibilities-for-phase-0-remaining-tasks	docs/manual/cr/parts/01-phase-and-status-history.tex	5614	AI/Human Responsibilities for Phase 0 Remaining Tasks
+cr:status:phase-status:architecture-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	5705	Architecture Decisions
+cr:status:phase-status:arrows-counterclockwise-current-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	5488	\texorpdfstring{\wip{} Current Issues}{ Current Issues}
+cr:status:phase-status:cocotb-infrastructure-setup	docs/manual/cr/parts/01-phase-and-status-history.tex	5653	cocotb Infrastructure Setup
+cr:status:phase-status:contact	docs/manual/cr/parts/01-phase-and-status-history.tex	5747	Contact
+cr:status:phase-status:current-phase	docs/manual/cr/parts/01-phase-and-status-history.tex	3721	Current Phase
+cr:status:phase-status:deferred-host-blocked-not-phase-6-work	docs/manual/cr/parts/01-phase-and-status-history.tex	5546	Deferred / host-blocked (not Phase 6 work)
+cr:status:phase-status:documentation-structure	docs/manual/cr/parts/01-phase-and-status-history.tex	5591	Documentation Structure
+cr:status:phase-status:final-specification-review	docs/manual/cr/parts/01-phase-and-status-history.tex	5685	Final Specification Review
+cr:status:phase-status:immediate-dft-j41m-and-fpga-hlrm	docs/manual/cr/parts/01-phase-and-status-history.tex	5499	\texorpdfstring{Immediate --- DFT (\code{j41m}) and FPGA (\code{hlrm})}{Immediate --- DFT () and FPGA ()}
+cr:status:phase-status:key-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	5703	Key Decisions
+cr:status:phase-status:known-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	5448	Known Issues
+cr:status:phase-status:next-actions	docs/manual/cr/parts/01-phase-and-status-history.tex	5496	Next Actions
+cr:status:phase-status:phase-0-foundations-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	4117	\texorpdfstring{Phase 0: Foundations \ok{}}{Phase 0: Foundations }
+cr:status:phase-status:phase-1-minimal-rv32i-core-white-check-mark-verification-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	4201	\texorpdfstring{Phase 1: Minimal RV32I Core \ok{} VERIFICATION COMPLETE}{Phase 1: Minimal RV32I Core VERIFICATION COMPLETE}
+cr:status:phase-status:phase-2-pipelined-cpu-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	4322	\texorpdfstring{Phase 2: Pipelined CPU \ok{} COMPLETE}{Phase 2: Pipelined CPU COMPLETE}
+cr:status:phase-status:phase-3-memory-system-caches-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	4493	\texorpdfstring{Phase 3: Memory System \& Caches \ok{} COMPLETE}{Phase 3: Memory System \& Caches COMPLETE}
+cr:status:phase-status:phase-4-gpu-lite-compute-engine-white-check-mark-complete	docs/manual/cr/parts/01-phase-and-status-history.tex	4607	\texorpdfstring{Phase 4: GPU-Lite Compute Engine \ok{} COMPLETE}{Phase 4: GPU-Lite Compute Engine COMPLETE}
+cr:status:phase-status:phase-5-soc-integration-white-check-mark	docs/manual/cr/parts/01-phase-and-status-history.tex	4751	\texorpdfstring{Phase 5: SoC Integration \ok{}}{Phase 5: SoC Integration }
+cr:status:phase-status:phase-6-ip-expansion-white-check-mark-complete-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	4812	\texorpdfstring{Phase 6: IP Expansion \ok{} COMPLETE (2026-10-05)}{Phase 6: IP Expansion COMPLETE (2026-10-05)}
+cr:status:phase-status:phase-7-mixed-signal-pll-clock-generator-construction	docs/manual/cr/parts/01-phase-and-status-history.tex	4911	\texorpdfstring{Phase 7: Mixed-Signal PLL Clock Generator \wip{}}{Phase 7: Mixed-Signal PLL Clock Generator }
+cr:status:phase-status:phase-progress	docs/manual/cr/parts/01-phase-and-status-history.tex	4114	Phase Progress
+cr:status:phase-status:process-decisions	docs/manual/cr/parts/01-phase-and-status-history.tex	5727	Process Decisions
+cr:status:phase-status:python-reference-model-implementation	docs/manual/cr/parts/01-phase-and-status-history.tex	5616	Python Reference Model Implementation
+cr:status:phase-status:recent-project-changes	docs/manual/cr/parts/01-phase-and-status-history.tex	4979	Recent Project Changes
+cr:status:phase-status:white-check-mark-resolved-2026-01-17	docs/manual/cr/parts/01-phase-and-status-history.tex	5451	\texorpdfstring{\ok{} Resolved (2026-01-17)}{ Resolved (2026-01-17)}
+cr:status:phase1-ai-human-responsibilities	docs/manual/cr/parts/01-phase-and-status-history.tex	1995	Phase 1: AI and Human Responsibilities
+cr:status:phase1-ai-human-responsibilities:ais-role-implementation-assistant	docs/manual/cr/parts/01-phase-and-status-history.tex	2013	\texorpdfstring{AI\textquotesingle s Role: \textbf{Implementation Assistant}}{AI\textquotesingle s Role: Implementation Assistant}
+cr:status:phase1-ai-human-responsibilities:cocotb-infrastructure	docs/manual/cr/parts/01-phase-and-status-history.tex	2771	cocotb Infrastructure
+cr:status:phase1-ai-human-responsibilities:code-quality	docs/manual/cr/parts/01-phase-and-status-history.tex	3621	Code Quality
+cr:status:phase1-ai-human-responsibilities:coverage	docs/manual/cr/parts/01-phase-and-status-history.tex	3289	Coverage
+cr:status:phase1-ai-human-responsibilities:debug-interface	docs/manual/cr/parts/01-phase-and-status-history.tex	3601	Debug Interface
+cr:status:phase1-ai-human-responsibilities:debug-interface-tests	docs/manual/cr/parts/01-phase-and-status-history.tex	3129	Debug Interface Tests
+cr:status:phase1-ai-human-responsibilities:directed-tests	docs/manual/cr/parts/01-phase-and-status-history.tex	2844	Directed Tests
+cr:status:phase1-ai-human-responsibilities:documentation	docs/manual/cr/parts/01-phase-and-status-history.tex	3363	Documentation
+cr:status:phase1-ai-human-responsibilities:exit-criteria-phase-1	docs/manual/cr/parts/01-phase-and-status-history.tex	3536	Exit Criteria (Phase 1)
+cr:status:phase1-ai-human-responsibilities:functional-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	3565	Functional Verification
+cr:status:phase1-ai-human-responsibilities:humans-role-architect-and-validator	docs/manual/cr/parts/01-phase-and-status-history.tex	2033	\texorpdfstring{Human\textquotesingle s Role: \textbf{Architect and Validator}}{Human\textquotesingle s Role: Architect and Validator}
+cr:status:phase1-ai-human-responsibilities:module-apb3-slavesv-apb3-debug-interface	docs/manual/cr/parts/01-phase-and-status-history.tex	2552	\texorpdfstring{Module: apb3\_\allowbreak{}slave.sv (APB3 Debug Interface)}{Module: apb3\_slave.sv (APB3 Debug Interface)}
+cr:status:phase1-ai-human-responsibilities:module-axi4lite-mastersv-axi4-lite-master-interface	docs/manual/cr/parts/01-phase-and-status-history.tex	2479	\texorpdfstring{Module: axi4lite\_\allowbreak{}master.sv (AXI4-Lite Master Interface)}{Module: axi4lite\_master.sv (AXI4-Lite Master Interface)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-alusv-arithmetic-logic-unit	docs/manual/cr/parts/01-phase-and-status-history.tex	2185	\texorpdfstring{Module: rv32i\_\allowbreak{}alu.sv (Arithmetic Logic Unit)}{Module: rv32i\_alu.sv (Arithmetic Logic Unit)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-controlsv-control-fsm	docs/manual/cr/parts/01-phase-and-status-history.tex	2332	\texorpdfstring{Module: rv32i\_\allowbreak{}control.sv (Control FSM)}{Module: rv32i\_control.sv (Control FSM)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-coresv-core-integration	docs/manual/cr/parts/01-phase-and-status-history.tex	2410	\texorpdfstring{Module: rv32i\_\allowbreak{}core.sv (Core Integration)}{Module: rv32i\_core.sv (Core Integration)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-cpu-topsv-top-level-integration	docs/manual/cr/parts/01-phase-and-status-history.tex	2699	\texorpdfstring{Module: rv32i\_\allowbreak{}cpu\_\allowbreak{}top.sv (Top-Level Integration)}{Module: rv32i\_cpu\_top.sv (Top-Level Integration)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-debugsv-debug-controller	docs/manual/cr/parts/01-phase-and-status-history.tex	2628	\texorpdfstring{Module: rv32i\_\allowbreak{}debug.sv (Debug Controller)}{Module: rv32i\_debug.sv (Debug Controller)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-decodesv-instruction-decoder	docs/manual/cr/parts/01-phase-and-status-history.tex	2255	\texorpdfstring{Module: rv32i\_\allowbreak{}decode.sv (Instruction Decoder)}{Module: rv32i\_decode.sv (Instruction Decoder)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-imm-gensv-immediate-generator	docs/manual/cr/parts/01-phase-and-status-history.tex	2123	\texorpdfstring{Module: rv32i\_\allowbreak{}imm\_\allowbreak{}gen.sv (Immediate Generator)}{Module: rv32i\_imm\_gen.sv (Immediate Generator)}
+cr:status:phase1-ai-human-responsibilities:module-rv32i-regfilesv-register-file	docs/manual/cr/parts/01-phase-and-status-history.tex	2056	\texorpdfstring{Module: rv32i\_\allowbreak{}regfile.sv (Register File)}{Module: rv32i\_regfile.sv (Register File)}
+cr:status:phase1-ai-human-responsibilities:protocol-compliance	docs/manual/cr/parts/01-phase-and-status-history.tex	3585	Protocol Compliance
+cr:status:phase1-ai-human-responsibilities:protocol-compliance-tests	docs/manual/cr/parts/01-phase-and-status-history.tex	3067	Protocol Compliance Tests
+cr:status:phase1-ai-human-responsibilities:questions	docs/manual/cr/parts/01-phase-and-status-history.tex	3684	Questions?
+cr:status:phase1-ai-human-responsibilities:quick-reference	docs/manual/cr/parts/01-phase-and-status-history.tex	2009	Quick Reference
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must	docs/manual/cr/parts/01-phase-and-status-history.tex	2098	\texorpdfstring{Module: rv32i\_\allowbreak{}regfile.sv (Register File)}{Module: rv32i\_regfile.sv (Register File)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-1	docs/manual/cr/parts/01-phase-and-status-history.tex	2162	\texorpdfstring{Module: rv32i\_\allowbreak{}imm\_\allowbreak{}gen.sv (Immediate Generator)}{Module: rv32i\_imm\_gen.sv (Immediate Generator)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-10	docs/manual/cr/parts/01-phase-and-status-history.tex	2820	cocotb Infrastructure
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-11	docs/manual/cr/parts/01-phase-and-status-history.tex	2896	Directed Tests
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-12	docs/manual/cr/parts/01-phase-and-status-history.tex	2975	Random Instruction Tests
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-13	docs/manual/cr/parts/01-phase-and-status-history.tex	3040	Scoreboard (RTL vs. Python Reference Model)
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-14	docs/manual/cr/parts/01-phase-and-status-history.tex	3105	Protocol Compliance Tests
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-15	docs/manual/cr/parts/01-phase-and-status-history.tex	3167	Debug Interface Tests
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-16	docs/manual/cr/parts/01-phase-and-status-history.tex	3254	SystemVerilog Assertions (SVA)
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-17	docs/manual/cr/parts/01-phase-and-status-history.tex	3327	Coverage
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-18	docs/manual/cr/parts/01-phase-and-status-history.tex	3401	Documentation
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-2	docs/manual/cr/parts/01-phase-and-status-history.tex	2227	\texorpdfstring{Module: rv32i\_\allowbreak{}alu.sv (Arithmetic Logic Unit)}{Module: rv32i\_alu.sv (Arithmetic Logic Unit)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-3	docs/manual/cr/parts/01-phase-and-status-history.tex	2299	\texorpdfstring{Module: rv32i\_\allowbreak{}decode.sv (Instruction Decoder)}{Module: rv32i\_decode.sv (Instruction Decoder)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-4	docs/manual/cr/parts/01-phase-and-status-history.tex	2374	\texorpdfstring{Module: rv32i\_\allowbreak{}control.sv (Control FSM)}{Module: rv32i\_control.sv (Control FSM)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-5	docs/manual/cr/parts/01-phase-and-status-history.tex	2450	\texorpdfstring{Module: rv32i\_\allowbreak{}core.sv (Core Integration)}{Module: rv32i\_core.sv (Core Integration)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-6	docs/manual/cr/parts/01-phase-and-status-history.tex	2519	\texorpdfstring{Module: axi4lite\_\allowbreak{}master.sv (AXI4-Lite Master Interface)}{Module: axi4lite\_master.sv (AXI4-Lite Master Interface)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-7	docs/manual/cr/parts/01-phase-and-status-history.tex	2592	\texorpdfstring{Module: apb3\_\allowbreak{}slave.sv (APB3 Debug Interface)}{Module: apb3\_slave.sv (APB3 Debug Interface)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-8	docs/manual/cr/parts/01-phase-and-status-history.tex	2666	\texorpdfstring{Module: rv32i\_\allowbreak{}debug.sv (Debug Controller)}{Module: rv32i\_debug.sv (Debug Controller)}
+cr:status:phase1-ai-human-responsibilities:raised-hand-human-must-9	docs/manual/cr/parts/01-phase-and-status-history.tex	2740	\texorpdfstring{Module: rv32i\_\allowbreak{}cpu\_\allowbreak{}top.sv (Top-Level Integration)}{Module: rv32i\_cpu\_top.sv (Top-Level Integration)}
+cr:status:phase1-ai-human-responsibilities:random-instruction-tests	docs/manual/cr/parts/01-phase-and-status-history.tex	2935	Random Instruction Tests
+cr:status:phase1-ai-human-responsibilities:red-flags-triangular-flag-on-post	docs/manual/cr/parts/01-phase-and-status-history.tex	3473	\texorpdfstring{Red Flags \warn{}}{Red Flags }
+cr:status:phase1-ai-human-responsibilities:reference-documents	docs/manual/cr/parts/01-phase-and-status-history.tex	3653	Reference Documents
+cr:status:phase1-ai-human-responsibilities:rtl-implementation	docs/manual/cr/parts/01-phase-and-status-history.tex	2053	RTL Implementation
+cr:status:phase1-ai-human-responsibilities:rtl-implementation-1	docs/manual/cr/parts/01-phase-and-status-history.tex	3544	RTL Implementation
+cr:status:phase1-ai-human-responsibilities:scoreboard-rtl-vs-python-reference-model	docs/manual/cr/parts/01-phase-and-status-history.tex	3000	Scoreboard (RTL vs. Python Reference Model)
+cr:status:phase1-ai-human-responsibilities:sign-off	docs/manual/cr/parts/01-phase-and-status-history.tex	3639	Sign-Off
+cr:status:phase1-ai-human-responsibilities:systemverilog-assertions-sva	docs/manual/cr/parts/01-phase-and-status-history.tex	3209	SystemVerilog Assertions (SVA)
+cr:status:phase1-ai-human-responsibilities:typical-module-implementation-flow	docs/manual/cr/parts/01-phase-and-status-history.tex	3427	Typical Module Implementation Flow
+cr:status:phase1-ai-human-responsibilities:typical-verification-flow	docs/manual/cr/parts/01-phase-and-status-history.tex	3448	Typical Verification Flow
+cr:status:phase1-ai-human-responsibilities:verification-testing	docs/manual/cr/parts/01-phase-and-status-history.tex	2769	Verification \& Testing
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval	docs/manual/cr/parts/01-phase-and-status-history.tex	2080	\texorpdfstring{Module: rv32i\_\allowbreak{}regfile.sv (Register File)}{Module: rv32i\_regfile.sv (Register File)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-1	docs/manual/cr/parts/01-phase-and-status-history.tex	2145	\texorpdfstring{Module: rv32i\_\allowbreak{}imm\_\allowbreak{}gen.sv (Immediate Generator)}{Module: rv32i\_imm\_gen.sv (Immediate Generator)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-10	docs/manual/cr/parts/01-phase-and-status-history.tex	2802	cocotb Infrastructure
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-11	docs/manual/cr/parts/01-phase-and-status-history.tex	2880	Directed Tests
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-12	docs/manual/cr/parts/01-phase-and-status-history.tex	2959	Random Instruction Tests
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-13	docs/manual/cr/parts/01-phase-and-status-history.tex	3024	Scoreboard (RTL vs. Python Reference Model)
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-14	docs/manual/cr/parts/01-phase-and-status-history.tex	3089	Protocol Compliance Tests
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-15	docs/manual/cr/parts/01-phase-and-status-history.tex	3151	Debug Interface Tests
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-16	docs/manual/cr/parts/01-phase-and-status-history.tex	3240	SystemVerilog Assertions (SVA)
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-17	docs/manual/cr/parts/01-phase-and-status-history.tex	3311	Coverage
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-18	docs/manual/cr/parts/01-phase-and-status-history.tex	3385	Documentation
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-2	docs/manual/cr/parts/01-phase-and-status-history.tex	2209	\texorpdfstring{Module: rv32i\_\allowbreak{}alu.sv (Arithmetic Logic Unit)}{Module: rv32i\_alu.sv (Arithmetic Logic Unit)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-3	docs/manual/cr/parts/01-phase-and-status-history.tex	2281	\texorpdfstring{Module: rv32i\_\allowbreak{}decode.sv (Instruction Decoder)}{Module: rv32i\_decode.sv (Instruction Decoder)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-4	docs/manual/cr/parts/01-phase-and-status-history.tex	2354	\texorpdfstring{Module: rv32i\_\allowbreak{}control.sv (Control FSM)}{Module: rv32i\_control.sv (Control FSM)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-5	docs/manual/cr/parts/01-phase-and-status-history.tex	2432	\texorpdfstring{Module: rv32i\_\allowbreak{}core.sv (Core Integration)}{Module: rv32i\_core.sv (Core Integration)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-6	docs/manual/cr/parts/01-phase-and-status-history.tex	2501	\texorpdfstring{Module: axi4lite\_\allowbreak{}master.sv (AXI4-Lite Master Interface)}{Module: axi4lite\_master.sv (AXI4-Lite Master Interface)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-7	docs/manual/cr/parts/01-phase-and-status-history.tex	2574	\texorpdfstring{Module: apb3\_\allowbreak{}slave.sv (APB3 Debug Interface)}{Module: apb3\_slave.sv (APB3 Debug Interface)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-8	docs/manual/cr/parts/01-phase-and-status-history.tex	2648	\texorpdfstring{Module: rv32i\_\allowbreak{}debug.sv (Debug Controller)}{Module: rv32i\_debug.sv (Debug Controller)}
+cr:status:phase1-ai-human-responsibilities:warning-ai-must-not-without-human-approval-9	docs/manual/cr/parts/01-phase-and-status-history.tex	2721	\texorpdfstring{Module: rv32i\_\allowbreak{}cpu\_\allowbreak{}top.sv (Top-Level Integration)}{Module: rv32i\_cpu\_top.sv (Top-Level Integration)}
+cr:status:phase1-ai-human-responsibilities:when-ai-is-overstepping	docs/manual/cr/parts/01-phase-and-status-history.tex	3475	When AI Is Overstepping
+cr:status:phase1-ai-human-responsibilities:when-human-should-intervene	docs/manual/cr/parts/01-phase-and-status-history.tex	3506	When Human Should Intervene
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with	docs/manual/cr/parts/01-phase-and-status-history.tex	2059	\texorpdfstring{Module: rv32i\_\allowbreak{}regfile.sv (Register File)}{Module: rv32i\_regfile.sv (Register File)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-1	docs/manual/cr/parts/01-phase-and-status-history.tex	2126	\texorpdfstring{Module: rv32i\_\allowbreak{}imm\_\allowbreak{}gen.sv (Immediate Generator)}{Module: rv32i\_imm\_gen.sv (Immediate Generator)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-10	docs/manual/cr/parts/01-phase-and-status-history.tex	2774	cocotb Infrastructure
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-11	docs/manual/cr/parts/01-phase-and-status-history.tex	2847	Directed Tests
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-12	docs/manual/cr/parts/01-phase-and-status-history.tex	2938	Random Instruction Tests
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-13	docs/manual/cr/parts/01-phase-and-status-history.tex	3003	Scoreboard (RTL vs. Python Reference Model)
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-14	docs/manual/cr/parts/01-phase-and-status-history.tex	3070	Protocol Compliance Tests
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-15	docs/manual/cr/parts/01-phase-and-status-history.tex	3132	Debug Interface Tests
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-16	docs/manual/cr/parts/01-phase-and-status-history.tex	3212	SystemVerilog Assertions (SVA)
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-17	docs/manual/cr/parts/01-phase-and-status-history.tex	3292	Coverage
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-18	docs/manual/cr/parts/01-phase-and-status-history.tex	3366	Documentation
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-2	docs/manual/cr/parts/01-phase-and-status-history.tex	2188	\texorpdfstring{Module: rv32i\_\allowbreak{}alu.sv (Arithmetic Logic Unit)}{Module: rv32i\_alu.sv (Arithmetic Logic Unit)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-3	docs/manual/cr/parts/01-phase-and-status-history.tex	2258	\texorpdfstring{Module: rv32i\_\allowbreak{}decode.sv (Instruction Decoder)}{Module: rv32i\_decode.sv (Instruction Decoder)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-4	docs/manual/cr/parts/01-phase-and-status-history.tex	2335	\texorpdfstring{Module: rv32i\_\allowbreak{}control.sv (Control FSM)}{Module: rv32i\_control.sv (Control FSM)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-5	docs/manual/cr/parts/01-phase-and-status-history.tex	2413	\texorpdfstring{Module: rv32i\_\allowbreak{}core.sv (Core Integration)}{Module: rv32i\_core.sv (Core Integration)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-6	docs/manual/cr/parts/01-phase-and-status-history.tex	2482	\texorpdfstring{Module: axi4lite\_\allowbreak{}master.sv (AXI4-Lite Master Interface)}{Module: axi4lite\_master.sv (AXI4-Lite Master Interface)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-7	docs/manual/cr/parts/01-phase-and-status-history.tex	2555	\texorpdfstring{Module: apb3\_\allowbreak{}slave.sv (APB3 Debug Interface)}{Module: apb3\_slave.sv (APB3 Debug Interface)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-8	docs/manual/cr/parts/01-phase-and-status-history.tex	2631	\texorpdfstring{Module: rv32i\_\allowbreak{}debug.sv (Debug Controller)}{Module: rv32i\_debug.sv (Debug Controller)}
+cr:status:phase1-ai-human-responsibilities:white-check-mark-ai-may-assist-with-9	docs/manual/cr/parts/01-phase-and-status-history.tex	2702	\texorpdfstring{Module: rv32i\_\allowbreak{}cpu\_\allowbreak{}top.sv (Top-Level Integration)}{Module: rv32i\_cpu\_top.sv (Top-Level Integration)}
+cr:status:phase1-ai-human-responsibilities:workflow-summary	docs/manual/cr/parts/01-phase-and-status-history.tex	3425	Workflow Summary
+cr:status:phase4-progress	docs/manual/cr/parts/01-phase-and-status-history.tex	295	Phase 4 (GPU-Lite SIMT) --- Sign-Off Progress
+cr:status:phase4-progress:completed-verified	docs/manual/cr/parts/01-phase-and-status-history.tex	304	Completed \& verified
+cr:status:phase4-progress:remaining-milestones	docs/manual/cr/parts/01-phase-and-status-history.tex	361	Remaining milestones
+cr:status:phase5-workflow	docs/manual/cr/parts/01-phase-and-status-history.tex	7526	Current Workflow (Phase 5 --- SoC Integration)
+cr:status:pyuvm-migration	docs/manual/cr/parts/01-phase-and-status-history.tex	853	pyuvm Migration Status
+cr:status:pyuvm-migration:a1-add-pyuvm-dependency	docs/manual/cr/parts/01-phase-and-status-history.tex	930	A.1: Add pyuvm Dependency
+cr:status:pyuvm-migration:a2-create-directory-structure	docs/manual/cr/parts/01-phase-and-status-history.tex	950	A.2: Create Directory Structure
+cr:status:pyuvm-migration:a3-create-migration-tracking-documents	docs/manual/cr/parts/01-phase-and-status-history.tex	982	A.3: Create Migration Tracking Documents
+cr:status:pyuvm-migration:b1-implement-uvm-driver-axi4-lite-memory-model	docs/manual/cr/parts/01-phase-and-status-history.tex	1018	\texorpdfstring{B.1: Implement uvm\_\allowbreak{}driver - AXI4-Lite Memory Model}{B.1: Implement uvm\_driver - AXI4-Lite Memory Model}
+cr:status:pyuvm-migration:b2-implement-uvm-driver-apb3-debug-interface	docs/manual/cr/parts/01-phase-and-status-history.tex	1053	\texorpdfstring{B.2: Implement uvm\_\allowbreak{}driver - APB3 Debug Interface}{B.2: Implement uvm\_driver - APB3 Debug Interface}
+cr:status:pyuvm-migration:b3-implement-uvm-monitor-commit-monitor	docs/manual/cr/parts/01-phase-and-status-history.tex	1091	\texorpdfstring{B.3: Implement uvm\_\allowbreak{}monitor - Commit Monitor}{B.3: Implement uvm\_monitor - Commit Monitor}
+cr:status:pyuvm-migration:b4-convert-cpuscoreboard-to-uvm-component	docs/manual/cr/parts/01-phase-and-status-history.tex	1121	\texorpdfstring{B.4: Convert CPUScoreboard to uvm\_\allowbreak{}component}{B.4: Convert CPUScoreboard to uvm\_component}
+cr:status:pyuvm-migration:blockers-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	1927	Blockers \& Issues
+cr:status:pyuvm-migration:c1-create-axi-agent	docs/manual/cr/parts/01-phase-and-status-history.tex	1177	C.1: Create AXI Agent
+cr:status:pyuvm-migration:c2-create-apb-agent	docs/manual/cr/parts/01-phase-and-status-history.tex	1200	C.2: Create APB Agent
+cr:status:pyuvm-migration:c3-create-cpu-environment	docs/manual/cr/parts/01-phase-and-status-history.tex	1227	C.3: Create CPU Environment
+cr:status:pyuvm-migration:completion-tracking	docs/manual/cr/parts/01-phase-and-status-history.tex	1770	Completion Tracking
+cr:status:pyuvm-migration:current-blockers	docs/manual/cr/parts/01-phase-and-status-history.tex	1945	Current Blockers
+cr:status:pyuvm-migration:d1-base-sequence	docs/manual/cr/parts/01-phase-and-status-history.tex	1285	D.1: Base Sequence
+cr:status:pyuvm-migration:d2-random-instruction-sequence	docs/manual/cr/parts/01-phase-and-status-history.tex	1306	D.2: Random Instruction Sequence
+cr:status:pyuvm-migration:d3-directed-test-sequences	docs/manual/cr/parts/01-phase-and-status-history.tex	1333	D.3: Directed Test Sequences
+cr:status:pyuvm-migration:e1-base-test-class	docs/manual/cr/parts/01-phase-and-status-history.tex	1391	E.1: Base Test Class
+cr:status:pyuvm-migration:e2-smoke-test-pyuvm	docs/manual/cr/parts/01-phase-and-status-history.tex	1421	E.2: Smoke Test (pyuvm)
+cr:status:pyuvm-migration:e3-isa-compliance-test-pyuvm	docs/manual/cr/parts/01-phase-and-status-history.tex	1445	E.3: ISA Compliance Test (pyuvm)
+cr:status:pyuvm-migration:e4-random-test-pyuvm	docs/manual/cr/parts/01-phase-and-status-history.tex	1485	E.4: Random Test (pyuvm)
+cr:status:pyuvm-migration:f1-update-makefile	docs/manual/cr/parts/01-phase-and-status-history.tex	1553	F.1: Update Makefile
+cr:status:pyuvm-migration:f2-parallel-testing	docs/manual/cr/parts/01-phase-and-status-history.tex	1575	F.2: Parallel Testing
+cr:status:pyuvm-migration:f3-regression-testing	docs/manual/cr/parts/01-phase-and-status-history.tex	1608	F.3: Regression Testing
+cr:status:pyuvm-migration:f4-initial-documentation-updates	docs/manual/cr/parts/01-phase-and-status-history.tex	1634	F.4: Initial Documentation Updates
+cr:status:pyuvm-migration:files-created-29-21-target-138-significantly-exceeded	docs/manual/cr/parts/01-phase-and-status-history.tex	1825	Files Created: 29 / 21 target (138\% - significantly exceeded!)
+cr:status:pyuvm-migration:files-modified-5-3-target-exceeded	docs/manual/cr/parts/01-phase-and-status-history.tex	1888	Files Modified: 5 / 3 target (exceeded)
+cr:status:pyuvm-migration:files-moved-0-3-target	docs/manual/cr/parts/01-phase-and-status-history.tex	1913	Files Moved: 0 / 3 target
+cr:status:pyuvm-migration:g1-archive-legacy-cocotb-tests	docs/manual/cr/parts/01-phase-and-status-history.tex	1665	G.1: Archive Legacy Cocotb Tests
+cr:status:pyuvm-migration:g2-remove-duplicate-helper-classes	docs/manual/cr/parts/01-phase-and-status-history.tex	1685	G.2: Remove Duplicate Helper Classes
+cr:status:pyuvm-migration:g3-final-documentation-updates	docs/manual/cr/parts/01-phase-and-status-history.tex	1703	G.3: Final Documentation Updates
+cr:status:pyuvm-migration:g4-update-makefile-defaults	docs/manual/cr/parts/01-phase-and-status-history.tex	1724	G.4: Update Makefile Defaults
+cr:status:pyuvm-migration:g5-final-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	1740	G.5: Final Verification
+cr:status:pyuvm-migration:next-steps	docs/manual/cr/parts/01-phase-and-status-history.tex	1955	Next Steps
+cr:status:pyuvm-migration:path-manipulation-in-cpu-scoreboard-fixed-2026-01-31	docs/manual/cr/parts/01-phase-and-status-history.tex	1931	\texorpdfstring{\ok{} Resolved Issues}{ Resolved Issues}
+cr:status:pyuvm-migration:phase-a-foundation-setup-target-05-days	docs/manual/cr/parts/01-phase-and-status-history.tex	921	Phase A: Foundation Setup (Target: 0.5 days)
+cr:status:pyuvm-migration:phase-b-core-uvm-components-target-2-days	docs/manual/cr/parts/01-phase-and-status-history.tex	1007	Phase B: Core UVM Components (Target: 2 days)
+cr:status:pyuvm-migration:phase-c-agent-environment-target-1-day	docs/manual/cr/parts/01-phase-and-status-history.tex	1168	Phase C: Agent \& Environment (Target: 1 day)
+cr:status:pyuvm-migration:phase-d-sequences-target-1-day	docs/manual/cr/parts/01-phase-and-status-history.tex	1276	Phase D: Sequences (Target: 1 day)
+cr:status:pyuvm-migration:phase-e-tests-target-15-days	docs/manual/cr/parts/01-phase-and-status-history.tex	1382	Phase E: Tests (Target: 1.5 days)
+cr:status:pyuvm-migration:phase-f-integration-validation-target-2-days	docs/manual/cr/parts/01-phase-and-status-history.tex	1543	Phase F: Integration \& Validation (Target: 2 days)
+cr:status:pyuvm-migration:phase-g-cleanup-finalization-target-1-day	docs/manual/cr/parts/01-phase-and-status-history.tex	1657	Phase G: Cleanup \& Finalization (Target: 1 day)
+cr:status:pyuvm-migration:phase-status	docs/manual/cr/parts/01-phase-and-status-history.tex	1786	Phase Status
+cr:status:pyuvm-migration:quick-status	docs/manual/cr/parts/01-phase-and-status-history.tex	893	Quick Status
+cr:status:pyuvm-migration:recent-updates	docs/manual/cr/parts/01-phase-and-status-history.tex	863	Recent Updates
+cr:status:pyuvm-migration:summary-statistics	docs/manual/cr/parts/01-phase-and-status-history.tex	1768	Summary Statistics
+cr:status:pyuvm-migration:white-check-mark-resolved-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	1929	\texorpdfstring{\ok{} Resolved Issues}{ Resolved Issues}
+cr:status:random-tests-status	docs/manual/cr/parts/01-phase-and-status-history.tex	429	Random Instruction Tests - Status Report
+cr:status:random-tests-status:available-test-targets	docs/manual/cr/parts/01-phase-and-status-history.tex	683	Available Test Targets
+cr:status:random-tests-status:conclusion	docs/manual/cr/parts/01-phase-and-status-history.tex	820	Conclusion
+cr:status:random-tests-status:dependencies	docs/manual/cr/parts/01-phase-and-status-history.tex	710	Dependencies
+cr:status:random-tests-status:executive-summary	docs/manual/cr/parts/01-phase-and-status-history.tex	446	Executive Summary
+cr:status:random-tests-status:future-improvements	docs/manual/cr/parts/01-phase-and-status-history.tex	773	Future Improvements
+cr:status:random-tests-status:how-to-run	docs/manual/cr/parts/01-phase-and-status-history.tex	460	How to Run
+cr:status:random-tests-status:instruction-coverage	docs/manual/cr/parts/01-phase-and-status-history.tex	603	Instruction Coverage
+cr:status:random-tests-status:known-issues	docs/manual/cr/parts/01-phase-and-status-history.tex	750	Known Issues
+cr:status:random-tests-status:latest-test-results	docs/manual/cr/parts/01-phase-and-status-history.tex	499	Latest Test Results
+cr:status:random-tests-status:makefile-integration	docs/manual/cr/parts/01-phase-and-status-history.tex	667	Makefile Integration
+cr:status:random-tests-status:potential-enhancements	docs/manual/cr/parts/01-phase-and-status-history.tex	775	Potential Enhancements
+cr:status:random-tests-status:python-modules-required	docs/manual/cr/parts/01-phase-and-status-history.tex	712	Python Modules Required
+cr:status:random-tests-status:simulator	docs/manual/cr/parts/01-phase-and-status-history.tex	734	Simulator
+cr:status:random-tests-status:test-architecture	docs/manual/cr/parts/01-phase-and-status-history.tex	537	Test Architecture
+cr:status:random-tests-status:test-coverage	docs/manual/cr/parts/01-phase-and-status-history.tex	478	Test Coverage
+cr:status:random-tests-status:test-execution	docs/manual/cr/parts/01-phase-and-status-history.tex	458	Test Execution
+cr:status:random-tests-status:test-file	docs/manual/cr/parts/01-phase-and-status-history.tex	539	Test File
+cr:status:random-tests-status:test-flow	docs/manual/cr/parts/01-phase-and-status-history.tex	583	Test Flow
+cr:status:random-tests-status:test-functions	docs/manual/cr/parts/01-phase-and-status-history.tex	547	Test Functions
+cr:status:random-tests-status:test-infrastructure	docs/manual/cr/parts/01-phase-and-status-history.tex	799	Test Infrastructure
+cr:status:random-tests-status:white-check-mark-resolved-pc-mismatch-logging	docs/manual/cr/parts/01-phase-and-status-history.tex	753	\texorpdfstring{\ok{} RESOLVED: PC Mismatch Logging}{ RESOLVED: PC Mismatch Logging}
+cr:status:roadmap	docs/manual/cr/parts/01-phase-and-status-history.tex	5757	Project Roadmap
+cr:status:roadmap:6a-additional-peripherals-apb4-slaves-on-the-phase-5-apb-sub-tree	docs/manual/cr/parts/01-phase-and-status-history.tex	6739	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:6b-aes-128-sha-256-accelerator	docs/manual/cr/parts/01-phase-and-status-history.tex	6831	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:6c-npu-minimal-int8-inference-engine	docs/manual/cr/parts/01-phase-and-status-history.tex	6926	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:back-end-flow-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	5804	Back-End Flow Overview
+cr:status:roadmap:openroad-back-end-integration-strategy	docs/manual/cr/parts/01-phase-and-status-history.tex	5780	OpenROAD Back-End Integration Strategy
+cr:status:roadmap:phase	docs/manual/cr/parts/01-phase-and-status-history.tex	5924	Phase
+cr:status:roadmap:phase-0-foundations-white-check-mark-complete-2026-01-18	docs/manual/cr/parts/01-phase-and-status-history.tex	5927	\texorpdfstring{Phase 0 --- Foundations \ok{} COMPLETE (2026-01-18)}{Phase 0 --- Foundations COMPLETE (2026-01-18)}
+cr:status:roadmap:phase-1-minimal-rv32i-core-white-check-mark-complete-2026-02-13	docs/manual/cr/parts/01-phase-and-status-history.tex	6008	\texorpdfstring{Phase 1 --- Minimal RV32I core \ok{} COMPLETE (2026-02-13)}{Phase 1 --- Minimal RV32I core COMPLETE (2026-02-13)}
+cr:status:roadmap:phase-2-pipelined-cpu-white-check-mark-complete-2026-03-08	docs/manual/cr/parts/01-phase-and-status-history.tex	6154	\texorpdfstring{Phase 2 --- Pipelined CPU \ok{} COMPLETE (2026-03-08)}{Phase 2 --- Pipelined CPU COMPLETE (2026-03-08)}
+cr:status:roadmap:phase-3-memory-system-caches-white-check-mark-complete-2026-05-21	docs/manual/cr/parts/01-phase-and-status-history.tex	6280	\texorpdfstring{Phase 3 --- Memory system \& caches \ok{} COMPLETE (2026-05-21)}{Phase 3 --- Memory system \& caches COMPLETE (2026-05-21)}
+cr:status:roadmap:phase-4-gpu-lite-compute-engine-research-level	docs/manual/cr/parts/01-phase-and-status-history.tex	6428	Phase 4 --- "GPU-lite" compute engine (research-level)
+cr:status:roadmap:phase-5-soc-integration-ai-shines-again-white-check-mark-complete-2026-06-24-asap7-soc-571-mhz-629-mw-sign-off-warning-timingpower-unvalidated-post-bead-8f3-current-rtl-re-measured-on-the-fixed-flow-2026-09-18-bead-0d0-727-ps-781-violators-hold-clean-2836-mw-still-not-closed-see-docsphase5-run-historymd	docs/manual/cr/parts/01-phase-and-status-history.tex	6570	\texorpdfstring{Phase 5 --- SoC integration (AI shines again) --- \ok{} COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off \warn{} timing/\allowbreak{}power unvalidated post-bead-\code{8f3}; current RTL re-measured on the fixed flow 2026-09-18, bead \code{0d0}: −727 ps / 781 violators / hold clean / 283.6 mW, still not closed --- see \cref{cr:run:phase5})}{Phase 5 --- SoC integration (AI shines again) --- COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off timing/power unvalidated post-bead-; current RTL re-measured on the fixed flow 2026-09-18, bead : −727 ps / 781 violators / hold clean / 283.6 mW, still not closed --- see )}
+cr:status:roadmap:phase-6-ip-expansion-technology-node-exploration-white-check-mark-6a6c-complete-gate-b-white-check-mark-2026-10-05	docs/manual/cr/parts/01-phase-and-status-history.tex	6718	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:phase-7-mixed-signal-pll-clock-generator	docs/manual/cr/parts/01-phase-and-status-history.tex	7133	Phase 7 --- Mixed-Signal PLL Clock Generator
+cr:status:roadmap:post-phase-6-tracks-dft-and-fpga-not-numbered-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	7110	Post-Phase-6 tracks: DFT and FPGA (not numbered phases)
+cr:status:roadmap:power-aware-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	5836	Power-Aware Verification
+cr:status:roadmap:project-expectations	docs/manual/cr/parts/01-phase-and-status-history.tex	5759	Project Expectations
+cr:status:roadmap:target-technologies	docs/manual/cr/parts/01-phase-and-status-history.tex	5907	Target Technologies
+cr:status:roadmap:technology-node-cross-comparison-pd-results-estimates	docs/manual/cr/parts/01-phase-and-status-history.tex	7005	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
+cr:status:roadmap:timing-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	5870	Timing Verification
 ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	7	CPU phases 0 to 3
 ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	11	DFT requirements
 ds:ch:functional-coverage	docs/manual/ds/parts/04-verification-plan.tex	7	Functional coverage
@@ -762,7 +931,7 @@ ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
 ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verification plan
-tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	78	Labels
+tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6048	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
 tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	19	Analog PLL
 tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	15	ASAP7 flow
@@ -806,27 +975,293 @@ tm:pd:node-strategy:freepdk45nangate45-ready-to-run	docs/manual/tm/parts/02-phys
 tm:pd:node-strategy:legacy-pr-directories-superseded-do-not-start-new-work-here	docs/manual/tm/parts/02-physical-design.tex	93	Legacy P\&R directories (superseded --- do not start new work here)
 tm:pd:node-strategy:sky130-ppa-ceiling-assessed-2026-03-28	docs/manual/tm/parts/02-physical-design.tex	151	Sky130 PPA ceiling (assessed 2026-03-28)
 tm:pd:node-strategy:sky130-real-drclvs-sign-off-gh-epic-102-stages-12-complete-2026-07-31	docs/manual/tm/parts/02-physical-design.tex	116	Sky130 real DRC/LVS sign-off (GH epic \#102, Stages 1--2 complete 2026-07-31)
-um:app:cleanup-recommendations	docs/manual/um/parts/99-appendix.tex	3	Cleanup recommendations
-um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	9	Build and run commands
-um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	21	Coding guidelines
-um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	29	Continuous integration
-um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	17	Debug interface
-um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	37	Documentation system
+um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	102	Build and run commands
+um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	474	Coding guidelines
+um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2688	Continuous integration
+um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	425	Debug interface
+um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6007	Documentation system
 um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
-um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	33	Issue tracking
-um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	25	Local quality checks
-um:ch:project-status	docs/manual/um/parts/01-chapters.tex	141	Project status
-um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	5	Project structure
-um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	13	Supported instructions
-um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	377	Commit Message Convention
-um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	387	Coding Guidelines
-um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	395	Questions?
-um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	294	Frequently Used Commands
-um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	329	Project Structure
-um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	146	Key Documentation
-um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	152	Architecture \& Design
-um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	209	Physical Design
-um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	283	README detail set
-um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	243	Verification \& Fixes
-um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	342	Reference Model (Python)
-um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	358	Verification Strategy
+um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6003	Issue tracking
+um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2233	Local quality checks
+um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6111	Project status
+um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	40	Project structure
+um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	360	Supported instructions
+um:ch:tool-flows	docs/manual/um/parts/01-chapters.tex	5116	Simulator and lint tool flows
+um:flow:badges	docs/manual/um/parts/01-chapters.tex	5042	GitHub Actions Badges
+um:flow:badges:badge-markdown	docs/manual/um/parts/01-chapters.tex	5047	Badge Markdown
+um:flow:badges:code-coverage-badge-if-using-codecov	docs/manual/um/parts/01-chapters.tex	5061	Code Coverage Badge (if using Codecov)
+um:flow:badges:example-combined-badges	docs/manual/um/parts/01-chapters.tex	5067	Example Combined Badges
+um:flow:badges:qa-checks-badge	docs/manual/um/parts/01-chapters.tex	5049	QA Checks Badge
+um:flow:badges:qa-checksyml	docs/manual/um/parts/01-chapters.tex	5077	\texorpdfstring{\code{qa-checks.yml}}{}
+um:flow:badges:tests-badge	docs/manual/um/parts/01-chapters.tex	5055	Tests Badge
+um:flow:badges:testsyml	docs/manual/um/parts/01-chapters.tex	5103	\texorpdfstring{\code{tests.yml}}{}
+um:flow:badges:workflow-details	docs/manual/um/parts/01-chapters.tex	5075	Workflow Details
+um:flow:ci-cd-workflow	docs/manual/um/parts/01-chapters.tex	2694	CI/CD Workflow Documentation
+um:flow:ci-cd-workflow:adding-new-test-jobs	docs/manual/um/parts/01-chapters.tex	3567	Adding New Test Jobs
+um:flow:ci-cd-workflow:artifact-retention-policy	docs/manual/um/parts/01-chapters.tex	3091	Artifact Retention Policy
+um:flow:ci-cd-workflow:changing-test-parameters	docs/manual/um/parts/01-chapters.tex	3555	Changing Test Parameters
+um:flow:ci-cd-workflow:combined-coverage	docs/manual/um/parts/01-chapters.tex	3328	Combined Coverage
+um:flow:ci-cd-workflow:common-issues	docs/manual/um/parts/01-chapters.tex	3650	Common Issues
+um:flow:ci-cd-workflow:contact-and-support	docs/manual/um/parts/01-chapters.tex	3745	Contact and Support
+um:flow:ci-cd-workflow:coverage-goals-phase-1	docs/manual/um/parts/01-chapters.tex	3297	Coverage Goals (Phase 1)
+um:flow:ci-cd-workflow:coverage-metrics	docs/manual/um/parts/01-chapters.tex	3388	Coverage Metrics
+um:flow:ci-cd-workflow:customizing-the-workflow	docs/manual/um/parts/01-chapters.tex	3553	Customizing the Workflow
+um:flow:ci-cd-workflow:debugging-failures	docs/manual/um/parts/01-chapters.tex	3436	Debugging Failures
+um:flow:ci-cd-workflow:directory-structure	docs/manual/um/parts/01-chapters.tex	3199	Directory Structure
+um:flow:ci-cd-workflow:downloading-artifacts	docs/manual/um/parts/01-chapters.tex	3285	Downloading Artifacts
+um:flow:ci-cd-workflow:environment-setup	docs/manual/um/parts/01-chapters.tex	3155	Environment Setup
+um:flow:ci-cd-workflow:future-enhancements	docs/manual/um/parts/01-chapters.tex	3668	Future Enhancements
+um:flow:ci-cd-workflow:integration-with-project-workflow	docs/manual/um/parts/01-chapters.tex	3501	Integration with Project Workflow
+um:flow:ci-cd-workflow:job-1-smoke-test	docs/manual/um/parts/01-chapters.tex	2898	\texorpdfstring{Job 1: \code{smoke-test}}{Job 1: }
+um:flow:ci-cd-workflow:job-2-full-random-test	docs/manual/um/parts/01-chapters.tex	2946	\texorpdfstring{Job 2: \code{full-random-test}}{Job 2: }
+um:flow:ci-cd-workflow:job-3-extended-test	docs/manual/um/parts/01-chapters.tex	2990	\texorpdfstring{Job 3: \code{extended-test}}{Job 3: }
+um:flow:ci-cd-workflow:job-4-summary-report	docs/manual/um/parts/01-chapters.tex	3066	\texorpdfstring{Job 4: \code{summary-report}}{Job 4: }
+um:flow:ci-cd-workflow:job-structure	docs/manual/um/parts/01-chapters.tex	2896	Job Structure
+um:flow:ci-cd-workflow:main-branch-random-test-failure	docs/manual/um/parts/01-chapters.tex	3458	Main Branch Random Test Failure
+um:flow:ci-cd-workflow:maintenance-tasks	docs/manual/um/parts/01-chapters.tex	3608	Maintenance Tasks
+um:flow:ci-cd-workflow:manual-workflow-dispatch	docs/manual/um/parts/01-chapters.tex	3213	Manual Workflow Dispatch
+um:flow:ci-cd-workflow:modifying-artifact-retention	docs/manual/um/parts/01-chapters.tex	3583	Modifying Artifact Retention
+um:flow:ci-cd-workflow:monitoring-and-maintenance	docs/manual/um/parts/01-chapters.tex	3594	Monitoring and Maintenance
+um:flow:ci-cd-workflow:nightly-extended-test-failure	docs/manual/um/parts/01-chapters.tex	3482	Nightly Extended Test Failure
+um:flow:ci-cd-workflow:overview	docs/manual/um/parts/01-chapters.tex	2698	Overview
+um:flow:ci-cd-workflow:performance-metrics	docs/manual/um/parts/01-chapters.tex	3340	Performance Metrics
+um:flow:ci-cd-workflow:pr-comment-bot	docs/manual/um/parts/01-chapters.tex	3109	PR Comment Bot
+um:flow:ci-cd-workflow:pr-smoke-test-failure	docs/manual/um/parts/01-chapters.tex	3438	PR Smoke Test Failure
+um:flow:ci-cd-workflow:random-tests	docs/manual/um/parts/01-chapters.tex	3299	Random Tests
+um:flow:ci-cd-workflow:references	docs/manual/um/parts/01-chapters.tex	3726	References
+um:flow:ci-cd-workflow:regular-monitoring	docs/manual/um/parts/01-chapters.tex	3596	Regular Monitoring
+um:flow:ci-cd-workflow:stress-tests	docs/manual/um/parts/01-chapters.tex	3314	Stress Tests
+um:flow:ci-cd-workflow:tier-1-smoke-tests-pr-validation	docs/manual/um/parts/01-chapters.tex	2759	Tier 1: Smoke Tests (PR Validation)
+um:flow:ci-cd-workflow:tier-2-full-random-tests-main-branch	docs/manual/um/parts/01-chapters.tex	2805	Tier 2: Full Random Tests (Main Branch)
+um:flow:ci-cd-workflow:tier-3-extended-tests-nightly	docs/manual/um/parts/01-chapters.tex	2850	Tier 3: Extended Tests (Nightly)
+um:flow:ci-cd-workflow:tiered-testing-strategy	docs/manual/um/parts/01-chapters.tex	2757	Tiered Testing Strategy
+um:flow:ci-cd-workflow:troubleshooting	docs/manual/um/parts/01-chapters.tex	3648	Troubleshooting
+um:flow:ci-cd-workflow:usage-examples	docs/manual/um/parts/01-chapters.tex	3211	Usage Examples
+um:flow:ci-cd-workflow:viewing-results	docs/manual/um/parts/01-chapters.tex	3242	Viewing Results
+um:flow:ci-cd-workflow:workflow-triggers	docs/manual/um/parts/01-chapters.tex	2712	Workflow Triggers
+um:flow:ci-setup	docs/manual/um/parts/01-chapters.tex	3765	CI/CD Setup Guide
+um:flow:ci-setup:auto-fix-issues	docs/manual/um/parts/01-chapters.tex	3902	Auto-fix Issues
+um:flow:ci-setup:ci-badge-status	docs/manual/um/parts/01-chapters.tex	3931	CI Badge Status
+um:flow:ci-setup:configuration-files	docs/manual/um/parts/01-chapters.tex	3991	Configuration Files
+um:flow:ci-setup:coverage-upload-fails	docs/manual/um/parts/01-chapters.tex	3959	Coverage Upload Fails
+um:flow:ci-setup:dependencies	docs/manual/um/parts/01-chapters.tex	3912	Dependencies
+um:flow:ci-setup:future-enhancements	docs/manual/um/parts/01-chapters.tex	4007	Future Enhancements
+um:flow:ci-setup:install-dependencies	docs/manual/um/parts/01-chapters.tex	3877	Install Dependencies
+um:flow:ci-setup:local-development	docs/manual/um/parts/01-chapters.tex	3875	Local Development
+um:flow:ci-setup:overview	docs/manual/um/parts/01-chapters.tex	3769	Overview
+um:flow:ci-setup:python-version-not-available	docs/manual/um/parts/01-chapters.tex	3977	Python Version Not Available
+um:flow:ci-setup:qa-checks-workflow	docs/manual/um/parts/01-chapters.tex	3783	QA Checks Workflow
+um:flow:ci-setup:run-qa-checks-locally	docs/manual/um/parts/01-chapters.tex	3883	Run QA Checks Locally
+um:flow:ci-setup:tests-workflow	docs/manual/um/parts/01-chapters.tex	3845	Tests Workflow
+um:flow:ci-setup:troubleshooting	docs/manual/um/parts/01-chapters.tex	3942	Troubleshooting
+um:flow:ci-setup:workflow-fails-on-first-run	docs/manual/um/parts/01-chapters.tex	3944	Workflow Fails on First Run
+um:flow:dqc	docs/manual/um/parts/01-chapters.tex	5551	\texorpdfstring{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on \code{soc_top}}{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on }
+um:flow:dqc:constraints-dqcsgdcsoc-topsgdc-and-why	docs/manual/um/parts/01-chapters.tex	5663	\texorpdfstring{Constraints (\src{dqc/sgdc/soc_top.sgdc}) and why}{Constraints () and why}
+um:flow:dqc:findings	docs/manual/um/parts/01-chapters.tex	5904	Findings
+um:flow:dqc:how-to-run	docs/manual/um/parts/01-chapters.tex	5563	How to run
+um:flow:dqc:negative-control-make-c-dqc-selftest	docs/manual/um/parts/01-chapters.tex	5842	\texorpdfstring{Negative control (\texttt{make\ -\allowbreak{}C\ dqc\ selftest})}{Negative control ()}
+um:flow:dqc:open-work-exact-resume-point	docs/manual/um/parts/01-chapters.tex	5977	Open work / exact resume point
+um:flow:dqc:results-arm-default	docs/manual/um/parts/01-chapters.tex	5774	\texorpdfstring{Results (arm \code{default})}{Results (arm )}
+um:flow:dqc:tool-and-licence-matrix-measured-2026-10-24	docs/manual/um/parts/01-chapters.tex	5719	Tool and licence matrix (measured 2026-10-24)
+um:flow:dqc:waivers-dqcwaivers	docs/manual/um/parts/01-chapters.tex	5857	\texorpdfstring{Waivers (\src{dqc/waivers/})}{Waivers ()}
+um:flow:dqc:what-is-analysed	docs/manual/um/parts/01-chapters.tex	5618	What is analysed
+um:flow:pre-commit-setup	docs/manual/um/parts/01-chapters.tex	4030	Pre-commit Hooks Setup Guide
+um:flow:pre-commit-setup:add-custom-hooks	docs/manual/um/parts/01-chapters.tex	4418	Add custom hooks
+um:flow:pre-commit-setup:advanced-configuration	docs/manual/um/parts/01-chapters.tex	4399	Advanced Configuration
+um:flow:pre-commit-setup:auto-fixes	docs/manual/um/parts/01-chapters.tex	4232	Auto-fixes
+um:flow:pre-commit-setup:change-hook-stages	docs/manual/um/parts/01-chapters.tex	4411	Change hook stages
+um:flow:pre-commit-setup:comparison-pre-commit-vs-ci	docs/manual/um/parts/01-chapters.tex	4371	Comparison: Pre-commit vs CI
+um:flow:pre-commit-setup:configuration-files	docs/manual/um/parts/01-chapters.tex	4359	Configuration Files
+um:flow:pre-commit-setup:hooks-are-slow	docs/manual/um/parts/01-chapters.tex	4339	Hooks are slow
+um:flow:pre-commit-setup:installation	docs/manual/um/parts/01-chapters.tex	4052	Installation
+um:flow:pre-commit-setup:mypy-fails-with-import-errors	docs/manual/um/parts/01-chapters.tex	4351	MyPy fails with import errors
+um:flow:pre-commit-setup:normal-workflow	docs/manual/um/parts/01-chapters.tex	4187	Normal Workflow
+um:flow:pre-commit-setup:on-every-commit	docs/manual/um/parts/01-chapters.tex	4087	On Every Commit
+um:flow:pre-commit-setup:on-git-push-only	docs/manual/um/parts/01-chapters.tex	4165	On Git Push Only
+um:flow:pre-commit-setup:pre-commit-command-not-found	docs/manual/um/parts/01-chapters.tex	4318	"pre-commit: command not found"
+um:flow:pre-commit-setup:pylint-command-not-found-or-pytest-command-not-found	docs/manual/um/parts/01-chapters.tex	4331	"pylint: command not found" or "pytest: command not found"
+um:flow:pre-commit-setup:run-all-hooks-on-all-files	docs/manual/um/parts/01-chapters.tex	4268	Run all hooks on all files
+um:flow:pre-commit-setup:run-hooks-on-specific-file-patterns	docs/manual/um/parts/01-chapters.tex	4401	Run hooks on specific file patterns
+um:flow:pre-commit-setup:run-hooks-on-specific-files	docs/manual/um/parts/01-chapters.tex	4287	Run hooks on specific files
+um:flow:pre-commit-setup:run-specific-hook	docs/manual/um/parts/01-chapters.tex	4274	Run specific hook
+um:flow:pre-commit-setup:running-hooks-manually	docs/manual/um/parts/01-chapters.tex	4266	Running Hooks Manually
+um:flow:pre-commit-setup:see-also	docs/manual/um/parts/01-chapters.tex	4456	See Also
+um:flow:pre-commit-setup:skipping-hooks-not-recommended	docs/manual/um/parts/01-chapters.tex	4252	Skipping Hooks (Not Recommended)
+um:flow:pre-commit-setup:step-1-install-pre-commit	docs/manual/um/parts/01-chapters.tex	4054	Step 1: Install pre-commit
+um:flow:pre-commit-setup:step-2-install-the-hooks	docs/manual/um/parts/01-chapters.tex	4060	Step 2: Install the hooks
+um:flow:pre-commit-setup:step-3-verify-installation	docs/manual/um/parts/01-chapters.tex	4077	Step 3: Verify installation
+um:flow:pre-commit-setup:summary	docs/manual/um/parts/01-chapters.tex	4430	Summary
+um:flow:pre-commit-setup:troubleshooting	docs/manual/um/parts/01-chapters.tex	4316	Troubleshooting
+um:flow:pre-commit-setup:uninstalling	docs/manual/um/parts/01-chapters.tex	4304	Uninstalling
+um:flow:pre-commit-setup:updating-hooks	docs/manual/um/parts/01-chapters.tex	4293	Updating Hooks
+um:flow:pre-commit-setup:usage	docs/manual/um/parts/01-chapters.tex	4185	Usage
+um:flow:pre-commit-setup:what-are-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	4035	What Are Pre-commit Hooks?
+um:flow:pre-commit-setup:what-hooks-are-configured	docs/manual/um/parts/01-chapters.tex	4083	What Hooks Are Configured?
+um:flow:pre-commit-setup:when-hooks-fail	docs/manual/um/parts/01-chapters.tex	4208	When Hooks Fail
+um:flow:proprietary-sim	docs/manual/um/parts/01-chapters.tex	5122	Proprietary simulator flow: Synopsys VCS and Cadence Xcelium
+um:flow:proprietary-sim:1-prerequisites	docs/manual/um/parts/01-chapters.tex	5163	1. Prerequisites
+um:flow:proprietary-sim:2-one-time-setup	docs/manual/um/parts/01-chapters.tex	5212	2. One-time setup
+um:flow:proprietary-sim:3-every-shell	docs/manual/um/parts/01-chapters.tex	5228	3. Every shell
+um:flow:proprietary-sim:4-running	docs/manual/um/parts/01-chapters.tex	5253	4. Running
+um:flow:proprietary-sim:5-how-it-works-tbcocotbcommonsim-portabilitymk	docs/manual/um/parts/01-chapters.tex	5335	\texorpdfstring{5. How it works (\src{tb/cocotb/common/sim_portability.mk})}{5. How it works ()}
+um:flow:proprietary-sim:6-writing-portable-tests	docs/manual/um/parts/01-chapters.tex	5407	6. Writing portable tests
+um:flow:proprietary-sim:7-known-noise-not-failures	docs/manual/um/parts/01-chapters.tex	5447	7. Known noise (not failures)
+um:flow:proprietary-sim:8-troubleshooting	docs/manual/um/parts/01-chapters.tex	5489	8. Troubleshooting
+um:flow:proprietary-sim:9-coverage	docs/manual/um/parts/01-chapters.tex	5533	9. Coverage
+um:flow:proprietary-sim:a-single-suite-through-the-makefiles	docs/manual/um/parts/01-chapters.tex	5255	A single suite, through the Makefiles
+um:flow:proprietary-sim:pass-criteria-and-floors	docs/manual/um/parts/01-chapters.tex	5301	Pass criteria and floors
+um:flow:proprietary-sim:the-full-regression-through-the-driver	docs/manual/um/parts/01-chapters.tex	5274	The full regression, through the driver
+um:flow:qa-workflow-diagram	docs/manual/um/parts/01-chapters.tex	4473	QA Workflow Diagram
+um:flow:qa-workflow-diagram:before-creating-pr	docs/manual/um/parts/01-chapters.tex	4725	Before Creating PR
+um:flow:qa-workflow-diagram:complete-qa-flow	docs/manual/um/parts/01-chapters.tex	4478	Complete QA Flow
+um:flow:qa-workflow-diagram:emergency-hotfix	docs/manual/um/parts/01-chapters.tex	4738	Emergency Hotfix
+um:flow:qa-workflow-diagram:fast-iteration-during-development	docs/manual/um/parts/01-chapters.tex	4708	Fast Iteration During Development
+um:flow:qa-workflow-diagram:layer-1-pre-commit-hooks-local-optional	docs/manual/um/parts/01-chapters.tex	4620	Layer 1: Pre-commit Hooks (Local, Optional)
+um:flow:qa-workflow-diagram:layer-2-pre-push-hook-local-optional	docs/manual/um/parts/01-chapters.tex	4637	Layer 2: Pre-push Hook (Local, Optional)
+um:flow:qa-workflow-diagram:layer-3-github-actions-ci-remote-mandatory	docs/manual/um/parts/01-chapters.tex	4654	Layer 3: GitHub Actions CI (Remote, Mandatory)
+um:flow:qa-workflow-diagram:recommended-setup	docs/manual/um/parts/01-chapters.tex	4670	Recommended Setup
+um:flow:qa-workflow-diagram:see-also	docs/manual/um/parts/01-chapters.tex	4753	See Also
+um:flow:qa-workflow-diagram:three-layers-of-protection	docs/manual/um/parts/01-chapters.tex	4618	Three Layers of Protection
+um:flow:qa-workflow-diagram:time-investment-vs-savings	docs/manual/um/parts/01-chapters.tex	4684	Time Investment vs. Savings
+um:flow:qa-workflow-diagram:workflow-optimization-tips	docs/manual/um/parts/01-chapters.tex	4706	Workflow Optimization Tips
+um:flow:workflow-triggers	docs/manual/um/parts/01-chapters.tex	4771	Workflow Trigger Summary
+um:flow:workflow-triggers:common-scenarios	docs/manual/um/parts/01-chapters.tex	4853	Common Scenarios
+um:flow:workflow-triggers:development-workflow-recommendation	docs/manual/um/parts/01-chapters.tex	4946	Development Workflow Recommendation
+um:flow:workflow-triggers:modifying-trigger-behavior	docs/manual/um/parts/01-chapters.tex	4995	Modifying Trigger Behavior
+um:flow:workflow-triggers:option-a-always-use-prs-recommended	docs/manual/um/parts/01-chapters.tex	4948	Option A: Always Use PRs (Recommended)
+um:flow:workflow-triggers:option-b-local-qa-before-pr	docs/manual/um/parts/01-chapters.tex	4966	Option B: Local QA Before PR
+um:flow:workflow-triggers:option-c-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	4980	Option C: Pre-commit Hooks
+um:flow:workflow-triggers:path-filtering-tests-workflow-only	docs/manual/um/parts/01-chapters.tex	4918	Path Filtering (Tests Workflow Only)
+um:flow:workflow-triggers:qa-checks-workflow-qa-checksyml	docs/manual/um/parts/01-chapters.tex	4780	\texorpdfstring{QA Checks Workflow (\code{qa-checks.yml})}{QA Checks Workflow ()}
+um:flow:workflow-triggers:scenario-1-working-on-a-feature-branch	docs/manual/um/parts/01-chapters.tex	4855	Scenario 1: Working on a Feature Branch
+um:flow:workflow-triggers:scenario-2-creating-a-pull-request-to-main	docs/manual/um/parts/01-chapters.tex	4867	Scenario 2: Creating a Pull Request to Main
+um:flow:workflow-triggers:scenario-3-merging-to-main	docs/manual/um/parts/01-chapters.tex	4877	Scenario 3: Merging to Main
+um:flow:workflow-triggers:scenario-4-manual-trigger	docs/manual/um/parts/01-chapters.tex	4886	Scenario 4: Manual Trigger
+um:flow:workflow-triggers:see-also	docs/manual/um/parts/01-chapters.tex	5027	See Also
+um:flow:workflow-triggers:tests-workflow-testsyml	docs/manual/um/parts/01-chapters.tex	4808	\texorpdfstring{Tests Workflow (\code{tests.yml})}{Tests Workflow ()}
+um:flow:workflow-triggers:to-run-ci-on-all-branches	docs/manual/um/parts/01-chapters.tex	4997	To run CI on all branches
+um:flow:workflow-triggers:to-run-ci-on-all-prs-but-push-to-main-only	docs/manual/um/parts/01-chapters.tex	5017	To run CI on all PRs but push to main only
+um:flow:workflow-triggers:to-run-ci-only-on-specific-branches	docs/manual/um/parts/01-chapters.tex	5007	To run CI only on specific branches
+um:flow:workflow-triggers:trigger-configuration	docs/manual/um/parts/01-chapters.tex	4775	Trigger Configuration
+um:flow:workflow-triggers:why-this-configuration	docs/manual/um/parts/01-chapters.tex	4895	Why This Configuration?
+um:flow:workflow-triggers:workflow-diagram	docs/manual/um/parts/01-chapters.tex	4836	Workflow Diagram
+um:guide:cleanup-recommendations	docs/manual/um/parts/99-appendix.tex	3	Cleanup recommendations
+um:guide:cleanup-recommendations:commercial-reports	docs/manual/um/parts/99-appendix.tex	60	Move the commercial-flow reports out of git
+um:guide:cleanup-recommendations:copilot-instructions	docs/manual/um/parts/99-appendix.tex	30	Replace the Copilot instructions and decide on the instruction files
+um:guide:cleanup-recommendations:ignored-tracked	docs/manual/um/parts/99-appendix.tex	70	Review the tracked files that match an ignore pattern
+um:guide:cleanup-recommendations:json-comments	docs/manual/um/parts/99-appendix.tex	120	Move the LibreLane JSON comment keys to the Technical Manual
+um:guide:cleanup-recommendations:l2-bench-results	docs/manual/um/parts/99-appendix.tex	40	Untrack the output of the L2 benchmark test
+um:guide:cleanup-recommendations:layout	docs/manual/um/parts/99-appendix.tex	100	Unify the constraint locations and the DFT, FPGA and HLS split
+um:guide:cleanup-recommendations:lec-seds	docs/manual/um/parts/99-appendix.tex	19	Change the LEC line-number seds to pattern addresses
+um:guide:cleanup-recommendations:legacy-flows	docs/manual/um/parts/99-appendix.tex	80	Retire the old Sky130 flows
+um:guide:cleanup-recommendations:mcp-json	docs/manual/um/parts/99-appendix.tex	110	Commit an MCP template and untrack the per-clone file
+um:guide:cleanup-recommendations:micro-p	docs/manual/um/parts/99-appendix.tex	50	Delete or keep the archived Phase 1 tree
+um:guide:cleanup-recommendations:soc-all-duplicate	docs/manual/um/parts/99-appendix.tex	90	Merge the duplicate soc\_all targets
+um:guide:cleanup-recommendations:stray-beads	docs/manual/um/parts/99-appendix.tex	9	Remove the stray second beads instance
+um:guide:coding-compliance-audit	docs/manual/um/parts/01-chapters.tex	1190	Coding Guidelines Compliance Audit
+um:guide:coding-compliance-audit:1-what-already-complies-codified-as-is	docs/manual/um/parts/01-chapters.tex	1207	1. What already complies (codified as-is)
+um:guide:coding-compliance-audit:2-violations-and-remediation-plan	docs/manual/um/parts/01-chapters.tex	1259	2. Violations and remediation plan
+um:guide:coding-compliance-audit:3-per-subsystem-consistency-matrix-reference	docs/manual/um/parts/01-chapters.tex	1549	3. Per-subsystem consistency matrix (reference)
+um:guide:coding-compliance-audit:4-suggested-sequencing	docs/manual/um/parts/01-chapters.tex	1597	4. Suggested sequencing
+um:guide:coding-compliance-audit:configtooling-contradictions-fixed-in-this-change	docs/manual/um/parts/01-chapters.tex	1504	\texorpdfstring{Config/\allowbreak{}tooling contradictions --- \textbf{fixed in this change}}{Config/tooling contradictions --- fixed in this change}
+um:guide:coding-compliance-audit:p1-low-risk-high-value	docs/manual/um/parts/01-chapters.tex	1267	P1 --- low-risk, high-value
+um:guide:coding-compliance-audit:p2-mechanical-cleanup	docs/manual/um/parts/01-chapters.tex	1346	P2 --- mechanical cleanup
+um:guide:coding-compliance-audit:p3-refactors-requiring-re-verification-proposal-only	docs/manual/um/parts/01-chapters.tex	1421	P3 --- refactors requiring re-verification (proposal only)
+um:guide:coding-guidelines	docs/manual/um/parts/01-chapters.tex	480	Coding Practices \& Style Guidelines
+um:guide:coding-guidelines:1-systemverilog-rtl	docs/manual/um/parts/01-chapters.tex	525	1. SystemVerilog RTL
+um:guide:coding-guidelines:11-file-organization	docs/manual/um/parts/01-chapters.tex	530	1.1 File organization
+um:guide:coding-guidelines:12-naming	docs/manual/um/parts/01-chapters.tex	569	1.2 Naming
+um:guide:coding-guidelines:13-language-constructs	docs/manual/um/parts/01-chapters.tex	616	1.3 Language constructs
+um:guide:coding-guidelines:14-reset-style	docs/manual/um/parts/01-chapters.tex	697	1.4 Reset style
+um:guide:coding-guidelines:15-ports-and-module-headers	docs/manual/um/parts/01-chapters.tex	718	1.5 Ports and module headers
+um:guide:coding-guidelines:16-formatting	docs/manual/um/parts/01-chapters.tex	735	1.6 Formatting
+um:guide:coding-guidelines:17-lint-gates	docs/manual/um/parts/01-chapters.tex	755	1.7 Lint gates
+um:guide:coding-guidelines:171-synthesis-undef-elaboration-gate-bead-gc0y	docs/manual/um/parts/01-chapters.tex	798	\texorpdfstring{1.7.1 Synthesis undef-elaboration gate (bead \code{gc0y})}{1.7.1 Synthesis undef-elaboration gate (bead )}
+um:guide:coding-guidelines:18-spyglass-lint-discipline	docs/manual/um/parts/01-chapters.tex	832	1.8 Spyglass lint discipline
+um:guide:coding-guidelines:2-python	docs/manual/um/parts/01-chapters.tex	902	2. Python
+um:guide:coding-guidelines:21-test-conventions	docs/manual/um/parts/01-chapters.tex	963	2.1 Test conventions
+um:guide:coding-guidelines:3-shell-and-build-scripts	docs/manual/um/parts/01-chapters.tex	984	3. Shell and build scripts
+um:guide:coding-guidelines:4-commit-messages	docs/manual/um/parts/01-chapters.tex	1006	4. Commit messages
+um:guide:coding-guidelines:5-repository-hygiene	docs/manual/um/parts/01-chapters.tex	1018	5. Repository hygiene
+um:guide:coding-guidelines:6-enforcement-summary	docs/manual/um/parts/01-chapters.tex	1043	6. Enforcement summary
+um:guide:coding-guidelines:7-source-comments	docs/manual/um/parts/01-chapters.tex	1096	7. Source comments
+um:guide:coding-guidelines:71-budgets	docs/manual/um/parts/01-chapters.tex	1102	7.1 Budgets
+um:guide:coding-guidelines:72-banned-content	docs/manual/um/parts/01-chapters.tex	1131	7.2 Banned content
+um:guide:coding-guidelines:73-citation-line	docs/manual/um/parts/01-chapters.tex	1152	7.3 Citation line
+um:guide:coding-guidelines:74-moving-comment-text	docs/manual/um/parts/01-chapters.tex	1165	7.4 Moving comment text
+um:guide:coding-guidelines:scope-and-enforcement-policy	docs/manual/um/parts/01-chapters.tex	497	Scope and enforcement policy
+um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	6347	Commit Message Convention
+um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	6357	Coding Guidelines
+um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	6365	Questions?
+um:guide:debug-interface	docs/manual/um/parts/01-chapters.tex	431	Debug Interface (Phase 1+)
+um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	6264	Frequently Used Commands
+um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	6299	Project Structure
+um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	6116	Key Documentation
+um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	6122	Architecture \& Design
+um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	6179	Physical Design
+um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	6253	README detail set
+um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	6213	Verification \& Fixes
+um:guide:local-qa	docs/manual/um/parts/01-chapters.tex	2239	Local QA Setup Guide
+um:guide:local-qa:all-checks	docs/manual/um/parts/01-chapters.tex	2369	All Checks
+um:guide:local-qa:automatically-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	2259	Automatically (Pre-commit Hooks)
+um:guide:local-qa:check-coverage-percentage	docs/manual/um/parts/01-chapters.tex	2609	Check Coverage Percentage
+um:guide:local-qa:configuration-files	docs/manual/um/parts/01-chapters.tex	2465	Configuration Files
+um:guide:local-qa:coverage-on-specific-module	docs/manual/um/parts/01-chapters.tex	2616	Coverage on Specific Module
+um:guide:local-qa:coverage-reports	docs/manual/um/parts/01-chapters.tex	2600	Coverage Reports
+um:guide:local-qa:development-workflow	docs/manual/um/parts/01-chapters.tex	2421	Development Workflow
+um:guide:local-qa:fast-iteration-workflow	docs/manual/um/parts/01-chapters.tex	2449	Fast Iteration Workflow
+um:guide:local-qa:generate-html-coverage-report	docs/manual/um/parts/01-chapters.tex	2602	Generate HTML Coverage Report
+um:guide:local-qa:getting-help	docs/manual/um/parts/01-chapters.tex	2666	Getting Help
+um:guide:local-qa:ide-integration	docs/manual/um/parts/01-chapters.tex	2481	IDE Integration
+um:guide:local-qa:import-errors-in-mypy	docs/manual/um/parts/01-chapters.tex	2544	Import errors in MyPy
+um:guide:local-qa:individual-checks	docs/manual/um/parts/01-chapters.tex	2376	Individual Checks
+um:guide:local-qa:manually-ci-on-github	docs/manual/um/parts/01-chapters.tex	2353	Manually (CI on GitHub)
+um:guide:local-qa:performance-tips	docs/manual/um/parts/01-chapters.tex	2622	Performance Tips
+um:guide:local-qa:pre-commit-is-slow	docs/manual/um/parts/01-chapters.tex	2534	Pre-commit is slow
+um:guide:local-qa:pycharm	docs/manual/um/parts/01-chapters.tex	2517	PyCharm
+um:guide:local-qa:pylint-score-too-low	docs/manual/um/parts/01-chapters.tex	2557	Pylint score too low
+um:guide:local-qa:quick-start	docs/manual/um/parts/01-chapters.tex	2244	Quick Start
+um:guide:local-qa:quick-test-during-development	docs/manual/um/parts/01-chapters.tex	2405	Quick Test During Development
+um:guide:local-qa:recommended-workflow	docs/manual/um/parts/01-chapters.tex	2423	Recommended Workflow
+um:guide:local-qa:running-checks-manually	docs/manual/um/parts/01-chapters.tex	2367	Running Checks Manually
+um:guide:local-qa:see-also	docs/manual/um/parts/01-chapters.tex	2649	See Also
+um:guide:local-qa:speed-up-pre-commit	docs/manual/um/parts/01-chapters.tex	2638	Speed Up Pre-commit
+um:guide:local-qa:speed-up-tests	docs/manual/um/parts/01-chapters.tex	2624	Speed Up Tests
+um:guide:local-qa:tests-failing-locally-but-pass-in-ci	docs/manual/um/parts/01-chapters.tex	2585	Tests failing locally but pass in CI
+um:guide:local-qa:troubleshooting	docs/manual/um/parts/01-chapters.tex	2532	Troubleshooting
+um:guide:local-qa:vscode	docs/manual/um/parts/01-chapters.tex	2483	VSCode
+um:guide:local-qa:what-gets-checked	docs/manual/um/parts/01-chapters.tex	2257	What Gets Checked
+um:guide:project-structure	docs/manual/um/parts/01-chapters.tex	46	Project Structure
+um:guide:quick-start	docs/manual/um/parts/01-chapters.tex	108	Quick Start
+um:guide:quick-start:design-quality-checks-spyglass-hal-local-eda-host-only	docs/manual/um/parts/01-chapters.tex	342	Design quality checks (SpyGlass / HAL, local EDA host only)
+um:guide:quick-start:dft-cdc-and-fpga-targets-added-2026-10-15	docs/manual/um/parts/01-chapters.tex	311	DFT, CDC and FPGA Targets (added 2026-10-15)
+um:guide:quick-start:nix-dev-shell-simulation-lint	docs/manual/um/parts/01-chapters.tex	113	Nix dev shell (simulation + lint)
+um:guide:quick-start:phase-0-reference-model-testing-complete-white-check-mark	docs/manual/um/parts/01-chapters.tex	135	\texorpdfstring{Phase 0: Reference Model Testing (Complete \ok{})}{Phase 0: Reference Model Testing (Complete )}
+um:guide:quick-start:phase-1-rtl-simulation-white-check-mark-complete-archived-to-micro-p	docs/manual/um/parts/01-chapters.tex	155	\texorpdfstring{Phase 1: RTL Simulation \ok{} Complete (Archived to \src{micro_p/})}{Phase 1: RTL Simulation Complete (Archived to )}
+um:guide:quick-start:phase-2-rtl-simulation-white-check-mark-complete	docs/manual/um/parts/01-chapters.tex	161	\texorpdfstring{Phase 2: RTL Simulation \ok{} Complete}{Phase 2: RTL Simulation Complete}
+um:guide:quick-start:phase-3-cache-simulation-white-check-mark-complete	docs/manual/um/parts/01-chapters.tex	191	\texorpdfstring{Phase 3: Cache Simulation \ok{} Complete}{Phase 3: Cache Simulation Complete}
+um:guide:quick-start:proprietary-simulators-vcs-xcelium	docs/manual/um/parts/01-chapters.tex	240	Proprietary simulators (VCS / Xcelium)
+um:guide:quick-start:rtl-linting-formatting	docs/manual/um/parts/01-chapters.tex	257	RTL Linting \& Formatting
+um:guide:quick-start:soc-cocotb-regression-tbcocotbsoc	docs/manual/um/parts/01-chapters.tex	210	\texorpdfstring{SoC cocotb regression (\src{tb/cocotb/soc})}{SoC cocotb regression ()}
+um:guide:quick-start:tool-input-rtl-filelists-rtlfilelist	docs/manual/um/parts/01-chapters.tex	293	\texorpdfstring{Tool-input RTL filelists (\src{rtl/filelist/})}{Tool-input RTL filelists ()}
+um:guide:readme-index	docs/manual/um/parts/01-chapters.tex	7	README Detail Set
+um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	6312	Reference Model (Python)
+um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	6328	Verification Strategy
+um:guide:spyglass-lint-remediation	docs/manual/um/parts/01-chapters.tex	1621	Spyglass Lint Remediation Plan (Handoff)
+um:guide:spyglass-lint-remediation:0-ground-rules-context	docs/manual/um/parts/01-chapters.tex	1633	0. Ground rules \& context
+um:guide:spyglass-lint-remediation:1-violation-catalog-disposition-summary	docs/manual/um/parts/01-chapters.tex	1673	1. Violation catalog \& disposition summary
+um:guide:spyglass-lint-remediation:2-fix-items-detailed-instructions	docs/manual/um/parts/01-chapters.tex	1737	2. FIX items --- detailed instructions
+um:guide:spyglass-lint-remediation:3-waive-document-items	docs/manual/um/parts/01-chapters.tex	2050	3. WAIVE + DOCUMENT items
+um:guide:spyglass-lint-remediation:4-coding-guideline-updates-docsdevelopmentcoding-guidelinesmd	docs/manual/um/parts/01-chapters.tex	2111	\texorpdfstring{4. Coding-guideline updates (\cref{um:guide:coding-guidelines})}{4. Coding-guideline updates ()}
+um:guide:spyglass-lint-remediation:5-execution-order-verification-for-the-implementing-session	docs/manual/um/parts/01-chapters.tex	2169	5. Execution order \& verification (for the implementing session)
+um:guide:spyglass-lint-remediation:6-open-confirmations-for-the-next-session	docs/manual/um/parts/01-chapters.tex	2215	6. Open confirmations for the next session
+um:guide:spyglass-lint-remediation:a-remove-default-nettype-none-rule-ind-all-files	docs/manual/um/parts/01-chapters.tex	1741	\texorpdfstring{A. Remove \texttt{`default\_\allowbreak{}nettype\ none} (rule IND) --- ALL FILES}{A. Remove (rule IND) --- ALL FILES}
+um:guide:spyglass-lint-remediation:b-blockingnon-blocking-in-always-ff-reset-loops-rules-sm-bnp-w336-nonblockassign	docs/manual/um/parts/01-chapters.tex	1802	\texorpdfstring{B. Blocking→non-blocking in \code{always_ff} reset loops (rules SM\_BNP / W336 / NonBlockAssign)}{B. Blocking→non-blocking in reset loops (rules SM\_BNP / W336 / NonBlockAssign)}
+um:guide:spyglass-lint-remediation:c-guard-non-synthesizable-initial-fatal-readmemh-rules-sm-ign-initial-w430-w213-lint-sv-string	docs/manual/um/parts/01-chapters.tex	1854	\texorpdfstring{C. Guard non-synthesizable \code{initial} / \texttt{\$fatal} / \texttt{\$readmemh} (rules SM\_\allowbreak{}IGN\_\allowbreak{}INITIAL / W430 / W213 / LINT\_\allowbreak{}SV\_\allowbreak{}STRING)}{C. Guard non-synthesizable / / (rules SM\_IGN\_INITIAL / W430 / W213 / LINT\_SV\_STRING)}
+um:guide:spyglass-lint-remediation:d-undriven-boot-rom-memory-read-rule-undriveninterm-ml-rtlsocboot-romsv224	docs/manual/um/parts/01-chapters.tex	1916	\texorpdfstring{D. Undriven boot\_rom memory read (rule UndrivenInTerm-ML) --- \src{rtl/soc/boot_rom.sv:224}}{D. Undriven boot\_rom memory read (rule UndrivenInTerm-ML) --- }
+um:guide:spyglass-lint-remediation:e-empty-blocks-rule-w192	docs/manual/um/parts/01-chapters.tex	1929	E. Empty blocks (rule W192)
+um:guide:spyglass-lint-remediation:f-oversized-index-variable-rule-lint-improper-range-index-rtlgpuwarp-schedulersv111-116	docs/manual/um/parts/01-chapters.tex	1975	\texorpdfstring{F. Oversized index variable (rule LINT\_\allowbreak{}IMPROPER\_\allowbreak{}RANGE\_\allowbreak{}INDEX) --- \src{rtl/gpu/warp_scheduler.sv:111-116}}{F. Oversized index variable (rule LINT\_IMPROPER\_RANGE\_INDEX) --- }
+um:guide:spyglass-lint-remediation:g-signedunsigned-mix-rule-signedunsignedexpr-ml-34-subset-shown	docs/manual/um/parts/01-chapters.tex	2003	\texorpdfstring{G. Signed/\allowbreak{}unsigned mix (rule SignedUnsignedExpr-ML, ×34 subset shown)}{G. Signed/unsigned mix (rule SignedUnsignedExpr-ML, ×34 subset shown)}
+um:guide:supported-instructions	docs/manual/um/parts/01-chapters.tex	366	Supported Instructions
+um:guide:supported-instructions:phase-1-white-check-mark-complete-rv32i-base	docs/manual/um/parts/01-chapters.tex	369	\texorpdfstring{Phase 1 \ok{} (Complete --- RV32I Base)}{Phase 1 (Complete --- RV32I Base)}
+um:guide:supported-instructions:phase-2-white-check-mark-verification-complete-rv32i-zicsr	docs/manual/um/parts/01-chapters.tex	394	\texorpdfstring{Phase 2 \ok{} (Verification Complete --- RV32I + Zicsr)}{Phase 2 (Verification Complete --- RV32I + Zicsr)}
