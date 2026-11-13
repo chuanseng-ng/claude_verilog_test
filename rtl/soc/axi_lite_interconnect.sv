@@ -223,26 +223,8 @@ module axi_lite_interconnect #(
     assign ar_hs = m_axil_arvalid && m_axil_arready;
     assign r_hs  = m_axil_rvalid  && m_axil_rready;
 
-    // bead rvb (fan-out fix, Path B / Doc: tm:pd:rvb-fanout-fix §A.2/§B.1
-    // option B2): the ring's read-data mux output used to drive
-    // m_axil_rdata/rvalid/rresp straight through combinationally (no
-    // register between this rsel-based mux and the GPU's own unregistered
-    // s_axil_rdata case-mux at the other end of a long macro-to-fabric
-    // net — two chained combinational muxes with zero pipeline stages in
-    // between, the root cause of the reported buffer-chain-depth/GRT
-    // timing blowup on this path). r_d*_d below are the mux's outputs;
-    // they are captured into r_d*_q one cycle later purely inside this
-    // module, giving CTS/the resizer a real register boundary here instead
-    // of a raw combinational output. This adds exactly one cycle of
-    // AXI-Lite read latency on the ring->master leg (RVALID/RDATA appear
-    // one cycle later than the old passthrough) -- AXI4-Lite's VALID/READY
-    // handshake has no fixed-latency requirement, so this is protocol
-    // legal; every master on this ring (CPU only, single-master control
-    // bus) already tolerates arbitrary RVALID latency by definition of the
-    // handshake. r_dreg_ready is the accept-into-register qualifier: it
-    // depends only on the registered r_dvalid_q and the external
-    // m_axil_rready input, never combinationally on its own output, so
-    // there is no READY->VALID loop.
+    // The read-data mux output goes through the registers r_d*_d and r_d*_q. This adds one cycle of read latency.
+    // r_dreg_ready depends only on r_dvalid_q and m_axil_rready.
     logic          r_dvalid_d, r_dvalid_q;
     logic [DW-1:0] r_ddata_d,  r_ddata_q;
     logic [1:0]    r_dresp_d,  r_dresp_q;
@@ -298,13 +280,7 @@ module axi_lite_interconnect #(
                     r_dresp_d        = s_axil_rresp [rsel];
                     _s_rready[rsel]  = r_dreg_ready;
                 end else begin
-                    // bead 3xtv: the DECERR response is one-shot.  rstate only
-                    // leaves R_DATA on r_hs, one cycle AFTER r_dvalid_q captured
-                    // the beat, so an unconditional 1 here reloaded r_dvalid_q in
-                    // the handshake cycle (r_dreg_ready=1) and emitted a phantom
-                    // second DECERR beat.  Offer the beat only while the output
-                    // register is empty; depends on the registered r_dvalid_q
-                    // only (no READY->VALID loop, no mapped-slave path change).
+                    // The DECERR response is one-shot. Offer the beat only while the output register is empty.
                     r_dvalid_d = !r_dvalid_q;
                     r_ddata_d  = '0;
                     r_dresp_d  = AXI_RESP_DECERR;

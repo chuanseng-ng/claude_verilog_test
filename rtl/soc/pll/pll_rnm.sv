@@ -1,33 +1,17 @@
-// =============================================================================
-// pll_rnm.sv  --  Real-Number Model (RNM) for PLL Clock Generator
-// Design : pll_clkgen  (Phase 7, Milestone M-b / M-c, bead claude_verilog_test-010)
-// Tool   : Verilator 5.x elaboration + cocotb co-sim (M-c)
+// pll_rnm - real-number model of the PLL clock generator.
 //
-// Ports
-//   ref_clk_i     : 1b input  — 100 MHz reference clock (from crystal / XO)
-//   rst_n_i       : 1b input  — active-low asynchronous reset
-//   feedback_div  : 4b input  — divider ratio: 4'h0 → N=N_DIV_DEFAULT (13)
-//   post_div_sel  : 2b input  — post-divider: 2'b00→/1, 2'b01→/2, 2'b10→/4
-//   out_clk_o     : 1b output — PLL output clock
-//   locked_o      : 1b output — lock indicator
-//
-// Behaviour
-//   - Computes f_out = F_REF * N / post_div in real arithmetic
-//   - Models vtune settling toward lock target with first-order step (alpha=0.5/cycle)
-//   - Asserts locked_o after LOCK_PERSIST_CYCLES consecutive ref cycles with
-//     vtune within LOCK_WINDOW_V of target; deasserts on reset
-//   - Generates out_clk_o via phase accumulator (no $realtime dependency)
-//
-// Spec traceability
-//   f_out_hz      → constraints.specs.f_out_hz      = 1.282e9
-//   divider_n     → constraints.specs.divider_n     = 13
-//   lock_time_us  → constraints.specs.lock_time_us  = 20
-//   post_div      → constraints.specs.post_div      = [1,2,4]
-//
-// Connect-rule boundary (for M-c AMS co-sim):
-//   ref_clk_i, rst_n_i, feedback_div, post_div_sel : L2R (digital → RNM)
-//   out_clk_o, locked_o                            : R2L (RNM → digital)
-// =============================================================================
+// Function: The model computes f_out = F_REF * N / post_div in real arithmetic.
+//   It settles vtune toward the lock target with a first-order step.
+//   locked_o asserts after LOCK_PERSIST_CYCLES consecutive ref cycles with vtune within LOCK_WINDOW_V of the target.
+//   Reset deasserts it. out_clk_o comes from a phase accumulator. It has no $realtime dependency.
+//   feedback_div 4'h0 selects N_DIV_DEFAULT. post_div_sel 2'b00, 2'b01 and 2'b10 select /1, /2 and /4.
+// Parameters: F_REF_HZ, N_DIV_DEFAULT, F_VCO_NOM_HZ, KVCO_HZ_V, VTUNE_NOM_V, LOCK_WINDOW_V, LOCK_PERSIST_CYCLES and VTUNE_RESET_V.
+//   They set the model constants. The defaults are in the code.
+// Clocks and resets: ref_clk_i is the reference clock. rst_n_i is active low and asynchronous.
+// Caller rules:
+//   - ref_clk_i, rst_n_i, feedback_div and post_div_sel are digital inputs. out_clk_o and locked_o are outputs.
+//   - Use the model only in co-simulation. It needs a simulator with SV real types, for example Verilator 5 with cocotb.
+// Doc: ds:mod:pll-rnm, cr:mod:pll-rnm
 
 `timescale 1ns/1ps
 
@@ -96,7 +80,7 @@ module pll_rnm #(
     // -------------------------------------------------------------------------
     // Lock acquisition + vtune update (synchronous on ref_clk_i)
     // First-order step: vtune[k+1] = vtune[k] + alpha*(target - vtune[k])
-    // alpha=0.5 → locks in ~10 ref cycles (~100 ns), far within 20 µs spec
+    // alpha is 0.5 per cycle.
     // -------------------------------------------------------------------------
     always_ff @(posedge ref_clk_i or negedge rst_n_i) begin
         if (!rst_n_i) begin

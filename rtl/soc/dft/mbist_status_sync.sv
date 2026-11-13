@@ -1,19 +1,14 @@
-// mbist_status_sync.sv
-// DFT Stage 4 (bead claude_verilog_test-j41m.14, GH #244): MBIST status block, destination domain
-// -> TCK. Specification: Doc: tm:ch:dft-architecture:165-tap-registers-control-word-crossing-j41m10-folded-in ("Status return crossing").
+// mbist_status_sync - MBIST status block, destination domain to TCK.
 //
-// Every status bit crosses through its OWN 2-FF cdc_sync (WIDTH = 1 per instance: the primitive's scope
-// note forbids multi-bit buses, and the bits carry no word coherency requirement of their own). The
-// controller freezes every bit except done/busy before it raises done, so the coherency is provided by
-// ORDER, not by the synchronisers: `done` and `busy` pass through ONE EXTRA TCK flop, so when the
-// tester sees done = 1 every data bit has had a full TCK period to settle. A capture with done = 0
-// shows data that may be mid-update; that is the documented meaning of "not done".
-//
-// The source bits are flop outputs of mbist_ctrl (status_o is a concatenation of flops and of
-// combinational selects over flops; the selects only change on rd_sel changes, a quasi-static
-// tester action with the documented >= 3 TCK settle rule).
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: Every status bit crosses through its own 2-FF cdc_sync with WIDTH = 1.
+//   done and busy pass through one extra TCK flop. The controller freezes the data bits before it raises done.
+//   When the tester sees done = 1, every data bit has had a full TCK period to settle.
+//   A capture with done = 0 can show data that is mid-update.
+// Parameters: ST_W is the width of the status.
+// Clocks and resets: tck_i is the clock. rst_tck_n_i is the reset.
+// Caller rules: The source bits must be flop outputs of mbist_ctrl, or selects over flops that change only on rd_sel changes.
+//   The tester must follow the >= 3 TCK settle rule after a change of rd_sel.
+// Doc: ds:mod:mbist-status-sync
 
 module mbist_status_sync #(
     parameter int unsigned ST_W = 69

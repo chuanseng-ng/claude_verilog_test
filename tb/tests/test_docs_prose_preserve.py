@@ -422,6 +422,54 @@ def test_diff_source_python_comment_and_docstring(tmp_path, monkeypatch, capsys)
     assert _run(capsys, "--from", "diff:HEAD:p.py", "--to", ok)[0] == 0
 
 
+_REUSE_OLD = (
+    "// m.sv\n"
+    "// Holding register of the control word (see mbist_xing.sv). Needs a check.\n"
+    "// Lint target: verilator.\n"
+    "module m;\n"
+    "endmodule\n"
+)
+_REUSE_NEW = "// m - holding register. mbist_xing uses it. See ds:mod:m.\nmodule m;\nendmodule\n"
+_REUSE_LINE = "Holding register of the control word (see mbist\\_xing.sv). Needs a check.\n"
+
+
+def test_diff_source_reused_words_not_netted(tmp_path, monkeypatch, capsys):
+    """Removed lines count in full, even when a new comment reuses their words."""
+    git = _repo(tmp_path, monkeypatch)
+    _commit(git, tmp_path, "m.sv", _REUSE_OLD)
+    _w(tmp_path, "m.sv", _REUSE_NEW)
+    book = _w(tmp_path, "ok.tex", "m.sv\n" + _REUSE_LINE + "Lint target: verilator.\n")
+    assert _run(capsys, "--from", "diff:HEAD:m.sv", "--to", book)[0] == 0
+    bad = _w(
+        tmp_path,
+        "bad.tex",
+        "m.sv\nHolding register of the control word.\nLint target: verilator.\n",
+    )
+    code, out = _run(capsys, "--from", "diff:HEAD:m.sv", "--to", bad)
+    assert code == 1
+    assert "mbist" in out
+
+
+def test_diff_source_removed_line_absent_is_reported(tmp_path, monkeypatch, capsys):
+    """A removed line that the destination lacks is still reported."""
+    git = _repo(tmp_path, monkeypatch)
+    _commit(git, tmp_path, "m.sv", _REUSE_OLD)
+    _w(tmp_path, "m.sv", _REUSE_NEW)
+    bad = _w(tmp_path, "bad.tex", "m.sv\n" + _REUSE_LINE)
+    code, out = _run(capsys, "--from", "diff:HEAD:m.sv", "--to", bad)
+    assert code == 1
+    assert "verilator" in out
+
+
+def test_diff_source_line_moved_within_file_is_exempt(tmp_path, monkeypatch, capsys):
+    """A removed line that is still in the file unchanged is not a loss."""
+    git = _repo(tmp_path, monkeypatch)
+    _commit(git, tmp_path, "m.sv", "// alpha text\n// beta text\nmodule m;\nendmodule\n")
+    _w(tmp_path, "m.sv", "// beta text\nmodule m;\nendmodule\n// alpha text\n")
+    book = _w(tmp_path, "d.tex", "Nothing relevant.\n")
+    assert _run(capsys, "--from", "diff:HEAD:m.sv", "--to", book)[0] == 0
+
+
 def test_diff_source_sdc_and_makefile_rules(tmp_path, monkeypatch, capsys):
     """Check diff source sdc and makefile rules."""
     git = _repo(tmp_path, monkeypatch)

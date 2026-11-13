@@ -129,11 +129,8 @@ module axil_to_apb #(
     assign s_axil_awready = (state_q == S_IDLE) && !aw_cap_q;
     assign s_axil_wready  = (state_q == S_IDLE) && !w_cap_q;
 
-    // Accept AR only in IDLE and only when no write is being assembled.
-    // GH #85: also gate on !s_axil_awvalid && !s_axil_wvalid so that a
-    // concurrent AR + AW + W presented in S_IDLE cannot handshake AR in the same
-    // always_ff evaluation as the AW+W capture, which would overwrite addr_q with
-    // the read address and clear is_write_q=0 before the write APB transfer starts.
+    // Accept AR only in S_IDLE and only when no write is assembled.
+    // Also require !s_axil_awvalid and !s_axil_wvalid.
     assign s_axil_arready = (state_q == S_IDLE) && !aw_cap_q && !w_cap_q &&
                             !s_axil_awvalid && !s_axil_wvalid;
 
@@ -236,4 +233,3 @@ module axil_to_apb #(
     end
 
 endmodule : axil_to_apb
-

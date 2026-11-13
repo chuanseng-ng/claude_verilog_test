@@ -1,52 +1,18 @@
-// dft_ctrl.sv
-// DFT Stage 1b (bead claude_verilog_test-j41m.3, GH #244).
+// dft_ctrl - TAP-driven DFT controller that makes the five scan and test control signals.
 //
-// The TAP-driven DFT controller. Same five outputs and the same four test inputs
-// as dft_ctrl_ports (Stage 1a), plus the JTAG pins, so soc_top swaps one module
-// for the other and no consumer changes (Doc: tm:ch:dft-architecture
-// section 15). Contents:
-//   * u_tap          jtag_tap, TCK domain, all outputs falling-edge flops
-//   * u_pins         the UNCHANGED 1a pin leg (dft_ctrl_ports)
-//   * u_tck_cg       rv32i_clock_gate on TCK: tck_scan_gated, open only in
-//                    Capture-DR and Shift-DR while the TAP is in serial scan, so
-//                    the scanned flops see the capture edge and the shift edges
-//                    and no edge in Run-Test/Idle, Pause or Update (no spurious
-//                    capture). test_en is tied 0: the gate is opened by the TAP's
-//                    state, never by scan_mode.
-//   * the combiner of section 15.4:
-//
-//        scan_mode_o, test_en_o = pin | tap_scan
-//        scan_rst_no            = pin_scan_rst_n & ~rst_assert
-//        scan_en_o              = serial ? tap_scan_en   : pin_scan_en
-//        test_clk_o             = glitch-free switch (serial ? tck_scan_gated
-//                                                              : pin_scan_clk)
-//
-// With the TAP idle (IR != SCAN, which includes reset and Test-Logic-Reset) every
-// term collapses to the 1a pin value, bit for bit. The TAP never gates the pin
-// path.
-//
-// test_clk_o select (section 15.5, open question Q-CLK, RESOLVED): u_clk_sw is a
-// glitch-free enable-before-switch selector (dft_clk_switch) between
-// tck_scan_gated (A) and the pin test clock (B). The select `serial` is the
-// TAP's falling-edge flop; the enable latches inside the switch retire the old
-// clock and enable the new one so that no runt pulse and no extra edge reaches
-// test_clk_o whatever the A/B phase relation. Its handshake is reset by u_sw_rst,
-// a second cdc_reset_sync on trst_ni in the TCK domain (kept here so jtag_tap
-// is unchanged): reset selects the pin clock with the TAP clock off, so the 1a
-// pins-only operation (TAP in reset, TCK stopped) passes scan_clk_i through.
-// Tester contract (details in dft_clk_switch.sv): after serial -> parallel the
-// first pin-clock pulse appears at once if scan_clk_i was stopped during scan, or
-// about 3 pin-clock cycles later if it was toggling; parallel -> serial needs no
-// pin-clock edge if scan_clk_i idles LOW (stopped HIGH, it cannot complete).
-//
-// The scan_mode/test_en/scan_rst/scan_en controls are TCK-launched quasi-static
-// levels that deliberately cross into the functional domains unsynchronised
-// (section 15.5 crossing 2). This is not a waiver: tck_i is listed under
-// reset_domains in tools/cdc/cdc_config.yml, which only removes it from the CDC
-// gate's domain count, and tools/dft/check_scan_clk_rst.py --tap-allowed-nets keeps
-// the TCK-launched nets that may reach non-TAP logic enumerated and checked.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The module has the same five outputs and four test inputs as dft_ctrl_ports, plus the JTAG pins.
+//   It holds jtag_tap (u_tap), dft_ctrl_ports (u_pins), a TCK clock gate (u_tck_cg) and a clock switch (u_clk_sw).
+//   scan_mode_o and test_en_o are the pin value OR tap_scan. scan_rst_no is pin_scan_rst_n AND NOT rst_assert. rst_assert=1 drives it low.
+//   scan_en_o is the TAP scan enable in serial mode and the pin value otherwise.
+//   test_clk_o is the glitch-free switch between tck_scan_gated and the pin test clock.
+//   With the TAP idle, every output equals the pin value.
+// Clocks and resets: u_sw_rst is a cdc_reset_sync on trst_ni in the TCK domain. Reset selects the pin clock.
+// Caller rules:
+//   - The scan_mode, test_en, scan_rst and scan_en outputs are TCK-launched quasi-static levels.
+//     They cross into the functional domains without synchronisers on purpose.
+//   - The tester contract of the clock switch is in dft_clk_switch.
+//   - tools/dft/check_scan_clk_rst.py lists the TCK-launched nets that can reach non-TAP logic. Add each new such net to that list.
+// Doc: ds:mod:dft-ctrl
 
 module dft_ctrl (
     // ── Stage 1a direct (parallel) pins ──────────────────────────────────────

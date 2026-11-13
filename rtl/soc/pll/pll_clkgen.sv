@@ -1,33 +1,15 @@
-// pll_clkgen.sv
-// Phase 7 (M-c) — PDK-agnostic PLL clock generator wrapper.
+// pll_clkgen - PDK-agnostic PLL clock generator wrapper.
 //
-// Selects between two implementations via the PLL_IMPL string parameter:
-//
-//   "STUB" (default):
-//       Instantiates pll_clkgen_stub — pure-digital, synthesisable,
-//       no real types, no #delays.  Lock counter asserts locked_o after
-//       STUB_LOCK_CYCLES ref_clk_i edges.  out_clk_o = ref_clk_i.
-//       Use for: ASIC synthesis, CI lint, and all existing digital tests.
-//
-//   "RNM":
-//       Instantiates pll_rnm (analog/pll_clkgen/models/pll_rnm.sv) —
-//       SystemVerilog Real-Number Model with vtune settling and phase
-//       accumulator.  out_clk_o is a 1.282 GHz clock (N=13, /1).
-//       Use for: Phase 7 M-c AMS co-simulation with cocotb.
-//       Requires simulator that supports SV real types (Verilator 5 +
-//       --no-timing, Questa, VCS).  NOT synthesisable.
-//
-// Port list is shared between both implementations (identical to pll_rnm.sv).
-//
-// Coding rules:
-//   * Top-level wrapper: wiring only, no logic
-//   * PLL_IMPL is a compile-time elaboration parameter — no run-time mux
-//   * generate/if used to select; unused branch elaborates but is pruned
-//
-// Lint target: lint-only -Wall -Wno-IMPORTSTAR 0 errors 0 warnings
-//   Elaborates with STUB branch only (default PLL_IMPL).
-//   The RNM branch is present in the generate block but pruned when
-//   PLL_IMPL != "RNM"; pll_rnm.sv is excluded from the lint source list.
+// Function: PLL_IMPL selects the implementation at elaboration. The port list is the same for both.
+//   "STUB" (default): pll_clkgen_stub. It is digital and synthesisable. locked_o asserts after STUB_LOCK_CYCLES ref_clk_i edges.
+//   out_clk_o is ref_clk_i. Use it for synthesis, lint and the digital tests.
+//   "RNM": pll_rnm, a real-number model with vtune settling and a phase accumulator.
+//   It needs a simulator with SV real types. It is not synthesisable.
+// Main parameters: PLL_IMPL and STUB_LOCK_CYCLES. The RNM model constants are parameters of pll_rnm.
+// Caller rules:
+//   - The wrapper has no logic. The unused branch elaborates and is pruned.
+//   - Lint with the STUB branch only. pll_rnm.sv is not in the lint source list.
+// Doc: ds:mod:pll-clkgen
 
 module pll_clkgen #(
     // Implementation selector — "STUB" (default, synth-safe) or "RNM" (cosim)
@@ -93,4 +75,3 @@ module pll_clkgen #(
     endgenerate
 
 endmodule : pll_clkgen
-

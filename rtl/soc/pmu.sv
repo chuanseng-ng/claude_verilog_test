@@ -1,219 +1,34 @@
-// pmu.sv
-// Pre-Phase-6 #5 (GH epic #98, this file: GH #99) — behavioral power-management
-// unit (PMU): power-mode APB4 register block + per-domain sequencer FSM.
+// pmu - behavioural power-management unit with an APB4 register block and a per-domain sequencer.
 //
-// SCOPE (per Doc: tm:pd:power-domain-evaluation, DECIDED 2026-06-27, "GO (scoped):
-// behavioral PMU sequencer only"): this is a clock-gate / reset / functional-
-// isolation *sequencing* controller, modeled as ordinary synchronous RTL and
-// fully verifiable under Verilator. It does NOT model real supply removal,
-// power switches, or retention-cell silicon — those require a UPF-capable
-// simulator not available in this open-source flow and are explicitly
-// deferred. `pnr/constraints/phase5_soc.upf` already carries the UPF intent
-// (PD_CPU/PD_GPU/PD_SRAM/PD_PERIPH, ISO_CPU/ISO_GPU, the SOC_PST state group) that
-// this module's outputs are named and ordered to match. tools/verif/check_upf.py
-// (CI) checks the mode names/encodings below against that file.
-//
-// Power modes (2-bit CTRL[1:0], matches the phase5_soc.upf SOC_PST NORMAL/CPU_OFF/GPU_OFF/IDLE states):
-//   00  NORMAL   — CPU on,  GPU on
-//   01  CPU_OFF  — CPU off, GPU on
-//   10  GPU_OFF  — CPU on,  GPU off
-//   11  IDLE     — CPU off, GPU off
-//
-// Sequencing order (fixed by the UPF, not a design choice — see evaluation
-// doc section 3 and phase5_soc.upf ISO_CPU/ISO_GPU; the UPF has no power
-// switch, see below):
-//   Power-down: assert *_ret_save -> assert *_iso_en -> gate clock (*_clk_en=0)
-//               -> assert domain reset (*_rst_n=0).
-//   Power-up:   release domain reset (*_rst_n=1) -> ungate clock (*_clk_en=1)
-//               -> assert *_ret_restore -> de-assert *_iso_en.
-// Each direction is walked one action per clk_i cycle through an explicit FSM
-// (9 states per domain: ON, 4 power-down actions, OFF, 4 power-up actions) so
-// the order above is structurally guaranteed and directly observable/
-// assertable by verification. The CPU domain's two isolation states are the
-// exception: they WAIT for the isolation handshake described next. A domain's target (from CTRL) is only re-sampled
-// while the domain is settled at ON or OFF — a request that changes mid-
-// sequence does not reverse the in-flight sequence, it takes effect once the
-// current one completes. This avoids ill-defined half-isolated / half-gated
-// states.
-//
-// Isolation handshake (bead 3ogd): the CPU domain runs on cpu_core_clk, an
-// independent clock, so "iso_en raised" at this module's port is NOT "the
-// clamp is active". soc_top carries cpu_iso_en_o through a 2-flop cdc_sync into
-// cpu_core_clk (the clamp control, pmu_cpu_iso_en_sync), whereas cpu_rst_n_o
-// reaches the CPU domain through a cdc_reset_sync whose ASSERTION is
-// asynchronous: the reset bites on the very core_clk edge this module drops it.
-// With the two merely spaced 2 clk_i cycles apart, "isolate first" held only
-// while 2 x cpu_core_clk period < 2 x clk_i period. cpu_iso_ack_i closes the
-// loop: soc_top synchronises the CPU-domain clamp control BACK into clk_i
-// (u_cpu_iso_ack_sync, a cdc_sync) and feeds it here, and the sequencer
-//   * power-down: holds DOM_PD_ISO until cpu_iso_ack_i == 1 -- the clamp is
-//     observed active in the CPU domain -- and only then gates the clock
-//     (DOM_PD_GATE) and asserts reset (DOM_OFF). The ack is the registered
-//     output of a synchroniser, so it can only be late, never early: the order
-//     holds for ANY ratio between the two clocks.
-//   * power-up: holds DOM_PU_ISO (iso_en_o already de-asserted) until
-//     cpu_iso_ack_i == 0 before settling at DOM_ON. This is the return-to-zero
-//     half of a 4-phase handshake, and it is REQUIRED, not decoration: the
-//     de-assert is still travelling through two synchronisers when the walk
-//     reaches DOM_ON, so a power-down requested straight away would otherwise
-//     meet the previous cycle's still-high ack in DOM_PD_ISO and gate the clock
-//     and assert reset with no clamp (a stale ack). STATUS.cpu_domain_on now also
-//     means "the clamp has been seen released in the CPU domain".
-// Power-up needs NO ack for the iso-release-vs-reset-release order (decision, bead
-// 3ogd). The UPF's last up-step, de-assert iso, stays last, and the hazard on the way
-// up is the mirror of the one on the way down: iso released too EARLY. It is harmless
-// here by structure, for any ratio: the only things the clamp holds are lines sampled
-// by cpu_gated_clk (u_cpu_axi_cdc's s-side, the CPU) plus the commit_valid_o
-// observation pin, and cpu_gated_clk cannot tick until the reset release is observed
-// in the CPU domain (soc_top: cpu_gated_clk_en includes pmu_cpu_rst_n_cpu_sync). A
-// clamp released a cpu_core_clk edge ahead of the reset release (a metastable first
-// stage in silicon; in this zero-delay model both paths are 2-flop syncs on one clock
-// and keep the nominal order) therefore exposes only retained values on a still-stopped
-// clock. Way down, by contrast, the reset acts ASYNCHRONOUSLY and at once, so the
-// clamp being late is observable: that direction gets the ack. (The release ack above
-// is a handshake-completion wait, not an ordering wait.)
-// The GPU domain needs no ack: u_gpu is on clk_i/core_clk, the clamp control is
-// the PMU's own flop (pmu_gpu_iso_en, no synchroniser) and gpu_rst_n is another
-// flop on the same edge, so the 2-cycle spacing is exact. Internally its ack is
-// iso_en_q itself (satisfied the cycle it is raised, and dropped the cycle it is
-// released), which makes both waits zero-length and leaves its walk unchanged.
-// Timeout: a wait on an ack that can never come (CPU PLL domain dead:
-// cpu_core_rst_n low holds the clamp synchroniser at 0; reachable by
-// firmware writing APB_PLL2 pll_enable=0) would hang the always-on PMU in
-// DOM_PD_ISO with STATUS.busy stuck. After ISO_ACK_TIMEOUT clk_i cycles in one
-// wait the sequencer proceeds as if acked and sets STATUS[3]
-// (cpu_iso_ack_timeout), sticky until the next CPU power-down begins. Proceeding
-// is safe in exactly the case that produces it: a domain whose clock/reset is
-// dead is not driving anything the clamp would hold. ISO_ACK_TIMEOUT must exceed
-// the worst-case ack round trip, ~(3 x R + 3) clk_i cycles for a cpu_core_clk
-// R times slower than clk_i (3 cpu edges to cross, 3 clk_i edges back); the
-// default 255 covers R up to ~80. If it is too small the timeout fires on a
-// live domain and the ordering guarantee is lost, loudly (STATUS[3]).
-//
-// Registered outputs (bead ktwt): every *_clk_en_o / *_iso_en_o / *_rst_n_o /
-// *_ret_save_o / *_ret_restore_o is the Q of a dedicated flop, never a
-// combinational decode of the binary dom_state_q. soc_top feeds these to
-// cdc_sync D pins, to the ASYNC clear of u_cpu_pmu_rst_sync and (GPU) to an
-// async reset and an isolation mux select, where a decode glitch is an event
-// (a Vivado CDC triage found glitch-capable transitions on 4 of the 9 state
-// changes, including a runt reset on DOM_PU_RESTORE -> DOM_PU_ISO). The flops
-// load the decode of the NEXT state, so every output is visible in exactly the
-// cycle the old combinational decode showed it: no latency change, the UPF
-// order and the one-action-per-cycle walk are untouched. The reset values are
-// the DOM_ON decode (see "Reset defaults" below).
-//
-// Retention scope (explicit no-op): cpu_ret_save_o/cpu_ret_restore_o (and GPU
-// equivalents) are emitted in the correct order for verification to assert,
-// but there is no retention-cell silicon in this model (phase5_soc.upf header,
-// "Retention: NONE"). Because the domain's reset is only
-// ever asserted while its clock is already gated (DOM_PD_GATE precedes DOM_OFF)
-// and is always released before the clock is ungated (DOM_PU_RST precedes
-// DOM_PU_CLK), the domain's own flops never see an active clock edge while
-// held in reset. What that buys depends on the domain's reset style (bead
-// 4a7i):
-//   - CPU domain (SYNCHRONOUS reset, `always_ff @(posedge clk)`): a reset
-//     that is asserted and released entirely while the clock is gated never
-//     takes effect, so CPU flop state (e.g. MSTATUS/MTVEC/PC) survives a PMU
-//     off->on cycle. This is a BEHAVIOURAL-MODEL ARTIFACT of clock-gating
-//     instead of supply removal, not retention.
-//   - GPU domain (ASYNCHRONOUS reset, `always_ff @(posedge clk or negedge
-//     rst_n)` in gpu_top / gpu_compute_unit / warp_scheduler / ...): asserting
-//     pmu_gpu_rst_n clears the flops immediately despite the gated clock, so
-//     GPU state (irq latch, GPU_CTRL.irq_enable, STATUS.done, ...) is LOST
-//     across a PMU off->on cycle. Repro: tb/cocotb/soc/test_soc_integration.py
-//     ::test_soc_gpu_isolation_via_pmu.
-// Neither domain models real retention. Real silicon with no retention cells
-// (the Phase 5 case) loses state in both domains on supply-off, so the GPU
-// behaviour is the realistic one. Software must re-initialise the GPU after
-// every PMU power-up and must not rely on CPU state surviving either.
-//
-// Isolation: cpu_iso_en_o / gpu_iso_en_o are ACTIVE-HIGH (phase5_soc.upf
-// ISO_CPU/ISO_GPU, `-isolation_sense high`, `-clamp_value 0`, `-applies_to
-// outputs`, `-location parent`) — this module only computes the *_iso_en
-// control signal; the actual output-clamp muxes live in soc_top (outside
-// u_cpu/u_gpu, in the always-on PD_PERIPH domain), per the UPF's
-// `-location parent` placement. See soc_top.sv for the clamp scope/rationale.
-//
-// This module deliberately does NOT emit cpu_pg_ctrl/gpu_pg_ctrl (power-
-// switch control signals). phase5_soc.upf therefore has no create_power_switch
-// either (bead h3lm: its former PSW_CPU/PSW_GPU named these nonexistent ports
-// and used invalid options); VDD_CPU/VDD_GPU are modelled as supply ports. Real power
-// switches are part of the deferred full-power-gating scope (no switch
-// insertion happens in this ASAP7 flow either — pnr/asap7/soc/pdn.tcl).
-// Forward-compat note: if a future phase adds real switches, cpu_pg_ctrl
-// would be the INVERSE of the "domain on" sense used internally here
-// (pg_ctrl = 0 means "on"), unlike every other signal in this module.
-//
-// Reset style (explicit decision, see Doc: um:guide:coding-guidelines
-// section 1.4): this module uses SYNCHRONOUS reset (`always_ff @(posedge
-// clk_i)` gated by `if (!rst_n_i)`), matching every other module on the APB
-// peripheral ring it lives on (uart_controller, spi_controller, timer,
-// interrupt_controller, apb4_register_bank, pll_apb_regs — all synchronous-
-// reset, PD_PERIPH always-on domain). Section 1.4's general guidance for NEW
-// modules is async-assert/sync-deassert with a per-domain reset synchronizer,
-// but soc_top has NO reset synchronizer anywhere in the design (core_rst_n =
-// rst_n_i & pll_locked is a plain combinational AND — pll_subsystem.sv:93) and
-// section 1.4 also requires uniform discipline within one subsystem. Adding
-// this module's own async-reset flavor (and the synchronizer that would then
-// be needed to make it safe) would make the PMU the sole exception on its own
-// bus and does not match the surrounding synchronous-reset peripheral
-// subsystem it integrates into. Matching the subsystem was chosen over
-// introducing the project's first reset synchronizer as a side effect of a
-// PMU; full CPU/peripheral reset-discipline unification remains the separate
-// P3 audit item already tracked in Doc: um:guide:coding-guidelines.
-//
-// Register map (byte offset, 32-bit words) — APB4 slave, reuses
-// apb4_register_bank.sv (all APB4 protocol machinery: pready hardwired 1,
-// pslverr hardwired 0, SW-write-wins-over-HW-write same cycle, HW writes
-// bypass WMASK, out-of-range writes dropped / reads return 0):
-//
-//   0x00  CTRL       [RW]
-//           [1:0]  pmu_mode_req — requested power mode (NORMAL/CPU_OFF/
-//                                 GPU_OFF/IDLE, see encoding above)
-//           [31:2] reserved (RO 0)
-//
-//   0x04  STATUS     [RO, HW-driven every cycle]
-//           [0]    cpu_domain_on — 1 when the CPU domain sequencer has
-//                                  settled at DOM_ON
-//           [1]    gpu_domain_on — 1 when the GPU domain sequencer has
-//                                  settled at DOM_ON
-//           [2]    busy          — 1 while either domain is mid-sequence
-//                                  (neither settled ON nor settled OFF)
-//           [3]    cpu_iso_ack_timeout — STICKY. 1 when a CPU isolation-ack
-//                                  wait expired (ISO_ACK_TIMEOUT cycles with no
-//                                  ack / no ack release; see "Isolation
-//                                  handshake"). Cleared by reset and when the
-//                                  next CPU power-down begins.
-//           [31:4] reserved (RO 0)
-//
-//   0x08  DOMAIN_EN  [RO, HW-driven every cycle] — live per-signal bitmap,
-//                     primarily for verification observability (each PMU
-//                     output bit directly readable without FSM-state decode):
-//           [0]  cpu_clk_en       [1]  gpu_clk_en
-//           [2]  cpu_iso_en       [3]  gpu_iso_en
-//           [4]  cpu_rst_n        [5]  gpu_rst_n
-//           [6]  cpu_ret_save     [7]  cpu_ret_restore
-//           [8]  gpu_ret_save     [9]  gpu_ret_restore
-//           [31:10] reserved (RO 0)
-//
-// Reset defaults (CTRL=NORMAL, both domains DOM_ON): cpu_clk_en_o=1,
-// gpu_clk_en_o=1, cpu_iso_en_o=0, gpu_iso_en_o=0, cpu_rst_n_o=1, gpu_rst_n_o=1,
-// both ret_save/ret_restore=0 -- identical to pre-PMU soc_top behavior, so
-// dropping this module in with no firmware writes to CTRL is a no-op for the
-// existing soc_all regression.
-//
-// APB4 clock/reset mapping: pclk = clk_i, presetn = rst_n_i. clk_i/rst_n_i is
-// core_clk/core_rst_n (PD_PERIPH always-on domain) — the PMU itself is never
-// clock-gated or reset by its own sequencing (it sequences the CPU/GPU
-// domains, not itself).
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
-// Per house style: no `default_nettype` directive (Spyglass IND, section 1.3).
+// Function: The unit sequences clock gate, isolation, reset and retention signals for the CPU and GPU domains.
+//   It does not model supply removal, power switches or retention cells. It has no cpu_pg_ctrl and no gpu_pg_ctrl.
+//   CTRL[1:0] selects the mode: 00 NORMAL, 01 CPU_OFF, 10 GPU_OFF, 11 IDLE. The names and codes match the UPF.
+//   Power-down order: *_ret_save, *_iso_en, gate the clock (*_clk_en=0), assert *_rst_n=0.
+//   Power-up order: release *_rst_n, ungate the clock, assert *_ret_restore, de-assert *_iso_en.
+//   Each domain walks one action per clk_i cycle through nine states. It samples its target only at ON or OFF.
+// Registers: CTRL, STATUS and DOMAIN_EN. STATUS[3] is the sticky cpu_iso_ack_timeout flag.
+//   Reset or the start of the next CPU power-down clears it.
+// Outputs: Every *_clk_en_o, *_iso_en_o, *_rst_n_o, *_ret_save_o and *_ret_restore_o is the Q of a flop.
+// Parameters: ADDR_W is the local byte address width. ISO_ACK_TIMEOUT is the ack wait limit. The default is 255.
+// Clocks and resets: clk_i and rst_n_i are core_clk and core_rst_n. The reset is synchronous.
+//   Reset defaults: both domains ON, clk_en 1, iso_en 0, rst_n 1, ret_save 0, ret_restore 0.
+//   The sequencing never gates or resets the PMU itself.
+// Caller rules:
+//   - Connect cpu_iso_ack_i to the CPU-domain clamp control, synchronised back into clk_i.
+//   - The CPU power-down waits for cpu_iso_ack_i=1. The CPU power-up waits for cpu_iso_ack_i=0.
+//   - After ISO_ACK_TIMEOUT cycles the wait ends and STATUS[3] sets.
+//   - ISO_ACK_TIMEOUT must exceed the worst-case ack round trip, about 3*R+3 clk_i cycles when cpu_core_clk is R times slower
+//     than clk_i. The default 255 covers R up to about 80. A value that is too small breaks the isolate-first order.
+//   - soc_top holds the isolation clamps. The UPF sense is high and the clamp value is 0.
+//   - Retention save and restore have no effect. The GPU loses its state on a power cycle.
+//   - Software must re-initialise the GPU after every power-up. It must not rely on CPU state surviving.
+// Full contract: ds:mod:pmu
+// Doc: ds:mod:pmu, tm:mod:pmu
 
 module pmu #(
     parameter int unsigned ADDR_W = 12,  // local byte address width (4 KB slot)
     // Cycles the CPU isolation-ack wait may last before the sequencer proceeds and flags
-    // STATUS[3] (see "Isolation handshake"). >= 2; elaboration guard below.
+    // STATUS[3] (see ds:mod:pmu). >= 2; elaboration guard below.
     parameter int unsigned ISO_ACK_TIMEOUT = 255
 ) (
     input logic clk_i,
@@ -360,17 +175,7 @@ module pmu #(
         endcase
     end
 
-    // Registered sequencing outputs (ktwt). These drive cdc_sync D pins and the
-    // ASYNC clear of u_cpu_pmu_rst_sync in soc_top, and (GPU) the async reset
-    // and the handshake isolation mux of the GPU domain. A combinational
-    // decode of the 4-bit binary dom_state_q can glitch when several state
-    // bits change on one edge (4 of the 9 transitions; a runt reset on
-    // DOM_PU_RESTORE -> DOM_PU_ISO), and a glitch on an async clear or a
-    // synchroniser D pin is a real event. Each output is therefore the Q of
-    // its own flop, loaded with the decode of the NEXT state: the value seen
-    // at cycle t is exactly decode(dom_state_q at t), so no output moves one
-    // cycle earlier or later than in the combinational version (UPF order and
-    // test_pmu's per-cycle expectations are unchanged).
+    // The outputs are registered. Each one is the Q of a flop that loads the decode of the next state.
     logic clk_en_q      [N_DOM];
     logic iso_en_q      [N_DOM];
     logic rst_n_q       [N_DOM];
@@ -386,9 +191,8 @@ module pmu #(
     logic ret_save_d    [N_DOM];
     logic ret_restore_d [N_DOM];
 
-    // Isolation handshake (bead 3ogd, see header). iso_ack_w[d] is the acknowledge the sequencer
-    // waits on; wait_hit[d] is the (CPU only) timeout expiring in a wait state; both are inputs
-    // to the NEXT-state logic only, never to an output decode.
+    // iso_ack_w[d] is the ack the sequencer waits on. wait_hit[d] is the timeout in a wait state.
+    // Both feed only the next-state logic.
     logic iso_ack_w [N_DOM];
     logic wait_hit  [N_DOM];
     logic cpu_iso_ack_to_q;   // STATUS[3], sticky
@@ -417,7 +221,7 @@ module pmu #(
                     DOM_PU_RST:     dom_state_d[d] = DOM_PU_CLK;
                     DOM_PU_CLK:     dom_state_d[d] = DOM_PU_RESTORE;
                     DOM_PU_RESTORE: dom_state_d[d] = DOM_PU_ISO;
-                    // Hold until the release is acknowledged (4-phase RZ; see header).
+                    // Hold until the release is acknowledged (4-phase RZ). See ds:mod:pmu.
                     DOM_PU_ISO:     dom_state_d[d] = (!iso_ack_w[d] || wait_hit[d]) ? DOM_ON
                                                                                     : DOM_PU_ISO;
                     default:        dom_state_d[d] = DOM_ON;
@@ -500,7 +304,7 @@ module pmu #(
                 endcase
             end
 
-            // ── State + output registers (synchronous reset -- see header) ──
+            // ── State + output registers (synchronous reset). See ds:mod:pmu. ──
             // Reset values are decode(DOM_ON): ungated, not isolated, reset
             // released, no retention pulse -- identical to what the former
             // combinational outputs showed during reset.

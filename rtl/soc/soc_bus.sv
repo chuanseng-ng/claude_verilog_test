@@ -1,28 +1,13 @@
-// soc_bus.sv
-// SoC Bus Fabric Wrapper — Phase 5 / APB migration PR-7 structural refactor.
+// soc_bus - structural wrapper for the five bus modules of the SoC fabric.
 //
-// Wraps the five bus modules that were previously instantiated inline in soc_top:
-//   1. axi4_crossbar      — AXI4 data fabric (4 masters × 3 slaves)
-//   2. axi4_to_axilite    — crossbar S2 (periph) → AXI-Lite master
-//   3. axi_lite_interconnect — AXI-Lite ring (3 slaves: GPU, APB_BRIDGE, DMA)
-//   4. axil_to_apb        — AXI-Lite ring slot 1 → APB master
-//   5. apb_interconnect   — APB master → 14 APB peripheral slaves (Pre-Phase-6 #5: +PMU;
-//                            GH #92: +PLL2; bead ckc: +GPIO; bead f7vs.6: +PWM; bead f7vs.7: +WDT; bead f7vs.8: +TRNG; bead f7vs.9: +I2C; bead f7vs.10: +CRYPTO; bead f7vs.11: +NPU)
-//
-// This is a PURE STRUCTURAL WRAPPER.  No logic is added or removed.
-// Every signal that crossed the soc_top/bus boundary is an explicit port here.
-//
-// Port groups (matching soc_top's wire naming):
-//   clk / rst_n              — single clock domain (core_clk / core_rst_n)
-//   AXI4 master-facing [N_MASTERS]   — crossbar master ports (from CPU/GPU/DMA)
-//   AXI4 slave-facing  [N_SLAVES]    — crossbar slave ports (to ROM/SRAM/periph)
-//   AXI-Lite [AXIL_GPU] / [AXIL_DMA] — ring slaves that remain AXI-Lite direct
-//   APB [N_APB_SLV]                  — per-peripheral APB ports
-//
-// Address-map packages (soc_addr_map_pkg, soc_periph_map_pkg) are used directly
-// for all parameters — soc_bus is the single source of truth for fabric sizing.
-//
-// Lint: verilator -Wall 0 errors 0 warnings (same baseline as pre-refactor).
+// Function: The module holds axi4_crossbar, axi4_to_axilite, axi_lite_interconnect, axil_to_apb and apb_interconnect.
+//   It adds no logic. Every signal that crosses the soc_top and bus boundary is a port.
+//   The crossbar has four masters and three slaves. The AXI-Lite ring has three slaves: GPU, APB bridge and DMA.
+//   apb_interconnect serves 14 APB peripheral slaves.
+// Parameters: N_MASTERS. The default is 4.
+// Clocks and resets: clk and rst_n are one clock domain (core_clk and core_rst_n).
+// Caller rules: soc_addr_map_pkg and soc_periph_map_pkg set all fabric sizes. soc_bus is the single source of truth for them.
+// Doc: ds:mod:soc-bus
 
 module soc_bus
     import axi_pkg::*;

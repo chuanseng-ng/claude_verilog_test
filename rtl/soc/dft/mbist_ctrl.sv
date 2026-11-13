@@ -1,42 +1,22 @@
-// mbist_ctrl.sv
-// DFT Stage 4 (beads claude_verilog_test-j41m.14 / j41m.10, GH #244).
+// mbist_ctrl - memory BIST controller for one clock domain.
 //
-// Memory BIST controller for ONE clock domain: a ROM-microcode March sequencer, a data-background
-// generator, one comparator per memory (and per read port) and a per-memory sticky fail flag with a
-// first-fail record. Specification: Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing.
-//
-// All N_MEM memories of a domain are tested in lock-step (same address, same data); they must have
-// the same word count (2**AW). Each memory is reached through a mem_collar, which this module drives
-// with ONE broadcast bus (registered outputs b_*) and whose bist_en_o select it owns.
-//
-// Control (level based; the holding register of mbist_xing drives it, nothing here sees a pulse):
-//   run_i = 1   start the selected algorithm when idle; the run completes by itself and the status
-//               (done, fail, records) is HELD until run_i returns to 0.
-//   run_i = 0   abort and clear everything; bist_en_o drops, the collars become pass-through.
-//   cfg_i       {rd_sel[3:0], mask_sel[3:0], pause_exp[2:0], pause_mant[7:0], bg_sel[2:0], bg_sweep, alg[2:0]}
-//               alg, bg_sweep, bg_sel, pause_*, mask_sel are latched at start; rd_sel is live.
-//
-// Algorithms (alg): 0 MARCH_CM, 1 RETENTION, 2 MARCH_CM_RET, 3 CKBD, 4 LANE, 5 FULL; 6, 7 reserved ->
-// done at once with cfg_err. Backgrounds (bg_sel): 0..5, 6/7 reserved -> cfg_err.
-//
-// Read latency (RD_LAT, default 2) is the Sky130 macro contract: the op registers load at edge Pk, the
-// macro captures at P(k+1), executes at the following negedge, and the data is sampled at P(k+2).
-//
-// No runtime-indexed array reads: the microcode is a constant-label case function, every per-memory
-// select is a one-hot AND-OR over a constant-bound loop, the op slot select is a ternary tree.
-//
-// Local compare (LOCAL_CMP = 1, bead claude_verilog_test-c54a, section 16.7): the comparators live in the
-// mem_collars (next to the macros). This module then broadcasts the expected-data tag (x_rd_o, x_xm_o, x_bg_o;
-// flop outputs) and receives one registered mismatch strobe per memory and read port (cmp_fail0_i / cmp_fail1_i)
-// instead of dout0_i / dout1_i. The Sky130 macro launches its read data on the falling edge, so the collar
-// captures the compare on the next falling edge (a full cycle after the launch) and retimes it to the rising
-// edge: the strobe is two clocks later than the combinational compare. The tag broadcast is launched on the same
-// falling edge (x_*_o are falling-edge copies of the sample-stage tag), so the drain is two cycles longer and the
-// read tags have two more stages (addr, slot): the first-fail record (addr, elem, slot, bg, port) and the sticky
-// fail flags are identical to LOCAL_CMP = 0. The one thing not available is the XOR mask of
-// the failing word (status_o[68:37]): the data never reaches this module, the field reads 0.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The controller has a ROM-microcode March sequencer, a data-background generator, one comparator
+//   per memory and read port, and a sticky fail flag with a first-fail record for each memory.
+//   It tests all N_MEM memories in lock-step. They must have the same word count 2**AW.
+//   Each memory has a mem_collar. One broadcast bus (registered outputs b_*) drives the collars. The controller owns bist_en_o.
+//   run_i=1 starts the selected algorithm when idle. The run ends by itself. The status stays until run_i returns to 0.
+//   run_i=0 aborts and clears all state. bist_en_o drops and the collars pass through.
+//   alg: 0 MARCH_CM, 1 RETENTION, 2 MARCH_CM_RET, 3 CKBD, 4 LANE, 5 FULL. A reserved alg code finishes at once with cfg_err.
+//   bg_sel: 0 to 5 are valid. A reserved bg_sel code sets cfg_err.
+// Parameters: N_MEM, AW, RD_LAT, P1_MASK, ASYNC_RST and LOCAL_CMP. RD_LAT is 2 by default. It is the Sky130 macro contract.
+//   P1_MASK has one bit per memory. A 1 means the memory has a functional read port 1, which is read and compared too.
+//   LOCAL_CMP=1: the collars compare. The controller broadcasts x_rd_o, x_xm_o and x_bg_o and takes cmp_fail0_i and cmp_fail1_i.
+//   The XOR mask of the failing word (status_o[68:37]) then reads 0.
+// Clocks and resets: clk_i is the clock. rst_n_i is the reset.
+// Caller rules:
+//   - Drive run_i and cfg_i from the holding register of mbist_xing. The module does not see pulses.
+//   - alg, bg_sweep, bg_sel, pause_* and mask_sel are latched at start. rd_sel is live.
+// Doc: ds:mod:mbist-ctrl, tm:mod:mbist-ctrl
 
 module mbist_ctrl #(
     parameter int unsigned        N_MEM   = 2,
@@ -48,7 +28,7 @@ module mbist_ctrl #(
     // the CPU-hard-macro instance (section 16.7): the macro has only a synchronous reset and no async pin may
     // be added to it (check_scan_clk_rst.py), so its reset is folded into run_i by the instantiator.
     parameter bit                 ASYNC_RST = 1'b1,
-    // 1: collar-local compare (see header); dout0_i / dout1_i are unused, cmp_fail*_i and x_*_o are used.
+    // 1: collar-local compare (see ds:mod:mbist-ctrl); dout0_i / dout1_i are unused, cmp_fail*_i and x_*_o are used.
     // 0: compare here from dout0_i / dout1_i; cmp_fail*_i are unused (tie 0), x_*_o may be left open.
     parameter bit                 LOCAL_CMP = 1'b0
 ) (

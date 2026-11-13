@@ -47,19 +47,8 @@ module apb_interconnect #(
     input  logic              pslverr_i [N_SLAVES]
 );
 
-    // ── Address decode ───────────────────────────────────────────────────────
-    // sel_idx: index of the selected slave, or N_SLAVES when no match.
-    // First-match (lowest index wins) — iterate up and stop on first hit.
-    //
-    // Two widths are needed and they are NOT the same number:
-    //   SEL_W — wide enough to also hold the N_SLAVES "no match" sentinel.
-    //   IDXW  — wide enough to index the [N_SLAVES] port arrays, and no wider.
-    // They differ exactly when N_SLAVES is a power of two (e.g. N_SLAVES=8:
-    // SEL_W=4, IDXW=3), which is what made the response mux trip WIDTHTRUNC
-    // when Phase 6a took the APB sub-tree from 7 slaves to 8. The `> 1` guard
-    // on IDXW mirrors apb4_register_bank.sv's own IDXW localparam and keeps
-    // N_SLAVES==1 (this module's default) legal — $clog2(1) is 0, and a bare
-    // $clog2(N_SLAVES)-1:0 slice would be [-1:0].
+    // sel_idx is the lowest-index match, or N_SLAVES for no match.
+    // SEL_W holds the N_SLAVES sentinel. IDXW indexes the port arrays and needs a guard for N_SLAVES==1.
     localparam int unsigned SEL_W = $clog2(N_SLAVES + 1);
     localparam int unsigned IDXW  = (N_SLAVES > 1) ? $clog2(N_SLAVES) : 1;
 
@@ -115,4 +104,3 @@ module apb_interconnect #(
     end
 
 endmodule : apb_interconnect
-
