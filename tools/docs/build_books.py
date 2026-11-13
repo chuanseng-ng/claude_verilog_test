@@ -12,8 +12,11 @@ Usage:
 
 Exit codes:
     0  clean build
-    1  an error, an undefined reference, a duplicate label or a missing
-       glossary entry remains (with --strict: also an overfull box > 10pt)
+    1  an error, an undefined reference, a duplicate label, a missing
+       glossary entry or a tall row (an "Overfull vbox ... while output is
+       active" log line, reported as tallrows=N; not counted inside an index
+       file) remains (with --strict: also an
+       overfull box > 10pt)
     2  setup error (no book source)
     3  the engine is not installed
 """
@@ -41,14 +44,33 @@ _GLOSS = re.compile(r"[Gg]lossary entry [`'\"]+([^`'\"\s]+)['\"]* (?:has not bee
 _ERR_BANG = re.compile(r"^! (.+)$")
 _ERR_FLE = re.compile(r"^(?:[A-Za-z]:)?[^\s:][^:\n]*\.\w+:\d+: (.+)$")
 _OVERFULL = re.compile(r"Overfull \\hbox \(([0-9.]+)pt too wide\)")
+# A box taller than the page while the output routine runs: a longtable row that is
+# taller than the text height. TeX Live's longtable can loop on it.
+_TALLROW = re.compile(
+    r"Overfull \\vbox \(([0-9.]+)pt too high\) has occurred while \\output is active"
+)
+# The two-column index (multicol) gives the same line for a column box a few points too
+# high, with correct pages. It is not a table row, so it is not counted: the log shows
+# "(./name.ind" when the index file is read and "])" at its end.
+_IND_OPEN = re.compile(r"\((?:\./)?[^\s()]*\.ind\s*$")
+_IND_CLOSE = re.compile(r"^\]?\)")
 
 
 def parse_log(text: str) -> dict[str, list]:
     """Extract the problems from the text of a LaTeX log."""
     res: dict[str, list] = {"undefined": [], "multiply": [], "glossary": [], "errors": []}
     res["overfull"] = []
+    res["tallrows"] = []
+    in_index = False
     for raw in text.splitlines():
         line = raw.strip("\r")
+        if _IND_OPEN.search(line):
+            in_index = True
+        elif in_index and _IND_CLOSE.match(line):
+            in_index = False
+        m = _TALLROW.search(line)
+        if m and not in_index:
+            res["tallrows"].append(float(m.group(1)))
         for rx, key in ((_UNDEF, "undefined"), (_MULTI, "multiply"), (_GLOSS, "glossary")):
             m = rx.search(line)
             if m and m.group(1) not in res[key]:
@@ -247,7 +269,8 @@ def main(argv: list[str] | None = None) -> int:
             f"{book}: undefined={len(found['undefined'])} "
             f"multiply-defined={len(found['multiply'])} "
             f"glossary={len(found['glossary'])} errors={len(found['errors'])} "
-            f"overfull>{OVERFULL_LIMIT:g}pt={len(found['overfull'])}"
+            f"overfull>{OVERFULL_LIMIT:g}pt={len(found['overfull'])} "
+            f"tallrows={len(found['tallrows'])}"
         )
         for key, label in (
             ("undefined", "undefined reference"),
@@ -257,7 +280,9 @@ def main(argv: list[str] | None = None) -> int:
         ):
             for item in found[key]:
                 print(f"  {label}: {item}")
-        if any(found[k] for k in ("undefined", "multiply", "glossary", "errors")):
+        if found["tallrows"]:
+            print(f"  tall row: {len(found['tallrows'])} box(es) too high in the output routine")
+        if any(found[k] for k in ("undefined", "multiply", "glossary", "errors", "tallrows")):
             bad = True
         if args.strict and found["overfull"]:
             bad = True
