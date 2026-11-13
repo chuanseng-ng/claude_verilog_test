@@ -443,3 +443,80 @@ def test_strip_heading_numbers_texorpdfstring_and_no_remainder():
         "\\section{\\texorpdfstring{Use of \\code{x}}{Use of x}}\\label{a:b}\\origsec{5}\n"
     )
     assert got.endswith("\\section{12}\n")
+
+
+def _tall_table(first: str = "A1", words: int = 1500) -> str:
+    """Helper: a GFM table whose one row has a very long cell."""
+    long_cell = " ".join(f"w{i}" for i in range(words))
+    return f"| id | desc | note |\n|---|---|---|\n| {first} | {long_cell} | short `code` |\n"
+
+
+def _short_table() -> str:
+    """Helper: a small table."""
+    return "| id | desc | note |\n|---|---|---|\n| A1 | short text here for the cell | note |\n"
+
+
+@needs_pandoc
+def test_tall_row_becomes_row_blocks_with_all_text(tmp_path):
+    """Check a table with a row taller than the page is written as row blocks, not longtable."""
+    tex, _, _ = conv(tmp_path, "# T\n\n" + _tall_table())
+    assert "\\begin{rowtable}" in tex and "\\end{rowtable}" in tex
+    assert "longtable" not in tex
+    assert "\\rowcolumns{id, desc, note}" in tex
+    assert "\\rowtitle{\\textbf{id}: A1}" in tex
+    assert "\\begin{rowcell}{desc}" in tex and "\\begin{rowcell}{note}" in tex
+    assert tex.index("{desc}") < tex.index("{note}")
+    for i in range(1500):
+        assert re.search(rf"\bw{i}\b", tex), i
+    assert "\\code{code}" in tex
+
+
+@needs_pandoc
+def test_row_block_header_text_repeats_with_every_row(tmp_path):
+    """Check the header text appears with each row; a long first cell becomes Row N."""
+    md = _tall_table("A1", 900) + "| " + "first cell with many words " * 3 + " | b | c |\n"
+    tex, _, _ = conv(tmp_path, "# T\n\n" + md)
+    assert tex.count("\\rowtitle{") == 2
+    assert "\\rowtitle{Row 2}" in tex
+    assert tex.count("\\begin{rowcell}{desc}") == 2
+    assert tex.count("\\begin{rowcell}{id}") == 1  # only the row with a long first cell
+    assert "first cell with many words" in tex
+
+
+@needs_pandoc
+def test_normal_table_stays_a_longtable(tmp_path):
+    """Check an ordinary table is still a longtable."""
+    md = "| a | b |\n|---|---|\n| " + "word " * 30 + " | y |\n"
+    tex, _, _ = conv(tmp_path, "# T\n\n" + md + "\n" + _short_table())
+    assert tex.count("\\begin{longtable}") == 2
+    assert "rowtable" not in tex
+
+
+@needs_pandoc
+def test_table_form_can_be_forced(tmp_path):
+    """Check the comment line and the tables option force either form."""
+    forced_rows, _, _ = conv(tmp_path, "# T\n\n<!-- cvt-table: rows -->\n" + _short_table())
+    assert "\\begin{rowtable}" in forced_rows and "longtable" not in forced_rows
+    assert "cvt-table" not in forced_rows
+    forced_long, _, _ = conv(tmp_path, "# T\n\n<!-- cvt-table: long -->\n" + _tall_table())
+    assert "\\begin{longtable}" in forced_long and "rowtable" not in forced_long
+    only_next, _, _ = conv(
+        tmp_path, "# T\n\n<!-- cvt-table: rows -->\n" + _short_table() + "\n" + _short_table()
+    )
+    assert only_next.count("\\begin{rowtable}") == 1 and only_next.count("\\begin{longtable}") == 1
+    whole_rows, _, _ = conv(tmp_path, "# T\n\n" + _short_table(), tables="rows")
+    assert "\\begin{rowtable}" in whole_rows
+    whole_long, _, _ = conv(tmp_path, "# T\n\n" + _tall_table(), tables="long")
+    assert "\\begin{longtable}" in whole_long and "rowtable" not in whole_long
+    bad = conv(tmp_path, "# T\n\n<!-- cvt-table: x -->\n" + _short_table())[2]
+    assert "bad-table-mode" in [k for k, _ in bad]
+
+
+@needs_pandoc
+def test_table_debug_reports_the_row_estimate(tmp_path):
+    """Check the debug option warns with the tallest row of each table."""
+    _, _, warns = conv(tmp_path, "# T\n\n" + _tall_table(), table_debug=True)
+    est = [d for k, d in warns if k == "table-estimate"]
+    assert len(est) == 1 and "tallest row" in est[0]
+    _, _, none = conv(tmp_path, "# T\n\n" + _tall_table())
+    assert not [k for k, _ in none if k == "table-estimate"]

@@ -5241,51 +5241,109 @@ per-module list is in \code{coverage_report.md} / \code{.json}):
   edits to RTL). \textbf{(c) real bug} -\textgreater{} none found.
 \end{itemize}
 
-{\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{rowtable}
 
-{
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*336/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*336/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*309/1000\relax}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Class
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Items
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Where
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-(c) bug & none & no uncovered point was dead logic that should not be \\
-(b) waiver & FSM / \code{case} \code{default:} recovery arms (34 line
-points: 32 FSM arms across dma, i2c, spi, uart, crypto,
+\rowcolumns{Class, Items, Where}
+
+\rowtitle{\textbf{Class}: (c) bug}
+
+\begin{rowcell}{Items}
+
+none
+
+\end{rowcell}
+
+\begin{rowcell}{Where}
+
+no uncovered point was dead logic that should not be
+
+\end{rowcell}
+
+\rowtitle{\textbf{Class}: (b) waiver}
+
+\begin{rowcell}{Items}
+
+FSM / \code{case} \code{default:} recovery arms (34 line points: 32 FSM
+arms across dma, i2c, spi, uart, crypto,
 apb\_\allowbreak{}cdc\_\allowbreak{}bridge, crossbar,
 axi4\_\allowbreak{}to\_\allowbreak{}axilite, axi-lite blocks,
 axil\_\allowbreak{}to\_\allowbreak{}apb, boot\_rom, pmu,
 sram\_\allowbreak{}controller, sha256, plus the 2 dead \code{sbox()} /
-\code{sha_k()} defaults) & state registers only hold named encodings in
-simulation \\
-(b) waiver & unused reference decode helpers in \code{soc_addr_map_pkg}
-/ \code{soc_periph_map_pkg} (8 line points) & no caller in RTL or tb \\
-(b) waiver & \code{pslverr} tie-off on 15 APB modules and its
+\code{sha_k()} defaults)
+
+\end{rowcell}
+
+\begin{rowcell}{Where}
+
+state registers only hold named encodings in simulation
+
+\end{rowcell}
+
+\rowtitle{\textbf{Class}: (b) waiver}
+
+\begin{rowcell}{Items}
+
+unused reference decode helpers in \code{soc_addr_map_pkg} /
+\code{soc_periph_map_pkg} (8 line points)
+
+\end{rowcell}
+
+\begin{rowcell}{Where}
+
+no caller in RTL or tb
+
+\end{rowcell}
+
+\rowtitle{\textbf{Class}: (b) waiver}
+
+\begin{rowcell}{Items}
+
+\code{pslverr} tie-off on 15 APB modules and its
 soc\_\allowbreak{}top/\allowbreak{}soc\_\allowbreak{}bus fan-out;
 \code{AxPROT} on modules that ignore it (the
 interconnect\textquotesingle s routing is tested, \ghref{222} W5); constant
 DMA IDs; \code{*_unused} nets; \code{scanmode_i}; I2C
 \code{i2c_scl_o}/\code{i2c_sda_o} (dead open-drain outputs);
-\code{axilite_to_axi4} write channel tie-offs & constants by design \\
+\code{axilite_to_axi4} write channel tie-offs
+
+\end{rowcell}
+
+\begin{rowcell}{Where}
+
+constants by design
+
+\end{rowcell}
+
+\rowtitle{Row 5}
+
+\begin{rowcell}{Class}
+
 (a) bead \bead{ej6j} (\textbf{tests added 2026-10-07, see "ej6j
 AXI4-fabric re-measurement" below; full-run table above not yet
-re-measured}) & AXI4 fabric: crossbar decode-error bursts,
-\code{axi4_to_axilite} bursts/\allowbreak{}errors,
-\code{axilite_to_axi4} AR skid, \code{boot_rom} write path,
-\code{sram_controller} WRAP, \code{async_axi_fifo} error response & \\
+re-measured})
+
+\end{rowcell}
+
+\begin{rowcell}{Items}
+
+AXI4 fabric: crossbar decode-error bursts, \code{axi4_to_axilite}
+bursts/\allowbreak{}errors, \code{axilite_to_axi4} AR skid,
+\code{boot_rom} write path, \code{sram_controller} WRAP,
+\code{async_axi_fifo} error response
+
+\end{rowcell}
+
+\rowtitle{Row 6}
+
+\begin{rowcell}{Class}
+
 (a) bead \bead{8riq} -\textgreater{} \textbf{closed for the unit-level
-fabric} (2026-10-07, PR for \code{test/axil-apb-coverage-8riq}) &
+fabric} (2026-10-07, PR for \code{test/axil-apb-coverage-8riq})
+
+\end{rowcell}
+
+\begin{rowcell}{Items}
+
 \code{axi_lite_interconnect} / \code{axi_lite_register_bank} /
 \code{axil_to_apb} / \code{apb_interconnect} are now \textbf{100 \%
 line} (were 95.0 / 93.3 / 95.3 / 100 \%). New suite
@@ -5298,13 +5356,25 @@ separately:} SoC-level \code{soc_bus}/\code{soc_top} response signals
 \code{m_*resp}) need CPU firmware to reach an unmapped ring address, and
 \code{apb_m_pslverr} is unreachable through the current map (see below).
 RTL bug found: bead \bead{3xtv} (phantom second DECERR read beat),
-pinned by an \code{expect_fail} guard & \\
+pinned by an \code{expect_fail} guard
+
+\end{rowcell}
+
+\rowtitle{Row 7}
+
+\begin{rowcell}{Class}
+
 (a) bead \bead{bq2o} -\textgreater{} \textbf{closed at unit level}
 (2026-10-08, PR \code{test/dma-coverage-bq2o}; unit-measured, CI
-re-measure pending) & \code{dma_engine} is \textbf{100 \% line (67/67
-after waivers)}, was 91.2 \% (62/68) at unit level with the pre-PR
-10-test \code{test_dma} (raw 98.5 \%, 67/68, before the L393 waiver). 8
-new tests: burst clamp
+re-measure pending)
+
+\end{rowcell}
+
+\begin{rowcell}{Items}
+
+\code{dma_engine} is \textbf{100 \% line (67/67 after waivers)}, was
+91.2 \% (62/68) at unit level with the pre-PR 10-test \code{test_dma}
+(raw 98.5 \%, 67/68, before the L393 waiver). 8 new tests: burst clamp
 255/\allowbreak{}256/\allowbreak{}257/\allowbreak{}293 words, AR / AW /
 W / B stalls (\code{arready}/\code{awready} low for 9/11 edges,
 \code{wready} low 3 edges per beat, B delayed 8 cycles), all channels
@@ -5327,25 +5397,74 @@ of \code{dma_engine.sv} each killed (RTL reverted,
 empty): clamp MAX-1 (5 tests fail), DECERR ignored on B, stale
 \code{err_on_read} not cleared, queue-full guard removed, \code{arready}
 / \code{wready} / \code{awready} / \code{bvalid} ignored,
-\code{last_resp_q} not captured on B. No RTL bug found. & \\
+\code{last_resp_q} not captured on B. No RTL bug found.
+
+\end{rowcell}
+
+\rowtitle{Row 8}
+
+\begin{rowcell}{Class}
+
 (a) bead \bead{05wf} -\textgreater{} \textbf{closed at unit level}
-(2026-10-08, branch \code{test/uart-spi-coverage-05wf}) &
+(2026-10-08, branch \code{test/uart-spi-coverage-05wf})
+
+\end{rowcell}
+
+\begin{rowcell}{Items}
+
 \code{uart_controller} / \code{spi_controller}: byte lanes 2/3, FIFO
 full, RX false-start, os\_tick gaps --- see "05wf re-measurement" below.
 SoC-level numbers in the table are marked † and are unit-suite figures
-until the next full \code{soc_coverage} run & \\
-(a) bead \bead{oez2} -\textgreater{} \textbf{closed} (2026-10-08, \prref{236}, see "Re-measured 2026-10-08 after bead \bead{oez2}" above) &
+until the next full \code{soc_coverage} run
+
+\end{rowcell}
+
+\rowtitle{Row 9}
+
+\begin{rowcell}{Class}
+
+(a) bead \bead{oez2} -\textgreater{} \textbf{closed} (2026-10-08, \prref{236}, see "Re-measured 2026-10-08 after bead \bead{oez2}" above)
+
+\end{rowcell}
+
+\begin{rowcell}{Items}
+
 \code{soc_top}:
 \code{timer_irq}/\code{uart_irq}/\code{spi_irq}/\code{dma_irq}, GPU
-isolation, debug APB, PLL programming, SPI MISO & \\
-(a) bead \bead{pnfw} (existing) & I2C: slave-mode bit-counter arms
-L617/\allowbreak{}L645, SoC-level pad drive & notes appended \\
-(a) bead \bead{2k8} (existing) & GPU-domain PMU path
-(\code{pmu_gpu_iso_en} etc.) & note appended \\
-\end{longtable}
-}
+isolation, debug APB, PLL programming, SPI MISO
 
-}
+\end{rowcell}
+
+\rowtitle{\textbf{Class}: (a) bead \bead{pnfw} (existing)}
+
+\begin{rowcell}{Items}
+
+I2C: slave-mode bit-counter arms L617/\allowbreak{}L645, SoC-level pad
+drive
+
+\end{rowcell}
+
+\begin{rowcell}{Where}
+
+notes appended
+
+\end{rowcell}
+
+\rowtitle{\textbf{Class}: (a) bead \bead{2k8} (existing)}
+
+\begin{rowcell}{Items}
+
+GPU-domain PMU path (\code{pmu_gpu_iso_en} etc.)
+
+\end{rowcell}
+
+\begin{rowcell}{Where}
+
+note appended
+
+\end{rowcell}
+
+\end{rowtable}
 
 Waiver summary: 59 entries (24 line, 35 toggle; +2 for bead \bead{bq2o}:
 \code{dma_engine} L393 dead saturate,

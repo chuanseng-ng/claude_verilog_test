@@ -1715,54 +1715,38 @@ has to cover the full macro-to-fabric distance in one cycle.
 write-enable/\allowbreak{}index-decode
 fan-out}{B.1 Path A --- SRAM write-enable/index-decode fan-out}}\label{tm:pd:rvb-fanout-fix:b1-path-a-sram-write-enableindex-decode-fan-out}
 
-\begin{landscape}
-\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{rowtable}
 
-{
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*47/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*133/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*133/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*133/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*133/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*133/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*133/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*133/1000\relax}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-\#
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Option
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-RTL sketch (NOT applied)
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Functional / verification impact
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Expected timing effect
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Area/\allowbreak{}power
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Risk
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Locked-decision conflict
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-A1 & \textbf{Register the write commit one cycle deep} (pipeline
+\rowcolumns{\#, Option, RTL sketch (NOT applied), Functional / verification impact, Expected timing effect, Area/\allowbreak{}power, Risk, Locked-decision conflict}
+
+\rowtitle{\textbf{\#} A1}
+
+\begin{rowcell}{Option}
+
+\textbf{Register the write commit one cycle deep} (pipeline
 \code{w_idx}/\code{s_wdata}/\code{s_wstrb} into a \code{W_COMMIT} stage
-before touching \code{mem[]}) & Add
-\code{wcommit_valid_q/wdata_q/wstrb_q/widx_q} captured in \code{W_DATA}
-on \code{s_wvalid}; move the
+before touching \code{mem[]})
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+Add \code{wcommit_valid_q/wdata_q/wstrb_q/widx_q} captured in
+\code{W_DATA} on \code{s_wvalid}; move the
 \texttt{mem[w\_\allowbreak{}idx][.\allowbreak{}.\allowbreak{}.\allowbreak{}]\ <=\allowbreak{}\ .\allowbreak{}.\allowbreak{}.\allowbreak{}}
 loop to fire off the *\_q registers one cycle later; \code{s_wready}
 still asserts every cycle in \code{W_DATA} (no extra backpressure) since
 the FSM just delays the \emph{effect}, not the AXI acceptance ---
 \code{s_bvalid} must wait one extra cycle after \code{s_wlast} is
-captured & +1 cycle write commit-to-visible latency (a read immediately
-following a write to the same address must now either stall or bypass
---- \textbf{needs a genuine read-after-write hazard check against
+captured
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
++1 cycle write commit-to-visible latency (a read immediately following a
+write to the same address must now either stall or bypass ---
+\textbf{needs a genuine read-after-write hazard check against
 \code{sram_controller}\textquotesingle s existing read FSM}, which
 currently reads \code{mem[r_idx]} combinationally with 0 extra latency);
 AXI4 protocol itself is unaffected
@@ -1771,59 +1755,138 @@ controller-internal choice, not visibly broken to the crossbar) provided
 BRESP is delayed to match; \textbf{verification}:
 \src{tb/cocotb/soc/test_sram_controller.py} (all write-then-read-back
 tests), \code{soc_all} end-to-end (any firmware relying on
-same-cycle-visible SRAM writes), crossbar write-channel tests & Breaks
-\code{s_wvalid}\textquotesingle s combinational reach at the
+same-cycle-visible SRAM writes), crossbar write-channel tests
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+Breaks \code{s_wvalid}\textquotesingle s combinational reach at the
 sram\_\allowbreak{}controller boundary --- the fan-out tree now roots at
 a \emph{local} register inside \code{sram_controller}, not at the
 far-away GPU macro\textquotesingle s \code{m_axi_wvalid}; does not by
 itself reduce endpoint count (still \textasciitilde32768 flops), only
 shortens/\allowbreak{}re-roots the tree so CTS/\allowbreak{}resizer see
 it as an ordinary intra-module fan-out, closer to where
-it\textquotesingle s consumed & +1 FF per write-data/\allowbreak{}addr
-bit (\textasciitilde64 FF), negligible power & Medium --- a same-address
-RAW hazard bug is easy to introduce silently; must be proven by directed
-cocotb test, not just regression pass & \textbf{None} --- keeps the flat
-behavioral array; fully consistent with Phase 5 M6\textquotesingle s
-locked "behavioral SRAM for Phase 5" decision \\
-A2 & \textbf{Pre-decoded, registered one-hot word-select} (decode
+it\textquotesingle s consumed
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
++1 FF per write-data/\allowbreak{}addr bit (\textasciitilde64 FF),
+negligible power
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+Medium --- a same-address RAW hazard bug is easy to introduce silently;
+must be proven by directed cocotb test, not just regression pass
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+\textbf{None} --- keeps the flat behavioral array; fully consistent with
+Phase 5 M6\textquotesingle s locked "behavioral SRAM for Phase 5"
+decision
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} A2}
+
+\begin{rowcell}{Option}
+
+\textbf{Pre-decoded, registered one-hot word-select} (decode
 \code{w_idx} into a registered 1024-bit one-hot vector \emph{ahead} of
-\code{s_wvalid}, reuse per-word) & At
-\texttt{W\_\allowbreak{}IDLE→W\_\allowbreak{}DATA} transition (when
+\code{s_wvalid}, reuse per-word)
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+At \texttt{W\_\allowbreak{}IDLE→W\_\allowbreak{}DATA} transition (when
 \code{w_idx} is captured from \code{s_awaddr}), also register
 \code{word_sel_q[1024]} as a one-hot decode of \code{w_idx}; in
 \code{W_DATA}, compute
 \texttt{word\_\allowbreak{}we[i]\ =\allowbreak{}\ word\_\allowbreak{}sel\_\allowbreak{}q[i]\ \&\ s\_\allowbreak{}wvalid\ \&\ !w\_\allowbreak{}err}
 (1024 AND2 gates) and gate all 32 bits of \code{mem[i]} from the single
 \code{word_we[i]}, reusing it across the 4 byte lanes instead of
-recomputing \code{(w_idx==i)} per bit & Zero added AXI latency (index
-decode happens during the address phase, which already exists a cycle
-ahead of data); same RAW semantics as today (write is still visible the
-cycle \code{s_wvalid} fires) --- \textbf{lower functional risk than A1};
-verification: same suites as A1 but no new latency-dependent test
-vectors needed, mainly a resynthesis/\allowbreak{}lint check that
-\code{word_we[i]} is correctly shared & Reduces
-\code{s_wvalid}\textquotesingle s \emph{direct} fan-out from (worst
-case) 32768 to 1024 --- a ≥16--32× reduction at the AND-gate level, and
-gives CTS/\allowbreak{}resizer 1024 independently-timed downstream
-branches instead of one shared tree; total flop count unchanged & +1024
-FF (one-hot register) + 1024 AND2 gates; more area than A1 (a full
+recomputing \code{(w_idx==i)} per bit
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
+Zero added AXI latency (index decode happens during the address phase,
+which already exists a cycle ahead of data); same RAW semantics as today
+(write is still visible the cycle \code{s_wvalid} fires) ---
+\textbf{lower functional risk than A1}; verification: same suites as A1
+but no new latency-dependent test vectors needed, mainly a
+resynthesis/\allowbreak{}lint check that \code{word_we[i]} is correctly
+shared
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+Reduces \code{s_wvalid}\textquotesingle s \emph{direct} fan-out from
+(worst case) 32768 to 1024 --- a ≥16--32× reduction at the AND-gate
+level, and gives CTS/\allowbreak{}resizer 1024 independently-timed
+downstream branches instead of one shared tree; total flop count
+unchanged
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
++1024 FF (one-hot register) + 1024 AND2 gates; more area than A1 (a full
 one-hot register vs \textasciitilde64 latched bits), but avoids
-sequencing complexity & Low-medium --- requires care that
-\code{word_sel_q} is correctly re-decoded/\allowbreak{}held for burst
-writes (\code{w_idx} increments mid-burst under \code{w_incr}, so
-\code{word_sel_q} must track it, effectively becoming a
-shift/\allowbreak{}increment of the one-hot register --- non-trivial for
-INCR bursts) & \textbf{None} --- same behavioral-array model \\
-A3 & \textbf{Real SRAM macro for ASAP7 (extend the existing
-\code{SRAM_SKY130} pattern)} & Add an \code{ASAP7}-side
-\code{ifdef}/\allowbreak{}parameter arm mirroring
-\code{sram_controller.sv:110-243}\textquotesingle s existing
+sequencing complexity
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+Low-medium --- requires care that \code{word_sel_q} is correctly
+re-decoded/\allowbreak{}held for burst writes (\code{w_idx} increments
+mid-burst under \code{w_incr}, so \code{word_sel_q} must track it,
+effectively becoming a shift/\allowbreak{}increment of the one-hot
+register --- non-trivial for INCR bursts)
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+\textbf{None} --- same behavioral-array model
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} A3}
+
+\begin{rowcell}{Option}
+
+\textbf{Real SRAM macro for ASAP7 (extend the existing
+\code{SRAM_SKY130} pattern)}
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+Add an \code{ASAP7}-side \code{ifdef}/\allowbreak{}parameter arm
+mirroring \code{sram_controller.sv:110-243}\textquotesingle s existing
 \code{SRAM_SKY130} structure, backed by \code{sram_1rw_256x32_asap7}
 (already qualified and used by the CPU/GPU caches, per
 \texttt{Doc:\allowbreak{}\ ds:\allowbreak{}ch:\allowbreak{}phase5-\allowbreak{}soc-\allowbreak{}integration-\allowbreak{}plan}
 and
 \texttt{pnr/\allowbreak{}asap7/\allowbreak{}\{cpu,\allowbreak{}gpu\}/\allowbreak{}config.\allowbreak{}json})
-or a small bank of them (1024×32 needs 4× the 256-deep macro, banked) &
+or a small bank of them (1024×32 needs 4× the 256-deep macro, banked)
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
 The macro model already has its own read-latency contract (2-cycle
 negedge-launched read per
 \code{sram_controller.sv:304-344}\textquotesingle s \code{SRAM_SKY130}
@@ -1836,239 +1899,502 @@ verification: full new \code{test_sram_controller.py} macro-mode matrix
 (mirroring the existing \code{SRAM_SKY130} cocotb coverage),
 \code{soc_all}, crossbar tests, plus a genuinely new PD
 macro-integration/\allowbreak{}characterization pass (LEF/LIB, macro
-placement, PDN) & Eliminates the \textasciitilde32768-flop write-decode
-and the 1024:1 read-mux \textbf{entirely} --- replaces both with the
+placement, PDN)
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+Eliminates the \textasciitilde32768-flop write-decode and the 1024:1
+read-mux \textbf{entirely} --- replaces both with the
 macro\textquotesingle s own internal decode (opaque to synthesis,
 characterized once via Liberty), which is the most robust structural fix
-for both Path A and (indirectly) SRAM read timing & Most robust; but
-adds real macro area/\allowbreak{}power (own Liberty numbers) instead of
-\textasciitilde32K DFF + combinational logic --- direction of
-area/\allowbreak{}power delta depends on macro efficiency vs
-standard-cell flop array (likely net area win, since a real SRAM macro
-is far denser than 32K DFF) & \textbf{Highest effort} --- needs macro
-selection/\allowbreak{}banking for 1024 words (macro is 256 deep), new
-LEF/LIB views, PDN/\allowbreak{}macro-placement work (bead
-\bead{86a}\textquotesingle s own experience with macro
-power/\allowbreak{}timing view generation is directly relevant), and is
-the largest RTL delta of the five options & \textbf{Tension with the
-locked decision}: \src{CLAUDE.md} /
+for both Path A and (indirectly) SRAM read timing
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
+Most robust; but adds real macro area/\allowbreak{}power (own Liberty
+numbers) instead of \textasciitilde32K DFF + combinational logic ---
+direction of area/\allowbreak{}power delta depends on macro efficiency
+vs standard-cell flop array (likely net area win, since a real SRAM
+macro is far denser than 32K DFF)
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+\textbf{Highest effort} --- needs macro selection/\allowbreak{}banking
+for 1024 words (macro is 256 deep), new LEF/LIB views,
+PDN/\allowbreak{}macro-placement work (bead \bead{86a}\textquotesingle s
+own experience with macro power/\allowbreak{}timing view generation is
+directly relevant), and is the largest RTL delta of the five options
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+\textbf{Tension with the locked decision}: \src{CLAUDE.md} /
 \texttt{Doc:\allowbreak{}\ ds:\allowbreak{}ch:\allowbreak{}phase5-\allowbreak{}soc-\allowbreak{}integration-\allowbreak{}plan}
 M6 explicitly locked "behavioral SRAM for Phase 5" (real
 DRAM/\allowbreak{}macro deferred to Phase 6+). This option does not
 touch DRAM, but it \emph{does} replace the flat behavioral array with a
 hard macro for ASAP7 --- a real architecture-decision reopening, not a
-Phase-5-scope tweak \\
-A4 & \textbf{\texttt{\$mem}-inferable memory instead of per-bit flops}
+Phase-5-scope tweak
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} A4}
+
+\begin{rowcell}{Option}
+
+\textbf{\texttt{\$mem}-inferable memory instead of per-bit flops}
 (restructure the array so yosys infers a \texttt{\$mem}/RTL memory
 object PD can map to a memory-compiler macro or a fully synthesized
-single-port RAM, rather than 32K discrete DFFs) & Likely requires
-removing the per-byte-strobe partial-write pattern
+single-port RAM, rather than 32K discrete DFFs)
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+Likely requires removing the per-byte-strobe partial-write pattern
 (\texttt{mem[w\_\allowbreak{}idx][b*8+\allowbreak{}:\allowbreak{}8]\ <=\allowbreak{}\ .\allowbreak{}.\allowbreak{}.\allowbreak{}}
 inside a loop) in favor of a single full-word masked write
 yosys\textquotesingle s memory inference recognizes, and possibly
 restructuring the reset behavior (yosys \texttt{\$mem} inference is
 sensitive to whether the array is ever reset --- this array is
-\emph{not} reset today, which is actually favorable for inference) &
+\emph{not} reset today, which is actually favorable for inference)
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
 Functionally equivalent if done correctly; verification: identical
 suites to A1/A3, plus a \textbf{synthesis-level check} (yosys
 \code{memory_collect}/\code{memory_dff} passes, or a \code{stat} dump)
 that inference actually happens --- this option\textquotesingle s
 benefit is entirely contingent on confirming inference occurs, which was
 flagged in this task as needing verification and was not empirically
-confirmed in this session (see §E) & \emph{If} \texttt{\$mem} inference
-succeeds and LibreLane/\allowbreak{}Yosys maps it to a real RAM
-primitive or SRAM-compiler macro, this fully removes the fan-out (same
-end-state as A3 via a synthesis-flow lever instead of an RTL macro
-instantiation); \emph{if} it only produces a synthesized
-(flip-flop-based) memory the tool can\textquotesingle t map to a macro,
-there is \textbf{no timing benefit at all} over today\textquotesingle s
-RTL --- ASAP7 has no synthesizable-memory-compiler path in this flow
-today & Unknown until confirmed working --- potentially the best
-area/\allowbreak{}power outcome (dense RAM primitive) or no improvement
-at all & \textbf{High} --- behavior is
-toolchain/\allowbreak{}PDK-dependent and unconfirmed for ASAP7 in this
-flow; do not rely on this without a synthesis experiment proving
-inference occurs (this proposal recommends investigating it, not
-adopting it blind) & \textbf{None outright} (still a "behavioral"
-description in RTL), but if it resolves to a real SRAM-compiler macro it
-has the same tension as A3 \\
-A5 & \textbf{SDC \code{set_max_fanout}/\allowbreak{}multicycle exception
-targeted at this net class} & e.g. a tighter \code{set_max_fanout} on
-\code{s_wvalid}-derived nets, or a multicycle on the crossbar→SRAM write
-path & None to RTL; but per w3a\textquotesingle s own conclusion this is
-a genuine single-cycle \code{s_wvalid}-gates-a-real-write-commit path
---- a multicycle exception would be \textbf{functionally incorrect} (the
-write really does commit in one cycle per AXI4) & The existing global
-\code{MAX_FANOUT_CONSTRAINT=16} is already respected at every individual
-buffer stage (w3a: "the problem is tree depth/\allowbreak{}breadth in
-aggregate, not any single illegal-fanout node") --- a net-specific
-fanout cap would only force \emph{more} buffer stages into the same
-shared tree, which is the mechanism already causing the oscillation, not
-a cure for it & N/A & \textbf{Not recommended} --- explicitly excluded
-per task instruction not to hide a real single-cycle path & N/A
-(SDC-only, but the wrong kind of SDC-only) \\
-\end{longtable}
-}
+confirmed in this session (see §E)
 
-\end{landscape}
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+\emph{If} \texttt{\$mem} inference succeeds and
+LibreLane/\allowbreak{}Yosys maps it to a real RAM primitive or
+SRAM-compiler macro, this fully removes the fan-out (same end-state as
+A3 via a synthesis-flow lever instead of an RTL macro instantiation);
+\emph{if} it only produces a synthesized (flip-flop-based) memory the
+tool can\textquotesingle t map to a macro, there is \textbf{no timing
+benefit at all} over today\textquotesingle s RTL --- ASAP7 has no
+synthesizable-memory-compiler path in this flow today
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
+Unknown until confirmed working --- potentially the best
+area/\allowbreak{}power outcome (dense RAM primitive) or no improvement
+at all
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+\textbf{High} --- behavior is toolchain/\allowbreak{}PDK-dependent and
+unconfirmed for ASAP7 in this flow; do not rely on this without a
+synthesis experiment proving inference occurs (this proposal recommends
+investigating it, not adopting it blind)
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+\textbf{None outright} (still a "behavioral" description in RTL), but if
+it resolves to a real SRAM-compiler macro it has the same tension as A3
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} A5}
+
+\begin{rowcell}{Option}
+
+\textbf{SDC \code{set_max_fanout}/\allowbreak{}multicycle exception
+targeted at this net class}
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+e.g. a tighter \code{set_max_fanout} on \code{s_wvalid}-derived nets, or
+a multicycle on the crossbar→SRAM write path
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
+None to RTL; but per w3a\textquotesingle s own conclusion this is a
+genuine single-cycle \code{s_wvalid}-gates-a-real-write-commit path ---
+a multicycle exception would be \textbf{functionally incorrect} (the
+write really does commit in one cycle per AXI4)
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+The existing global \code{MAX_FANOUT_CONSTRAINT=16} is already respected
+at every individual buffer stage (w3a: "the problem is tree
+depth/\allowbreak{}breadth in aggregate, not any single illegal-fanout
+node") --- a net-specific fanout cap would only force \emph{more} buffer
+stages into the same shared tree, which is the mechanism already causing
+the oscillation, not a cure for it
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
+N/A
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+\textbf{Not recommended} --- explicitly excluded per task instruction
+not to hide a real single-cycle path
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+N/A (SDC-only, but the wrong kind of SDC-only)
+
+\end{rowcell}
+
+\end{rowtable}
 
 \subsubsection{\texorpdfstring{B.2 Path B --- GPU AXI-Lite read-data
 fan-out into
 \code{u_periph_bridge}}{B.2 Path B --- GPU AXI-Lite read-data fan-out into }}\label{tm:pd:rvb-fanout-fix:b2-path-b-gpu-axi-lite-read-data-fan-out-into-u-periph-bridge}
 
-\begin{landscape}
-\footnotesize\setlength{\tabcolsep}{3pt}
+\begin{rowtable}
 
-{
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*47/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*136/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*136/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*136/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*136/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*114/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*136/1000\relax}
-  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-14\tabcolsep)*136/1000\relax}@{}}
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-\#
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Option
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-RTL sketch (NOT applied)
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Functional / verification impact
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Expected timing effect
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Area/\allowbreak{}power
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Risk
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Locked-decision conflict
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-B1 & \textbf{Register \code{s_axil_rdata} inside \code{gpu_top}
-(macro-boundary register)} & Add a flop capturing the \code{always_comb}
-case-mux output (\code{gpu_top.sv:298-321}) on the cycle the AR address
-is accepted, so \code{s_axil_rdata}/\code{s_axil_rvalid} present one
-cycle after \code{ar_cap_q} today\textquotesingle s combinational cycle
---- i.e. add a genuine extra AXI-Lite read latency (\code{RVALID} one
-cycle later than \code{ARVALID}\&\code{ARREADY}) & AXI-Lite protocol is
-fully compliant with an extra latency cycle (AXI4-Lite has no
-fixed-latency requirement, only VALID/\allowbreak{}READY handshake
-rules) --- but this is a \textbf{GPU macro boundary change}: the macro
-must be re-hardened (re-run GPU-block synthesis/\allowbreak{}PD,
-re-characterize timing) since its I/O timing contract changes;
-verification: GPU AXI-Lite register-access cocotb tests (any GPU
-ctrl-register read test with a fixed expected-latency assumption),
-\code{soc_all} (periph read paths through the ring),
+\rowcolumns{\#, Option, RTL sketch (NOT applied), Functional / verification impact, Expected timing effect, Area/\allowbreak{}power, Risk, Locked-decision conflict}
+
+\rowtitle{\textbf{\#} B1}
+
+\begin{rowcell}{Option}
+
+\textbf{Register \code{s_axil_rdata} inside \code{gpu_top}
+(macro-boundary register)}
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+Add a flop capturing the \code{always_comb} case-mux output
+(\code{gpu_top.sv:298-321}) on the cycle the AR address is accepted, so
+\code{s_axil_rdata}/\code{s_axil_rvalid} present one cycle after
+\code{ar_cap_q} today\textquotesingle s combinational cycle --- i.e. add
+a genuine extra AXI-Lite read latency (\code{RVALID} one cycle later
+than \code{ARVALID}\&\code{ARREADY})
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
+AXI-Lite protocol is fully compliant with an extra latency cycle
+(AXI4-Lite has no fixed-latency requirement, only
+VALID/\allowbreak{}READY handshake rules) --- but this is a \textbf{GPU
+macro boundary change}: the macro must be re-hardened (re-run GPU-block
+synthesis/\allowbreak{}PD, re-characterize timing) since its I/O timing
+contract changes; verification: GPU AXI-Lite register-access cocotb
+tests (any GPU ctrl-register read test with a fixed expected-latency
+assumption), \code{soc_all} (periph read paths through the ring),
 \code{test_axi_lite_interconnect}/\code{test_axi4_to_axilite} if they
-assume the old latency & Moves the register from \code{u_periph_bridge}
-(far side) to inside the GPU macro (near side) --- this shortens the
-\emph{unregistered} combinational span from "two muxes across the whole
-macro-to-fabric distance" to "one clean 3-way ring mux only," and gives
-CTS a real register boundary at the macro pin instead of a raw comb
-output, letting the buffer-chain-heavy segment be split at the actual
-clock edge instead of purely as an optimization artifact & +32 FF inside
-GPU macro; negligible & \textbf{Medium-high} --- this is a macro
-re-harden, not a leaf-module edit; per the GPU\textquotesingle s own PD
-history
+assume the old latency
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+Moves the register from \code{u_periph_bridge} (far side) to inside the
+GPU macro (near side) --- this shortens the \emph{unregistered}
+combinational span from "two muxes across the whole macro-to-fabric
+distance" to "one clean 3-way ring mux only," and gives CTS a real
+register boundary at the macro pin instead of a raw comb output, letting
+the buffer-chain-heavy segment be split at the actual clock edge instead
+of purely as an optimization artifact
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
++32 FF inside GPU macro; negligible
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+\textbf{Medium-high} --- this is a macro re-harden, not a leaf-module
+edit; per the GPU\textquotesingle s own PD history
 (\texttt{Doc:\allowbreak{}\ cr:\allowbreak{}run:\allowbreak{}phase5} GPU
 macro boundary caveats, bead \bead{cyb}/\code{g0o} class of finding)
 touching a macro\textquotesingle s registered I/O contract has
 previously had ripple effects on macro pin ordering/\allowbreak{}timing
-views that needed dedicated fixing & None --- GPU behavioral semantics
-unchanged, purely a macro-boundary pipeline register \\
-B2 & \textbf{Register \code{m_axil_rdata} inside
-\code{axi_lite_interconnect} (ring-level register, not macro-internal)}
-& Add a flop after the \code{rsel}-based mux
+views that needed dedicated fixing
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+None --- GPU behavioral semantics unchanged, purely a macro-boundary
+pipeline register
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} B2}
+
+\begin{rowcell}{Option}
+
+\textbf{Register \code{m_axil_rdata} inside \code{axi_lite_interconnect}
+(ring-level register, not macro-internal)}
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+Add a flop after the \code{rsel}-based mux
 (\code{axi_lite_interconnect.sv:254}) so \code{m_axil_rdata} is
 registered before leaving the interconnect, rather than
-mux\textquotesingle d combinationally straight through & Adds one cycle
-of read latency on the ring→periph-bridge leg only
+mux\textquotesingle d combinationally straight through
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
+Adds one cycle of read latency on the ring→periph-bridge leg only
 (GPU/\allowbreak{}DMA/\allowbreak{}APB-bridge internal timing
 unaffected); \textbf{no macro re-harden needed} (interconnect is
 ordinary flat RTL, not a macro) --- cleanest scope of the three register
 options; verification: \code{test_axi_lite_interconnect}
 (latency-sensitive assertions), \code{test_axi4_to_axilite},
-\code{soc_all} periph-read regression & Same effect as B1 on the
-downstream (\code{u_periph_bridge}) side --- the combinational span from
-GPU\textquotesingle s comb mux output to the fabric register is
-unchanged in length (still crosses the physical macro-to-fabric distance
-combinationally) \textbf{unless} the new register is physically placed
-close to the GPU macro\textquotesingle s output; if placed near the ring
-interconnect\textquotesingle s own location (likely far from the GPU
-macro, near the rest of the fabric) it does \textbf{not} shorten the
-long, high-capacitance segment w3a measured --- it only adds a register
-\emph{after} it, which does still break the specific "unregistered all
-the way from GPU regs to periph\_\allowbreak{}bridge\textquotesingle s D
-pin" property, converting one long combinational hop into two, each
-roughly half the distance (better, though less clean structurally than
-B1) & +32 FF, negligible & Low --- purely a leaf-RTL change in a
-non-macro module & None \\
-B3 & \textbf{Register \code{s_rdata}/\code{m_axil_rdata} input at the
-periph bridge (add a stage \emph{before} \code{rdata_q}, i.e. a 2-deep
-pipeline)} & In \code{axi4_to_axilite.sv}, add an extra flop ahead of
-the existing
+\code{soc_all} periph-read regression
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+Same effect as B1 on the downstream (\code{u_periph_bridge}) side ---
+the combinational span from GPU\textquotesingle s comb mux output to the
+fabric register is unchanged in length (still crosses the physical
+macro-to-fabric distance combinationally) \textbf{unless} the new
+register is physically placed close to the GPU macro\textquotesingle s
+output; if placed near the ring interconnect\textquotesingle s own
+location (likely far from the GPU macro, near the rest of the fabric) it
+does \textbf{not} shorten the long, high-capacitance segment w3a
+measured --- it only adds a register \emph{after} it, which does still
+break the specific "unregistered all the way from GPU regs to
+periph\_\allowbreak{}bridge\textquotesingle s D pin" property,
+converting one long combinational hop into two, each roughly half the
+distance (better, though less clean structurally than B1)
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
++32 FF, negligible
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+Low --- purely a leaf-RTL change in a non-macro module
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+None
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} B3}
+
+\begin{rowcell}{Option}
+
+\textbf{Register \code{s_rdata}/\code{m_axil_rdata} input at the periph
+bridge (add a stage \emph{before} \code{rdata_q}, i.e. a 2-deep
+pipeline)}
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+In \code{axi4_to_axilite.sv}, add an extra flop ahead of the existing
 \texttt{rdata\_\allowbreak{}q\ <=\allowbreak{}\ m\_\allowbreak{}axil\_\allowbreak{}rdata}
 (\code{axi4_to_axilite.sv:282}), i.e.
 \texttt{rdata\_\allowbreak{}stage\_\allowbreak{}q\ <=\allowbreak{}\ m\_\allowbreak{}axil\_\allowbreak{}rdata;\ rdata\_\allowbreak{}q\ <=\allowbreak{}\ rdata\_\allowbreak{}stage\_\allowbreak{}q;}
-& Same AXI-Lite latency-cycle impact as B1/B2 but adds it at the
-consuming end instead of the source; simplest possible code change (one
-new register in an existing module, no macro boundary, no interconnect
-logic change) --- verification identical scope to B2 & \textbf{Does not
-address the root cause}: the long, high-capacitance, unregistered span
-is \emph{before} this point (GPU comb mux → ring comb mux); adding a
-register after both muxes only means
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
+Same AXI-Lite latency-cycle impact as B1/B2 but adds it at the consuming
+end instead of the source; simplest possible code change (one new
+register in an existing module, no macro boundary, no interconnect logic
+change) --- verification identical scope to B2
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+\textbf{Does not address the root cause}: the long, high-capacitance,
+unregistered span is \emph{before} this point (GPU comb mux → ring comb
+mux); adding a register after both muxes only means
 \code{u_periph_bridge}\textquotesingle s \emph{own} input register now
 samples the same over-loaded combinational net one cycle later --- it
 does not shorten or re-root the segment w3a measured at 686--1430 fF, so
-timing benefit is doubtful & +32 FF, negligible & Low implementation
-risk, but \textbf{high risk of not fixing the actual timing problem} ---
-listed for completeness, not recommended & None \\
-B4 & \textbf{AXI-Lite skid/\allowbreak{}register slice on the
+timing benefit is doubtful
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
++32 FF, negligible
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+Low implementation risk, but \textbf{high risk of not fixing the actual
+timing problem} --- listed for completeness, not recommended
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+None
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} B4}
+
+\begin{rowcell}{Option}
+
+\textbf{AXI-Lite skid/\allowbreak{}register slice on the
 ring\textquotesingle s GPU-facing port} (a generic 1-deep skid buffer
 module inserted between GPU\textquotesingle s \code{s_axil_*} and the
-ring, on both AR/R directions) & Instantiate a small skid-buffer wrapper
-around the GPU\textquotesingle s AXI-Lite slave ports at the
-\code{soc_bus.sv} boundary (structurally similar to B1 but implemented
-as a \emph{separate, reusable} module rather than a change inside
-\code{gpu_top}) & Functionally equivalent to B1 (extra read latency,
-AXI-Lite compliant) but \textbf{avoids editing/\allowbreak{}re-hardening
-the GPU macro itself} --- the skid buffer lives in
-\code{soc_bus.sv}/fabric RTL, outside the macro boundary; this is the
-best of B1\textquotesingle s timing benefit and B2/B3\textquotesingle s
-"no macro re-harden" property, at the cost of an extra small module;
-verification: new skid-buffer unit test + same
-\code{soc_all}/\allowbreak{}ring-suite regression as B1/B2 & If the skid
-buffer is placed physically adjacent to the GPU macro\textquotesingle s
-pins (achievable via macro placement /
+ring, on both AR/R directions)
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+Instantiate a small skid-buffer wrapper around the GPU\textquotesingle s
+AXI-Lite slave ports at the \code{soc_bus.sv} boundary (structurally
+similar to B1 but implemented as a \emph{separate, reusable} module
+rather than a change inside \code{gpu_top})
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
+Functionally equivalent to B1 (extra read latency, AXI-Lite compliant)
+but \textbf{avoids editing/\allowbreak{}re-hardening the GPU macro
+itself} --- the skid buffer lives in \code{soc_bus.sv}/fabric RTL,
+outside the macro boundary; this is the best of B1\textquotesingle s
+timing benefit and B2/B3\textquotesingle s "no macro re-harden"
+property, at the cost of an extra small module; verification: new
+skid-buffer unit test + same \code{soc_all}/\allowbreak{}ring-suite
+regression as B1/B2
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+If the skid buffer is placed physically adjacent to the GPU
+macro\textquotesingle s pins (achievable via macro placement /
 \src{pnr/asap7/soc/macro_placement.cfg} proximity, not an RTL concern),
 this gets the same "break the long span near its source" benefit as B1
-without touching the macro\textquotesingle s own synthesized boundary &
-+32-64 FF (skid buffer control + data), negligible & Medium --- new
-shared module needs its own verification and correct
+without touching the macro\textquotesingle s own synthesized boundary
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
++32-64 FF (skid buffer control + data), negligible
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+Medium --- new shared module needs its own verification and correct
 READY/\allowbreak{}VALID skid semantics (get this wrong and
 it\textquotesingle s a functional bug, not just a timing fix) but avoids
-the macro-re-harden risk of B1 & None \\
-B5 & \textbf{SDC-only (multicycle on the GPU AXI-Lite read path)} &
-\texttt{set\_\allowbreak{}multicycle\_\allowbreak{}path\ -\allowbreak{}setup\ 2\ -\allowbreak{}to\ [get\_\allowbreak{}pins\ u\_\allowbreak{}bus.\allowbreak{}u\_\allowbreak{}periph\_\allowbreak{}bridge.\allowbreak{}rdata\_\allowbreak{}q*/\allowbreak{}D]}
-style exception & None to RTL & Would hide a real single-cycle AXI-Lite
-\code{RVALID}/\code{RDATA} timing requirement --- \textbf{not
-functionally legitimate} unless the RTL is \emph{first} changed
-(B1/\allowbreak{}B2/\allowbreak{}B4) to genuinely take 2 cycles, at
-which point the SDC exception would document a real 2-cycle contract
-rather than paper over a 1-cycle violation. As a standalone fix with no
-RTL change, this is excluded for the same reason as A5. & N/A & Not
-recommended standalone & N/A \\
-\end{longtable}
-}
+the macro-re-harden risk of B1
 
-\end{landscape}
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+None
+
+\end{rowcell}
+
+\rowtitle{\textbf{\#} B5}
+
+\begin{rowcell}{Option}
+
+\textbf{SDC-only (multicycle on the GPU AXI-Lite read path)}
+
+\end{rowcell}
+
+\begin{rowcell}{RTL sketch (NOT applied)}
+
+\texttt{set\_\allowbreak{}multicycle\_\allowbreak{}path\ -\allowbreak{}setup\ 2\ -\allowbreak{}to\ [get\_\allowbreak{}pins\ u\_\allowbreak{}bus.\allowbreak{}u\_\allowbreak{}periph\_\allowbreak{}bridge.\allowbreak{}rdata\_\allowbreak{}q*/\allowbreak{}D]}
+style exception
+
+\end{rowcell}
+
+\begin{rowcell}{Functional / verification impact}
+
+None to RTL
+
+\end{rowcell}
+
+\begin{rowcell}{Expected timing effect}
+
+Would hide a real single-cycle AXI-Lite \code{RVALID}/\code{RDATA}
+timing requirement --- \textbf{not functionally legitimate} unless the
+RTL is \emph{first} changed (B1/\allowbreak{}B2/\allowbreak{}B4) to
+genuinely take 2 cycles, at which point the SDC exception would document
+a real 2-cycle contract rather than paper over a 1-cycle violation. As a
+standalone fix with no RTL change, this is excluded for the same reason
+as A5.
+
+\end{rowcell}
+
+\begin{rowcell}{Area/\allowbreak{}power}
+
+N/A
+
+\end{rowcell}
+
+\begin{rowcell}{Risk}
+
+Not recommended standalone
+
+\end{rowcell}
+
+\begin{rowcell}{Locked-decision conflict}
+
+N/A
+
+\end{rowcell}
+
+\end{rowtable}
 
 \subsection{C. Recommendation}\label{tm:pd:rvb-fanout-fix:c-recommendation}
 
