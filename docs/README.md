@@ -40,7 +40,10 @@ Use `#` in place of `//` in Python, Tcl and shell files. Labels do not change wh
 move. Search `docs/manual/common/labels.tsv` to find a label. The chapter "Documentation
 system" in the User Manual has the full rules.
 
-## Markdown files
+## Where the old Markdown files went
 
-The Markdown files in this directory are the source of the conversion into the books. A later
-change moves their content into the books and removes the files.
+No other Markdown file remains in `docs/`. The content of each one is in a book.
+`docs/manual/common/path_map.tsv` has one row for each old path: the old path, the new
+file and the label. Use it to find the new place of a path that an old note or a git commit
+cites. Local `README.md` files next to the code (`pnr/`, `tools/`, `tb/`, `hls/`, `fpga/`,
+`sw/`) stay Markdown.

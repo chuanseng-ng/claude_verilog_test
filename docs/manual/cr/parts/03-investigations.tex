@@ -950,7 +950,7 @@ committed.
 \begin{record}
 
 The defect class is now gated in every \src{pnr/Makefile} LibreLane run
-(\src{docs/SYNTH_UNDEF_GATE.md}): a log scanner plus a structural check
+(\src{docs/SYNTH_UNDEF_GATE.md} (\cref{tm:flow:synth-undef-gate})): a log scanner plus a structural check
 of the elaborated header JSON, via the
 \src{pnr/plugins/librelane_plugin_cvt_synthgate} plugin. Negative
 control: this note\textquotesingle s reverted \code{rv32i_core.sv}
@@ -1028,7 +1028,7 @@ pins.
 \item
   \textbf{S6} SoC \code{RUN_2026-10-11_08-39-41}: see
   \cref{cr:defect:sky130-slew-cap-e45j:8-new-baseline-on-the-sv2v-rebuilt-cpu-macro-2026-10-11-bead-dud4-stale-waiver-3-unwaived-ss-corner-nets} and
-  \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}. Not a single-variable
+  \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} (\cref{tm:pd:sky130-real-drc-lvs}). Not a single-variable
   comparison with the 2026-10-09 baseline.
 \end{itemize}
 
@@ -1038,7 +1038,7 @@ check false-positived on 509 sv2v function-inlining temporaries on the
 SoC (that run used \code{CVT_SYNTH_GATE=warn}, shell-only) -
 \textbf{fixed by bead \bead{j1b7}}: dead function temporaries are exempt
 on a pre-proc RTLIL proof and the SoC gate runs blocking
-(\src{docs/SYNTH_UNDEF_GATE.md}); ASAP7 macros are still the corrupt
+(\src{docs/SYNTH_UNDEF_GATE.md} (\cref{tm:flow:synth-undef-gate})); ASAP7 macros are still the corrupt
 views (shelved).
 
 \end{record}
@@ -1115,7 +1115,7 @@ Every repair step therefore sized buffers against roughly half the
 capacitance that routing later delivers. (A post-RCX repair stage would
 also work, but it is not needed to reach this result and it is the
 option that needs the shared-LibreLane edit evaluated in
-\code{LIBRELANE_PATCHING_EVALUATION.md}.)
+\code{LIBRELANE_PATCHING_EVALUATION.md} (\cref{tm:pd:librelane-patching}).)
 
 Two more measured facts:
 
@@ -2090,7 +2090,7 @@ accept (none), re-run (\code{_114232_} at the next run). The
 setup/\allowbreak{}hold/\allowbreak{}LVS/\allowbreak{}DRC numbers do not
 depend on that decision. The SoC closes setup and hold at all nine
 corners (typical-corner caveat of
-\src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §7 unchanged), whereas the
+\src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} (\cref{tm:pd:sky130-real-drc-lvs}) §7 unchanged), whereas the
 CPU \textbf{standalone} macro does not close ss reg-to-reg setup
 (max\_ss -3.70 ns, 996 violators, icache tag-SRAM half-cycle paths at 75
 MHz); the SoC runs at 40 MHz.
@@ -2113,7 +2113,7 @@ not violate is STALE. Synthesis-named drivers keep the mandatory
 din0{[}22{]} (0.37 pF, max\_ss + nom\_ss), din0{[}23{]} (0.36),
 din0{[}26{]} (0.355); \code{_047147_/Y} stays unwaived and is tracked
 here. \code{--strict-stale} on that run: 7 waived, 1 unwaived, 0 stale.
-Details: \src{docs/design/DFT_ARCHITECTURE.md} 14.13.
+Details: \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) 14.13.
 
 \end{record}
 
@@ -2131,7 +2131,7 @@ before adopting it; this is that arm. \code{config_rccal_wl1500.json}
 was the A/B arm of sections 6 and 9 and is \textbf{removed} (it was a
 copy of \code{config_rccal.json} plus this one key, so it is redundant;
 nothing else referenced it besides historical text in this file,
-\code{DFT_ARCHITECTURE.md} and \code{SKY130_CDC_MAXSS_ANALYSIS.md},
+\code{DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) and \code{SKY130_CDC_MAXSS_ANALYSIS.md} (\cref{tm:pd:sky130-cdc-maxss}),
 which are left as history).
 
 \textbf{The arm.} \code{RUN_2026-10-28_05-14-30} against baseline
@@ -2194,7 +2194,7 @@ instances / timing-repair buffers & 331 309 / 28 879 & 332 973 / 28
 step-38 repair (buffers / nets / resized) & 240 / 341 / 184 & 45 / 174 /
 63 \\
 post-route CDC budget check & PASS at all 9 corners & PASS (after the
-check-SDC fix of \code{DFT_ARCHITECTURE.md} 14.14.1) \\
+check-SDC fix of \code{DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) 14.14.1) \\
 \end{longtable}
 }
 

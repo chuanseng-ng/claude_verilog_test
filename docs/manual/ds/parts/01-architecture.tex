@@ -1381,7 +1381,7 @@ make report_area
 make clean
 \end{lstlisting}
 
-See \src{docs/design/OPENROAD_FLOW_SPEC.md} for complete flow
+See \src{docs/design/OPENROAD_FLOW_SPEC.md} (\cref{tm:pd:openroad-flow}) for complete flow
 documentation.
 
 \subsection{Known limitations (Phase 1)}\label{ds:ch:phase1-architecture:known-limitations-phase-1}
@@ -7173,7 +7173,7 @@ full crossbar.
   Pass criterion: 0 architectural mismatches; no deadlocks (100k-cycle
   watchdog per kernel).
 \item
-  Record in \src{docs/regression/PHASE4_RANDOM_KERNELS.md}.
+  Record in \src{docs/regression/PHASE4_RANDOM_KERNELS.md} (\cref{tm:suite:phase4-random-kernels}).
 \end{itemize}
 
 \subsubsection{Phase 3 regression must still pass}\label{ds:ch:phase3-closure-phase4-plan:66-phase-3-regression-must-still-pass}\origsec{6.6}
@@ -7286,7 +7286,7 @@ Step 0 of execution. \\
 regression result. \\
 \code{docs/regression/PHASE3_RANDOM_REGRESSION.md} & 50k random
 regression result. \\
-\src{docs/regression/PHASE4_RANDOM_KERNELS.md} & 1k kernel regression
+\src{docs/regression/PHASE4_RANDOM_KERNELS.md} (\cref{tm:suite:phase4-random-kernels}) & 1k kernel regression
 result. \\
 \src{rtl/gpu/gpu_pkg.sv} & Constants and types. \\
 \src{rtl/gpu/gpu_top.sv} & Top with AXI4-Lite slave + AXI4 master +
@@ -9223,7 +9223,7 @@ peripherals, in implementation order.
 \subsection{Bus decision --- APB4 for everything, including crypto
 and the NPU}\label{ds:ch:phase6-ip-expansion-plan:2-bus-decision-apb4-for-everything-including-crypto-and-the-npu}\origsec{2}
 
-\src{docs/PERIPHERAL_BUS_EVALUATION.md} (bead \bead{ahe}, GO) settled
+\src{docs/PERIPHERAL_BUS_EVALUATION.md} (\cref{tm:dec:peripheral-bus}) (bead \bead{ahe}, GO) settled
 the peripheral-bus standard as \textbf{APB4 behind
 \code{apb4_register_bank}}, and named the Phase 6 set ---
 "GPIO/\allowbreak{}I2C/\allowbreak{}PWM/\allowbreak{}WDT/\allowbreak{}TRNG/\allowbreak{}AES-SHA"
@@ -10138,7 +10138,7 @@ PR is reviewed against):
 \code{npu_mac_array.sv}, \code{npu_weight_mem.sv})}{6c --- NPU (, , )}}\label{ds:ch:phase6-ip-expansion-plan:6c-npu-rtlnpunpu-topsv-npu-mac-arraysv-npu-weight-memsv}
 
 \textbf{Hand RTL, not HLS.}
-\src{docs/CPP_TO_RTL_HLS_EVALUATION.md:14-18} does name the Phase 6 INT8
+\src{docs/CPP_TO_RTL_HLS_EVALUATION.md:14-18} (\cref{tm:dec:cpp-to-rtl-hls-evaluation}) does name the Phase 6 INT8
 NPU as an HLS target, but the same document records (a) the
 \textbf{proven} Synlig \code{OPT_MUXTREE} miscompile of runtime-indexed
 muxes that corrupted the CPU\textquotesingle s branch comparator through
@@ -11355,15 +11355,15 @@ Relationship
 \texttt{Doc:\allowbreak{}\ cr:\allowbreak{}status:\allowbreak{}roadmap}
 §Phase 6+ & Roadmap-level summary; this document is authoritative where
 they differ \\
-\src{docs/PERIPHERAL_BUS_EVALUATION.md} & The APB4 decision this phase
+\src{docs/PERIPHERAL_BUS_EVALUATION.md} (\cref{tm:dec:peripheral-bus}) & The APB4 decision this phase
 implements \\
 \texttt{Doc:\allowbreak{}\ cr:\allowbreak{}status:\allowbreak{}phase-\allowbreak{}status}
 & Per-item live status \\
 \src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) & Address and register reference,
 updated per item \\
-\src{docs/CPP_TO_RTL_HLS_EVALUATION.md} & HLS-vs-hand-RTL evidence
+\src{docs/CPP_TO_RTL_HLS_EVALUATION.md} (\cref{tm:dec:cpp-to-rtl-hls-evaluation}) & HLS-vs-hand-RTL evidence
 behind the 6c decision \\
-\src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} & Gate B context \\
+\src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} (\cref{tm:pd:sky130-real-drc-lvs}) & Gate B context \\
 \texttt{Doc:\allowbreak{}\ um:\allowbreak{}guide:\allowbreak{}coding-\allowbreak{}guidelines}
 & SystemVerilog house style for all new RTL \\
 \end{longtable}
@@ -14113,7 +14113,7 @@ input  logic        timer_irq,      // Timer interrupt request
 \paragraph{DFT test access (Sky130 scan, bead j41m.2, GH \#244)}\label{ds:ch:rtl-definition:dft-test-access-sky130-scan-bead-j41m2-gh-244}
 
 \textbf{Purpose}: scan / test-mode control of \code{soc_top}. Contract
-and rationale: \src{docs/design/DFT_ARCHITECTURE.md} section 14.
+and rationale: \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) section 14.
 
 \begin{lstlisting}[language=Verilog]
 parameter int unsigned SCAN_CHAINS = 8;
@@ -14132,7 +14132,7 @@ With the inactive values every scan mux and mask is a pass-through and
 
 \textbf{Purpose}: IEEE 1149.1 test access port driving the same test
 controls as the pins above. Instruction map, TDRs, combination rules and
-deviations: \src{docs/design/DFT_ARCHITECTURE.md} section 15. Idle
+deviations: \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) section 15. Idle
 values used by the SoC suites: TAP held in reset.
 
 \begin{lstlisting}[language=Verilog]
@@ -15026,7 +15026,7 @@ MHz demonstrated} at Run 43, 2026-05-20).
   representative firmware (CoreMark, 232 B working set) fits L1 with 18×
   margin and shows no conflict pressure --- so 2-way is not adopted
   (adds \textasciitilde100--200 ps hit-path mux for no real benefit).
-  See \src{docs/M10_L2_DECISION_ANALYSIS.md}.
+  See \src{docs/M10_L2_DECISION_ANALYSIS.md} (\cref{tm:dec:m10-l2}).
 \item
   \textbf{AXI4 burst upgrade}: Phase 3 refill FSMs use 4 sequential
   AXI4-Lite transactions. These are upgraded to AXI4 burst mode during
@@ -15039,7 +15039,7 @@ MHz demonstrated} at Run 43, 2026-05-20).
   representative firmware fits the 4 KB L1; the GPU carries bulk data.
   No real L1 bottleneck → no L2. Revisit only if a future on-core
   workload sustains \textgreater4 KB working sets. See
-  \src{docs/M10_L2_DECISION_ANALYSIS.md}.
+  \src{docs/M10_L2_DECISION_ANALYSIS.md} (\cref{tm:dec:m10-l2}).
 \item
   \textbf{DRAM controller}: Use behavioral AXI4-slave SRAM model for
   Phase 5. Real DRAM controller (with refresh) is a Phase 6+ stretch

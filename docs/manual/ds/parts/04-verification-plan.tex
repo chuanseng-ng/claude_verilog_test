@@ -592,7 +592,7 @@ State coverage & 100\% (all states visited) \\
 SoC / peripheral / NPU line + toggle coverage (\ghref{216}): measured,
 triaged and enforced as a nightly gate (95 \% per-module line floor +
 control-signal toggle floor, triaged trees only; bead \bead{s1cg}) in
-\src{docs/verification/SOC_COVERAGE_REPORT.md}; reproduce with
+\src{docs/verification/SOC_COVERAGE_REPORT.md} (\cref{tm:flow:soc-coverage-report}); reproduce with
 \texttt{make\ -\allowbreak{}C\ tb/\allowbreak{}cocotb/\allowbreak{}soc\ soc\_\allowbreak{}coverage}
 (nightly CI: \src{.github/workflows/soc_coverage.yml}).
 
@@ -602,7 +602,7 @@ module of those three trees must reach the 95 \% line floor on the
 combined SoC + CPU/\allowbreak{}cache/\allowbreak{}GPU data (category-b
 waivers for unreachable points). The 100 \% control-toggle gate is
 deliberately NOT applied to them. See
-\src{docs/verification/SOC_COVERAGE_REPORT.md}, sections "Gate decision"
+\src{docs/verification/SOC_COVERAGE_REPORT.md} (\cref{tm:flow:soc-coverage-report}), sections "Gate decision"
 and "line triage, slice 2".
 \end{quote}
 
@@ -701,7 +701,7 @@ SoC its \code{BAD} count is dominated by false positives (the async
 reset and synchronous APB/SPI ports are each modeled as a separate clock
 domain). It becomes a real \code{BAD=0} gate at Phase 6+ once actual
 clock domains exist. Full writeup:
-\src{docs/verification/CDC_SNITCH_POC.md}.
+\src{docs/verification/CDC_SNITCH_POC.md} (\cref{tm:flow:cdc-snitch-poc}).
 \end{quote}
 
 \textbf{AI may assist with}:

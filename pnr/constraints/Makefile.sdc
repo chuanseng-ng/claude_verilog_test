@@ -110,9 +110,10 @@ help_sdc:
 	@echo "  $(SDC_POST_CTS) - Post-CTS"
 	@echo ""
 	@echo "Documentation:"
-	@echo "  constraints/README_SDC.md        - Full documentation"
-	@echo "  constraints/QUICK_REFERENCE.md   - Quick lookup"
-	@echo "  constraints/SDC_FILES_SUMMARY.md - File overview"
+	@echo "  Technical Manual (docs/manual/tm), labels:"
+	@echo "  tm:pd:constraints-readme-sdc        - Full documentation"
+	@echo "  tm:pd:constraints-quick-reference   - Quick lookup"
+	@echo "  tm:pd:constraints-sdc-files-summary - File overview"
 	@echo ""
 
 #----------------------------------------------------------------

@@ -15,7 +15,7 @@ It has the RTL (SystemVerilog), the tests (cocotb and Python), the physical desi
 - Phase 7: a mixed-signal PLL (analog flow in `analog/`).
 - Technology nodes: Sky130 (real DRC and LVS), ASAP7 (predictive) and FreePDK45 (predictive).
 
-The specifications in `docs/` are the source of truth. Refer to them. Do not rely on RTL that does not exist.
+The books in `docs/manual/` are the source of truth. Refer to them. Do not rely on RTL that does not exist.
 
 ## 2. Status
 
@@ -55,7 +55,7 @@ Detail for each caveat: `docs/manual/cr/` (run histories) and `docs/manual/tm/` 
 | `sim/` | Simulation Makefile and sim support |
 | `pnr/` | Physical design: `sky130/`, `asap7/`, `freepdk45/`, `constraints/`, `commercial/`, `config/` |
 | `tools/` | Scripts: `verif/`, `docs/`, `eda/`, `setup/`, `cdc/`, `dft/`, `formal/`, `fpga/`, `fw/`, `hls/` |
-| `docs/` | Documents: the books in `docs/manual/`, plus Markdown files that wait for conversion |
+| `docs/` | Documents: the four books in `docs/manual/`, and `docs/README.md` |
 | `dft/` | Tessent flows for scan and MBIST evaluation |
 | `fpga/` | FPGA board files (`nexys_video/`) |
 | `hls/` | High-level synthesis flows |
@@ -200,8 +200,8 @@ bd prime                 # full command reference
 
 ## 10. Documentation rules
 
-Project documentation moves into four LaTeX books in `docs/manual/`. Each book builds to a PDF.
-Markdown files under `docs/` that are not converted yet stay valid until their conversion.
+Project documentation is in four LaTeX books in `docs/manual/`. Each book builds to a PDF.
+No Markdown file remains in `docs/` except `docs/README.md`. Local `README.md` files next to the code stay Markdown.
 
 | Book | Directory | Content |
 | :--- | :-------- | :------ |

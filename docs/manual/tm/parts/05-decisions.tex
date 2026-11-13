@@ -3,3 +3,1911 @@
 \chapter{Decision log}\label{tm:ch:decision-log}
 
 This chapter holds the design decisions. Each section gives the question, the options and the result.
+
+\begin{relocated}{docs/3PLL_CDC_EVALUATION.md}
+% Converted from docs/3PLL_CDC_EVALUATION.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{3-PLL Multi-Clock + CDC Evaluation (pre-Phase-6 \#4)}\label{tm:dec:3pll-cdc}
+
+\textbf{Status:} DECIDED 2026-06-27 --- \textbf{GO, 2-domain MVP}
+(Option A): one CPU domain @ \textasciitilde1282 MHz + one shared
+GPU+bus+peripheral domain @ 571 MHz, with a single async-AXI CDC bridge
+on CPU↔crossbar. The full 3-domain split (separate GPU PLL) is rejected
+as over-scoped (GPU already == bus speed). Folds in the \code{ste}
+PLL-enable fix. Implementation = per-module PRs under the epic below.
+\textbf{Date:} 2026-06-27 · Bead \code{claude_verilog_test-d8v}.
+\textbf{Proposal:} instantiate the \code{pll_subsystem} 3× --- separate
+PLLs for CPU / GPU / SoC-bus+peripherals --- to create genuine clock
+domains, and evaluate whether that\textquotesingle s meaningful for
+exercising CDC.
+
+\subsection{Where we are today}\label{tm:dec:3pll-cdc:1-where-we-are-today}\origsec{1}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Single clock.} Every instance runs on \code{core_clk} from one
+  \code{pll_subsystem} (\code{clk_i} ref); only \code{pll_subsystem}
+  itself is on \code{clk_i} (bootstrap rule). The AXI4 crossbar /
+  AXI-Lite ring / APB subtree are \textbf{purely synchronous} ---
+  \code{soc_top.sv}, \code{soc_bus.sv}.
+\item
+  \textbf{Zero genuine CDC.} The only synchronizers are 2-FF on async
+  \emph{pads} (IRQ \code{irq_src_i}, UART RX). No async-AXI FIFO, no
+  gray-code pointers, no CDC-aware fabric.
+  \texttt{design\_\allowbreak{}state.\allowbreak{}json:\allowbreak{}\ cdc\_\allowbreak{}clean=\allowbreak{}false};
+  \code{cdc_snitch} reports 0 real internal crossings (BAD count is
+  \textasciitilde95\% reset-domain false positives).
+\item
+  \textbf{Signed off single-clock} at M11: \textbf{571 MHz,
+  GPU-governed} (\code{pnr/constraints/.../phase5_soc.sdc} = one
+  \code{create_clock}, no
+  \texttt{set\_\allowbreak{}clock\_\allowbreak{}groups\ -\allowbreak{}asynchronous}).
+  The plan already flags multi-clock as a \textbf{High/Med risk} (CDC
+  review; pre-harden macros {[}done{]}; per-domain SDC).
+\end{itemize}
+
+\subsection{The upside (why 3-PLL was proposed)}\label{tm:dec:3pll-cdc:2-the-upside-why-3-pll-was-proposed}\origsec{2}
+
+{
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+Block & Standalone ASAP7 fmax & In single-clock SoC \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CPU & \textbf{1282 MHz} (780 ps, +24 ps; M7) & throttled to
+\textbf{571} \\
+GPU & \textbf{571 MHz} (its native fmax) & 571 (governs) \\
+Bus/\allowbreak{}periph & fast (small logic) & 571 \\
+\end{longtable}
+}
+
+So independent domains could run \textbf{CPU \textasciitilde1282 MHz
+(2.25×)} while GPU stays 571. Plus: it\textquotesingle s the
+\textbf{only way to exercise real CDC} in this design (currently none).
+
+\subsection{The cost (this is the hard part)}\label{tm:dec:3pll-cdc:3-the-cost-this-is-the-hard-part}\origsec{3}
+
+A domain split puts a \textbf{clock-domain crossing on every fabric
+boundary where the master and the crossbar differ}. From the topology
+map:
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*352/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*113/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*515/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Crossing
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Signals
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Needs
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CPU ↔ crossbar (M0) & \textasciitilde70 & async-AXI bridge (FIFO,
+gray-code ptrs) \\
+GPU-data ↔ crossbar (M2) & \textasciitilde70 & async-AXI bridge \\
+GPU-ifetch ↔ crossbar (M1) & \textasciitilde40 & async-AXI bridge
+(read-only) \\
+GPU-ctrl AXI-Lite & \textasciitilde20 & CDC on the AXI-Lite slave \\
+(DMA, if its own domain) & \textasciitilde70 & async-AXI bridge \\
+\end{longtable}
+}
+
+Plus: \textbf{reset synchronizers} per domain (reset is single-domain
+today), \textbf{multi-clock SDC} (3× \code{create_clock} +
+\texttt{set\_\allowbreak{}clock\_\allowbreak{}groups\ -\allowbreak{}asynchronous}
++ \code{max_delay} on every CDC path), \textbf{CDC verification} (the
+\code{cdc_snitch} POC needs a wrapper --- reset-domain neutralization,
+port allowlist, \code{magic_cdc} attributes --- before \code{BAD=0} is a
+real gate; Verilator CDC is weak; metastability isn\textquotesingle t
+fully simulatable), and a \textbf{full M11-scale PD re-closure} (3 CTS
+trees, per-domain PDN/IR, multi-clock STA).
+
+Async-AXI FIFOs / gray-code CDC are the \textbf{classic silicon-killer
+RTL} --- hardest to get right, hardest to verify. This is a large,
+high-risk feature, not a refactor.
+
+\subsection{Key scoping insight --- the full 3-domain split is
+over-scoped}\label{tm:dec:3pll-cdc:4-key-scoping-insight-the-full-3-domain-split-is-over-scoped}\origsec{4}
+
+The proposal was CPU / GPU / bus as \textbf{three} domains. But
+\textbf{GPU\textquotesingle s fmax (571) == the bus target (571)} --- so
+GPU and bus can share one domain. That collapses the design to
+\textbf{two} domains:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Domain A --- CPU @ \textasciitilde1282 MHz} (its own PLL).
+\item
+  \textbf{Domain B --- GPU + bus + peripherals @ 571 MHz} (one PLL).
+\end{itemize}
+
+Result: \textbf{ONE CDC boundary (CPU ↔ crossbar)} instead of four,
+while still (a) exercising real CDC end-to-end and (b) delivering the
+entire CPU 2.25× speedup. A separate 3rd PLL for GPU buys a
+\emph{second} CDC boundary for \textasciitilde no benefit (GPU is
+already at bus speed). \textbf{3 PLLs ≠ 3 useful domains here.}
+
+\subsection{Recommendation}\label{tm:dec:3pll-cdc:5-recommendation}\origsec{5}
+
+\textbf{3-PLL as literally proposed (3 domains): NO.} \textbf{A 2-domain
+MVP (CPU-fast + everything-else): the right scope IF we pursue CDC} ---
+and it\textquotesingle s worth doing for the CDC-methodology value (this
+SoC has never exercised real CDC) plus a free CPU 2.25×, at a fraction
+of the 3-domain cost/\allowbreak{}risk.
+
+But note the honest counter: \textbf{Phase 5 is signed off at 571 MHz
+single-clock, and this is a GPU-governed SoC} --- the CPU is the control
+core, and CoreMark-class firmware (M10) runs fine. So multi-clock is
+\textbf{not required to ship}; its value is (a) CDC
+methodology/\allowbreak{}portfolio demonstration and (b) CPU-bound
+headroom that this design doesn\textquotesingle t centrally need.
+
+\subsubsection{Decision options (this PR)}\label{tm:dec:3pll-cdc:decision-options-this-pr}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{A --- 2-domain MVP (recommended if pursuing CDC):} one
+  async-AXI bridge on CPU↔crossbar; CPU PLL @1282, shared GPU+bus PLL
+  @571; multi-clock SDC; wrap \code{cdc_snitch} to a real gate; folds in
+  the \code{ste} PLL-enable fix (PLL control redesigned anyway). Own
+  feature epic + re-verify + a PD re-closure.
+\item
+  \textbf{B --- Full 3-domain:} as proposed; adds the GPU↔fabric CDC
+  boundary. More cost/risk for marginal benefit.
+\item
+  \textbf{C --- NO-GO (defer):} stay single-clock (signed off).
+  Multi-clock/\allowbreak{}CDC isn\textquotesingle t needed for this
+  GPU-centric SoC; revisit only if a CPU-bound workload justifies it.
+  Keep \code{ste} as a standalone PLL-safety fix.
+\end{itemize}
+
+\subsubsection{Folds in}\label{tm:dec:3pll-cdc:folds-in}
+
+The 3-PLL/\allowbreak{}2-domain work redesigns PLL control (multiple
+\code{pll_subsystem}), so \textbf{fix the \code{pll_enable} self-brick
+(\code{ste} / issue \#89) here} --- make CONTROL{[}0{]} safe per domain.
+
+\subsection{If GO (A) --- implementation sketch (own PRs, each
+re-verified)}\label{tm:dec:3pll-cdc:6-if-go-a-implementation-sketch-own-prs-each-re-verified}\origsec{6}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{\code{async_axi_fifo.sv}} --- parameterized dual-clock AXI4
+  CDC bridge (gray-code FIFO per channel). The crux; unit-test
+  exhaustively (full-throttle, backpressure,
+  near-empty/\allowbreak{}full, reset-while-busy).
+\item
+  \textbf{3×/2× \code{pll_subsystem}} in soc\_top (params ready) +
+  \code{ste} PLL-enable safety fix.
+\item
+  Insert the async bridge on CPU↔crossbar; reset synchronizers; GPU+bus
+  on the shared PLL (no CDC there).
+\item
+  \textbf{\code{phase5_soc_multiclock.sdc}} --- per-domain clocks,
+  \texttt{set\_\allowbreak{}clock\_\allowbreak{}groups\ -\allowbreak{}asynchronous},
+  \code{max_delay} CDC budgets.
+\item
+  \textbf{CDC verification}: wrap \code{cdc_snitch} (reset neutralize +
+  port allowlist + \code{magic_cdc} on synchronizer FFs) → \code{BAD=0}
+  CI gate; directed CPU↔fabric CDC tests; \code{soc_all} regression.
+\item
+  \textbf{PD re-closure}: multi-clock M11 run (2 CTS trees, per-domain
+  STA/PDN).
+\end{enumerate}
+
+\subsection{Verdict line}\label{tm:dec:3pll-cdc:7-verdict-line}\origsec{7}
+
+Pending human GO/NO-GO. Recommendation: \textbf{A (2-domain MVP)} if the
+goal includes real-CDC methodology; \textbf{C (defer)} if the goal is
+shipping the GPU-centric SoC, since single-clock 571 MHz is already
+signed off.
+\end{relocated}
+
+\begin{relocated}{docs/M10_L2_DECISION_ANALYSIS.md}
+% Converted from docs/M10_L2_DECISION_ANALYSIS.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{Phase 5 M10 --- L2 Cache Decision Analysis}\label{tm:dec:m10-l2}
+
+\textbf{Status:} FINAL 2026-06-21 --- \textbf{NO-GO on both L2 and
+2-way; keep the direct-mapped L1 D\$} (human architectural sign-off).
+M11 floorplan is L2-free; the parameterized 2-way RTL stays on branch
+\code{experiment/dcache-2way} as a record and is NOT merged. See §10 for
+the final decision and its full basis. \textbf{Date:} 2026-06-21
+\textbf{Gate criterion}
+(\texttt{Doc:\allowbreak{}\ ds:\allowbreak{}ch:\allowbreak{}phase5-\allowbreak{}soc-\allowbreak{}integration-\allowbreak{}plan}
+M10; \src{CLAUDE.md} locked-decision \#4):
+
+\begin{quote}
+Add \code{rtl/mem/l2_cache.sv} \textbf{only if} Phase 5 benchmarking
+shows L1 miss rates are a bottleneck. Document the decision either way.
+\end{quote}
+
+\subsection{What was measured}\label{tm:dec:m10-l2:1-what-was-measured}\origsec{1}
+
+M9 recorded cycle counts but not miss rates. M10 built a real RISC-V
+bare-metal benchmark path (\src{sw/bench/}, riscv32-none-elf-gcc) and a
+SoC cocotb harness (\src{tb/cocotb/soc/test_l2_bench.py}) that runs C on
+the full \code{soc_top}, dumps the M7 hardware perf counters
+(\code{mhpmcounter3}=I\$ miss, \code{mhpmcounter4}=D\$ miss,
+\code{mcycle}, \code{minstret}) through a flushed scratch block, and
+computes miss rates.
+
+\begin{quote}
+\textbf{Note 2026-10-10 (bead \bead{kiit}, \ghref{260}):} \code{mcycle} and
+the other \code{rv32i_csr_file} performance counters stopped counting in
+every cycle a CSR instruction was in EX (and in trap-entry / MRET
+cycles). Cycle counts taken from \code{mcycle} before the fix therefore
+under-count by one per CSR instruction in the measured window (the size
+of the effect depends on how many CSR instructions the harness executes
+inside its window; it was not re-measured). The results below are left
+as recorded. See Doc:
+cr:fix:fixes-index:14-performance-counters-freeze-while-a-csr-instruction-is-in-ex-bead-kiit-gh-260.
+\end{quote}
+
+The decision workload is \code{sweep.c}: a working-set sweep (512 B → 32
+KB) in two access patterns --- \textbf{SEQ} (sequential) and
+\textbf{STRIDE} (256 B stride, defeats spatial locality) --- each warmed
+by a prime pass then measured at steady state. L1 D\$ = 4 KB,
+direct-mapped, 16 B lines.
+
+Raw data: \src{tb/cocotb/soc/l2_bench_results.md}.
+
+\subsection{Result --- a hard capacity cliff at the 4 KB L1 boundary}\label{tm:dec:m10-l2:2-result-a-hard-capacity-cliff-at-the-4-kb-l1-boundary}\origsec{2}
+
+{
+\begin{longtable}[]{@{}rrr@{}}
+\toprule\noalign{}
+working set & SEQ D\$miss/\allowbreak{}1k-instr & STRIDE
+D\$miss/\allowbreak{}1k-instr \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+≤ 4 KB & \textbf{0.00} & \textbf{0.00} \\
+8 KB & \textbf{49.96} & \textbf{189.35} \\
+16 KB & 49.98 & 194.53 \\
+32 KB & 49.99 & 197.23 \\
+\end{longtable}
+}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Below/at 4 KB:} zero D\$ misses --- the working set fits
+  entirely in L1.
+\item
+  \textbf{First size above L1 (8 KB):} miss rate snaps to
+  \textasciitilde50/\allowbreak{}1k-instr (SEQ) and
+  \textasciitilde190/\allowbreak{}1k-instr (STRIDE) and then
+  \textbf{plateaus} --- a textbook capacity wall, not a gradual
+  roll-off.
+\item
+  \textbf{STRIDE ≈ 3.8× worse than SEQ} above the cliff --- classic
+  direct-mapped conflict/\allowbreak{}eviction behavior.
+\item
+  \textbf{I\$ misses ≈ 0} for all sizes ≥ 1 KB --- the hot loops fit the
+  4 KB I\(; the
+  512 B/SEQ I\) figure is just cold first-touch. \textbf{I\$ is not a
+  concern.}
+\item
+  Corroboration: a 48×48 int \code{matmul} (27 KB working set, 6.75× L1)
+  showed \textasciitilde50 D\$miss/\allowbreak{}1k-instr before its
+  software-multiply runtime made the sim intractable --- consistent with
+  the SEQ plateau.
+\end{itemize}
+
+\subsection{Interpretation}\label{tm:dec:m10-l2:3-interpretation}\origsec{3}
+
+\textbf{What the data proves:} the L1 D\$ has a sharp 4 KB capacity
+boundary, and any data working set above it sustains a high miss rate to
+SRAM (full AXI4 burst penalty per miss). A 16--32 KB L2 would absorb the
+8 KB / 16 KB cases entirely and roughly halve the 32 KB SEQ miss stream.
+
+\textbf{What the data does NOT prove:} that \emph{representative} SoC
+CPU workloads actually operate above 4 KB with reuse. \code{sweep} is a
+synthetic adversary built to defeat the cache --- it measures the
+cache\textquotesingle s limit, not that real firmware reaches it. The
+representative integer workloads (Dhrystone/\allowbreak{}CoreMark) were
+not run to completion (no hardware multiply → software \code{__mulsi3}
+makes them very slow in RTL sim).
+
+\textbf{Architectural context} weighs against a reflexive "yes":
+
+\begin{itemize}
+\tightlist
+\item
+  This CPU is the \textbf{control/\allowbreak{}orchestration core} of a
+  GPU-governed SoC (SoC fmax ≈ 571 MHz, GPU-bound). Bulk data-parallel
+  work runs on the \textbf{GPU}, which has its own 16 KB shared memory +
+  memory coalescer --- it does not lean on the CPU L1.
+\item
+  An L2 adds latency, area, and an \textbf{extra hard macro to the M11
+  floorplan} (changing area/\allowbreak{}PDN/\allowbreak{}timing scope),
+  against the conservative Phase 5 locked posture (decisions
+  \#1/\#4/\#5: add capacity only when a real bottleneck is proven).
+\item
+  The STRIDE ≈ 4× penalty is a \textbf{conflict-miss} signature. If a
+  cheaper lever is wanted first, a \textbf{2-way set-associative D\$}
+  (CLAUDE.md decision \#2) attacks the conflict component directly and
+  is far smaller than an L2.
+\end{itemize}
+
+\subsection{Recommendation}\label{tm:dec:m10-l2:4-recommendation}\origsec{4}
+
+\textbf{Decision (2026-06-21): defer L2; evaluate a 2-way
+set-associative D\$ first.}
+
+L2 is not added in the Phase 5 base scope on this evidence alone.
+Instead, attack the cheaper, more-targeted lever first: the STRIDE ≈ 4×
+penalty is a \textbf{conflict-miss} signature (CLAUDE.md decision
+\#2\textquotesingle s trigger --- "measurable conflict-miss impact" ---
+is now met). A 2-way set-associative D\$ is far smaller than an L2 and
+addresses the conflict component directly.
+
+\textbf{Experiment plan (M10b):}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Prototype a 2-way set-associative D\$ (\code{rv32i_dcache.sv}),
+  parameterized ways, \textbf{same 4 KB total capacity} (128 sets × 2
+  ways × 16 B) so the change isolates \emph{conflict}-miss reduction
+  from capacity (capacity is held constant).
+\item
+  Re-run the same \code{sweep} benchmark and compare against the
+  direct-mapped baseline in §2. Expected: SEQ plateau
+  (\textasciitilde50/kI ≥8 KB) is \textbf{capacity} --- associativity
+  will NOT move it; STRIDE (\textasciitilde190/kI) should drop toward
+  SEQ if conflicts dominate it.
+\item
+  Re-decide L2 with that data: if 2-way collapses STRIDE and the
+  residual SEQ capacity miss is deemed acceptable for control-plane
+  firmware → no L2. If the SEQ capacity wall is judged a real bottleneck
+  for on-core workloads → escalate to L2.
+\end{enumerate}
+
+This keeps the M11 floorplan L2-free for now; the 2-way D\$ (if adopted)
+is a modification of the existing L1, not a new macro.
+
+\begin{quote}
+Direct-mapped remains the committed default until the 2-way experiment
+justifies a change (Phase 3 locked decision \#2). The prototype runs on
+an experiment branch.
+\end{quote}
+
+\subsection{2-Way D\$ Re-benchmark (M10b-2, 2026-06-21)}\label{tm:dec:m10-l2:5-2-way-d-re-benchmark-m10b-2-2026-06-21}\origsec{5}
+
+\textbf{Correctness gate (Step 1):} RTL fix
+\code{fr_null_20260621_125041_00} confirmed on branch
+\code{experiment/dcache-2way} (commit \code{aba0c18} --- writeback
+buffer now reads \code{cand_vw}, not stale \code{victim_way_q}).
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{make\ -\allowbreak{}C\ sim\ dcache}: TESTS=8 PASS=8 FAIL=0
+  (including \code{test_dirty_eviction_writeback})
+\item
+  \texttt{make\ -\allowbreak{}C\ sim\ soc\_\allowbreak{}coherency}:
+  TESTS=3 PASS=3 FAIL=0
+\end{itemize}
+
+\textbf{Benchmark (Step 2):} same \code{sweep} firmware, same
+\code{test_l2_bench.py} harness, same \code{SRAM_MEM_WORDS=65536}.
+Cache: \code{DCACHE_WAYS=2}, 128 sets × 2 ways × 16 B = 4 KB.
+
+Raw data: \src{tb/cocotb/soc/l2_bench_results_2way.md}.
+
+\subsubsection{Comparison table --- direct-mapped vs 2-way (same 4
+KB capacity)}\label{tm:dec:m10-l2:51-comparison-table-direct-mapped-vs-2-way-same-4-kb-capacity}\origsec{5.1}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*115/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*173/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*173/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*173/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*173/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*173/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedleft
+size (B)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+1-way SEQ /kI
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+2-way SEQ /kI
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+1-way STR /kI
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+2-way STR /kI
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+STRIDE change
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+512 & 0.00 & 0.00 & 0.00 & 0.00 & no change \\
+1024 & 0.00 & 0.00 & 0.00 & 0.00 & no change \\
+2048 & 0.00 & 0.00 & 0.00 & 0.00 & no change \\
+4096 & 0.00 & 0.00 & 0.00 & 0.00 & no change \\
+8192 & 49.96 & 49.96 & 189.35 & 189.35 & 0\% reduction \\
+16384 & 49.98 & 49.98 & 194.53 & 194.53 & 0\% reduction \\
+32768 & 49.99 & 49.99 & 197.23 & 197.23 & 0\% reduction \\
+\end{longtable}
+}
+
+\subsubsection{Capacity vs conflict decomposition}\label{tm:dec:m10-l2:52-capacity-vs-conflict-decomposition}\origsec{5.2}
+
+The two benchmarks are \textbf{bit-identical}. This outcome is
+physically expected once the STRIDE access geometry is analyzed:
+
+\begin{itemize}
+\tightlist
+\item
+  The \code{sweep} firmware uses
+  \texttt{STRIDE\_\allowbreak{}STEP\ =\allowbreak{}\ 64\ words\ =\allowbreak{}\ 256\ bytes}.
+\item
+  The D\$ line size is 16 bytes, and the cache has 256 sets (WAYS=1) or
+  128 sets (WAYS=2).
+\item
+  A 256 B stride increments the cache-set index by 256/16 = 16 sets
+  (WAYS=1) or 8 sets (WAYS=2). Each consecutive STRIDE access maps to a
+  \emph{different set} in both configurations.
+\item
+  Because no two STRIDE accesses map to the same set, \textbf{there is
+  no set aliasing}, and therefore \textbf{no conflict misses} --- only
+  capacity misses (the working set exceeds 4 KB total cache space).
+\item
+  2-way associativity prevents evictions when two addresses map to the
+  \emph{same set} with different tags. When no two live accesses share a
+  set (as here), extra ways provide no benefit.
+\end{itemize}
+
+\textbf{Conclusion:} the STRIDE ≈ 3.8× penalty over SEQ measured in the
+direct-mapped baseline is a \textbf{capacity miss phenomenon, not a
+conflict-miss phenomenon}. The STRIDE pattern in this benchmark always
+evicts by capacity; reducing the effective number of sets from 256 to
+128 (the price of adding a second way at constant capacity) does not
+change the miss rate because no aliasing was occurring in the first
+place.
+
+\subsubsection{Residual capacity wall}\label{tm:dec:m10-l2:53-residual-capacity-wall}\origsec{5.3}
+
+Both WAYS=1 and WAYS=2 sustain \textasciitilde50 D\$miss/kI (SEQ) for
+working sets ≥ 8 KB. This is a pure capacity wall: once the working set
+exceeds 4 KB, every line brought in evicts a line that will be needed
+again. The only remedy is more cache capacity (a larger L1 or an L2),
+not more associativity.
+
+The STRIDE ceiling (\textasciitilde190--197/\allowbreak{}kI) is
+similarly capacity-driven. With a 256 B stride and a 16 B line, each
+access is guaranteed cold regardless of cache size below the full
+working-set footprint. Neither associativity nor an L2 would help STRIDE
+unless the L2 were large enough to hold the entire working set.
+
+\subsubsection{Implication for L2}\label{tm:dec:m10-l2:54-implication-for-l2}\origsec{5.4}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{2-way D\$ at same 4 KB capacity: no measurable miss-rate
+  benefit} for the \code{sweep} workload (which uses non-aliasing large
+  strides).
+\item
+  \textbf{Residual capacity wall above 4 KB is entirely a capacity
+  problem}, addressable only by a larger cache (a bigger L1 or an L2).
+\item
+  \textbf{An L2 of 16--32 KB would absorb the 8--16 KB working-set
+  cases} (SEQ \textasciitilde50/kI would drop to \textasciitilde0;
+  STRIDE would drop only if the L2 is large enough to hold the strided
+  footprint --- typically not for STRIDE\_\allowbreak{}STEP
+  \textless\textless{} working\_\allowbreak{}set).
+\item
+  Whether the capacity wall represents a \emph{real bottleneck} for the
+  SoC\textquotesingle s actual control-plane firmware remains unproven
+  (see §3 architectural context).
+\end{itemize}
+
+\begin{quote}
+\textbf{L2 GO/NO-GO decision left to the human} on this data. The 2-way
+experiment confirms: conflict misses are not the driver for this
+workload; any remaining miss-rate concern is purely capacity, and only
+an L2 (or larger L1) would address it.
+\end{quote}
+
+\subsection{Reproduce}\label{tm:dec:m10-l2:6-reproduce}\origsec{6}
+
+\begin{lstlisting}[language=bash]
+# Direct-mapped baseline (DCACHE_WAYS=1 in rv32i_cache_pkg.sv)
+nix develop .#bench --command make -C sw/bench clean all   # build benchmarks
+cd sim && make l2_bench                                      # writes l2_bench_results.md
+
+# 2-way re-benchmark (branch experiment/dcache-2way, DCACHE_WAYS=2)
+git checkout experiment/dcache-2way
+cd sim && make l2_bench                                      # writes l2_bench_results_2way.md
+\end{lstlisting}
+
+\subsection{Conflict-stress benchmark (M10c, 2026-06-21)}\label{tm:dec:m10-l2:7-conflict-stress-benchmark-m10c-2026-06-21}\origsec{7}
+
+\textbf{Purpose:} M10b\textquotesingle s \code{sweep} benchmark used a
+256 B stride which never aliases the same cache set --- so it tested
+\emph{capacity} misses only. To determine whether \textbf{conflict
+misses} can be relevant for real SoC workloads, M10c (\code{conflict.c})
+forces true set-aliasing: all K probe addresses are at 4096 B intervals
+(same D\$ set for both WAYS=1 and WAYS=2). K ∈ \{1, 2, 4, 8, 16\}. K=2
+is the key discriminator.
+
+\subsubsection{Results --- D\$miss/kI by K-value}\label{tm:dec:m10-l2:71-results-dmisski-by-k-value}\origsec{7.1}
+
+Branch \code{experiment/dcache-2way}. Same firmware binary
+(\code{conflict.hex}) for both WAYS. ROUNDS=256 measured-pass accesses
+per K-value.
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*51/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*152/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*152/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*169/1000\relax}
+  >{\raggedleft\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*169/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*287/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedleft
+K
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+WAYS=1 D\$miss/kI
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+WAYS=2 D\$miss/kI
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+WAYS=1 miss/\allowbreak{}access
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+WAYS=2 miss/\allowbreak{}access
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+verdict
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+1 & \textbf{0.00} & \textbf{0.00} & 0.0000 & 0.0000 & fits both (no
+conflict) \\
+2 & \textbf{153.48} & \textbf{0.00} & \textbf{1.0000} & \textbf{0.0000}
+& \textbf{KEY: 1-way thrashes, 2-way holds} \\
+4 & 173.68 & 173.68 & 1.0000 & 1.0000 & both thrash (K \textgreater{} 2
+ways) \\
+8 & 185.91 & 185.91 & 1.0000 & 1.0000 & both thrash \\
+16 & 192.70 & 192.70 & 1.0000 & 1.0000 & both thrash \\
+\end{longtable}
+}
+
+Raw data: \src{tb/cocotb/soc/conflict_results_1way.md},
+\src{tb/cocotb/soc/conflict_results_2way.md}.
+
+\subsubsection{K=2 headline numbers}\label{tm:dec:m10-l2:72-k2-headline-numbers}\origsec{7.2}
+
+{
+\begin{longtable}[]{@{}lrrrr@{}}
+\toprule\noalign{}
+config & ΔD\$miss & D\$miss/\allowbreak{}access & D\$miss/kI & cycles
+(measured pass) \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+WAYS=1 & 512 & \textbf{1.0000} & 153.48 & 20 749 \\
+WAYS=2 & 0 & \textbf{0.0000} & 0.00 & 16 141 \\
+\end{longtable}
+}
+
+\textbf{K=2 WAYS=1:} every access evicts the other line → 1.0000
+miss/\allowbreak{}access. The measured pass counts exactly 512 = 2 ×
+ROUNDS misses --- one miss for each of the 512 accesses. \textbf{K=2
+WAYS=2:} both lines reside simultaneously in the 2-way LRU set → 0
+misses. Cycle counts: 20 749 (1-way, stall-heavy) vs 16 141 (2-way, no
+stalls) --- a 22\% speedup for the K=2 conflict-heavy access pattern.
+
+The 2-way LRU implementation (cand\_vw / lru\_array fix from
+\code{fr_null_20260621_125041_00}) is \textbf{confirmed functionally
+correct}.
+
+\subsubsection{Interpretation}\label{tm:dec:m10-l2:73-interpretation}\origsec{7.3}
+
+\textbf{What the conflict-stress benchmark proves:}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{2-way D\$ eliminates conflict misses completely when K=2} ---
+  the LRU policy works as designed; the cand\_vw RTL fix is confirmed.
+\item
+  \textbf{For K\textgreater2, both configs thrash equally} --- a 2-way
+  cache cannot hold K\textgreater2 aliased lines any more than a 1-way
+  cache can hold K\textgreater1. Adding associativity beyond 2 would
+  help K=3 but not K≥4.
+\item
+  \textbf{The discriminating question} is whether real SoC firmware has
+  hot data structures that map exactly 2 or more congruent lines to the
+  same cache set. For this CPU (RV32I control core, not the
+  data-parallel GPU):
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Small scalar kernels (boot, peripheral drivers, interrupt handlers):
+    working set typically \textless{} 512 B → all in L1, zero misses
+    regardless of WAYS.
+  \item
+    \code{matmul}-class loops with two large arrays: both arrays may
+    alias the same sets, making this a real concern. But the GPU handles
+    bulk data-parallel work.
+  \item
+    Memory-scanning loops (boot ROM copy, DMA setup): stride-based, not
+    aliasing.
+  \end{itemize}
+\item
+  \textbf{The conflict-miss problem is real but workload-conditional.}
+  The experiment proves 2-way works; it does not prove the workload
+  reaches K=2 aliasing in practice.
+\end{enumerate}
+
+\subsubsection{Final architecture observation}\label{tm:dec:m10-l2:74-final-architecture-observation}\origsec{7.4}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*484/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*496/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+axis
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+finding
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+2-way eliminates conflict misses (K=2) & CONFIRMED --- 1.0000 → 0.0000
+miss/\allowbreak{}access \\
+Capacity wall (working set \textgreater{} 4 KB) & UNCHANGED --- requires
+L2 or larger L1 \\
+K≥4 conflict (\textgreater2 aliased hot lines) & UNSOLVED by 2-way;
+needs ≥4-way or L2 \\
+Real workload set aliasing & UNPROVEN --- sweep/\allowbreak{}conflict
+are synthetic \\
+\end{longtable}
+}
+
+\begin{quote}
+\textbf{GO/NO-GO for 2-way promotion and/or L2 is left to the human.}
+The conflict-stress result closes the open measurement question:
+\textbf{2-way does eliminate true conflict misses when they exist}.
+Whether the SoC CPU firmware encounters them is an
+architectural-judgement call, not a simulation question.
+\end{quote}
+
+\subsection{Reproduce (M10c)}\label{tm:dec:m10-l2:8-reproduce-m10c}\origsec{8}
+
+\begin{textblock}
+# On branch experiment/dcache-2way (DCACHE_WAYS=2 active):
+# conflict.hex is already built (sw/bench/build/conflict.hex, commit 87c16d1).
+# Do NOT need to rebuild firmware — same binary for both WAYS.
+
+# WAYS=1 run: edit rv32i_cache_pkg.sv to DCACHE_WAYS=1 then:
+cd sim && make conflict_bench_1way     # → tb/cocotb/soc/conflict_results_1way.md
+
+# WAYS=2 run: edit rv32i_cache_pkg.sv to DCACHE_WAYS=2 then:
+cd sim && make conflict_bench_2way     # → tb/cocotb/soc/conflict_results_2way.md
+\end{textblock}
+
+\subsection{CoreMark Real-Workload Run (M10c-3)}\label{tm:dec:m10-l2:9-coremark-real-workload-run-m10c-3}\origsec{9}
+
+\textbf{Branch}: \code{experiment/dcache-2way},
+\textbf{DCACHE\_\allowbreak{}WAYS=1} (shipping direct-mapped, reverted
+for this run). \textbf{Firmware}: \code{sw/bench/coremark} --- 3-kernel
+port (list sort + 2×2 matmul + CRC-16), ITERATIONS=1.
+\textbf{Working-set}: \textasciitilde232 B (list 80 B + matmul 24 B +
+CRC buf 16 B + overhead) --- \textless{} 6\% of 4 KB L1 D\$.
+
+{
+\begin{longtable}[]{@{}lr@{}}
+\toprule\noalign{}
+metric & value \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Δinstret & 1,463 \\
+Δcycles & 7,750 \\
+ΔI\$-miss & 45 \\
+\textbf{ΔD\$-miss} & \textbf{14} \\
+I\$-miss / 1k-instr & 30.76 \\
+\textbf{D\$-miss / 1k-instr} & \textbf{9.57} \\
+D\$-miss / 1k-cycle & 1.81 \\
+\end{longtable}
+}
+
+\textbf{Conclusion}: D\(-miss/kI = 9.57 — all 14 D\) misses are cold
+fills on the first touch of the \textasciitilde232 B data region. After
+warm-up the working set is fully resident in the 4 KB direct-mapped L1
+with zero capacity or conflict pressure. Representative embedded
+firmware does not drive L1 D\$ miss pressure; the L2 go/no-go decision
+is driven by application working-set size (capacity cliff at 4-8 KB,
+from the sweep benchmark), not by CoreMark-class workloads.
+
+Results file: \src{tb/cocotb/soc/coremark_results.md}.
+
+\subsection{Final Decision (2026-06-21) --- NO-GO on L2 and 2-way;
+keep direct-mapped}\label{tm:dec:m10-l2:10-final-decision-2026-06-21-no-go-on-l2-and-2-way-keep-direct-mapped}\origsec{10}
+
+Human architectural sign-off after the full three-leg investigation.
+
+\subsubsection{Evidence summary}\label{tm:dec:m10-l2:evidence-summary}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*97/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*78/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*402/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*402/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Leg
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Benchmark
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Result
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Reading
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Capacity & \code{sweep} & 0 D\$miss/kI ≤4 KB; \textasciitilde50 (SEQ) /
+\textasciitilde190 (STRIDE) ≥8 KB, plateau & Hard 4 KB capacity wall ---
+but a \textbf{synthetic} adversary \\
+Conflict & \code{conflict} & K=2: direct-mapped 153/kI → \textbf{2-way
+0/kI} (−22\% cyc); K≥4 both thrash & 2-way \textbf{does} eliminate true
+conflict misses --- proven + RTL-correct --- but only ≤2 ways \\
+Real workload & \code{coremark} & 232 B working set; \textbf{9.57
+D\$miss/\allowbreak{}kI, all 14 cold-fill, 0 steady-state evictions} &
+Representative firmware \textbf{fits L1} with 18× margin --- no capacity
+or conflict pressure \\
+\end{longtable}
+}
+
+}
+
+\subsubsection{Decision}\label{tm:dec:m10-l2:decision}
+
+\textbf{No L2, and do not adopt the 2-way D\$. The shipping L1 stays 4
+KB direct-mapped (\code{DCACHE_WAYS=1}).}
+
+Rationale:
+
+\begin{itemize}
+\tightlist
+\item
+  The L1 capacity wall (sweep) and the 2-way conflict benefit (conflict)
+  only appear under \textbf{synthetic} access patterns. The
+  representative workload (CoreMark) sits 18× inside the 4 KB L1 and
+  shows only cold-fill misses --- real control-plane firmware does not
+  reach either regime.
+\item
+  This CPU is the control/\allowbreak{}orchestration core of a
+  \textbf{GPU-governed} SoC (\textasciitilde571 MHz). Bulk data-parallel
+  work runs on the GPU (own 16 KB shared mem + coalescer); it does not
+  lean on the CPU L1.
+\item
+  An L2 adds latency, area, and an extra \textbf{M11 floorplan macro}
+  (area/\allowbreak{}PDN/\allowbreak{}timing) for no demonstrated
+  real-workload benefit.
+\item
+  A 2-way D\$ adds a \textasciitilde100--200 ps hit-path way-select mux
+  for conflict insurance that representative firmware never cashes in.
+\item
+  Consistent with Phase 5 locked decisions
+  \#1/\allowbreak{}\#2/\allowbreak{}\#4/\allowbreak{}\#5 (add
+  capacity/\allowbreak{}associativity only when a real bottleneck is
+  proven). The trigger was tested and \textbf{not} met by representative
+  workloads.
+\end{itemize}
+
+\subsubsection{Disposition}\label{tm:dec:m10-l2:disposition}
+
+\begin{itemize}
+\tightlist
+\item
+  \code{experiment/dcache-2way} is \textbf{retained as the record}: it
+  holds the verified parameterized 2-way RTL (WAYS=1 bit-identical
+  baseline; WAYS=2 functionally correct, dcache 8/8 + coherency 3/3) and
+  the conflict/\allowbreak{}CoreMark benchmarks. It is \textbf{not
+  merged}.
+\item
+  \textbf{Revisit trigger:} if a future on-core workload is shown to
+  sustain \textgreater4 KB working sets (→ L2 / larger L1) or K≥2
+  congruent-line hot sets (→ 2-way), re-open this analysis. The
+  benchmark harness (\src{sw/bench/} + \code{test_l2_bench.py}) and the
+  2-way RTL are ready to re-measure.
+\item
+  \textbf{M11 proceeds} with the 4 KB direct-mapped L1, L2-free.
+\end{itemize}
+\end{relocated}
+
+\begin{relocated}{docs/PERIPHERAL_BUS_EVALUATION.md}
+% Converted from docs/PERIPHERAL_BUS_EVALUATION.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{Peripheral Bus Evaluation --- AXI4-Lite vs APB (pre-Phase-6)}\label{tm:dec:peripheral-bus}
+
+\textbf{Status:} RECOMMENDATION --- pending human sign-off (this PR is
+the decision + plan; migration module-PRs link back here).
+\textbf{Date:} 2026-06-24 · Bead \code{claude_verilog_test-ahe}.
+\textbf{Why now:} Phase 6 adds \textbf{6 more register peripherals}
+(GPIO/\allowbreak{}I2C/\allowbreak{}PWM/\allowbreak{}WDT/\allowbreak{}TRNG/\allowbreak{}AES-SHA)
+on this bus. Settle the peripheral-bus standard before scaling, or re-do
+them.
+
+\subsection{Question}\label{tm:dec:peripheral-bus:1-question}\origsec{1}
+
+The SoC control path is an AXI4-Lite ring
+(\code{axi_lite_interconnect.sv}) fed from the AXI4 crossbar via
+\code{axi4_to_axilite.sv}. Do the downstream peripherals actually need
+AXI4-Lite, or is a simpler APB bus sufficient?
+
+\subsection{Findings (evidence-based)}\label{tm:dec:peripheral-bus:2-findings-evidence-based}\origsec{2}
+
+\subsubsection{The ring carries two different classes of slave}\label{tm:dec:peripheral-bus:the-ring-carries-two-different-classes-of-slave}
+
+\code{soc_periph_map_pkg.sv} --- 7 slaves @
+0x2000\_\allowbreak{}1000--7FFF (4 KB each):
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*378/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*261/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*342/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Slave
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Class
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Bus need
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{GPU ctrl} (0x\ldots1000) & accelerator
+command/\allowbreak{}config & AXI4-Lite-native (anchors the ring) \\
+\textbf{DMA ctrl} (0x\ldots5000) & master config & AXI4-Lite
+(it\textquotesingle s also an AXI4 master) \\
+\textbf{PLL regs} (0x\ldots7000) & config & simple register file \\
+\textbf{UART / SPI / Timer / IRQ}
+(0x\ldots2/\allowbreak{}3/\allowbreak{}4/\allowbreak{}6000) &
+\textbf{simple register peripherals} & \textbf{APB-class} \\
+\end{longtable}
+}
+
+\subsubsection{The 4 simple peripherals are APB-equivalent}\label{tm:dec:peripheral-bus:the-4-simple-peripherals-are-apb-equivalent}
+
+All of \code{uart_controller}, \code{spi_controller}, \code{timer},
+\code{interrupt_controller} instantiate \code{axi_lite_register_bank}
+and are plain memory-mapped register files. No outstanding-transaction
+depth \textgreater1, no burst, no pipelined/\allowbreak{}concurrent R+W
+exploited, no locked/\allowbreak{}atomic, responses always OKAY.
+(\code{axi_lite_register_bank.sv:21} = depth-1 write + depth-1 read;
+\code{axi_lite_interconnect.sv:13} = depth-1 per channel; AXI-Lite has
+no bursts.)
+
+\subsubsection{Which AXI4-Lite features are genuinely used}\label{tm:dec:peripheral-bus:which-axi4-lite-features-are-genuinely-used}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*306/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*131/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*542/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Feature
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Used?
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Note / APB cover
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Multiple outstanding (\textgreater1) & \textbf{No} & depth-1 everywhere
+→ APB single-transfer equivalent \\
+Burst & \textbf{No} & the bridge serializes AXI4 bursts to single beats
+already \\
+\textbf{Byte strobes (\code{wstrb})} & \textbf{Yes} & partial-word
+writes (UART/SPI byte lanes) → \textbf{APB4 \code{pstrb}} covers this \\
+Concurrent R/W channels & not exploited & single CPU master serializes;
+only matters for a future 2nd control master \\
+DECERR (unmapped) & partial & generated by the interconnect, not the
+slaves → APB \code{pslverr} covers \\
+ID, AxPROT/\allowbreak{}LOCK/\allowbreak{}CACHE/\allowbreak{}QOS, EXOKAY
+& \textbf{No} & tied off / bookkeeping only \\
+\end{longtable}
+}
+
+}
+
+\textbf{The only real AXI-Lite feature the simple peripherals use is
+byte-strobe partial writes --- covered by APB4 \code{pstrb}.}
+
+\subsection{Recommendation --- hybrid: AXI-Lite fabric + APB
+peripheral subtree}\label{tm:dec:peripheral-bus:3-recommendation-hybrid-axi-lite-fabric-apb-peripheral-subtree}\origsec{3}
+
+\textbf{Adopt APB for the simple-register-peripheral subtree; keep
+AXI4-Lite for the accelerator/\allowbreak{}master ports.}
+
+\begin{itemize}
+\tightlist
+\item
+  Add one \textbf{\code{axil_to_apb} bridge} off the AXI-Lite ring
+  feeding an \textbf{APB4 peripheral bus} (APB4 for \code{pstrb}).
+\item
+  Move \textbf{UART / SPI / Timer / IRQ} --- and all Phase 6 peripherals
+  (GPIO/\allowbreak{}I2C/\allowbreak{}PWM/\allowbreak{}WDT/\allowbreak{}TRNG/\allowbreak{}AES-SHA)
+  --- onto that APB subtree behind an \code{apb_register_bank} (same
+  register logic, APB ports).
+\item
+  \textbf{Keep AXI4-Lite} for \textbf{GPU ctrl} and \textbf{DMA ctrl}
+  (they are accelerators/\allowbreak{}masters, AXI-Lite-native --- the
+  reason the ring exists) and optionally \textbf{PLL}.
+\end{itemize}
+
+This is the textbook SoC topology (AXI/\allowbreak{}AXI-Lite fabric +
+masters, single AXI-Lite→APB bridge to a slow-peripheral APB tree). It
+is the right structure \textbf{before} Phase 6 drops in 6 APB-class
+peripherals, and it keeps AXI-Lite exactly where it is justified.
+
+\textbf{Net:} APB is sufficient (indeed the better fit) for the simple
+peripherals; AXI4-Lite stays for GPU/DMA. Gains: simpler per-peripheral
+slave (no AW/\allowbreak{}W-decouple FSM), 1-cycle-faster reads (no
+bridge latch on that subtree), and Phase 6 peripherals become trivial
+APB drop-ins. Cost: one bridge + per-module bus-port swap + re-verify.
+
+\subsubsection{Alternative considered --- keep all AXI4-Lite}\label{tm:dec:peripheral-bus:alternative-considered-keep-all-axi4-lite}
+
+Defensible (cohesion, zero churn, peripherals already verified
+\code{soc_all} 82/82). Rejected as the primary recommendation because it
+makes every Phase 6 peripheral carry an AXI-Lite register-bank FSM for
+no functional benefit, and APB is the conventional fit for these slow
+register IPs.
+
+\subsection{Migration plan (if approved) --- per-module PRs linked to
+this one}\label{tm:dec:peripheral-bus:4-migration-plan-if-approved-per-module-prs-linked-to-this-one}\origsec{4}
+
+This PR is the \textbf{main/\allowbreak{}tracking PR}. Each step below
+is its \textbf{own PR}, linked back here (bead
+\code{claude_verilog_test-mdu} epic + sub-beads). Re-run \code{soc_all}
+(verification-orchestrator) after each.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{\code{apb4_register_bank.sv} + \code{axil_to_apb.sv} bridge}
+  (new RTL + unit tests). PR-1.
+\item
+  \textbf{UART} → APB register bank (swap bus ports; keep
+  FIFO/\allowbreak{}snoop logic). PR-2.
+\item
+  \textbf{SPI} → APB. PR-3.
+\item
+  \textbf{Timer} → APB. PR-4.
+\item
+  \textbf{Interrupt controller} → APB. PR-5.
+\item
+  \textbf{\code{soc_top} + \code{soc_periph_map_pkg}} --- insert
+  \code{axil_to_apb} on the ring, move the 4 (+PLL?) slaves onto the APB
+  subtree, rewire. PR-6.
+\item
+  \textbf{Full \code{soc_all} regression} + (optional) a 1M-cycle SoC
+  stress re-run. PR-7.
+\end{enumerate}
+
+Each PR keeps AXI-Lite for GPU/DMA untouched. APB4 (\code{pstrb})
+preserves the byte-strobe writes. Delegation: RTL →
+rtl-design-orchestrator; sims → verification-orchestrator.
+
+\subsection{Decision}\label{tm:dec:peripheral-bus:5-decision}\origsec{5}
+
+GO / NO-GO on the hybrid migration is a human architectural call (this
+PR). If GO → the \code{mdu} migration epic\textquotesingle s per-module
+PRs proceed; if NO-GO → close \code{ahe}/\code{mdu} with "keep AXI-Lite
+ring as-is," and Phase 6 peripherals stay AXI-Lite-native.
+\end{relocated}
+
+\begin{relocated}{docs/XEZIM_EVALUATION.md}
+% Converted from docs/XEZIM_EVALUATION.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{\texorpdfstring{Xezim evaluation: secondary compile +
+simulation tool (bead
+\code{qd9l})}{Xezim evaluation: secondary compile + simulation tool (bead )}}\label{tm:dec:xezim}
+
+\textbf{Date:} 2026-11-01. \textbf{Status:} evaluation only. No CI, RTL
+or flow change; adoption is an open human decision (section 9).
+
+\textbf{Verdict: do not add xezim to cocotb regression or CI now.} It
+silently miscompiles an idiom used in this RTL (section 4), and stock
+cocotb 1.9.2 cannot run on it (section 3). It is usable locally as a
+cross-check for functional gate-level sim and X-probing, never as sole
+evidence. \textbf{Separately, slang closes the use-before-declare CI gap
+today with no new dependency} (section 5).
+
+Tags: \textbf{measured} (run here, this session), \textbf{inferred},
+\textbf{claimed} (xezim\textquotesingle s docs, not reproduced),
+\textbf{reported} (user or repo docs, not run here). Measurements are
+single runs unless stated. Raw logs live under
+\code{/nobackup/xezim_eval/} (not in the repo, and may be wiped).
+
+\subsection{Method}\label{tm:dec:xezim:1-method}\origsec{1}
+
+Tool under test: xezim 0.11.4, git \code{9dcffd69-dirty} (local one-line
+\code{Cargo.toml} edit), plain release build, no JIT. Baselines:
+Verilator 5.048, sv2v 0.0.13.1, pyslang 11.0.0, cocotb 1.9.2 (repo pin)
+and 2.0.1 (isolated install). RTL: \code{origin/main} at \code{87b7cf0}.
+
+Each legality check needed a negative control, and each pass needed a
+control able to fail. \textbf{VCS and Xcelium are not installed on this
+host}: their figures are reported from
+\texttt{Doc:\allowbreak{}\ um:\allowbreak{}flow:\allowbreak{}proprietary-\allowbreak{}sim}
+(2026-10-24), plus the user\textquotesingle s confirmation from another
+machine that they reject use-before-declare.
+
+Phase 3, the full regression bake-off, \textbf{was not run}: the
+plan\textquotesingle s stop gate tripped (section 3).
+
+\subsection{Elaboration (measured)}\label{tm:dec:xezim:2-elaboration-measured}\origsec{2}
+
+\code{soc_top} and \code{rv32i_cpu_top} elaborate with exit 0 on four
+define arms (default, \code{SRAM_SKY130}, \code{SRAM_ASAP7},
+\code{FPGA}). \code{--verbose} confirms real elaboration: 92 modules on
+default \code{soc_top}.
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*327/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*163/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*151/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*339/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Tool, \code{soc_top}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Wall
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Peak RSS
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Note
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+xezim \code{--compile} & 0.46-0.81 s & 135-186 MB & \\
+Verilator \code{--lint-only} & 2.4-4.1 s & 91-151 MB & \\
+sv2v & \textasciitilde4.7 s & \textasciitilde655 MB & \\
+pyslang full compilation & 0.2-0.34 s & 57-73 MB & Default, FPGA, macro
+arms \\
+\end{longtable}
+}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*518/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*88/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*198/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*88/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*88/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Negative control
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+xezim
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Verilator
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+sv2v
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+slang
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Missing module & reject & reject & \textbf{accept} & reject \\
+Use before declare (\code{assign}, \code{always_comb}) & \textbf{accept}
+& \textbf{accept} & \textbf{accept} & reject \\
+Never-declared identifier & reject & reject & \textbf{accept} &
+reject \\
+Illegal syntax & reject & reject & reject & reject \\
+Override of nonexistent parameter & reject & reject & reject & reject \\
+Override of localparam & reject & reject & reject & reject \\
+Too many positional overrides & \textbf{accept} & reject & reject &
+reject \\
+Same parameter overridden twice & \textbf{accept} & reject & reject &
+reject \\
+String into \texttt{int\ unsigned} parameter & accept & accept + warning
+& accept & accept \\
+Positive control, legal string override & accept & accept & accept &
+accept \\
+\end{longtable}
+}
+
+The string-into-integer row is probably legal SV (inferred), so
+accepting it isn\textquotesingle t scored as a defect. Struct-select
+reproducers D1-D3
+(\texttt{Doc:\allowbreak{}\ cr:\allowbreak{}defect:\allowbreak{}synlig-\allowbreak{}struct-\allowbreak{}select-\allowbreak{}ainf})
+give correct values on xezim and Verilator; this is no evidence about
+Synlig.
+
+\subsubsection{Can xezim\textquotesingle s misses be fixed? (source
+read, nothing built)}\label{tm:dec:xezim:can-xezims-misses-be-fixed-source-read-nothing-built}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*189/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*341/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*450/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Miss
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Location
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Assessment (effort inferred)
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Duplicate named override & \code{xezim-parser/src/strict_check.rs}
+\textasciitilde268 & Small: seen-set, hours \\
+Excess positional & Same pass, or \code{src/elaborate.rs}
+\textasciitilde35346 & Small: count check, hours; must count body
+parameters right \\
+Use before declare, read & \code{src/elaborate.rs:7137} &
+\textbf{Deliberate omission:} the code flags writes only, as its
+reference simulator is said to tolerate reads "irregularly". Opt-in flag
+recommended \\
+\end{longtable}
+}
+
+}
+
+All belong in the separate \code{xezim-core} repo, so upstreaming is the
+only sensible long-term route.
+
+\subsection{cocotb (measured)}\label{tm:dec:xezim:3-cocotb-measured}\origsec{3}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*112/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*286/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*291/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*291/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setup
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Trivial DUT
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\code{test_gpio}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Other
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Stock cocotb 1.9.2 & \textbf{FATAL}
+\texttt{We\ are\ calling\ up\ again}, no \code{results.xml} &
+\textbf{FATAL} & \\
+1.9.2 + throwaway shim & 10 pass, both fail controls report FAIL &
+18/18, sim time per test identical to Verilator; RTL mutant caught &
+\code{test_command_queue} 3/3, pyuvm smoke 4/4,
+\code{test_mbist_soc_slice} \textbf{2/3} \\
+cocotb 2.0.1, no shim & 3 pass, fail control reports FAIL & Not run &
+\code{test_functional_path_and_no_fault_run} same failure as shim \\
+\end{longtable}
+}
+
+}
+
+\begin{itemize}
+\tightlist
+\item
+  Trigger: \code{cbValueChange} delivered while Python is inside
+  \code{vpi_put_value}, for example a Python-driven clock. Timer-only
+  tests and HDL-generated clocks pass.
+\item
+  \textbf{Which side violates the VPI contract is not established.}
+  cocotb 2 tolerates it, so it isn\textquotesingle t a blanket xezim
+  failure.
+\item
+  The shim is a byte-patched copy of cocotb\textquotesingle s VPI
+  library plus \code{LD_PRELOAD}. Not acceptable for production.
+\item
+  Project cannot simply move to cocotb 2: \code{requirements.txt:9}
+  records that 2.x removed the \code{units=} keyword used throughout
+  \src{tb/}. Migration size not measured.
+\item
+  Throughput: \code{test_gpio} on xezim \textasciitilde1.5 s end to end,
+  no build. Verilator \textasciitilde25 s build, test body 1.16 s vs
+  xezim 1.25-1.37 s. \textbf{Unit-suite only; long-run throughput
+  unmeasured.}
+\end{itemize}
+
+\subsection{Silent miscompile (measured, reproduced twice
+independently)}\label{tm:dec:xezim:4-silent-miscompile-measured-reproduced-twice-independently}\origsec{4}
+
+\begin{lstlisting}[language=Verilog]
+function automatic logic f(input logic [7:0] a); return a == 8'h40; endfunction
+logic [7:0] x = 8'h40;  logic one = 1, zero = 0;
+wire a = ~f(x) || zero;   // correct 0, xezim 0.11.4 gives 1
+wire b = ~f(x) && one;    // correct 0, xezim 0.11.4 gives 1
+\end{lstlisting}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*614/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*366/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Form
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+xezim
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\texttt{\textasciitilde{}f(x)\ ||\ y},
+\texttt{\textasciitilde{}f(x)\ \&\&\ y} (wire, \code{always_comb}, NBA)
+& \textbf{wrong} (\texttt{\&\&} measured on wire only) \\
+\texttt{\textasciitilde{}f(x)} alone,
+\texttt{\textasciitilde{}fx\ ||\ y} (no call), \texttt{!f(x)\ ||\ y},
+\texttt{\textasciitilde{}f(x)\ |\ y} & right \\
+\texttt{if\ (\textasciitilde{}f(x))},
+\texttt{\textasciitilde{}f(x)\ ?\ a\ :\allowbreak{}\ b},
+\texttt{1'(\textasciitilde{}f(x))\ ||\ y} & right \\
+Same in \code{initial}, blocking & right \\
+\end{longtable}
+}
+
+}
+
+\begin{itemize}
+\tightlist
+\item
+  Verilator gives correct results. \code{XEZIM_TWO_STATE=0},
+  \code{XEZIM_JIT=0}, \code{XEZIM_INIT_ZERO=1} don\textquotesingle t
+  change it.
+\item
+  Inferred mechanism, source not traced: \texttt{\textasciitilde{}}
+  widened in logical-operand context, making the result always nonzero.
+\item
+  \textbf{This RTL hits it:}
+  \texttt{rtl/\allowbreak{}soc/\allowbreak{}sram\_\allowbreak{}controller.\allowbreak{}sv:\allowbreak{}253-\allowbreak{}254,\allowbreak{}\ 647-\allowbreak{}648,\allowbreak{}\ 825-\allowbreak{}826},
+  the only
+  \texttt{\textasciitilde{}call(.\allowbreak{}.\allowbreak{}.\allowbreak{})}
+  sites in \src{rtl/}. On xezim a legal SRAM write returns SLVERR.
+  \textbf{Not an RTL bug} on this evidence: Verilator correct, and the
+  RTL is legal.
+\item
+  It shows why xezim can\textquotesingle t be sole evidence: a similar
+  miscompile that hides a fault instead of raising one would pass
+  silently. Other forms were not swept.
+\end{itemize}
+
+\subsection{Slang as use-before-declare check (measured)}\label{tm:dec:xezim:5-slang-as-use-before-declare-check-measured}\origsec{5}
+
+Gap: Verilator and sv2v accept use-before-declare, while VCS and Xcelium
+reject it (reported), and neither runs in CI. \code{pyslang==11.0.0} is
+\textbf{already pinned} in \src{requirements.txt} and used by the
+blocking \code{check_upf.py} gate.
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*490/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Check
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Result
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Negative controls & Every illegal case rejected; legal cases accepted
+(section 2) \\
+\code{soc_top} default (396 instances, 84 unique modules), \code{-DFPGA}
+& 0 errors, 0 warnings \\
+\code{rv32i_cpu_top}, \code{gpu_top} default & 0 errors, 0 warnings \\
+\code{soc_top} Sky130 + ASAP7 \code{__pnr__} arms & 0 errors with
+\code{--ignore-unknown-modules} \\
+Seeded use-before-declare: \code{soc_top}, \code{gpio_controller},
+\code{rv32i_regfile} & All 3 caught, default arm; \code{soc_top} also on
+Sky130 arm \\
+\end{longtable}
+}
+
+}
+
+Limits:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{\code{--ignore-unknown-modules} hides missing modules}
+  (measured: missing-module control exits 0). Macro arms need it because
+  macro models aren\textquotesingle t in the file lists. Use it only
+  there, or add macro stubs.
+\item
+  Testbench code wasn\textquotesingle t checked. Default warning set
+  only; stricter \code{-Wextra} not evaluated.
+\item
+  This section reports the trial. The gate that followed is
+  \src{tools/verif/check_elab_strict.py}, clean on its 6 arms: 3
+  defaults, FPGA with \code{rtl/fpga/*.sv}, Sky130 and ASAP7
+  \code{__pnr__}.
+\end{itemize}
+
+\subsection{Differentiators (measured)}\label{tm:dec:xezim:6-differentiators-measured}\origsec{6}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*265/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*715/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Item
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Result
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{Sky130 functional GLS} & Committed \code{rv32i_cpu_top} netlist:
+\code{x4=0x0c}, BEQ taken. \textbf{Control:} July Synlig netlist
+(\code{995c487}): \code{x4=0x30}, BEQ not taken. \textasciitilde14 s,
+2.9 GB. 2 of 6 programs; no 31-register matrix \\
+\textbf{SDF} & \textbf{No valid result.} No SDF exists for the committed
+netlist. On a different on-disk netlist/\allowbreak{}SDF pair, xezim
+annotated 0 signals and left 30,420 timing-check entries unmatched;
+cause unknown \\
+\textbf{X-propagation} & 10/10 probes match 4-state LRM expectation (no
+commercial reference available). Verilator is 2-state; with
+\code{rand+reset+2}, seed 7 takes the opposite \code{if} branch.
+\code{XEZIM_INIT_ZERO=1} zeroes uninitialised memory but leaves scalar
+\code{logic} at X \\
+\textbf{UPF} & Small DUT: clamp and corruption occur under \code{--upf},
+neither without. \code{phase5_soc.upf} parses and binds on
+\code{soc_top}, but all 4 domains show "always on", so \textbf{no clamp
+exercised}. Wrong supply path logs "unknown supply" and proceeds \\
+\textbf{Metastability / CDC} & Nothing documented. Toy
+\texttt{\$setuphold} + notifier gives X on violation;
+\code{+notimingcheck} removes it \\
+\end{longtable}
+}
+
+}
+
+\subsection{Pros and cons per option}\label{tm:dec:xezim:7-pros-and-cons-per-option}\origsec{7}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*93/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*360/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*360/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*168/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Option
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Pros
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Cons
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Best role
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{Verilator} & Fast build-once runs, in CI, mature, 896-test floor
+& 2-state hides X, accepts use-before-declare, no SDF, zero-delay CDC &
+Primary, unchanged \\
+\textbf{VCS} & 4-state, full SV, 872/0/46 (reported), coverage works &
+Licensed, not in CI, not on this host & Periodic cross-check \\
+\textbf{Xcelium} & Same; fastest reported (\textasciitilde6 min SoC);
+found \code{dft_clk_switch} race & Licensed; no \code{imc} for coverage
+& Periodic cross-check \\
+\textbf{xezim} & Free, 4-state event-driven, CI-capable, sub-second
+elaboration, no build, GLS + UPF + X on one command & Silent miscompile
+above; cocotb 1.9.2 blocked; 8 months old, one dominant author;
+conflicting perf and sv-tests claims (below); no merge tool, FSM or
+condition coverage; no Liberty & Local cross-check only \\
+\textbf{Icarus} & Free, 4-state & Older SV; repo memory forbids it;
+unused by any workflow & Remove \\
+\textbf{Yosys \code{sim}} & Race-free cycle model, proved useful in
+\code{u99} & Niche; netlist only & Keep for GLS triage \\
+\textbf{sv2v + Yosys} & Sky130 fabric flow & Silent on missing modules;
+slow on SoC (yosys \textasciitilde10 min) & Unchanged, synthesis only \\
+\textbf{Synlig} & CPU macro baseline & Proven silent struct-select
+defects & Guarded, per existing gates \\
+\textbf{pyslang} & Strictest measured, fastest, already pinned &
+Elaboration only; \code{--ignore-unknown-modules} trap &
+\textbf{Blocking CI gate} (\code{lvdk}) \\
+\textbf{SpyGlass / HAL} & Deep lint & Local only; CDC/RDC core rules not
+run & Unchanged \\
+\end{longtable}
+}
+
+}
+
+Xezim claims not supported by this work: README near-parity with
+commercial sim vs \code{NOTES.md:3288} "4-5x faster" reference; README
+sv-tests 99.0 \% (0.11.0) vs checked-in 91.3 \% (0.8.1); README "keep
+warm cache on" vs \code{--help} "EXPERIMENTAL, off by default";
+\code{Cargo.toml} "MIT OR Apache-2.0" vs \code{LICENSE} Apache-2.0.
+
+\subsection{Improvement areas}\label{tm:dec:xezim:8-improvement-areas}\origsec{8}
+
+\textbf{This repo (independent of xezim):}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Pyslang strict-elaboration gate (section 5): done, bead \bead{lvdk}.
+  Closes the use-before-declare CI gap.
+\item
+  \src{uv.lock} pins cocotb 2.0.1 while \src{requirements.txt} says
+  \code{<2.0}.
+\item
+  \texttt{sim/\allowbreak{}Makefile:\allowbreak{}90-\allowbreak{}91,\allowbreak{}\ 124-\allowbreak{}125}
+  list \code{mem_collar.sv} and \code{mbist_ctrl.sv} twice; yosys fails
+  on sv2v output unless de-duplicated (those two lists may serve
+  different targets: check before editing).
+\item
+  Stale docs:
+  \texttt{Doc:\allowbreak{}\ um:\allowbreak{}flow:\allowbreak{}ci-\allowbreak{}cd-\allowbreak{}workflow}
+  (line 533 of the original file) suggests Icarus;
+  \texttt{Doc:\allowbreak{}\ ds:\allowbreak{}ch:\allowbreak{}verification-\allowbreak{}plan\ (line\ 402\ of\ the\ original\ file)}
+  says "Verilator + SDF", which is not implemented. Icarus remains in
+  \code{flake.nix:203} + \src{tb/cocotb/cpu/Makefile:101}.
+\item
+  No free 4-state simulation in CI; X and race bugs surface only on
+  non-CI proprietary runs. No clean solution today: xezim is the
+  candidate, once fixed.
+\item
+  No local Verilator wall-clock baseline. CI timeouts
+  aren\textquotesingle t measured durations.
+\item
+  Simulator choice hard-coded in \code{sim_portability.mk:56} and
+  \code{run_cocotb_targets.py:152}; adding any simulator touches both.
+\item
+  Plan a cocotb 2 migration: \code{units=} was the recorded blocker, and
+  it would also remove the 1.9.2 blocker here.
+\end{enumerate}
+
+\textbf{Xezim, if pursued (upstream, needs approval to file):} fix
+section 4; settle cocotb 1.x re-entrancy; add cocotb to its CI (20
+pytest cases currently not in \texttt{cargo\ test}); publish current
+sv-tests data + a controlled benchmark; add
+duplicate/\allowbreak{}excess override checks and opt-in read check;
+report SDF mismatches clearly.
+
+\subsection{Recommendation and open decisions}\label{tm:dec:xezim:9-recommendation-and-open-decisions}\origsec{9}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*312/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*668/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Role
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Recommendation
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+cocotb regression / CI & \textbf{Not now.} Re-check after section 4 is
+fixed and either cocotb blocker clears \\
+Local GLS and X cross-check & \textbf{Allowed as cross-check only}, with
+a control able to fail. Disagreements are triaged, not trusted \\
+Compile / elaboration check & \textbf{Use pyslang instead} \\
+\end{longtable}
+}
+
+}
+
+Open human decisions:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Decided:} pyslang gate added, blocking, on 6 arms
+  (\src{tools/verif/check_elab_strict.py}, bead \bead{lvdk}).
+\item
+  \textbf{Done:} both reports filed upstream on 2026-11-02, after both
+  reproduced on git \code{0f4d2fcf}: the section 4 miscompile as
+  \href{https://github.com/aionhw/xezim/issues/810}{aionhw/\allowbreak{}xezim\#810}
+  and the cocotb 1.9.2 abort as
+  \href{https://github.com/aionhw/xezim/issues/811}{\#811} (bead
+  \bead{gxg0}). Upstream fixed both the same day (\code{9cad2c17}).
+  Measured on \code{d20039e4}: both testcases pass, and
+  \code{test_mbist_soc_slice} passes 3/3 on stock cocotb 1.9.2 and on
+  2.0.1, with no shim. All other results in this document are still from
+  \code{9dcffd69}.
+\item
+  \textbf{Deferred:} xezim-core prototype, revisit after upstream
+  responds (bead \bead{1ljh}).
+\item
+  \textbf{Open:} Phase 3 was deferred until the section 4 miscompile was
+  fixed and a cocotb route existed. Both conditions are now met on
+  \code{d20039e4}, so running it is a user decision (bead \bead{9xn3}).
+\end{enumerate}
+
+\subsection{What was NOT verified}\label{tm:dec:xezim:10-what-was-not-verified}\origsec{10}
+
+\begin{itemize}
+\tightlist
+\item
+  Full regression, SoC-scale cocotb suites, long-run throughput, memory
+  on long runs.
+\item
+  Any cocotb 2 run of \code{test_gpio} or a pyuvm suite; size of cocotb
+  2 migration.
+\item
+  VCS/\allowbreak{}Xcelium on these probes (use-before-declare confirmed
+  by user, logs not seen here).
+\item
+  SDF on the committed macro; timing GLS of any kind; 4 of 6 GLS
+  programs; register matrix; Verilator GLS timing.
+\item
+  Clamp and corruption on \code{soc_top}; X state on \code{soc_top}
+  after reset beyond a sampled testbench (26 X-warn lines on MBIST,
+  collar, macro signals; not triaged).
+\item
+  Root cause of section 4 and other expression forms; shim correctness
+  beyond these suites; seeds other than 1234.
+\item
+  Any xezim source fix: section 2 fix assessments are from reading code.
+\item
+  Xezim\textquotesingle s own regression suite wasn\textquotesingle t
+  run; its claimed C906/\allowbreak{}C910/\allowbreak{}Ibex results
+  weren\textquotesingle t reproduced.
+\end{itemize}
+\end{relocated}
+
+\begin{relocated}{docs/AGENT_IMPROVEMENT_PROPOSAL.md}
+% Converted from docs/AGENT_IMPROVEMENT_PROPOSAL.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{\texorpdfstring{Proposed improvements to
+\code{digital-chip-design-agents}}{Proposed improvements to }}\label{tm:dec:agent-improvement-proposal}
+
+\textbf{Upstream:}
+\href{https://github.com/hdl-tools/digital-chip-design-agents}{https:/\allowbreak{}/\allowbreak{}github.com/\allowbreak{}hdl-tools/\allowbreak{}digital-chip-design-agents}
+\textbf{Versions audited:} all orchestrators at \code{1.2.0}
+(\code{chip-design-memory-ip} is \code{1.8.0}, not audited)
+\textbf{Basis:} 7 real agent invocations in one session on this repo
+(2026-09-26/\allowbreak{}27), Phase 6a GPIO work. \textbf{Status:}
+PROPOSAL. Nothing upstream has been changed.
+
+\subsection{What happened}\label{tm:dec:agent-improvement-proposal:what-happened}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*315/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*239/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*426/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Agent
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Task
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Outcome
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{rtl-design-orchestrator} & GPIO RTL + SoC integration & Good;
+needed 3 corrections from the caller \\
+\code{verification-orchestrator} & SoC-level GPIO test & \textbf{Strong}
+--- found a stale-build-cache hazard itself \\
+\code{verification-orchestrator} & Debug an IRQ-clear failure &
+\textbf{Strong} --- instrumented, root-caused, verified \\
+\code{physical-design-orchestrator} & Hold-violation triage &
+\textbf{Strong} --- corrected a bead\textquotesingle s false premise \\
+\code{physical-design-orchestrator} & Slew/cap triage & \textbf{Strong}
+--- \emph{declined to predict} beyond the evidence \\
+\textbf{\code{firmware-orchestrator}} & \textbf{GPIO driver} &
+\textbf{Failed} --- see below \\
+\end{longtable}
+}
+
+\code{firmware-orchestrator} wrote a largely correct driver, then
+\textbf{stopped without running its verification to completion}. Its
+final report was \emph{"I\textquotesingle ll stop issuing commands now
+and wait for the Monitor notification to arrive before continuing"} ---
+after \textasciitilde250 k tokens spent looping on a wait for its own
+background job. \textbf{The suite it produced failed when run, and the
+agent never discovered this.} It also silently skipped the last item on
+its deliverable list.
+
+\subsection{The finding that matters most}\label{tm:dec:agent-improvement-proposal:the-finding-that-matters-most}
+
+I expected the audit to show firmware lacking guards the strong
+performers had. It does lack some (§1). But the bigger result is
+\textbf{family-wide}:
+
+\begin{quote}
+\textbf{No orchestrator --- verification, PD, RTL or firmware ---
+contains any instruction to verify before reporting, to quote exact
+command output, or forbidding a claim that an unrun gate passed.}
+\end{quote}
+
+The strong performers succeeded \textbf{despite} their definitions, not
+because of them. Three of four also omitted the \emph{same} final
+deliverable (a CI pass-count floor bump) across unrelated tasks --- a
+systemic completeness gap, not individual carelessness.
+
+So the highest-value fixes are template-wide, not firmware-only.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{\texorpdfstring{Guards \code{firmware-orchestrator}
+uniquely lacks}{Guards  uniquely lacks}}\label{tm:dec:agent-improvement-proposal:1-guards-firmware-orchestrator-uniquely-lacks}\origsec{1}
+
+Measured presence across the four \code{1.2.0} orchestrators:
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*614/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*69/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*59/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*59/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*178/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Guard
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+verif
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+PD
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+RTL
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+firmware
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Execution-tier hierarchy (MCP → wrapper → direct) & \ok{} & \ok{} &
+\ok{} & \textbf{\bad{} no such section} \\
+"These flows are long-running; read \code{metrics.json}/logs after
+completion" & \bad{} & \ok{} & \bad{} & \bad{} \\
+\texttt{Never\ proceed\ past\ a\ FAIL\ without\ applying\ the\ loop-\allowbreak{}back\ rule}
+& \bad{} & \ok{} & \bad{} & \bad{} \\
+\texttt{SUSPEND;\ flag\ RTL\ fix\ needed} terminal row & \ok{} & \bad{}
+& \bad{} & \bad{} \\
+\texttt{Escalate\ clearly\ if\ max\ iterations\ exceeded\ —\ show\ state\ and\ root\ cause}
+& \bad{} & \bad{} & \ok{} & \bad{} \\
+\end{longtable}
+}
+
+}
+
+\code{firmware-orchestrator} is the \textbf{only} orchestrator with no
+execution-tier section at all, and the only one with none of the five
+guards above. It is also the shortest (82 lines vs
+90/\allowbreak{}102/\allowbreak{}91).
+
+\textbf{Especially incoherent:} it \emph{requires}
+\texttt{stress\_\allowbreak{}test\_\allowbreak{}24h\_\allowbreak{}clean:\allowbreak{}\ true}
+and a "24-hour high-throughput" stress test while giving \textbf{zero}
+guidance on executing a long job. PD --- whose flows are obviously long
+--- is the only one that got that guidance. Firmware demands a longer
+job and got none.
+
+\subsection{An outright defect: the experience log hardcodes success}\label{tm:dec:agent-improvement-proposal:2-an-outright-defect-the-experience-log-hardcodes-success}\origsec{2}
+
+\code{chip-design-firmware/1.2.0/agents/firmware-orchestrator.md:78}
+writes the session record with:
+
+\begin{lstlisting}[language={}]
+"signoff_achieved": true
+\end{lstlisting}
+
+hardcoded in the template, while the surrounding instruction says to
+write the record \emph{"after signoff \textbf{or on
+escalation/\allowbreak{}abandon}"}. So a failed or abandoned run appends
+a record claiming success --- actively poisoning the
+\code{memory/firmware/knowledge.md} corpus these agents are designed to
+learn from. \textbf{This is a one-word fix and should land regardless of
+everything else here.}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Proposed changes}\label{tm:dec:agent-improvement-proposal:proposed-changes}
+
+\subsubsection{\texorpdfstring{P1 --- Add a Reporting Contract to every
+orchestrator
+\emph{(template-wide)}}{P1 --- Add a Reporting Contract to every orchestrator (template-wide)}}\label{tm:dec:agent-improvement-proposal:p1-add-a-reporting-contract-to-every-orchestrator-template-wide}
+
+Root cause of the only real failure: nothing obliged the agent to run
+its gates or to prove it had.
+
+\begin{lstlisting}[language={}]
+## Reporting Contract
+1. Before reporting, RUN every gate named in the task and paste each one's exact output.
+2. Never report a gate as passing that you did not run in this session. If you could not run
+   it, say so explicitly and say why.
+3. A tool exiting 0 with empty or unparsable output is NOT a pass.
+4. Re-read the task's deliverable list immediately before finishing and confirm each item.
+   Report any you did not complete, and why.
+5. Separate measured from inferred. Quote the number you observed; mark anything else as
+   inference.
+\end{lstlisting}
+
+Item 3 is not hypothetical: this repo already hit it (bead \bead{dwp})
+and wrote wrapper scripts to defend against it. Item 4 addresses the
+3-of-4 missed-deliverable pattern. Item 5 is what the PD agent did
+\emph{unprompted} --- it declined to predict a slew/cap regression the
+evidence didn\textquotesingle t support --- and is worth making explicit
+so it isn\textquotesingle t luck.
+
+\subsubsection{\texorpdfstring{P2 --- Add a Long-Running Job protocol
+\emph{(template-wide; generalise
+PD\textquotesingle s)}}{P2 --- Add a Long-Running Job protocol (template-wide; generalise PD\textquotesingle s)}}\label{tm:dec:agent-improvement-proposal:p2-add-a-long-running-job-protocol-template-wide-generalise-pds}
+
+Directly prevents the 250 k-token wait loop.
+
+\begin{textblock}
+## Long-Running Jobs
+Builds, simulations and PD flows routinely exceed a single turn.
+1. Start them in the background; never busy-poll in a loop.
+2. Check at intervals matched to the job (minutes, not seconds). A quiet log during a
+   compile is normal, not a hang — confirm liveness by CPU use before concluding anything.
+3. If the job will outlive your turn budget, STOP and report: what is running, its job id,
+   where its log is, and exactly what remains. A partial report naming the job is far more
+   useful than an unverified success claim.
+4. Never report results you have not seen. "Still running" is a valid, useful answer.
+\end{textblock}
+
+\subsubsection{\texorpdfstring{P3 --- Give \code{firmware-orchestrator}
+the missing sections}{P3 --- Give  the missing sections}}\label{tm:dec:agent-improvement-proposal:p3-give-firmware-orchestrator-the-missing-sections}
+
+Add the execution-tier hierarchy the other three have, plus
+PD\textquotesingle s read-the-logs-after-completion rule, plus
+RTL\textquotesingle s
+\texttt{Escalate\ clearly\ …\ show\ state\ and\ root\ cause}, plus
+PD\textquotesingle s \texttt{Never\ proceed\ past\ a\ FAIL}. Raise
+\texttt{maxTurns:\allowbreak{}\ 70} toward PD\textquotesingle s
+\code{100} \textbf{only after} P2 lands --- more turns without a wait
+protocol just buys a longer stall.
+
+\subsubsection{\texorpdfstring{P4 --- Fix the hardcoded
+\code{signoff_achieved}}{P4 --- Fix the hardcoded }}\label{tm:dec:agent-improvement-proposal:p4-fix-the-hardcoded-signoff-achieved}
+
+Replace the literal \code{true} at line 78 with the actual outcome, and
+state that an abandoned or failed run must record \code{false}.
+
+\subsubsection{\texorpdfstring{P5 --- Add an artifact-provenance guard
+\emph{(new; from a defect that reached a
+PR)}}{P5 --- Add an artifact-provenance guard (new; from a defect that reached a PR)}}\label{tm:dec:agent-improvement-proposal:p5-add-an-artifact-provenance-guard-new-from-a-defect-that-reached-a-pr}
+
+No agent --- and neither did I --- asked whether \textbf{CI} could
+obtain the generated artifacts a test depends on. A driver test consumed
+\code{sw/bench/build/*.hex}, produced by a cross toolchain into a
+\textbf{gitignored} directory. It passed locally and failed in CI with
+\code{FileNotFoundError}.
+
+\begin{textblock}
+6. If a test consumes a generated artifact, verify its PROVENANCE in every environment that
+   will run the test — not just yours. Check whether the artifact is committed, or
+   reproducible by a step that environment actually performs. Passing locally because you
+   built it by hand is not evidence CI will pass.
+\end{textblock}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Priority}\label{tm:dec:agent-improvement-proposal:priority}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*54/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*338/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*160/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*80/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*348/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\#
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Change
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Scope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Effort
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Value
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+P4 & Un-hardcode \code{signoff_achieved} & firmware, 1 line & trivial &
+stops corrupting the memory corpus \\
+P1 & Reporting Contract & all 4 & small & prevents shipping unverified
+failures \\
+P2 & Long-Running Job protocol & all 4 & small & prevents the 250
+k-token stall \\
+P3 & Backfill firmware\textquotesingle s missing sections & firmware &
+small & brings it to parity \\
+P5 & Artifact-provenance guard & all 4 & small & catches the
+local-pass/\allowbreak{}CI-fail class \\
+\end{longtable}
+}
+
+P4 and P1 are the two I would land first.
+
+\subsection{Caveats on this evidence}\label{tm:dec:agent-improvement-proposal:caveats-on-this-evidence}
+
+One session, one repo, seven invocations --- a small sample, and this
+repo is unusually caveat-heavy, which may itself have shaped agent
+behaviour. The \code{firmware-orchestrator} failure is a single data
+point; the \emph{absence} of the guards in §1 and the
+\code{signoff_achieved} defect are static facts about the files and do
+not depend on sample size. The three-of-four missed-deliverable pattern
+is behavioural and would want confirming on other repos before being
+treated as settled.
+\end{relocated}

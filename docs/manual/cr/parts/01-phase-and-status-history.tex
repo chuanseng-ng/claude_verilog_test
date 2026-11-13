@@ -208,7 +208,7 @@ map and current status, see the root \src{README.md} and
 \item
   \textbf{DFT: scan, MBIST and JTAG for the Sky130 SoC} (epic
   \code{j41m}, \ghref{244}). Stage 0 architecture (\prref{250},
-  \src{docs/design/DFT_ARCHITECTURE.md}); Stage 1a scan-ready SoC fabric
+  \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture})); Stage 1a scan-ready SoC fabric
   (\prref{258}; bead \bead{j41m.2} still open); Stage 1b IEEE 1149.1 JTAG
   TAP (\prref{270}, \code{j41m.3}); TRST reset-sync check (\prref{280}) and CI
   \code{dft-scan-check} for both PDKs (\prref{281}). Stage 2 scan insertion
@@ -219,7 +219,7 @@ map and current status, see the root \src{README.md} and
   (\prref{279}), SRAM backdoor helper with \code{FPGA=1} regression 762
   passed (\prref{282}), board recommendation Digilent Nexys Video XC7A200T
   and ECP5 fmax lower bound (\prref{283},
-  \src{docs/FPGA_BOARD_SELECTION.md}). Board-gated stages wait for a
+  \src{docs/FPGA_BOARD_SELECTION.md} (\cref{tm:dec:fpga-board-selection})). Board-gated stages wait for a
   board.
 \end{itemize}
 
@@ -397,7 +397,7 @@ RTL/\code{gpu_asm} encoding), 0 deadlocks, 0 mismatches. Harness:
 \src{tb/cocotb/gpu/test_random_kernels.py},
 \texttt{make\ gpu\_\allowbreak{}random} (sets
 \texttt{EXTRA\_\allowbreak{}ARGS=\allowbreak{}""} to skip tracing).
-Report: \src{docs/regression/PHASE4_RANDOM_KERNELS.md}.
+Report: \src{docs/regression/PHASE4_RANDOM_KERNELS.md} (\cref{tm:suite:phase4-random-kernels}).
 Branches/\allowbreak{}loads/\allowbreak{}shared-mem out of random scope
 (covered by directed kernels) \\
 \ok{} G & ASAP7 GPU-block P\&R & \textbf{PASSED} 2026-05-28:
@@ -3724,7 +3724,7 @@ Last updated: 2026-10-15
 
 \textbf{Phase 5: SoC Integration} - \ok{} COMPLETE (2026-06-24) ---
 M1--M12 done. M10 L2 gate → NO-GO
-(\src{docs/M10_L2_DECISION_ANALYSIS.md}); M11 ASAP7 SoC P\&R signed off
+(\src{docs/M10_L2_DECISION_ANALYSIS.md} (\cref{tm:dec:m10-l2})); M11 ASAP7 SoC P\&R signed off
 \textbf{571 MHz / 62.9 mW / 520×520 µm / 65.6 \% util / 0 DRC / 0
 antenna} (sv2v frontend; \cref{cr:run:phase5}). Indicative
 ASAP7 (predictive PDK). \warn{} \textbf{Timing/\allowbreak{}power now
@@ -3751,15 +3751,15 @@ B, \code{f7vs.15}, \prref{214}) closed timing at all 9 corners on
 
 \textbf{DFT: scan + MBIST + JTAG for the Sky130 SoC} (epic \code{j41m},
 \ghref{244}) - \wip{} IN PROGRESS --- Stage 0 architecture \ok{}
-(\src{docs/design/DFT_ARCHITECTURE.md}, \prref{250}); Stage 1a scan-ready
+(\src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}), \prref{250}); Stage 1a scan-ready
 SoC fabric merged (\prref{258}; bead \bead{j41m.2} still open); Stage 1b
 IEEE 1149.1 JTAG TAP \ok{} (\prref{270}, \code{j41m.3}). Stage 2 scan
 insertion not started; MBIST not built (Stage 4 plan only).
 
 \textbf{FPGA prototyping} (epic \code{hlrm}, \ghref{245}) - \wip{} IN
 PROGRESS --- Stage 0 \ok{} without hardware:
-\src{docs/FPGA_STAGE0_EVALUATION.md} (\prref{279}) and
-\src{docs/FPGA_BOARD_SELECTION.md} (\prref{283}; recommendation Digilent
+\src{docs/FPGA_STAGE0_EVALUATION.md} (\cref{tm:dec:fpga-stage0-evaluation}) (\prref{279}) and
+\src{docs/FPGA_BOARD_SELECTION.md} (\cref{tm:dec:fpga-board-selection}) (\prref{283}; recommendation Digilent
 Nexys Video XC7A200T). Open-tool ECP5 fmax lower bound:
 \textasciitilde48--52 MHz CPU-only on LFE5U-85F (a lower bound, not an
 estimate of the Artix-7). Board-gated stages not started. A Vivado
@@ -3797,7 +3797,7 @@ peripheral. New \src{rtl/periph/gpio_controller.sv} --- APB4 slave on
 \begin{itemize}
 \tightlist
 \item
-  \textbf{Bus}: APB4, per \src{docs/PERIPHERAL_BUS_EVALUATION.md}
+  \textbf{Bus}: APB4, per \src{docs/PERIPHERAL_BUS_EVALUATION.md} (\cref{tm:dec:peripheral-bus})
   ("Phase 6 peripherals become trivial APB drop-ins"). The "AXI4-Lite"
   wording in \cref{cr:status:roadmap} and \src{CLAUDE.md} was stale and has
   been corrected.
@@ -3864,7 +3864,7 @@ peripheral. New \src{rtl/periph/gpio_controller.sv} --- APB4 slave on
   \texttt{set\_\allowbreak{}false\_\allowbreak{}path\ -\allowbreak{}from\ [get\_\allowbreak{}ports\ gpio\_\allowbreak{}in\_\allowbreak{}i]}
   closed the 3 survivors (all one path, \code{gpio_in_i[31]} → a
   \code{cdc_sync} stage-1 flop). Detail:
-  \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}.
+  \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} (\cref{tm:pd:sky130-real-drc-lvs}).
 \end{itemize}
 
 \textbf{Sky130 PD quality campaign, 2026-09-26} --- four runs after the
@@ -3923,7 +3923,7 @@ fixed:
   33/40/41 → thousands at step 51). The same gap explains the hold
   regression. Adding a stage needs a shared-LibreLane edit ---
   evaluated, and recommended \emph{not yet}, in
-  \src{docs/LIBRELANE_PATCHING_EVALUATION.md}.
+  \src{docs/LIBRELANE_PATCHING_EVALUATION.md} (\cref{tm:pd:librelane-patching}).
 \item
   \textbf{\texttt{max\ fanout\ violations\ =\allowbreak{}\ 0} is
   vacuous} --- \code{sky130_soc.sdc} has no \code{set_max_fanout} at
@@ -4057,7 +4057,7 @@ GPU+bus+peripheral domain, giving exactly \textbf{one} CDC boundary (CPU
   §"Power figure caveat".
 \item
   Full record: \cref{cr:run:phase5}
-  and \src{docs/3PLL_CDC_EVALUATION.md}.
+  and \src{docs/3PLL_CDC_EVALUATION.md} (\cref{tm:dec:3pll-cdc}).
 \end{itemize}
 
 \textbf{Sky130 real DRC/LVS sign-off (GH epic \#102)} --- Stages 1--2
@@ -4087,7 +4087,7 @@ GPU+bus+peripheral domain, giving exactly \textbf{one} CDC boundary (CPU
   \textbf{Stages 3--4} (GPU standalone + full SoC incl. GPU, \ghref{105}/\allowbreak{}\#106): not attempted; need ≥32 GB RAM +
   \textasciitilde500 GB scratch. GPU stays ASAP7-indicative-only.
 \item
-  Full record: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §7.
+  Full record: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} (\cref{tm:pd:sky130-real-drc-lvs}) §7.
 \end{itemize}
 
 \textbf{Previous Phases}:
@@ -4797,7 +4797,7 @@ M9 & Fast-follows: CPU→GPU kernel launch, SW coherency,
 DMA/\allowbreak{}peripheral loopback, SRAM readback, 1M-cycle random,
 benchmarks & \ok{} 2026-06-24 (1,079,867 cyc, 0 fail) \\
 M10 & L2 cache decision gate (needs M9 benchmarks) & \ok{} 2026-06-21
---- \textbf{NO-GO} (\src{docs/M10_L2_DECISION_ANALYSIS.md}) \\
+--- \textbf{NO-GO} (\src{docs/M10_L2_DECISION_ANALYSIS.md} (\cref{tm:dec:m10-l2})) \\
 M11 & SoC P\&R + STA (\code{phase5_soc.sdc}/\code{.upf}) & \ok{}
 2026-06-24 \warn{} figures unvalidated, bead \bead{0p6} \\
 M12 & Sign-off + documentation & \ok{} 2026-06-24 \\
@@ -5506,14 +5506,14 @@ Phase 7 M-a..M-c complete 2026-06-20.
 \textbf{Current priority}: finish DFT Stage 1a (bead \bead{j41m.2},
 still open; \code{j41m.9} is its GPU scan-reset test gap), then Stage 2
 scan insertion (\code{j41m.8}, \code{j41m.4}--\code{j41m.6}). Open human
-decisions in \src{docs/design/DFT_ARCHITECTURE.md}: Q-TRST and Q-STUB,
+decisions in \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}): Q-TRST and Q-STUB,
 and the Sky130 CPU-macro re-harden, which depends on bead \bead{dud4}.
 
 FPGA stages beyond Stage 0 are gated on a board choice (\code{hlrm}).
 The Vivado Artix-7 run is in progress on a separate branch.
 
-Golden specs: \src{docs/design/DFT_ARCHITECTURE.md},
-\src{docs/FPGA_BOARD_SELECTION.md},
+Golden specs: \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}),
+\src{docs/FPGA_BOARD_SELECTION.md} (\cref{tm:dec:fpga-board-selection}),
 \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) (Phase 6, closed).
 
 \textbf{Regression gates in CI (read 2026-10-15)}:
@@ -6742,7 +6742,7 @@ sub-tree)}\label{cr:status:roadmap:6a-additional-peripherals-apb4-slaves-on-the-
 
 \begin{quote}
 \textbf{Bus correction (2026-09-20):} this heading previously read
-"AXI4-Lite slaves". \src{docs/PERIPHERAL_BUS_EVALUATION.md} settled the
+"AXI4-Lite slaves". \src{docs/PERIPHERAL_BUS_EVALUATION.md} (\cref{tm:dec:peripheral-bus}) settled the
 peripheral-bus standard as \textbf{APB4} behind
 \code{apb4_register_bank} --- "Phase 6 peripherals become trivial APB
 drop-ins". The per-node frequency columns below are \emph{projections},
@@ -6824,7 +6824,7 @@ routing DRC 0, setup AND hold both clean at all 9 corners. \warn{} The
 SoC clock is \textbf{25 ns / 40 MHz} (\src{pnr/sky130/soc/config.json}),
 so this measures GPIO \emph{inside a 40 MHz SoC} --- the 75 MHz column
 above is a per-peripheral projection and is still NOT a measurement.
-Detail: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}.
+Detail: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} (\cref{tm:pd:sky130-real-drc-lvs}).
 
 \end{record}
 
@@ -6836,7 +6836,7 @@ Detail: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}.
 \textbf{Bus correction (2026-09-28, bead \bead{f7vs.1}):} this section
 previously said "AXI4-Lite slave". The peripheral-bus standard is
 \textbf{APB4} behind \code{apb4_register_bank}
-(\code{docs/PERIPHERAL_BUS_EVALUATION.md:5,43} names AES-SHA
+(\code{docs/PERIPHERAL_BUS_EVALUATION.md:5,43} (\cref{tm:dec:peripheral-bus}) names AES-SHA
 explicitly). The 2026-09-20 correction reached the 6a heading only and
 never propagated here. Golden spec:
 \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) §2.
@@ -7102,7 +7102,7 @@ Stages 3--4 \hold{} host-gated.
   attempted; need ≥32 GB RAM + \textasciitilde500 GB scratch vs the
   current \textasciitilde15 GB host. GPU stays ASAP7-indicative-only.
 \item
-  Full record: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §7.
+  Full record: \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} (\cref{tm:pd:sky130-real-drc-lvs}) §7.
 \end{itemize}
 
 \end{record}
@@ -7116,14 +7116,14 @@ Stages 3--4 \hold{} host-gated.
 \item
   \textbf{DFT: scan, MBIST and JTAG for the Sky130 SoC} (epic
   \code{j41m}): Stage 0 architecture \ok{}
-  (\src{docs/design/DFT_ARCHITECTURE.md}); Stage 1a fabric RTL merged
+  (\src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture})); Stage 1a fabric RTL merged
   (\prref{258}, bead \bead{j41m.2} still open); Stage 1b JTAG TAP \ok{} (\prref{270}). Stage 2 scan insertion is not started, and MBIST has no RTL
   yet.
 \item
   \textbf{FPGA prototyping} (epic \code{hlrm}): Stage 0 \ok{} without
-  hardware (\src{docs/FPGA_STAGE0_EVALUATION.md}, \prref{279}). Board
+  hardware (\src{docs/FPGA_STAGE0_EVALUATION.md} (\cref{tm:dec:fpga-stage0-evaluation}), \prref{279}). Board
   recommendation Digilent Nexys Video XC7A200T
-  (\src{docs/FPGA_BOARD_SELECTION.md}, \prref{283}). Open-tool ECP5 fmax
+  (\src{docs/FPGA_BOARD_SELECTION.md} (\cref{tm:dec:fpga-board-selection}), \prref{283}). Open-tool ECP5 fmax
   lower bound \textasciitilde48--52 MHz CPU-only. Later stages wait for
   a board.
 \end{itemize}
@@ -7279,7 +7279,7 @@ proven corrupt for register indices x2/x3 (value 9) as read by the
 branch comparator\textquotesingle s rs1/rs2 ports feeding EX; not proven
 for other indices, instruction types, or access patterns. Full method,
 evidence paths, and the read-port cone-sharing analysis: bead \bead{ma7}
-notes and \src{docs/CPP_TO_RTL_HLS_EVALUATION.md}. \bad{} \textbf{UPDATE
+notes and \src{docs/CPP_TO_RTL_HLS_EVALUATION.md} (\cref{tm:dec:cpp-to-rtl-hls-evaluation}). \bad{} \textbf{UPDATE
 2026-09-19 (bead \bead{ma7} remedy, PARTIALLY APPLIED --- CPU re-harden
 BLOCKED, GPU still deferred).} User-approved remedy applied to configs
 only so far: \src{pnr/asap7/cpu/config.json} + \code{config_3014.json}
@@ -7563,7 +7563,7 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (\cref{ds:
 \item
   \ok{} \textbf{L2 cache evaluation} (M10): benchmarked → \textbf{NO-GO}
   (no L2, keep direct-mapped L1; 2-way also evaluated + rejected).
-  \src{docs/M10_L2_DECISION_ANALYSIS.md}
+  \src{docs/M10_L2_DECISION_ANALYSIS.md} (\cref{tm:dec:m10-l2})
 \item
   \ok{} \textbf{Backend flow} (M11): full SoC synth + P\&R + STA via
   \texttt{make\ librelane-\allowbreak{}asap7-\allowbreak{}soc} (sv2v
@@ -7638,7 +7638,7 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (\cref{ds:
 \item
   \ok{} \textbf{2-domain multi-clock SoC + CDC} --- COMPLETE 2026-08-09,
   both domains close (Pre-Phase-6 \#4, GH epic \#90 → \#91--\#96, bead
-  \bead{d8v} decision in \src{docs/3PLL_CDC_EVALUATION.md}): split the
+  \bead{d8v} decision in \src{docs/3PLL_CDC_EVALUATION.md} (\cref{tm:dec:3pll-cdc})): split the
   SoC into CPU @ \textasciitilde1282 MHz and GPU+bus+periph @ 571 MHz,
   giving exactly \textbf{one} CDC boundary (CPU ↔ crossbar M0).
   \textbf{\#91 done (2026-08-01)}: \src{rtl/soc/async_axi_fifo.sv} ---
@@ -7750,7 +7750,7 @@ status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (\cref{ds:
   commit \code{30beab3}): \code{pmu.sv}\textquotesingle s sequence order
   is UPF-mandated and the sync-reset CPU domain depends on it to keep
   its flop state across a PMU cycle
-  (\code{docs/POWER_DOMAIN_EVALUATION.md:22,25}), so it stays unchanged.
+  (\code{docs/POWER_DOMAIN_EVALUATION.md:22,25} (\cref{tm:pd:power-domain-evaluation})), so it stays unchanged.
   \warn{} That state survival is a behavioural-model artifact of the
   \textbf{CPU only} (bead \bead{4a7i}): the GPU domain uses async reset,
   so \code{pmu_gpu_rst_n} clears GPU state (IRQ latch,
@@ -7860,7 +7860,7 @@ see items 13--15): additional \textbf{APB4} peripherals
 (GPIO/\allowbreak{}I2C/\allowbreak{}PWM/\allowbreak{}WDT/\allowbreak{}TRNG/\allowbreak{}AES-SHA),
 minimal INT8 NPU (\src{rtl/npu/}), and FreePDK45 tech-node exploration.
 See \cref{cr:status:roadmap}. \warn{} Peripherals are \textbf{APB4}, not
-AXI4-Lite --- \src{docs/PERIPHERAL_BUS_EVALUATION.md} settled that
+AXI4-Lite --- \src{docs/PERIPHERAL_BUS_EVALUATION.md} (\cref{tm:dec:peripheral-bus}) settled that
 ("Phase 6 peripherals become trivial APB drop-ins"); the AXI4-Lite
 wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadmap}) until
 2026-09-20 was stale.
@@ -8196,7 +8196,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   DOUT/\allowbreak{}DIGEST/\allowbreak{}IV in one cycle, 3 edges after
   the change; the clear is functional D logic, so it needs 3
   \code{scan_en=0} edges first and protects against software and a
-  cooperating tester, not an adversarial one: \code{DFT_ARCHITECTURE.md}
+  cooperating tester, not an adversarial one: \code{DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture})
   14.10), \code{rk_q} retains the round-10 key (which inverts to the
   master key) between operations, and \textbf{everything else is exposed
   through scan}, so DFT access must be treated as key access.
@@ -8277,7 +8277,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
 \item
   \wip{} \textbf{DFT --- scan + MBIST + JTAG for the Sky130 SoC} (epic
   \code{j41m}, \ghref{244}; architecture and decisions 1--9 in
-  \src{docs/design/DFT_ARCHITECTURE.md}). Stage 0 \ok{} (\prref{250}).
+  \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture})). Stage 0 \ok{} (\prref{250}).
   Stage 1a: scan-ready SoC fabric merged (\prref{258}: test ports on
   \code{soc_top}, \code{test_en} on the clock gates, reset and clock
   scan muxes, crypto key mask; seam module
@@ -8290,7 +8290,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   \% is adopted as the target, provisionally} (\code{j41m.23},
   2026-10-30): the fabric and the CPU macro are separate rungs, and
   sign-off waits on the cell-pin re-grade \code{j41m.20}
-  (\code{DFT_ARCHITECTURE.md} 2.1, 18.8). Open: Q-TRST (\code{trst_ni}
+  (\code{DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) 2.1, 18.8). Open: Q-TRST (\code{trst_ni}
   power-up tie-off at the chip top), Q-STUB (1-bit SCAN stub until Stage
   2 chains exist), Stage 2 scan insertion and scan-mode SDC
   (\code{j41m.8}, \code{j41m.5}), the CPU-macro scan boundary and
@@ -8298,7 +8298,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   the crypto scan-entry scrub protocol (\code{j41m.6}), and the MBIST
   control-word crossing (\code{j41m.10}). Stage 4 MBIST (beads
   \code{j41m.14}/\code{j41m.10}, \prref{306}, spec
-  \src{docs/design/DFT_ARCHITECTURE.md} section 16): \code{mbist_ctrl}
+  \src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) section 16): \code{mbist_ctrl}
   (ROM-microcode March C- / retention / checkerboard / byte-lane, 6
   backgrounds), \code{mem_collar} on the two SoC-level SRAM macros,
   \code{MBIST_CTRL}/\code{MBIST_STATUS} TAP registers (opcodes 6/7) and
@@ -8313,9 +8313,9 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   define selects block-RAM-inferable memories (\src{rtl/fpga/};
   \texttt{make\ -\allowbreak{}C\ tb/\allowbreak{}cocotb/\allowbreak{}soc\ FPGA=\allowbreak{}1\ soc\_\allowbreak{}all\_\allowbreak{}ci}
   reports 762 passed, 0 failed, with the SRAM backdoor helper, \prref{282}); yosys resource counts for Xilinx 7-series and ECP5, with and
-  without GPU, are in \src{docs/FPGA_STAGE0_EVALUATION.md} (\prref{279}).
+  without GPU, are in \src{docs/FPGA_STAGE0_EVALUATION.md} (\cref{tm:dec:fpga-stage0-evaluation}) (\prref{279}).
   Board recommendation, not a purchase: Digilent Nexys Video XC7A200T
-  (\src{docs/FPGA_BOARD_SELECTION.md}, \prref{283}). The only measured fmax
+  (\src{docs/FPGA_BOARD_SELECTION.md} (\cref{tm:dec:fpga-board-selection}), \prref{283}). The only measured fmax
   is an open-tool ECP5 \textbf{lower bound}, CPU-only on LFE5U-85F:
   \textasciitilde48--52 MHz (CPU) and \textasciitilde47--55 MHz
   (fabric); the with-GPU build does not place on that device. A Vivado
