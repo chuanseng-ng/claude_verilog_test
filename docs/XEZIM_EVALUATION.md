@@ -10,7 +10,7 @@ Tags: **measured** (run here, this session), **inferred**, **claimed** (xezim's 
 
 Tool under test: xezim 0.11.4, git `9dcffd69-dirty` (local one-line `Cargo.toml` edit), plain release build, no JIT. Baselines: Verilator 5.048, sv2v 0.0.13.1, pyslang 11.0.0, cocotb 1.9.2 (repo pin) and 2.0.1 (isolated install). RTL: `origin/main` at `87b7cf0`.
 
-Each legality check needed a negative control, and each pass needed a control able to fail. **VCS and Xcelium are not installed on this host**: their figures are reported from `docs/verification/PROPRIETARY_SIM_FLOW.md` (2026-10-24), plus the user's confirmation from another machine that they reject use-before-declare.
+Each legality check needed a negative control, and each pass needed a control able to fail. **VCS and Xcelium are not installed on this host**: their figures are reported from `Doc: um:flow:proprietary-sim` (2026-10-24), plus the user's confirmation from another machine that they reject use-before-declare.
 
 Phase 3, the full regression bake-off, **was not run**: the plan's stop gate tripped (section 3).
 
@@ -135,7 +135,7 @@ Xezim claims not supported by this work: README near-parity with commercial sim 
 1. Pyslang strict-elaboration gate (section 5): done, bead `lvdk`. Closes the use-before-declare CI gap.
 2. `uv.lock` pins cocotb 2.0.1 while `requirements.txt` says `<2.0`.
 3. `sim/Makefile:90-91, 124-125` list `mem_collar.sv` and `mbist_ctrl.sv` twice; yosys fails on sv2v output unless de-duplicated (those two lists may serve different targets: check before editing).
-4. Stale docs: `docs/CI_CD_WORKFLOW.md:533` suggests Icarus; `docs/verification/VERIFICATION_PLAN.md:402` says "Verilator + SDF", which is not implemented. Icarus remains in `flake.nix:203` + `tb/cocotb/cpu/Makefile:101`.
+4. Stale docs: `Doc: um:flow:ci-cd-workflow` (line 533 of the original file) suggests Icarus; `docs/verification/VERIFICATION_PLAN.md:402` says "Verilator + SDF", which is not implemented. Icarus remains in `flake.nix:203` + `tb/cocotb/cpu/Makefile:101`.
 5. No free 4-state simulation in CI; X and race bugs surface only on non-CI proprietary runs. No clean solution today: xezim is the candidate, once fixed.
 6. No local Verilator wall-clock baseline. CI timeouts aren't measured durations.
 7. Simulator choice hard-coded in `sim_portability.mk:56` and `run_cocotb_targets.py:152`; adding any simulator touches both.
