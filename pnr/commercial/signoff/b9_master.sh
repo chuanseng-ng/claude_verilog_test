@@ -11,7 +11,7 @@ stagger() { local now l a need=${1:-6}; now=$(date +%s); [ $((now-LAST)) -lt 60 
 step() { local n=$1; shift; [ -f $M/$n.done ] && { echo "$(date +%T) skip $n (rc=$(cat $M/$n.done))" >> $L; return 0; }
   stagger; echo "$(date +%T) start $n" >> $L; "$@" > $M/$n.out 2>&1; local rc=$?; echo "$(date +%T) end $n rc=$rc" >> $L; echo $rc > $M/$n.done; return $rc; }
 # 1
-step wait_quantus bash -c 'while pgrep -f "quantus/scripts/chain_all.sh" >/dev/null || pgrep -x quantus >/dev/null; do sleep 30; done; for c in nom min max; do [ -f quantus/runs/icc2b9_$c/.done ] || { echo "icc2b9_$c quantus not done"; exit 1; }; done'
+step wait_quantus bash -c 'while pgrep -f "quantus/scripts/[c]hain_all.sh" >/dev/null || pgrep -x quantus >/dev/null; do sleep 30; done; for c in nom min max; do [ -f quantus/runs/icc2b9_$c/.done ] || { echo "icc2b9_$c quantus not done"; exit 1; }; done'
 # 2
 step q_pt $LK bash -c "cd pt && env PT_SET=quantus PT_STARRC_DIR=pnr/commercial/signoff/quantus/runs PT_NO_MARKER=1 GATE_LIGHT=1 scripts/run_one.sh icc2b9 nom tt 1"
 step q_correlate bash -c "cd quantus/scripts && CORR_TAG=_icc2b9 python3 correlate_all.py --arms icc2b9"

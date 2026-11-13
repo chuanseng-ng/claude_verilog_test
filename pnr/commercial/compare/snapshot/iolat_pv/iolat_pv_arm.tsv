@@ -9,6 +9,7 @@ innovusb7	nom	tt	3.1448	3.1774
 icc2b8	nom	tt	2.0924	2.0925
 innovusb8	nom	tt	2.7105	2.7257
 icc2b9	nom	tt	2.0925	2.0926
+innovusb9	nom	tt	2.7115	2.7267
 openroad	nom	ss	5.0350	5.0351
 icc2b6	nom	ss	3.0799	3.0803
 innovusb6	nom	ss	5.2070	5.2605
@@ -17,6 +18,7 @@ innovusb7	nom	ss	5.2070	5.2605
 icc2b8	nom	ss	3.5767	3.5767
 innovusb8	nom	ss	4.6127	4.6225
 icc2b9	nom	ss	3.5769	3.5769
+innovusb9	nom	ss	4.6143	4.6241
 openroad	nom	ff	1.9999	2.0019
 icc2b6	nom	ff	1.2614	1.2627
 innovusb6	nom	ff	2.2640	2.2727
@@ -25,6 +27,7 @@ innovusb7	nom	ff	2.2640	2.2727
 icc2b8	nom	ff	1.4390	1.4392
 innovusb8	nom	ff	1.8988	1.9048
 icc2b9	nom	ff	1.4391	1.4392
+innovusb9	nom	ff	1.8995	1.9055
 openroad	min	tt	2.7308	2.7310
 icc2b6	min	tt	1.7245	1.7247
 innovusb6	min	tt	2.9364	2.9595
@@ -33,6 +36,7 @@ innovusb7	min	tt	2.9364	2.9595
 icc2b8	min	tt	1.9865	1.9865
 innovusb8	min	tt	2.5500	2.5573
 icc2b9	min	tt	1.9866	1.9866
+innovusb9	min	tt	2.5509	2.5582
 openroad	min	ss	4.7607	4.7607
 icc2b6	min	ss	2.9379	2.9381
 innovusb6	min	ss	4.9139	4.9458
@@ -41,6 +45,7 @@ innovusb7	min	ss	4.9139	4.9458
 icc2b8	min	ss	3.4071	3.4071
 innovusb8	min	ss	4.3625	4.3657
 icc2b9	min	ss	3.4073	3.4073
+innovusb9	min	ss	4.3639	4.3671
 openroad	min	ff	1.8804	1.8815
 icc2b6	min	ff	1.1975	1.1977
 innovusb6	min	ff	2.0891	2.0982
@@ -49,6 +54,7 @@ innovusb7	min	ff	2.0891	2.0982
 icc2b8	min	ff	1.3696	1.3696
 innovusb8	min	ff	1.7828	1.7854
 icc2b9	min	ff	1.3696	1.3697
+innovusb9	min	ff	1.7835	1.7860
 openroad	max	tt	3.1181	3.1278
 icc2b6	max	tt	1.9365	1.9427
 innovusb6	max	tt	3.4170	3.4694
@@ -57,6 +63,7 @@ innovusb7	max	tt	3.4170	3.4694
 icc2b8	max	tt	2.2321	2.2344
 innovusb8	max	tt	2.9167	2.9437
 icc2b9	max	tt	2.2322	2.2345
+innovusb9	max	tt	2.9178	2.9449
 openroad	max	ss	5.3726	5.3778
 icc2b6	max	ss	3.2755	3.2772
 innovusb6	max	ss	5.5896	5.6794
@@ -65,6 +72,7 @@ innovusb7	max	ss	5.5896	5.6794
 icc2b8	max	ss	3.8037	3.8039
 innovusb8	max	ss	4.9391	4.9599
 icc2b9	max	ss	3.8039	3.8041
+innovusb9	max	ss	4.9409	4.9618
 openroad	max	ff	2.1528	2.1595
 icc2b6	max	ff	1.3501	1.3546
 innovusb6	max	ff	2.4981	2.5057
@@ -73,3 +81,4 @@ innovusb7	max	ff	2.4981	2.5057
 icc2b8	max	ff	1.5406	1.5423
 innovusb8	max	ff	2.0591	2.0694
 icc2b9	max	ff	1.5407	1.5424
+innovusb9	max	ff	2.0599	2.0703

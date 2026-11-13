@@ -41,15 +41,28 @@ VARIANTS = ("own", "base", "iolat", "iolat_pv", "iolat_pvs")
 # b7 = b6 + one combined ECO pass (ff hold buffers, deck-antenna sink buffers, dcache dout0 buffers; docs/COMMERCIAL_FLOW_COMPARISON.md section 7 items 4-6).
 # ADOPT_B7 decides which generation is the FINAL arm of the comparison (the other becomes a history arm); set by the sign-off decision, never silently.
 # b8 = b6 flow on the FLIPPED I-cache floorplan (pnr/sky130/cpu/macro_placement_flipic.cfg) + the b7 ECO set with dout0 buffers on every max-cap pin (user decision 2026-11-08).
-# b9 = b8 + ICC2 ECO round 3 (ICC2 only): the two input-port diodes moved next to their loads, one antenna diode moved off an abutting li1 pin pair (docs section 4.9, items 12-14).  Innovus has no b9: its b8 stays the Innovus b8.
+# b9 = b8 + ICC2 ECO round 3 (ICC2 only): the two input-port diodes moved next to their loads, one antenna diode moved off an abutting li1 pin pair (docs section 4.9, items 12-14).  Innovus b9 (2026-11-12) = Innovus b8 + one post-route optDesign re-time of the APB read path (section 4.9); judged against Innovus b6 by regress_check.py and NOT adopted (FINAL_GEN_INN stays b6).
 # FINAL_GEN is the generation that is the FINAL arm of the comparison ("b6", "b7", "b8" or "b9"); the others are history arms.  Set by the sign-off decision, never silently.
 ADOPT_B7 = False
-FINAL_GEN = "b6"
-_R6 = "final" if FINAL_GEN == "b6" else "history"
-_R7 = "final" if FINAL_GEN == "b7" else "history"
-_R8 = "final" if FINAL_GEN == "b8" else "history"
-_R9 = "final" if FINAL_GEN == "b9" else "history"
-_R8_INN = "final" if FINAL_GEN in ("b8", "b9") else "history"  # Innovus has no b9 layout: its b8 is the Innovus arm of a b9 final
+# 2026-11-09 user decision: the FINAL generation is set per tool.  ICC2 -> b9 (user sign-off: the ss setup margin shift of the I-cache SRAM flip is accepted).
+# Innovus -> set by the Innovus b9 adoption rule (no check worse than Innovus b6 apart from measured buffer cost); stays "b6" until that is decided.
+FINAL_GEN_ICC2 = "b9"
+FINAL_GEN_INN = "b6"
+FINAL_GEN = FINAL_GEN_ICC2  # legacy name: the ICC2 generation
+
+
+def _role(tool, gen):
+    return "final" if (FINAL_GEN_ICC2 if tool == "icc2" else FINAL_GEN_INN) == gen else "history"
+
+
+_R6 = _role("icc2", "b6")
+_R7 = _role("icc2", "b7")
+_R8 = _role("icc2", "b8")
+_R9 = _role("icc2", "b9")
+_R6_INN = _role("innovus", "b6")
+_R7_INN = _role("innovus", "b7")
+_R8_INN = _role("innovus", "b8")
+_R9_INN = _role("innovus", "b9")
 
 # arm id -> PT arm name, display name, role, synthesis, notes
 ARMS = {
@@ -70,7 +83,7 @@ ARMS = {
     "innovus_b6": dict(
         pt="innovusb6",
         name="Innovus b6",
-        role=_R6,
+        role=_R6_INN,
         synthesis="Genus 23.14 v1 (tt only)",
         pnr="Innovus 23.14, full MMMC av_ss/av_tt/av_ff, captbl6",
     ),
@@ -84,7 +97,7 @@ ARMS = {
     "innovus_b7": dict(
         pt="innovusb7",
         name="Innovus b7",
-        role=_R7,
+        role=_R7_INN,
         synthesis="Genus 23.14 v1 (tt only)",
         pnr="Innovus 23.14, b6 + ECO: 2 antenna-sink buf_6, 1 dcache dout0 buffer",
     ),
@@ -108,6 +121,13 @@ ARMS = {
         role=_R8_INN,
         synthesis="Genus 23.14 v1 (tt only)",
         pnr="Innovus 23.14, flipped I-cache floorplan (MX), b7 ECO set, dout0 buffers on every max-cap pin",
+    ),
+    "innovus_b9": dict(
+        pt="innovusb9",
+        name="Innovus b9",
+        role=_R9_INN,
+        synthesis="Genus 23.14 v1 (tt only)",
+        pnr="Innovus 23.14, b8 + ECO round 3 (post-route optDesign setup/DRV re-time of the apb_paddr_i -> apb_prdata_o_reg paths and the max-transition violators)",
     ),
     "icc2_b5e": dict(
         pt="icc2",
@@ -163,6 +183,7 @@ SDC_FILES = {
     "own:icc2_b8": f"{COM}/constraints/sky130_cpu_icc2_b8_own_pt.sdc",
     "own:icc2_b9": f"{COM}/constraints/sky130_cpu_icc2_b9_own_pt.sdc",
     "own:innovus_b8": f"{COM}/constraints/sky130_cpu_innovus_b8_own_pt.sdc",
+    "own:innovus_b9": f"{COM}/constraints/sky130_cpu_innovus_b9_own_pt.sdc",
     "own:innovus_b7": f"{COM}/constraints/sky130_cpu_innovus_b7_own_pt.sdc",
     "own:innovus_b6": f"{COM}/constraints/sky130_cpu_innovus_b6_own_pt.sdc",
     "own:innovus_b5k": f"{COM}/constraints/sky130_cpu_innovus_b5k_own_pt.sdc",
@@ -1046,10 +1067,10 @@ def innovus_arm(b="b6"):
         note="power view av_ss (ss leakage), activity 0.1: not comparable with tt figures",
     )
     tot, peak, srcs = 0.0, 0, []
-    stage_dirs = ([f"{SNAP}/innovus_b6"] if b in ("b6", "b7") else []) + ([d] if b != "b6" else [])  # b7 = the b6 flow + the b7 ECO / finish / restream stages; b8 has its own full chain
+    stage_dirs = ([f"{SNAP}/innovus_b6"] if b in ("b6", "b7") else []) + ([f"{SNAP}/innovus_b8"] if b == "b9" else []) + ([d] if b != "b6" else [])  # b7 = the b6 flow + the b7 ECO / finish / restream stages; b8 has its own full chain
     for sd in stage_dirs:
         for t in sorted(p(f"{sd}/stage_time").glob("0*.time")):
-            if b != "b6" and sd.endswith("innovus_b6") and t.name.startswith(("06m_finish", "07_restream")):
+            if b != "b6" and (sd.endswith("innovus_b6") or sd.endswith("innovus_b8")) and t.name.startswith(("06m_finish", "07_restream")):
                 continue  # superseded by the b7 finish / restream
             rel = f"{sd}/stage_time/{t.name}"
             w, rss = time_v(rel)
@@ -1066,7 +1087,7 @@ def innovus_arm(b="b6"):
     out["peak_rss"] = E(round(peak / 1048576, 2), "GB", "derived", srcs, rule="max over stages")
     out["census"] = census(f"{r6}/final_cellcount.txt")
     out.update(drclvs(f"innovus_{b}"))
-    runs = lec_conformal({"b6": "b4m", "b7": "b7m", "b8": "b8m"}[b])
+    runs = lec_conformal({"b6": "b4m", "b7": "b7m", "b8": "b8m", "b9": "b9m"}[b])
     out["lec_runs"] = runs
     out["lec"] = lec_summary(runs, ["innovus_"], ["negctl"], "conformal")
     out.update(redhawk(f"innovus{b}"))
@@ -1083,6 +1104,10 @@ def innovus_b7():
 
 def innovus_b8():
     return innovus_arm("b8")
+
+
+def innovus_b9():
+    return innovus_arm("b9")
 
 
 def history():
@@ -1227,6 +1252,7 @@ def synthesis():
         ("icc2_b8", "dc_v2"),
         ("icc2_b9", "dc_v2"),
         ("innovus_b8", "genus_v1"),
+        ("innovus_b9", "genus_v1"),
         ("icc2_b5e", "dc_v1"),
     ):
         tt, f = rows[(key, "tt")]
@@ -1259,7 +1285,7 @@ def synthesis():
     fm = f"{COM}/signoff/lec/formality/reports/b4a2_dc_v2_vs_rtl/fm_log.txt"
     out["icc2_b6"]["synth_lec"] = lec_formality("b4a2")
     out["innovus_b6"]["synth_lec"] = lec_conformal("b4b_genus")
-    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("icc2_b9", "icc2_b6"), ("innovus_b8", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
+    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("icc2_b9", "icc2_b6"), ("innovus_b8", "innovus_b6"), ("innovus_b9", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
         for k in ("synth_runtime", "synth_peak_rss", "synth_lec"):
             out[b7][k] = out[b6][k]
     _ = fm
@@ -1308,7 +1334,13 @@ def quantus_crosscheck():
         warnings.append("quantus reports not committed; quantus_crosscheck omitted")
         return {}
     out = {"correlation": {}, "cost": {}, "pt_sensitivity_nom_tt": {}, "techgen": {}}
-    for k, r in json.loads(text(rep))["results"].items():
+    rep_b9 = f"{COM}/signoff/quantus/reports/quantus_vs_starrc_icc2b9.json"  # ICC2 b9 (step 4 adopt-b9, 2026-11-13): same method, separate file written with CORR_TAG=_icc2b9
+    corr_src = [(k, r, rep) for k, r in json.loads(text(rep))["results"].items()]
+    if tracked(rep_b9):
+        corr_src += [(k, r, rep_b9) for k, r in json.loads(text(rep_b9))["results"].items()]
+    else:
+        warnings.append("quantus ICC2 b9 correlation report not committed; omitted")
+    for k, r, rep in corr_src:
         out["correlation"][k] = E(
             {
                 "total_C_median_err_pct": round(r["total_C"]["median_err_pct"], 2),
@@ -1461,6 +1493,8 @@ def build():
         natives["icc2_b9"] = icc2_b9()
     if p(f"{SNAP}/innovus_b8").is_dir():
         natives["innovus_b8"] = innovus_b8()
+    if p(f"{SNAP}/innovus_b9").is_dir():
+        natives["innovus_b9"] = innovus_b9()
     natives.update(history())
     core = json.loads(text(f"{SNAP}/openroad/metrics.json"))
     core_src = f"{SNAP}/openroad/metrics.json"

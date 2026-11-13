@@ -1,0 +1,23 @@
+	Command being timed: "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/scripts/safe_run.sh /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b9_innovus/logs/06m_finish.log innovus -nowin -files /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/scripts/06m_finish.tcl -log /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b9_innovus/logs/06m_finish.innovus.log -overwrite"
+	User time (seconds): 3954.62
+	System time (seconds): 1586.95
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:35:10
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 7435380
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 53
+	Minor (reclaiming a frame) page faults: 3755259
+	Voluntary context switches: 599055
+	Involuntary context switches: 17722
+	Swaps: 0
+	File system inputs: 45760
+	File system outputs: 4433512
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
