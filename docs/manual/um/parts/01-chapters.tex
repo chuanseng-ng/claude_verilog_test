@@ -141,3 +141,258 @@ The file \src{docs/manual/common/dictionary.yaml} is the only source of project 
 \chapter{Project status}\label{um:ch:project-status}
 
 This chapter gives the current status of each phase.
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Key Documentation}\label{um:guide:key-documentation}
+\begin{relocated}{CLAUDE.md}
+
+\textbf{Always refer to these specifications} (do not rely on
+non-existent RTL):
+
+\section{Architecture \& Design}\label{um:guide:key-documentation:architecture-design}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*465/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*515/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Document
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Purpose
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\src{docs/ROADMAP.md} & High-level project plan and phases \\
+\src{docs/PHASE_STATUS.md} & Current project status and next steps \\
+\src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} & CPU architectural
+requirements (Phase 0) \\
+\src{docs/design/PHASE1_ARCHITECTURE_SPEC.md} & CPU implementation spec
+(Phase 1) - \ok{} Complete \\
+\src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} & Pipelined CPU spec
+(Phase 2) - \ok{} Complete \\
+\src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} & Cache architecture spec
+(Phase 3) - \ok{} Approved \\
+\src{docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md} & GPU architecture
+spec (Phase 4) --- frozen ISA/\allowbreak{}execution model \\
+\src{docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md} & Phase 3 closure + Phase 4
+implementation plan (golden spec) \\
+\src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} & Phase 5 SoC integration
+roadmap --- 12 milestones M1--M12 (golden spec) \\
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} & Phase 6 IP expansion ---
+remaining 6a peripherals + 6b crypto + 6c NPU (golden spec) \\
+\src{docs/design/DFT_ARCHITECTURE.md} & DFT scan + MBIST + JTAG
+architecture for the Sky130 SoC (epic \code{j41m}) \\
+\src{docs/design/TESSENT_MBIST_EVALUATION.md} & Parallel evaluation of
+Siemens Tessent MemoryBIST vs the in-house MBIST (flow in
+\src{dft/tessent/mbist/}; epic \code{j41m}) \\
+\src{docs/FPGA_BOARD_SELECTION.md} & FPGA board recommendation and
+measured ECP5 fmax lower bound (epic \code{hlrm}) \\
+\src{docs/design/RTL_DEFINITION.md} & Interface signal definitions \\
+\src{docs/design/MEMORY_MAP.md} & Address space and register map \\
+\src{docs/design/DFT_ARCHITECTURE.md} & Sky130 DFT (scan + MBIST) Stage
+0 feasibility, architecture, decisions (\ghref{244}) \\
+\src{docs/design/TESSENT_ATPG_FLOW.md} & Tessent scan insertion + ATPG
+evaluation flow for the Sky130 SoC fabric (\src{dft/tessent/atpg/}, epic
+\code{j41m}, Stage 2 evaluation) \\
+\src{docs/design/REFERENCE_MODEL_SPEC.md} & Python reference model
+API \\
+\end{longtable}
+}
+
+}
+
+\section{Physical Design}\label{um:guide:key-documentation:physical-design}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*412/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*568/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Document
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Purpose
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\src{docs/design/OPENROAD_FLOW_SPEC.md} & Complete OpenROAD flow
+documentation \\
+\src{docs/design/UPF_POWER_SPEC.md} & Power intent and UPF
+specification \\
+\src{docs/design/SDC_TIMING_SPEC.md} & Timing constraints and STA
+guidelines \\
+\src{pnr/README.md} & Physical design directory structure \\
+\src{docs/COMMERCIAL_FLOW_COMPARISON.md} & Sky130 CPU macro: OpenROAD vs
+DC-\textgreater ICC2 vs Genus-\textgreater Innovus, one
+StarRC-\textgreater PrimeTime judge; data in
+\src{pnr/commercial/compare/comparison.json} \\
+\end{longtable}
+}
+
+}
+
+\section{Verification \& Fixes}\label{um:guide:key-documentation:verification-fixes}
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*456/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*524/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Document
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Purpose
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\src{docs/verification/VERIFICATION_PLAN.md} & Verification strategy
+(RTL + physical design) \\
+\src{docs/verification/PROPRIETARY_SIM_FLOW.md} & VCS / Xcelium setup,
+regression run, portability rules (EDA hosts without nix) \\
+\src{docs/verification/DQC_FLOW.md} & Local SpyGlass
+lint/\allowbreak{}CDC/\allowbreak{}RDC + Cadence HAL flow
+(\texttt{make\ -\allowbreak{}C\ dqc\ .\allowbreak{}.\allowbreak{}.\allowbreak{}}),
+waivers, licence matrix, open RTL findings \\
+\src{docs/XEZIM_EVALUATION.md} & Measured evaluation of xezim as
+secondary compile/\allowbreak{}sim tool vs
+Verilator/\allowbreak{}VCS/\allowbreak{}Xcelium/\allowbreak{}slang: not
+adopted for regression; pyslang recommended for use-before-declare (bead
+\bead{qd9l}) \\
+\src{docs/RANDOM_TESTS_STATUS.md} & Random instruction test results and
+guide \\
+\src{fixes/FIXES_INDEX.md} & \textbf{*} Central reference for all RTL
+bug fixes \\
+\end{longtable}
+}
+
+}
+
+\section{README detail set}\label{um:guide:key-documentation:readme-detail-set}
+
+\src{docs/readme/} holds the deep content split out of the root README:
+\code{PHASE_HISTORY.md}, \code{QUICK_START.md} (build/\allowbreak{}run
+commands per phase), \code{SUPPORTED_INSTRUCTIONS.md},
+\code{DEBUG_INTERFACE.md} (APB3 register map),
+\code{PROJECT_STRUCTURE.md} (full directory tree).
+\end{relocated}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Frequently Used Commands}\label{um:guide:frequently-used-commands}
+\begin{relocated}{CLAUDE.md}
+
+Build/run commands for every phase live in
+\src{docs/readme/QUICK_START.md}. Quick entry points:
+
+\begin{textblock}
+# Phase 0 reference-model tests
+cd tb/tests && pytest -v
+
+# Cache sims (Phase 3)
+cd sim && make phase3_all
+
+# OpenROAD back-end flow
+cd pnr && make all          # synth → floorplan → place → cts → route → sta → power
+cd pnr && make report_summary
+\end{textblock}
+
+Commit with the \code{[Category]} convention (see below). Use
+\code{rtk}-prefixed commands for token-efficient output (see RTK
+section).
+
+\textbf{Analog/\allowbreak{}mixed-signal flow (Phase 7+)}: the
+\code{analog} nix devshell provides the open analog toolchain (ngspice /
+xschem / magic / klayout / netgen) --- enter it with
+\texttt{nix\ develop\ \textasciitilde{}/\allowbreak{}Downloads/\allowbreak{}Github/\allowbreak{}librelane\#analog}
+(OpenVAF is not in nixpkgs → ngspice-behavioral fallback). The analog
+flow state lives in
+\texttt{analog/\allowbreak{}pll\_\allowbreak{}clkgen/\allowbreak{}\{,\allowbreak{}sky130\}/\allowbreak{}design\_\allowbreak{}state.\allowbreak{}json}
+--- \textbf{separate from the digital \src{design_state.json}} at repo
+root. Full-SoC AMS cosim (RNM PLL through \code{Vtop}) needs
+\code{MAKEFLAGS=-j2} (OOM on a 15 GiB host otherwise) with
+\code{SIM_BUILD} routed to \code{/nobackup}. See
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md}.
+
+\section{Project Structure}\label{um:guide:frequently-used-commands:project-structure}
+
+Top level: \src{rtl/} (\code{cpu/}, \code{gpu/}, \code{mem/} caches,
+\code{periph/}, \code{soc/}), \src{tb/} (\code{models/} Python +
+\code{cocotb/}), \src{docs/} (specs + \code{readme/} detail set),
+\src{pnr/} (physical design), \src{sim/}, \src{micro_p/} (archived Phase
+1).
+
+Full annotated directory tree → \src{docs/readme/PROJECT_STRUCTURE.md}.
+\end{relocated}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Reference Model (Python)}\label{um:guide:reference-model-and-verification}
+\begin{relocated}{CLAUDE.md}
+
+Python reference models for CPU and GPU live in \src{tb/models/}:
+\code{rv32i_model.py} (CPU instruction-accurate),
+\code{gpu_kernel_model.py} (GPU SIMT), \code{memory_model.py},
+\code{cache_model.py} (DirectMappedCache). See
+\src{docs/design/REFERENCE_MODEL_SPEC.md} for the complete API.
+
+\begin{lstlisting}[language=Python]
+from tb.models.rv32i_model import RV32IModel
+cpu = RV32IModel()
+result = cpu.step(0x00000093)  # addi x1, x0, 0
+assert result['rd'] == 1
+\end{lstlisting}
+
+\section{Verification Strategy}\label{um:guide:reference-model-and-verification:verification-strategy}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Phase 0}: Python reference models, pytest unit tests,
+  cross-validate vs RISC-V spike, cocotb infra.
+\item
+  \textbf{Phase 1+}: cocotb interface drivers, pyuvm
+  sequences/\allowbreak{}scoreboards, RTL-vs-model comparison, 10k+
+  random instructions.
+\end{itemize}
+
+See \src{docs/verification/VERIFICATION_PLAN.md} for the phase-by-phase
+plan. Per-phase completion history → \src{docs/readme/PHASE_HISTORY.md}.
+\end{relocated}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Commit Message Convention}\label{um:guide:commit-and-coding-rules}
+\begin{relocated}{CLAUDE.md}
+
+Use the format: \texttt{[Category]\ Brief\ description}
+
+Categories: \code{[Fix]}, \code{[Feature]}, \code{[Code]} (refactoring),
+\code{[Env]} (build), \code{[Doc]}, \code{[Test]}, \code{[Spec]},
+\code{[RTL]} (RTL design), \code{[PD]} (physical design),
+\code{[Analog]} (mixed-signal), \code{[Chore]} (maintenance).
+
+\section{Coding Guidelines}\label{um:guide:commit-and-coding-rules:coding-guidelines}
+
+All new/\allowbreak{}modified code follows
+\src{docs/development/CODING_GUIDELINES.md} (SystemVerilog per
+lowRISC-adapted house style, Python per ruff/PEP 8). Compliance backlog:
+\src{docs/development/CODING_COMPLIANCE_AUDIT.md}. Existing verified RTL
+is grandfathered --- no style-only mass edits.
+
+\section{Questions?}\label{um:guide:commit-and-coding-rules:questions}
+
+Refer to specifications in \src{docs/} --- they are the source of truth.
+\end{relocated}

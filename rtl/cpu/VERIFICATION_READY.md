@@ -94,7 +94,7 @@ The following debug features are documented but not yet fully implemented:
 
 ## Critical Bugs Fixed ✅
 
-### AXI Protocol Fixes (See CRITICAL_FIXES.md)
+### AXI Protocol Fixes (See fixes/CRITICAL_FIXES.md)
 
 1. **FETCH state timing**: Now correctly waits for `rvalid` independent of `arready`
 2. **MEM_WAIT state timing**: Properly handles read/write data phases

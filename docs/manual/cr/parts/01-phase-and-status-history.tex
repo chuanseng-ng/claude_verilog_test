@@ -7,3 +7,1198 @@ This chapter holds the completion record of each phase.
 \chapter{Status history}\label{cr:ch:status-history}
 
 This chapter holds the earlier project status statements.
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Project Overview}\label{cr:status:claude-md-overview}
+
+\begin{record}
+
+Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project.
+
+\textbf{Current Phase}: Phase 5 (SoC Integration) --- \ok{} COMPLETE
+(2026-06-24). M1--M12 done; M11 ASAP7 SoC P\&R signed off at \textbf{571
+MHz / 62.9 mW \warn{} fabric-only, excludes both hard macros / 520×520
+µm / 65.6 \% util / 0 DRC / 0 antenna \warn{} routing claims
+unsupported, see below} (run 14, sv2v frontend; PDN \warn{} withdrawn
+--- the grid is EMPTY, see below). Power-attribution root cause +
+bounds: \src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat" (bead
+\bead{ew3}). \textbf{The "0 DRC / 0 antenna" figure is vacuous --- run
+14\textquotesingle s detailed routing committed zero wires (bead
+\bead{xy6}); timing/\allowbreak{}power/\allowbreak{}area numbers are
+unaffected (GRT-estimated parasitics, as always) but every routing-clean
+claim is withdrawn.} \src{docs/PHASE5_RUN_HISTORY.md} §"Routing /
+physical-closure caveat". \warn{} \textbf{The 571 MHz / 62.9 mW
+timing+power figure itself is now also unvalidated (bead
+\bead{8f3}/\code{0p6}, 2026-09-16): it came from
+\code{OpenROAD.STAMidPNR-3} run WITHOUT an in-session
+\code{global_route}, which a CPU-block proof showed reports
+falsely-clean 0/0/0 violations on \textasciitilde94\% zero-wire
+parasitics. Run 14\textquotesingle s artifacts are wiped (bead
+\bead{alq}) and cannot be re-measured with the now-fixed
+\code{STA_POSTGRT_INSESSION_GRT=1}; the honest current-RTL replacement
+is 258.5 mW / setup WNS −2084 ps / 41,864 violators
+(\src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat", bead
+\bead{w3a}/\code{86a}/\code{0p6}) --- a different, unfinished design
+point, not a re-run of run 14.} \ok{} \textbf{UPDATE 2026-09-18 (bead
+\bead{0d0}): the SoC has since been re-measured three times on the fixed
+flow; the current honest current-RTL point is setup WNS −727.37 ps / TNS
+−60,665 ps / 781 violators, hold CLEAN, 283.6 mW total / 89.6 mW
+fabric-only (\code{RUN_2026-09-17_20-41-11}, pinned OpenROAD 26Q2,
+annotation-gated, zero real signal drivers unannotated) --- this
+supersedes the −2084 ps figure above as the current basis. Timing is
+still NOT closed at 1750 ps. Run 14 itself remains unvalidated and
+unrecoverable.} See \src{docs/PHASE5_RUN_HISTORY.md}.
+
+\textbf{Status}: Phase 4 complete (2026-05-27, all GPU tests green;
+ASAP7 GPU sign-off 571 MHz / 262 mW \warn{} STA-zero-wire, unvalidated
+post-\code{8f3}, re-run deferred --- see
+\src{docs/GPU_ASAP7_RUN_HISTORY.md}); Phase 3 complete (2026-05-21,
+139/139 total, ASAP7 1418 MHz sign-off \warn{} same STA caveat, bead
+\bead{8f3}/\code{0p6}); Phase 2 complete (2026-03-08, 75 MHz on Sky130,
+real post-route SPEF --- unaffected).
+
+\bad{} \textbf{ASAP7 CPU/GPU macro netlists: PROVEN frontend miscompile
+(bead \bead{u99} → \code{ma7}, 2026-09-19).} Both macros are built with
+\code{USE_SYNLIG:true}. A differential (same
+testbench/\allowbreak{}ROM/\allowbreak{}sequencing, Synlig gate netlist
+vs RTL sim) showed \code{rv32i_cpu_top}\textquotesingle s netlist
+returns \textbf{0x30} for an APB debug read of \code{DBG_GPR[4]} where
+RTL returns \textbf{0x0c} --- harness error, timing races and
+debug-semantics explanations all excluded. Mechanism: \code{OPT_MUXTREE}
+mis-elaborating a \textbf{runtime-indexed mux}, the same class proven in
+beads \code{gcd} and \code{b0t}. \src{rtl/cpu/core/rv32i_regfile.sv}
+uses that idiom on \textbf{all three} read ports, so the two feeding
+ID/\allowbreak{}execute are \textbf{UNVERIFIED, not proven clean}
+(\code{u99} checked insn/PC retire order, not register values);
+\code{rtl/gpu/warp_scheduler.sv:152} is the same class, untested. Remedy
+(switch both configs to \code{USE_SYNLIG:false} + sv2v → re-harden both
+macros → SoC re-run, expect PPA to worsen as \code{valu_hls} did) is
+\textbf{not applied} and needs a human decision: bead \bead{ma7} (P1).
+Treat every ASAP7 CPU/GPU macro PPA figure below as resting on a netlist
+from a frontend with a proven miscompile in this repo. \textbf{The
+Sky130 SoC fabric is unaffected by the frontend question (sv2v), but the
+Sky130 CPU hard macro is NOT: it is configured \code{USE_SYNLIG:true}
+and its committed netlist
+\src{pnr/sky130/cpu/macro/rv32i_cpu_top.nl.v.gz} is itself functionally
+WRONG (bead \bead{dud4}, 2026-10-10,
+\src{docs/SKY130_CPU_SYNLIG_DUD4.md})} --- the u99 program leaves
+\code{x4=0x30} (RTL \code{0x0c}), the ma7
+\texttt{BEQ\ x2,\allowbreak{}x3} is evaluated NOT-TAKEN, confirmed in
+two simulators; the Sky130 SoC consumes this macro. Root cause
+(measured, simulation-confirmed): Synlig elaborates
+\code{.if_id_rs1_addr(if_id_reg.instruction[19:15])} /
+\code{.if_id_rs2_addr(...[24:20])} in \code{rv32i_core.sv}
+\code{u_hazard} as \texttt{5'x} (log:
+\texttt{Range\ select\ [639:\allowbreak{}608]\ out\ of\ bounds\ .\allowbreak{}.\allowbreak{}.\allowbreak{}\ Setting\ all\ 32\ result\ bits\ to\ undef}),
+so forwarding selects are wrong and stored values are wrong; an sv2v
+synthesis of the same RTL is cycle-exact identical to RTL on all test
+programs (31 regs x 3 ports). It is NOT the regfile read mux. INFERRED,
+untested: ASAP7\textquotesingle s CPU (same two lines, Synlig-built
+until \code{ma7}\textquotesingle s config switch) has the same defect,
+so the u99/ma7 "OPT\_\allowbreak{}MUXTREE regfile read mux" diagnosis is
+in doubt. \bad{} \textbf{UPDATE 2026-09-19 (bead \bead{ma7} step 1): the
+corruption is PROVEN to reach the execute datapath, not just the debug
+port.} A branch-dependent differential (same \code{tb_cpu_macro_check.v}
+harness/\allowbreak{}method as \code{u99}, new program whose control
+flow depends on computed register values so an ID-stage regfile read
+corruption becomes observable via \code{commit_pc_o}, not the known-bad
+debug port) shows the two arms retire IDENTICALLY through a
+\texttt{BEQ\ x2,\allowbreak{}x3} instruction\textquotesingle s own fetch
+(x2=x3=9, must be TAKEN) and then diverge exactly at that
+instruction\textquotesingle s commit: the frontend-independent RTL
+reference (Verilator) takes the branch correctly (matches the Python
+golden model bit-exact); the same Synlig gate netlist u99 used evaluates
+it as NOT-TAKEN and parks at a dead marker instead. Exact coverage:
+proven corrupt for register indices x2/x3 (value 9) as read by the
+branch comparator\textquotesingle s rs1/rs2 ports feeding EX; not proven
+for other indices, instruction types, or access patterns. Full method,
+evidence paths, and the read-port cone-sharing analysis: bead \bead{ma7}
+notes and \src{docs/CPP_TO_RTL_HLS_EVALUATION.md}. \bad{} \textbf{UPDATE
+2026-09-19 (bead \bead{ma7} remedy, PARTIALLY APPLIED --- CPU re-harden
+BLOCKED, GPU still deferred).} User-approved remedy applied to configs
+only so far: \src{pnr/asap7/cpu/config.json} + \code{config_3014.json}
+and \src{pnr/asap7/gpu/config.json} + \code{config_3014.json} are now
+\code{USE_SYNLIG:false} with a new sv2v-preprocessing Makefile pipeline
+(\code{asap7-cpu-sv2v}, \code{asap7-gpu-sv2v}), mirroring the
+already-applied \code{valu_hls} fix. \textbf{The CPU re-harden PD run
+has NOT completed cleanly}: 3 attempts (lint fix needed and applied; a
+known unbounded-resizer-loop defect, bead bpp, needed and got
+\code{PL_RESIZER_TIMING_MAX_PASSES=2}; the 3rd attempt,
+\code{RUN_2026-09-19_15-42-11}, reached \code{OpenROAD.DetailedRouting}
+cleanly through CTS/\allowbreak{}GRT/\allowbreak{}resizer but then hit a
+\textbf{new, unresolved routing-congestion regression} --- 108716 DRC
+violations, \textasciitilde53x this block\textquotesingle s own
+best-ever prior routed baseline of 2045, concentrated as \code{DRT-0255}
+failures on SRAM macro pins --- that leaves \code{OpenROAD.RCX}
+extracting zero parasitics and \code{OpenROAD.STAPostPNR} failing
+outright). Root cause NOT pinned down (ruled out: wrong OpenROAD binary,
+simple netlist-size growth); tracked as bead \bead{lxv}.
+\textbf{\code{pnr/asap7/soc/macro/rv32i_cpu_top.*} are UNCHANGED and
+remain the old, Synlig-built, proven-corrupt views} --- no macro view
+was regenerated from an incomplete run. GPU re-harden itself remains
+fully deferred (host-gated, unchanged from the note above);
+\code{pnr/asap7/soc/macro/gpu_top.*} also remain Synlig-built and
+suspect. See bead \bead{ma7} notes for the full attempt history and the
+methodology-deviation discussion (disabling SPEF/\allowbreak{}MCSTA to
+force flow completion was considered and explicitly rejected as not
+matching this block\textquotesingle s own established reference
+methodology). \bad{} \textbf{UPDATE 2026-09-19 (bead \bead{lxv}, root
+cause narrowed further --- CPU re-harden STILL BLOCKED).} Five
+single-variable experiments across two sessions have now excluded:
+\code{PL_MACRO_HALO}, \code{GRT_LAYER_ADJUSTMENTS}, a structural netlist
+difference at the failing \code{clk0}/\code{csb0}/\code{din0} pins
+(byte-identical gate types/\allowbreak{}fanin between the Synlig and
+sv2v builds), a placement-clearance difference around the SRAM macros
+(\textless1\% delta), a genuine global-routing capacity problem (the
+failing run\textquotesingle s own GRT reports 0/0/0 overflow at 11.86\%
+usage), a relaxed \code{CLOCK_PERIOD} (780→1000 ps: DRC 109687 vs.
+108716 baseline, despite −9.8\% fewer resizer-inserted buffers), and a
+raised \code{PL_RESIZER_TIMING_MAX_PASSES} (2→4: DRC 109562 vs. 108716,
+despite +2.1\% more buffers). DRC count is invariant to resizer-driven
+cell-count changes in either direction. The only unexcluded explanation
+is the SRAM hard-macro\textquotesingle s own pin-access geometry
+(\code{sram_1rw_256x32_asap7.lef}: all \textasciitilde74 signal pins
+\texttt{SHAPE\ ABUTMENT} on one edge) --- pre-existing in both
+frontends, consistent with \code{e69}\textquotesingle s own non-zero
+2045-violation baseline on identical geometry. A real fix likely
+requires a hard-macro LEF/\allowbreak{}pin-layout change, which
+\textbf{needs explicit human approval} before any macro view is touched;
+none was attempted. Full trail: bead \bead{lxv},
+\src{docs/ASAP7_RUN_HISTORY.md}. \hold{} \textbf{DECISION 2026-09-20
+(user): SHELVED until a ≥32 GB host is available} --- beads \code{lxv}
+and \code{ma7} are now formally blocked on \code{2kn}. The user declined
+both alternatives (authorising a hard-macro LEF edit, or re-baselining
+against the pre-existing 2 045-violation routing baseline) in favour of
+deferring. \textbf{Consequence to carry forward: the ASAP7 CPU and GPU
+macro views remain the Synlig-built netlists proven to mis-execute a
+branch, so every ASAP7 CPU/\allowbreak{}GPU/\allowbreak{}SoC PPA figure
+in this repo rests on a netlist with a proven functional miscompile.}
+The correctness fix \emph{is} in the configs (\code{USE_SYNLIG:false} +
+sv2v); what is missing is a completed PD run to regenerate the views. Do
+not attempt further config-level knob sweeps on this host --- the
+exclusion list is exhaustive for config variables (10 hypotheses refuted
+across 5 single-variable experiments). On obtaining the host, resume by
+re-running the sv2v CPU re-harden \textbf{with} the real power grid
+before touching macro geometry: a PDN-bearing route has never been tried
+and may change the DRT picture on its own. \bad{} \textbf{UPDATE
+2026-10-10 (bead \bead{ainf}, \src{docs/SYNLIG_STRUCT_SELECT_AINF.md}):
+"Synlig + \prref{259}" is supported for the CPU struct-member selects but
+NOT for the GPU.} Synlig has three silent struct-select defects (D1:
+\code{s.m[..]} on a struct type with exactly two packed-range members;
+D2: LHS part-select of a member; D3: element select of a
+multi-dimensional packed-array member). \src{rtl/cpu}: the 15 remaining
+member selects are all on structs with R\textgreater=7 ranged members,
+there is no LHS member select and no multi-dim array member, and
+Synlig-vs-sv2v miter+SAT proves \code{rv32i_pipeline_ex/_mem/_wb/_ex1c}
+EQUIV (not proven: whole core, regfile, caches). \src{rtl/gpu}:
+\code{gpu_compute_unit} \code{id_ex_q.rs1_data[l]}/\code{rs2_data[l]} is
+read as ONE bit by Synlig (D3, measured NOT-EQUIV), so
+VLD/\allowbreak{}VST/\allowbreak{}VLDS/\allowbreak{}VSTS addresses and
+data are wrong in any Synlig-built GPU netlist, including the committed
+\code{pnr/asap7/soc/macro/gpu_top.*}. The CPU conclusion is a property
+of today\textquotesingle s source (\code{if_id_reg_t} is a latent R=2
+type; \code{check_struct_member_select.py} guards new selects). \ok{}
+\textbf{UPDATE 2026-10-10 (beads \code{ma7}/\code{dud4},
+\src{docs/ASAP7_CPU_SYNLIG_MA7.md}): the ASAP7 miscompile is the same
+defect as Sky130\textquotesingle s, NOT a regfile read-mux /
+\code{OPT_MUXTREE} fault --- this SUPERSEDES the
+"OPT\_\allowbreak{}MUXTREE runtime-indexed mux" mechanism and the "two
+read ports feeding ID/\allowbreak{}execute are UNVERIFIED" statement
+above (the dated entries above are kept as history).} Gate-vs-RTL
+differential on four ASAP7 \code{rv32i_cpu_top} netlists, two simulators
+(yosys \code{sim} with the original u99/ma7 harness, and Verilator with
+Liberty-derived cell models, cycle-exact on every output port): the
+\textbf{committed macro} and a fresh \textbf{Synlig} synthesis of main
+RTL (arm S) both give \code{DBG_GPR[4]}=\code{0x30} (RTL \code{0x0c})
+and \texttt{BEQ\ x2,\allowbreak{}x3} NOT taken; \textbf{Synlig + the two
+hazard-unit part-selects routed through a named wire (arm W) and the
+sv2v netlist (arm V) are IDENTICAL to RTL on all 6 programs and pass the
+full 31-register x (rs1, rs2, both, debug) port matrix (124/124 cells)},
+while S and the committed macro fail 96/124. Mechanism (MEASURED
+isolation, INFERRED internals): Synlig elaborates
+\code{rv32i_core.sv:436-437}
+(\code{.if_id_rs1_addr(if_id_reg.instruction[19:15])},
+\code{...[24:20]}) as \texttt{5'x}, so the forwarding selects ignore the
+consumer\textquotesingle s source register and every ALU operand becomes
+the previous instruction\textquotesingle s result (the failing values
+reproduce exactly: \code{x2=5+7}, \code{x3=12+12},
+\code{x4=24+24=0x30}); the wrong stored values then make the BEQ
+operands unequal. The regfile read path is correct in W and V. Coverage
+limits: 6 programs, not exhaustive; W/V correctness is by simulation,
+not formal equivalence; the committed macro is judged on its own netlist
+plus RTL \code{999e44a}. \textbf{Consequence for \code{lxv}/\code{ma7}
+(an option, not a decision):} the blocked sv2v CPU re-harden is not the
+only route to a correct ASAP7 CPU macro --- a Synlig build with the RTL
+fix (\prref{259}: the two part-selects through a full-width wire) gave a
+functionally correct netlist (arm W) and keeps the Synlig
+netlist/\allowbreak{}P\&R baseline whose routing was healthier (2 045
+DRC violations in \code{e69} vs 108 716 in the sv2v attempts), but it
+still needs a full re-harden to regenerate the macro views, and the GPU
+macro (\code{warp_scheduler.sv:152}, other \code{struct.member[a:b]}
+port connections) was NOT checked for the same class. \bad{}
+\textbf{UPDATE 2026-10-11 (bead \bead{dud4}, Sky130 CPU macro
+re-hardened on sv2v and proven vs RTL; supersedes the earlier "Sky130
+and the SoC fabric are unaffected (both use the sv2v frontend)" wording,
+which was FALSE for the CPU hard macro).} The July Sky130 CPU macro was
+Synlig-built (\code{USE_SYNLIG:true}) and mis-executed (u99
+\code{x4=0x30}, BEQ not taken). Root cause: Synlig elaborated the two
+hazard-unit port connections
+\code{.if_id_rs1_addr(if_id_reg.instruction[19:15])}/\code{rs2} as
+\texttt{5'x} (struct-member part-select), deleting the \code{fwd_b_*}
+forwarding-select flops --- \textbf{not} \code{OPT_MUXTREE} on the
+regfile read mux (that \code{u99}/\code{ma7} attribution is in doubt,
+ASAP7 shows the same two lines). Fixed by the RTL rewrite (\prref{259})
+\textbf{plus} this re-harden: \src{pnr/sky130/cpu/config.json} is now
+\code{USE_SYNLIG:false} on the new
+\texttt{make\ -\allowbreak{}C\ pnr\ sky130-\allowbreak{}cpu-\allowbreak{}sv2v}
+output; run \code{RUN_2026-10-11_06-00-12} (75 MHz, config otherwise
+unchanged); the committed post-fill netlist matches RTL on all 6
+gate-vs-RTL programs and 124/124 port-matrix cells, census 4868 flops
+with \code{fwd_b_*} present, negative control detected
+(\src{tools/verif/gls/sky130/run_netlist_proof.sh}). New views are in
+\src{pnr/sky130/cpu/macro/} (all 403 LEF pins at identical positions).
+CPU standalone: LVS match, KLayout DRC 0, routing DRC 0, Magic
+27,733,913 (same count as before, 99.9869 \% inside SRAM footprints,
+remaining 3,626 = known \code{nwell.4} abstract artifact); setup clean
+at all tt/ff corners (+3.44 ns nom\_tt) but \textbf{ss reg-to-reg setup
+FAILS (max\_ss −3.70 ns, 996 violators; icache tag-SRAM half-cycle paths
+--- reported, not tuned)}; hold fails only on I/O ports. Sky130 SoC
+re-run on the new macro (\code{RUN_2026-10-11_08-39-41}, rccal flow):
+LVS 0, routing DRC 0, setup and hold clean at all 9 corners (worst +2.48
+/ +0.287 ns); \code{CVT.MaxCapViolations} FAILS (3 flat nets, ss
+corners) and the \code{axi_rdata_i[12]} waiver is now stale --- owner
+decisions open (see bead \bead{dud4}, \src{docs/SKY130_SLEW_CAP_E45J.md}
+§8). \textbf{This is a NEW baseline, not a single-variable comparison}
+(frontend + RTL since July + registered-APB-output macro). Every earlier
+Sky130 CPU/SoC result wrapped the functionally wrong macro.
+\textbf{ASAP7 CPU/GPU macros are still the corrupt Synlig views
+(shelved, blocked on bead \bead{2kn}/\code{lxv}).} Note: the gc0y
+synthesis gate\textquotesingle s structural \code{x-driven-net} check
+false-positives on 509 sv2v function-inlining temporaries when run on
+the SoC (it was validated on the CPU only); the SoC run used
+\code{CVT_SYNTH_GATE=warn} (shell export, not in any tracked file) ---
+owner decision open.
+
+\textbf{Current status (2026-10-15)}: Phase 6 IP expansion \ok{}
+complete (6a--6c RTL; batched Sky130 Gate B harden \ok{} 2026-10-05,
+items 13--15 below). Two tracks are in progress: \textbf{DFT} (epic
+\code{j41m}: scan + JTAG + MBIST for the Sky130 SoC; Stage 1b JTAG TAP
+merged, Stage 1a fabric RTL merged with bead \bead{j41m.2} still open,
+item 16) and \textbf{FPGA prototyping} (epic \code{hlrm}: Stage 0 done,
+no hardware, item 17).
+
+\textbf{Target}: Build a complete SoC with CPU, GPU, caches, and
+peripherals through incremental phases.
+
+Per-phase completion records → \src{docs/readme/PHASE_HISTORY.md} and
+\src{docs/PHASE_STATUS.md}.
+
+\end{record}
+
+\section{Project Phases}\label{cr:status:claude-md-overview:project-phases}
+
+\begin{record}
+
+See \src{docs/ROADMAP.md} for the complete phase plan and
+\src{docs/PHASE_STATUS.md} for current status.
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*159/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*410/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*410/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Phase
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Scope
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+0 --- Foundations & Specs + Python reference models (no RTL) & \ok{}
+2026-01-18 \\
+1 --- Minimal RV32I core & Single-cycle; AXI4-Lite master; APB3 debug &
+\ok{} 2026-02-13 \\
+2 --- Pipelined CPU & 5-stage in-order; RV32I+Zicsr; M-mode interrupts;
+hazard/\allowbreak{}forwarding & \ok{} 2026-03-08 (75 MHz Sky130) \\
+3 --- Memory system & L1 I\$ + D\$ (4 KB each, direct-mapped,
+write-back); FENCE.I & \ok{} 2026-05-21 (ASAP7 1418 MHz) \\
+4 --- GPU-Lite SIMT & 8-lane warps, single CU, round-robin, 1-level
+divergence, 16 KB shared mem & \ok{} 2026-05-27 (ASAP7 571 MHz) \\
+5 --- SoC integration & CPU + GPU + DMA + AXI4 crossbar +
+UART/\allowbreak{}SPI/\allowbreak{}timer/\allowbreak{}IRQ + behavioral
+SRAM & \ok{} 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW \warn{} fabric-only
+sign-off) \\
+6+ --- IP expansion &
+GPIO/\allowbreak{}I2C/\allowbreak{}PWM/\allowbreak{}WDT/\allowbreak{}TRNG/\allowbreak{}AES-SHA
+peripherals; INT8 NPU; tech-node exploration & \ok{} \textbf{Phase 6
+complete 2026-10-05} --- \textbf{6a \ok{}} (GPIO \code{ckc}/\code{00ef}
++ Sky130-hardened, PWM \code{f7vs.6}, WDT \code{f7vs.7}, TRNG
+\code{f7vs.8}, I2C \code{f7vs.9}); \textbf{6b CRYPTO \ok{} done}
+(AES-128 + SHA-256, bead \bead{f7vs.10}); \textbf{6c NPU \ok{} done}
+(INT8 4×4, bead \bead{f7vs.11}) --- Phase 6 RTL complete; Gate B batched
+Sky130 harden \ok{} 2026-10-05 (\code{f7vs.15}, \prref{214}); golden spec
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md}, epic \code{f7vs} (closed) \\
+7 --- Mixed-Signal PLL & Dual-PDK charge-pump PLL (ASAP7 indicative +
+Sky130 real DRC/LVS) via analog-design agents; AMS RNM integrated as SoC
+clock source & done (M-a..M-c) \\
+\end{longtable}
+}
+
+}
+
+\end{record}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Current Workflow (Phase 5 --- SoC Integration)}\label{cr:status:phase5-workflow}
+
+\begin{record}
+
+Legend: \ok{} done · \wip{} in progress · \hold{} not started. Milestone
+status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \ok{} \textbf{AXI4 interconnect} (M1/M3): \code{axi4_crossbar.sv},
+  \code{axi_lite_interconnect.sv}, \code{axi_lite_register_bank.sv};
+  Phase 3 refill FSMs upgraded to AXI4 burst (M2)
+\item
+  \ok{} \textbf{Peripherals + DMA} (M4/M5): UART, SPI, timer, interrupt
+  controller, DMA engine in \src{rtl/periph/}
+\item
+  \ok{} \textbf{SRAM controller} (M6): behavioral AXI4-slave in
+  \src{rtl/soc/sram_controller.sv}
+\item
+  \ok{} \textbf{SoC top integration} (M8): CPU + GPU + DMA + peripherals
+  wired in \src{rtl/soc/soc_top.sv} (+ \code{boot_rom.sv})
+\item
+  \ok{} \textbf{Performance counters} (M7): CSR-mapped + AXI-Lite GPU
+  stats (CPU re-sign-off 1282 MHz)
+\item
+  \ok{} \textbf{SoC verification} (M9): boot 100/100; DMA+UART+SPI
+  loopback; SW coherency (D\$ flush→GPU→D\$ inval); CPU-GPU IRQ-driven
+  integration; DUT-side boot SRAM check. Found+fixed 2 RTL bugs (D-cache
+  MMIO caching \code{go9}; axi4\_\allowbreak{}crossbar AR/AW
+  handshake+arbitration \code{7fs}). \code{soc_all} 73/73 at M9 (142/142
+  as of 2026-08-01, after the PMU epic + \ghref{91}
+  async\_\allowbreak{}axi\_\allowbreak{}fifo).
+\item
+  \ok{} \textbf{Full regression}: CPU rollup + GPU + cache green;
+  \textbf{1M+ cycle SoC stress (1,079,867 cyc, 0 fail)} + CPU/GPU
+  benchmarks (M9 \code{pgf})
+\item
+  \ok{} \textbf{L2 cache evaluation} (M10): benchmarked → \textbf{NO-GO}
+  (no L2, keep direct-mapped L1; 2-way also evaluated + rejected).
+  \src{docs/M10_L2_DECISION_ANALYSIS.md}
+\item
+  \ok{} \textbf{Backend flow} (M11): full SoC synth + P\&R + STA via
+  \texttt{make\ librelane-\allowbreak{}asap7-\allowbreak{}soc} (sv2v
+  frontend --- Synlig can\textquotesingle t synth this SoC;
+  \src{pnr/asap7/soc/}, \code{phase5_soc.sdc} single-clock,
+  \code{phase5_soc.upf} 4-domain). Signed off \textbf{571 MHz / 62.9 mW
+  \warn{} fabric-only, excludes both hard macros / 520×520 µm / 65.6 \%
+  util / 0 DRC / 0 antenna \warn{} unsupported, see bead \bead{xy6}}
+  (run 14). PDN \warn{} withdrawn --- every ASAP7 run committed ZERO
+  power-grid shapes (bead \bead{4l8}); the "benign tap-cell artifact"
+  reading was wrong. \warn{} Timing/\allowbreak{}power also unvalidated
+  post-\code{8f3} (STA zero-wire, run 14 artifacts wiped) --- see
+  \src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat" bead
+  \bead{0p6} note. \ok{} Current RTL HAS been re-measured on the fixed
+  flow (bead \bead{0d0}, 2026-09-18): −727.37 ps / 781 violators / hold
+  clean / 283.6 mW at \code{RUN_2026-09-17_20-41-11}; run
+  14\textquotesingle s own figures stay unvalidated.
+  \src{docs/PHASE5_RUN_HISTORY.md}
+\item
+  \ok{} \textbf{Sign-off} (M12): M11 PPA recorded; docs updated
+  (CLAUDE/\allowbreak{}ROADMAP/\allowbreak{}PHASE\_\allowbreak{}STATUS →
+  Phase 5 complete). Indicative ASAP7 (predictive PDK). Follow-ups:
+  sv2v↔RTL equivalence --- largely done 2026-09-13 (bead \bead{q7n}:
+  flat \code{soc_top} 99.65 \% proven / 0 disproven; 25 of 27 modules
+  proven outright via \src{tools/verif/equiv_sv2v_module.sh}, bounded
+  post-reset BMC passes on \code{pmu} and \code{dma_engine}; the SoC now
+  elaborates in strict LRM mode after fixing \code{soc_top.sv}
+  use-before-declare and two \code{__pnr__} shim
+  \texttt{parameter\ string} mismatches --- \code{soc_all} 183/183,
+  re-sweep on the regenerated netlist unchanged) + CPU-macro burst-port
+  LEF (\code{g0o})
+\item
+  \ok{} \textbf{Behavioral PMU} (Pre-Phase-6 \#5, GH epic \#98 →
+  \#99/\allowbreak{}\#100/\allowbreak{}\#101, 2026-08-01):
+  \src{rtl/soc/pmu.sv} --- APB4 slave + per-domain sequencer FSM
+  encoding the 4 PST states from \code{phase5_soc.upf}. Sequencing order
+  is \textbf{fixed by the UPF} (down:
+  \texttt{ret\_\allowbreak{}save\ →\ iso\_\allowbreak{}en\ →\ gate\ clk\ →\ reset};
+  up: the reverse), walked one action per cycle through an explicit
+  9-state chain. PMU sits at \texttt{0x2000\_\allowbreak{}8000–8FFF} ---
+  no free APB slot existed, so \code{PERIPH_LIMIT} +
+  \code{AXIL_APB_LIMIT} were extended to \code{0x2000_8FFF}. Two
+  \code{rv32i_clock_gate} cells gate \code{core_clk} into
+  \code{u_cpu}/\code{u_gpu} (first SoC-level clock gates); isolation
+  clamps live in \code{soc_top} per
+  \texttt{-\allowbreak{}location\ parent}. \textbf{Outputs are
+  registered (bead \bead{ktwt}, 2026-10-18)}:
+  \code{clk_en}/\code{iso_en}/\code{rst_n}/\code{ret_*} are flop Q pins
+  loaded from the NEXT-state decode (zero latency change), because the
+  earlier combinational decode of the binary \code{dom_state_q} could
+  glitch into \code{cdc_sync} D pins and the async clear of
+  \code{u_cpu_pmu_rst_sync};
+  \src{tools/verif/check_registered_outputs.py} proves it structurally
+  (a zero-delay sim cannot). A Sky130 SoC re-harden is a follow-up.
+  \textbf{Isolation handshake (bead \bead{3ogd})}: the CPU clamp control
+  (\code{pmu_cpu_iso_en_sync}, \code{cpu_core_clk}) is synchronised back
+  to \code{core_clk} (\code{u_cpu_iso_ack_sync}) as
+  \code{pmu.cpu_iso_ack_i}; the CPU \code{DOM_PD_ISO} waits for it
+  before gating the clock and asserting reset ("isolate first" now holds
+  at any clock ratio; it failed at a CPU clock 3x slower than the
+  fabric), and \code{DOM_PU_ISO} waits for it to fall (4-phase RZ, so a
+  stale ack cannot satisfy the next power-down). \code{ISO_ACK_TIMEOUT}
+  (255) bounds the wait and sets sticky \code{STATUS[3]} (dead CPU clock
+  must not hang the PMU). The GPU needs none (same clock). UPF step
+  order unchanged. PD timing of the new crossing is NOT validated
+  (budgets added to the check SDCs, no routed run). \textbf{Sequencing
+  only} --- retention save/\allowbreak{}restore are emitted in order but
+  are a functional no-op (the UPF, rewritten 2026-10-17 bead
+  \bead{h3lm}, declares no retention and no power switches), and no
+  \code{pg_ctrl}. \code{soc_all} \textbf{120/120}, \code{test_pmu} 10/10
+  with per-cycle ordering assertions.
+\item
+  \ok{} \textbf{2-domain multi-clock SoC + CDC} --- COMPLETE 2026-08-09,
+  both domains close (Pre-Phase-6 \#4, GH epic \#90 → \#91--\#96, bead
+  \bead{d8v} decision in \src{docs/3PLL_CDC_EVALUATION.md}): split the
+  SoC into CPU @ \textasciitilde1282 MHz and GPU+bus+periph @ 571 MHz,
+  giving exactly \textbf{one} CDC boundary (CPU ↔ crossbar M0).
+  \textbf{\#91 done (2026-08-01)}: \src{rtl/soc/async_axi_fifo.sv} ---
+  dual-clock AXI4 bridge, 5 gray-code FIFOs
+  (AW/\allowbreak{}W/\allowbreak{}B/\allowbreak{}AR/\allowbreak{}R,
+  id-less to match the crossbar\textquotesingle s master face), built on
+  new reusable primitives in \src{rtl/soc/cdc/} (\code{cdc_sync},
+  \code{cdc_reset_sync}, \code{cdc_gray_fifo}). Cummings style-1
+  pointers: only the \emph{registered} gray pointer crosses, through one
+  2-FF sync each way; \code{full_q}/\code{empty_q} registered in their
+  own domains, so \textbf{no combinational path crosses the boundary}.
+  Reset is cross-coupled
+  (\texttt{rst\_\allowbreak{}both\_\allowbreak{}n\ =\allowbreak{}\ s\_\allowbreak{}rst\_\allowbreak{}n\_\allowbreak{}i\ \&\ m\_\allowbreak{}rst\_\allowbreak{}n\_\allowbreak{}i}
+  into both \code{cdc_reset_sync}) --- a one-sided reset would otherwise
+  inject fabricated AXI beats. Reset is a \textbf{hard flush, not a
+  graceful abort} (a burst can be left half-transferred; both resets
+  must share a common root). \code{DEPTH} must be a power of two ≥ 2
+  (elaboration guard; the DEPTH=2 variant was added by bead \bead{3snb}
+  2026-10-13 --- the full flag at depth 2 is
+  \texttt{wr\_\allowbreak{}gray\_\allowbreak{}d\ =\allowbreak{}=\allowbreak{}\ \textasciitilde{}rd\_\allowbreak{}gray\_\allowbreak{}sync\_\allowbreak{}w}
+  because a 2-bit gray pointer has no low bits for the general "invert
+  the top two bits" compare; \code{async_axi_fifo} itself remains
+  validated at ≥ 4 only). \code{test_async_axi_fifo} \textbf{22/22},
+  \code{soc_all} \textbf{142/142}. \warn{} The \code{mem_q} →
+  read-domain combinational read is a real async path --- \textbf{\#94
+  must add
+  \texttt{set\_\allowbreak{}max\_\allowbreak{}delay\ -\allowbreak{}datapath\_\allowbreak{}only}}
+  on it and on the two gray-pointer crossings. \textbf{\#92 done
+  (2026-08-01)}: second \code{pll_subsystem} instance
+  (\code{u_cpu_pll_sub}) + second top-level reference port
+  \code{cpu_clk_i}/\code{cpu_rst_n_i} + \code{APB_PLL2} slot at
+  \texttt{0x2000\_\allowbreak{}9000–9FFF}
+  (\code{PERIPH_LIMIT}/\code{AXIL_APB_LIMIT} extended).
+  \code{pll_clkgen_stub} is a pure ref passthrough with no divide, so
+  two PLLs off \textbf{one} reference would be bit-identical --- hence a
+  second \emph{port}, not a divided clock (also avoids the Run-13 CTS
+  split-tree lesson in \code{phase5_soc.sdc}). \ghref{89} \code{pll_enable}
+  self-brick was already fixed in \code{110d7ac}; \#92 only replicates
+  it to instance 2. \textbf{\#93 done (2026-08-02)}: CPU domain made
+  real. \code{u_cpu_cg} re-sourced \code{core_clk}→\code{cpu_core_clk};
+  \texttt{async\_\allowbreak{}axi\_\allowbreak{}fifo\ u\_\allowbreak{}cpu\_\allowbreak{}axi\_\allowbreak{}cdc}
+  inserted on CPU↔crossbar M0; \code{pmu_cpu_clk_en}/\code{iso_en} via
+  \code{cdc_sync} and \code{pmu_cpu_rst_n} via \code{cdc_reset_sync}
+  into the CPU domain; \code{ext_irq}/\code{timer_irq} synchronised
+  (both level-held, so 2-FF is safe); ISO\_CPU clamps moved to the
+  bridge\textquotesingle s CPU-domain face. New
+  \textbf{\src{rtl/soc/apb_cdc_bridge.sv}} (originally a 2-phase toggle
+  handshake at \#93; converted to a 4-phase return-to-zero handshake by
+  bead \bead{rfz}, 2026-08-12 --- see the file header) closes the
+  APB\_PLL2 crossing that went live once
+  \texttt{cpu\_\allowbreak{}clk\_\allowbreak{}i\ !=\allowbreak{}\ clk\_\allowbreak{}i}
+  (\code{axil_to_apb} confirmed tolerant of arbitrary \code{pready} wait
+  states). TB wrappers now expose \code{cpu_clk_i}/\code{cpu_rst_n_i} as
+  real ports with a shared \code{soc_clocks.py} helper; existing suites
+  stay at 1:1. \code{soc_all} \textbf{159/159} (21 suites),
+  \code{test_apb_cdc_bridge} 15/15, \code{soc_multiclock} 4/4 +
+  \code{soc_pll_multiclock} 1/1 at a \textbf{7 ns / 3 ns coprime ratio}
+  --- the first real CDC coverage in this repo. \warn{} \textbf{Two RTL
+  bugs found only at a divergent ratio}, both invisible to every 1:1
+  suite \emph{and} to \code{async_axi_fifo}\textquotesingle s own 22
+  unit tests, because both reset their domains together: (1)
+  \code{4398c2e} --- the CPU clock-enable synchroniser reset to
+  "disabled", so \code{cpu_gated_clk} was stopped for the whole reset
+  window and the CPU\textquotesingle s \emph{synchronous} reset never
+  loaded \code{RESET_PC} (fix: synchronise the inverted enable so
+  reset-to-0 means "not disabled"); (2) \code{7a9f9d4} ---
+  \code{cdc_gray_fifo}\textquotesingle s
+  \texttt{wr\_\allowbreak{}ready\_\allowbreak{}o\ =\allowbreak{}\ !full\_\allowbreak{}q}
+  was not gated by \code{wr_rst_n_i}, so the FIFO advertised ready while
+  held in reset and silently swallowed beats (fix:
+  \texttt{wr\_\allowbreak{}ready\_\allowbreak{}o\ =\allowbreak{}\ wr\_\allowbreak{}rst\_\allowbreak{}n\_\allowbreak{}i\ \&\&\ !full\_\allowbreak{}q}).
+  Shared signature: \textbf{a reset value that advertises availability}.
+  \#95 should gate on that class explicitly rather than trusting
+  unit-suite green. \textbf{\#94 done (2026-08-02)}:
+  \src{pnr/constraints/phase5_soc_multiclock.sdc} --- evolved from the
+  run-14 signed-off \code{phase5_soc.sdc}, not rewritten. Two
+  \code{create_clock} on the \textbf{ports} (\code{sys_clk} 1750 ps on
+  \code{clk_i}, \code{cpu_clk} 780 ps on \code{cpu_clk_i}) --- the
+  Run-13 CTS split-tree lesson is preserved and extended to the second
+  PLL stub, so still \textbf{no \code{create_generated_clock}} for
+  \code{core_clk}/\code{cpu_core_clk}. Adds
+  \texttt{set\_\allowbreak{}clock\_\allowbreak{}groups\ -\allowbreak{}asynchronous}
+  between the two, then
+  \texttt{set\_\allowbreak{}max\_\allowbreak{}delay\ -\allowbreak{}datapath\_\allowbreak{}only}
+  (bounded to one \emph{destination}-domain period) on: all 5
+  \code{async_axi_fifo} channel FIFOs (\code{mem_q} combinational read +
+  both gray-pointer crossings each),
+  \code{apb_cdc_bridge}\textquotesingle s 2 toggle crossings + 4
+  \code{cmd_*}/2 \code{resp_*} payload buses, and the PMU/IRQ single-bit
+  crossings into \code{cpu_core_clk}. \code{u_cpu_pmu_rst_sync} gets
+  \code{set_false_path} instead --- it is an async-clear reset path, not
+  a setup-checked datapath. Also fixed the sv2v build lists
+  (\code{SKY130_SOC_SV_FILES}/\code{SOC_SV_FILES} were missing all 5 CDC
+  modules \textbf{and} \code{rv32i_clock_gate.sv}); both
+  \texttt{make\ <pdk>-\allowbreak{}soc-\allowbreak{}sv2v} runs now
+  regenerate clean. \warn{} \textbf{sv2v has no Verilator-style
+  \code{-I} auto-discovery}, so a missing module there is silently
+  blackboxed --- the cocotb regression can never catch it. SDC is
+  Tcl-syntax-validated only, not yet run through OpenSTA and not yet
+  wired into any \code{config.json} (\#96). Residual, non-blocking:
+  metastability injection is not modelable in Verilator; PMU-driven live
+  power-cycling across domains is untested (bead \bead{2k8}) --- the
+  underlying ordering hazard (\code{pmu.sv} releases \code{rst_n_w} one
+  cycle \emph{before} ungating \code{clk_en_w} on power-up) was
+  \textbf{closed in \code{soc_top.sv}}, not \code{pmu.sv}, by gating
+  \code{u_cpu_cg} with the CPU-domain-native
+  \code{pmu_cpu_rst_n_cpu_sync}
+  (\texttt{cpu\_\allowbreak{}gated\_\allowbreak{}clk\_\allowbreak{}en\ =\allowbreak{}\ \textasciitilde{}pmu\_\allowbreak{}cpu\_\allowbreak{}clk\_\allowbreak{}dis\_\allowbreak{}sync\ \&\ pmu\_\allowbreak{}cpu\_\allowbreak{}rst\_\allowbreak{}n\_\allowbreak{}cpu\_\allowbreak{}sync},
+  commit \code{30beab3}): \code{pmu.sv}\textquotesingle s sequence order
+  is UPF-mandated and the sync-reset CPU domain depends on it to keep
+  its flop state across a PMU cycle
+  (\code{docs/POWER_DOMAIN_EVALUATION.md:22,25}), so it stays unchanged.
+  \warn{} That state survival is a behavioural-model artifact of the
+  \textbf{CPU only} (bead \bead{4a7i}): the GPU domain uses async reset,
+  so \code{pmu_gpu_rst_n} clears GPU state (IRQ latch,
+  \code{irq_enable}, \code{done}) despite the gated clock (repro
+  \code{tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu}).
+  Neither domain models real retention (none in Phase 5); software must
+  re-initialise the GPU after power-up. \code{timer_irq} is never
+  exercised by any reused firmware. Also unfixed by design: the PMU
+  power-down path has \textbf{no drain/\allowbreak{}quiesce step}, so a
+  mid-burst CPU reset can wedge a crossbar slave engine
+  (\code{soc_top.sv:84-93}) --- pre-existing, widened by the
+  bridge\textquotesingle s hard-flush reset. \textbf{\#96 done
+  (2026-08-09)}: multi-clock PD re-closure, 8 runs (16--23). Driven by a
+  new \src{pnr/asap7/soc/config_multiclock.json} +
+  \code{librelane-asap7-soc-multiclock} target, leaving
+  \code{config.json} and the run-14 sign-off byte-reproducible.
+  \textbf{Best and accepted: run 23} (\code{RUN_2026-08-09_14-36-16})
+  --- \textbf{BOTH domains close}: \code{sys_clk} \textbf{+74.8 ps / TNS
+  0 / 0 violators → 571 MHz MET}, \code{cpu_clk} \textbf{+9.8 ps / TNS 0
+  / 0 violators → 1282 MHz MET}, the first time the CPU domain has ever
+  met its 780 ps target. 0 routing DRC, 0 antenna, 0 slew/cap \warn{}
+  all unsupported, run 23 committed zero routed wires --- bead
+  \bead{xy6}, 51.9 mW \warn{} fabric-only (excludes both hard macros ---
+  see bead \bead{ew3} / \src{docs/PHASE5_RUN_HISTORY.md}; the 62.9→51.9
+  mW drop vs. run 14 must NOT be read as a multi-clock power win, it
+  coincides with the unrelated first-ever \code{USE_ICG_CELL}
+  insertion), 66.9 \% util, and the \textbf{post-route CDC budget check
+  PASS}. \warn{} Both domains\textquotesingle{} timing figures here are
+  also \code{8f3}-affected STA-zero-wire results, unvalidated and
+  run-23-artifacts-gone (bead \bead{0p6}); the honest current-RTL
+  post-GRT point (different RTL vintage, not a run-23 re-run) is
+  \textbf{setup WNS −727.37 ps / TNS −60,665 ps / 781 violators, hold
+  CLEAN, 283.6 mW total / 89.6 mW fabric-only} at
+  \code{RUN_2026-09-17_20-41-11} (bead \bead{0d0}, 2026-09-18;
+  supersedes the earlier −2084 ps / 41,864-violator \code{w3a-sta-7}
+  snapshot) --- \src{docs/PHASE5_RUN_HISTORY.md} §"Power figure caveat".
+  The CPU domain runs \textbf{2.24× the fabric} instead of being
+  de-rated onto it. Getting there needed two independent fixes: (a) the
+  macro exported \textasciitilde600--800 ps combinational in→out arcs on
+  its APB outputs ---
+  \code{apb_prdata_o}/\code{apb_pslverr_o}/\code{apb_pready_o} are now
+  PURE registered outputs (two earlier attempts failed and are
+  documented in \code{rv32i_cpu_top.sv}: registering \code{prdata} alone
+  merely RELOCATED the delay into an 876.85 ps input setup requirement,
+  and a SETUP-phase decode for \code{pslverr} still left a 617.9 ps arc
+  re-sourced from \code{apb_psel_i}); and (b) the CPU macro had
+  \textbf{no \code{FP_PIN_ORDER_CFG}}, so every regeneration reshuffled
+  \textbf{393 of 401} boundary pins --- that, not the RTL, caused run
+  22\textquotesingle s −596 ps collapse (post-CTS \code{cpu_clk} skew
+  −485.6 → −922.1 ps, hold violations 805 → 4702, 4814 hold buffers
+  inserted). \src{pnr/asap7/cpu/pin_order.cfg} now pins it: two runs
+  produce a byte-identical LEF, which made tuning measurable for the
+  first time (block setup −25.87 → −10.48 → \textbf{−0.87 ps} across
+  three revisions). Full table + caveats →
+  \src{docs/PHASE5_RUN_HISTORY.md}. \warn{} \textbf{Three findings that
+  outlive \#96, all measured:} (1) bead \bead{s9f} --- librelane
+  declares the resizer slack margins \texttt{units=\allowbreak{}"ns"}
+  but passes them raw to OpenROAD, which reads the Liberty unit; ASAP7
+  is \code{1ps}, so \code{0.075}/\code{0.1} meant 0.075 ps / 0.1 ps.
+  \textbf{Every ASAP7 sign-off in this repo (CPU 1282 MHz, GPU, SoC run
+  14) had \textasciitilde0 optimisation guard band, not 75/100 ps.}
+  Reported slacks remain valid; the guard band does not. (2) bead
+  \bead{7l5} (fixed + closed) ---
+  \code{check_cdc_timing.tcl}\textquotesingle s exceptions never bound
+  on a flattened netlist: hierarchy survives only as dot-joined escaped
+  \textbf{net} names while cells become anonymous,
+  OpenSTA\textquotesingle s
+  \texttt{-\allowbreak{}filter\ "name\ =\allowbreak{}\textasciitilde{}"}
+  mis-parses a literal \code{.}, and the old exceptions targeted the
+  synchroniser \textbf{output} (\code{q_o}), a destination-domain-only
+  path rather than the crossing. Now re-pointed at the
+  launch→first-capture segment and proven non-vacuous by negative
+  control (all budgets forced to 1 ps → 7 violated groups). (3) beads
+  \code{cyb}/\code{g0o} --- \textbf{both now FIXED in run 23}: the
+  800.71 ps combinational APB-debug arc is gone (all three APB outputs
+  registered; no output pin of the macro carries a combinational arc),
+  and the burst-era ports (\code{axi_rlast_i}, \code{awlen},
+  \code{wlast}, \code{arlen}, \ldots) are now constrained in the block
+  SDC and present in both the LEF and the Liberty. A new finding
+  replaces them: the macro boundary was never pinned, so any
+  regeneration could silently wreck the integrating
+  top\textquotesingle s timing --- fixed by \code{pin_order.cfg}, and
+  the GPU macro has the same untreated exposure. IR drop was
+  unobtainable until 2026-09-12 (now fixed, see below):
+  \code{analyze_power_grid} failed \code{PSM-0069} --- \warn{} not from
+  a tap-cell artifact, but because \textbf{no ASAP7 run ever committed a
+  power grid at all} (bead \bead{4l8}): \code{pdngen} raises
+  \code{PDN-0179} inside \code{build_grids}, before \code{write_to_db},
+  and the local warn-and-continue patch swallowed it. Measured: 0
+  \code{dbSWire} shapes on VDD/VSS in run 23 and in the 3.0.14 CPU run,
+  against 65 610 in a sky130 control. Consequence: every ASAP7
+  routing/\allowbreak{}DRC number was produced with M1/M2/M5 free of PDN
+  metal and is a lower bound. See \src{docs/PHASE5_RUN_HISTORY.md} §PDN
+  caveat. \textbf{Fixed 2026-09-12 (bead \bead{4l8}):} the grid topology
+  was wrong --- M1 rails were connected straight to M5 with M2 as a
+  parallel sparse strap; the ORFS ASAP7 reference puts followpins on
+  both M1 and M2, then M2→M5→M6. With \src{pnr/asap7/pdn_asap7_orfs.tcl}
+  the CPU block builds 27 999/27 213 PG shapes, \code{check_power_grid}
+  PASSes both nets, and IR drop reports 0.18 \%/0.19 \% worst case
+  (indicative --- harness on a floorplan-stage ODB, not a full run).
+  ASAP7 also shipped no via resistances, so \code{VIAS_R} had to be
+  added or PSM aborts with \code{PSM-0021}.
+\end{enumerate}
+
+\textbf{Phase 6+} (after Phase 5 sign-off; Phase 6 complete 2026-10-05,
+see items 13--15): additional \textbf{APB4} peripherals
+(GPIO/\allowbreak{}I2C/\allowbreak{}PWM/\allowbreak{}WDT/\allowbreak{}TRNG/\allowbreak{}AES-SHA),
+minimal INT8 NPU (\src{rtl/npu/}), and FreePDK45 tech-node exploration.
+See \src{docs/ROADMAP.md}. \warn{} Peripherals are \textbf{APB4}, not
+AXI4-Lite --- \src{docs/PERIPHERAL_BUS_EVALUATION.md} settled that
+("Phase 6 peripherals become trivial APB drop-ins"); the AXI4-Lite
+wording that stood here and in \code{docs/ROADMAP.md:398} until
+2026-09-20 was stale.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{12}
+\item
+  \ok{} \textbf{Phase 6a --- GPIO controller} (bead \bead{ckc}, RTL
+  2026-09-20; Sky130-hardened 2026-09-26 via bead \bead{00ef}):
+  \src{rtl/periph/gpio_controller.sv}, APB4 slave on
+  \code{apb4_register_bank}, \textbf{32 pins}, at
+  \texttt{0x2000\_\allowbreak{}A000–AFFF} as APB index 7.
+  \code{APB_N_SLAVES} 7 → 8 and both \code{AXIL_APB_LIMIT} /
+  \code{PERIPH_LIMIT} extended to \code{0x2000_AFFF} --- the same
+  two-edit pattern PLL/\allowbreak{}PMU/\allowbreak{}PLL2 each used.
+  Pins are the unidirectional triplet \code{gpio_out_o} /
+  \code{gpio_oe_o} / \code{gpio_in_i}: \textbf{this RTL tree contains no
+  \code{inout} or tristate at all}, and the Sky130 SoC hardens as a core
+  macro with no pad ring, so the bidirectional merge is deliberately
+  left to pad-ring integration. \code{gpio_in_i} is asynchronous and is
+  synchronised by \textbf{\code{N_PINS} separate
+  \texttt{cdc\_\allowbreak{}sync\ \#(.\allowbreak{}WIDTH(1))}
+  instances}, not one wide instance --- that primitive\textquotesingle s
+  own scope warning forbids multi-bit binary buses, and GPIO pins carry
+  no cross-bit word coherency. Per-pin level/\allowbreak{}edge
+  interrupts with polarity. \code{GPIO_IRQ_STAT} is \textbf{edge-sticky
+  / level-live}, ARM-PL061-style: an edge-mode bit latches and is
+  cleared only by a \code{GPIO_IRQ_CLR} write (a \textbf{set beats a
+  same-cycle clear}, so an edge is never lost to a racing clear), while
+  a level-mode bit simply follows its condition and \code{GPIO_IRQ_CLR}
+  has no effect on it. Making level events sticky too was rejected ---
+  at the reset defaults (level, active-low, pins undriven low) every
+  pin\textquotesingle s condition is true, so a fully sticky raw
+  register would latch to all-ones on the first cycle out of reset.
+  \code{GPIO_IRQ_EN} masks the output only, and \code{irq_o} is
+  level-held as \code{soc_top.sv:623-627} requires. New
+  \code{interrupt_controller} source bit 5 (\code{N_SOURCES} 5 → 6).
+  \code{test_gpio} \textbf{16/16}, \code{soc_all} \textbf{217/217} over
+  27 suites (201 pre-GPIO; CI \code{PASS_FLOOR} 170 → 210). Growing the
+  APB window to \code{0x2000_AFFF} broke
+  \code{test_axil_interconnect.test_decerr_unmapped}, which probed
+  \code{0x2000_A000} expecting DECERR --- \code{BAD_HIGH} bumped to
+  \code{0x2000_B000}, which is the per-growth maintenance step that
+  test\textquotesingle s own comment already prescribes; expect the same
+  edit for every future APB slot. Also fixed in passing:
+  \code{apb_interconnect.sv}\textquotesingle s response-mux index width,
+  which tripped \code{WIDTHTRUNC} once \code{N_SLAVES} hit the
+  power-of-two 8 (now separate \code{SEL_W}/\code{IDXW} localparams,
+  with \code{IDXW} guarded so the module\textquotesingle s own
+  \code{N_SLAVES=1} default stays legal). \ok{} \textbf{Hardened on
+  Sky130 2026-09-26} (\code{RUN_2026-09-26_00-07-59}, bead \bead{00ef}):
+  \textbf{Netgen LVS PASSED}, routing DRC 0, \textbf{setup AND hold both
+  clean at all 9 corners} (+7.08 ns / +0.1413 ns), 48.25 mW, 38.98 \%
+  util, 40 MHz. Magic DRC 9,081 is the only deferred error (bead
+  \bead{45a} waiver). \warn{} First Sky130 SoC harden since 2026-07-30
+  and \textbf{NOT} a single-variable comparison with it --- 33 RTL
+  commits intervened, 13 touching \code{soc_top.sv}. Notably \textbf{the
+  ss setup failure bead \bead{ujv} was deferred on no longer
+  reproduces}. KLayout DRC was \textbf{skipped, not waived} (8.5 GB peak
+  OOM-killed the prior attempt on this 15 GB host, and
+  \code{KLayout.DRC} precedes \code{Netgen.LVS} in
+  librelane\textquotesingle s Classic flow, so the kill cost LVS for a
+  check not on the path to it);
+  \texttt{make\ librelane-\allowbreak{}sky130-\allowbreak{}soc-\allowbreak{}noklayout}
+  does this via \code{--skip} so \code{config.json} keeps
+  \texttt{RUN\_\allowbreak{}KLAYOUT\_\allowbreak{}DRC:\allowbreak{}\ true}.
+  Hold went \textbf{71 → 3 → 0} by raising
+  \code{GRT_RESIZER_HOLD_SLACK_MARGIN} 0.05 → 0.3 and adding
+  \texttt{PL\_\allowbreak{}RESIZER\_\allowbreak{}HOLD\_\allowbreak{}SLACK\_\allowbreak{}MARGIN:\allowbreak{}\ 0.\allowbreak{}3},
+  then closing the last 3 --- root cause was that all design repair runs
+  on GRT-\textbf{estimated} parasitics with no repair stage after RCX,
+  so real-route erosion lands where nothing can react (every violation
+  was a boundary-port path; \code{timing__hold_r2r_vio__count} = 0 at
+  all 9 corners). The 3 survivors were one path, \code{gpio_in_i[31]} →
+  a \code{cdc_sync} stage-1 flop, closed by
+  \texttt{set\_\allowbreak{}false\_\allowbreak{}path\ -\allowbreak{}from\ [get\_\allowbreak{}ports\ gpio\_\allowbreak{}in\_\allowbreak{}i]}
+  (plus \code{cpu_rst_n_i}, a latent gap of the same class dating to
+  2026-08-02). Open follow-ups: bead \bead{e45j} ---
+  max-slew/\allowbreak{}max-cap, root-caused to the fact that
+  \textbf{every} librelane repair step is pre-route and runs on
+  GRT-\emph{estimated} parasitics (\code{repair_design_postgrt.tcl} uses
+  \texttt{estimate\_\allowbreak{}parasitics\ -\allowbreak{}global\_\allowbreak{}routing}),
+  with no post-RCX repair stage existing at all, so real-parasitic
+  erosion lands where nothing can act on it (0/0 at steps 33/40/41 →
+  8623/346 at step 51). Adding a real post-RCX step would mean editing
+  the \textbf{shared external librelane install} every other flow here
+  uses, and the \code{Odb.InsertECOBuffers} alternative targets pins by
+  synthesis-generated name so any committed list goes stale --- both
+  rejected. Instead, over-repairing \emph{before} routing
+  (\texttt{GRT\_\allowbreak{}DESIGN\_\allowbreak{}REPAIR\_\allowbreak{}MAX\_\allowbreak{}\{SLEW,\allowbreak{}CAP\}\_\allowbreak{}PCT}
+  10 → 30,
+  \texttt{DESIGN\_\allowbreak{}REPAIR\_\allowbreak{}MAX\_\allowbreak{}\{SLEW,\allowbreak{}CAP\}\_\allowbreak{}PCT}
+  20 → 40) took \textbf{slew 8623 → 2380 and cap 346 → 70} at
+  \code{RUN_2026-09-26_07-34-03} while setup/\allowbreak{}hold slacks
+  both \emph{improved} --- at the cost of \textbf{antenna 132 → 182
+  nets}, the trade \code{sky130_soc.sdc:144-149} already documented. Not
+  zero, so still open. Bead \code{58q} (reopened 2026-09-26) then
+  recovered antenna by raising \code{GRT_ANTENNA_ITERS} 8 → 20 /
+  \code{GRT_ANTENNA_MARGIN} 25 → 50 --- \textbf{antenna 263 → 182 pins,
+  182 → 114 nets} (nets now better than the 120 \code{58q} originally
+  accepted), hold/\allowbreak{}setup/\allowbreak{}LVS/\allowbreak{}DRC
+  all still clean, at the cost of \textbf{max-slew 2380 → 3199}. \warn{}
+  \textbf{These two knobs pull against each other} --- repair buffers
+  cut slew and raise antenna; antenna diodes cut antenna and raise slew,
+  each diode being another load pin. The Pareto frontier is demonstrated
+  but uncharacterised; both current points are single-axis optima. Also
+  note \code{58q}\textquotesingle s old close reason contains a
+  \textbf{false premise} --- it claims GRT antenna repair skips the
+  legalization sub-steps, but \code{antenna_repair.tcl:23-27} sources
+  \code{dpl.tcl} and \code{grt.tcl} after \code{repair_antennas}; the
+  lever was safe only because \code{OpenROAD.RepairAntennas} already
+  runs in the adopted flow with hold clean. Both checkers remain
+  \code{--skip}-ped, and "max fanout = 0" is \textbf{vacuous} because
+  the SDC has no \code{set_max_fanout} at all. \ok{} \textbf{UPDATE
+  2026-10-07 (bead \bead{e45j}, \src{docs/SKY130_SLEW_CAP_E45J.md}):
+  root cause corrected and largely fixed.} The "0/0/0 at steps 33/40/41"
+  figures were \textbf{nom\_tt only} (mid-PnR STA runs one corner; other
+  corners\textquotesingle{} \code{state_out} values are stale step-9
+  copies), and the resizer \emph{is} corner-aware: an in-session GRT
+  estimate on the step-40 ODB already gave max\_ss slew 307 / cap 0. The
+  gap is the \textbf{estimator} --- sky130\textquotesingle s tech-LEF
+  layer C is ground-only, and OpenRCX extracts \textbf{1.69 / 1.88 /
+  2.04× the estimated C (min/\allowbreak{}nom/\allowbreak{}max) and 0.62
+  / 1.02 / 1.91× the R} (17 525 nets). A \textbf{project-local LibreLane
+  plugin} (\src{pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130}, no
+  shared-install edit) rescales the estimate per corner in the four
+  repair/\allowbreak{}resizer steps;
+  \texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc-\allowbreak{}rccal-\allowbreak{}noklayout}
+  (\code{config_rccal.json}). Measured vs Gate B baseline
+  \code{RUN_2026-10-05_06-50-11} (one run,
+  \code{RUN_2026-10-06_22-43-34}, \code{dma_engine.sv} pinned to its
+  Gate B version so only one variable changed): \textbf{max\_ss slew
+  7622 → 295, cap 140 → 0 (cap 0 at all 9 corners)}, antenna
+  \textbf{210/305 → 184/259 nets/pins (better, not worse)}, setup worst
+  slack +0.579 → \textbf{+3.276 ns}, hold +0.279 → +0.275 ns, LVS
+  PASSED, routing DRC 0, Magic 8984 unchanged, util 44.8 → 45.2 \%. This
+  broke the slew-vs-antenna trade-off. \code{e45j} stays open (295
+  residual: 16 SRAM-input pins = \code{o1i}, \textasciitilde33 buffer
+  nets, diode pins); \code{Checker.MaxCapViolations} could now be
+  un-skipped but was not executed this run. \ok{} \textbf{UPDATE
+  2026-10-09 (bead \bead{e45j}, \src{docs/SKY130_SLEW_CAP_E45J.md} §7):
+  the RC-calibrated flow is now the DEFAULT Sky130 SoC flow}
+  (\texttt{make\ -\allowbreak{}C\ pnr\ librelane-\allowbreak{}sky130-\allowbreak{}soc[-\allowbreak{}noklayout]}
+  runs \code{config_rccal.json}; \code{-norccal[-noklayout]} runs the
+  old \code{config.json} for A/B; \code{SKY130_SOC_CONFIG=} is honoured
+  by every target). Max-cap is gated at all 9 corners by the plugin step
+  \code{CVT.MaxCapViolations} with \textbf{one named, user-approved
+  single-net waiver} in
+  \src{pnr/sky130/soc/constraints/max_cap_waivers.json}: the load is the
+  CPU macro pin \code{u_cpu*/axi_rdata_i[12]} (Liberty pin cap 0.2464 pF
+  vs 0.0083 pF median; net 0.56-0.68 pF vs 0.5301 pF limit at the six
+  tt/ss corners), keyed on the macro pin (not the stale-prone driver
+  name \code{_078722_}), with a 0.70 pF ceiling and a stale-waiver
+  warning. \warn{} Un-skipping the stock \code{Checker.MaxCapViolations}
+  alone gates NOTHING (its
+  \texttt{corner\_\allowbreak{}override=\allowbreak{}[""]} matches no
+  corner; measured exit 0 + a WARNING), which is why the step is custom;
+  the stock checker cannot waive by net. Validated by 50 unit tests
+  (\src{tb/tests/test_cvt_maxcap_waiver.py}) plus the check applied to
+  the finished runs: PASS with the waiver, FAIL with an empty list; the
+  substituted step was exercised in LibreLane (\code{--only}) but
+  \textbf{no full flow has run with the adopted config yet}. Re-check
+  any run with
+  \texttt{make\ -\allowbreak{}C\ pnr\ sky130-\allowbreak{}soc-\allowbreak{}maxcap-\allowbreak{}check}.
+  Max-slew stays skipped (102-423 pins at max\_ss residual);
+  \code{GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500} is NOT adopted (needs
+  another RTL-vintage arm); the source fix (an input buffer inside the
+  CPU macro) still needs hard-macro approval. \warn{} \textbf{UPDATE
+  2026-10-08 (bead \bead{e45j}, \src{docs/SKY130_SLEW_CAP_E45J.md} §5):
+  confirmation on CURRENT RTL did NOT hold, so rccal is NOT adopted as
+  default and \code{Checker.MaxCapViolations} stays skipped.}
+  \code{RUN_2026-10-08_05-21-39} (rccal, no DMA pin): LVS PASSED,
+  routing DRC 0, setup+hold 0 violators (+3.329 / +0.282 ns), but
+  \textbf{max-cap = 1 at six tt/ss corners} (one driver, \code{_078722_}
+  o22a\_4 on \code{cpu_bridge_s_rdata[12]}, 0.614 pF vs 0.530 pF at
+  nom\_tt), max\_ss slew 295 → 423, antenna 184/259 → 205/273 nets/pins
+  (different netlist, one run per arm, noise uncharacterised; still
+  \textasciitilde18x better than Gate B on max\_ss slew). Un-skipping
+  would fail the flow. \ok{} \textbf{UPDATE 2026-10-09 (bead
+  \bead{e45j}, §6): still NOT adopted; noise is zero.} A same-config
+  repeat (\code{RUN_2026-10-08_21-07-20}) is \textbf{bit-identical} to
+  the confirmation run through step 51 (deterministic flow, so
+  run-to-run noise = 0). The one cap violation is a long wire (2 196 um,
+  rank 54/117 008) into a CPU-macro input pin whose Liberty cap is
+  \textbf{0.2464 pF vs a 0.0083 pF median} (\code{axi_rdata_i[12]}) ---
+  not an RC-estimator error. Single-variable run
+  \code{GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500}
+  (\code{config_rccal_wl1500.json}, \code{RUN_2026-10-08_23-12-19}):
+  max\_ss slew \textbf{423 → 102}, antenna 205/273 → 212/253,
+  setup/\allowbreak{}hold/\allowbreak{}LVS/\allowbreak{}DRC unchanged,
+  but \textbf{cap still 1 at the same six corners} (0.646 pF), so no
+  default changed and \code{Checker.MaxCapViolations} stays skipped.
+  Remaining fix is macro-side (CPU macro input buffering, needs
+  approval) or a named single-net waiver (user\textquotesingle s call).
+  \ok{} \textbf{UPDATE 2026-10-28 (bead \bead{e45j},
+  \src{docs/SKY130_SLEW_CAP_E45J.md} section 9):
+  \code{GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH=1500} IS now adopted (in
+  \src{pnr/sky130/soc/config_rccal.json}, the default), which SUPERSEDES
+  the "NOT adopted (needs another RTL-vintage arm)" above (kept as
+  history).} Single-variable arm \code{RUN_2026-10-28_05-14-30} vs
+  \code{RUN_2026-10-27_05-40-27} (identical netlist through floorplan):
+  max\_ss max-slew \textbf{1067 -\textgreater{} 129} (max\_tt 695
+  -\textgreater{} 1, max\_ff 596 -\textgreater{} 0), max\_ss setup WNS
+  -0.153 -\textgreater{} -0.055 ns (the 5 accepted NPU SRAM paths, bead
+  \bead{7dhp}), hold 0 violators, LVS 0, routing DRC 0, Magic DRC 10 962
+  vs 10 959 (same rules), CDC check PASS at 9 corners.
+  \code{config_rccal_wl1500.json} removed; \code{hold-dlygate-scd-link}
+  waiver ceiling 0.115 -\textgreater{} 0.120 pF, the two run-pinned
+  waivers deleted (\code{--strict-stale} on the arm: 9 waived, 0
+  unwaived, 0 stale). \code{check_scan_chains.py} needs
+  \texttt{-\allowbreak{}-\allowbreak{}en-\allowbreak{}net\ dft\_\allowbreak{}scan\_\allowbreak{}en}
+  or it false-fails on the resizer clone of the enable gate.
+\item
+  \ok{} \textbf{Phase 6b --- CRYPTO: AES-128 + SHA-256 accelerator}
+  (bead \bead{f7vs.10}, 2026-10-03): \src{rtl/periph/crypto_accel.sv} +
+  \code{aes128_core.sv} + \code{sha256_core.sv} --- two cores,
+  \textbf{one} APB4 slot, \textbf{one} IRQ, at
+  \texttt{0x2000\_\allowbreak{}F000–FFFF} as APB index 12 / IRQ bit 10,
+  with
+  \texttt{parameter\ bit\ EN\_\allowbreak{}AES\ =\allowbreak{}\ 1,\allowbreak{}\ EN\_\allowbreak{}SHA\ =\allowbreak{}\ 1}
+  generate guards so a PD run can drop either
+  (\texttt{EN\_\allowbreak{}AES=\allowbreak{}0\ \&\&\ EN\_\allowbreak{}SHA=\allowbreak{}0}
+  is an elaboration error, not a config). \code{APB_N_SLAVES} 12 → 13;
+  the window limits were already final at \code{0x2001_0FFF} from
+  groundwork \code{f7vs.2}, so unlike every 6a item \textbf{neither
+  \code{AXIL_APB_LIMIT} nor \code{PERIPH_LIMIT} nor \code{BAD_HIGH}
+  moved} --- \code{f7vs.2}/\code{f7vs.3} had pre-declared
+  \code{crypto_irq} and pre-placed it at \code{irq_src_i} bit 10,
+  reducing integration to one tie deletion plus the
+  array/\allowbreak{}count edits. \textbf{AES is encrypt-only, exposing
+  ECB \emph{and} CTR}: CTR makes an encrypt-only core a complete cipher
+  in both directions, so there is no inverse S-box and no inverse key
+  schedule --- nearly a second core avoided. Iterative 128-bit datapath,
+  \textbf{on-the-fly key schedule in a single 128-bit \code{rk_q}}; the
+  precomputed-11-round-key form was rejected twice over, at 1408 flops
+  \emph{and} because fetching round key \code{r} is exactly the
+  runtime-indexed read the \code{ma7} defect class forbids.
+  \code{SBOX_PARALLEL=16} → \textbf{11 cycles/\allowbreak{}block}; the
+  documented fold-to-4 fallback is \textbf{41 cycles and bit-identical},
+  folding via a byte-lane carousel that rotates the state through a
+  fixed substitution window (\code{s_q[31:0]} is always the substituted
+  slice) so it introduces \textbf{no} runtime-indexed mux and stays a
+  parameter change. SHA-256 is a single 512-bit block compress, 64
+  rounds at 1/cycle → \textbf{66 cycles/\allowbreak{}block}; padding,
+  length and multi-block iteration are
+  \textbf{software\textquotesingle s job} per FIPS 180-4, and
+  \texttt{CTRL[4]\ SHA\_\allowbreak{}CONT} chains from the RO
+  \code{DIGEST} words so chaining costs no 256-bit register. \textbf{No
+  new runtime-indexed mux} (the \code{ma7} acceptance criterion): S-box
+  and SHA \code{K} are constant-label \code{case} functions, Rcon is an
+  \code{xtime()} chain, the \code{W} schedule a shift register ---
+  verified by \texttt{synth\ -\allowbreak{}flatten} showing \textbf{no
+  \texttt{\$shiftx} and no \texttt{\$pmux}}. \warn{} \textbf{That
+  verification was vacuous} (found 2026-10-05, bead \bead{f7vs.15}): a
+  full \code{synth} runs \code{techmap}, which lowers every
+  \texttt{\$shiftx}/\texttt{\$pmux}, so the post-synth count reads zero
+  for any design. The coarse-grain netlist
+  (\texttt{synth\ -\allowbreak{}run\ :\allowbreak{}fine}) of
+  \code{crypto_accel} actually carries \textbf{4 \texttt{\$shiftx} + 2
+  \texttt{\$shift}} (all inside \code{apb4_register_bank}, present in
+  every netlist), \textbf{26 \texttt{\$pmux}} (yosys \code{proc} lowers
+  every \code{case}, including constant-label ones) and \textbf{21
+  \texttt{\$mem\_\allowbreak{}v2}} (the S-boxes, turned into ROMs by
+  \code{proc_rom}). None of this is new runtime indexing in the CRYPTO
+  datapath, and Sky130 uses the sv2v frontend, not Synlig, so the
+  \code{ma7} \code{OPT_MUXTREE} defect is not exposed --- but the stated
+  proof did not prove it. Use the per-module, coarse-grain method item
+  15 established. \code{N_REGS=32}. \textbf{Keys live in the
+  repo\textquotesingle s first shadow register outside
+  \code{apb4_register_bank}}, loaded by APB write-snoop with the
+  bank\textquotesingle s KEY words at \code{WMASK=0} and never
+  HW-written, so they read 0 forever --- a true write-only register is
+  otherwise impossible because \code{prdata} is combinational off
+  \code{regs[addr_word]} (\code{apb4_register_bank.sv:120-129}). Four
+  register-map entries from the plan\textquotesingle s own table proved
+  \textbf{unimplementable as written} and were corrected in the golden
+  spec: \code{CTRL[2]} start cannot be a stored RW bit (a same-cycle
+  \code{hw_wen} clear is the §3 one-cycle window, and the
+  bead-\code{6o8w} collision rule makes the SW \code{1} win anyway) so
+  it is \textbf{W1P, reads 0}, decoded as a snoop pulse; \code{DIN0-3}
+  cannot hold a SHA block (4 words vs 512 bits) so they are a
+  \textbf{4-word aperture onto one 512-bit shift register} where
+  \emph{write order}, not address, is the contract; multi-block SHA
+  chaining was impossible with an RO \code{DIGEST} and no \code{H}
+  input, hence \code{SHA_CONT}; and
+  \texttt{STATUS[3]\ key\_\allowbreak{}write\_\allowbreak{}rejected} had
+  no clear, now reset / \code{IRQ_CLR[1]} / an accepted key write.
+  \textbf{DOUT and DIGEST have no result register at all} --- the bank
+  word \emph{is} the result register, written from the
+  cores\textquotesingle{} combinational next-state outputs on the
+  completion edge, so they are either current or one operation stale,
+  never a partial round state. An illegal start (\code{mode==3}, no key,
+  or a compiled-out core) takes a \textbf{2-cycle zero-length path} that
+  sets \code{done} with no writeback, so a \code{while(!done);} driver
+  cannot hang --- but \textbf{\code{done} does not imply valid data}.
+  \code{test_crypto} \textbf{41/41} (FIPS-197 App. B/C + SP 800-38A
+  F.5.1 vectors, double-pinned in model \emph{and} suite) plus a
+  \textbf{25-fault mutation campaign} leaving only 2 provably-equivalent
+  survivors; \code{test_soc_crypto} \textbf{1/1} driving the block from
+  CPU firmware over AXI-Lite→APB and proving
+  \texttt{irq\_\allowbreak{}src\_\allowbreak{}i\ =\allowbreak{}=\allowbreak{}\ crypto\_\allowbreak{}irq\ <<\ 10}
+  exclusively, per cycle. \ok{} \textbf{Gate A ran} (first of the phase,
+  plan §8): 24,227 cells / 277,875 µm², \textbf{+14.04 ns setup slack at
+  ss on the real 25 ns period} → \code{SBOX_PARALLEL} stays 16. \warn{}
+  The originally recorded "\textbf{3.59 \%} of SoC stdcell area" was
+  \textbf{wrong by \textasciitilde10×} (corrected 2026-10-04, bead
+  \bead{f7vs.11}): its 7,744,600 µm² denominator is
+  \code{design__instance__area}, which is stdcell \textbf{plus}
+  hard-macro area --- macros are 6,952,440 µm² of it (88 \%). Against
+  stdcell alone CRYPTO is \textbf{\textasciitilde28 \%} of the
+  SoC\textquotesingle s 992,638 µm². The decision survives on a
+  different reason --- core utilisation goes 39.0 \% →
+  \textasciitilde43.7 \% with CRYPTO + NPU, and the fold-to-4 fallback
+  would save only 0.2 pp of it for 3.7× the latency --- but "an order of
+  magnitude away from 40 \%" was false. Plan §8 holds the full
+  correction. \warn{} \textbf{NOT production cryptography} and the
+  header says so outright: no DPA/\allowbreak{}side-channel resistance
+  (duration is fixed \emph{by construction}, but that is a cycle-count
+  statement only --- no claim about power, EM or glitch), no fault
+  hardening, not certified. The key is \textbf{not} bus-readable, but
+  that buys little: no privilege split exists
+  (M0/\allowbreak{}M1/\allowbreak{}M2/\allowbreak{}M3 all decode to the
+  APB ring and \code{axil_to_apb} ignores \code{AxPROT}), so \textbf{any
+  master can substitute its own key between a victim\textquotesingle s
+  load and start and read \code{DOUT}} --- in CTR that recovers the
+  victim\textquotesingle s plaintext, in SHA it yields
+  \code{H(victim_msg)}. Treat it as an unprotected shared oracle, not
+  key storage. \code{key_valid} drops only on a whole-SoC reset or on
+  the DFT scan wipe (bead \bead{j41m.6}, 2026-10-17: every
+  \code{scan_mode} edge, entry and exit, hardware-zeroizes the key,
+  round/SHA state, message shadow and
+  DOUT/\allowbreak{}DIGEST/\allowbreak{}IV in one cycle, 3 edges after
+  the change; the clear is functional D logic, so it needs 3
+  \code{scan_en=0} edges first and protects against software and a
+  cooperating tester, not an adversarial one: \code{DFT_ARCHITECTURE.md}
+  14.10), \code{rk_q} retains the round-10 key (which inverts to the
+  master key) between operations, and \textbf{everything else is exposed
+  through scan}, so DFT access must be treated as key access.
+\item
+  \ok{} \textbf{Phase 6c --- INT8 NPU} (bead \bead{f7vs.11},
+  2026-10-04): \src{rtl/npu/npu_top.sv} + \code{npu_mac_array.sv} +
+  \code{npu_weight_mem.sv} at \texttt{0x2001\_\allowbreak{}0000–0FFF} as
+  \textbf{APB index 13 / IRQ bit 11} --- the last Phase 6 item; Phase 6
+  RTL is complete. Weight-stationary 4×4 INT8 grid, INT8×INT8→INT32,
+  shared requantizer (unsigned ×\code{SCALE[15:0]}, \textbf{arithmetic}
+  \texttt{>>>\ SCALE[20:\allowbreak{}16]} so rounding is \textbf{floor},
+  49-bit product never truncated, saturate then ReLU) draining one
+  lane/\allowbreak{}cycle; PIO only (\code{WADDR} auto-increment +
+  \code{WDATA}, depth-4 \code{AIN}/\code{AOUT}), no SRAM aperture.
+  Integration needed \textbf{no} window move ---
+  \code{AXIL_APB_LIMIT}/\code{PERIPH_LIMIT}/\code{BAD_HIGH} were final
+  since \code{f7vs.2}, and \code{npu_irq} was pre-declared and
+  pre-placed in the \code{irq_src_i} MSB, so the IRQ edit was one tie
+  deletion. \textbf{The weight-SRAM / OOM answer: every \code{ifdef} arm
+  is a hard macro and there is no behavioural array anywhere in the RTL}
+  --- 1× \code{sky130_sram_4kbyte_1rw1r_32x1024_8} (\code{SRAM_SKY130}),
+  4× \code{sram_1rw_256x32_asap7} + \code{rv32i_clock_gate}
+  (\code{SRAM_ASAP7}), 4× \code{sram_1rw_256x32_freepdk45}
+  (default/\allowbreak{}cocotb). The \code{sram_controller.sv} 2-way
+  shape (macro / \code{else} flat array) was \textbf{rejected}: its
+  \code{else} arm is the 32 768-flop structure bead \bead{rvb} proved
+  makes the ASAP7 post-CTS resizer non-terminating. It cost no new PD
+  asset --- \code{MACROS} is keyed by \textbf{module, not instance}, and
+  all four 4 KB views are committed at \src{pnr/sky130/soc/macro/} (the
+  stub/\allowbreak{}model comments pointing at
+  \code{/nobackup/openram_sky130_4kb} were wrong; that dir was wiped
+  2026-09-15 and nothing reads it). Two traps it did cost: (1) the macro
+  instance \textbf{must be named \code{u_sram_macro}} so the existing
+  \code{PDN_MACRO_CONNECTIONS} regex matches --- any other name silently
+  floats vccd1/\allowbreak{}vssd1; (2)
+  \textbf{\code{--define=SRAM_ASAP7} had to be added to
+  \code{SOC_SV2V_DEFINES}} because sv2v resolves \code{ifdef} before
+  Yosys, so \code{config.json}\textquotesingle s define is too late ---
+  without it the ASAP7 netlist instantiates the FreePDK45 module and
+  silently blackboxes it (proven fixed: regenerated ASAP7 netlist has 0
+  \code{sram_1rw_256x32_freepdk45}). Read latency is normalised to
+  \textbf{2 cycles on every arm} in \code{npu_weight_mem.sv}, because
+  the sim models disagree (Sky130 negedge-launched vs FreePDK45
+  posedge). \textbf{\code{ma7} gate proven on the coarse-grain netlist}
+  (\texttt{synth\ -\allowbreak{}run\ :\allowbreak{}fine}, before techmap
+  hides the cells): zero
+  \texttt{\$shiftx}/\texttt{\$pmux}/\texttt{\$mem*} in the three
+  \src{rtl/npu} modules. Two lessons: the flat count can never be zero
+  because \code{apb4_register_bank} carries 4 \texttt{\$shiftx} + 2
+  \texttt{\$shift} of its own, and \textbf{a constant-label \code{case}
+  is NOT sufficient} --- yosys \code{proc} lowers every \code{case} to
+  \texttt{\$pmux} --- so runtime selects are 2:1 ternary trees / one-hot
+  AND-OR, and AIN/AOUT are \textbf{positional shift registers}, never
+  \code{array[runtime_ptr]}. \code{KLEN} is \textbf{1..63} (the
+  plan\textquotesingle s "1..64" was unreachable in 6 bits; caught by
+  tests-first). \code{test_npu} \textbf{39/39}, \code{test_soc_npu}
+  \textbf{1/1} (CPU firmware over AXI-Lite→APB, interrupt-driven,
+  \texttt{irq\_\allowbreak{}src\_\allowbreak{}i\ =\allowbreak{}=\allowbreak{}\ npu\_\allowbreak{}irq\ <<\ 11}
+  proven every cycle, six negative controls), mutation campaign 65
+  mutants: 55 killed, 10 provably equivalent, 0 gaps; \code{soc_all_ci}
+  from clean \textbf{476 pass / 0 fail / 16 skip} over 53 suites (CI
+  \code{PASS_FLOOR} 433 → 473). \textbf{Gate A}: 19 603 cells /
+  \textbf{203 179 µm²} stdcell ≈ 20 \% of the SoC\textquotesingle s
+  stdcell area, plus the 472 439 µm² macro; \textbf{+1.84 ns setup at ss
+  on 25 ns} --- thin, limiter is the MAC array\textquotesingle s
+  single-cycle multiply + column tree + accumulate from a fanout-129 AIN
+  flop; Gate B fallback is registering the column sums (4×18 flops, +1
+  cycle). \warn{} Same slack is \textbf{−5.0 ns} under plain
+  \texttt{abc\ -\allowbreak{}liberty} --- Gate A is recipe-sensitive,
+  use the flow-faithful one. \warn{} \textbf{This probe exposed that
+  CRYPTO\textquotesingle s Gate A "3.59 \%" was wrong
+  \textasciitilde10×} (stdcell+macro denominator) --- corrected in item
+  14 and plan §8. Gate B watch items: the MAC path, the second
+  macro\textquotesingle s \code{macro_placement.cfg} line (6.9 µm GCell
+  multiples, path read from a synth probe not guessed), and \code{e45j}
+  on \textasciitilde48 \% more stdcell logic. Non-goals: INT4, sparsity,
+  tiling, 16 KB, demo firmware, L3 driver.
+\item
+  \wip{} \textbf{DFT --- scan + MBIST + JTAG for the Sky130 SoC} (epic
+  \code{j41m}, \ghref{244}; architecture and decisions 1--9 in
+  \src{docs/design/DFT_ARCHITECTURE.md}). Stage 0 \ok{} (\prref{250}).
+  Stage 1a: scan-ready SoC fabric merged (\prref{258}: test ports on
+  \code{soc_top}, \code{test_en} on the clock gates, reset and clock
+  scan muxes, crypto key mask; seam module
+  \src{rtl/soc/dft/dft_ctrl_ports.sv}), but bead \bead{j41m.2} is still
+  open (◐) and the GPU scan-reset test gap \code{j41m.9} is open. Stage
+  1b \ok{}: IEEE 1149.1 JTAG TAP (\src{rtl/soc/dft/jtag_tap.sv}, \prref{270}, \code{j41m.3}), plus the TRST reset-sync structural check (\prref{280}, \code{j41m.11}) and \code{dft-scan-check} for both PDKs in CI
+  (\prref{281}, \code{j41m.12}). Stage 3 ATPG: the patched Quaigh completes
+  the fabric (99.95 \% test / 99.16 \% fault coverage on the
+  generic-gate collapsed universe, \code{j41m.18}). \textbf{99 \% / 98
+  \% is adopted as the target, provisionally} (\code{j41m.23},
+  2026-10-30): the fabric and the CPU macro are separate rungs, and
+  sign-off waits on the cell-pin re-grade \code{j41m.20}
+  (\code{DFT_ARCHITECTURE.md} 2.1, 18.8). Open: Q-TRST (\code{trst_ni}
+  power-up tie-off at the chip top), Q-STUB (1-bit SCAN stub until Stage
+  2 chains exist), Stage 2 scan insertion and scan-mode SDC
+  (\code{j41m.8}, \code{j41m.5}), the CPU-macro scan boundary and
+  re-harden (\code{j41m.4}, which depends on the \code{dud4} outcome),
+  the crypto scan-entry scrub protocol (\code{j41m.6}), and the MBIST
+  control-word crossing (\code{j41m.10}). Stage 4 MBIST (beads
+  \code{j41m.14}/\code{j41m.10}, \prref{306}, spec
+  \src{docs/design/DFT_ARCHITECTURE.md} section 16): \code{mbist_ctrl}
+  (ROM-microcode March C- / retention / checkerboard / byte-lane, 6
+  backgrounds), \code{mem_collar} on the two SoC-level SRAM macros,
+  \code{MBIST_CTRL}/\code{MBIST_STATUS} TAP registers (opcodes 6/7) and
+  the TCK -\textgreater{} core crossing through a depth-2
+  \code{cdc_gray_fifo}; fault-injection suites prove detection per fault
+  class against an independent golden model. The ten CPU-macro cache
+  SRAMs are designed (section 16.7) but NOT wired: they need the CPU
+  macro boundary change and a re-harden (proposed with \code{j41m.4}).
+\item
+  \wip{} \textbf{FPGA prototyping} (epic \code{hlrm}, \ghref{245}). Stage 0
+  \ok{} (no board and no vendor toolchain on the host): one \code{FPGA}
+  define selects block-RAM-inferable memories (\src{rtl/fpga/};
+  \texttt{make\ -\allowbreak{}C\ tb/\allowbreak{}cocotb/\allowbreak{}soc\ FPGA=\allowbreak{}1\ soc\_\allowbreak{}all\_\allowbreak{}ci}
+  reports 762 passed, 0 failed, with the SRAM backdoor helper, \prref{282}); yosys resource counts for Xilinx 7-series and ECP5, with and
+  without GPU, are in \src{docs/FPGA_STAGE0_EVALUATION.md} (\prref{279}).
+  Board recommendation, not a purchase: Digilent Nexys Video XC7A200T
+  (\src{docs/FPGA_BOARD_SELECTION.md}, \prref{283}). The only measured fmax
+  is an open-tool ECP5 \textbf{lower bound}, CPU-only on LFE5U-85F:
+  \textasciitilde48--52 MHz (CPU) and \textasciitilde47--55 MHz
+  (fabric); the with-GPU build does not place on that device. A Vivado
+  Artix-7 run is in progress on a separate branch and has no results in
+  this repo yet. Board-gated stages (bring-up, firmware validation,
+  dual-oscillator CDC) and the clock-gating choice are open human
+  decisions.
+\end{enumerate}
+
+\end{record}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{AI/Human Boundaries}\label{cr:status:ai-human-boundaries}
+
+\section{AI MAY assist with}\label{cr:status:ai-human-boundaries:ai-may-assist-with}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Python boilerplate (class structure, imports)
+\item
+  Simple instruction implementations (after human verification)
+\item
+  cocotb driver scaffolding; test case generation; documentation
+  formatting
+\end{itemize}
+
+\end{record}
+
+\section{Human MUST}\label{cr:status:ai-human-boundaries:human-must}
+
+\begin{record}
+
+\begin{itemize}
+\tightlist
+\item
+  Write and approve all specifications
+\item
+  Implement complex instructions (branches, loads, stores); design
+  control FSMs
+\item
+  Define verification strategy; review all AI-generated code; make
+  architectural decisions
+\end{itemize}
+
+See each phase in \src{docs/verification/VERIFICATION_PLAN.md} for
+detailed AI/Human responsibilities.
+
+\end{record}
