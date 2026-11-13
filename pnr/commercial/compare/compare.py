@@ -36,7 +36,7 @@ COM = "pnr/commercial"
 SNAP = f"{COM}/compare/snapshot"
 OUT = f"{COM}/compare/comparison.json"
 CORNERS = [f"{rc}_{lib}" for rc in ("nom", "min", "max") for lib in ("tt", "ss", "ff")]
-VARIANTS = ("own", "base", "iolat", "iolat_pv", "iolat_pvs")
+VARIANTS = ("own", "base", "iolat", "iolat_pv", "iolat_pvs", "soc_budget")
 
 # b7 = b6 + one combined ECO pass (ff hold buffers, deck-antenna sink buffers, dcache dout0 buffers; docs/COMMERCIAL_FLOW_COMPARISON.md section 7 items 4-6).
 # ADOPT_B7 decides which generation is the FINAL arm of the comparison (the other becomes a history arm); set by the sign-off decision, never silently.
@@ -195,6 +195,7 @@ SDC_FILES = {
     "iolat": f"{COM}/constraints/sky130_cpu_iolat.sdc",
     "iolat_pv": f"{COM}/constraints/sky130_cpu_iolat_pv.sdc",
     "iolat_pvs": f"{COM}/constraints/sky130_cpu_iolat_pv.sdc",
+    "soc_budget": f"{COM}/constraints/sky130_cpu_iolat_pv_soc.sdc",
     "own:icc2_b6": f"{COM}/constraints/sky130_cpu_icc2_b6_own_pt.sdc",
     "own:icc2_b7": f"{COM}/constraints/sky130_cpu_icc2_b7_own_pt.sdc",
     "own:icc2_b8": f"{COM}/constraints/sky130_cpu_icc2_b8_own_pt.sdc",
@@ -1461,6 +1462,19 @@ def clock_latency():
             "unit": "ns (clk_io network latency; SDC adds 1.0 ns source latency)",
             "values": tab,
             "rule": "arm: each arm's own mean register-clock-pin latency; shared: mean of the three arms per corner",
+        }
+    f = f"{SNAP}/soc_budget/budget_evidence.tsv"
+    if p(f).is_file():
+        ev = {}
+        for line in text(f).splitlines()[1:]:
+            lib, g, bits, a, k, ka, cur, bud, note = line.split("\t")
+            ev.setdefault(lib, {})[g] = {"bits": int(bits), "arrival_ns": float(a), "k_arrival_ns": float(ka), "current_ns": float(cur), "budget_ns": float(bud), "note": note}
+        out["tables"]["soc_budget"] = {
+            "label": "derived",
+            "source": [f, f"{SNAP}/soc_budget/arrival_tt.tsv", f"{SNAP}/soc_budget/arrival_ss.tsv", f"{SNAP}/soc_budget/arrival_ff.tsv", f"{SNAP}/iolat_pv/iobud_soc.tsv"],
+            "unit": "ns (set_input_delay -max, after the launching clock edge)",
+            "values": ev,
+            "rule": "budget = min(current SDC delay, ceil_0.1(K * arrival)); arrival = SoC-side driver cells (DC-mapped async_axi_fifo / apb_cdc_bridge) launch edge to macro pin, macro-Liberty pin load, zero wire; K = 2.0; no SoC SPEF on the host",
         }
     for var in ("iolat_pv", "iolat_pvs"):
         for arm, meta in ARMS.items():

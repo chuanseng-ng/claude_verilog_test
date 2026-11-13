@@ -38,6 +38,7 @@ PT_DIRS = {
     "own": "runs_own",
     "iolat_pv": "runs_iolat_pv",
     "iolat_pvs": "runs_iolat_pvs",
+    "soc_budget": "runs_iolat_pv_soc",
 }
 PV_VARIANTS = ("iolat_pv", "iolat_pvs")
 PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9", "innovusb9", "innovusb10", "innovusb11"]
@@ -119,6 +120,8 @@ def pt(only=None) -> None:
                     copy(src / "iolat_pv.txt", dst / "iolat_pv.txt")
                     copy(src / "io_viol_summary.tsv", dst / "io_viol_summary.tsv", required=False)
                     copy(src / "io_viol.tsv", dst / "io_viol.tsv", required=False)
+                if var == "soc_budget":
+                    copy(src / "iolat_pv_soc.txt", dst / "iolat_pv_soc.txt")
                 if c == "nom_tt":
                     copy(src / "power_B.txt", dst / "power_B.txt", required=False)
                     copy(src / "time.txt", dst / "time.txt", required=False)
@@ -305,6 +308,8 @@ def add_b7() -> None:
                     copy(src / "iolat_pv.txt", dst / "iolat_pv.txt")
                     copy(src / "io_viol_summary.tsv", dst / "io_viol_summary.tsv", required=False)
                     copy(src / "io_viol.tsv", dst / "io_viol.tsv", required=False)
+                if var == "soc_budget":
+                    copy(src / "iolat_pv_soc.txt", dst / "iolat_pv_soc.txt")
                 if c == "nom_tt":
                     copy(src / "power_B.txt", dst / "power_B.txt", required=False)
                     copy(src / "time.txt", dst / "time.txt", required=False)
@@ -438,7 +443,26 @@ def merge_pv() -> None:
     print(f"{len(manifest)} per-view files merged into {rel(mf)}")
 
 
+def merge_soc() -> None:
+    """Add ONLY the step-4b soc_budget variant (pt/soc_budget, the budget table and its evidence) and merge its MANIFEST rows."""
+    for d in (SNAP / "pt" / "soc_budget", SNAP / "soc_budget"):
+        if d.exists():
+            shutil.rmtree(d)
+    pt(only=("soc_budget",))
+    copy(COM / "signoff/pt/iolat_pv/iobud_soc.tsv", SNAP / "iolat_pv" / "iobud_soc.tsv")
+    for f in ("budget_evidence.tsv", "dc/arrival_tt.tsv", "dc/arrival_ss.tsv", "dc/arrival_ff.tsv"):
+        copy(COM / "signoff/soc_budget/runs" / f, SNAP / "soc_budget" / Path(f).name)
+    mf = SNAP / "MANIFEST.tsv"
+    new = {r[0] for r in manifest}
+    keep = [l for l in mf.read_text().splitlines(True) if l.split("\t")[0] not in new and not l.startswith(f"{rel(SNAP)}/pt/soc_budget/")]
+    mf.write_text("".join(keep) + "".join("\t".join(map(str, r)) + "\n" for r in manifest))
+    print(f"{len(manifest)} soc_budget files merged into {rel(mf)}")
+
+
 def main() -> None:
+    if "--only-soc" in sys.argv:
+        merge_soc()
+        return
     if "--add-b7" in sys.argv:
         add_b7()
         return
