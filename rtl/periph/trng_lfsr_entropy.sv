@@ -1,42 +1,28 @@
-// trng_lfsr_entropy.sv
-// Phase 6a-4 -- default (LFSR) entropy arm of the TRNG (bead claude_verilog_test-f7vs.8,
-// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG"). Selected by trng.sv unless
-// TRNG_RO_SKY130 is defined. The bit-exact specification of everything in this file is
-// tb/models/trng_lfsr_model.py; this RTL reproduces that model word for word.
+// trng_lfsr_entropy - default LFSR entropy arm of the TRNG.
 //
-// THIS IS NOT A SOURCE OF ENTROPY. It is a deterministic pseudo-random generator: every word it
-// ever emits is a pure function of the 32-bit seed. trng.sv forces TRNG_STATUS.INSECURE = 1
-// whenever this arm is compiled in, so software can tell it from real entropy.
-//
-// Pipeline (one raw sample per clock in which run_i is high):
-//   1. load_i loads three Fibonacci LFSRs from seed_i by plain slicing -- lfsr31 = seed[30:0],
-//      lfsr29 = seed[28:0], lfsr23 = seed[22:0]; seed bit 31 is unused. An all-zero slice is a
-//      lock-up state and is deliberately NOT rescued (a dead source must be reported by the
-//      health test in trng.sv, not silently replaced).
-//   2. Register width n, tap t (1-based): out = state[n-1], fb = state[n-1] ^ state[t-1],
-//      state <= {state[n-2:0], fb}. Polynomials x^31+x^28+1, x^29+x^27+1, x^23+x^18+1 -- taps
-//      (31,28), (29,27), (23,18), all primitive, maximal length 2^n-1.
-//   3. Raw sample = out31 ^ out29 ^ out23, taken from the CURRENT state (sample 0 is the freshly
-//      loaded state, before any step); all three registers then step once.
-//   4. Von Neumann debiaser over consecutive NON-overlapping raw pairs: 01 -> 0, 10 -> 1 (emit the
-//      FIRST bit of the pair), 00 / 11 -> discard. ~75 % of raw samples are discarded.
-//   5. Emitted bits pack LSB-first into a 32-bit word; the 32nd bit completes it. word_valid_o is
-//      a COMBINATIONAL strobe in the clock the completing pair is consumed, so the consumer
-//      registers the word on that same edge.
-//   Backpressure is a STALL, not a drop: the consumer simply drops run_i. Nothing here ever
-//   discards a sample for lack of room, which is what makes the word sequence a function of the
-//   seed alone.
-//
-// Port contract shared with the ring-oscillator arm (trng_ro_sky130.sv): sample_valid_o/sample_o
-// carry the RAW (pre-debias) stream to the health test in trng.sv; word_valid_o/word_o the
-// debiased, assembled words. load_i also clears the debiaser/assembler; flush_i clears only the
-// debiaser/assembler (used after a health failure, so bits from a failing source are never
-// mixed into a later word). load_i and flush_i win over a same-cycle run_i.
-//
-// No CDC: single clock domain, no asynchronous inputs. Reset: synchronous active-low, matching
-// the rest of rtl/periph/.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: trng.sv selects this arm unless TRNG_RO_SKY130 is defined.
+//   The arm is a deterministic pseudo-random generator, NOT a source of entropy. Every word is a function of the seed.
+//   trng.sv forces TRNG_STATUS.INSECURE = 1 whenever this arm is compiled in.
+//   The arm takes one raw sample per clock in which run_i is high:
+//   1. load_i loads three Fibonacci LFSRs from seed_i: lfsr31 = seed[30:0], lfsr29 = seed[28:0], lfsr23 = seed[22:0].
+//      Seed bit 31 is unused. An all-zero slice locks up and is not rescued. The health test in trng.sv reports it.
+//   2. For register width n and tap t (1-based): out = state[n-1], fb = state[n-1] ^ state[t-1],
+//      state <= {state[n-2:0], fb}. The taps are (31,28), (29,27) and (23,18).
+//   3. Raw sample = out31 ^ out29 ^ out23, from the current state. Sample 0 is the freshly loaded state.
+//      All three registers then step once.
+//   4. A von Neumann debiaser takes non-overlapping raw pairs: 01 gives 0, 10 gives 1, 00 and 11 are discarded.
+//   5. Emitted bits pack LSB-first into a 32-bit word. word_valid_o is a combinational strobe in the clock
+//      that consumes the completing pair.
+// Ports:
+//   load_i loads the LFSRs and clears the debiaser and assembler. flush_i clears only the debiaser and assembler.
+//   load_i and flush_i win over a same-cycle run_i.
+//   sample_valid_o and sample_o carry the raw (pre-debias) stream to the health test in trng.sv.
+//   word_valid_o and word_o carry the debiased, assembled words.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. The arm has no CDC.
+// Caller rules:
+//   - Backpressure is a stall. Drop run_i. The arm never discards a sample for lack of room.
+//   - The port contract is shared with trng_ro_sky130.sv.
+// Doc: ds:mod:trng-lfsr-entropy, tm:mod:trng-lfsr-entropy
 
 module trng_lfsr_entropy (
     input  logic        clk,

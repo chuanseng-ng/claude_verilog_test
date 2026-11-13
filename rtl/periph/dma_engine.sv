@@ -1,49 +1,30 @@
-// dma_engine.sv
-// Phase 5 (M5) — Descriptor-queue DMA engine.
+// dma_engine - descriptor-queue DMA engine: AXI4 burst master, AXI4-Lite control slave, IRQ output.
 //
-// AXI4 burst master for data movement + AXI4-Lite control slave + IRQ output.
-//
-// Register map (word indices into the axi_lite_register_bank):
-//   0  SRC_ADDR    RW  source byte address
-//   1  DST_ADDR    RW  destination byte address
-//   2  LENGTH      RW  transfer length in bytes (must be word-multiple)
-//   3  CTRL        RW  [0]=start(pulse/edge), [1]=irq_en, [2]=soft_reset(pulse/edge)
-//   4  STATUS      RO  [0]=busy, [1]=done(sticky), [2]=error(sticky),
-//                      [3]=q_full, [4]=q_empty, [10:8]=q_count
-//   5  IRQ_STATUS  RO  [0]=done_irq(sticky), [1]=err_irq(sticky)
-//   6  ERR_INFO    RO  [1:0]=last_axi_resp, [2]=err_on_read
-//   7  RSVD        RO  reserved, reads 0
-//
-// CTRL.start and CTRL.soft_reset are edge-detected (0→1); the bit is
-// HW-cleared immediately after consume to prevent double-enqueue.
-// done/error sticky bits cleared only by soft_reset.
-// NOTE: "true per-bit W1C deferred" — the register bank's WMASK prevents SW
-// from directly clearing STATUS/IRQ_STATUS; only soft_reset clears them.
-//
-// Burst-split rule: each burst is limited to min(words_rem, MAX_BURST_BEATS,
-// src_to_4k_words, dst_to_4k_words) to respect the AXI4 4 KB boundary rule
-// on both source and destination addresses simultaneously.
-//
-// Read-error handling (bead wdmo).  A read burst is an error if ANY of:
-//   - a beat carries RRESP != OKAY;
-//   - RLAST arrives on a beat other than beat beats_q-1 (early RLAST); or
-//   - beat beats_q-1 arrives without RLAST (late / over-running RLAST).
-// All three take the same exit: ERR_INFO.err_on_read, ERR_INFO[1:0] = the FIRST error beat's
-// RRESP (held across the drain), STATUS.error, IRQ_STATUS.err_irq, then S_ERR and halted until
-// soft_reset.  No AW/W is ever issued for a descriptor that failed on read.  On every read-error
-// exit the R channel is DRAINED first: m_rready stays high and beats are discarded until the beat
-// carrying RLAST has been accepted (S_RDRAIN), and only then does S_ERR raise the error/IRQ.  An
-// error on the RLAST beat itself needs no drain and goes straight to S_ERR.
-//
-// AXI protocol precondition: the read slave must eventually assert RLAST on every burst it has
-// accepted.  The drain waits for it, so a slave that never asserts RLAST wedges the DMA in
-// S_RDRAIN by definition (as it would wedge any AXI master).  There is deliberately no timeout.
-// soft_reset during S_RDRAIN abandons the drain exactly as it abandons any in-flight transfer
-// (see the srst_pulse branch): STATUS.busy stays high until the drain ends, so software that
-// waits for busy=0 / error before soft_reset never hits this.
-//
-// Flat per-channel AXI ports (no SV interfaces) per Phase 5 RTL convention.
-// Lint target: verilator -Wall 0 errors 0 warnings.
+// Function: CTRL.start queues one descriptor. The engine copies LENGTH bytes from SRC_ADDR to DST_ADDR.
+//   Each burst has min(words_rem, MAX_BURST_BEATS, src_to_4k_words, dst_to_4k_words) beats.
+//   So no burst crosses a 4 KB boundary on the source or the destination.
+//   The AXI master uses ID 0, 4-byte beats and INCR bursts. The AXI ports are flat, with no SV interfaces.
+// Registers (word index into axi_lite_register_bank):
+//   0 SRC_ADDR (RW), 1 DST_ADDR (RW), 2 LENGTH (RW, bytes, must be a multiple of 4),
+//   3 CTRL (RW: [0] start, [1] irq_en, [2] soft_reset),
+//   4 STATUS (RO: [0] busy, [1] done sticky, [2] error sticky, [3] q_full, [4] q_empty, [10:8] q_count),
+//   5 IRQ_STATUS (RO: [0] done_irq sticky, [1] err_irq sticky),
+//   6 ERR_INFO (RO: [1:0] last_axi_resp, [2] err_on_read), 7 reserved (reads 0).
+//   CTRL.start and CTRL.soft_reset are edge-detected (0 to 1). Hardware clears the bit right after it consumes it.
+//   The done and error sticky bits set on completion or error and clear only on soft_reset or reset. Per-bit W1C is deferred.
+//   A read burst is an error if a beat has RRESP != OKAY, RLAST arrives early, or beat beats_q-1 has no RLAST.
+//   ERR_INFO[1:0] holds the first error beat's RRESP. The engine drains the R channel (S_RDRAIN) before S_ERR.
+//   It then halts until soft_reset. No AW or W is issued for a descriptor that failed on read.
+// Parameters: QDEPTH (descriptor FIFO depth, default 4), ADDR_W (AXI-Lite local address width, default 12),
+//   MAX_BURST_BEATS (maximum AXI4 burst length in beats, default 256).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous.
+// Caller rules:
+//   - The read slave must eventually assert RLAST on every burst it accepts. The drain has no timeout.
+//   - A slave that never asserts RLAST wedges the DMA in S_RDRAIN.
+//   - STATUS.busy is high during S_RDRAIN. soft_reset during S_RDRAIN abandons the drain, like any transfer in flight.
+//     Software that waits for busy = 0 or error before soft_reset never does this.
+// Full contract: ds:mod:dma-engine
+// Doc: ds:mod:dma-engine, tm:mod:dma-engine
 
 module dma_engine
     import axi_pkg::*;
@@ -317,48 +298,9 @@ module dma_engine
     // Unpacked to avoid memory blowup in synthesis
     logic [31:0] linebuf [MAX_BURST_BEATS];
 
-    // linebuf has NO reset and NO soft-reset term, deliberately (bead f7vs.15, Gate B).
-    // It used to be written from inside the big FSM always_ff, i.e. under `if (!rst_n) ... else`
-    // and `if (srst_pulse) ... else`, so rst_n (core_rst_n in soc_top) sat in the write-enable
-    // cone of all MAX_BURST_BEATS*32 = 8192 flops. Gate B (Sky130 ss) measured that distribution at
-    // 98 stages / 30.8 ns. Giving the array its own always_ff keeps the same flop count (it was never
-    // in the reset list) and removes core_rst_n from every one of those enables.
-    //
-    // PROOF that writing linebuf during reset / soft-reset is unobservable.
-    // linebuf is read in exactly one place: m_wdata = linebuf[wr_idx_q] in state S_W.
-    //   1. S_W is entered only from S_AW (S_AW -> S_W on m_awready); S_AW is entered only from S_R
-    //      on (m_rvalid && m_rresp == OKAY && m_rlast && rd_idx_q == beats_q-1), i.e. the one
-    //      OKAY, exactly-beats_q-long burst. Every other path out of S_R is S_ERR or S_RDRAIN; S_RDRAIN
-    //      exits only to S_ERR, and S_ERR goes to S_IDLE (halted_q), never to S_AW/S_W. So an S_W
-    //      burst is always preceded, in the same transfer, by one complete, in-count run of S_R.
-    //   2. Every run of S_R is preceded by S_CALC, which sets rd_idx_q <= 0 (the only other writer of
-    //      rd_idx_q is the S_R increment and reset); the first S_R beat therefore writes linebuf[0],
-    //      the next linebuf[1], and so on, one word per accepted m_rvalid, before S_AW can start.
-    //      S_W then reads wr_idx_q = 0 .. beats_q-1 against those same indices. Because S_AW needs
-    //      RLAST on beat beats_q-1 exactly (point 1), all beats_q words were written this transfer.
-    //   3. Reset (rst_n low) and soft-reset (srst_pulse) both force state_q to S_IDLE. From S_IDLE
-    //      the only way back to S_W is S_IDLE -> S_CALC -> S_AR -> S_R -> S_AW -> S_W, i.e. through
-    //      point 2 again, which rewrites linebuf[0..beats-1] before any of it is read.
-    //      Whatever the array held when reset/soft-reset hit -- including a word written on the very
-    //      edge that state_q was forced to S_IDLE (state_q still reads S_R on that edge, so the new
-    //      enable below fires where the old one was suppressed) -- is dead data.
-    //   4. Error path: S_R writes the beat that carries the error (it is still a beat inside the
-    //      burst, see below), then goes to S_ERR, or to S_RDRAIN when that beat was not RLAST. S_RDRAIN
-    //      is NOT S_R, so the enable below is low for every drained beat: the drain writes nothing.
-    //      The array content after an error is therefore dead data; the error path ends S_ERR ->
-    //      S_IDLE with halted_q set, no S_W follows, and the next transfer restarts at S_CALC.
-    //   5. In-range: the enable is state_q == S_R && m_rvalid and nothing else, with no beats_q
-    //      comparator, because rd_idx_q < beats_q holds on every S_R cycle. S_CALC loads rd_idx_q = 0
-    //      and beats_q >= 1; rd_idx_q increments only on an S_R beat that stays in S_R, and a beat
-    //      stays in S_R only if it was error-free, which requires m_rlast == (rd_idx_q == beats_q-1),
-    //      so a non-RLAST beat has rd_idx_q < beats_q-1 and the incremented index is <= beats_q-1. Any
-    //      beat at index beats_q-1 leaves S_R (to S_AW, S_ERR or S_RDRAIN). An over-long burst's
-    //      surplus beats are therefore taken in S_RDRAIN and cannot wrap rd_idx_q onto linebuf[0..].
-    //      (rd_idx_q <= beats_q-1 <= MAX_BURST_BEATS-1 = 255 also keeps the 8-bit index in range.)
-    // The enable below is therefore the minimum that preserves the old behaviour on every
-    // reachable S_W read: (state_q == S_R) && m_rvalid. It has no rst_n and no srst_pulse term,
-    // and the wdmo drain/in-range qualification is carried entirely by state_q and the
-    // FSM's own transitions, so it adds no new term to the enable cone either.
+    // linebuf has no reset and no soft-reset term, on purpose. Its write enable is (state_q == S_R) && m_rvalid and nothing else.
+    // Writing it during reset or soft-reset is unobservable: m_wdata reads it only in S_W, after a full in-count run of S_R.
+    // S_RDRAIN is not S_R, so a drained beat writes nothing. See tm:mod:dma-engine.
     always_ff @(posedge clk) begin
         if (state_q == S_R && m_rvalid) linebuf[8'(rd_idx_q)] <= m_rdata;
     end
@@ -487,12 +429,8 @@ module dma_engine
             q_head         <= '0;
             q_tail         <= '0;
             q_count        <= '0;
-            // CTRL hardware-writeback flops (bead 0oc4): they MUST have a reset value. The register
-            // bank samples hw_wen_i/hw_wdata_i on the first edge after rst_n deasserts; without a
-            // reset these two held their power-up contents through the whole reset window, so in
-            // silicon (or an X-propagating simulator) CTRL could load garbage there, including
-            // CTRL.start (spurious DMA) and CTRL.soft_reset. Verilator zero-initialises flops, which
-            // is why no ordinary simulation shows it (test_dma_ctrl_hw_flops_reset_* deposit garbage).
+            // CTRL hardware-writeback flops: they must have a reset value. The register bank samples hw_wen_i and hw_wdata_i
+            // on the first edge after rst_n deasserts. Without a reset, CTRL could load garbage, including CTRL.start.
             hw_wen_i  [REG_CTRL]   <= 1'b0;
             hw_wdata_i[REG_CTRL]   <= '0;
         end else begin
@@ -705,4 +643,3 @@ module dma_engine
     assign irq_o = irq_en & (done_pending_q | err_pending_q);
 
 endmodule : dma_engine
-

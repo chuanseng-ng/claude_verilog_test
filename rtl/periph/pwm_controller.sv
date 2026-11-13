@@ -1,95 +1,29 @@
-// pwm_controller.sv
-// Phase 6a-2 -- Pulse-width modulation controller, APB4 slave (bead claude_verilog_test-f7vs.6,
-// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-2 -- PWM"). Written to the pre-committed contract in
-// tb/cocotb/soc/test_pwm.py (that suite's module docstring is the authoritative spec; this header
-// summarises it).
+// pwm_controller - pulse-width modulation controller, APB4 slave, N_CH channels (default 4).
 //
-// Register map (word indices into the apb4_register_bank, N_REGS=8):
-//   0  PWM_CTRL       RW   [3:0] per-channel enable, [7:4] per-channel output polarity
-//                           (polarity: 0 = active-high, 1 = inverted)
-//   1  PWM_PERIOD     RW   [15:0] shared period, in prescaled ticks (ALL channels share it --
-//                           a per-channel period would be 4x the registers for no real benefit,
-//                           and a shared period is what makes multi-channel phase relationships
-//                           meaningful; see Doc: ds:ch:phase6-ip-expansion-plan Sec.7)
-//   2  PWM_PRESCALE   RW   [15:0] core_clk divider; one tick = (PRESCALE+1) core_clk cycles
-//   3  PWM_DUTY01     RW   [15:0] ch0 duty, [31:16] ch1 duty (prescaled ticks)
-//   4  PWM_DUTY23     RW   [15:0] ch2 duty, [31:16] ch3 duty (prescaled ticks)
-//   5  PWM_IRQ_EN     RW   [3:0] per-channel period-wrap IRQ enable -- masks irq_o ONLY
-//   6  PWM_IRQ_STAT   RO   [3:0] sticky per-channel period-wrap (HW-written)
-//   7  PWM_IRQ_CLR    W1C  APB-write-snoop clear against PWM_IRQ_STAT; always reads 0
-//
-// Timing contract: a shared 16-bit tick counter counts 0 .. PERIOD-1 and wraps back to 0 (the
-// period-wrap event) once every (PRESCALE+1) core_clk cycles. Channel ch's active condition is
-// (tick_count < DUTY[ch]) while ch is enabled; pwm_o[ch] = active_condition ^ PWM_CTRL[4+ch]
-// (polarity=0 drives pwm_o=1 during the active window, polarity=1 is the exact complement).
-// Left/edge-aligned only -- no centre-alignment, no dead-time (both explicit non-goals: centre-
-// alignment needs an up/down counter and only earns its keep alongside dead-time, which itself
-// implies complementary output pairs and a shoot-through safety story no consumer here has).
-//
-// Three corner cases, all a defined decision rather than an accident (test_pwm.py's module
-// docstring specifies these; this RTL matches it):
-//   DUTY == 0        : true 0% -- tick_count (unsigned, >= 0) can never be < 0, so the active
-//                       condition is false for every value of tick_count. No special-case logic
-//                       needed; it falls out of the compare itself, with no one-cycle glitch.
-//   DUTY >= PERIOD    : true 100% -- tick_count ranges 0 .. PERIOD-1, so tick_count < DUTY holds
-//                       for the whole range, INCLUDING the exact wrap instant (tick_count goes
-//                       PERIOD-1 -> 0, both satisfy the compare) -- the active condition's value
-//                       never changes at the wrap boundary, so there is no one-tick glitch there
-//                       either. Again falls out of the same compare with no special case.
-//   PERIOD == 0       : no valid period exists. Explicitly forced: the active condition carries
-//                       an unconditional (period != 0) term, so pwm_o holds its inactive level;
-//                       and the tick/wrap counters are held at 0 whenever period==0 (see the
-//                       always_ff below), so a period-wrap event can structurally never fire and
-//                       no IRQ is ever generated. This avoids both an output glitch and a
-//                       spurious/runaway interrupt storm from an otherwise ill-defined compare
-//                       against a free-running counter.
-//
-// A channel's enable/duty/polarity fields (PWM_CTRL[c]/[4+c], PWM_DUTYxx) are only physically
-// representable for channel indices < MAP_CH (4, given the fixed nibble/half-word register
-// layout above -- 2 duty registers x 2 half-words = 4 channels' worth of duty storage, and an
-// 8-bit CTRL field split 4+4). The elaboration guard below accepts N_CH up to 8 (matching the
-// generic-component convention used throughout rtl/periph/), but only channels 0..MAP_CH-1 are
-// ever wired to real register bits; any channel index >= MAP_CH (reachable only when N_CH > 4,
-// not exercised by test_pwm.py, which always uses the N_CH=4 default) is permanently disabled
-// with duty forced to 0 -- there is no register space in this map to control it.
-//
-// A disabled channel (PWM_CTRL[ch]==0) drives its inactive level continuously (its active
-// condition is forced false regardless of DUTY) and its PWM_IRQ_STAT bit never accumulates a
-// period-wrap event, regardless of DUTY -- a real datapath/status gate, not merely an irq_o mask
-// (contrast PWM_IRQ_EN, which gates irq_o only; PWM_IRQ_STAT keeps accumulating for an enabled
-// channel even with its own IRQ_EN bit clear).
-//
-// PWM_IRQ_STAT update (HW-written every cycle), sticky per channel:
-//   stat = (stat & ~clr) | wrap_event   where wrap_event[ch] = enabled[ch] & period_wrap_this_cycle
-// SET WINS over CLEAR on a same-cycle collision -- a PWM_IRQ_CLR write whose ACCESS-phase commit
-// edge lands the same cycle a fresh period-wrap is captured leaves the bit SET, mirroring
-// gpio_controller.sv's identical edge-sticky formula (and proven set-beats-clear test pattern).
-//
-// irq_o = |(PWM_IRQ_STAT & PWM_IRQ_EN) -- LEVEL-HELD, never a single-cycle pulse. Required, not
-// stylistic: every IRQ source feeding interrupt_controller crosses core_clk -> cpu_core_clk
-// through a plain 2-FF cdc_sync at rtl/soc/soc_top.sv:637-644, which can only safely observe
-// a level held for multiple destination-clock cycles -- a single-cycle pulse could be missed
-// entirely. PWM_IRQ_STAT's stickiness (it stays 1 until a PWM_IRQ_CLR write with no coincident
-// fresh wrap) is what makes irq_o level-held.
-//
-// No CDC at all: pwm_o is a push-pull output with no oe and no asynchronous input pin -- unlike
-// gpio_controller.sv, this module has nothing to synchronise. The `-to` false path this implies
-// at the top-level SDC (mirroring the uart_tx_o convention) is an integration-level concern, out
-// of scope here.
-//
-// Reset: synchronous, active-low throughout -- `always_ff @(posedge clk) if (!rst_n) ... else
-// ...`, no `negedge rst_n` in any sensitivity list. Matches gpio_controller.sv / timer.sv /
-// spi_controller.sv and the rest of rtl/periph/'s uniform synchronous-reset discipline (the
-// mismatch against the async-reset rtl/soc/cdc/* primitives is why the lint target below carries
-// -Wno-SYNCASYNCNET).
-//
-// APB4 interface (ARM IHI0024C):
-//   clk/rst_n map straight through (pclk=clk, presetn=rst_n) -- matching gpio_controller.sv's
-//   convention, not apb4_register_bank's own pclk/presetn port names.
-//   ADDR_W = 12 (byte address; [1:0] unused, word-aligned).
-//   Zero wait states: pready driven 1 every ACCESS phase (apb4_register_bank's own behaviour).
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: A shared tick counter advances once every (PRESCALE+1) core_clk cycles and counts 0 .. PERIOD-1.
+//   It wraps to 0 every PERIOD ticks (the period-wrap event).
+//   Channel ch is active while it is enabled and tick_count < DUTY[ch]. pwm_o[ch] = active ^ CTRL[4+ch].
+//   The output is left-aligned only. There is no centre alignment and no dead time.
+//   pwm_o is push-pull with no oe and no asynchronous input. The module has no CDC.
+// Registers (word index, N_REGS = 8):
+//   0 CTRL (RW: [3:0] channel enable, [7:4] polarity, 0 = active-high), 1 PERIOD (RW, shared, in prescaled ticks),
+//   2 PRESCALE (RW, one tick = PRESCALE+1 core_clk cycles), 3 DUTY01 (RW: [15:0] ch0, [31:16] ch1),
+//   4 DUTY23 (RW: ch2, ch3), 5 IRQ_EN (RW, masks irq_o only), 6 IRQ_STAT (RO, sticky per-channel period wrap),
+//   7 IRQ_CLR (W1C, reads 0).
+//   DUTY == 0 gives a true 0 percent output. DUTY >= PERIOD gives a true 100 percent output.
+//   PERIOD == 0 holds pwm_o inactive and the counters at 0, so no period wrap and no IRQ occur.
+//   A disabled channel drives its inactive level and never sets its IRQ_STAT bit.
+//   An enabled channel sets its IRQ_STAT bit on each period wrap. It clears on IRQ_CLR or reset.
+//   A new period wrap beats a same-cycle IRQ_CLR write (set wins).
+// Parameters: ADDR_W (APB address width, default 12), N_CH (1 to 8, default 4; other values are an elaboration $fatal).
+//   Only channels 0 to 3 have register bits. A channel index of 4 or more is permanently disabled with duty 0.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous (pclk = clk, presetn = rst_n).
+// Caller rules:
+//   - irq_o = |(IRQ_STAT & IRQ_EN). It is level-held, never a single-cycle pulse.
+//   - The consumer synchroniser in soc_top needs a level that stays asserted for several cycles.
+//   - APB access has zero wait states. pready is 1 in every ACCESS phase.
+//   - A -to false path at the top-level SDC for pwm_o is an integration concern.
+// Doc: ds:mod:pwm-controller, tm:mod:pwm-controller
 
 module pwm_controller
 #(
@@ -128,9 +62,7 @@ module pwm_controller
     output logic irq_o
 );
 
-    // Elaboration-time guard (IEEE 1800-2017 §20.11): $fatal directly inside a generate scope,
-    // not wrapped in `initial`, fires at ELABORATION time -- under `verilator --lint-only` too.
-    // Mirrors rtl/soc/cdc/cdc_sync.sv's g_stages_check and gpio_controller.sv:137-139.
+    // Elaboration guard. A $fatal in a generate scope fires at elaboration, also under `verilator --lint-only`.
     if (N_CH == 0 || N_CH > 8) begin : g_n_ch_check
         $fatal(1, "pwm_controller: N_CH (%0d) must be in [1, 8]", N_CH);
     end
@@ -151,12 +83,10 @@ module pwm_controller
     // Word address width (mirrors apb4_register_bank's own WORDW).
     localparam int unsigned WORDW = ADDR_W - 2;
 
-    // MAP_CH: channels actually representable by this fixed 8-register/32-bit map (see header).
+    // MAP_CH: channels actually representable by this fixed 8-register/32-bit map (see ds:mod:pwm-controller).
     localparam int unsigned MAP_CH = (N_CH > 4) ? 4 : N_CH;
 
-    // Implemented-channel mask, MAP_CH-wide. Idiom mirrored from interrupt_controller.sv:78 /
-    // gpio_controller.sv:160 (GH #87-safe width-cast: MAP_CH==32 case never arises here, but the
-    // idiom is kept identical for consistency).
+    // Implemented-channel mask, MAP_CH-wide. The width cast keeps MAP_CH == 32 from truncating to 0.
     localparam logic [31:0] CH_MASK = 32'(({32{1'b1}} >> (32 - MAP_CH)));
 
     // Per-half-word duty write masks: a duty half-word is SW-writable only if its channel is
@@ -225,7 +155,7 @@ module pwm_controller
 
     // =========================================================================
     // Shared prescaler / tick / period counters.
-    // Synchronous reset (see header). `>=` comparisons rather than `==` so a
+    // Synchronous reset (see ds:mod:pwm-controller). `>=` comparisons rather than `==` so a
     // dynamic PRESCALE/PERIOD change (e.g. lowering PRESCALE below the current
     // count) self-corrects on the next cycle instead of missing its compare and
     // locking up (test_pwm_prescaler_change_mid_period).
@@ -241,7 +171,7 @@ module pwm_controller
             prescale_cnt_q <= 16'h0;
             tick_count_q   <= 16'h0;
         end else if (period_w == 16'h0) begin
-            // PERIOD==0: hold both counters at 0 -- no tick, no wrap, ever (see header).
+            // PERIOD==0: hold both counters at 0 -- no tick, no wrap, ever (see ds:mod:pwm-controller).
             prescale_cnt_q <= 16'h0;
             tick_count_q   <= 16'h0;
         end else if (prescale_cnt_q >= prescale_w) begin
@@ -264,7 +194,7 @@ module pwm_controller
 
     // =========================================================================
     // Per-channel decode — enable/polarity/duty, mapped only for c < MAP_CH
-    // (see header). Channels >= MAP_CH (only reachable if N_CH > 4) are
+    // (see ds:mod:pwm-controller). Channels >= MAP_CH (only reachable if N_CH > 4) are
     // permanently disabled with duty tied to 0 -- no register space exists for
     // them in this fixed map.
     // =========================================================================
@@ -291,7 +221,7 @@ module pwm_controller
     endgenerate
 
     // =========================================================================
-    // Active condition + output drive — see header for the duty==0 / duty>=period
+    // Active condition + output drive — see ds:mod:pwm-controller for the duty==0 / duty>=period
     // / period==0 corner cases, all of which fall directly out of this compare.
     // =========================================================================
     logic [N_CH-1:0] active_cond_w;
@@ -304,13 +234,8 @@ module pwm_controller
 
     assign pwm_o = N_CH'(active_cond_w ^ polarity_w);
 
-    // =========================================================================
-    // PWM_IRQ_CLR write-snoop — one-cycle clear mask.
-    // Address-compare zero-extends addr_word to 32 b before comparing (GH #87
-    // truncation-safe idiom, mirrored verbatim from apb4_register_bank.sv /
-    // gpio_controller.sv:277-289) so N_REGS == 2**WORDW can never wrap a valid
-    // index to a false match.
-    // =========================================================================
+    // PWM_IRQ_CLR write-snoop: a one-cycle clear mask.
+    // The address compare zero-extends addr_word to 32 bits, so N_REGS == 2**WORDW cannot wrap a valid index.
     logic [WORDW-1:0] addr_word_w;
     assign addr_word_w = paddr[ADDR_W-1:2];
 
@@ -329,18 +254,9 @@ module pwm_controller
             strb_expand[8*b +: 8] = strb[b] ? 8'hFF : 8'h00;
     endfunction
 
-    // The expanded strobe MUST land in a named net before being sliced.
-    //
-    // Writing `strb_expand(pstrb)[N_CH-1:0]` -- a part-select applied directly to a function
-    // call -- is legal SystemVerilog and Verilator accepts it, but it is NOT legal
-    // Verilog-2005. sv2v passes the construct through verbatim rather than lowering it, and
-    // yosys then rejects the generated file with "syntax error, unexpected '['". That breaks
-    // the CDC flow AND both PD flows (Sky130 and ASAP7 are both sv2v-fronted), while no cocotb
-    // suite can catch it, since Verilator consumes the SystemVerilog and never sees sv2v output.
-    //
-    // The 32-bit temp costs a local UNUSEDSIGNAL waiver for bits [31:N_CH] -- deliberately
-    // preferred over a portability break. strb_expand stays byte-for-byte identical to
-    // apb4_register_bank.sv / gpio_controller.sv rather than being narrowed to N_CH.
+    // The expanded strobe must land in a named net before it is sliced.
+    // A part-select applied directly to a function call is not legal Verilog-2005. sv2v passes it through and yosys rejects it.
+    // The 32-bit temp needs a local UNUSEDSIGNAL waiver for bits [31:N_CH].
     /* verilator lint_off UNUSEDSIGNAL */
     logic [31:0] strb_mask_w;
     /* verilator lint_on  UNUSEDSIGNAL */
@@ -352,7 +268,7 @@ module pwm_controller
 
     // =========================================================================
     // PWM_IRQ_STAT next-state — sticky per channel, SET WINS over a same-cycle
-    // CLEAR (see header).
+    // CLEAR (see ds:mod:pwm-controller).
     // =========================================================================
     logic [N_CH-1:0] wrap_event_w, stat_q_w, stat_next_w;
     assign wrap_event_w = enabled_w & {N_CH{wrap_fire_w}};
@@ -374,7 +290,7 @@ module pwm_controller
     end
 
     // =========================================================================
-    // IRQ output — level-held (see header rationale).
+    // IRQ output — level-held (see ds:mod:pwm-controller).
     // =========================================================================
     assign irq_o = |(regs_o[REG_PWM_IRQ_STAT] & regs_o[REG_PWM_IRQ_EN]);
 

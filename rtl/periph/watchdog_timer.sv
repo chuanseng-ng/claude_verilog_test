@@ -1,73 +1,35 @@
-// watchdog_timer.sv
-// Phase 6a-3 -- Watchdog timer, APB4 slave (bead claude_verilog_test-f7vs.7,
-// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-3 -- WDT"). Written to the pre-committed contract in
-// tb/cocotb/soc/test_wdt.py (that suite's module docstring is the authoritative spec; this header
-// summarises it).
+// watchdog_timer - watchdog timer with bark, bite and window mode, APB4 slave.
 //
-// Register map (word indices into the apb4_register_bank, N_REGS=8):
-//   0  WDT_CTRL      RW  [0] enable, [1] RST_EN (reset 0), [2] window-mode enable; [31:3] reserved
-//   1  WDT_RELOAD    RW  32-bit counter reload value, in prescaled ticks
-//   2  WDT_COUNT     RO  live 32-bit down-counter
-//   3  WDT_WINDOW    RW  closed-window threshold; 0 disables the window check
-//   4  WDT_FEED      WO  0x5A5A_C0DE with pstrb==4'hF feeds; anything else is rejected; reads 0
-//   5  WDT_PRESCALE  RW  [15:0] core_clk divider; one tick = (PRESCALE+1) core_clk cycles
-//   6  WDT_STATUS    RO  [0] bark, [1] bite, [2] window violation -- all sticky
-//   7  WDT_IRQ_CLR   WO  W1C against WDT_STATUS (APB write-snoop, not WMASK); reads 0
-//
-// Timing contract (E = commit edge of the write that sets CTRL[0]; P = PRESCALE, R = RELOAD):
-//   Enabling loads COUNT from RELOAD one edge after E. COUNT then falls by one per tick. Timeout
-//   is a registered detection of COUNT == 0 while running, so BARK becomes visible (P+1)*R + 2
-//   edges after E. The bark edge also reloads the counter and starts a second full period; a
-//   second timeout with no valid feed in between is the BITE, (P+1)*R + 1 edges after the bark.
-//   Both fall inside the latency windows the suite pins.
-//   A valid feed reloads COUNT on its own commit edge and also clears the bark->bite escalation.
-//   A feed committing on the very edge a timeout is detected is too late: the timeout wins.
-//
-// Window mode (CTRL[2]==1 AND WINDOW != 0): a valid-magic feed while COUNT > WINDOW is a window
-// violation -- sets STATUS[2], does NOT reload. COUNT == WINDOW is inside the open window and is
-// accepted. With WINDOW == 0 or CTRL[2] == 0 a feed is accepted at any time. A violation is only
-// a status bit: it never escalates to a bite by itself.
-//
-// RELOAD == 0 while enabled FAILS TOWARD FIRING: COUNT loads as 0, so it is already expired --
-// bark within a couple of edges, bite one edge later, COUNT pinned at 0, no underflow. The
-// dangerous failure of a watchdog is silence (a counter that waited for a 32-bit wrap would
-// disarm the dog for ~2^32 ticks); the only way to reach this state is firmware that enabled the
-// dog before programming it, so a misconfigured watchdog must be noisy. RELOAD writes while
-// running are deferred: the live counter is only touched by a feed, a bark reload or an enable.
-//
-// Bite is TERMINAL: COUNT freezes at 0, nothing further accumulates, a later feed or enable does
-// not revive it. wdt_rst_req_o is a SEPARATE flop from STATUS[1], set on the same edge and
-// level-held until rst_n -- W1C-clearing STATUS[1] does not drop it. RST_EN does NOT gate
-// wdt_rst_req_o: it only arms the SoC-level CPU-domain reset AND-in, which is integration and
-// lives in soc_top, not here.
-//
-// RO-register hazard (historical, bead 6o8w): apb4_register_bank used to let a SW write win over a
-// same-cycle HW write even when WMASK was 0 (it wrote the old value back), so a stray APB store to
-// COUNT or STATUS could stall the counter or swallow a bark/bite set. The bank is now race-free
-// (SW wins inside WMASK, HW wins outside it). Stores to those two words are still presented to the
-// bank as reads (bank_pwrite_w), retained as belt-and-braces; it gives the same observable
-// behaviour. New peripherals do not need this pattern.
-//
-// irq_o = |STATUS[2:0] -- LEVEL-HELD, never a single-cycle pulse. There is no IRQ_EN register
-// (masking is the interrupt_controller's job). Required, not stylistic: every IRQ source crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
-// STATUS stickiness makes irq_o level-held; W1C drops it.
-//   STATUS next = (STATUS & ~clr) | set   -- SET WINS over a same-cycle clear, so a bark or bite
-//   can never be lost to a racing WDT_IRQ_CLR write.
-//
-// Documented limitation: the counter is clocked from core_clk through its prescaler. This SoC has
-// no independent always-on oscillator, so a stuck or dead PLL cannot be barked at.
-//
-// No CDC in this module: no asynchronous inputs, single clock domain (core_clk).
-//
-// Reset: synchronous, active-low throughout -- `always_ff @(posedge clk) if (!rst_n) ... else
-// ...`, no `negedge rst_n` anywhere; matches gpio_controller.sv / pwm_controller.sv / timer.sv.
-//
-// APB4 interface (ARM IHI0024C): clk/rst_n map straight to pclk/presetn. ADDR_W = 12 (byte
-// address, [1:0] unused). Zero wait states: pready is the register bank's constant 1. Writes
-// commit on the ACCESS phase (psel & penable); the FEED / IRQ_CLR snoops decode that same phase.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: A 32-bit down-counter runs from core_clk through a prescaler.
+//   Enabling loads COUNT from RELOAD one edge after the commit edge E of the write that sets CTRL[0].
+//   COUNT then falls by one per tick. Let P = PRESCALE and R = RELOAD.
+//   BARK becomes visible (P+1)*R + 2 edges after E. The bark edge reloads the counter.
+//   A second timeout with no valid feed is the BITE, (P+1)*R + 1 edges after the bark.
+//   A valid feed reloads COUNT on its commit edge and clears the bark-to-bite escalation.
+//   A feed on the edge where a timeout is detected is too late. The timeout wins.
+//   Window mode (CTRL[2] = 1 and WINDOW != 0): a valid feed while COUNT > WINDOW sets STATUS[2] and does not reload.
+//   A window violation never escalates to a bite by itself.
+//   RELOAD = 0 while enabled fails toward firing: COUNT loads as 0, bark follows within a couple of edges and bite one edge later.
+//   COUNT stays at 0 and does not underflow.
+// Registers (word index, N_REGS = 8):
+//   0 WDT_CTRL (RW: [0] enable, [1] RST_EN, [2] window-mode enable), 1 WDT_RELOAD (RW), 2 WDT_COUNT (RO),
+//   3 WDT_WINDOW (RW, 0 disables the check), 4 WDT_FEED (WO, reads 0),
+//   5 WDT_PRESCALE (RW [15:0], one tick = PRESCALE+1 core_clk cycles),
+//   6 WDT_STATUS (RO, sticky: [0] bark, [1] bite, [2] window violation), 7 WDT_IRQ_CLR (WO, W1C on STATUS, reads 0).
+//   Only the value 0x5A5A_C0DE with pstrb == 4'hF feeds the watchdog. Any other write to WDT_FEED is rejected.
+// Parameters: ADDR_W (APB address width, default 12; the legal range is 5 to 32).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. The module has no CDC.
+//   WDT_CTRL resets to 0, so RST_EN is off after reset. The STATUS bits set on their event and clear on W1C or reset.
+// Caller rules:
+//   - RELOAD writes while running are deferred. Only a feed, a bark reload or an enable loads the live counter.
+//   - The bite is terminal. COUNT freezes at 0, and a later feed or enable does not revive it.
+//   - wdt_rst_req_o is a separate flop from STATUS[1]. It is level-held until rst_n. A W1C of STATUS[1] does not drop it.
+//   - RST_EN does not gate wdt_rst_req_o. It only arms the SoC-level CPU-domain reset AND-in in soc_top.
+//   - rst_en_o exports WDT_CTRL[1] to soc_top. This module does not use it.
+//   - irq_o = |STATUS[2:0]. It is level-held. There is no IRQ_EN register: masking is the interrupt_controller's job.
+//   - A new bark or bite beats a same-cycle WDT_IRQ_CLR write (set wins).
+//   - The counter runs from core_clk. A stuck or dead PLL cannot be barked at.
+// Doc: ds:mod:watchdog-timer, tm:mod:watchdog-timer, cr:mod:watchdog-timer
 
 module watchdog_timer
 #(
@@ -164,10 +126,7 @@ module watchdog_timer
     logic        hw_wen_i  [N_REGS];
     logic [31:0] hw_wdata_i[N_REGS];
 
-    // -------------------------------------------------------------------------
-    // APB address decode (zero-extended to 32 b before comparing -- GH #87-safe idiom, as in
-    // apb4_register_bank.sv / gpio_controller.sv / pwm_controller.sv).
-    // -------------------------------------------------------------------------
+    // APB address decode. The compares zero-extend addr_word to 32 bits.
     logic [WORDW-1:0] addr_word_w;
     assign addr_word_w = paddr[ADDR_W-1:2];
 
@@ -180,7 +139,7 @@ module watchdog_timer
     assign is_ro_addr_w      = ({{(32-WORDW){1'b0}}, addr_word_w} == 32'(REG_WDT_COUNT)) ||
                                ({{(32-WORDW){1'b0}}, addr_word_w} == 32'(REG_WDT_STATUS));
 
-    // Stores to the two HW-owned words are shown to the bank as reads (see header).
+    // Stores to COUNT and STATUS are shown to the bank as reads. See cr:mod:watchdog-timer.
     logic bank_pwrite_w;
     assign bank_pwrite_w = pwrite & ~is_ro_addr_w;
 
@@ -346,7 +305,7 @@ module watchdog_timer
     assign clr_w = (access_w & pwrite & is_irq_clr_addr_w) ?
                    (pwdata[2:0] & strb_mask_w[2:0]) : 3'b000;
 
-    // STATUS next-state: sticky, SET WINS over a same-cycle clear (see header).
+    // STATUS next-state: sticky, SET WINS over a same-cycle clear (see ds:mod:watchdog-timer).
     logic [2:0] set_w, stat_next_w;
     assign set_w       = {violation_w, set_bite_w, set_bark_w};
     assign stat_next_w = (stat_w & ~clr_w) | set_w;
@@ -370,7 +329,7 @@ module watchdog_timer
     end
 
     // =========================================================================
-    // Outputs -- both level-held (see header rationale).
+    // Outputs -- both level-held (see ds:mod:watchdog-timer).
     // =========================================================================
     assign irq_o         = |stat_w;
     assign wdt_rst_req_o = bite_q;

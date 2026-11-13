@@ -1,47 +1,27 @@
-// uart_controller.sv
-// Phase 5 (M4) — UART peripheral, 8N1 (8N2 also received), APB4 slave.
-// APB migration PR-2: converted from AXI4-Lite slave to APB4 slave.
+// uart_controller - UART peripheral, 8N1 (8N2 also received), APB4 slave.
 //
-// Register map (word indices into apb4_register_bank):
-//   0  UART_TX     WO [7:0]  write pushes byte to TX FIFO (via APB access snoop)
-//   1  UART_RX     RO [7:0]  RX FIFO head; read pops via snoop
-//   2  UART_STATUS RO        [0]=tx_busy [1]=tx_full [2]=tx_empty
-//                            [3]=rx_empty [4]=rx_full [5]=rx_valid(!rx_empty)
-//                            [6]=framing_error (sticky; read-to-clear on UART_RX read)
-//   3  UART_CTRL   RW [4:0]  [0]=tx_en [1]=rx_en [2]=irq_tx_empty_en
-//                            [3]=irq_rx_valid_en [4]=loopback
-//   4  UART_BAUD   RW [15:0] oversample-period divisor D:
-//                            1 oversample tick = (D+1) clocks;
-//                            1 serial bit      = 16 oversample ticks = 16*(D+1) clocks.
-//                            TX and RX share this generator so loopback stays aligned.
-//
-// TX engine: IDLE → START(0) → DATA[0..7] LSB-first → STOP(1) → IDLE
-//            advances one state per bit_tick (= 16 oversample ticks).
-// RX engine (A4 — 16x oversample):
-//   2-FF synchroniser on uart_rx_i (loopback bypasses it).
-//   START detect: synchronised line low at any os_tick → restart the RX's own
-//   phase counter (rx_phase_q) at 0; the TX phase counter is never touched.
-//   Bits voted 2-of-3 on rx_phase_q 6, 7, 8 (mid-bit).
-//   STOP bit voted at its mid-point; if not 1 → framing_error sticky set (A3).
-//   The frame closes AT the stop-bit mid-point (byte pushed, IDLE re-armed), so
-//   the next START is accepted from there on: back-to-back 8N1 frames with no
-//   idle gap and a bit-clock error of +/-3.5 % are received (bead shm5).
-//   Byte is always pushed regardless of framing error (flag-only, no drop).
-// Loopback: RX receives internal tx_serial (same clock domain); shared os_tick
-//           generator keeps TX and RX exactly bit-aligned.
-//
-// IRQ: irq_o = (irq_tx_empty_en & tx_empty & tx_was_nonempty_q)  [A2]
-//            | (irq_rx_valid_en & rx_valid)
-//      tx-empty term gated by tx_was_nonempty_q to suppress false IRQ at reset.
-//
-// APB snoop (replaces AXI snoop):
-//   TX push: psel & penable & pwrite  & pready at UART_TX word address.
-//   RX pop:  psel & penable & !pwrite & pready at UART_RX word address.
-//   APB transfers are single-beat and the access phase completes in one cycle
-//   when pready=1, so the pulse is exactly one cycle — cleaner than the
-//   two-channel AXI-Lite snoop.  No capture registers needed.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The TX engine runs IDLE, START (0), DATA[0..7] LSB first, STOP (1), IDLE, one state per bit_tick.
+//   The RX engine oversamples 16x and reads uart_rx_i through a 2-FF synchroniser.
+//   It votes 2 of 3 at the mid-bit phases 6, 7 and 8. The frame closes at the stop-bit mid-point.
+//   A stop bit that votes 0 sets the sticky framing_error flag. The RX engine pushes the byte anyway.
+//   TX and RX share one oversample generator, so loopback stays bit-aligned.
+// Registers (word index into apb4_register_bank):
+//   0 UART_TX (WO, a write pushes a byte into the TX FIFO), 1 UART_RX (RO, RX FIFO head, a read pops),
+//   2 UART_STATUS (RO: [0] tx_busy, [1] tx_full, [2] tx_empty, [3] rx_empty, [4] rx_full, [5] rx_valid,
+//     [6] framing_error), 3 UART_CTRL (RW: [0] tx_en, [1] rx_en, [2] irq_tx_empty_en, [3] irq_rx_valid_en,
+//     [4] loopback), 4 UART_BAUD (RW [15:0], divisor D).
+//   One oversample tick lasts D+1 clocks. One serial bit lasts 16 oversample ticks, 16*(D+1) clocks.
+//   framing_error is sticky. A read of UART_RX or a reset clears it.
+// Parameters: ADDR_W (APB address width, default 12), SYNC_STAGES (uart_rx_i synchroniser depth, at least 2, default 2).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous (pclk = clk, presetn = rst_n).
+//   Everything is disabled at reset. The uart_rx_i synchroniser resets to 1, the idle level.
+// Caller rules:
+//   - A zero-strobe write to UART_TX is a legal APB no-op and does not push.
+//   - Loopback feeds the internal tx_serial to the receiver and bypasses the synchroniser.
+//   - The receiver accepts back-to-back 8N1 frames with no idle gap and a bit-clock error of +/-3.5 %.
+//   - irq_o = (irq_tx_empty_en & tx_empty & tx_was_nonempty_q) | (irq_rx_valid_en & rx_valid).
+//     The tx_was_nonempty_q term suppresses a false IRQ at reset.
+// Doc: ds:mod:uart-controller, tm:mod:uart-controller, cr:mod:uart-controller
 
 module uart_controller #(
     parameter int unsigned ADDR_W      = 12,  // APB4 local address width
@@ -160,24 +140,9 @@ module uart_controller #(
     assign irq_rx_valid_en = regs_o[REG_UART_CTRL][CTRL_IRQ_RX_VALID_BIT];
     assign loopback        = regs_o[REG_UART_CTRL][CTRL_LOOPBACK_BIT];
 
-    // =========================================================================
-    // APB access-phase snoop — detect UART_TX write and UART_RX read commits.
-    //
-    // APB4 access phase completes when psel & penable & pready are all 1.
-    // pready is driven 1'b1 combinatorially by apb4_register_bank (zero wait
-    // states), so the access phase is always exactly one cycle wide.  No capture
-    // registers are needed — the word address, pwrite, and pstrb are all stable
-    // during the setup and access phases by APB4 protocol.
-    //
-    // Word address from the byte address:
-    //   addr_word = paddr[ADDR_W-1:2]
-    //
-    // TX push: APB write ACCESS to UART_TX with >=1 strobe asserted.
-    //   A zero-strobe write (pstrb==4'h0) is a legal APB no-op and must not push.
-    //
-    // RX pop:  APB read ACCESS completing at UART_RX word address.
-    //   APB is single-transfer; the access pulse is one cycle → no double-pop risk.
-    // =========================================================================
+    // APB access-phase snoop for the UART_TX write commit and the UART_RX read commit.
+    // The access phase is one cycle wide, so a pulse is exactly one cycle. TX push needs at least one strobe.
+    // RX pop is a read ACCESS at the UART_RX word address.
     logic [WORDW-1:0] apb_word_addr;
     assign apb_word_addr = paddr[ADDR_W-1:2];
 
@@ -272,18 +237,9 @@ module uart_controller #(
         end
     end
 
-    // =========================================================================
-    // A4 — 16x oversample tick generator (shared by TX and RX engines)
-    //
-    // UART_BAUD register (D = regs_o[REG_UART_BAUD][15:0]) sets the oversample
-    // period: 1 os_tick = (D+1) system clocks.
-    // 1 serial bit = 16 os_ticks = 16*(D+1) system clocks.
-    // When D=0 → os_tick every clock; bit period = 16 clocks.
-    //
-    // os_phase counts 0..15; wraps every 16 os_ticks → one bit_tick per wrap.
-    // TX FSM uses bit_tick; RX FSM uses os_tick + os_phase for mid-bit sampling.
-    // TX and RX share this generator so loopback stays exactly bit-aligned.
-    // =========================================================================
+    // A4: 16x oversample tick generator, shared by the TX and RX engines.
+    // UART_BAUD sets D: one os_tick is D+1 clocks, one bit is 16 os_ticks. D=0 gives an os_tick every clock.
+    // The TX FSM uses bit_tick. The RX FSM uses os_tick and its own phase counter rx_phase_q.
     logic [15:0] baud_cnt_q;   // oversample period down-counter
     logic        os_tick;      // one pulse per oversample period (every D+1 clks)
     logic [3:0]  os_phase_q;   // oversample phase 0..15 within one bit period
@@ -292,10 +248,8 @@ module uart_controller #(
     assign os_tick  = (baud_cnt_q == 16'h0);
     assign bit_tick = os_tick && (os_phase_q == 4'd15);
 
-    // The shared phase counter free-runs: it times the TX engine only.  The RX
-    // engine keeps its own phase counter (rx_phase_q, below) that it re-aligns on
-    // every START edge, so receiving never disturbs the transmitted bit timing
-    // and TX stays exactly 16 os_ticks per bit (bead shm5).
+    // The shared phase counter free-runs and times the TX engine only. The RX engine keeps its own phase counter.
+    // So receiving never disturbs the transmitted bit timing: TX stays exactly 16 os_ticks per bit.
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             baud_cnt_q <= 16'h0;
@@ -385,44 +339,9 @@ module uart_controller #(
 
     assign uart_tx_o = tx_serial;
 
-    // =========================================================================
-    // A4 — RX engine (16x oversample, serial receiver; re-syncs every frame)
-    //
-    // Receives from uart_rx_i (through the cdc_sync synchroniser) or from the
-    // internal tx_serial when loopback is enabled (same clock domain — no
-    // synchroniser needed).
-    //
-    // Own phase counter (bead shm5):
-    //   rx_phase_q counts os_ticks 0..15 and is reset to 0 on the os_tick at
-    //   which RX_IDLE sees the line low (the START falling edge, seen up to one
-    //   os_tick late).  It is independent of the TX phase counter os_phase_q, so
-    //   re-aligning the receiver never stretches or shortens a transmitted bit.
-    //   Every frame therefore starts from a fresh alignment and a baud error
-    //   cannot accumulate from one byte to the next.
-    //
-    // Mid-bit sampling with majority vote (A3-integrated):
-    //   Each bit is voted 2-of-3 on rx_phase_q = 6, 7, 8.  Because the phase
-    //   counter restarts AT the detection os_tick, rx_phase_q == k is seen k+1
-    //   os_ticks after it; phases 6/7/8 are therefore 7/8/9 os_ticks after the
-    //   detected edge, centred on 8 ticks, the bit mid-point (the true edge is
-    //   0..1 os_tick before the detected one).
-    //   START bit: a majority-high vote (not genuinely low mid-bit) is a noise
-    //              glitch; it is rejected one os_tick after the vote completes.
-    //   Data bits: voted values are latched at the end of the bit (phase 15).
-    //   STOP bit:  voted on phases 6, 7 and the live line at phase 8; the frame
-    //              is closed AT that mid-point: framing error if the vote is 0,
-    //              byte pushed, RX_IDLE re-armed.  The next START may be
-    //              accepted from there on, so frames sent back-to-back with a
-    //              single stop bit and a bit-clock error of a few percent keep
-    //              their framing.  The os_ticks between that mid-point and the
-    //              nominal end of the stop bit absorb the error: the receiver
-    //              is back in IDLE before even a fast sender's next START.
-    //
-    // Loopback alignment:
-    //   TX advances on bit_tick; the START it drives is seen by RX one os_tick
-    //   later and the receiver aligns to it.  The shared os_tick generator keeps
-    //   the two engines on the same tick grid.
-    // =========================================================================
+    // A4: RX engine, 16x oversample. It reads uart_rx_i through the cdc_sync, or tx_serial when loopback is on.
+    // rx_phase_q counts os_ticks 0..15 and restarts at the os_tick where RX_IDLE sees the line low.
+    // Each bit is voted 2 of 3 on rx_phase_q 6, 7 and 8. The frame closes at the stop-bit mid-point.
     typedef enum logic [2:0] {
         RX_IDLE  = 3'd0,
         RX_START = 3'd1,   // absorbing the START bit period; verify mid-bit low
@@ -464,18 +383,9 @@ module uart_controller #(
     // Cleared by rx_pop (read of UART_RX — read-to-clear) or by reset.
     logic framing_error_q;
 
-    // 2-FF synchroniser on the asynchronous uart_rx_i pad (CDC hardening).
-    // Idle line is high (8N1), so the synchroniser must reset to 1: a reset
-    // value of 0 would present a false START bit to the receiver FSM.
-    // cdc_sync with RESET_VAL = 1 resets both stages to 1 (no inverters).
-    // Loopback path uses the internal tx_serial (same clock domain) and
-    // bypasses this synchroniser. Same 2-cycle latency as the previous
-    // hand-written chain; the reset is now asserted asynchronously by the
-    // primitive (see the cdc_sync header) where it was synchronous here.
-    // SYNC_STAGES > 2 is safe for the receiver: the RX FSM aligns its
-    // oversample phase to the *synchronised* start edge and every later data
-    // edge is delayed by the same constant, so the sample points keep their
-    // position relative to the bits; only the data-valid latency grows.
+    // Synchroniser on the asynchronous uart_rx_i pad. The idle line is high, so it resets to 1 (RESET_VAL = 1).
+    // A reset value of 0 would present a false START bit. Loopback bypasses it.
+    // SYNC_STAGES above 2 is safe for the receiver: only the data-valid latency grows.
     logic uart_rx_sync_q;
 
     cdc_sync #(
@@ -692,4 +602,3 @@ module uart_controller #(
                    (irq_rx_valid_en & rx_valid);
 
 endmodule : uart_controller
-

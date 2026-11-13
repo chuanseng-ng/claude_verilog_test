@@ -1,88 +1,27 @@
-// gpio_controller.sv
-// Phase 6a — General-purpose I/O controller, APB4 slave (bead claude_verilog_test-ckc).
+// gpio_controller - GPIO controller, APB4 slave, with per-pin level and edge interrupts.
 //
-// Register map (word indices into the apb4_register_bank):
-//   0  GPIO_DATA_IN   RO             live synchronised pin levels (HW-written)
-//   1  GPIO_DATA_OUT  RW             output-drive value per pin
-//   2  GPIO_DIR       RW             1 = pin driven as output, 0 = input
-//   3  GPIO_IRQ_EN    RW             1 = pin's IRQ event masked into irq_o
-//   4  GPIO_IRQ_TYPE  RW             0 = level-sensitive, 1 = edge-sensitive
-//   5  GPIO_IRQ_POL   RW             0 = active-low/falling, 1 = active-high/rising
-//   6  GPIO_IRQ_STAT  RO             per-pin pending: sticky in edge mode,
-//                                    live in level mode (HW-written)
-//   7  GPIO_IRQ_CLR   W1C            APB-write-snoop clear (edge pins only);
-//                                    always reads 0
-//
-// Only the low N_PINS bits of GPIO_DATA_OUT/GPIO_DIR/GPIO_IRQ_EN/GPIO_IRQ_TYPE/
-// GPIO_IRQ_POL/GPIO_IRQ_CLR are SW-writable (WMASK restricted to the
-// implemented-pin mask below); the rest of this module's internal buses are
-// N_PINS-wide, so an unimplemented pin (N_PINS < 32) can never source an
-// event or a driven level.
-//
-// Input synchronisation: gpio_in_i is an asynchronous external pin bus. Per
-// rtl/soc/cdc/cdc_sync.sv's own scope warning, that primitive is valid
-// ONLY for WIDTH=1 or gray-coded buses -- NOT an arbitrary multi-bit binary
-// bus, because independent bits can resolve metastability on different
-// destination-clock edges and the sampled word could transiently equal a
-// value no single source-side cycle ever drove. GPIO pins carry no cross-bit
-// word coherency (each pin is an independent, unrelated external signal), so
-// this module instantiates N_PINS SEPARATE single-bit cdc_sync instances
-// -- one per pin -- rather than one WIDTH(N_PINS) instance, making that
-// absence of coherency explicit and self-documenting rather than accidental.
-//
-// Edge detection: the synchronised bus is registered one further cycle
-// (gpio_in_prev_q); rise = sync & ~prev, fall = ~sync & prev.
-//
-// Per-pin IRQ event (raw, independent of GPIO_IRQ_EN -- GPIO_IRQ_STAT is the
-// raw pending register; GPIO_IRQ_EN masks only the irq_o output). Both event
-// terms are computed for every pin every cycle; GPIO_IRQ_TYPE selects which
-// one reaches GPIO_IRQ_STAT:
-//   edge mode  (IRQ_TYPE=1): event = IRQ_POL ? rise : fall
-//   level mode (IRQ_TYPE=0): event = IRQ_POL ? sync : ~sync
-//
-// GPIO_IRQ_STAT update (HW-written every cycle), per pin, BY TRIGGER TYPE:
-//   edge  (IRQ_TYPE=1): STICKY.  stat = (stat & ~clr) | edge_event
-//       SET WINS over CLEAR on a same-cycle collision -- a GPIO_IRQ_CLR write
-//       that lands the same cycle a fresh edge is captured leaves the bit SET,
-//       so an edge is never silently lost to a racing clear.
-//   level (IRQ_TYPE=0): LIVE.    stat = level_event
-//       The bit simply follows the pin, and GPIO_IRQ_CLR has NO EFFECT on it.
-//       A level interrupt is silenced by removing the condition at the source
-//       or by masking GPIO_IRQ_EN -- never by clearing status.
-//
-// This edge-sticky / level-live split follows ARM PL061 (GPIORIS is the raw
-// level in level mode; GPIOICR clears edge detection only). The alternative --
-// making level events sticky too -- was rejected: with the reset defaults
-// (IRQ_TYPE=0 level, IRQ_POL=0 active-low) and undriven pins reading low,
-// every pin's level condition is TRUE at reset, so a sticky raw register
-// would latch to all-ones on the first cycle out of reset and stay there
-// until software cleared a register it had not yet configured.
-//
-// irq_o = |(GPIO_IRQ_STAT & GPIO_IRQ_EN) -- LEVEL-HELD, never a single-cycle
-// pulse. This is required, not stylistic: soc_top.sv documents (see its IRQ
-// routing note) that every IRQ source feeding interrupt_controller crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync (u_ext_irq_sync),
-// which can only safely observe a level that stays asserted for multiple
-// destination-clock cycles -- a single-cycle pulse could be missed entirely
-// by that synchroniser. GPIO_IRQ_STAT's stickiness is what makes irq_o
-// level-held: an edge-mode bit stays 1 until SW clears it via GPIO_IRQ_CLR,
-// and a level-mode bit stays 1 for as long as its condition holds -- in both
-// cases far longer than the 2 destination-clock cycles the synchroniser needs.
-// Compare timer.sv's irq_pending_q and interrupt_controller.sv's raw source
-// levels, which are level-held for the same reason.
-//
-// No tristate: gpio_out_o/gpio_oe_o/gpio_in_i form a unidirectional triplet
-// (drive value, output-enable, sensed level) rather than a single inout pad
-// signal -- this repo has no tristate primitives or pad-ring model at the
-// RTL level. Merging these three into one true bidirectional pad is a
-// pad-ring / integration-level concern, out of scope for this module.
-//
-// APB4 interface (ARM IHI0024C):
-//   pclk = clk, presetn = rst_n (active-low synchronous reset)
-//   ADDR_W = 12 (byte address; [1:0] unused, word-aligned)
-//   Zero wait states: pready driven 1 every ACCESS phase.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The pins form a unidirectional triplet: gpio_out_o (drive value), gpio_oe_o (1 = drive)
+//   and gpio_in_i (sensed level). There is no tristate. Merging the triplet into a pad is pad-ring work.
+//   gpio_in_i is asynchronous. N_PINS single-bit cdc_sync instances synchronise it, one per pin.
+// Registers (word index; the full map is in ds:mod):
+//   0 DATA_IN (RO, synchronised pin levels), 1 DATA_OUT (RW), 2 DIR (RW, 1 = output),
+//   3 IRQ_EN (RW, masks irq_o only), 4 IRQ_TYPE (RW, 0 level, 1 edge),
+//   5 IRQ_POL (RW, 0 active-low or falling, 1 active-high or rising),
+//   6 IRQ_STAT (RO, raw pending), 7 IRQ_CLR (W1C, edge pins only, reads 0).
+//   Only the low N_PINS bits of the RW registers are writable. An unimplemented pin cannot source an event.
+//   IRQ_STAT is live for a level pin. For an edge pin it sets on the edge and clears on IRQ_CLR or reset; a new edge beats a same-cycle clear.
+//   IRQ_CLR has no effect on a level pin. Remove the condition at the source, or mask it in IRQ_EN.
+// Parameters: ADDR_W (APB address width, default 12), N_PINS (1 to 32, default 32; other values are an
+//   elaboration $fatal), SYNC_STAGES (gpio_in_i synchroniser depth, at least 2, default 2).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous (pclk = clk, presetn = rst_n).
+//   After reset DIR = 0 (all inputs), DATA_OUT = 0, IRQ_TYPE = 0 (level), IRQ_POL = 0 (active-low) and IRQ_EN = 0 (masked).
+// Caller rules:
+//   - irq_o = |(IRQ_STAT & IRQ_EN). It is level-held, never a single-cycle pulse.
+//   - The consumer synchroniser in soc_top needs a level that stays asserted for several cycles.
+//   - Software clears an edge interrupt with IRQ_CLR. A level interrupt follows the pin.
+//   - APB access has zero wait states. pready is 1 in every ACCESS phase.
+// Full contract: ds:mod:gpio-controller
+// Doc: ds:mod:gpio-controller, tm:mod:gpio-controller
 
 module gpio_controller
 #(
@@ -125,16 +64,8 @@ module gpio_controller
     output logic irq_o
 );
 
-    // Elaboration-time guard (IEEE 1800-2017 §20.11): $fatal directly inside a
-    // generate scope, not wrapped in `initial`, fires at ELABORATION time --
-    // under `verilator --lint-only` too, which never runs simulation and would
-    // otherwise silently let an illegal N_PINS through. Mirrors
-    // rtl/soc/cdc/cdc_sync.sv's g_stages_check and the rationale recorded
-    // at rtl/soc/sram_controller.sv:110-126.
-    // N_PINS == 0 is rejected as well as > 32: a zero-pin instance would make
-    // every [N_PINS-1:0] part-select below a [-1:0] range, and PIN_MASK's
-    // >> (32 - N_PINS) a >> 32 (all zeroes), so the module would be both
-    // illegal and useless.
+    // Elaboration guard. A $fatal in a generate scope fires at elaboration, also under `verilator --lint-only`.
+    // N_PINS must be in [1, 32]. N_PINS == 0 would make every [N_PINS-1:0] select a [-1:0] range.
     if (N_PINS == 0 || N_PINS > 32) begin : g_n_pins_check
         $fatal(1, "gpio_controller: N_PINS (%0d) must be in [1, 32]", N_PINS);
     end
@@ -156,8 +87,7 @@ module gpio_controller
     localparam int unsigned WORDW = ADDR_W - 2;
 
     // Implemented-pin mask: only the low N_PINS bits are SW-writable.
-    // Idiom mirrored verbatim from interrupt_controller.sv:77 (GH #87-safe
-    // width-cast: N_PINS==32 must not truncate to 0).
+    // The width cast keeps N_PINS == 32 from truncating to 0.
     localparam logic [31:0] PIN_MASK = 32'(({32{1'b1}} >> (32 - N_PINS)));
 
     // =========================================================================
@@ -217,7 +147,7 @@ module gpio_controller
 
     // =========================================================================
     // Input synchronisation — N_PINS independent single-bit cdc_sync
-    // instances (see header: a single WIDTH(N_PINS) instance is forbidden by
+    // instances (see ds:mod:gpio-controller: a single WIDTH(N_PINS) instance is forbidden by
     // cdc_sync.sv's own scope warning for an arbitrary binary bus).
     // =========================================================================
     logic [N_PINS-1:0] gpio_in_sync_q;
@@ -263,7 +193,7 @@ module gpio_controller
     assign fall_w = ~gpio_in_sync_q & gpio_in_prev_q;
 
     // =========================================================================
-    // Per-pin IRQ event — raw, independent of GPIO_IRQ_EN (see header).
+    // Per-pin IRQ event — raw, independent of GPIO_IRQ_EN (see ds:mod:gpio-controller).
     // =========================================================================
     logic [N_PINS-1:0] irq_type_w, irq_pol_w;
     assign irq_type_w = regs_o[REG_GPIO_IRQ_TYPE][N_PINS-1:0];
@@ -273,12 +203,8 @@ module gpio_controller
     assign edge_event_w  = (irq_pol_w & rise_w) | (~irq_pol_w & fall_w);
     assign level_event_w = (irq_pol_w & gpio_in_sync_q) | (~irq_pol_w & ~gpio_in_sync_q);
 
-    // =========================================================================
-    // GPIO_IRQ_CLR write-snoop — one-cycle clear mask.
-    // Address-compare zero-extends addr_word to 32 b before comparing (GH #87
-    // truncation-safe idiom, mirrored verbatim from apb4_register_bank.sv) so
-    // that N_REGS == 2**WORDW can never wrap a valid index to a false match.
-    // =========================================================================
+    // GPIO_IRQ_CLR write-snoop: a one-cycle clear mask.
+    // The address compare zero-extends addr_word to 32 bits, so N_REGS == 2**WORDW cannot wrap a valid index.
     logic [WORDW-1:0] addr_word_w;
     assign addr_word_w = paddr[ADDR_W-1:2];
 
@@ -302,7 +228,7 @@ module gpio_controller
                    (pwdata & strb_expand(pstrb)) : 32'h0;
 
     // =========================================================================
-    // GPIO_IRQ_STAT next-state — per pin, by trigger type (see header):
+    // GPIO_IRQ_STAT next-state — per pin, by trigger type (see ds:mod:gpio-controller):
     //   edge  pins: sticky, SET WINS over a same-cycle CLEAR.
     //   level pins: live; clr_w has no effect on them by construction.
     // =========================================================================
@@ -332,7 +258,7 @@ module gpio_controller
     end
 
     // =========================================================================
-    // IRQ output — level-held (see header rationale).
+    // IRQ output — level-held (see ds:mod:gpio-controller).
     // =========================================================================
     assign irq_o = |(regs_o[REG_GPIO_IRQ_STAT] & regs_o[REG_GPIO_IRQ_EN]);
 

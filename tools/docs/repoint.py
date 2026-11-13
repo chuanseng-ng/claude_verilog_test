@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import posixpath
 import re
 import subprocess
@@ -37,7 +38,12 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-EXCLUDE_PREFIXES = (".beads/", "memory/", "micro_p/", "pnr/commercial/")
+# sw/bootloader/ and sw/bench/bin2hex.py are hashed by the boot image drift gate
+# (tools/fpga/boot_image.py), so a comment edit there fails CI. The manifests listed in
+# BOOT_MANIFESTS add every source they record, read at run time.
+EXCLUDE_PREFIXES = (".beads/", "memory/", "micro_p/", "pnr/commercial/", "sw/bootloader/")
+EXCLUDE_FILES = {"sw/bench/bin2hex.py"}
+BOOT_MANIFESTS = ("fpga/nexys_video/boot_uart.manifest.json",)
 EXCLUDE_NAMES = {"design_state.json", "path_map.tsv", "package-lock.json", "uv.lock", "flake.lock"}
 EXCLUDE_SUFFIXES = (".lock",)
 MAP_REL = "docs/manual/common/path_map.tsv"
@@ -159,8 +165,22 @@ def git_files(root: Path) -> list[str]:
     return [p for p in out.decode("utf-8", "replace").split("\0") if p]
 
 
-def is_excluded(rel: str, old_paths: set[str]) -> bool:
-    if rel.startswith(EXCLUDE_PREFIXES):
+def manifest_sources(root: Path) -> set[str]:
+    """Return the sources that the boot-image manifests record (none if absent or unreadable)."""
+    found: set[str] = set()
+    for rel in BOOT_MANIFESTS:
+        try:
+            data = json.loads((root / rel).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        srcs = data.get("sources") if isinstance(data, dict) else None
+        if isinstance(srcs, dict):
+            found.update(str(k).replace("\\", "/") for k in srcs)
+    return found
+
+
+def is_excluded(rel: str, old_paths: set[str], pinned: frozenset[str] = frozenset()) -> bool:
+    if rel.startswith(EXCLUDE_PREFIXES) or rel in EXCLUDE_FILES or rel in pinned:
         return True
     name = rel.rsplit("/", 1)[-1]
     if name in EXCLUDE_NAMES or name.endswith(EXCLUDE_SUFFIXES):
@@ -303,7 +323,7 @@ def regions(kind: str, text: str, lines: list[str]) -> list[list[tuple[int, int]
     n = len(lines)
     whole = [[(0, len(ln))] for ln in lines]
     if kind == "prose":
-        out = []
+        out: list[list[tuple[int, int]]] = []
         fenced = False
         for i, ln in enumerate(lines):
             if FENCE.match(ln):
@@ -616,10 +636,11 @@ def main(argv: list[str] | None = None) -> int:
     wanted = [p.replace("\\", "/").strip("/") for p in args.paths]
     rep = Report()
     old_paths = set(mapping)
+    pinned = frozenset(manifest_sources(root))
     for rel in files:
         if wanted and not any(rel == w or rel.startswith(w + "/") for w in wanted):
             continue
-        if is_excluded(rel, old_paths):
+        if is_excluded(rel, old_paths, pinned):
             continue
         fp = root / rel
         try:

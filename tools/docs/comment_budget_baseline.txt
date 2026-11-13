@@ -146,59 +146,6 @@ rtl/mem/rv32i_dcache.sv | date | 1 |
 rtl/mem/rv32i_icache.sv | bead | 4 |
 rtl/mem/rv32i_icache.sv | blk | 5 | 17
 rtl/mem/rv32i_icache.sv | meas | 1 |
-rtl/npu/npu_mac_array.sv | bead | 2 |
-rtl/npu/npu_top.sv | bead | 1 |
-rtl/npu/npu_top.sv | hdr | 1 | 77
-rtl/npu/npu_weight_mem.sv | bead | 3 |
-rtl/npu/npu_weight_mem.sv | hdr | 1 | 53
-rtl/periph/aes128_core.sv | bead | 8 |
-rtl/periph/aes128_core.sv | blk | 1 | 12
-rtl/periph/aes128_core.sv | hdr | 1 | 75
-rtl/periph/aes128_core.sv | meas | 1 |
-rtl/periph/crypto_accel.sv | bead | 10 |
-rtl/periph/crypto_accel.sv | ghpr | 1 |
-rtl/periph/crypto_accel.sv | hdr | 1 | 204
-rtl/periph/dma_engine.sv | bead | 2 |
-rtl/periph/dma_engine.sv | blk | 1 | 42
-rtl/periph/dma_engine.sv | hdr | 1 | 46
-rtl/periph/dma_engine.sv | meas | 1 |
-rtl/periph/gpio_controller.sv | bead | 1 |
-rtl/periph/gpio_controller.sv | blk | 1 | 10
-rtl/periph/gpio_controller.sv | fline | 2 |
-rtl/periph/gpio_controller.sv | ghpr | 2 |
-rtl/periph/gpio_controller.sv | hdr | 1 | 85
-rtl/periph/i2c_bit_engine.sv | bead | 3 |
-rtl/periph/i2c_bit_engine.sv | blk | 1 | 11
-rtl/periph/i2c_bit_engine.sv | hdr | 1 | 125
-rtl/periph/i2c_bit_engine.sv | meas | 4 |
-rtl/periph/i2c_controller.sv | bead | 1 |
-rtl/periph/i2c_controller.sv | ghpr | 1 |
-rtl/periph/i2c_controller.sv | hdr | 1 | 135
-rtl/periph/i2c_controller.sv | meas | 2 |
-rtl/periph/interrupt_controller.sv | bead | 7 |
-rtl/periph/interrupt_controller.sv | blk | 1 | 17
-rtl/periph/pwm_controller.sv | bead | 1 |
-rtl/periph/pwm_controller.sv | blk | 1 | 12
-rtl/periph/pwm_controller.sv | fline | 5 |
-rtl/periph/pwm_controller.sv | ghpr | 2 |
-rtl/periph/pwm_controller.sv | hdr | 1 | 92
-rtl/periph/sha256_core.sv | bead | 5 |
-rtl/periph/sha256_core.sv | hdr | 1 | 59
-rtl/periph/spi_controller.sv | bead | 3 |
-rtl/periph/spi_controller.sv | blk | 2 | 24
-rtl/periph/spi_controller.sv | ghpr | 1 |
-rtl/periph/spi_controller.sv | hdr | 1 | 44
-rtl/periph/trng.sv | bead | 3 |
-rtl/periph/trng.sv | ghpr | 1 |
-rtl/periph/trng.sv | hdr | 1 | 58
-rtl/periph/trng_lfsr_entropy.sv | bead | 1 |
-rtl/periph/trng_ro_sky130.sv | bead | 1 |
-rtl/periph/uart_controller.sv | bead | 3 |
-rtl/periph/uart_controller.sv | blk | 4 | 38
-rtl/periph/uart_controller.sv | hdr | 1 | 44
-rtl/periph/watchdog_timer.sv | bead | 2 |
-rtl/periph/watchdog_timer.sv | ghpr | 1 |
-rtl/periph/watchdog_timer.sv | hdr | 1 | 70
 rtl/soc/pll/pll_apb_regs.sv | ghpr | 1 |
 rtl/soc/pll/pll_clkgen.sv | meas | 1 |
 rtl/soc/soc_periph_map_pkg.sv | bead | 7 |

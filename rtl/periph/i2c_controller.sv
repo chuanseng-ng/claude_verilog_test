@@ -1,138 +1,36 @@
-// i2c_controller.sv
-// Phase 6a-5 -- I2C master controller, APB4 slave (bead claude_verilog_test-f7vs.9,
-// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-5 -- I2C"). Master-only, 7-bit addressing, repeated
-// START, mandatory clock stretching, arbitration-loss DETECTION, 8-byte TX/RX FIFOs.
+// i2c_controller - I2C master controller, APB4 slave.
 //
-// !!! PAD-RING CONTRACT -- READ BEFORE INTEGRATING (also in Doc: ds:mm:memory-map) !!!
-//   * Open-drain, NO TRISTATE. Each line is the unidirectional triplet used by GPIO:
-//       i2c_scl_o / i2c_scl_oe_o / i2c_scl_i      i2c_sda_o / i2c_sda_oe_o / i2c_sda_i
-//   * `*_oe_o` is the real control. oe = 1 DRIVES THE LINE LOW; oe = 0 RELEASES it.
-//   * `*_o` is HARD-TIED 1'b0 and is DEAD. It exists only for pad-ring symmetry with
-//     gpio_out_o/gpio_oe_o/gpio_in_i, so the I2C pins map onto a pad cell the same way a GPIO pin
-//     does. Do not use it as data: the pad must drive 0 when oe = 1 and be high-Z when oe = 0.
-//   * An EXTERNAL PULL-UP on each line is REQUIRED. Nothing on-chip ever drives a line high; a
-//     released line is high only because the pull-up makes it so.
-//   * The wired-AND of master and slaves lives OFF-CHIP (the physical bus). This RTL does not model
-//     it; a testbench must (the internal loopback below models it for its one slave only).
-//   * `*_i` are the sensed pad levels and are ASYNCHRONOUS (see "CDC").
-//
-// Register map (word indices into the apb4_register_bank, N_REGS=12; 0x030-0xFFC read 0):
-//   0  I2C_CTRL      RW  [0] EN, [1] LOOPBACK, [11:8] RX_THR (FIFO level that raises
-//                        IRQ_STAT[4]; 0 behaves as 1; 9..15 never fire); other bits reserved, read 0
-//   1  I2C_STATUS    RO  [0] busy (engine executing a command), [1] txn_active (this master holds
-//                        the bus: START sent, STOP not yet), [2] nack (sticky), [3] arb_lost
-//                        (sticky), [4] timeout (sticky), [5] SCL sensed level, [6] SDA sensed level
-//                        ([4:2] are the SAME flops as IRQ_STAT[3:1]; they clear via IRQ_CLR)
-//   2  I2C_CLKDIV    RW  [15:0] tick divider, reset 0x00FF. One bit = 4 ticks, a tick is
-//                        (CLKDIV+1) clk cycles, so f_scl = f_clk / (4*(CLKDIV+1)) with no stretching
-//                        (see "Bit timing" for the exact phase split and the residual error).
-//                        Values below CLKDIV_MIN are CLAMPED to CLKDIV_MIN (reads back as written)
-//   3  I2C_ADDR      RW  [6:0] slave address, [7] R/W (0 = write, 1 = read); START sends
-//                        {ADDR[6:0], ADDR[7]}. The engine does not police ADDR[7] against the
-//                        data op in CMD: software keeps them consistent
-//   4  I2C_TX_DATA   WO  a write with pstrb[0] pushes pwdata[7:0] into the TX FIFO (snoop-push);
-//                        a push into a FULL FIFO is dropped; reads 0
-//   5  I2C_RX_DATA   RO  RX FIFO head; an APB READ pops it (snoop-pop, SPI_RX idiom); reading an
-//                        EMPTY FIFO returns 0, sets no status and does not underflow
-//   6  I2C_CMD       WO  snoop-pulse, reads 0, see "Commands"
-//   7  I2C_FIFO_STAT RO  [3:0] tx_level, [7:4] rx_level, [8] tx_full, [9] tx_empty, [10] rx_full,
-//                        [11] rx_empty
-//   8  I2C_TIMEOUT   RW  [15:0] stuck-wait limit in engine TICKS, reset 0xFFFF; 0 disables
-//   9  I2C_IRQ_EN    RW  [4:0] masks irq_o only; I2C_IRQ_STAT is the raw pending register
-//  10  I2C_IRQ_STAT  RO  [0] done, [1] nack, [2] arb_lost, [3] timeout (all four sticky),
-//                        [4] rx_threshold (LIVE level, follows the RX FIFO)
-//  11  I2C_IRQ_CLR    WO  W1C against IRQ_STAT[3:0] (bit 4 is a live level and has no clear);
-//                        reads 0
-//
-// Commands. A write to I2C_CMD with pstrb[0] set (pstrb[1] for COUNT) starts ONE command:
-//   [0] START   [1] WRITE   [2] READ   [3] STOP   [4] NACK_LAST   [15:8] COUNT
-// Fixed execution order inside one command: START (or repeated START if txn_active) + address
-// byte; then COUNT data bytes (WRITE wins if WRITE and READ are both set); then STOP.
-//   * COUNT 0 means 1. WRITE pops the TX FIFO per byte and READ pushes the RX FIFO per byte; if the
-//     TX FIFO is empty (WRITE) or the RX FIFO is full (READ) the engine HOLDS SCL LOW and waits,
-//     bounded by I2C_TIMEOUT. COUNT may exceed the 8-byte FIFOs for that reason.
-//   * READ ACKs every byte except the last of the command, which is NACKed iff NACK_LAST = 1.
-//   * A NACK (address or write data) sets `nack`, abandons the remaining data bytes, and still
-//     sends STOP if STOP was requested; otherwise the bus is held (txn_active stays 1) so software
-//     can issue STOP or a repeated START. `done` then sets.
-//   * A command is ACCEPTED only when CTRL.EN = 1, the engine is idle, and it is legal: it needs
-//     START, or txn_active for a WRITE/READ/STOP-only command. An illegal or busy-time write is
-//     IGNORED silently; STATUS.busy is the gate software polls.
-//   * `done` sets when a command finishes normally (ACK or NACK), after STOP when one was sent. An
-//     arbitration loss or timeout sets its own sticky bit INSTEAD of `done`.
-//   * CTRL.EN = 0 aborts the engine at once (lines released, no event bit, txn_active cleared) and
-//     flushes BOTH FIFOs once, on the 1 -> 0 edge. Sticky flags and registers are retained. Change
-//     CTRL.LOOPBACK only while idle.
-//
-// Bit timing (full phase table, derivation and residual-error list: i2c_bit_engine.sv header).
-// N = CLKDIV_eff + 1 clk per tick; one SCL bit is FOUR timed phases and the bus period is 4*N clk,
-// f_scl = f_clk / (4*N), with SCL low = 2N + K and SCL high = 2N - K clk, K = floor(N/8) (the skew
-// buys the Fast-mode tLOW; a symmetric split misses it). The 3 clk it takes the released SCL to come
-// back through the 2-FF synchroniser are counted INSIDE the high phase, so the period is exactly 4*N.
-// Measured (100 MHz clk): CLKDIV 249 -> 1000 clk = 100.0 kHz (tLOW 5.31 us, tHIGH 4.69 us); CLKDIV 62
-// -> 252 clk = 396.8 kHz (tLOW 1.33 us, tHIGH 1.19 us).
-// RESIDUAL ERROR: exactly 4*N unless (a) the SCL pad rises more than ~1 clk after oe_o releases it
-// (the excess is waited out and adds to the period -- bus-capacitance stretching, not compensated);
-// (b) a slave stretches SCL (adds the stretch, bounded by I2C_TIMEOUT); (c) CTRL.LOOPBACK, which has
-// no synchroniser, runs at 4*N - 2 clk. Fast-mode tLOW at an exact 400 kHz is missed for N = 4..7 and
-// 13..15 only (f_clk 6.4..11.2 or 20.8..24 MHz); Standard mode and every other N meet the limits.
-//
-// Clock stretching is MANDATORY: the bit engine releases SCL, then does not advance (and does not
-// start its SCL-high interval) until the SYNCHRONISED scl_i reads high. I2C_TIMEOUT bounds every such
-// wait (bus busy before START, SCL stretched, FIFO starvation). On expiry the sticky `timeout` bit
-// sets, both lines are released and the engine goes idle. It is sticky and diagnostic: without it a
-// stuck slave hangs the FSM with no visible cause.
-//
-// Arbitration: whenever the engine releases SDA to send a 1 (data/address bit, or a NACK in a read's
-// ACK slot) it compares that against the sensed SDA at the end of the SCL-high interval. Sensed low
-// = another master drove it = ARBITRATION LOST: sticky `arb_lost`, lines released, engine idle. The
-// ACK slot of a write is excluded (the slave is meant to pull it low). There is NO retry FSM;
-// software re-issues. Detection falls out of the open-drain model for free.
-//
-// CDC: i2c_scl_i and i2c_sda_i are asynchronous external pins and are SINGLE-BIT, so each goes
-// through its own cdc_sync #(.WIDTH(1)) instance. cdc_sync's multi-bit prohibition does not
-// apply (cf. gpio_controller.sv, which instantiates one per pin for the same reason). Nothing is
-// placed in front of the synchroniser. Its reset value is 0, which reads as "line low" for the first
-// two cycles after reset; nothing depends on it, because EN resets 0 and the pre-START bus-free wait
-// (S_BUSWAIT) simply holds until both synchronised lines read high.
-//
-// Prescaler minimum (explicit elaboration guard): the engine samples the SYNCHRONISED lines, which
-// lag the pins by SYNC_STAGES clk, and the oe register adds one more. An SCL-low interval is two
-// ticks and the SDA-to-sample distance is at least two ticks, so a tick must comfortably exceed
-// that latency. CLKDIV_MIN (default 3 -> tick = 4 clk, 2x margin over the 4-clk worst case) must be
-// >= SYNC_STAGES + 1; a smaller override FAILS ELABORATION (g_clkdiv_min_check), and CLKDIV below
-// CLKDIV_MIN is clamped in hardware. With the four-phase bit (see "Bit timing") the SAME bound is
-// also what keeps the shortened S_BIT_HI1 reload (CLKDIV_eff - (SYNC_STAGES+1) - K) non-negative:
-// at CLKDIV_eff = SYNC_STAGES + 1 it is exactly 0 (a 1-clk phase, K = 0), so the minimum is unchanged
-// by the fourth phase and is tight, not conservative. The SCL-low interval is now 2N + K >= two ticks
-// and the SDA-to-sample distance 2N + K - 3 >= two ticks, so the original latency argument holds.
-// The bit engine receives the clamped value and does not re-check it.
-// The same lesson as spi_controller.sv's SPI_CLK_DIV >= 7, but enforced rather than documented (SPI
-// leaves 0..1 unsafe).
-//
-// Loopback (CTRL[1], SPI_CTRL[4] precedent): the sensed lines come from an internal wired-AND of
-// the master's own oe with a tiny internal slave instead of from the synchronised pins; the pad
-// oe_o outputs are forced 0 so a real bus is not disturbed. The slave ACKs ANY address and every
-// write byte, and a read returns the LAST BYTE WRITTEN (reset 0xA5) -- write then read-back works.
-// It never stretches and does not model sync latency (the mux sits AFTER the synchroniser, as in
-// spi_controller.sv). It exists to make the SoC fabric test cheap; protocol coverage needs a real BFM.
-//
-// IRQ: irq_o = |(IRQ_STAT & IRQ_EN). LEVEL-HELD, never a pulse -- every IRQ source crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
-//   sticky next = (q & ~clear) | set    -- a SET WINS over a same-cycle W1C, so an event is never
-//   lost to a racing clear (GPIO_IRQ_STAT / trng health_fail precedent). rx_threshold is not
-//   sticky: it follows the FIFO level and drops when software pops below the threshold.
-//
-// Reset: synchronous, active-low throughout (no `negedge rst_n`), matching the other periph/.
-// Single clock domain (core_clk); the only asynchronous inputs are the two pins above.
-//
-// APB4 interface (ARM IHI0024C): clk/rst_n map to pclk/presetn. ADDR_W = 12 (byte address, [1:0]
-// unused). Zero wait states (pready is the bank's constant 1). Writes commit on the ACCESS phase
-// (psel & penable); the TX push, RX pop, CMD and IRQ_CLR snoops decode that same phase. Read-only
-// registers are written by hardware with the NEXT-state value (as trng.sv), so a read one transfer
-// after an event cannot see stale data.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: Master only, 7-bit addressing, repeated START, mandatory clock stretching, arbitration-loss detection
+//   and 8-byte TX and RX FIFOs. The protocol core is i2c_bit_engine. This module has the register bank, the FIFOs,
+//   the pad synchronisers, the loopback slave, the sticky flags and the interrupt.
+// Registers (word index; the full map is in ds:mod):
+//   0 CTRL (RW: [0] EN, [1] LOOPBACK, [11:8] RX_THR), 1 STATUS (RO), 2 CLKDIV (RW, reset 0x00FF), 3 ADDR (RW),
+//   4 TX_DATA (WO, a write pushes), 5 RX_DATA (RO, a read pops), 6 CMD (WO), 7 FIFO_STAT (RO),
+//   8 TIMEOUT (RW, reset 0xFFFF, 0 disables), 9 IRQ_EN (RW), 10 IRQ_STAT (RO), 11 IRQ_CLR (WO, W1C on [3:0]).
+//   f_scl = f_clk / (4*(CLKDIV+1)). A CLKDIV below CLKDIV_MIN is clamped to CLKDIV_MIN and reads back as written.
+//   CMD: [0] START, [1] WRITE, [2] READ, [3] STOP, [4] NACK_LAST, [15:8] COUNT. COUNT 0 means 1.
+//   One command runs only its set parts, in this order: START (a repeated START if txn_active) and the address byte,
+//   COUNT data bytes (WRITE wins over READ), STOP. A legal command has START, or comes while txn_active.
+//   An arbitration loss or a timeout sets its own sticky bit instead of done. Wait for done, nack, arb_lost or timeout.
+//   done, nack, arb_lost and timeout are sticky. They clear on IRQ_CLR or reset. EN = 0 keeps them. IRQ_STAT[4] is live and has no clear.
+//   RX_THR is the RX FIFO level that raises IRQ_STAT[4]. 0 behaves as 1. 9 to 15 never fire.
+// Parameters: ADDR_W (APB address width, default 12), CLKDIV_MIN (smallest legal CLKDIV, default 3).
+//   CLKDIV_MIN must be at least SYNC_STAGES + 1, where SYNC_STAGES = 2. A smaller value fails elaboration.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. EN resets to 0.
+//   i2c_scl_i and i2c_sda_i are asynchronous pins. Each goes through its own single-bit cdc_sync.
+// Caller rules (PAD-RING CONTRACT):
+//   - The pins are open-drain with no tristate. i2c_scl_oe_o and i2c_sda_oe_o are the control.
+//     oe = 1 drives the line low. oe = 0 releases it.
+//   - i2c_scl_o and i2c_sda_o are hard-tied to 1'b0 and are dead. Do not use them as data.
+//   - Each line needs an external pull-up. Nothing on-chip drives a line high.
+//   - The wired-AND of master and slaves is off-chip. A testbench must model it.
+//   - A command is accepted only when EN = 1, the engine is idle and the command is legal. Otherwise it is ignored.
+//   - Software keeps ADDR[7] consistent with the data operation. The engine does not check it.
+//   - After a NACK without STOP, txn_active stays 1. Software issues STOP or a repeated START.
+//   - EN = 0 aborts the engine and flushes both FIFOs once, on the 1 -> 0 edge. Change LOOPBACK only while idle.
+//   - irq_o = |(IRQ_STAT & IRQ_EN). It is level-held. A set wins over a same-cycle clear.
+// Full contract: ds:mod:i2c-controller
+// Doc: ds:mod:i2c-controller, tm:mod:i2c-controller
 
 module i2c_controller
 #(
@@ -160,7 +58,7 @@ module i2c_controller
     output logic              pslverr,
 
     // =========================================================================
-    // I2C pads -- open-drain triplets, NO tristate (see PAD-RING CONTRACT above)
+    // I2C pads -- open-drain triplets, NO tristate (see PAD-RING CONTRACT in ds:mod:i2c-controller)
     // =========================================================================
     output logic i2c_scl_o,       // DEAD: hard-tied 1'b0, pad-ring symmetry with GPIO only
     output logic i2c_scl_oe_o,    // 1 = drive SCL low, 0 = release (external pull-up)
@@ -184,7 +82,7 @@ module i2c_controller
     if (ADDR_W < 6 || ADDR_W > 32) begin : g_addr_w_check
         $fatal(1, "i2c_controller: ADDR_W (%0d) must be in [6, 32]", ADDR_W);
     end
-    // The prescaler minimum must exceed the synchroniser latency (see header). The upper bound keeps
+    // The prescaler minimum must exceed the synchroniser latency (see tm:mod:i2c-controller). The upper bound keeps
     // the clamp constant inside the 16-bit CLKDIV field.
     if (CLKDIV_MIN < SYNC_STAGES + 1 || CLKDIV_MIN > 16'hFFFF) begin : g_clkdiv_min_check
         $fatal(1, "i2c_controller: CLKDIV_MIN (%0d) must be in [SYNC_STAGES+1 = %0d, 65535]: a tick must exceed the %0d-clk synchroniser latency",
@@ -248,9 +146,7 @@ module i2c_controller
     logic        hw_wen_i  [N_REGS];
     logic [31:0] hw_wdata_i[N_REGS];
 
-    // -------------------------------------------------------------------------
-    // APB address decode (zero-extended to 32 b before comparing -- GH #87-safe idiom).
-    // -------------------------------------------------------------------------
+    // APB address decode. The compares zero-extend addr_word to 32 bits.
     logic [WORDW-1:0] addr_word_w;
     assign addr_word_w = paddr[ADDR_W-1:2];
 
@@ -313,7 +209,7 @@ module i2c_controller
                              regs_o[REG_IRQ_EN][31:5], regs_o[REG_IRQ_STAT], regs_o[REG_IRQ_CLR]};
     /* verilator lint_on  UNUSEDSIGNAL */
 
-    // Clamp: a tick must exceed the synchroniser latency (see header).
+    // Clamp: a tick must exceed the synchroniser latency (see tm:mod:i2c-controller).
     logic [15:0] div_eff_w;
     assign div_eff_w = (clkdiv_w < 16'(CLKDIV_MIN)) ? 16'(CLKDIV_MIN) : clkdiv_w;
 
@@ -697,7 +593,7 @@ module i2c_controller
     end
 
     // =========================================================================
-    // Interrupt -- level-held (see header)
+    // Interrupt -- level-held (see ds:mod:i2c-controller)
     // =========================================================================
     assign irq_o = |({rx_thr_q_w, tout_q, arb_q, nack_q, done_q} & irq_en_w);
 
