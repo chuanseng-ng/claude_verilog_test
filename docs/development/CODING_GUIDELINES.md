@@ -19,6 +19,8 @@ enforced by a tool config, this document points at the config rather than restat
   `soc_all` 73/73 regression) is not retro-edited for style alone. Deviations are
   tracked as a prioritized backlog in the [compliance audit](CODING_COMPLIANCE_AUDIT.md);
   each cleanup lands as its own reviewed change with regression evidence.
+  One exception: moving comment text into the documentation books is allowed in any file
+  (see section 7). Such an edit changes comments only. `tools/docs/code_equiv.py` proves it.
 - Authoritative tool configs: `.rules.verible_lint` (RTL style-lint),
   `pyproject.toml` (ruff/mypy/pytest),
   `.pylintrc` (pylint), `.pre-commit-config.yaml` (local gates), `.editorconfig` (whitespace).
@@ -300,3 +302,55 @@ Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build/tooling
 
 Widening the enforced scope (cocotb lint, RTL hard gate, shellcheck) is tracked in the
 [compliance audit](CODING_COMPLIANCE_AUDIT.md) remediation plan.
+
+---
+
+## 7. Source comments
+
+A source comment states the contract and the reason. The documentation books in `docs/manual/`
+hold history, measurements and rejected alternatives.
+
+### 7.1 Budgets
+
+| File type | Budget |
+| :-------- | :----- |
+| RTL file header | 40 lines maximum, 30 lines target |
+| RTL inline comment block | 8 lines |
+| Test module docstring | 25 lines (DUT, scenarios, run command, `Doc:` line) |
+| SDC, UPF, Tcl and cfg header | 25 lines |
+| Makefile comment per target or variable | 6 lines |
+| Workflow comment per step | 5 lines |
+
+`tools/docs/check_comment_budget.py` reports each violation against a baseline. The baseline can only shrink.
+
+### 7.2 Banned content
+
+Do not write these in a source comment:
+
+- bead IDs
+- `GH #` and `PR #` numbers
+- run names
+- ISO dates
+- measured values with units
+- a `file:line` reference (cite a `Doc:` label or a symbol name)
+
+### 7.3 Citation line
+
+A file cites its documentation with one line in the header:
+
+```text
+// Doc: ds:ch:mod-cdc-primitives
+```
+
+Use `#` in place of `//` in Python, Tcl, SDC, UPF, shell and Make files. Separate more than one label with commas.
+`tools/docs/check_doc_labels.py` fails when a cited label does not exist.
+
+### 7.4 Moving comment text
+
+Moving comment text into a book is an exception to the rule "no style-only mass edits".
+
+1. Copy the removed text verbatim into a `relocated` environment of the book.
+2. Cut the comment to its budget by deletion. Add the `Doc:` line.
+3. Run `tools/docs/code_equiv.py` to prove that no code changed.
+4. Run `tools/docs/prose_preserve.py` to prove that no text is lost.
+5. Run `tools/docs/check_pinned_text.py`. Some tools match comment text and line numbers.
