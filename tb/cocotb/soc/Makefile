@@ -1,5 +1,6 @@
 # Makefile for SoC cocotb tests (Phase 5 / M3–M9)
 # Component unit tests (M3–M6) + SoC boot test (M9).
+# Doc: tm:suite:soc-makefile, cr:suite:soc-makefile
 
 TOPLEVEL_LANG ?= verilog
 SIM ?= verilator
@@ -11,32 +12,27 @@ RTL      := $(PROJ_ROOT)/rtl
 TB       := $(PROJ_ROOT)/tb/cocotb
 SIM_DIR  := $(PROJ_ROOT)/sim
 
-# Bead claude_verilog_test-f97: base directory for the per-target sim_build dirs.
-# Defaults to `.` so an unset environment behaves exactly as before (CI unchanged).
-# Point it at scratch when the root filesystem is tight, e.g.
+# Base directory for the per-target sim_build dirs. It defaults to `.`, so with the variable unset the
+# sim_build dirs stay in the current directory. Point it at scratch when the root filesystem is tight:
 #   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc soc_all
-# The 26 per-target dirs are ~190 MB each (~5 GB total) and EVERY one of them is
-# invalidated by any RTL edit, so a full soc_all rebuild needs several GB at once.
-# When that space is not there the run dies part-way and reports
-#   ERROR: results.xml was not written by the simulation!
-# AFTER the per-suite PASS lines -- an ENOSPC that does not look like one.
-# Same idea as the AMS cosim flow's SIM_BUILD routing (CLAUDE.md, PHASE7 plan).
+# An RTL edit invalidates every dir that compiles the edited file; after an edit to a shared package a full soc_all
+# rebuild needs several GB at once. When that space is missing, the run fails after the per-suite PASS lines with
+# "ERROR: results.xml was not written by the simulation!". That message means a full disk, not a test fault.
 SIM_BUILD_ROOT ?= .
 ifeq ($(strip $(SIM_BUILD_ROOT)),)
   $(error SIM_BUILD_ROOT is empty -- refusing to build or clean at the filesystem root)
 endif
 
-# GH #216 / bead nkj7: where `make soc_coverage` collects per-simulation coverage .dat files, the
-# merged.dat and the report.  Absolute, because every sub-make and every simulator process runs
-# from this directory but a relative path would silently follow a future `-C`.
+# Where `make soc_coverage` collects the per-simulation coverage .dat files, merged.dat and the report.
+# Absolute, because every sub-make and simulator process runs from this directory, but a relative path
+# would silently follow a future `-C`.
 COV_DIR ?= $(SIM_BUILD_ROOT)/coverage
 override COV_DIR := $(abspath $(COV_DIR))
 
-# Bead claude_verilog_test-f97: pre-flight free-space gate.  A full soc_all
-# rebuild writes ~5 GB of Verilator objects; running out mid-flight surfaces as
-# a post-PASS `results.xml was not written` error that reads like flaky infra.
-# Fail here instead, naming the real cause.  Override the floor if you know the
-# build is incremental: make SIM_BUILD_MIN_FREE_MB=500 soc_all
+# Pre-flight free-space gate. A full soc_all rebuild writes several GB of Verilator objects, and running out
+# of space mid-flight shows up as a "results.xml was not written" error after the PASS lines.
+# The check-space target fails first and names the real cause. Override the floor if the build is
+# incremental: make SIM_BUILD_MIN_FREE_MB=500 soc_all
 SIM_BUILD_MIN_FREE_MB ?= 6000
 
 # NOTE: the check-space RECIPE lives at the bottom of this file, after the
@@ -49,17 +45,11 @@ SIM_BUILD_MIN_FREE_MB ?= 6000
 # bfm/ lives in tb/cocotb (TB); slave model lives in this directory.
 export PYTHONPATH := $(TB):$(SOC_DIR):$(PYTHONPATH)
 
-# GH #104 Sky130 SoC Stage-2 — sram_controller.sv backing-store selection for
-# the standalone `sram_controller` unit-test target only (mirrors the
-# SRAM_TARGET convention in sim/Makefile). PLL_SOURCES/SOC_BOOT_SOURCES below
-# instantiate soc_top, which also has a cache-macro `ifdef SRAM_SKY130`
-# selection (rv32i_dcache.sv/rv32i_icache.sv) not wired to a SRAM_TARGET
-# switch in *this* Makefile today — enabling SRAM_TARGET=sky130 here only
-# affects the isolated sram_controller DUT (no cache in its source list).
-# For a full soc_top elaboration under SRAM_SKY130, use
-# `make -C sim lint_soc_sky130` (sim/Makefile swaps both the cache and
-# sram_controller macros together).
-#   make sram_controller                      # flat array (existing 7/7 suite)
+# Backing store for the standalone sram_controller target (same SRAM_TARGET convention as sim/Makefile).
+# SRAM_TARGET=sky130 adds +define+SRAM_SKY130 to COMPILE_ARGS of EVERY target in this make: pass it only with sram_controller.
+# The cache, CPU and NPU RTL also select sky130 macros on that define, and PLL_SOURCES, SOC_BOOT_SOURCES, NPU_SOURCES lack them.
+# For a full soc_top elaboration under SRAM_SKY130, use `make -C sim lint_soc_sky130`.
+#   make sram_controller                      # flat array
 #   make sram_controller SRAM_TARGET=sky130   # sky130_sram_4kbyte_1rw1r_32x1024_8
 SRAM_TARGET ?= freepdk45
 ifeq ($(SRAM_TARGET),sky130)
@@ -90,7 +80,7 @@ AXIL_SOURCES = \
 	$(RTL)/soc/axi_lite_interconnect.sv \
 	$(SOC_DIR)/tb_axi_lite_interconnect.sv
 
-# Bead claude_verilog_test-8riq: the real ring -> axil_to_apb -> apb_interconnect -> apb4_register_bank
+# The real ring -> axil_to_apb -> apb_interconnect -> apb4_register_bank
 # chain with scripted AXI-Lite / APB slaves (stalls + error responses), see tb_axil_apb_fabric.sv.
 AXIL_APB_FABRIC_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
@@ -106,7 +96,7 @@ SRAM_SOURCES = \
 	$(SRAM_CTRL_SIM_MODEL) \
 	$(RTL)/soc/sram_controller.sv
 
-# Bead ej6j: standalone AXI4-fabric bridge / ROM unit suites (the DUT is the toplevel, like sram_controller).
+# Standalone AXI4-fabric bridge / ROM unit suites (the DUT is the toplevel, like sram_controller).
 A2L_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/axi4_to_axilite.sv
@@ -145,14 +135,14 @@ SPI_SOURCES = \
 	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/periph/spi_controller.sv
 
-# APB migration PR-1: apb4_register_bank unit-test sources.
+# APB migration: apb4_register_bank unit-test sources.
 # Standalone: axi_pkg (for DW/SW constants) + DUT + TB wrapper.
 APB4_REG_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(SOC_DIR)/tb_apb4_register_bank.sv
 
-# APB migration PR-1: axil_to_apb bridge unit-test sources.
+# APB migration: axil_to_apb bridge unit-test sources.
 # Full AXI→APB path: axi_pkg + bridge + register bank + TB wrapper.
 AXIL_TO_APB_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
@@ -160,9 +150,9 @@ AXIL_TO_APB_SOURCES = \
 	$(RTL)/soc/axil_to_apb.sv \
 	$(SOC_DIR)/tb_axil_to_apb.sv
 
-# APB migration PR-7: pll_axil_regs deleted — PLL_REGS_SOURCES now points at
+# APB migration: pll_axil_regs deleted — PLL_REGS_SOURCES now points at
 # pll_apb_regs (APB4 slave).  The pll_regs target and pll_regs_lint below are
-# redirected to the PR-6 pll_apb_regs target (same functional coverage).
+# redirected to the pll_apb_regs target (same functional coverage).
 # PLL_REGS_SOURCES kept as an alias so any external callers still compile;
 # the canonical source list is PLL_APB_REGS_SOURCES.
 PLL_REGS_SOURCES = \
@@ -170,7 +160,7 @@ PLL_REGS_SOURCES = \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(SOC_DIR)/tb_pll_apb_regs.sv
 
-# APB migration PR-6: standalone pll_apb_regs unit-test sources.
+# APB migration: standalone pll_apb_regs unit-test sources.
 # Minimal: apb4_register_bank (no axi_pkg needed) + pll_apb_regs + standalone TB.
 # BFM drives APB4 ports directly; no bus-bridge or full SoC required.
 PLL_APB_REGS_SOURCES = \
@@ -178,7 +168,7 @@ PLL_APB_REGS_SOURCES = \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(SOC_DIR)/tb_pll_apb_regs.sv
 
-# GH #101: standalone pmu unit-test sources.
+# Standalone pmu unit-test sources.
 # Minimal: apb4_register_bank (no axi_pkg needed) + pmu + standalone TB.
 # BFM drives APB4 ports directly; no bus-bridge or full SoC required.
 PMU_SOURCES = \
@@ -186,7 +176,7 @@ PMU_SOURCES = \
 	$(RTL)/soc/pmu.sv \
 	$(SOC_DIR)/tb_pmu.sv
 
-# Phase 6a (bead claude_verilog_test-ckc): standalone gpio_controller unit-test sources.
+# Phase 6a: standalone gpio_controller unit-test sources.
 # apb4_register_bank (register file) + cdc_sync (N_PINS independent single-bit input
 # synchronisers, one per pin -- see gpio_controller.sv header) + gpio_controller + standalone TB.
 GPIO_SOURCES = \
@@ -195,47 +185,36 @@ GPIO_SOURCES = \
 	$(RTL)/periph/gpio_controller.sv \
 	$(SOC_DIR)/tb_gpio.sv
 
-# Phase 6a-2 (bead claude_verilog_test-f7vs.6): standalone pwm_controller unit-test sources.
-# apb4_register_bank (register file) + pwm_controller + standalone TB. Unlike GPIO_SOURCES above,
-# there is no cdc_sync here -- PWM has no async input pins at all (push-pull pwm_o only, no
-# oe, no CDC -- Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-2 -- PWM"). pwm_controller.sv does not
-# exist yet as of this line's authorship (strict TDD, step 2 of Sec.9's workflow); the pwm/
-# pwm_lint targets below are expected to fail to elaborate until it does.
+# Phase 6a-2: standalone pwm_controller unit-test sources.
+# apb4_register_bank (register file) + pwm_controller + standalone TB. Unlike GPIO_SOURCES above, there is no
+# cdc_sync here: PWM has no async input pins (push-pull pwm_o only, no oe, no CDC). Doc: ds:ch:phase6-ip-expansion-plan:6a-2-pwm-rtlperiphpwm-controllersv
 PWM_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/periph/pwm_controller.sv \
 	$(SOC_DIR)/tb_pwm.sv
 
-# Phase 6a-3 (bead claude_verilog_test-f7vs.7): standalone watchdog_timer unit-test sources.
-# apb4_register_bank (register file) + watchdog_timer + standalone TB. Like PWM there is no
-# cdc_sync here -- the WDT has no async input pins (clk/rst_n/APB4 only; irq_o and
-# wdt_rst_req_o are outputs), so no CDC in this module -- Doc: ds:ch:phase6-ip-expansion-plan Sec.7
-# "6a-3 -- WDT". watchdog_timer.sv does not exist yet as of this line's authorship (strict TDD,
-# step 2 of Sec.9's workflow); the wdt/wdt_lint targets below are expected to fail to elaborate
-# until it does.
+# Phase 6a-3: standalone watchdog_timer unit-test sources.
+# apb4_register_bank (register file) + watchdog_timer + standalone TB. Like PWM there is no cdc_sync here:
+# the WDT has no async input pins (clk/rst_n/APB4 only; irq_o and wdt_rst_req_o are outputs).
+# Doc: ds:ch:phase6-ip-expansion-plan:6a-3-wdt-rtlperiphwatchdog-timersv
 WDT_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/periph/watchdog_timer.sv \
 	$(SOC_DIR)/tb_wdt.sv
 
-# Phase 6a-4 (bead claude_verilog_test-f7vs.8): standalone trng unit-test sources.
-# apb4_register_bank (register file) + trng + its DEFAULT (LFSR) entropy sub-module + standalone
-# TB. trng.sv selects its entropy source with `ifdef TRNG_RO_SKY130 INSIDE the module; this target
-# does NOT define that macro, so trng_lfsr_entropy.sv is the arm under test and
-# trng_ro_sky130.sv is deliberately absent (it is a Sky130-only analog stub, exempted in
-# tools/verif/check_periph_filelists.py's EXEMPT map -- never add it to a file list). No
-# cdc_sync here: the LFSR arm has no asynchronous input (clk/rst_n/APB4 only; irq_o is an
-# output) -- Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG". trng.sv and
-# trng_lfsr_entropy.sv do not exist yet as of this line's authorship (strict TDD, step 2 of
-# Sec.9's workflow); the trng/trng_lint targets below are expected to fail to elaborate until they
-# do.
+# Phase 6a-4: standalone trng unit-test sources: apb4_register_bank + trng + its DEFAULT (LFSR) entropy
+# sub-module + standalone TB. trng.sv selects its entropy source with `ifdef TRNG_RO_SKY130 INSIDE the module.
+# This target does NOT define that macro, so trng_lfsr_entropy.sv is the arm under test and trng_ro_sky130.sv
+# is deliberately absent: it is a Sky130-only analog stub, exempt in tools/verif/check_periph_filelists.py
+# (EXEMPT map). Never add it to a file list. No cdc_sync: the LFSR arm has no asynchronous input.
+# Doc: ds:ch:phase6-ip-expansion-plan:6a-4-trng-rtlperiphtrngsv
 TRNG_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/periph/trng_lfsr_entropy.sv \
 	$(RTL)/periph/trng.sv \
 	$(SOC_DIR)/tb_trng.sv
 
-# Phase 6a-5 (bead claude_verilog_test-f7vs.9): standalone i2c_controller unit-test sources.
+# Phase 6a-5: standalone i2c_controller unit-test sources.
 # apb4_register_bank (register file) + cdc_sync (i2c_controller instantiates one per pin,
 # like gpio_controller) + i2c_bit_engine (protocol core) + i2c_controller + standalone TB. The bus (wired-AND of master, slave and
 # pull-up) is modelled by tb/cocotb/bfm/i2c_slave.py, NOT by any RTL file in this list.
@@ -248,22 +227,12 @@ I2C_SOURCES = \
 	$(RTL)/periph/i2c_controller.sv \
 	$(SOC_DIR)/tb_i2c.sv
 
-# Phase 6b (bead claude_verilog_test-f7vs.10): standalone crypto_accel unit-test sources.
-# apb4_register_bank (register file; crypto_accel's DOUT / DIGEST / IV3 / STATUS / IRQ_STAT are
-# hardware-written bank words, so the bank IS the result storage) + the two sub-cores
-# (aes128_core, sha256_core -- listed BEFORE the wrapper that instantiates them, same ordering
-# convention as trng_lfsr_entropy before trng and i2c_bit_engine before i2c_controller) +
-# crypto_accel + the standalone TB. tb_crypto.sv instantiates FOUR crypto_accel configurations
-# side by side (default, SBOX_PARALLEL=4, EN_AES=0, EN_SHA=0) so one simulation build reaches both
-# generate arms and both fold factors; test_crypto.py also re-lints this exact list (read back
-# through tools/verif/check_source_closure.py's parser, not hand-copied) with -G overrides to
-# prove the elaboration guards refuse an illegal SBOX_PARALLEL / ADDR_W / EN_AES=EN_SHA=0.
-# NO cdc/cdc_sync.sv here, deliberately and unlike gpio / i2c: crypto_accel has NO
-# asynchronous input at all (clk / rst_n / APB4 in, irq_o out), so there is nothing to
-# synchronise, and no SDC set_false_path applies either -- the crypto_accel header says so
-# explicitly. Do not "add it for safety": an unused module in the list is dead weight that would
-# also hide a genuinely missing one. The three RTL files did not exist when this list was written
-# (strict TDD): crypto / crypto_lint are expected to fail to elaborate until the RTL lands.
+# Phase 6b: standalone crypto_accel unit-test sources. apb4_register_bank (its DOUT / DIGEST / IV3 / STATUS / IRQ_STAT
+# words are hardware-written bank words) + aes128_core and sha256_core, listed BEFORE the wrapper that instantiates them.
+# tb_crypto.sv has FOUR crypto_accel configurations (default, SBOX_PARALLEL=4, EN_AES=0, EN_SHA=0). test_crypto.py re-lints
+# this exact list (read back through tools/verif/check_source_closure.py's parser) with -G overrides.
+# NO cdc_sync.sv, unlike gpio / i2c: crypto_accel has no asynchronous input, so no synchroniser and no SDC false path apply.
+# Do not add it for safety: an unused module in the list is dead weight and hides a genuinely missing one.
 CRYPTO_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/periph/aes128_core.sv \
@@ -271,28 +240,12 @@ CRYPTO_SOURCES = \
 	$(RTL)/periph/crypto_accel.sv \
 	$(SOC_DIR)/tb_crypto.sv
 
-# Phase 6c (bead claude_verilog_test-f7vs.11): standalone npu_top unit-test sources.
-# apb4_register_bank (register file; npu_top's STATUS / AOUT / IRQ_STAT / WADDR are hardware-written
-# bank words, so the bank IS the storage -- same pattern as crypto_accel) + the three npu RTL files
-# (npu_weight_mem and npu_mac_array listed BEFORE the npu_top that instantiates them, the same
-# sub-modules-first convention as CRYPTO_SOURCES) + the standalone TB. tb_npu.sv instantiates TWO
-# npu_top configurations side by side (defaults, and EN_NPU=0) so one simulation build reaches both
-# generate arms; test_npu.py also re-lints this exact list (read back through
-# tools/verif/check_source_closure.py's parser, not hand-copied) with a -G override to prove the
-# WEIGHT_WORDS elaboration guard refuses anything but 1024.
-# The weight memory is a hard-macro wrapper with a 3-way ifdef (plan Sec.7 "Weight-SRAM
-# instantiation"): the SIMULATION build defines neither SRAM_SKY130 nor SRAM_ASAP7 and so takes the
-# FreePDK45 `else` arm, which instantiates 4 banks of sram_1rw_256x32_freepdk45 -- that behavioural
-# model lives in sim/sram_1rw_256x32_verilator.v (same file SRAM_SIM_MODEL / the SoC lists use) and
-# MUST be in this list or Verilator reports a missing module. rv32i_clock_gate is listed because the
-# ASAP7 arm instantiates it per bank (en = !csb0); under the default define set that arm is not
-# elaborated, so the file is dead weight at sim time but keeps the list a faithful superset of every
-# arm and costs nothing (an `ifdef`-pruned module is never an unused-module lint warning).
-# NO cdc/cdc_sync.sv, deliberately: npu_top has NO asynchronous input (clk / rst_n / APB4 in,
-# irq_o out), so there is nothing to synchronise -- do not "add it for safety". The three rtl/npu
-# files did not exist when this list was written (strict TDD): npu / npu_lint are expected to fail
-# to elaborate until the RTL lands. rtl/npu/ must not be created by the verification step because
-# tools/verif/check_periph_filelists.py already scans it and would demand five file-list entries.
+# Phase 6c: standalone npu_top unit-test sources. The register bank holds the hardware-written words, so it is the storage.
+# npu_weight_mem and npu_mac_array come BEFORE npu_top. tb_npu.sv has two npu_top configurations (defaults, EN_NPU=0).
+# test_npu.py re-lints this exact list (read back through tools/verif/check_source_closure.py's parser) with a -G override.
+# The weight memory has a 3-way ifdef. A simulation build defines neither SRAM_SKY130 nor SRAM_ASAP7, so it takes the FreePDK45
+# arm, and sim/sram_1rw_256x32_verilator.v MUST be in this list or Verilator reports a missing module. rv32i_clock_gate is for
+# the ASAP7 arm: unused at sim time, but it keeps the list a superset of every arm. No cdc_sync: npu_top has no asynchronous input.
 NPU_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/mem/rv32i_clock_gate.sv \
@@ -302,14 +255,14 @@ NPU_SOURCES = \
 	$(RTL)/npu/npu_top.sv \
 	$(SOC_DIR)/tb_npu.sv
 
-# Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
+# Phase 6 groundwork: standalone apb_interconnect
 # unit-test sources. apb_interconnect is a single, self-contained combinational module --
 # no other RTL package or CDC primitive needed.
 APB_INTERCONNECT_SOURCES = \
 	$(RTL)/soc/apb_interconnect.sv \
 	$(SOC_DIR)/tb_apb_interconnect.sv
 
-# GH #91: standalone async_axi_fifo (dual-clock AXI4 CDC bridge) unit-test
+# Standalone async_axi_fifo (dual-clock AXI4 CDC bridge) unit-test
 # sources. axi_pkg (bus geometry defaults) + the 3 cdc/ primitives +
 # async_axi_fifo + standalone TB wrapper. No bus-bridge or full SoC required.
 ASYNC_AXI_FIFO_SOURCES = \
@@ -320,30 +273,22 @@ ASYNC_AXI_FIFO_SOURCES = \
 	$(RTL)/soc/async_axi_fifo.sv \
 	$(SOC_DIR)/tb_async_axi_fifo.sv
 
-# GH #93: standalone apb_cdc_bridge (APB4 4-phase RZ-handshake CDC bridge --
-# converted from 2-phase NRZ toggle by bead claude_verilog_test-rfz,
-# 2026-08-12, see rtl/soc/apb_cdc_bridge.sv header) unit-test sources.
-# apb_cdc_bridge.sv only depends on the 2 cdc/ reset/sync primitives (no
-# axi_pkg, no cdc_gray_fifo -- it crosses single-bit req/ack levels, not
-# gray-coded multi-bit pointers) + standalone TB wrapper. No bus-bridge or
-# full SoC required.
+# Standalone apb_cdc_bridge (APB4 4-phase RZ-handshake CDC bridge) unit-test sources. It depends only on the 2 cdc/
+# reset/sync primitives (no axi_pkg, no cdc_gray_fifo: it crosses single-bit req/ack levels, not gray-coded multi-bit
+# pointers) + standalone TB wrapper. No bus-bridge or full SoC required.
 APB_CDC_BRIDGE_SOURCES = \
 	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/apb_cdc_bridge.sv \
 	$(SOC_DIR)/tb_apb_cdc_bridge.sv
 
-# Bead claude_verilog_test-07n: standalone cdc_reset_sync DFT scan-bypass
-# mux (scanmode_i / scan_rst_ni) directed unit test. cdc_reset_sync alone +
-# standalone TB wrapper -- no cdc_sync/cdc_gray_fifo dependency, this is
-# a single-primitive test, not a CDC bridge test.
-# Bead claude_verilog_test-xtaa: cdc_sync RESET_VAL directed unit test.
+# cdc_sync RESET_VAL directed unit test.
 # The primitive alone + standalone TB wrapper.
 CDC_SYNC_SOURCES = \
 	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(SOC_DIR)/tb_cdc_sync.sv
 
-# Bead claude_verilog_test-3snb: standalone cdc_gray_fifo (DEPTH=2 variant + DEPTH=4 control)
+# Standalone cdc_gray_fifo (DEPTH=2 variant + DEPTH=4 control)
 # unit-test sources. CDC_GRAY_FIFO_RTL is overridable so the mutation campaign can point the very
 # same suite at a mutated copy of the primitive: make CDC_GRAY_FIFO_RTL=/path/mutant.sv cdc_gray_fifo
 CDC_GRAY_FIFO_RTL ?= $(RTL)/soc/cdc/cdc_gray_fifo.sv
@@ -352,17 +297,22 @@ CDC_GRAY_FIFO_SOURCES = \
 	$(CDC_GRAY_FIFO_RTL) \
 	$(SOC_DIR)/tb_cdc_gray_fifo.sv
 
+# Standalone cdc_reset_sync DFT scan-bypass
+# mux (scanmode_i / scan_rst_ni) directed unit test. cdc_reset_sync alone +
+# standalone TB wrapper -- no cdc_sync/cdc_gray_fifo dependency, this is
+# a single-primitive test, not a CDC bridge test.
 CDC_RESET_SYNC_SCAN_SOURCES = \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(SOC_DIR)/tb_cdc_reset_sync_scan.sv
 
-# Bead claude_verilog_test-j41m.2 (DFT Stage 1a): rv32i_clock_gate test-enable unit test.
+# DFT Stage 1a: rv32i_clock_gate test-enable unit test.
 # The gate alone + standalone wrapper; no other RTL needed.
 CLOCK_GATE_SCAN_SOURCES = \
 	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(SOC_DIR)/tb_clock_gate_scan.sv
 
-# Bead claude_verilog_test-j41m.2: the three DFT leaf modules (rtl/soc/dft/) + wrapper.
+# tb_dft_muxes instantiates the three DFT leaf modules dft_clk_mux, dft_rst_mux and dft_ctrl_ports. The list also holds
+# jtag_tap, dft_clk_switch, dft_ctrl and their dependencies, which this DUT does not use.
 DFT_MUXES_SOURCES = \
 	$(RTL)/soc/dft/dft_clk_mux.sv \
 	$(RTL)/soc/dft/dft_rst_mux.sv \
@@ -375,14 +325,14 @@ DFT_MUXES_SOURCES = \
 	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(SOC_DIR)/tb_dft_muxes.sv
 
-# Bead claude_verilog_test-j41m.3 (DFT Stage 1b): the JTAG TAP alone. cdc_reset_sync is the TAP's
+# DFT Stage 1b: the JTAG TAP alone. cdc_reset_sync is the TAP's
 # TRST_N release synchroniser (the only dependency).
 JTAG_TAP_SOURCES = \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(SOC_DIR)/tb_jtag_tap.sv
 
-# Bead claude_verilog_test-j41m.14 (DFT Stage 4): MBIST controller + collar + fault-injecting SRAM models.
+# DFT Stage 4: MBIST controller + collar + fault-injecting SRAM models.
 MBIST_CTRL_SOURCES = \
 	$(RTL)/soc/dft/mbist_ctrl.sv \
 	$(RTL)/soc/dft/mem_collar.sv \
@@ -444,7 +394,7 @@ MBIST_FI_EQUIV_SOURCES = \
 	$(SOC_DIR)/sram_fi_core.sv \
 	$(SOC_DIR)/tb_sram_fi_equiv.sv
 
-# Bead claude_verilog_test-c54a: the REAL rv32i_cpu_top (+define+SRAM_SKY130, ten collars and the in-macro MBIST
+# The REAL rv32i_cpu_top (+define+SRAM_SKY130, ten collars and the in-macro MBIST
 # controller) behind dft_ctrl + soc_mbist, against fault-injecting stand-ins carrying the 1 KB macro's name.
 MBIST_CPU_MACRO_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
@@ -498,7 +448,7 @@ MBIST_FI_EQUIV_1K_SOURCES = \
 	$(SOC_DIR)/sram_fi_core.sv \
 	$(SOC_DIR)/tb_sram_fi_equiv_1k.sv
 
-# Bead claude_verilog_test-j41m.3: dft_ctrl = jtag_tap + the unchanged 1a pin leg + the TCK
+# dft_ctrl = jtag_tap + the unchanged 1a pin leg + the TCK
 # scan-clock gate (rv32i_clock_gate) + the combiner; the wrapper also instantiates the 1a
 # dft_ctrl_ports as the golden reference.
 DFT_CTRL_SOURCES = \
@@ -511,7 +461,7 @@ DFT_CTRL_SOURCES = \
 	$(RTL)/soc/dft/dft_ctrl.sv \
 	$(SOC_DIR)/tb_dft_ctrl.sv
 
-# Bead claude_verilog_test-j41m.3: the glitch-free test-clock switch alone.  tb_dft_clk_switch gates
+# The glitch-free test-clock switch alone.  tb_dft_clk_switch gates
 # a raw TCK with rv32i_clock_gate to make the A clock (as dft_ctrl does) and carries a PLAIN_MUX
 # parameter that swaps the switch for `sel ? a : b` (the RED negative control, target
 # dft_clk_switch_plainmux).
@@ -521,8 +471,6 @@ DFT_CLK_SWITCH_SOURCES = \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(SOC_DIR)/tb_dft_clk_switch.sv
 
-# Full SoC top-level sources for the boot test (M9).
-# Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
 GPU_SRAM_SIM   ?= $(PROJ_ROOT)/sim/sram_1rw_128x32_asap7.v
 
@@ -625,6 +573,8 @@ PLL_SOURCES = \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_pll.sv
 
+# Full SoC top-level sources for the boot test (M9).
+# Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SOC_BOOT_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/soc_addr_map_pkg.sv \
@@ -749,19 +699,12 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing
-# GH #216 / bead nkj7: opt-in line + toggle coverage.  `make soc_coverage` (below) runs the whole
-# soc_all_ci regression with COVERAGE=1; nothing here changes an ordinary (uninstrumented) run.
-#  * The flags go in COMPILE_ARGS, not EXTRA_ARGS: most targets pass EXTRA_ARGS= on the command
-#    line, which would override a makefile-level `+=`; none pass COMPILE_ARGS=.
-#  * COV_SFX is appended to EVERY SIM_BUILD (the content-keyed one, see the b079 block below),
-#    so an instrumented build can never reuse an uninstrumented Vtop (or vice versa) -- the same
-#    stale-Vtop false-pass class as PR #142.
-#  * Each simulation writes its own .dat through the runtime plusarg +verilator+coverage+file+,
-#    which cocotb 1.9.2's verilator.cpp honours when it calls VerilatedCov::write().  The name
-#    carries MODULE as well as SIM_BUILD because soc_integration_batch shares one SIM_BUILD
-#    across four MODULEs.
-#  * --coverage-max-width 256 keeps wide datapath arrays (the DMA's 8192-bit linebuf, SRAM model
-#    arrays) out of toggle coverage, where they would only add noise and memory.
+# Opt-in line + toggle coverage: `make soc_coverage` (below) runs the whole soc_all_ci regression with COVERAGE=1.
+#  * The flags go in COMPILE_ARGS, not EXTRA_ARGS: most targets pass EXTRA_ARGS= on the command line, which
+#    would override a makefile-level `+=`; none pass COMPILE_ARGS=.
+#  * COV_SFX is appended to EVERY SIM_BUILD, so an instrumented build never reuses an uninstrumented Vtop.
+#  * Each simulation writes its own .dat through the plusarg +verilator+coverage+file+. The name carries MODULE too,
+#    because soc_integration_batch shares one SIM_BUILD across four MODULEs. --coverage-max-width 256 keeps wide arrays out of toggle coverage.
 ifdef COVERAGE
 	COV_SFX := _cov
 	# Verilator will not create the directory itself; make a direct `make gpio COVERAGE=1` work too.
@@ -794,63 +737,12 @@ endif
 	# Functional regression only — short integration test runtime overhead is negligible.
 	BUILD_ARGS += OPT_FAST=-O0
 	BUILD_ARGS += OPT_SLOW=-O0
-# Bead claude_verilog_test-7je: give every target its OWN build dir.
-# Verilator always names the binary Vtop regardless of TOPLEVEL, so a single
-# shared sim_build/ meant `make timer` straight after `make async_axi_fifo`
-# silently reused the previous suite's Vtop and died with
-#   VPI: Couldn't find root handle timer / Toplevel instances: timer != tb_async_axi_fifo
-# BUILD_ARGS is recursively expanded (only ever `+=`, never `:=`), so `$@`
-# resolves at recipe time to the target being built.  soc_all's per-suite
-# `rm -rf sim_build` and the per-target `$(MAKE) clean` calls that used to
-# paper over this are removed -- the dirs no longer collide.
-# The build dir must also distinguish BUILD VARIANTS of the same target, not
-# just different targets. soc_all runs `sram_controller` twice -- once default,
-# once SRAM_TARGET=sky130 -- and that switch changes the source list
-# (SRAM_CTRL_SIM_MODEL), a define (SRAM_SKY130) and a parameter
-# (MEM_WORDS 4096 -> 1024). Same $@, so without the suffix below both land in
-# sim_build_sram_controller and the second run silently REUSES the first's
-# Vtop: measured MEM_WORDS=0x1000 and zero sky130 references in the binary
-# while the suite still reported 11/11 PASS. That is a false pass, strictly
-# worse than the VPI crash this bead started from, and it is only invisible
-# because TOPLEVEL happens to match. (Caught in review of PR #142.)
-#
-# Bead b079 -- the directory is now chosen by CONTENT of the build recipe, not by target name.
-# The per-target name above fixed the collision (7je) but made every target pay for its own
-# Verilator build even when two targets compile the byte-identical model: tb_soc_top was built
-# 15 times per soc_all_ci run (~41 s each in CI) for 15 suites that differ only in the Python
-# MODULE they run.  SIM_BUILD is therefore
-#     $(SIM_BUILD_ROOT)/sim_build_<TOPLEVEL>_<key>[_cov]
-# where <key> is the first 16 hex digits of the sha256 of EVERYTHING that determines the
-# compiled model (SIM_KEY_MATERIAL below).  Two targets share a directory iff that material is
-# byte-equal; there is no hand-kept list of "these suites are the same".  Because the key covers
-# SRAM_TARGET's source list and +define, the -G parameter sweeps (register_bank ADDR_W,
-# boot_rom MEM_INIT_FILE, apb_interconnect N_SLAVES, ...) and the COVERAGE flags, the four
-# hard-coded per-variant SIM_BUILD= overrides that used to live in the recipes are gone: each
-# variant already hashes to its own directory (and COV_SFX still keeps an instrumented model
-# apart from a plain one even if the hash were ever to collide -- the PR #142 class).
-#
-# IN the key (compile-time): TOPLEVEL; the ordered VERILOG_SOURCES list; COMPILE_ARGS (every
-#   -D/+define+/--coverage*/--trace flag); EXTRA_ARGS (every -G parameter, -I, -W); BUILD_ARGS
-#   minus -j (CXX/LINK shim, PYTHON3, OPT_FAST/OPT_SLOW); the environment variables Verilator's
-#   makefile or cocotb's reads at build time (VERILATOR_TRACE, VERILATOR_SIM_DEBUG,
-#   VERILOG_INCLUDE_DIRS, COCOTB_HDL_*, CXXFLAGS/CPPFLAGS/LDFLAGS/OBJCACHE); and the toolchain
-#   (full `verilator --version`, g++ version, cocotb version, content hash of sim/cxx_shim.sh).
-# NOT in the key (runtime only): MODULE, TESTCASE, PLUSARGS, SIM_ARGS, and every environment
-#   variable only the Python tests read (REGBANK_ADDR_W, APB_IC_*, ...).  The firmware images are
-#   not compile-time either: no soc_all_ci target passes -GMEM_INIT_FILE for tb_soc_top, the tests
-#   backdoor-load the ROM over VPI, and the one target that DOES make a hex path a string
-#   parameter (boot_rom_init) carries it in EXTRA_ARGS and therefore in the key.
-# Source CONTENT is deliberately not hashed: cocotb already rebuilds when a VERILOG_SOURCES file
-#   is newer than Vtop.mk, which is the pre-existing (and unchanged) staleness rule; hashing
-#   content would leave a ~190 MB directory behind per RTL edit on a developer host.
-#
-# Sharing is safe because suites run strictly one after another (a sequential recipe), and each
-# one's outputs are separate: results.xml is checked by check_for_results_file at the end of its
-# own run, and the coverage .dat name carries MODULE (see PLUSARGS below).
-#
-# `make print-sim-build ...` and tb/tests/test_sim_build_key.py are the reproducible checks.
-# Toolchain identity, computed once per top-level make and inherited by every sub-make through
-# the environment (a `verilator --version` costs ~0.2 s and there are ~100 sub-makes per run).
+# SIM_BUILD = $(SIM_BUILD_ROOT)/sim_build_<TOPLEVEL>_<key>[_cov]: one dir per distinct compiled model. <key> is a sha256 prefix of
+# SIM_KEY_MATERIAL (tools, TOPLEVEL, ordered VERILOG_SOURCES, COMPILE_ARGS, EXTRA_ARGS, BUILD_ARGS minus -j, build-time env).
+# Stale-Vtop hazard: Verilator always names the binary Vtop, so a compile-time input missing from the key lets a second model reuse
+# the first model's Vtop and still PASS. Add every new compile-time define, parameter or env var to SIM_KEY_MATERIAL, and pass no
+# SIM_BUILD= from a recipe (check-exit-propagation alone does, on purpose). MODULE, TESTCASE, PLUSARGS, SIM_ARGS stay out of the key.
+# Do not hash source content (each RTL edit would leave a new large dir). Check a key: `make print-sim-build ...`, tb/tests/test_sim_build_key.py.
 ifndef SIM_KEY_TOOLS
   export SIM_KEY_TOOLS := $(shell printf '%s|%s|%s|%s' "$$(verilator --version 2>&1)" "$$(g++ --version 2>&1 | head -n1)" "$$(cocotb-config --version 2>&1)" "$$(sha256sum < $(SIM_DIR)/cxx_shim.sh | cut -c1-16)")
 endif
@@ -873,7 +765,7 @@ ifdef COVERAGE
 	# MODULE is in the name because suites that share a build directory share SIM_BUILD.
 	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE)$(if $(TESTCASE),__tc$(shell printf '%s' '$(TESTCASE)' | sha256sum | cut -c1-8)).dat
 endif
-# Bead b079: parallel C++ compile of the Verilated model.  Unset by default (a developer host
+# Parallel C++ compile of the Verilated model.  Unset by default (a developer host
 # keeps whatever -j its own MAKEFLAGS gives); CI sets it to the runner's core count.  Applies to
 # the Vtop.mk build only, never to the order the suites run in, and is excluded from the key.
 SIM_BUILD_JOBS ?=
@@ -933,36 +825,12 @@ include $(TB)/common/sim_portability.mk
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-# Bead p6t8 -- make a failing cocotb suite actually fail the make.
-#
-# cocotb 1.9.2's own makefile cannot propagate a test failure as an exit code.  Its
-# Makefile.inc (cocotb/share/makefiles/Makefile.inc:88-90) says so in as many words:
-#     # Check that the COCOTB_RESULTS_FILE was created, since we can't set an exit code
-#     # from cocotb.
-#     define check_for_results_file
-#         @test -f $(COCOTB_RESULTS_FILE) || (echo "ERROR: ... was not written ..." && exit 1)
-#     endef
-# It asserts the file EXISTS, never that it holds no failures, and `$(call
-# check_for_results_file)` is the last line of the $(COCOTB_RESULTS_FILE) recipe in every
-# simulator makefile (Makefile.verilator:76 for us).  Measured: a forced failure gave
-# TESTS=9 PASS=0 FAIL=8, a results.xml with 8 <failure> elements, and sub-make exit 0.
-#
-# The fix is a redefinition HERE, after the include above.  Make expands recipe lines when
-# the rule RUNS, not when the file is parsed, so a definition that appears later in the
-# makefile still reaches every target, every simulator and every build point, with no edit
-# to the ~35 recipes below.  The macro runs at the end of each build point's own recipe, so
-# build points overwriting a shared results.xml does not matter: each is checked before the
-# next one starts.
-#
-# This is what makes the `set -e` in the multi-build-point recipes (register_bank,
-# apb4_register_bank, the apb_interconnect sweep) FUNCTION -- until now a failing point was
-# masked by a later passing one and only the CI PASS_FLOOR log-grep noticed, indirectly.
-#
-# The verdict comes from tools/verif/check_cocotb_results.py, which reuses
-# tools/eda/summarize.py's tested parser (failure / error / no-passing-test / unparsable
-# all count as not clean), deliberately not a grep for "<failure".  The original existence
-# check is kept so a missing file still gets cocotb's own message first.
-# `check-exit-propagation` below is the self-test that proves this stays wired.
+# Make a failing cocotb suite fail the make. cocotb 1.9.2's check_for_results_file only tests that the results file EXISTS,
+# never that it holds no failures, so a red suite exited 0. This redefinition goes AFTER the include and reaches every target and
+# simulator, because make expands recipe lines when the rule runs. It makes the `set -e` in the multi-build-point recipes
+# (register_bank, apb4_register_bank, boot_rom, mbist_ctrl, the apb_interconnect sweep) take effect. The verdict comes from tools/verif/check_cocotb_results.py,
+# which reuses tools/eda/summarize.py's parser, not from a grep for "<failure". The existence check stays first, so a missing
+# file still gets cocotb's own message. `check-exit-propagation` below is the self-test that proves this stays wired.
 define check_for_results_file
     @test -f $(COCOTB_RESULTS_FILE) || (echo "ERROR: $(COCOTB_RESULTS_FILE) was not written by the simulation!" >&2 && exit 1)
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
@@ -973,13 +841,11 @@ crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
 
-# Two build points (bead r5hu): the default ADDR_W=12, and ADDR_W=5 where WORDW=3 and
-# N_REGS(8) == 2**WORDW -- the case a truncating `WORDW'(N_REGS)` cast wraps to 0.  ADDR_W is an
-# elaboration parameter, so the second point is its own Verilator build in its OWN SIM_BUILD
-# (reusing one dir across parameter values is the stale-Vtop hazard; test_register_bank.py also
-# checks the elaborated address-bus width against REGBANK_ADDR_W).  $(BUILD_ARGS) is kept for
-# the nix CXX shim / -O0 flags; its SIM_BUILD is overridden by the later, explicit one (the last
-# command-line assignment wins).  `set -e` + trailing `\` so either point failing aborts the target.
+# Two build points: the default ADDR_W=12, and ADDR_W=5 where WORDW=3 and N_REGS(8) == 2**WORDW, the case a truncating
+# `WORDW'(N_REGS)` cast wraps to 0. ADDR_W is an elaboration parameter, so each point is its own Verilator build, and the
+# differing EXTRA_ARGS put the points in separate SIM_BUILD dirs. test_register_bank.py also checks the elaborated address-bus
+# width against REGBANK_ADDR_W. $(BUILD_ARGS) carries the nix CXX shim and -O0 flags. `set -e` and the trailing `\` make
+# a failure at either point abort the target.
 register_bank:
 	@set -e; \
 	echo "=== register_bank: ADDR_W=12 (default) ==="; \
@@ -1000,7 +866,7 @@ axil_interconnect:
 		VERILOG_SOURCES="$(AXIL_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Bead 8riq: fabric chain with stalls / SLVERR / DECERR.  -Wno-SYNCASYNCNET kept for consistency
+# Fabric chain with stalls / SLVERR / DECERR.  -Wno-SYNCASYNCNET kept for consistency
 # with the other SoC-level targets; the wrapper has no async paths of its own.
 axil_apb_fabric_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
@@ -1017,26 +883,17 @@ verilator_lint:
 		$(if $(filter sky130,$(SRAM_TARGET)),+define+SRAM_SKY130 -GMEM_WORDS=1024) \
 		--top-module sram_controller $(SRAM_SOURCES)
 
-# GH #104 verification finding: sram_controller's MEM_WORDS parameter
-# defaults to 4096 (16 KB flat-array window); the sky130_sram_4kbyte macro is
-# hardwired to 1024 words (10-bit addr0/addr1). Without overriding MEM_WORDS
-# here, SRAM_SKY130 elaborates with a 12-bit word_index() truncated onto the
-# macro's 10-bit address ports (WIDTHTRUNC) -- a silent address-aliasing bug
-# in the *test build*, not caught by the RTL's own MEM_WORDS!=1024 check
-# (that check is a runtime `initial $error`, which neither Verilator
-# `--lint-only` nor a live cocotb run treats as fatal). -GMEM_WORDS=1024
-# matches the macro geometry the RTL comment (sram_controller.sv line ~52)
-# already documents as mandatory under SRAM_SKY130.
+# sram_controller's MEM_WORDS defaults to 4096, but the sky130_sram_4kbyte macro is hardwired to 1024 words (10-bit addr0/addr1).
+# Without -GMEM_WORDS=1024 under SRAM_SKY130, a 12-bit word_index() is truncated onto the macro's 10-bit address ports
+# (WIDTHTRUNC): a silent address alias in the test build. The RTL's own MEM_WORDS != 1024 check is a runtime `initial $error`,
+# which neither Verilator `--lint-only` nor a cocotb run treats as fatal. -GMEM_WORDS=1024 matches the macro geometry that
+# sram_controller.sv documents as mandatory under SRAM_SKY130.
 sram_controller: $(call sp_lint,verilator_lint)
 	$(MAKE) MODULE=test_sram_controller TOPLEVEL=sram_controller \
 		VERILOG_SOURCES="$(SRAM_SOURCES)" \
 		EXTRA_ARGS="$(if $(filter sky130,$(SRAM_TARGET)),-GMEM_WORDS=1024)" \
 		$(BUILD_ARGS)
 
-# Bead ej6j.  boot_rom runs as two build points: the default (empty MEM_INIT_FILE -> zero-fill arm)
-# and one with MEM_INIT_FILE set to a hex image (the $$readmemh arm no other suite takes -- they all
-# backdoor-load).  The parameter is an elaboration parameter, so the second point is its own
-# Verilator build in its OWN SIM_BUILD (the stale-Vtop hazard documented above).
 axi4_to_axilite:
 	$(MAKE) MODULE=test_axi4_to_axilite TOPLEVEL=axi4_to_axilite \
 		VERILOG_SOURCES="$(A2L_SOURCES)" \
@@ -1047,6 +904,10 @@ axilite_to_axi4:
 		VERILOG_SOURCES="$(L2A_SOURCES)" \
 		$(BUILD_ARGS)
 
+# boot_rom runs as two build points: the default (empty MEM_INIT_FILE -> zero-fill arm)
+# and one with MEM_INIT_FILE set to a hex image (the $$readmemh arm no other suite takes -- they all
+# backdoor-load).  The parameter is an elaboration parameter, so the second point is its own
+# Verilator build, and the different EXTRA_ARGS give it its own SIM_BUILD (see the stale-Vtop hazard at SIM_BUILD).
 boot_rom:
 	@set -e; \
 	echo "=== boot_rom: MEM_INIT_FILE empty (default) ==="; \
@@ -1100,7 +961,7 @@ uart: $(call sp_lint,uart_lint)
 		$(BUILD_ARGS)
 
 # -Wno-SYNCASYNCNET: spi_controller's own flops are synchronous-reset while the
-# cdc_sync on spi_miso_i (bead a2g) asserts reset asynchronously, so rst_n
+# cdc_sync on spi_miso_i asserts reset asynchronously, so rst_n
 # reaches both styles.  With spi_controller as the lint ROOT there is no logic
 # between the port and the two usages, so Verilator flags the mix; the same
 # rst_n / cdc_sync pattern raises nothing at soc_top scope.  Every SoC-level
@@ -1115,14 +976,14 @@ spi: $(call sp_lint,spi_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# APB migration PR-1: apb4_register_bank lint + sim.
+# APB migration: apb4_register_bank lint + sim.
 apb4_register_bank_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module tb_apb4_register_bank $(APB4_REG_SOURCES)
 
-# Two build points (bead r5hu); same scheme as register_bank above.  The ADDR_W=5 point is the
+# Two build points; same scheme as register_bank above.  The ADDR_W=5 point is the
 # POSITIVE CONTROL for the axi_lite_register_bank truncating-cast defect: this module already
-# zero-extends the address (GH #87), so its boundary test must pass.
+# zero-extends the address, so its boundary test must pass.
 apb4_register_bank: $(call sp_lint,apb4_register_bank_lint)
 	@set -e; \
 	echo "=== apb4_register_bank: ADDR_W=12 (default) ==="; \
@@ -1138,8 +999,7 @@ apb4_register_bank: $(call sp_lint,apb4_register_bank_lint)
 		$(BUILD_ARGS) \
 		sim
 
-# APB migration PR-1: axil_to_apb bridge lint + sim.
-# clean first: bridge TB uses the same Vtop binary name as other targets.
+# APB migration: axil_to_apb bridge lint + sim.
 axil_to_apb_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module tb_axil_to_apb $(AXIL_TO_APB_SOURCES)
@@ -1151,7 +1011,7 @@ axil_to_apb: $(call sp_lint,axil_to_apb_lint)
 
 # Phase 7 M-c: PLL lint gates.
 # soc_pll_lint: lints tb_soc_pll (full SoC, used by test_pll_lock).
-# pll_regs_lint: APB migration PR-7 — pll_axil_regs deleted; redirected to
+# pll_regs_lint: APB migration — pll_axil_regs deleted; redirected to
 #   lint tb_pll_apb_regs (APB4 slave, same functional coverage as original).
 soc_pll_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
@@ -1166,16 +1026,12 @@ pll_regs_lint:
 		--top-module tb_pll_apb_regs \
 		$(PLL_APB_REGS_SOURCES)
 
-# Phase 7 M-c / APB migration PR-7: SoC PLL simulation targets.
-# test_pll_lock (3 tests): uses full SoC tb_soc_pll — verifies PLL lock
-#   signal propagation and pll_locked_o port.
-# pll_regs: APB migration PR-7 — pll_axil_regs deleted; pll_regs is now an
-#   alias for pll_apb_regs (4 tests, tb_pll_apb_regs, APB4 slave).
-#   The original test_pll_regs (AXI-Lite) is superseded by test_pll_apb_regs.
+# Phase 7 M-c / APB migration: SoC PLL simulation targets.
+# pll_regs is an alias for pll_apb_regs (tb_pll_apb_regs, APB4 slave); pll_axil_regs and its AXI-Lite test are deleted.
 pll_regs: $(call sp_lint,pll_regs_lint)
 	$(MAKE) pll_apb_regs
 
-# APB migration PR-6: pll_apb_regs lint + sim.
+# APB migration: pll_apb_regs lint + sim.
 # lint only: apb4_register_bank + pll_apb_regs + standalone TB wrapper.
 pll_apb_regs_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
@@ -1187,7 +1043,7 @@ pll_apb_regs: $(call sp_lint,pll_apb_regs_lint)
 		VERILOG_SOURCES="$(PLL_APB_REGS_SOURCES)" \
 		$(BUILD_ARGS)
 
-# GH #101: pmu lint + sim.
+# pmu lint + sim.
 # lint only: apb4_register_bank + pmu + standalone TB wrapper.
 pmu_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
@@ -1199,7 +1055,7 @@ pmu: $(call sp_lint,pmu_lint)
 		VERILOG_SOURCES="$(PMU_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Phase 6a (bead claude_verilog_test-ckc): gpio_controller lint + sim.
+# Phase 6a: gpio_controller lint + sim.
 # lint only: apb4_register_bank + cdc_sync + gpio_controller + standalone TB wrapper.
 # -Wno-SYNCASYNCNET: same rationale as spi_lint above -- cdc_sync's own flops are
 # asynchronous-reset while gpio_controller's are synchronous-reset, and both are flopped off the
@@ -1215,7 +1071,7 @@ gpio: $(call sp_lint,gpio_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Phase 6a-2 (bead claude_verilog_test-f7vs.6): pwm_controller lint + sim.
+# Phase 6a-2: pwm_controller lint + sim.
 # lint only: apb4_register_bank + pwm_controller + standalone TB wrapper.
 # -Wno-SYNCASYNCNET: matches the gpio targets' convention above, for consistency with the rest of
 # this file's per-target EXTRA_ARGS, even though PWM has no cdc_sync / async input of its own.
@@ -1230,7 +1086,7 @@ pwm: $(call sp_lint,pwm_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Phase 6a-3 (bead claude_verilog_test-f7vs.7): watchdog_timer lint + sim.
+# Phase 6a-3: watchdog_timer lint + sim.
 # lint only: apb4_register_bank + watchdog_timer + standalone TB wrapper.
 # -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm targets above.
 wdt_lint:
@@ -1244,7 +1100,7 @@ wdt: $(call sp_lint,wdt_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Phase 6a-4 (bead claude_verilog_test-f7vs.8): trng lint + sim.
+# Phase 6a-4: trng lint + sim.
 # lint only: apb4_register_bank + trng_lfsr_entropy + trng + standalone TB wrapper.
 # -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt targets above.
 trng_lint:
@@ -1258,7 +1114,7 @@ trng: $(call sp_lint,trng_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Phase 6a-5 (bead claude_verilog_test-f7vs.9): i2c_controller lint + sim (L1 protocol suite).
+# Phase 6a-5: i2c_controller lint + sim (L1 protocol suite).
 # lint only: apb4_register_bank + cdc_sync + i2c_controller + standalone TB wrapper.
 # -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt/trng targets above (the
 # async pad inputs feed cdc_sync flops).
@@ -1273,7 +1129,7 @@ i2c: $(call sp_lint,i2c_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Phase 6b (bead claude_verilog_test-f7vs.10): crypto_accel lint + sim (L1 AES / SHA suite).
+# Phase 6b: crypto_accel lint + sim (L1 AES / SHA suite).
 # lint only: apb4_register_bank + aes128_core + sha256_core + crypto_accel + standalone TB wrapper
 # (which holds all four configurations, so this lint also covers EN_AES=0 / EN_SHA=0 /
 # SBOX_PARALLEL=4). Contract: 0 errors, 0 warnings.
@@ -1290,17 +1146,12 @@ crypto: $(call sp_lint,crypto_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Phase 6c (bead claude_verilog_test-f7vs.11): npu_top lint + sim (L1 INT8 NPU suite).
-# lint only: apb4_register_bank + the weight-SRAM behavioural model + the three npu RTL files +
-# standalone TB wrapper (which holds both configurations, so this lint also covers EN_NPU=0).
-# Contract: 0 errors, 0 warnings.  Default define set => the FreePDK45 SRAM arm (see NPU_SOURCES).
-# -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt/trng/i2c/crypto targets above,
-# kept for consistency although npu_top has no asynchronous input to trip it.
-# -Wno-DECLFILENAME: sim/sram_1rw_256x32_verilator.v defines module sram_1rw_256x32_freepdk45, so
-# `-Wall` reports DECLFILENAME on a file this target does not own (measured, Verilator 5.048);
-# soc_boot_lint disables it for the same file. Every npu RTL file is named after its module, so
-# nothing of ours is hidden by it. test_npu.py's single-instance lint passes the same flag.
-# RED until the RTL lands: with rtl/npu/ absent both targets stop at "Cannot find file".
+# Phase 6c: npu_top lint + sim (L1 INT8 NPU suite). Lint: NPU_SOURCES (both configurations, so it also covers EN_NPU=0).
+# Contract: 0 errors, 0 warnings.
+# -Wno-SYNCASYNCNET: same per-target convention as the other peripheral targets, kept for consistency.
+# -Wno-DECLFILENAME: sim/sram_1rw_256x32_verilator.v defines module sram_1rw_256x32_freepdk45, so `-Wall` reports it on a
+# file this target does not own. soc_boot_lint disables it for the same file, and test_npu.py's lint passes the flag too.
+# Every npu RTL file is named after its module, so the flag hides nothing of ours.
 npu_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET -Wno-DECLFILENAME \
 		--top-module tb_npu \
@@ -1312,7 +1163,7 @@ npu: $(call sp_lint,npu_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Phase 6 groundwork (bead claude_verilog_test-f7vs.4): apb_interconnect lint + sim.
+# Phase 6 groundwork: apb_interconnect lint + sim.
 # lint only: apb_interconnect + standalone TB wrapper, at the wrapper's default N_SLAVES.
 # -Wno-SYNCASYNCNET: matches the gpio/spi targets' convention above, even though this DUT has
 # no clock/reset of its own to trip it -- kept for consistency with the rest of this file's
@@ -1322,19 +1173,12 @@ apb_interconnect_lint:
 		--top-module tb_apb_interconnect \
 		$(APB_INTERCONNECT_SOURCES)
 
-# apb_interconnect is a real N_SLAVES sweep, not a single build+run like every other target in
-# this file: N_SLAVES is a SystemVerilog elaboration-time parameter (it changes SEL_W/IDXW and
-# the generated decode-window array sizes -- see tb_apb_interconnect.sv), so Verilator must
-# re-elaborate the whole design once per value; a single cocotb process cannot change it at
-# runtime. Each point gets ITS OWN SIM_BUILD directory -- reusing one across different N_SLAVES
-# values is exactly the stale-Verilator-cache / corrupt-Vtop hazard this phase's groundwork
-# (bead f7vs.3) exists to avoid (Doc: ds:ch:phase6-ip-expansion-plan Sec.10 "Operational hazards").
-# test_apb_interconnect.py reads back which N_SLAVES / OVERLAP_TEST this build used via the
-# APB_IC_N_SLAVES / APB_IC_OVERLAP environment variables set below, so the same test module
-# runs unmodified at every sweep point plus the dedicated first-match-wins overlap build.
-# `set -e` (in a single multi-line shell recipe, note the trailing `\` continuations) so a
-# failure at any sweep point aborts the target with a non-zero exit instead of being masked by
-# a later point's success.
+# apb_interconnect is a real N_SLAVES sweep: N_SLAVES is an elaboration-time parameter (it changes SEL_W/IDXW and the decode-window
+# array sizes, see tb_apb_interconnect.sv), so Verilator re-elaborates once per value. Each point hashes to its OWN SIM_BUILD:
+# reusing one dir across N_SLAVES values is the stale-Vtop hazard (see the SIM_BUILD block; Doc: ds:ch:phase6-ip-expansion-plan:operational-hazards). test_apb_interconnect.py
+# reads N_SLAVES and OVERLAP_TEST back from APB_IC_N_SLAVES / APB_IC_OVERLAP, set below, so one test module runs at every sweep
+# point plus the first-match-wins overlap build. `set -e` in one multi-line recipe (note the trailing `\`) makes a failing point
+# abort the target.
 apb_interconnect: $(call sp_lint,apb_interconnect_lint)
 	@set -e; \
 	for n in 1 2 7 8 9 13 14 15 16 17; do \
@@ -1352,7 +1196,7 @@ apb_interconnect: $(call sp_lint,apb_interconnect_lint)
 		EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=2 -GOVERLAP_TEST=1 +define+TB_N_SLAVES=2 +define+TB_OVERLAP_TEST=1" \
 		sim
 
-# GH #91: async_axi_fifo lint + sim.
+# async_axi_fifo lint + sim.
 # lint only: axi_pkg + 3 cdc/ primitives + async_axi_fifo + standalone TB wrapper.
 async_axi_fifo_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
@@ -1364,7 +1208,7 @@ async_axi_fifo: $(call sp_lint,async_axi_fifo_lint)
 		VERILOG_SOURCES="$(ASYNC_AXI_FIFO_SOURCES)" \
 		$(BUILD_ARGS)
 
-# GH #93: apb_cdc_bridge lint + sim.
+# apb_cdc_bridge lint + sim.
 # lint only: 2 cdc/ primitives + apb_cdc_bridge + standalone TB wrapper.
 apb_cdc_bridge_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
@@ -1376,7 +1220,7 @@ apb_cdc_bridge: $(call sp_lint,apb_cdc_bridge_lint)
 		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-xtaa: cdc_sync RESET_VAL lint + sim.
+# cdc_sync RESET_VAL lint + sim.
 cdc_sync_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module tb_cdc_sync \
@@ -1401,7 +1245,7 @@ cdc_sync: $(call sp_lint,cdc_sync_lint cdc_sync_stages1_neg)
 		VERILOG_SOURCES="$(CDC_SYNC_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-3snb: cdc_gray_fifo DEPTH=2 lint + sim.
+# cdc_gray_fifo DEPTH=2 lint + sim.
 # Lint of the wrapper (both depths) plus the bare primitive at every legal depth, so the depth-2
 # generate branch and the unchanged DEPTH>=4 branch are each elaborated under -Wall.
 cdc_gray_fifo_lint:
@@ -1441,7 +1285,7 @@ cdc_gray_fifo_sim:
 cdc_gray_fifo: $(call sp_lint,cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg)
 	$(MAKE) cdc_gray_fifo_sim
 
-# Bead claude_verilog_test-xtaa: SYNC_STAGES pass-through of the four peripherals that own an
+# SYNC_STAGES pass-through of the four peripherals that own an
 # input synchroniser. One cheap latency test per family at SYNC_STAGES=3 (the default depth 2 is
 # covered by each peripheral's own suite). -GSYNC_STAGES is part of the sim_build key, so each
 # variant gets its own directory. Lint of each DUT already runs in its own <name>_lint target.
@@ -1467,7 +1311,7 @@ periph_sync_stages: $(call sp_lint,uart_lint irq_lint spi_lint gpio_lint)
 		SYNC_PERIPH=tb_gpio EXPECT_STAGES=3 \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-07n: cdc_reset_sync DFT scan-bypass lint + sim.
+# cdc_reset_sync DFT scan-bypass lint + sim.
 # lint only: cdc_reset_sync + standalone TB wrapper.
 cdc_reset_sync_scan_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
@@ -1479,7 +1323,7 @@ cdc_reset_sync_scan: $(call sp_lint,cdc_reset_sync_scan_lint)
 		VERILOG_SOURCES="$(CDC_RESET_SYNC_SCAN_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-j41m.2: rv32i_clock_gate test_en (scan) lint + sim.
+# rv32i_clock_gate test_en (scan) lint + sim.
 # The gate carries its own lint_off pragmas for the behavioural latch, so the
 # plain -Wall lint below must stay clean.
 clock_gate_scan_lint:
@@ -1497,7 +1341,7 @@ dft_muxes: $(call sp_lint,dft_muxes_lint)
 		VERILOG_SOURCES="$(DFT_MUXES_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-j41m.3 (DFT Stage 1b): JTAG TAP unit suite, dft_ctrl suite.
+# DFT Stage 1b: JTAG TAP unit suite, dft_ctrl suite.
 # Every unit test is generated once per (TCK period, system-clock period) pair, see test_jtag_tap.py.
 jtag_tap_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
@@ -1518,7 +1362,7 @@ mbist_ctrl_lint:
 
 # Three build points (each hashes to its own SIM_BUILD): small (every algorithm x every fault class), soc
 # (two 1024-word macros, port 1 on memory 0) and cpu (ten 256-word cache SRAMs); small and cpu are built a
-# second time with LOCAL_CMP = 1 (collar-local compare, bead c54a).
+# second time with LOCAL_CMP = 1 (collar-local compare).
 mbist_ctrl: $(call sp_lint,mbist_ctrl_lint)
 	@set -e; for cfg in "small 4 6 5 0" "soc 2 10 1 0" "cpu 10 8 0 0" "small 4 6 5 1" "cpu 10 8 0 1"; do set -- $$cfg; \
 	  echo "=== mbist_ctrl: $$1 (N_MEM=$$2 AW=$$3 P1_MASK=$$4 LOCAL_CMP=$$5) ==="; \
@@ -1606,6 +1450,7 @@ clock_gate_scan: $(call sp_lint,clock_gate_scan_lint)
 		VERILOG_SOURCES="$(CLOCK_GATE_SCAN_SOURCES)" \
 		$(BUILD_ARGS)
 
+# soc_pll runs test_pll_lock on the full SoC (tb_soc_pll, which exposes pll_locked_o), then pll_apb_regs.
 soc_pll: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
@@ -1614,11 +1459,8 @@ soc_pll: $(call sp_lint,soc_pll_lint)
 		$(BUILD_ARGS)
 	$(MAKE) pll_apb_regs
 
-# GH #93 multiclock APB_PLL2 / apb_cdc_bridge exercise (bonus item 4 of the
-# GH #93 multiclock verification task — see test_soc_multiclock_pll2.py's
-# module docstring for why this is a separate DUT/target from
-# soc_multiclock). Reuses pll2_fw/pll2_decode.hex — no new firmware.
-#
+# Multiclock APB_PLL2 / apb_cdc_bridge exercise on tb_soc_pll. test_soc_multiclock_pll2.py's module docstring says why
+# it is a separate target from soc_multiclock. Reuses pll2_fw/pll2_decode.hex (no new firmware).
 soc_pll_multiclock: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_soc_multiclock_pll2 TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
@@ -1626,7 +1468,7 @@ soc_pll_multiclock: $(call sp_lint,soc_pll_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-j41m.2 (DFT Stage 1a): soc_top test-access ports, via tb_soc_pll
+# DFT Stage 1a: soc_top test-access ports, via tb_soc_pll
 # (which exposes pll_locked_o / cpu_pll_locked_o). Same sources/flags as soc_pll_multiclock.
 soc_dft_scan: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_soc_dft_scan TOPLEVEL=tb_soc_pll \
@@ -1635,7 +1477,7 @@ soc_dft_scan: $(call sp_lint,soc_pll_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-j41m.17: the scan_en gate (dft_scan_en = request & crypto wipe done), pin
+# The scan_en gate (dft_scan_en = request & crypto wipe done), pin
 # and TAP-serial, on the same wrapper and flags as soc_dft_scan.
 soc_scan_en_gate: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_soc_scan_en_gate TOPLEVEL=tb_soc_pll \
@@ -1644,7 +1486,7 @@ soc_scan_en_gate: $(call sp_lint,soc_pll_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-j41m.3 (DFT Stage 1b): soc_top driven through the JTAG TAP (tb_soc_pll
+# DFT Stage 1b: soc_top driven through the JTAG TAP (tb_soc_pll
 # carries tck_i/tms_i/tdi_i/trst_ni/tdo_o/tdo_oe_o). Same sources/flags as soc_dft_scan.
 soc_jtag: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_soc_jtag TOPLEVEL=tb_soc_pll \
@@ -1662,7 +1504,6 @@ soc_boot_lint:
 		$(SOC_BOOT_SOURCES)
 
 # M9 SoC boot test — 3 tests: PC scoreboard, SRAM sentinels, 100/100 stability.
-# fr_null_20260603_052800_00 (CPU RESET_PC) fixed by rtl-design-orchestrator 2026-06-03.
 soc_boot: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1689,7 +1530,7 @@ soc_boot_diag:
 
 # M9 software-managed coherency test — CPU flush+GPU launch+CPU inval end-to-end.
 # Verifies CSRW 0x7C0 (dcache_flush) and CSRW 0x7C1 (dcache_inval) under real
-# GPU kernel execution (bead claude_verilog_test-777).
+# GPU kernel execution.
 # Firmware: coherency_fw/coherency_fw.hex (generated by gen_coherency_hex.py).
 # Tests: test_coherency_pass (positive), test_coherency_no_flush (negative),
 #        test_coherency_no_inval (negative/warn if dst lines cold).
@@ -1700,7 +1541,7 @@ soc_coherency: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# M9 CPU-GPU interrupt integration test (bead claude_verilog_test-ov2).
+# M9 CPU-GPU interrupt integration test.
 # IRQ-driven counterpart to soc_coherency: CPU enables GPU IRQ via
 # interrupt_controller (IRQ_MASK bit 4), launches kernel, waits in a bounded
 # spin loop until the ISR fires (mtvec trap → ISR clears IRQ + sets flag +
@@ -1713,19 +1554,11 @@ soc_cpu_gpu: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level GPIO test (bead claude_verilog_test-8qn4 item 1). Exercises
-# gpio_controller (APB slave 7, 0x2000_A000) through the real fabric path —
-# CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-# axil_to_apb -> apb_interconnect -- for the first time (test_gpio/tb_gpio.sv
-# drives the APB4 face directly). gpio_controller.sv is already part of
-# SOC_BOOT_SOURCES (no new source-list variable needed) and tb_soc_top.sv
-# already lints clean with the new gpio_out_o/gpio_oe_o/gpio_in_i ports, so
-# this reuses soc_boot_lint as its hard prerequisite exactly like
-# soc_periph/soc_coherency/soc_cpu_gpu above.
-# Tests: output path (GPIO_DIR/GPIO_DATA_OUT reach gpio_oe_o/gpio_out_o),
-# input path (gpio_in_i -> GPIO_DATA_IN, respecting the 3-clock-edge sync
-# latency), and the GPIO -> interrupt_controller[5] -> CPU MEIP interrupt
-# path end to end (CPU actually takes the trap; GPIO_IRQ_CLR deasserts it).
+# SoC-level GPIO test. Exercises gpio_controller (APB slave 7, 0x2000_A000) through the real fabric path: CPU -> axi4_crossbar ->
+# axi4_to_axilite -> axi_lite_interconnect -> axil_to_apb -> apb_interconnect. test_gpio/tb_gpio.sv drives the APB4 face directly.
+# gpio_controller.sv is already in SOC_BOOT_SOURCES, so this reuses soc_boot_lint as its hard prerequisite, like soc_periph,
+# soc_coherency and soc_cpu_gpu. Tests: output path, input path (3-clock-edge sync latency) and the GPIO ->
+# interrupt_controller[5] -> CPU MEIP interrupt path end to end (the CPU takes the trap; GPIO_IRQ_CLR deasserts it).
 soc_gpio: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_gpio TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1733,7 +1566,7 @@ soc_gpio: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# UART boot-ROM bootloader (bead hlrm.2): the real bootloader image from sw/bootloader/prebuilt/
+# UART boot-ROM bootloader: the real bootloader image from sw/bootloader/prebuilt/
 # is backdoor-loaded into boot_rom and driven over uart_rx_i by a bit-level UART model.
 # Rebuild the images (needs the nix #bench toolchain):  make -C sw/bootloader prebuilt
 soc_uart_boot: $(call sp_lint,soc_boot_lint)
@@ -1743,18 +1576,11 @@ soc_uart_boot: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level PWM test (bead claude_verilog_test-f7vs.6 item 5). Exercises
-# pwm_controller (APB slave 8, 0x2000_B000) through the real fabric path —
-# CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
-# axil_to_apb -> apb_interconnect -- for the first time (test_pwm/tb_pwm.sv
-# drives the APB4 face directly). pwm_controller.sv is already part of
-# SOC_BOOT_SOURCES (no new source-list variable needed) and tb_soc_top.sv
-# already lints clean with the existing pwm_o port, so this reuses
-# soc_boot_lint as its hard prerequisite exactly like soc_gpio above.
-# Tests: boundary toggle (pwm_o free-runs at the configured period/duty once
-# channel 0 is enabled — no cocotb stimulus needed, unlike soc_gpio) and the
-# PWM -> interrupt_controller[6] -> CPU MEIP interrupt path end to end (CPU
-# actually takes the trap; PWM_IRQ_CLR + PWM_IRQ_EN=0 deassert it).
+# SoC-level PWM test. Exercises pwm_controller (APB slave 8, 0x2000_B000) through the same fabric path as soc_gpio;
+# test_pwm/tb_pwm.sv drives the APB4 face directly. pwm_controller.sv is already in SOC_BOOT_SOURCES, so this reuses
+# soc_boot_lint as its hard prerequisite, like soc_gpio. Tests: boundary toggle (pwm_o free-runs at the configured
+# period and duty once channel 0 is enabled, so no cocotb stimulus is needed) and the PWM -> interrupt_controller[6] ->
+# CPU MEIP interrupt path end to end (PWM_IRQ_CLR + PWM_IRQ_EN=0 deassert it).
 soc_pwm: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_pwm TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1762,17 +1588,11 @@ soc_pwm: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level WDT test (bead claude_verilog_test-f7vs.7 step 5). Exercises watchdog_timer
-# (APB slave 9, 0x2000_C000) through the real fabric path — CPU -> axi4_crossbar ->
-# axi4_to_axilite -> axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- for the first
-# time (test_wdt/tb_wdt.sv drives the APB4 face directly), plus the two things that only exist
-# inside soc_top: the WDT -> interrupt_controller[7] -> CPU MEIP interrupt path, and the
-# bite -> CPU-domain reset path (u_cpu_wdt_rst_sync). Two tests / two hand-assembled images
-# (wdt_fw/gen_wdt_hex.py, no cross toolchain — CI-safe): feed-then-starve with RST_EN=0 (bark
-# trap, bite trap, wdt_rst_req_o at the boundary, cpu_domain_rst_n never falls), and RST_EN=1
-# (bite resets the CPU domain only). watchdog_timer.sv is already in SOC_BOOT_SOURCES and
-# tb_soc_top.sv already lints clean with wdt_rst_req_o, so this reuses soc_boot_lint exactly
-# like soc_pwm above.
+# SoC-level WDT test. Exercises watchdog_timer (APB slave 9, 0x2000_C000) through the same fabric path as soc_gpio, plus what exists
+# only inside soc_top: the WDT -> interrupt_controller[7] -> CPU MEIP path and the bite -> CPU-domain reset path
+# (u_cpu_wdt_rst_sync). Three tests on two hand-assembled images (wdt_fw/gen_wdt_hex.py, no cross toolchain, CI-safe): feed-then-starve
+# with RST_EN=0 (bark trap, bite trap, wdt_rst_req_o at the boundary, cpu_domain_rst_n never falls), RST_EN=1 (bite resets the
+# CPU domain only), and recovery after an external reset. It reuses soc_boot_lint, like soc_pwm.
 soc_wdt: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_wdt TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1780,15 +1600,11 @@ soc_wdt: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level TRNG test (bead claude_verilog_test-f7vs.8 step 5). Exercises trng (APB slave 10,
-# 0x2000_D000) through the real fabric path — CPU -> axi4_crossbar -> axi4_to_axilite ->
-# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- for the first time (test_trng/
-# tb_trng.sv drives the APB4 face directly), plus the trng -> interrupt_controller[8] -> CPU MEIP
-# interrupt path. One test / one hand-assembled image (trng_fw/gen_trng_hex.py, no cross
-# toolchain — CI-safe): polled phase with the popped words checked value-exact against
-# tb/models/trng_lfsr_model.py and TRNG_STATUS[3] (INSECURE) read back, then an interrupt-driven
-# phase. trng.sv + trng_lfsr_entropy.sv are already in SOC_BOOT_SOURCES and tb_soc_top.sv is
-# unchanged (TRNG adds no top-level pins), so this reuses soc_boot_lint exactly like soc_wdt above.
+# SoC-level TRNG test. Exercises trng (APB slave 10, 0x2000_D000) through the same fabric path as soc_gpio, plus the
+# trng -> interrupt_controller[8] -> CPU MEIP path. One test, one hand-assembled image (trng_fw/gen_trng_hex.py, no cross
+# toolchain, CI-safe): a polled phase with the popped words checked value-exact against tb/models/trng_lfsr_model.py and
+# TRNG_STATUS[3] (INSECURE) read back, then an interrupt-driven phase. trng.sv and trng_lfsr_entropy.sv are in SOC_BOOT_SOURCES
+# and TRNG adds no top-level pins, so this reuses soc_boot_lint, like soc_wdt.
 soc_trng: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_trng TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1796,15 +1612,11 @@ soc_trng: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level I2C FABRIC test (bead claude_verilog_test-f7vs.9). Exercises i2c_controller (APB slave
-# 11, 0x2000_E000) through the real fabric path -- CPU -> axi4_crossbar -> axi4_to_axilite ->
-# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- plus the i2c -> interrupt_controller
-# [9] -> CPU MEIP interrupt path. Deliberately CHEAP: it uses the DUT's internal loopback
-# (I2C_CTRL[1], the SPI_CTRL[4] precedent) so no bus BFM and no protocol traffic runs at
-# CLK_PERIOD_NS=2; full protocol coverage is the L1 `i2c` suite. One test / one hand-assembled
-# image (i2c_fw/gen_i2c_hex.py, no cross toolchain -- CI-safe). i2c_controller.sv is already in
-# SOC_BOOT_SOURCES and tb_soc_top.sv already exposes the i2c_* pins, so this reuses soc_boot_lint
-# exactly like soc_trng/soc_gpio/soc_wdt above.
+# SoC-level I2C test. Exercises i2c_controller (APB slave 11, 0x2000_E000) through the same fabric path as soc_gpio.
+# Two tests, two hand-assembled images (i2c_fw/gen_i2c_hex.py, no cross toolchain, CI-safe): test_soc_i2c uses the internal
+# loopback (I2C_CTRL[1]) and the i2c -> interrupt_controller[9] -> CPU MEIP path; test_soc_i2c_real_pads drives the real pads
+# against tb/cocotb/bfm/i2c_slave.py. Full protocol coverage is the L1 `i2c` suite. i2c_controller.sv is in SOC_BOOT_SOURCES
+# and tb_soc_top.sv exposes the i2c_* pins, so this reuses soc_boot_lint.
 soc_i2c: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_i2c TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1812,14 +1624,11 @@ soc_i2c: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10). Exercises crypto_accel (APB slave
-# 12, 0x2000_F000) through the real fabric path -- CPU -> axi4_crossbar -> axi4_to_axilite ->
-# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- plus the crypto -> interrupt_controller
-# [10] -> CPU MEIP interrupt path. Deliberately CHEAP: a few FIPS-197 / FIPS 180-4 known answers read
-# back over the bus; every behaviour of the peripheral itself is the L1 `crypto` suite. One test / one
-# hand-assembled image (crypto_fw/gen_crypto_hex.py, no cross toolchain -- CI-safe). crypto_accel.sv,
-# aes128_core.sv and sha256_core.sv are already in SOC_BOOT_SOURCES and tb_soc_top.sv needs no new
-# ports (crypto has no pins), so this reuses soc_boot_lint exactly like soc_i2c/soc_trng above.
+# SoC-level crypto fabric test. Exercises crypto_accel (APB slave 12, 0x2000_F000) through the same fabric path as soc_gpio, plus the
+# crypto -> interrupt_controller[10] -> CPU MEIP path. Deliberately cheap: a few FIPS-197 / FIPS 180-4 known answers read back over
+# the bus. The behaviour of the peripheral itself is the L1 `crypto` suite. One test, one hand-assembled image
+# (crypto_fw/gen_crypto_hex.py, no cross toolchain, CI-safe). The crypto RTL is in SOC_BOOT_SOURCES and crypto has no pins,
+# so this reuses soc_boot_lint.
 soc_crypto: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_crypto TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1827,15 +1636,11 @@ soc_crypto: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level NPU FABRIC test (bead claude_verilog_test-f7vs.11). Exercises npu_top (APB slave 13,
-# 0x2001_0000) through the real fabric path -- CPU -> axi4_crossbar -> axi4_to_axilite ->
-# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- plus the npu -> interrupt_controller
-# [11] -> CPU MEIP interrupt path. Deliberately CHEAP: three small INT8 inferences (polled, interrupt
-# driven with ReLU, illegal START) read back over the bus; every behaviour of the peripheral itself
-# is the L1 `npu` suite. One test / one hand-assembled image (npu_fw/gen_npu_hex.py, no cross
-# toolchain -- CI-safe). npu_top.sv / npu_mac_array.sv / npu_weight_mem.sv are already in
-# SOC_BOOT_SOURCES and tb_soc_top.sv needs no new ports (the NPU has no pins), so this reuses
-# soc_boot_lint exactly like soc_crypto above.
+# SoC-level NPU fabric test. Exercises npu_top (APB slave 13, 0x2001_0000) through the same fabric path as soc_gpio, plus the
+# npu -> interrupt_controller[11] -> CPU MEIP path. Deliberately cheap: three small INT8 inferences (polled, interrupt driven
+# with ReLU, illegal START) read back over the bus. The behaviour of the peripheral itself is the L1 `npu` suite. One test, one
+# hand-assembled image (npu_fw/gen_npu_hex.py, no cross toolchain, CI-safe). The NPU RTL is in SOC_BOOT_SOURCES and the NPU has
+# no pins, so this reuses soc_boot_lint.
 soc_npu: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_npu TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1843,37 +1648,12 @@ soc_npu: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2). Unlike soc_gpio
-# above (hand-assembled gpio_fw firmware proving the RTL through the
-# fabric), this suite proves sw/drivers/gpio.h -- the first GPIO driver
-# layer in this repo -- by RUNNING a normal compiled C program
-# (sw/bench/gpio_demo.c) built through the existing sw/bench toolchain.
-# gpio_controller.sv is already part of SOC_BOOT_SOURCES and tb_soc_top.sv
-# already exposes gpio_out_o/gpio_oe_o/gpio_in_i (see soc_gpio's own
-# comment), so this reuses soc_boot_lint as its hard lint prerequisite
-# exactly like soc_gpio/soc_periph/soc_coherency/soc_cpu_gpu do -- no
-# separate gpio_driver_lint alias, for the same reason none of those four
-# have one either (one shared tb_soc_top lint gate for the whole family).
-# SRAM_MEM_WORDS=65536 override matches l2_bench: gpio_demo.c links via the
-# shared sw/bench/rv32i.ld, whose stack top (0x41C00) assumes that window.
-# Firmware is pre-built by
-#   nix develop ~/Downloads/Github/claude_verilog_test#bench --command make -C sw/bench
-# this target consumes sw/bench/build/gpio_demo.{hex,sym,dis} -- it does NOT
-# rebuild the C code (same contract as l2_bench).
-# ── gpio_driver is IN soc_all but NOT IN soc_all_ci (bead 8qn4 item 2) ────────
-# It consumes sw/bench/build/{trampoline,gpio_demo}.{hex,sym}, produced by the
-# riscv32-none-elf cross toolchain into the GITIGNORED sw/bench/build/. CI has no
-# cross-toolchain step, so those files cannot exist there and the suite dies in
-# _parse_hex() with a FileNotFoundError traceback -- exactly what failed on
-# PR #195. Hence: in soc_all (the full local gate), out of soc_all_ci.
-#
-# l2_bench depends on the same sw/bench hexes but is in NEITHER target, on
-# purpose: it is a benchmark/characterisation harness built for the M10 L2
-# decision (TESTCASE-limited, SRAM_MEM_WORDS=65536), not a pass/fail regression.
-#
-# RTL-level GPIO coverage is unaffected either way: soc_gpio is in soc_all_ci
-# because its firmware (tb/cocotb/soc/gpio_fw/gpio_fw.hex) is generated by a
-# pure-Python assembler, is committed, and needs no external toolchain.
+# GPIO driver test: proves sw/drivers/gpio.h by RUNNING a compiled C program (sw/bench/gpio_demo.c) on the SoC. soc_gpio proves
+# the RTL with committed firmware instead. This target reuses soc_boot_lint (no separate gpio_driver_lint) and passes
+# SRAM_MEM_WORDS=65536 like l2_bench: gpio_demo.c links via sw/bench/rv32i.ld, whose stack top (0x41C00) assumes that window.
+# It consumes sw/bench/build/{trampoline,gpio_demo}.{hex,sym} and does NOT rebuild them:
+#   nix develop <repo>#bench --command make -C sw/bench
+# In soc_all, NOT in soc_all_ci: CI has no riscv32 cross-toolchain step and sw/bench/build is gitignored. l2_bench is in neither.
 gpio_driver: $(call sp_lint,soc_boot_lint)
 	@test -f $(PROJ_ROOT)/sw/bench/build/gpio_demo.hex -a \
 	      -f $(PROJ_ROOT)/sw/bench/build/trampoline.hex || { \
@@ -1888,18 +1668,11 @@ gpio_driver: $(call sp_lint,soc_boot_lint)
 		  -GSRAM_MEM_WORDS=65536" \
 		$(BUILD_ARGS)
 
-# GH #93 multiclock SoC CDC exercise (bead: feat/cpu-domain-cdc-gh93 verif task).
-# Drives clk_i (fabric) / cpu_clk_i (CPU) at a genuinely asynchronous 7 ns /
-# 3 ns ratio (see test_soc_multiclock.py's module docstring for the full
-# rationale) to prove the CPU<->fabric CDC (async_axi_fifo + the
-# ext_irq/timer_irq/pmu_cpu_* cdc_sync synchronisers in soc_top.sv) works
-# when the two domains are not clock-aligned, reusing boot_fw/boot.hex,
-# periph_fw/periph_loopback.hex, and cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex — no
-# new firmware. Reuses SOC_BOOT_SOURCES + soc_boot_lint (same DUT/lint gate
-# as soc_boot/soc_periph/soc_cpu_gpu).
-#
-# In soc_all (see the soc_all comment block) since 2026-08-02, once both
-# bugs it found were fixed. Runnable standalone too: `rtk make soc_multiclock`.
+# Multiclock SoC CDC exercise. Drives clk_i (fabric) and cpu_clk_i (CPU) at a genuinely asynchronous ratio (see
+# test_soc_multiclock.py's module docstring) to prove the CPU<->fabric CDC (async_axi_fifo and the ext_irq / timer_irq /
+# pmu_cpu_* cdc_sync synchronisers in soc_top.sv) works when the domains are not clock-aligned. Reuses boot_fw/boot.hex,
+# periph_fw/periph_loopback.hex and cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex (no new firmware), the SOC_BOOT_SOURCES list and
+# soc_boot_lint. It is in soc_all_ci and also runs standalone.
 soc_multiclock: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_multiclock TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1907,14 +1680,10 @@ soc_multiclock: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# GH #95 (Group A, directed-test half): SoC-level reset-asymmetry class --
-# hold one physical domain's reset input low for an extended, deliberate
-# window (well beyond ordinary PLL-lock skew) while the other domain is
-# fully released and free-running, offering real traffic through
-# u_cpu_axi_cdc. See test_soc_multiclock_reset.py's module docstring for the
-# full rationale (regression coverage for fr_57f49b7f9b29 / fr_280f3ac18c66's
-# shared bug-class signature, at full-SoC scale). Reuses boot_fw/boot.hex --
-# no new firmware. Same DUT/source list/lint gate as soc_multiclock.
+# SoC-level reset-asymmetry class: hold one physical domain's reset input low for an extended, deliberate window (well beyond
+# ordinary PLL-lock skew) while the other domain is released and free-running, offering real traffic through u_cpu_axi_cdc.
+# See test_soc_multiclock_reset.py's module docstring for the rationale. Reuses boot_fw/boot.hex (no new firmware).
+# Same DUT, source list and lint gate as soc_multiclock.
 soc_multiclock_reset: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_multiclock_reset TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1922,14 +1691,10 @@ soc_multiclock_reset: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# GH #95 (Group C): PMU-driven live CPU-domain power-cycle at a divergent
-# clock ratio (bead claude_verilog_test-2k8) -- see test_soc_pmu_multiclock.py's
-# module docstring for the full rationale (firmware programs the DMA to write
-# PMU CTRL=CPU_OFF on the CPU's own behalf; the power-up trigger is supplied
-# by the testbench itself, since the CPU cannot write its own wake register
-# once gated). Firmware: pmu_cycle_fw/pmu_cycle.hex (generated by
-# gen_pmu_cycle_hex.py) -- new firmware, not reused from another suite. Same
-# DUT/source list/lint gate as soc_multiclock.
+# PMU-driven live CPU-domain power-cycle at a divergent clock ratio; see test_soc_pmu_multiclock.py's module docstring (firmware
+# programs the DMA to write PMU CTRL=CPU_OFF on the CPU's behalf, and the testbench supplies the power-up trigger, because the
+# CPU cannot write its own wake register once gated). Firmware: pmu_cycle_fw/pmu_cycle.hex (generated by gen_pmu_cycle_hex.py),
+# new for this suite. Same DUT, source list and lint gate as soc_multiclock.
 soc_pmu_multiclock: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_pmu_multiclock TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1937,10 +1702,10 @@ soc_pmu_multiclock: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Bead 3ogd: PMU / soc_top isolation-before-reset ordering (iso-ack handshake) at CPU clocks 3x and 8x
+# PMU / soc_top isolation-before-reset ordering (iso-ack handshake) at CPU clocks 3x and 8x
 # SLOWER than the fabric (the ratios where the old 2-flop clamp lost the race to the async PMU reset),
 # 1:1 and faster; the stale-ack guard on back-to-back power cycles; a dead CPU clock (the handshake
-# must time out, not hang the PMU); and the ISO_GPU clamps incl. m_axil_if_rready (PR #301).  Power
+# must time out, not hang the PMU); and the ISO_GPU clamps incl. m_axil_if_rready.  Power
 # cycles are driven by a backdoor write of PMU CTRL, so no firmware.  Same DUT/source list/lint gate
 # as soc_pmu_multiclock.
 soc_pmu_iso_ack: $(call sp_lint,soc_boot_lint)
@@ -1950,12 +1715,10 @@ soc_pmu_iso_ack: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# SoC-level integration gaps from the GH #216 coverage run (bead claude_verilog_test-oez2): the
-# peripheral IRQ lines + CPU traps (timer/UART/SPI/DMA), the SPI MISO input against a testbench
-# slave, both PLLs' divider registers through the fabric, GPU isolation via a PMU power cycle,
-# and the external APB debug master (halt/GPR/step, RO-register PSLVERR, and the apb_cdc_bridge
-# force-complete PSLVERR with the destination in reset). Six tests, ONE Vtop build. Firmware:
-# integ_fw/gen_integ_hex.py (three images, hand-assembled, no cross toolchain -- CI-safe).
+# SoC-level integration gaps: the peripheral IRQ lines + CPU traps (timer/UART/SPI/DMA), the SPI MISO input against a testbench
+# slave, both PLLs' divider registers through the fabric, GPU isolation via a PMU power cycle, and the external APB debug master
+# (halt/GPR/step, RO-register PSLVERR, and the apb_cdc_bridge force-complete PSLVERR with the destination in reset), plus register,
+# DMA and GPU walks. Firmware: integ_fw/gen_integ_hex.py (hand-assembled, no cross toolchain -- CI-safe).
 # Same DUT/source list/lint gate as soc_pmu_multiclock.
 soc_integration: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_integration TOPLEVEL=tb_soc_top \
@@ -1964,12 +1727,10 @@ soc_integration: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# M9 SoC stress + benchmark test (bead claude_verilog_test-pgf).
-# Self-checking firmware runs STRESS_ITER=10 outer loops exercising CPU burst,
-# DMA, GPU kernel, UART/SPI loopback, and timer in each loop (≥1M sim cycles).
-# Waveform tracing is DISABLED (EXTRA_ARGS="") — tracing 1M+ cycles would
-# generate a multi-GB VCD dump.  Keep this target OUT of soc_all because
-# runtime is long (>5 min); run explicitly with `make soc_stress`.
+# M9 SoC stress + benchmark test. Self-checking firmware (stress_fw/gen_stress_hex.py, run first) does STRESS_ITER outer loops of
+# CPU burst, DMA, GPU kernel, UART/SPI loopback and timer work.
+# Do not add --trace or WAVES=1: a trace of this run fills the disk. Keep this target out of soc_all and soc_all_ci because
+# it runs long; run it with `make soc_stress`.
 soc_stress: $(call sp_lint,soc_boot_lint)
 	/usr/bin/python3 $(SOC_DIR)/stress_fw/gen_stress_hex.py
 	$(MAKE) MODULE=test_soc_stress TOPLEVEL=tb_soc_top \
@@ -1978,14 +1739,11 @@ soc_stress: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# M10 L2-cache decision benchmark (bead claude_verilog_test-e4f).
-# Loads bare-metal C benchmarks (hello / sweep / matmul) onto the full SoC
-# with SRAM_MEM_WORDS=65536 (256 KB window) and reads perf-counter scratch
-# slots after EBREAK to compute I$/D$-miss rates.
-# Firmware is pre-built by `nix develop .#bench --command make -C sw/bench`;
-# this target consumes the build/ outputs — it does NOT rebuild the C code.
-# EXTRA_ARGS: no --trace (miss-rate runs can be long; VCD is wasteful here).
-# Excluded from soc_all (long runtime; separate measurement tool).
+# M10 L2-cache decision benchmark. Loads bare-metal C benchmarks (hello / sweep / matmul) onto the full SoC with
+# SRAM_MEM_WORDS=65536 (256 KB window) and reads perf-counter scratch slots after EBREAK to compute I$/D$-miss rates.
+# Firmware is pre-built by `nix develop .#bench --command make -C sw/bench`; this target consumes the build/ outputs
+# and does NOT rebuild the C code. No --trace: miss-rate runs can be long and a VCD is wasteful here.
+# Not in soc_all or soc_all_ci: it is a benchmark, not a pass/fail regression, and it needs the cross-built sw/bench/build hexes.
 l2_bench_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
@@ -2003,51 +1761,20 @@ l2_bench: $(call sp_lint,l2_bench_lint)
 		TESTCASE=test_hello_sanity,test_sweep_l2_bench \
 		$(BUILD_ARGS)
 
-# Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
-# M9 cpu_gpu + Phase 7 M-c PLL (lock + regs) + GH #101 PMU + GH #91 async_axi_fifo.
-# Bead claude_verilog_test-7je: each suite now builds into its own
-# sim_build_<target>/ (see BUILD_ARGS above), so no per-suite purge is needed
-# here.  Use `make distclean` to sweep every build dir.
-# NOTE: soc_stress and l2_bench are intentionally excluded from soc_all (long runtime).
-# soc_multiclock / soc_pll_multiclock (GH #93) joined soc_all on 2026-08-02.
-#   Both blocking bugs they found (soc_top.sv CPU clock-gate/sync-reset race,
-#   commit 4398c2e; cdc_gray_fifo wr_ready_o reset-release-skew accept-and-drop,
-#   commit 7a9f9d4 — see test_soc_multiclock.py's BLOCKER NOTE #1/#2 for the
-#   full root-cause trail) are fixed, and both suites pass. Runtime measured at
-#   ~95s combined (soc_multiclock ~93s dominated by test_multiclock_periph_loopback's
-#   UART/SPI bit-banging at the 7ns/3ns ratio; soc_pll_multiclock <1s) — comparable
-#   to soc_boot's own 100-attempt stability gate already in this list, so kept in.
-# ── soc_all vs soc_all_ci ─────────────────────────────────────────────────────
-# soc_all_ci  — every suite that needs NOTHING beyond this repo + the nix sim
-#               devshell. This is what CI runs, and what PASS_FLOOR is measured
-#               against.
-# soc_all     — soc_all_ci PLUS suites that additionally need the riscv32-none-elf
-#               cross toolchain to have produced sw/bench/build/*.hex. Run this
-#               locally as the final verification step before pushing; it is the
-#               real "everything" gate.
-#
-# The split exists because CI has no cross-toolchain step, so a toolchain-
-# dependent suite in the CI target dies in _parse_hex() with a FileNotFoundError
-# (this is exactly what failed on PR #195). Prior to this split the only way to
-# keep CI green was to drop such suites from soc_all altogether, which silently
-# shrank the "run everything" target — the reason for naming the CI subset
-# explicitly instead.
-#
-# Build the firmware first if you are running the full soc_all:
-#   nix develop <repo>#bench --command make -C sw/bench
+# soc_all = soc_all_ci + gpio_driver. soc_all_ci is every suite that needs nothing beyond this repo and the
+# nix sim devshell. CI runs it, and PASS_FLOOR is measured against it. gpio_driver also needs the riscv32-none-elf cross toolchain
+# to have built sw/bench/build/*.hex (nix develop <repo>#bench --command make -C sw/bench), so run soc_all locally as the final gate
+# before a push. Keep a toolchain-dependent suite out of soc_all_ci: CI has no cross-toolchain step, and such a suite dies in
+# _parse_hex() with a FileNotFoundError. soc_stress and l2_bench are in neither target (long runtime). Builds go into
+# content-keyed sim_build dirs, so no per-suite purge is needed. Use `make distclean` to sweep every build dir.
 soc_all: soc_all_ci
 	$(MAKE) gpio_driver
 
-# Bead 9ayu.1: the ordered list of `soc_all_ci` sub-make invocations lives in ONE variable.  An
-# entry is the sub-make's arguments joined with ':' (so an entry with a variable assignment stays
-# one word: `sram_controller:SRAM_TARGET=sky130` is `$(MAKE) sram_controller SRAM_TARGET=sky130`).
-# It is consumed by
-#   * soc_all_ci          -- every entry, in this order (behaviour unchanged);
-#   * soc_ci_shard        -- a subset (SUITES="..." or SHARD=k NSHARDS=n), same relative order;
-#   * print-soc-ci-suites -- one entry per line, for tools/verif/soc_shards.py and the CI union check.
-# Add a new CI suite HERE, once; the sharded coverage workflow and (bead 9ayu.2) the sharded
-# cocotb workflow pick it up with no further edit.  soc_ci_shard also makes the run order of a
-# shard deterministic (list order), which matters only for the build-dir sharing described above.
+# The ordered list of `soc_all_ci` sub-make invocations lives in ONE variable. An entry is the sub-make's arguments joined with ':'
+# (`sram_controller:SRAM_TARGET=sky130` is `$(MAKE) sram_controller SRAM_TARGET=sky130`). It feeds soc_all_ci (every entry, in order),
+# soc_ci_shard (a subset, same relative order) and print-soc-ci-suites (one entry per line, for tools/verif/soc_shards.py and the CI
+# union check). Add a new CI suite HERE, once: the sharded workflows pick it up. Put no comment line inside the variable block,
+# because soc_shards.py parses its raw text.
 SOC_CI_SUITES := \
     crossbar \
     register_bank \
@@ -2116,8 +1843,8 @@ SOC_CI_SUITES := \
 
 # Suites whose ONE module is too heavy for a single shard are run as several TESTCASE slices when
 # sharded (never by soc_all_ci, which runs the whole module).  `suite=slice|slice|...`, a slice is
-# a comma-separated list of the module's cocotb test names.  soc_uart_boot is ~33 min instrumented
-# (test_load_verify_jump_and_run alone is ~15 min); its slices are balanced on measured times (the 8n1 slice, shm5, is estimated).
+# a comma-separated list of the module's cocotb test names.  soc_uart_boot is the one split suite; its slices are balanced on the
+# run times in tools/verif/soc_shard_weights.json.
 # Every @cocotb.test of the module must appear in exactly one slice: tb/tests/test_soc_shards.py
 # checks that against the test file, so a new test cannot silently fall out of the sharded run.
 SOC_CI_SPLITS := \
@@ -2138,18 +1865,16 @@ soc_all_ci: check-space
 print-soc-ci-suites:
 	@$(foreach s,$(SOC_CI_SUITES),echo '$(s)';)
 
-# Bead 9ayu.1: run a subset of the soc_all_ci list (a CI shard).  Select it either explicitly,
+# Run a subset of the soc_all_ci list (a CI shard). Select it explicitly,
 #   make soc_ci_shard SUITES="crossbar soc_boot sram_controller:SRAM_TARGET=sky130"
-# or by index, using the deterministic balanced assignment of tools/verif/soc_shards.py
-# (weights: tools/verif/soc_shard_weights.json):
+# or by index, using the balanced assignment of tools/verif/soc_shards.py (weights: tools/verif/soc_shard_weights.json):
 #   make soc_ci_shard SHARD=1 NSHARDS=5
-# Every entry that ran to completion is appended to $(SOC_SUITES_RAN) (default
-# $(SIM_BUILD_ROOT)/suites_ran.txt), which the CI merge job compares with print-soc-ci-suites.
-# A suite that fails stops the shard (the p6t8 check makes a red suite exit non-zero).
+# Each entry that ran to completion is appended to $(SOC_SUITES_RAN) (default $(SIM_BUILD_ROOT)/suites_ran.txt). The CI merge job
+# compares that file with print-soc-ci-suites. A failing suite stops the shard (the results check above makes a red suite exit non-zero).
 SHARD ?=
 NSHARDS ?=
 SOC_SUITES_RAN ?= $(SIM_BUILD_ROOT)/suites_ran.txt
-# Cost model for SHARD=/NSHARDS= (bead 9ayu.2).  Empty = the script's default, the INSTRUMENTED
+# Cost model for SHARD=/NSHARDS=.  Empty = the script's default, the INSTRUMENTED
 # (COVERAGE=1) timings of soc_coverage.yml.  The plain cocotb.yml shards pass the uninstrumented
 # file (tools/verif/soc_shard_weights_plain.json), because instrumented and plain runs scale
 # differently per suite and a balance tuned for one is poor for the other.
@@ -2166,7 +1891,7 @@ soc_ci_shard: check-space
 	@mkdir -p $(dir $(SOC_SUITES_RAN)) && : > $(SOC_SUITES_RAN)
 	$(foreach s,$(SUITES),+$(MAKE) $(subst :, ,$(s)) && echo '$(s)' >> $(SOC_SUITES_RAN)$(soc_nl))
 
-# Bead 9ayu.1: the instrumented half of `soc_coverage` for ONE shard: run the shard's suites with
+# The instrumented half of `soc_coverage` for ONE shard: run the shard's suites with
 # COVERAGE=1 and leave the per-simulation .dat files in $(COV_DIR).  No merge and no report here;
 # the sharded workflow's final job merges every shard's .dat and renders the report once.
 .PHONY: soc_coverage_shard
@@ -2176,13 +1901,9 @@ soc_coverage_shard:
 	$(MAKE) soc_ci_shard COVERAGE=1
 	@ls $(COV_DIR)/*.dat >/dev/null 2>&1 || { echo "ERROR: soc_coverage_shard: no .dat written to $(COV_DIR) -- coverage was not collected" >&2; exit 1; }
 
-# soc_integration_batch — compile tb_soc_top ONCE and run the four soc_top integration
-# suites back-to-back without a clean between MODULE changes.
-# Saves ~3 full compilations (~90 min at -j2) vs running soc_boot/periph/coherency/cpu_gpu
-# individually. Safe because all four share identical VERILOG_SOURCES, TOPLEVEL, EXTRA_ARGS,
-# and BUILD_ARGS; only the MODULE (Python test) differs. cocotb's dependency check sees the
-# Vtop binary is current and skips recompilation for suites 2-4.
-# Requires the same SIM_BUILD for all four invocations (set via env or command line).
+# soc_integration_batch: run the four tb_soc_top suites (test_boot, test_periph_loopback, test_soc_coherency, test_cpu_gpu_irq) in one
+# command. They pass the same TOPLEVEL, VERILOG_SOURCES, EXTRA_ARGS and BUILD_ARGS, so they hash to one SIM_BUILD and cocotb builds
+# Vtop once. soc_boot, soc_periph, soc_coherency and soc_cpu_gpu run one by one share that same build dir.
 .PHONY: soc_integration_batch
 soc_integration_batch: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
@@ -2206,11 +1927,9 @@ soc_integration_batch: $(call sp_lint,soc_boot_lint)
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-7je: cocotb's own `clean` only removes $(SIM_BUILD),
-# which is now per-target, so it cannot sweep the others.
-# Bead claude_verilog_test-f97: sweep $(SIM_BUILD_ROOT), not the CWD.  With the
-# dirs relocated, a CWD-relative `rm -rf sim_build_*` deleted only the local
-# symlinks and orphaned the real ~1.8 GB on the scratch filesystem.
+# cocotb's own `clean` removes only $(SIM_BUILD), one keyed dir, so it cannot sweep the others.
+# Sweep $(SIM_BUILD_ROOT), not the CWD. With the dirs relocated, a CWD-relative `rm -rf sim_build_*` deletes only the local
+# symlinks and orphans the real dirs on the scratch filesystem.
 .PHONY: distclean clean-sim-builds
 distclean: clean-sim-builds
 
@@ -2219,13 +1938,10 @@ clean-sim-builds:
 	@# Also clear any stale in-tree dirs/symlinks left by an earlier SIM_BUILD_ROOT.
 	rm -rf ./sim_build ./sim_build_*
 
-# Bead p6t8 self-test: prove a genuinely failing cocotb suite now makes make exit non-zero.
-# Deliberately NOT in soc_all / soc_all_ci -- it fails a suite on purpose.  The failure needs
-# no edit to any committed test: test_register_bank.py's stale-Vtop guard (_setup) asserts
-# the elaborated address-bus width equals REGBANK_ADDR_W, so elaborating -GADDR_W=5 while
-# claiming REGBANK_ADDR_W=12 makes every test fail.  Own SIM_BUILD (the stale-Vtop hazard
-# applies to reuse of a dir across parameter values).  The sub-make is expected to fail;
-# exit 0 from it means the check_for_results_file redefinition has stopped working.
+# Self-test: a genuinely failing cocotb suite must make make exit non-zero. NOT in soc_all / soc_all_ci: it fails a suite on purpose.
+# No committed test needs an edit: the stale-Vtop guard in test_register_bank.py (_setup) asserts that the elaborated address-bus
+# width equals REGBANK_ADDR_W, so elaborating -GADDR_W=5 while claiming REGBANK_ADDR_W=12 fails every test. The sub-make has its own
+# SIM_BUILD and is expected to fail. Exit 0 from it means the check_for_results_file redefinition has stopped working.
 .PHONY: check-exit-propagation
 check-exit-propagation:
 	@echo "=== check-exit-propagation: a deliberately failing suite MUST make make exit non-zero ==="; \
@@ -2240,7 +1956,7 @@ check-exit-propagation:
 	fi; \
 	echo "check-exit-propagation: PASS -- the failing suite exited non-zero"
 
-# Bead b079: print the build directory (and, with SIM_KEY_VERBOSE=1, the exact key material) the
+# Print the build directory (and, with SIM_KEY_VERBOSE=1, the exact key material) the
 # sub-make for the given variables would use, without building anything.  Used by
 # tb/tests/test_sim_build_key.py; handy when asking "why did this target rebuild / not share?":
 #   make print-sim-build MODULE=m TOPLEVEL=tb_soc_top VERILOG_SOURCES="..." EXTRA_ARGS="..." $(BUILD_ARGS)
@@ -2251,15 +1967,12 @@ ifdef SIM_KEY_VERBOSE
 	@echo "key-material: $(SIM_KEY_MATERIAL)"
 endif
 
-# Bead b079 self-test (negative control c): a failing suite that REUSES another suite's build
-# directory must still make make exit non-zero.  The same register_bank DUT is run twice with the
-# same compile-time inputs and a different runtime-only environment (REGBANK_ADDR_W is read by the
-# Python test, never by Verilator): 12 matches the elaborated ADDR_W=12 and passes, 7 does not and
-# fails the stale-Vtop guard in test_register_bank._setup.  Passing proves, in one go, that
-#   * REGBANK_ADDR_W really is runtime-only (second run hashes to the SAME directory), and
-#   * the second run did NOT rebuild (no verilator invocation in its output), and
-#   * its failure is not masked by the sharing (the p6t8 exit-code wiring still fires).
-# Deliberately NOT in soc_all / soc_all_ci -- it fails a suite on purpose.
+# Self-test: a failing suite that REUSES another suite's build directory must still make make exit non-zero. The same register_bank
+# DUT runs twice with the same compile-time inputs and a different runtime-only environment (REGBANK_ADDR_W is read by the Python
+# test, never by Verilator): 12 matches the elaborated ADDR_W=12 and passes, 7 does not and fails the stale-Vtop guard in
+# test_register_bank._setup. A pass proves that REGBANK_ADDR_W is runtime-only (the second run hashes to the SAME directory), that the
+# second run did NOT rebuild (no verilator invocation in its output), and that the sharing does not mask its failure.
+# NOT in soc_all / soc_all_ci: it fails a suite on purpose.
 .PHONY: check-shared-build-failure
 check-shared-build-failure:
 	@echo "=== check-shared-build-failure: a failing suite in a SHARED build dir MUST fail make ==="; \
@@ -2292,16 +2005,12 @@ check-space:
 	fi; \
 	echo "check-space: $${free_mb} MB free at $(SIM_BUILD_ROOT) (floor $(SIM_BUILD_MIN_FREE_MB) MB) -- OK"
 
-# GH #216 / bead nkj7: whole-SoC line + toggle coverage.  Runs the ENTIRE soc_all_ci regression
-# with COVERAGE=1 (instrumented Vtop in its own sim_build_*_cov dirs, one .dat per simulation in
-# $(COV_DIR)), merges them, and renders a per-module report.  Deliberately NOT a prerequisite of
-# soc_all_ci / soc_all: an instrumented -O0 build is much slower and is run nightly / on demand
-# (.github/workflows/soc_coverage.yml), never per PR.  Defined down here for the same reason as
-# check-space: a target above the cocotb include would become the default goal.
+# Whole-SoC line + toggle coverage: runs the ENTIRE soc_all_ci regression with COVERAGE=1 (instrumented Vtop in its own
+# sim_build_*_cov dirs, one .dat per simulation in $(COV_DIR)), merges them and renders a per-module report. NOT a prerequisite of
+# soc_all_ci / soc_all: an instrumented -O0 build is much slower. soc_coverage.yml runs the sharded form (soc_coverage_shard) nightly and on a PR that edits this Makefile.
+# Defined down here for the same reason as check-space: a target above the cocotb include would become the default goal.
 #   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc_cov soc_coverage
-# Outputs in $(COV_DIR): <build>__<module>.dat (per simulation), merged.dat,
-# coverage_report.md, coverage_report.json.  The target fails if the regression fails or if no
-# coverage data was produced (a vacuous "report" would otherwise look like a clean one).
+# Outputs in $(COV_DIR): per-simulation .dat files, merged.dat, coverage_report.md and .json. It fails if no .dat was produced, so an empty report cannot pass.
 .PHONY: soc_coverage
 soc_coverage:
 	@mkdir -p $(COV_DIR)
@@ -2314,19 +2023,12 @@ soc_coverage:
 		--waivers $(PROJ_ROOT)/tools/verif/coverage_waivers.txt \
 		--out-md $(COV_DIR)/coverage_report.md --out-json $(COV_DIR)/coverage_report.json
 
-# Commercial-simulator coverage (Step 4 of the VCS/Xcelium bring-up; user decision: VCS only -- Xcelium's
-# imc is not installed, and COVERAGE=1 is refused for SIM=xcelium by tb/cocotb/common/sim_portability.mk).
-# Runs the SAME soc_all_ci job list as the uninstrumented VCS regression (tools/eda/regress_specs.py soc,
-# read from `make print-soc-ci-suites`, never a fork) with COVERAGE=1 -- every simulation compiled with
-# `-cm line+cond+fsm+tgl+branch+assert`, scoped to rtl/ with -cm_hier, writing a uniquely named test into
-# its build's simv.vdb -- through the results.xml-judging driver at bounded parallelism (VCS_COV_JOBS,
-# default 3: 15 GB host), then merges every simv.vdb with ONE urg call (-flex_merge modules: the suites
-# have different top-level testbenches, so the databases have different base designs) and writes
-# $(VCS_COV_ROOT)/report/soc/urgReport/{dashboard,modlist,hierarchy,modinfo,...}.txt (+ .html).
-# Needs `source tools/eda/sim_env.sh` (VCS_HOME, licence, venv) in the calling shell.
-#   make SIM=vcs soc_coverage_vcs     (SIM=vcs only so this Makefile parses without a verilator binary; the script sets SIM=vcs for every sub-make itself)
-#   make SIM=vcs VCS_COV_ROOT=/big/disk/cov soc_coverage_vcs
-# Fails if any chain fails, or if urg reports no scores ("--" everywhere is not a result).
+# Commercial-simulator coverage, VCS only (Xcelium's imc is not installed, and sim_portability.mk refuses COVERAGE=1 for SIM=xcelium).
+# Runs the SAME soc_all_ci job list as the uninstrumented VCS regression (tools/eda/regress_specs.py soc, read from
+# `make print-soc-ci-suites`, never a fork) with COVERAGE=1 at bounded parallelism (VCS_COV_JOBS; vcs_coverage.py refuses more than 3 because of host memory), merges every
+# simv.vdb with ONE urg call (-flex_merge modules) and writes the report under $(VCS_COV_ROOT)/report/soc.
+# Fails if a chain fails or urg reports no scores. Needs `source tools/eda/sim_env.sh` in the calling shell.
+#   make SIM=vcs soc_coverage_vcs     (SIM=vcs only so this Makefile parses without a verilator binary)
 VCS_COV_ROOT ?= $(PROJ_ROOT)/sim_build_cov
 VCS_COV_JOBS ?= 3
 .PHONY: soc_coverage_vcs

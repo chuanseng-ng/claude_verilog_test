@@ -122,7 +122,7 @@ cr:app:archive-session-summary:verification-status	docs/manual/cr/parts/04-fix-l
 cr:app:archive-session-summary:whats-working-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	9757	\texorpdfstring{What\textquotesingle s Working \ok{}}{What\textquotesingle s Working }
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
-cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	8915	Build files
+cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	9966	Build files
 cr:ch:fix-log	docs/manual/cr/parts/04-fix-log-and-archive.tex	3	Fix log
 cr:ch:investigations	docs/manual/cr/parts/03-investigations.tex	3	Investigations
 cr:ch:phase-5-soc-runs	docs/manual/cr/parts/02-run-histories.tex	3	Phase 5 SoC runs
@@ -525,12 +525,12 @@ cr:fix:timing-analysis:possibility-3-debug-writes-require-cpu-to-be-halted-warni
 cr:fix:timing-analysis:problem-statement	docs/manual/cr/parts/04-fix-log-and-archive.tex	3606	Problem Statement
 cr:fix:timing-analysis:state-machine-flow	docs/manual/cr/parts/04-fix-log-and-archive.tex	3618	State Machine Flow
 cr:fix:timing-analysis:testing-hypothesis-what-if-branch-taken-0	docs/manual/cr/parts/04-fix-log-and-archive.tex	4204	\texorpdfstring{Testing Hypothesis: What if branch\_\allowbreak{}taken = 0?}{Testing Hypothesis: What if branch\_taken = 0?}
-cr:flow:ci-cocotb	docs/manual/cr/parts/05-source-file-history.tex	8920	\texttt{.github/workflows/cocotb.yml}
-cr:flow:ci-qa-checks	docs/manual/cr/parts/05-source-file-history.tex	9272	\texttt{.github/workflows/qa-checks.yml}
-cr:flow:ci-random-tests	docs/manual/cr/parts/05-source-file-history.tex	9363	\texttt{.github/workflows/random\_tests.yml}
-cr:flow:ci-rtl-checks	docs/manual/cr/parts/05-source-file-history.tex	9382	\texttt{.github/workflows/rtl-checks.yml}
-cr:flow:ci-soc-coverage	docs/manual/cr/parts/05-source-file-history.tex	9553	\texttt{.github/workflows/soc\_coverage.yml}
-cr:flow:ci-synth-undef-gate	docs/manual/cr/parts/05-source-file-history.tex	9817	\texttt{.github/workflows/synth-undef-gate.yml}
+cr:flow:ci-cocotb	docs/manual/cr/parts/05-source-file-history.tex	9971	\texttt{.github/workflows/cocotb.yml}
+cr:flow:ci-qa-checks	docs/manual/cr/parts/05-source-file-history.tex	10323	\texttt{.github/workflows/qa-checks.yml}
+cr:flow:ci-random-tests	docs/manual/cr/parts/05-source-file-history.tex	10414	\texttt{.github/workflows/random\_tests.yml}
+cr:flow:ci-rtl-checks	docs/manual/cr/parts/05-source-file-history.tex	10433	\texttt{.github/workflows/rtl-checks.yml}
+cr:flow:ci-soc-coverage	docs/manual/cr/parts/05-source-file-history.tex	10604	\texttt{.github/workflows/soc\_coverage.yml}
+cr:flow:ci-synth-undef-gate	docs/manual/cr/parts/05-source-file-history.tex	10868	\texttt{.github/workflows/synth-undef-gate.yml}
 cr:mod:apb-cdc-bridge	docs/manual/cr/parts/05-source-file-history.tex	31	\texttt{soc/apb\_cdc\_bridge.sv}
 cr:mod:apb4-register-bank	docs/manual/cr/parts/05-source-file-history.tex	8	\texttt{soc/apb4\_register\_bank.sv}
 cr:mod:axi-lite-interconnect	docs/manual/cr/parts/05-source-file-history.tex	71	\texttt{soc/axi\_lite\_interconnect.sv}
@@ -1001,6 +1001,7 @@ cr:suite:sim-makefile	docs/manual/cr/parts/05-source-file-history.tex	4606	\text
 cr:suite:sim-sky130-sram-4kbyte-1rw1r-32x1024-8-sv	docs/manual/cr/parts/05-source-file-history.tex	4867	\texttt{sim/sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8.sv}
 cr:suite:soc-axi4-fabric-bfm	docs/manual/cr/parts/05-source-file-history.tex	6089	\texttt{tb/cocotb/soc/axi4\_fabric\_bfm.py}
 cr:suite:soc-axil-stall-bfm	docs/manual/cr/parts/05-source-file-history.tex	6115	\texttt{tb/cocotb/soc/axil\_stall\_bfm.py}
+cr:suite:soc-makefile	docs/manual/cr/parts/05-source-file-history.tex	8916	\texttt{tb/cocotb/soc/Makefile}
 cr:suite:soc-mbist-golden	docs/manual/cr/parts/05-source-file-history.tex	6129	\texttt{tb/cocotb/soc/mbist\_golden.py}
 cr:suite:soc-pll2-fw-gen-pll2-decode-hex	docs/manual/cr/parts/05-source-file-history.tex	6143	\texttt{tb/cocotb/soc/pll2\_fw/gen\_pll2\_decode\_hex.py}
 cr:suite:soc-pmu-cycle-fw-gen-pmu-cycle-hex	docs/manual/cr/parts/05-source-file-history.tex	6157	\texttt{tb/cocotb/soc/pmu\_cycle\_fw/gen\_pmu\_cycle\_hex.py}
@@ -1944,10 +1945,10 @@ tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6495	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
 tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11896	Analog PLL
 tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	5339	ASAP7 flow
-tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	12524	CDC and lint checks
+tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	13269	CDC and lint checks
 tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	5347	Commercial flow comparison
 tm:ch:constraint-files	docs/manual/tm/parts/02-physical-design.tex	2824	Constraint files
-tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	7579	Coverage
+tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	8324	Coverage
 tm:ch:decision-log	docs/manual/tm/parts/05-decisions.tex	3	Decision log
 tm:ch:dft-architecture	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4	DFT Architecture: scan + MBIST + JTAG for the Sky130 SoC (Stage 0)
 tm:ch:dft-architecture:0-decisions-already-taken-2026-10-10	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	23	Decisions already taken (2026-10-10)
@@ -2065,9 +2066,9 @@ tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6504	Const
 tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9232	PDN and flow script notes
 tm:ch:pd-macro-placement-notes	docs/manual/tm/parts/02-physical-design.tex	8905	Macro placement and pin order notes
 tm:ch:pd-makefile-notes	docs/manual/tm/parts/02-physical-design.tex	10316	pnr Makefile notes
-tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	13175	Proprietary simulators
+tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	13920	Proprietary simulators
 tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	4406	Sky130 flow
-tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	12727	Synthesis undefined-value gate
+tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	13472	Synthesis undefined-value gate
 tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6523	Tessent flows
 tm:ch:test-benches-and-suites	docs/manual/tm/parts/03-verification-infrastructure.tex	3	Test benches and suites
 tm:ch:tool-defects-and-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	3	Tool defects and caveats
@@ -2226,30 +2227,30 @@ tm:dec:xezim:7-pros-and-cons-per-option	docs/manual/tm/parts/05-decisions.tex	14
 tm:dec:xezim:8-improvement-areas	docs/manual/tm/parts/05-decisions.tex	1492	Improvement areas
 tm:dec:xezim:9-recommendation-and-open-decisions	docs/manual/tm/parts/05-decisions.tex	1539	Recommendation and open decisions
 tm:dec:xezim:can-xezims-misses-be-fixed-source-read-nothing-built	docs/manual/tm/parts/05-decisions.tex	1167	Can xezim\textquotesingle s misses be fixed? (source read, nothing built)
-tm:flow:cdc-snitch-poc	docs/manual/tm/parts/03-verification-infrastructure.tex	12530	CDC Snitch integration --- feasibility POC
-tm:flow:cdc-snitch-poc:decision	docs/manual/tm/parts/03-verification-infrastructure.tex	12685	Decision
-tm:flow:cdc-snitch-poc:follow-ups	docs/manual/tm/parts/03-verification-infrastructure.tex	12673	Follow-ups
-tm:flow:cdc-snitch-poc:goal	docs/manual/tm/parts/03-verification-infrastructure.tex	12538	Goal
-tm:flow:cdc-snitch-poc:result-full-soc-top-52-rtl-files-32k-registers	docs/manual/tm/parts/03-verification-infrastructure.tex	12609	\texorpdfstring{Result (full \code{soc_top}, 52 RTL files, \textasciitilde32k registers)}{Result (full , 52 RTL files, \textasciitilde32k registers)}
-tm:flow:cdc-snitch-poc:the-5234-bad-are-100-false-positives	docs/manual/tm/parts/03-verification-infrastructure.tex	12633	\texorpdfstring{The 5234 \code{BAD} are \textasciitilde100\% false positives}{The 5234 are \textasciitilde100\% false positives}
-tm:flow:cdc-snitch-poc:to-make-it-a-real-gate-deferred-to-phase-6	docs/manual/tm/parts/03-verification-infrastructure.tex	12703	To make it a real gate (deferred to Phase 6+)
-tm:flow:cdc-snitch-poc:toolchain-what-actually-worked	docs/manual/tm/parts/03-verification-infrastructure.tex	12580	Toolchain (what actually worked)
-tm:flow:cdc-snitch-poc:what-cdc-snitch-does	docs/manual/tm/parts/03-verification-infrastructure.tex	12545	\texorpdfstring{What cdc\_\allowbreak{}snitch does}{What cdc\_snitch does}
-tm:flow:commercial-sim-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	7585	VCS code coverage and hole review (Step 4, report-only)
-tm:flow:commercial-sim-coverage:1-how-to-run	docs/manual/tm/parts/03-verification-infrastructure.tex	7610	How to run
-tm:flow:commercial-sim-coverage:2-results	docs/manual/tm/parts/03-verification-infrastructure.tex	7765	Results
-tm:flow:commercial-sim-coverage:21-overall	docs/manual/tm/parts/03-verification-infrastructure.tex	7772	Overall
-tm:flow:commercial-sim-coverage:22-per-module-scores	docs/manual/tm/parts/03-verification-infrastructure.tex	7895	Per-module scores
-tm:flow:commercial-sim-coverage:3-ranked-hole-list-highest-risk-first	docs/manual/tm/parts/03-verification-infrastructure.tex	8475	Ranked hole list (highest risk first)
-tm:flow:commercial-sim-coverage:31-top-15	docs/manual/tm/parts/03-verification-infrastructure.tex	8526	Top 15
-tm:flow:commercial-sim-coverage:32-further-holes-ranks-16-onward-grouped	docs/manual/tm/parts/03-verification-infrastructure.tex	8745	Further holes (ranks 16 onward, grouped)
-tm:flow:commercial-sim-coverage:4-toggle-coverage-how-it-was-treated	docs/manual/tm/parts/03-verification-infrastructure.tex	8877	Toggle coverage: how it was treated
-tm:flow:commercial-sim-coverage:5-proposed-waivers-nothing-is-written-for-a-human-to-accept	docs/manual/tm/parts/03-verification-infrastructure.tex	8929	Proposed waivers (nothing is written; for a human to accept)
-tm:flow:commercial-sim-coverage:6-caveats-and-tool-behaviour-that-affects-reading-the-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	9002	Caveats and tool behaviour that affects reading the numbers
-tm:flow:commercial-sim-coverage:7-functional-coverage-that-already-exists-and-how-it-relates	docs/manual/tm/parts/03-verification-infrastructure.tex	9065	Functional coverage that already exists, and how it relates
-tm:flow:commercial-sim-coverage:8-reproducibility-and-provenance	docs/manual/tm/parts/03-verification-infrastructure.tex	9121	Reproducibility and provenance
-tm:flow:commercial-sim-coverage:instrumentation-did-not-change-passfail	docs/manual/tm/parts/03-verification-infrastructure.tex	7714	Instrumentation did not change pass/fail
-tm:flow:commercial-sim-coverage:what-coverage1-simvcs-does-tbcocotbcommonsim-portabilitymk	docs/manual/tm/parts/03-verification-infrastructure.tex	7640	\texorpdfstring{What \texttt{COVERAGE=\allowbreak{}1\ SIM=\allowbreak{}vcs} does (tb/\allowbreak{}cocotb/\allowbreak{}common/\allowbreak{}sim\_\allowbreak{}portability.mk)}{What does (tb/cocotb/common/sim\_portability.mk)}
+tm:flow:cdc-snitch-poc	docs/manual/tm/parts/03-verification-infrastructure.tex	13275	CDC Snitch integration --- feasibility POC
+tm:flow:cdc-snitch-poc:decision	docs/manual/tm/parts/03-verification-infrastructure.tex	13430	Decision
+tm:flow:cdc-snitch-poc:follow-ups	docs/manual/tm/parts/03-verification-infrastructure.tex	13418	Follow-ups
+tm:flow:cdc-snitch-poc:goal	docs/manual/tm/parts/03-verification-infrastructure.tex	13283	Goal
+tm:flow:cdc-snitch-poc:result-full-soc-top-52-rtl-files-32k-registers	docs/manual/tm/parts/03-verification-infrastructure.tex	13354	\texorpdfstring{Result (full \code{soc_top}, 52 RTL files, \textasciitilde32k registers)}{Result (full , 52 RTL files, \textasciitilde32k registers)}
+tm:flow:cdc-snitch-poc:the-5234-bad-are-100-false-positives	docs/manual/tm/parts/03-verification-infrastructure.tex	13378	\texorpdfstring{The 5234 \code{BAD} are \textasciitilde100\% false positives}{The 5234 are \textasciitilde100\% false positives}
+tm:flow:cdc-snitch-poc:to-make-it-a-real-gate-deferred-to-phase-6	docs/manual/tm/parts/03-verification-infrastructure.tex	13448	To make it a real gate (deferred to Phase 6+)
+tm:flow:cdc-snitch-poc:toolchain-what-actually-worked	docs/manual/tm/parts/03-verification-infrastructure.tex	13325	Toolchain (what actually worked)
+tm:flow:cdc-snitch-poc:what-cdc-snitch-does	docs/manual/tm/parts/03-verification-infrastructure.tex	13290	\texorpdfstring{What cdc\_\allowbreak{}snitch does}{What cdc\_snitch does}
+tm:flow:commercial-sim-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	8330	VCS code coverage and hole review (Step 4, report-only)
+tm:flow:commercial-sim-coverage:1-how-to-run	docs/manual/tm/parts/03-verification-infrastructure.tex	8355	How to run
+tm:flow:commercial-sim-coverage:2-results	docs/manual/tm/parts/03-verification-infrastructure.tex	8510	Results
+tm:flow:commercial-sim-coverage:21-overall	docs/manual/tm/parts/03-verification-infrastructure.tex	8517	Overall
+tm:flow:commercial-sim-coverage:22-per-module-scores	docs/manual/tm/parts/03-verification-infrastructure.tex	8640	Per-module scores
+tm:flow:commercial-sim-coverage:3-ranked-hole-list-highest-risk-first	docs/manual/tm/parts/03-verification-infrastructure.tex	9220	Ranked hole list (highest risk first)
+tm:flow:commercial-sim-coverage:31-top-15	docs/manual/tm/parts/03-verification-infrastructure.tex	9271	Top 15
+tm:flow:commercial-sim-coverage:32-further-holes-ranks-16-onward-grouped	docs/manual/tm/parts/03-verification-infrastructure.tex	9490	Further holes (ranks 16 onward, grouped)
+tm:flow:commercial-sim-coverage:4-toggle-coverage-how-it-was-treated	docs/manual/tm/parts/03-verification-infrastructure.tex	9622	Toggle coverage: how it was treated
+tm:flow:commercial-sim-coverage:5-proposed-waivers-nothing-is-written-for-a-human-to-accept	docs/manual/tm/parts/03-verification-infrastructure.tex	9674	Proposed waivers (nothing is written; for a human to accept)
+tm:flow:commercial-sim-coverage:6-caveats-and-tool-behaviour-that-affects-reading-the-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	9747	Caveats and tool behaviour that affects reading the numbers
+tm:flow:commercial-sim-coverage:7-functional-coverage-that-already-exists-and-how-it-relates	docs/manual/tm/parts/03-verification-infrastructure.tex	9810	Functional coverage that already exists, and how it relates
+tm:flow:commercial-sim-coverage:8-reproducibility-and-provenance	docs/manual/tm/parts/03-verification-infrastructure.tex	9866	Reproducibility and provenance
+tm:flow:commercial-sim-coverage:instrumentation-did-not-change-passfail	docs/manual/tm/parts/03-verification-infrastructure.tex	8459	Instrumentation did not change pass/fail
+tm:flow:commercial-sim-coverage:what-coverage1-simvcs-does-tbcocotbcommonsim-portabilitymk	docs/manual/tm/parts/03-verification-infrastructure.tex	8385	\texorpdfstring{What \texttt{COVERAGE=\allowbreak{}1\ SIM=\allowbreak{}vcs} does (tb/\allowbreak{}cocotb/\allowbreak{}common/\allowbreak{}sim\_\allowbreak{}portability.mk)}{What does (tb/cocotb/common/sim\_portability.mk)}
 tm:flow:control-signals-analysis	docs/manual/tm/parts/03-verification-infrastructure.tex	324	\texorpdfstring{Control Signal Analysis for rv32i\_\allowbreak{}decode.sv}{Control Signal Analysis for rv32i\_decode.sv}
 tm:flow:control-signals-analysis:1-mem-to-reg-write-back-mux-control	docs/manual/tm/parts/03-verification-infrastructure.tex	362	\texorpdfstring{\code{mem_to_reg} (Write-Back Mux Control)}{(Write-Back Mux Control)}
 tm:flow:control-signals-analysis:2-pc-wr-en-program-counter-write-enable	docs/manual/tm/parts/03-verification-infrastructure.tex	431	\texorpdfstring{\code{pc_wr_en} (Program Counter Write Enable)}{(Program Counter Write Enable)}
@@ -2267,74 +2268,74 @@ tm:flow:control-signals-analysis:recommendation	docs/manual/tm/parts/03-verifica
 tm:flow:control-signals-analysis:should-not-add-handled-elsewhere	docs/manual/tm/parts/03-verification-infrastructure.tex	620	Should NOT Add (Handled Elsewhere)
 tm:flow:control-signals-analysis:summary-and-recommendations	docs/manual/tm/parts/03-verification-infrastructure.tex	592	Summary and Recommendations
 tm:flow:control-signals-analysis:updated-decoder-interface-proposal	docs/manual/tm/parts/03-verification-infrastructure.tex	638	Updated Decoder Interface Proposal
-tm:flow:functional-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	9147	Functional coverage in the cocotb flow (bead h367)
-tm:flow:functional-coverage:1-evaluation	docs/manual/tm/parts/03-verification-infrastructure.tex	9158	Evaluation
-tm:flow:functional-coverage:2-flow	docs/manual/tm/parts/03-verification-infrastructure.tex	9245	Flow
-tm:flow:functional-coverage:3-the-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	9284	The gate
-tm:flow:functional-coverage:4-rolling-out-to-another-peripheral	docs/manual/tm/parts/03-verification-infrastructure.tex	9311	Rolling out to another peripheral
-tm:flow:functional-coverage:5-what-this-does-not-do	docs/manual/tm/parts/03-verification-infrastructure.tex	9362	What this does not do
-tm:flow:i2c-functional-coverage-model	docs/manual/tm/parts/03-verification-infrastructure.tex	9384	I2C functional-coverage model (bead h367 pilot)
-tm:flow:i2c-functional-coverage-model:bus-what-the-master-did-on-the-wire-source-bus	docs/manual/tm/parts/03-verification-infrastructure.tex	9402	bus: what the master did on the wire (source: bus)
-tm:flow:i2c-functional-coverage-model:cfg-configuration-programmed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	9490	cfg: configuration programmed (source: apb)
-tm:flow:i2c-functional-coverage-model:cmd-the-i2c-cmd-words-issued-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	9453	cmd: the I2C\_CMD words issued (source: apb)
-tm:flow:i2c-functional-coverage-model:err-error-and-recovery-paths	docs/manual/tm/parts/03-verification-infrastructure.tex	9565	err: error and recovery paths
-tm:flow:i2c-functional-coverage-model:irq-status-fifo-what-software-observed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	9528	irq / status / fifo: what software observed (source: apb)
-tm:flow:i2c-functional-coverage-model:known-limits-of-the-model	docs/manual/tm/parts/03-verification-infrastructure.tex	9662	Known limits of the model
-tm:flow:i2c-functional-coverage-model:reachability-and-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	9625	Reachability and waivers
-tm:flow:i2c-functional-coverage-model:soc-reached-through-the-real-fabric-test-soc-i2cpy-source-scenario	docs/manual/tm/parts/03-verification-infrastructure.tex	9614	\texorpdfstring{soc: reached through the real fabric (\code{test_soc_i2c.py}, source: scenario)}{soc: reached through the real fabric (, source: scenario)}
-tm:flow:soc-coverage-report	docs/manual/tm/parts/03-verification-infrastructure.tex	9682	SoC line + toggle coverage report (GH \#216)
-tm:flow:soc-coverage-report:05wf-re-measurement-uart-controller-spi-controller-unit-level-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	11915	\texorpdfstring{05wf re-measurement: \code{uart_controller} / \code{spi_controller} (unit level, 2026-10-08)}{05wf re-measurement: / (unit level, 2026-10-08)}
-tm:flow:soc-coverage-report:7ovx-register-walk-re-measurement-2026-10-09	docs/manual/tm/parts/03-verification-infrastructure.tex	11482	7ovx register-walk re-measurement (2026-10-09)
-tm:flow:soc-coverage-report:adjusted-totals-before-after-triaged-trees-pr-226-data	docs/manual/tm/parts/03-verification-infrastructure.tex	11984	Adjusted totals, before / after (triaged trees, PR \#226 data)
-tm:flow:soc-coverage-report:ci-and-recommendation	docs/manual/tm/parts/03-verification-infrastructure.tex	10526	CI and recommendation
-tm:flow:soc-coverage-report:combined-report-soc-cpu-cache-gpu-suites-bead-1eyv-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	10257	\texorpdfstring{Combined report: SoC + CPU / cache / GPU suites (bead \code{1eyv}, 2026-10-10)}{Combined report: SoC + CPU / cache / GPU suites (bead , 2026-10-10)}
-tm:flow:soc-coverage-report:coverage-cleanup-beads-j41m7-34dv-4pl8-0ntg-xkw5-pr-316-2026-10-18	docs/manual/tm/parts/03-verification-infrastructure.tex	11012	Coverage cleanup: beads j41m.7, 34dv, 4pl8, 0ntg, xkw5 (PR \#316, 2026-10-18)
-tm:flow:soc-coverage-report:coverage-cleanup-second-pass-bead-xkw5-leftovers-pr-320-2026-10-19	docs/manual/tm/parts/03-verification-infrastructure.tex	11159	Coverage cleanup, second pass: bead xkw5 leftovers (PR \#320, 2026-10-19)
-tm:flow:soc-coverage-report:ej6j-axi4-fabric-re-measurement-2026-10-07	docs/manual/tm/parts/03-verification-infrastructure.tex	11719	ej6j AXI4-fabric re-measurement (2026-10-07)
-tm:flow:soc-coverage-report:findings-no-rtl-change-made	docs/manual/tm/parts/03-verification-infrastructure.tex	11431	Findings (no RTL change made)
-tm:flow:soc-coverage-report:findings-rtl-bugs-not-fixed-per-scope	docs/manual/tm/parts/03-verification-infrastructure.tex	10938	Findings (RTL bugs; not fixed, per scope)
-tm:flow:soc-coverage-report:gate-decision	docs/manual/tm/parts/03-verification-infrastructure.tex	12277	Gate decision
-tm:flow:soc-coverage-report:gate-what-is-and-is-not-covered	docs/manual/tm/parts/03-verification-infrastructure.tex	10985	Gate: what is and is not covered
-tm:flow:soc-coverage-report:gh-222-waiver-audit-bead-kp61-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	11799	\texorpdfstring{GH \#222 waiver audit (bead \code{kp61}, 2026-10-08)}{GH \#222 waiver audit (bead , 2026-10-08)}
-tm:flow:soc-coverage-report:how-to	docs/manual/tm/parts/03-verification-infrastructure.tex	12461	How to
-tm:flow:soc-coverage-report:informational-trees-before-soc-suites-only-after-combined	docs/manual/tm/parts/03-verification-infrastructure.tex	10362	Informational trees, before (SoC suites only) / after (combined)
-tm:flow:soc-coverage-report:informational-trees-no-triage-no-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	10144	Informational trees (no triage, no waivers)
-tm:flow:soc-coverage-report:method	docs/manual/tm/parts/03-verification-infrastructure.tex	9696	Method
-tm:flow:soc-coverage-report:method-1	docs/manual/tm/parts/03-verification-infrastructure.tex	10266	Method
-tm:flow:soc-coverage-report:new-tests	docs/manual/tm/parts/03-verification-infrastructure.tex	10744	New tests
-tm:flow:soc-coverage-report:new-tests-no-rtl-change	docs/manual/tm/parts/03-verification-infrastructure.tex	11054	New tests (no RTL change)
-tm:flow:soc-coverage-report:new-tests-no-rtl-change-1	docs/manual/tm/parts/03-verification-infrastructure.tex	11302	New tests (no RTL change)
-tm:flow:soc-coverage-report:per-module-result-ci-run-above-adjusted-toggle-hittotal-rows-shown-only-where-the-module-changed	docs/manual/tm/parts/03-verification-infrastructure.tex	11381	\texorpdfstring{Per-module result (CI run above; adjusted toggle, hit/\allowbreak{}total; rows shown only where the module changed)}{Per-module result (CI run above; adjusted toggle, hit/total; rows shown only where the module changed)}
-tm:flow:soc-coverage-report:per-module-result-line-hittotal-waived-category-b-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	10591	\texorpdfstring{Per-module result (line \%, hit/\allowbreak{}total; "waived" = category-b points removed from the denominator)}{Per-module result (line \%, hit/total; "waived" = category-b points removed from the denominator)}
-tm:flow:soc-coverage-report:remaining-slice-2-and-what-is-not-verified	docs/manual/tm/parts/03-verification-infrastructure.tex	10816	Remaining (slice 2) and what is not verified
-tm:flow:soc-coverage-report:reproducing	docs/manual/tm/parts/03-verification-infrastructure.tex	12514	Reproducing
-tm:flow:soc-coverage-report:results	docs/manual/tm/parts/03-verification-infrastructure.tex	10006	Results
-tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-1-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	10557	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead , 2026-10-10)}
-tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-2-remaining-gaps-same-head-measurement-gate-flip-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	10851	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead , 2026-10-10)}
-tm:flow:soc-coverage-report:still-open	docs/manual/tm/parts/03-verification-infrastructure.tex	11455	Still open
-tm:flow:soc-coverage-report:still-open-xkw5-stays-open	docs/manual/tm/parts/03-verification-infrastructure.tex	11137	Still open (xkw5 stays open)
-tm:flow:soc-coverage-report:the-prover-waivers-cite-a-proof-not-a-netlist-lookup	docs/manual/tm/parts/03-verification-infrastructure.tex	11210	The prover: waivers cite a proof, not a netlist lookup
-tm:flow:soc-coverage-report:triage	docs/manual/tm/parts/03-verification-infrastructure.tex	12024	Triage
-tm:flow:soc-coverage-report:triage-of-every-uncovered-point-head-line-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	10652	Triage of every uncovered point (HEAD line numbers)
-tm:flow:soc-coverage-report:triaged-trees-after-60-waivers-48-line-and-950-toggle-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	10021	Triaged trees (after 60 waivers: 48 line and 950 toggle points removed from the denominator)
-tm:flow:soc-coverage-report:waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	11107	Waivers
-tm:flow:soc-coverage-report:waivers-added	docs/manual/tm/parts/03-verification-infrastructure.tex	10808	Waivers added
-tm:flow:soc-coverage-report:what-closed-the-slice-1-open-points	docs/manual/tm/parts/03-verification-infrastructure.tex	10887	What closed the slice-1 open points
-tm:flow:synth-undef-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	12734	\texorpdfstring{Synthesis undef-elaboration gate (bead \code{gc0y})}{Synthesis undef-elaboration gate (bead )}
-tm:flow:synth-undef-gate:allowlist	docs/manual/tm/parts/03-verification-infrastructure.tex	13103	Allowlist
-tm:flow:synth-undef-gate:ci-job-githubworkflowssynth-undef-gateyml-toolsverifsynth-gateci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	13125	\texorpdfstring{CI job (\src{.github/workflows/synth-undef-gate.yml}, \src{tools/verif/synth_gate/ci_smoke.sh})}{CI job (, )}
-tm:flow:synth-undef-gate:components	docs/manual/tm/parts/03-verification-infrastructure.tex	12747	Components
-tm:flow:synth-undef-gate:controls-all-in-blocking-mode-run-by-ci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	13020	\texorpdfstring{Controls (all in blocking mode, run by \code{ci_smoke.sh})}{Controls (all in blocking mode, run by )}
-tm:flow:synth-undef-gate:flow-wiring	docs/manual/tm/parts/03-verification-infrastructure.tex	13073	Flow wiring
-tm:flow:synth-undef-gate:measured-yosys-046-sv2v-00131-toolsverifsynth-gateelab-gatesh	docs/manual/tm/parts/03-verification-infrastructure.tex	12951	\texorpdfstring{Measured (yosys 0.46, sv2v 0.0.13.1; \src{tools/verif/synth_gate/elab_gate.sh})}{Measured (yosys 0.46, sv2v 0.0.13.1; )}
-tm:flow:synth-undef-gate:mechanism-read-from-the-rtlil-tbtestsfixturessynth-undeffunctemp	docs/manual/tm/parts/03-verification-infrastructure.tex	12869	\texorpdfstring{Mechanism (read from the RTLIL, \code{tb/tests/fixtures/synth_undef/functemp_*})}{Mechanism (read from the RTLIL, )}
-tm:flow:synth-undef-gate:netlist-census-tripwire-toolsverifcheck-cpu-netlist-censuspy	docs/manual/tm/parts/03-verification-infrastructure.tex	13161	\texorpdfstring{Netlist census tripwire (\src{tools/verif/check_cpu_netlist_census.py})}{Netlist census tripwire ()}
-tm:flow:synth-undef-gate:pattern-list-evidence-probe-designs-through-yosys-046-synlig-plugin-and-through-sv2v-read-verilog-strings-of-yosys-046062-and-synlig-svso	docs/manual/tm/parts/03-verification-infrastructure.tex	12780	\texorpdfstring{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + \code{read_verilog}; \code{strings} of yosys 0.46/0.62 and \code{synlig-sv.so})}{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + ; of yosys 0.46/0.62 and )}
-tm:flow:synth-undef-gate:post-incrementation-operations-are-handled-as-pre-incrementation	docs/manual/tm/parts/03-verification-infrastructure.tex	13083	\texorpdfstring{\texttt{Post-\allowbreak{}incrementation\ operations\ are\ handled\ as\ pre-\allowbreak{}incrementation}}{}
-tm:flow:synth-undef-gate:report	docs/manual/tm/parts/03-verification-infrastructure.tex	12933	Report
-tm:flow:synth-undef-gate:sv2v-function-temporaries-on-the-soc-bead-j1b7	docs/manual/tm/parts/03-verification-infrastructure.tex	12855	\texorpdfstring{sv2v function temporaries on the SoC (bead \code{j1b7})}{sv2v function temporaries on the SoC (bead )}
-tm:flow:synth-undef-gate:the-rule-func-temp-dead-init	docs/manual/tm/parts/03-verification-infrastructure.tex	12889	\texorpdfstring{The rule \code{func-temp-dead-init}}{The rule }
-tm:flow:synth-undef-gate:what-the-gate-does-not-cover	docs/manual/tm/parts/03-verification-infrastructure.tex	13113	What the gate does not cover
+tm:flow:functional-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	9892	Functional coverage in the cocotb flow (bead h367)
+tm:flow:functional-coverage:1-evaluation	docs/manual/tm/parts/03-verification-infrastructure.tex	9903	Evaluation
+tm:flow:functional-coverage:2-flow	docs/manual/tm/parts/03-verification-infrastructure.tex	9990	Flow
+tm:flow:functional-coverage:3-the-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	10029	The gate
+tm:flow:functional-coverage:4-rolling-out-to-another-peripheral	docs/manual/tm/parts/03-verification-infrastructure.tex	10056	Rolling out to another peripheral
+tm:flow:functional-coverage:5-what-this-does-not-do	docs/manual/tm/parts/03-verification-infrastructure.tex	10107	What this does not do
+tm:flow:i2c-functional-coverage-model	docs/manual/tm/parts/03-verification-infrastructure.tex	10129	I2C functional-coverage model (bead h367 pilot)
+tm:flow:i2c-functional-coverage-model:bus-what-the-master-did-on-the-wire-source-bus	docs/manual/tm/parts/03-verification-infrastructure.tex	10147	bus: what the master did on the wire (source: bus)
+tm:flow:i2c-functional-coverage-model:cfg-configuration-programmed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	10235	cfg: configuration programmed (source: apb)
+tm:flow:i2c-functional-coverage-model:cmd-the-i2c-cmd-words-issued-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	10198	cmd: the I2C\_CMD words issued (source: apb)
+tm:flow:i2c-functional-coverage-model:err-error-and-recovery-paths	docs/manual/tm/parts/03-verification-infrastructure.tex	10310	err: error and recovery paths
+tm:flow:i2c-functional-coverage-model:irq-status-fifo-what-software-observed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	10273	irq / status / fifo: what software observed (source: apb)
+tm:flow:i2c-functional-coverage-model:known-limits-of-the-model	docs/manual/tm/parts/03-verification-infrastructure.tex	10407	Known limits of the model
+tm:flow:i2c-functional-coverage-model:reachability-and-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	10370	Reachability and waivers
+tm:flow:i2c-functional-coverage-model:soc-reached-through-the-real-fabric-test-soc-i2cpy-source-scenario	docs/manual/tm/parts/03-verification-infrastructure.tex	10359	\texorpdfstring{soc: reached through the real fabric (\code{test_soc_i2c.py}, source: scenario)}{soc: reached through the real fabric (, source: scenario)}
+tm:flow:soc-coverage-report	docs/manual/tm/parts/03-verification-infrastructure.tex	10427	SoC line + toggle coverage report (GH \#216)
+tm:flow:soc-coverage-report:05wf-re-measurement-uart-controller-spi-controller-unit-level-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	12660	\texorpdfstring{05wf re-measurement: \code{uart_controller} / \code{spi_controller} (unit level, 2026-10-08)}{05wf re-measurement: / (unit level, 2026-10-08)}
+tm:flow:soc-coverage-report:7ovx-register-walk-re-measurement-2026-10-09	docs/manual/tm/parts/03-verification-infrastructure.tex	12227	7ovx register-walk re-measurement (2026-10-09)
+tm:flow:soc-coverage-report:adjusted-totals-before-after-triaged-trees-pr-226-data	docs/manual/tm/parts/03-verification-infrastructure.tex	12729	Adjusted totals, before / after (triaged trees, PR \#226 data)
+tm:flow:soc-coverage-report:ci-and-recommendation	docs/manual/tm/parts/03-verification-infrastructure.tex	11271	CI and recommendation
+tm:flow:soc-coverage-report:combined-report-soc-cpu-cache-gpu-suites-bead-1eyv-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	11002	\texorpdfstring{Combined report: SoC + CPU / cache / GPU suites (bead \code{1eyv}, 2026-10-10)}{Combined report: SoC + CPU / cache / GPU suites (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:coverage-cleanup-beads-j41m7-34dv-4pl8-0ntg-xkw5-pr-316-2026-10-18	docs/manual/tm/parts/03-verification-infrastructure.tex	11757	Coverage cleanup: beads j41m.7, 34dv, 4pl8, 0ntg, xkw5 (PR \#316, 2026-10-18)
+tm:flow:soc-coverage-report:coverage-cleanup-second-pass-bead-xkw5-leftovers-pr-320-2026-10-19	docs/manual/tm/parts/03-verification-infrastructure.tex	11904	Coverage cleanup, second pass: bead xkw5 leftovers (PR \#320, 2026-10-19)
+tm:flow:soc-coverage-report:ej6j-axi4-fabric-re-measurement-2026-10-07	docs/manual/tm/parts/03-verification-infrastructure.tex	12464	ej6j AXI4-fabric re-measurement (2026-10-07)
+tm:flow:soc-coverage-report:findings-no-rtl-change-made	docs/manual/tm/parts/03-verification-infrastructure.tex	12176	Findings (no RTL change made)
+tm:flow:soc-coverage-report:findings-rtl-bugs-not-fixed-per-scope	docs/manual/tm/parts/03-verification-infrastructure.tex	11683	Findings (RTL bugs; not fixed, per scope)
+tm:flow:soc-coverage-report:gate-decision	docs/manual/tm/parts/03-verification-infrastructure.tex	13022	Gate decision
+tm:flow:soc-coverage-report:gate-what-is-and-is-not-covered	docs/manual/tm/parts/03-verification-infrastructure.tex	11730	Gate: what is and is not covered
+tm:flow:soc-coverage-report:gh-222-waiver-audit-bead-kp61-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	12544	\texorpdfstring{GH \#222 waiver audit (bead \code{kp61}, 2026-10-08)}{GH \#222 waiver audit (bead , 2026-10-08)}
+tm:flow:soc-coverage-report:how-to	docs/manual/tm/parts/03-verification-infrastructure.tex	13206	How to
+tm:flow:soc-coverage-report:informational-trees-before-soc-suites-only-after-combined	docs/manual/tm/parts/03-verification-infrastructure.tex	11107	Informational trees, before (SoC suites only) / after (combined)
+tm:flow:soc-coverage-report:informational-trees-no-triage-no-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	10889	Informational trees (no triage, no waivers)
+tm:flow:soc-coverage-report:method	docs/manual/tm/parts/03-verification-infrastructure.tex	10441	Method
+tm:flow:soc-coverage-report:method-1	docs/manual/tm/parts/03-verification-infrastructure.tex	11011	Method
+tm:flow:soc-coverage-report:new-tests	docs/manual/tm/parts/03-verification-infrastructure.tex	11489	New tests
+tm:flow:soc-coverage-report:new-tests-no-rtl-change	docs/manual/tm/parts/03-verification-infrastructure.tex	11799	New tests (no RTL change)
+tm:flow:soc-coverage-report:new-tests-no-rtl-change-1	docs/manual/tm/parts/03-verification-infrastructure.tex	12047	New tests (no RTL change)
+tm:flow:soc-coverage-report:per-module-result-ci-run-above-adjusted-toggle-hittotal-rows-shown-only-where-the-module-changed	docs/manual/tm/parts/03-verification-infrastructure.tex	12126	\texorpdfstring{Per-module result (CI run above; adjusted toggle, hit/\allowbreak{}total; rows shown only where the module changed)}{Per-module result (CI run above; adjusted toggle, hit/total; rows shown only where the module changed)}
+tm:flow:soc-coverage-report:per-module-result-line-hittotal-waived-category-b-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	11336	\texorpdfstring{Per-module result (line \%, hit/\allowbreak{}total; "waived" = category-b points removed from the denominator)}{Per-module result (line \%, hit/total; "waived" = category-b points removed from the denominator)}
+tm:flow:soc-coverage-report:remaining-slice-2-and-what-is-not-verified	docs/manual/tm/parts/03-verification-infrastructure.tex	11561	Remaining (slice 2) and what is not verified
+tm:flow:soc-coverage-report:reproducing	docs/manual/tm/parts/03-verification-infrastructure.tex	13259	Reproducing
+tm:flow:soc-coverage-report:results	docs/manual/tm/parts/03-verification-infrastructure.tex	10751	Results
+tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-1-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	11302	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-2-remaining-gaps-same-head-measurement-gate-flip-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	11596	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:still-open	docs/manual/tm/parts/03-verification-infrastructure.tex	12200	Still open
+tm:flow:soc-coverage-report:still-open-xkw5-stays-open	docs/manual/tm/parts/03-verification-infrastructure.tex	11882	Still open (xkw5 stays open)
+tm:flow:soc-coverage-report:the-prover-waivers-cite-a-proof-not-a-netlist-lookup	docs/manual/tm/parts/03-verification-infrastructure.tex	11955	The prover: waivers cite a proof, not a netlist lookup
+tm:flow:soc-coverage-report:triage	docs/manual/tm/parts/03-verification-infrastructure.tex	12769	Triage
+tm:flow:soc-coverage-report:triage-of-every-uncovered-point-head-line-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	11397	Triage of every uncovered point (HEAD line numbers)
+tm:flow:soc-coverage-report:triaged-trees-after-60-waivers-48-line-and-950-toggle-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	10766	Triaged trees (after 60 waivers: 48 line and 950 toggle points removed from the denominator)
+tm:flow:soc-coverage-report:waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	11852	Waivers
+tm:flow:soc-coverage-report:waivers-added	docs/manual/tm/parts/03-verification-infrastructure.tex	11553	Waivers added
+tm:flow:soc-coverage-report:what-closed-the-slice-1-open-points	docs/manual/tm/parts/03-verification-infrastructure.tex	11632	What closed the slice-1 open points
+tm:flow:synth-undef-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	13479	\texorpdfstring{Synthesis undef-elaboration gate (bead \code{gc0y})}{Synthesis undef-elaboration gate (bead )}
+tm:flow:synth-undef-gate:allowlist	docs/manual/tm/parts/03-verification-infrastructure.tex	13848	Allowlist
+tm:flow:synth-undef-gate:ci-job-githubworkflowssynth-undef-gateyml-toolsverifsynth-gateci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	13870	\texorpdfstring{CI job (\src{.github/workflows/synth-undef-gate.yml}, \src{tools/verif/synth_gate/ci_smoke.sh})}{CI job (, )}
+tm:flow:synth-undef-gate:components	docs/manual/tm/parts/03-verification-infrastructure.tex	13492	Components
+tm:flow:synth-undef-gate:controls-all-in-blocking-mode-run-by-ci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	13765	\texorpdfstring{Controls (all in blocking mode, run by \code{ci_smoke.sh})}{Controls (all in blocking mode, run by )}
+tm:flow:synth-undef-gate:flow-wiring	docs/manual/tm/parts/03-verification-infrastructure.tex	13818	Flow wiring
+tm:flow:synth-undef-gate:measured-yosys-046-sv2v-00131-toolsverifsynth-gateelab-gatesh	docs/manual/tm/parts/03-verification-infrastructure.tex	13696	\texorpdfstring{Measured (yosys 0.46, sv2v 0.0.13.1; \src{tools/verif/synth_gate/elab_gate.sh})}{Measured (yosys 0.46, sv2v 0.0.13.1; )}
+tm:flow:synth-undef-gate:mechanism-read-from-the-rtlil-tbtestsfixturessynth-undeffunctemp	docs/manual/tm/parts/03-verification-infrastructure.tex	13614	\texorpdfstring{Mechanism (read from the RTLIL, \code{tb/tests/fixtures/synth_undef/functemp_*})}{Mechanism (read from the RTLIL, )}
+tm:flow:synth-undef-gate:netlist-census-tripwire-toolsverifcheck-cpu-netlist-censuspy	docs/manual/tm/parts/03-verification-infrastructure.tex	13906	\texorpdfstring{Netlist census tripwire (\src{tools/verif/check_cpu_netlist_census.py})}{Netlist census tripwire ()}
+tm:flow:synth-undef-gate:pattern-list-evidence-probe-designs-through-yosys-046-synlig-plugin-and-through-sv2v-read-verilog-strings-of-yosys-046062-and-synlig-svso	docs/manual/tm/parts/03-verification-infrastructure.tex	13525	\texorpdfstring{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + \code{read_verilog}; \code{strings} of yosys 0.46/0.62 and \code{synlig-sv.so})}{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + ; of yosys 0.46/0.62 and )}
+tm:flow:synth-undef-gate:post-incrementation-operations-are-handled-as-pre-incrementation	docs/manual/tm/parts/03-verification-infrastructure.tex	13828	\texorpdfstring{\texttt{Post-\allowbreak{}incrementation\ operations\ are\ handled\ as\ pre-\allowbreak{}incrementation}}{}
+tm:flow:synth-undef-gate:report	docs/manual/tm/parts/03-verification-infrastructure.tex	13678	Report
+tm:flow:synth-undef-gate:sv2v-function-temporaries-on-the-soc-bead-j1b7	docs/manual/tm/parts/03-verification-infrastructure.tex	13600	\texorpdfstring{sv2v function temporaries on the SoC (bead \code{j1b7})}{sv2v function temporaries on the SoC (bead )}
+tm:flow:synth-undef-gate:the-rule-func-temp-dead-init	docs/manual/tm/parts/03-verification-infrastructure.tex	13634	\texorpdfstring{The rule \code{func-temp-dead-init}}{The rule }
+tm:flow:synth-undef-gate:what-the-gate-does-not-cover	docs/manual/tm/parts/03-verification-infrastructure.tex	13858	What the gate does not cover
 tm:flow:tessent-atpg	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6530	Tessent scan insertion + ATPG evaluation flow (Sky130 SoC fabric)
 tm:flow:tessent-atpg:1-how-to-run	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6545	How to run
 tm:flow:tessent-atpg:2-flow-and-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6574	Flow and decisions
@@ -2722,6 +2723,7 @@ tm:suite:soc-i2c-cov	docs/manual/tm/parts/03-verification-infrastructure.tex	283
 tm:suite:soc-i2c-fw-gen-i2c-hex	docs/manual/tm/parts/03-verification-infrastructure.tex	2875	\texttt{tb/cocotb/soc/i2c\_fw/gen\_i2c\_hex.py}
 tm:suite:soc-integ-fw-gen-integ-hex	docs/manual/tm/parts/03-verification-infrastructure.tex	2951	\texttt{tb/cocotb/soc/integ\_fw/gen\_integ\_hex.py}
 tm:suite:soc-jtag-driver	docs/manual/tm/parts/03-verification-infrastructure.tex	3062	\texttt{tb/cocotb/soc/jtag\_driver.py}
+tm:suite:soc-makefile	docs/manual/tm/parts/03-verification-infrastructure.tex	7580	\texttt{tb/cocotb/soc/Makefile}
 tm:suite:soc-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1168	\texttt{tb/models/soc\_model.py}
 tm:suite:soc-npu-fw-gen-npu-hex	docs/manual/tm/parts/03-verification-infrastructure.tex	3107	\texttt{tb/cocotb/soc/npu\_fw/gen\_npu\_hex.py}
 tm:suite:soc-periph-fw-gen-periph-hex	docs/manual/tm/parts/03-verification-infrastructure.tex	3179	\texttt{tb/cocotb/soc/periph\_fw/gen\_periph\_hex.py}
