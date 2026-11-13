@@ -1125,8 +1125,13 @@ Workflow comment per step & 5 lines \\
 \end{longtable}
 }
 
-\src{tools/docs/check_comment_budget.py} reports each violation against
-a baseline. The baseline can only shrink.
+\src{tools/docs/check_comment_budget.py} compares each violation with
+the baseline file \src{tools/docs/comment_budget_baseline.txt}. The
+check runs in \code{qa-checks.yml} and blocks a pull request. A new
+file must obey the budgets. The baseline is a closed list of
+exceptions. It can only shrink. The header of the baseline file gives
+the reason for each class of exception. Do not add an entry. Change the
+comment instead.
 
 \subsubsection{7.2 Banned content}\label{um:guide:coding-guidelines:72-banned-content}
 
