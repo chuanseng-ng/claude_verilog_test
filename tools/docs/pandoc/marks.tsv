@@ -1,0 +1,41 @@
+# Pictograph table. The single source for cvt.lua (Markdown to LaTeX) and
+# prose_preserve.py (word-stream comparison). Columns, separated by one tab:
+#   codepoint (hex)   LaTeX replacement   token (word that prose_preserve sees)
+# The class cvtdocs.cls carries one \newunicodechar line per codepoint so
+# that a pictograph inside a code block prints the same mark. A unit test
+# keeps the class and this table in step. U+FE0F is always removed.
+26A0	\warn{}	WARN
+2757	\warn{}	WARN
+1F6A8	\warn{}	WARN
+1F6A9	\warn{}	WARN
+1F525	\warn{}	WARN
+26A1	\warn{}	WARN
+2705	\ok{}	OK
+2714	\ok{}	OK
+1F7E2	\ok{}	OK
+1F389	\ok{}	OK
+1F3AF	\ok{}	OK
+274C	\bad{}	BAD
+1F534	\bad{}	BAD
+23F8	\hold{}	HOLD
+270B	\hold{}	HOLD
+1F6D1	\hold{}	HOLD
+1F6AB	\hold{}	HOLD
+1F6A7	\wip{}	WIP
+1F504	\wip{}	WIP
+23ED	\wip{}	WIP
+1F7E1	\partialmark{}	PARTIAL
+1F7E0	\partialmark{}	PARTIAL
+2139	\notemark{}	NOTE
+1F4DD	\notemark{}	NOTE
+1F449	\notemark{}	NOTE
+1F4C9	\notemark{}	NOTE
+1F4C8	\notemark{}	NOTE
+1F4CA	\notemark{}	NOTE
+1F527	\notemark{}	NOTE
+1F680	\notemark{}	NOTE
+1F30A	\notemark{}	NOTE
+1F631	\notemark{}	NOTE
+2753	\openmark{}	OPEN
+1F914	\openmark{}	OPEN
+2B50	\textbf{*}	STAR

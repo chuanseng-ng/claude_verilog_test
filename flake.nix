@@ -175,6 +175,25 @@
             };
           }
         else pkgs.verible;
+
+      # ── Documentation TeX Live set ─────────────────────────────────────────────
+      # The books under docs/manual are built with lualatex by tools/docs/build_books.py.
+      # scheme-small plus exactly the packages the document class and macros load, so the
+      # closure stays small enough for a CI runner. xr.sty ships in `tools` and xr-hyper.sty in `hyperref`.
+      # CI (.github/workflows/docs.yml) builds the books with this set and is the check
+      # that the list is complete.
+      docsTexFor = pkgs:
+        pkgs.texlive.combine {
+          inherit (pkgs.texlive)
+            scheme-small
+            latexmk
+            fontspec luaotfload lm lm-math unicode-math newunicodechar
+            geometry xcolor graphics tools ulem booktabs pdflscape enumitem fancyhdr
+            fvextra fancyvrb listings imakeidx hyperref cleveref
+            glossaries glossaries-extra l3packages
+            mdframed zref needspace etoolbox kvoptions iftex
+            amsmath amsfonts upquote makeindex dejavu xurl;
+        };
     in
     {
       # Expose the pinned Verilator as a package so CI can put just the binary on
@@ -187,6 +206,7 @@
         {
           verilator = pkgs.verilator;
           default = pkgs.verilator;
+          docs-tex = docsTexFor pkgs;
         }
         # AppImage + FHS sandbox are Linux-only.
         // lib.optionalAttrs pkgs.stdenv.isLinux {
@@ -311,6 +331,28 @@
               if [[ $- == *i* ]]; then
                 echo "soc dft env ready. Quaigh is external: export QUAIGH=/nobackup/claude_sim_build/dft_stage0/qg/root/bin/quaigh"
                 echo "Spike: make -C tools/dft/atpg ladder   (12 GB / 24 h cap per run, tools/dft/atpg/README.md)"
+              fi
+            '';
+          };
+
+          # Documentation shell: builds the LaTeX books under docs/manual (tools/docs/build_books.py, `make -C docs/manual`)
+          # and runs the doc checks. The TeX set is the same docs-tex package CI installs; python3 carries PyYAML for
+          # gen_glossary.py and pytest for tb/tests/test_docs_*.py. pandoc serves the Markdown-to-LaTeX tools.
+          docs = pkgs.mkShell {
+            name = "soc-docs";
+
+            packages = with pkgs; [
+              (docsTexFor pkgs)
+              pandoc
+              (python3.withPackages (ps: [ ps.pyyaml ps.pytest ]))
+              git
+              gnumake
+            ];
+
+            shellHook = ''
+              if [[ $- == *i* ]]; then
+                echo "soc docs env ready — $(lualatex --version | head -1)"
+                echo "Build: python3 tools/docs/build_books.py [ds tm um cr]   Checks: make -C docs/manual check"
               fi
             '';
           };

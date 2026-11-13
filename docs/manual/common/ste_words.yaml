@@ -1,0 +1,268 @@
+# Word lists for tools/docs/ste_check.py.
+#
+# This list is maintained by the project. It is NOT the ASD-STE100 dictionary
+# and it does not contain the licensed standard. The owner of the documents
+# must check every entry against the licensed standard before the list is used
+# to approve text. The checker only reports likely problems; it cannot prove
+# that text follows ASD-STE100.
+
+# Word or phrase that STE practice replaces with a simpler word.
+# Key (lower case) -> approved replacement or advice.
+not_approved:
+  "utilize": "use"
+  "utilise": "use"
+  "utilization": "use"
+  "in order to": "to"
+  "so as to": "to"
+  "prior to": "before"
+  "subsequent to": "after"
+  "subsequently": "then"
+  "approximately": "about"
+  "commence": "start"
+  "initiate": "start"
+  "terminate": "stop"
+  "ensure": "make sure"
+  "verify": "make sure / do a check of"
+  "perform": "do"
+  "sufficient": "enough"
+  "additional": "more"
+  "via": "through"
+  "e.g.": "for example"
+  "i.e.": "that is"
+  "etc.": "(give the list)"
+  "should": "must (if mandatory)"
+  "may": "can (if permission is not meant)"
+  "however": "but"
+  "therefore": "so"
+  "thus": "so"
+  "hence": "so"
+  "furthermore": "also"
+  "moreover": "also"
+  "in addition": "also"
+  "in addition to": "and"
+  "due to": "because of"
+  "as well as": "and"
+  "obtain": "get"
+  "attempt": "try"
+  "indicate": "show"
+  "demonstrate": "show"
+  "determine": "find"
+  "locate": "find"
+  "modify": "change"
+  "assist": "help"
+  "purchase": "buy"
+  "numerous": "many"
+  "a number of": "some / many"
+  "a lot of": "many"
+  "inform": "tell"
+  "examine": "look at / do a check of"
+  "leverage": "use"
+  "optimal": "best"
+  "functionality": "function"
+  "in the event that": "if"
+  "in case of": "if"
+  "it is possible to": "can"
+  "is able to": "can"
+  "has the ability to": "can"
+  "regarding": "about"
+  "concerning": "about"
+  "with regard to": "about"
+  "at this time": "now"
+  "at the present time": "now"
+  "currently": "now"
+  "simply": "(remove the word)"
+  "just": "(remove the word)"
+  "very": "(remove the word)"
+  "quite": "(remove the word)"
+  "rather": "(remove the word)"
+  "whereas": "but"
+  "once": "after / when"
+  "require": "need"
+  "provide": "give"
+
+# Domain nouns ending in -ing that are technical names here, and ordinary
+# words that end in -ing but are not verb forms. Other -ing words are flagged.
+allowed_ing:
+  - timing
+  - blocking
+  - nonblocking
+  - pending
+  - routing
+  - forwarding
+  - gating
+  - floorplanning
+  - encoding
+  - decoding
+  - buffering
+  - caching
+  - pipelining
+  - handshaking
+  - padding
+  - clocking
+  - signalling
+  - string
+  - thing
+  - nothing
+  - something
+  - anything
+  - everything
+  - during
+  - ring
+  - bring
+  - spring
+  - being
+  - ceiling
+  - building
+  - morning
+  - evening
+  - king
+  - wiring
+  - bonding
+  - scheduling
+
+# Closed-class words. The noun-cluster rule treats these as breaks.
+function_words:
+  - a
+  - an
+  - the
+  - of
+  - in
+  - "on"
+  - at
+  - to
+  - for
+  - with
+  - without
+  - from
+  - by
+  - and
+  - or
+  - but
+  - nor
+  - if
+  - then
+  - else
+  - when
+  - while
+  - where
+  - which
+  - who
+  - whom
+  - whose
+  - what
+  - that
+  - this
+  - these
+  - those
+  - it
+  - its
+  - they
+  - them
+  - their
+  - he
+  - she
+  - his
+  - her
+  - we
+  - us
+  - our
+  - you
+  - your
+  - i
+  - my
+  - me
+  - not
+  - "no"
+  - as
+  - than
+  - so
+  - can
+  - could
+  - must
+  - will
+  - would
+  - shall
+  - should
+  - may
+  - might
+  - there
+  - here
+  - all
+  - any
+  - each
+  - every
+  - both
+  - some
+  - such
+  - only
+  - also
+  - into
+  - onto
+  - over
+  - under
+  - between
+  - through
+  - after
+  - before
+  - until
+  - about
+  - against
+  - per
+  - via
+  - up
+  - down
+  - out
+  - "off"
+  - above
+  - below
+  - within
+  - across
+  - because
+  - since
+  - until
+  - unless
+  - whether
+  - how
+  - why
+  - more
+  - most
+  - less
+  - least
+  - other
+  - another
+  - same
+  - one
+  - two
+  - three
+  - first
+  - second
+  - last
+  - next
+  - very
+  - too
+  - again
+  - once
+  - still
+  - yet
+  - even
+  - just
+  - now
+  - always
+  - never
+  - often
+  - do
+  - does
+  - did
+  - done
+  - be
+  - is
+  - are
+  - was
+  - were
+  - been
+  - being
+  - am
+  - has
+  - have
+  - had
+  - having

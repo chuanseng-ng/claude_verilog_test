@@ -1,0 +1,22 @@
+% Design Specification (ds). Build with tools/docs/build_books.py.
+\documentclass[book=ds]{cvtdocs}
+
+\cvtexternal{tm}
+\cvtexternal{um}
+\cvtexternal{cr}
+\input{glossary}
+
+\begin{document}
+\cvtmaketitle{Design Specification}{CVT-DS}{\cvtrevision}
+\tableofcontents
+
+\input{parts/01-architecture}
+\input{parts/02-constraints-and-power-intent}
+\input{parts/03-module-contracts}
+\input{parts/04-verification-plan}
+
+\cleardoublepage
+\printunsrtglossary[type=acronym,title={Acronyms},style=list]
+\printunsrtglossary[title={Terms},style=list]
+\printindex[\cvtbeadindex]
+\end{document}

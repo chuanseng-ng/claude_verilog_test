@@ -1,0 +1,143 @@
+\chapter{Getting started}\label{um:ch:getting-started}
+
+This chapter shows how to set up the project and run the first test.
+
+\chapter{Project structure}\label{um:ch:project-structure}
+
+This chapter describes the directory tree of the repository.
+
+\chapter{Build and run commands}\label{um:ch:build-and-run-commands}
+
+This chapter lists the commands to build and run each phase.
+
+\chapter{Supported instructions}\label{um:ch:supported-instructions}
+
+This chapter lists the instructions that the CPU supports.
+
+\chapter{Debug interface}\label{um:ch:debug-interface}
+
+This chapter describes the debug interface and its register map.
+
+\chapter{Coding guidelines}\label{um:ch:coding-guidelines}
+
+This chapter states the rules for SystemVerilog and Python code.
+
+\chapter{Local quality checks}\label{um:ch:local-quality-checks}
+
+This chapter lists the checks to run before a commit.
+
+\chapter{Continuous integration}\label{um:ch:continuous-integration}
+
+This chapter describes the checks that run on each pull request.
+
+\chapter{Issue tracking}\label{um:ch:issue-tracking}
+
+This chapter describes how the project tracks issues.
+
+\chapter{Documentation system}\label{um:ch:documentation-system}
+
+This chapter explains the documentation system of the project. Read it before you edit a book or cite a book from a source file.
+
+\section{The four books}
+All project documentation is in four books. Each book is a LaTeX document that builds to a PDF.
+\begin{description}
+  \item[Design Specification (\code{ds})] States what the design must do.
+  \item[Technical Manual (\code{tm})] Describes how the design and the flows work.
+  \item[User Manual (\code{um})] Shows how to use the project.
+  \item[Changes record (\code{cr})] Keeps the history. It does not describe the current state.
+\end{description}
+The source of the books is in \src{docs/manual/}. Shared files are in \src{docs/manual/common/}.
+
+\section{Labels}
+A label has the form \code{book:kind:slug}. The book is \code{ds}, \code{tm}, \code{um} or \code{cr}. The slug has lowercase letters, digits and hyphens only. A label can have more parts, for example \code{tm:pd:corners}.
+The kind is one of the words in \cref{tab:um:guide:label-kinds}.
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Kind & Use\\
+    \midrule
+    \code{part} & A part of a book\\
+    \code{ch} & A chapter\\
+    \code{mod} & A module\\
+    \code{pd} & A physical design item\\
+    \code{suite} & A test suite\\
+    \code{dec} & A decision\\
+    \code{defect} & A tool defect or a caveat\\
+    \code{run} & A run\\
+    \code{fix} & A fix\\
+    \code{status} & A status statement\\
+    \code{guide} & A user guide section\\
+    \code{flow} & A flow\\
+    \code{mm} & A memory map item\\
+    \code{inv} & An invariant\\
+    \code{app} & An appendix\\
+    \bottomrule
+  \end{tabular}
+  \caption{Label kinds}\label{tab:um:guide:label-kinds}
+\end{table}
+
+Labels are the stable interface of the books. Section numbers and page numbers change. A label does not change. Cite a label and never cite a number.
+
+\section{Cite a label from a source file}
+Put one comment line in the source file. The line has a fixed form.
+\begin{lstlisting}[language=SystemVerilog]
+// Doc: ds:mod:apb-cdc-bridge
+\end{lstlisting}
+Use \texttt{\#} in place of \texttt{//} in Python, Tcl and shell files. Write more than one label with commas between them. The checker \src{tools/docs/check_doc_labels.py} fails when a cited label does not exist.
+
+\section{Find a label}
+Search the label list with \code{grep}.
+\begin{lstlisting}[language=bash]
+grep apb-cdc docs/manual/common/labels.tsv
+\end{lstlisting}
+Each line of \src{docs/manual/common/labels.tsv} gives the label, the file, the line and the section title. Regenerate the file with the command \code{python tools/docs/check_doc_labels.py --write-labels}.
+
+\section{Build the PDFs}
+The build needs LuaLaTeX, Python 3 and the font package \code{dejavu}. Run the same command on Linux and on Windows from the root of the repository.
+\begin{procedure}
+  \item Run \code{python tools/docs/build_books.py} to build all books.
+  \item Run \code{python tools/docs/build_books.py um} to build one book.
+  \item Find the PDF files in the directory \code{docs/manual/_build/}.
+\end{procedure}
+The program repeats the LuaLaTeX run until the cross-references are stable. It prints each undefined reference, each duplicate label and each error. The command \code{make -C docs/manual all} runs the same program.
+
+\section{Moved text and records}
+Some text moved from a source file into a book. The environment \code{relocated} marks that text. It prints a line with the original source path before the text and an end line after it.
+\begin{lstlisting}[language={[LaTeX]TeX}]
+\begin{relocated}{rtl/soc/pmu.sv}
+  Text that moved from the source file.
+\end{relocated}
+\end{lstlisting}
+The text between the two lines is normal text. It breaks across pages and can hold longtables, code blocks and landscape pages.
+
+The environment \code{record} marks historical text in the Changes record. It takes an optional date and prints it before the text. Do not edit the words inside a \code{record} environment.
+
+\section{Status marks}
+A status mark is a small tag in the text. Write the macro and an empty pair of braces.
+\begin{description}
+  \item[\texttt{\textbackslash ok\{\}}] Marks a result that passes.
+  \item[\texttt{\textbackslash bad\{\}}] Marks a result that fails.
+  \item[\texttt{\textbackslash warn\{\}}] Marks a caveat. Read the caveat before you use the result.
+  \item[\texttt{\textbackslash hold\{\}}] Marks work that is on hold.
+  \item[\texttt{\textbackslash wip\{\}}] Marks work in progress.
+  \item[\texttt{\textbackslash partialmark\{\}}] Marks a result that is true in part.
+  \item[\texttt{\textbackslash notemark\{\}}] Marks a note or a remark.
+  \item[\texttt{\textbackslash openmark\{\}}] Marks an open question.
+\end{description}
+The converter changes each pictograph of a source file into one of these marks. The table is \src{tools/docs/pandoc/marks.tsv}.
+
+The converter prints a message for a pictograph that is not in the table. It uses \texttt{\textbackslash notemark\{\}} for that pictograph. Add the pictograph to the table.
+
+\section{Code blocks}
+A code block that has only ASCII characters uses the environment \code{lstlisting}. It colors the keywords of its language.
+
+A code block with a box-drawing character or an arrow uses the environment \code{textblock}. Use it for a diagram. It keeps the columns of the text.
+
+\section{Glossary}
+The file \src{docs/manual/common/dictionary.yaml} is the only source of project terms. Each entry has a term, a kind, an expansion for acronyms and a definition. Run \code{python tools/docs/gen_glossary.py} after you edit the file. The program writes \src{docs/manual/common/glossary.tex}. Commit both files. Use \texttt{\textbackslash gls\{CDC\}} in the text to write an acronym with its first-use expansion.
+
+\chapter{Project status}\label{um:ch:project-status}
+
+This chapter gives the current status of each phase.

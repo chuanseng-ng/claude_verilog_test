@@ -1,0 +1,23 @@
+% Changes Record (cr). Build with tools/docs/build_books.py.
+\documentclass[book=cr]{cvtdocs}
+
+\cvtexternal{ds}
+\cvtexternal{tm}
+\cvtexternal{um}
+\input{glossary}
+
+\begin{document}
+\cvtmaketitle{Changes Record}{CVT-CR}{\cvtrevision}
+\tableofcontents
+
+\input{parts/01-phase-and-status-history}
+\input{parts/02-run-histories}
+\input{parts/03-investigations}
+\input{parts/04-fix-log-and-archive}
+\input{parts/05-source-file-history}
+
+\cleardoublepage
+\printunsrtglossary[type=acronym,title={Acronyms},style=list]
+\printunsrtglossary[title={Terms},style=list]
+\printindex[\cvtbeadindex]
+\end{document}

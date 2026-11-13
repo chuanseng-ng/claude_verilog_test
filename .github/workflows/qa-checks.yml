@@ -109,6 +109,20 @@ jobs:
       - name: Strict elaboration gate (pyslang)
         run: python tools/verif/check_elab_strict.py
 
+      # BLOCKING: text that scripts and tests match literally (comment text, line numbers) must still be
+      # in the source. Stdlib only. The waiver-anchor check runs in its own step above, so skip it here.
+      - name: Pinned-text gate (literal anchors still match their sources)
+        run: python tools/docs/check_pinned_text.py --skip-waivers
+
+      # BLOCKING: label scheme, cross-references and citations of the LaTeX books under docs/manual. No TeX needed.
+      - name: Documentation label gate (labels, references, citations)
+        run: python tools/docs/check_doc_labels.py
+
+      # BLOCKING: source-comment size budgets against tools/docs/comment_budget_baseline.txt. Fails on any
+      # growth, and also when the baseline could be tightened (run it with --update-baseline and commit).
+      - name: Comment budget gate (no growth over the baseline)
+        run: python tools/docs/check_comment_budget.py
+
       - name: Run ruff format check
         run: |
           echo "::group::Ruff Format Check"

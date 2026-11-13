@@ -1,0 +1,200 @@
+name: Documentation
+
+# No paths filter on the triggers: the workflow can then be a required check without leaving
+# pull requests waiting. The `changes` job decides whether the slow PDF build is needed.
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Decide whether the PDF build is needed
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      needed: ${{ steps.decide.outputs.needed }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compare with the base
+        id: decide
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          pattern='^(docs/manual/|tools/docs/|flake\.nix$|flake\.lock$|\.github/workflows/docs\.yml$)'
+          needed=false
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] || [ "${REF_TYPE}" = "tag" ]; then
+            needed=true
+          else
+            base=""
+            if [ "${EVENT_NAME}" = "pull_request" ]; then
+              base="$(git merge-base "origin/${BASE_REF}" "${HEAD_SHA}")"
+            elif git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+              base="${BEFORE_SHA}"
+            fi
+            if [ -z "${base}" ]; then
+              echo "No usable base commit; building."
+              needed=true
+            else
+              files="$(git diff --name-only "${base}" "${HEAD_SHA}")"
+              echo "Changed files:"
+              echo "${files}"
+              if grep -Eq "${pattern}" <<< "${files}"; then
+                needed=true
+              fi
+            fi
+          fi
+          echo "needed=${needed}" >> "${GITHUB_OUTPUT}"
+          echo "PDF build needed: ${needed}"
+
+  static:
+    name: Static documentation checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install "pyyaml>=6.0" "pytest>=8.0.0"
+
+      - name: Glossary is in sync with the dictionary
+        run: python tools/docs/gen_glossary.py --check
+
+      - name: Labels and citations are consistent
+        run: python tools/docs/check_doc_labels.py
+
+      # The glob selects only the documentation tests. Tests that need pandoc skip when it is absent.
+      - name: Documentation tool tests
+        run: |
+          set -euo pipefail
+          python -m pytest tb/tests/test_docs_*.py -q
+
+  pdf:
+    name: Build the PDF books
+    needs: changes
+    if: needs.changes.outputs.needed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Nix (TeX Live from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install the pinned TeX Live set (nix profile)
+        run: |
+          set -euo pipefail
+          nix profile install .#docs-tex
+          lualatex --version | head -1
+
+      - name: Build the books
+        run: python3 tools/docs/build_books.py --outdir docs/manual/_build
+
+      - name: Check that all four PDFs exist
+        run: |
+          set -euo pipefail
+          for book in ds tm um cr; do
+            test -s "docs/manual/_build/${book}.pdf"
+          done
+
+      - name: Upload the PDFs
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-pdfs
+          path: |
+            docs/manual/_build/ds.pdf
+            docs/manual/_build/tm.pdf
+            docs/manual/_build/um.pdf
+            docs/manual/_build/cr.pdf
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Attach the PDFs to the release
+    needs: pdf
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Write access is granted to this job only.
+    permissions:
+      contents: write
+    steps:
+      - name: Download the PDFs
+        uses: actions/download-artifact@v4
+        with:
+          name: manual-pdfs
+          path: pdfs
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "${TAG}" --repo "${REPO}" > /dev/null 2>&1; then
+            gh release create "${TAG}" --repo "${REPO}" --title "${TAG}" \
+              --notes "Documentation PDFs for ${TAG}."
+          fi
+          gh release upload "${TAG}" pdfs/*.pdf --repo "${REPO}" --clobber
+
+  docs-ok:
+    name: Documentation checks passed
+    needs: [ changes, static, pdf, release ]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # This is the single job to require in branch protection: it passes when the PDF build was skipped.
+      - name: Evaluate results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          STATIC: ${{ needs.static.result }}
+          PDF: ${{ needs.pdf.result }}
+          RELEASE: ${{ needs.release.result }}
+        run: |
+          set -euo pipefail
+          echo "changes=${CHANGES} static=${STATIC} pdf=${PDF} release=${RELEASE}"
+          [ "${CHANGES}" = "success" ] || exit 1
+          [ "${STATIC}" = "success" ] || exit 1
+          [ "${PDF}" = "success" ] || [ "${PDF}" = "skipped" ] || exit 1
+          [ "${RELEASE}" = "success" ] || [ "${RELEASE}" = "skipped" ] || exit 1

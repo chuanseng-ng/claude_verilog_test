@@ -1,0 +1,98 @@
+label	file	line	title
+cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7	Archive
+cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	7	ASAP7 CPU, GPU and SoC runs
+cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	15	Build files
+cr:ch:fix-log	docs/manual/cr/parts/04-fix-log-and-archive.tex	3	Fix log
+cr:ch:investigations	docs/manual/cr/parts/03-investigations.tex	3	Investigations
+cr:ch:phase-5-soc-runs	docs/manual/cr/parts/02-run-histories.tex	3	Phase 5 SoC runs
+cr:ch:phase-history	docs/manual/cr/parts/01-phase-and-status-history.tex	3	Phase history
+cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	7	Physical design files
+cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
+cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	11	Sky130 runs
+cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	7	Status history
+cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	11	Test benches
+cr:part:fix-log-and-archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	1	Fix log and archive
+cr:part:investigations	docs/manual/cr/parts/03-investigations.tex	1	Investigations
+cr:part:phase-and-status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	1	Phase and status history
+cr:part:run-histories	docs/manual/cr/parts/02-run-histories.tex	1	Run histories
+cr:part:source-file-history	docs/manual/cr/parts/05-source-file-history.tex	1	Source-file history
+ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	7	CPU phases 0 to 3
+ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	11	DFT requirements
+ds:ch:functional-coverage	docs/manual/ds/parts/04-verification-plan.tex	7	Functional coverage
+ds:ch:gpu-lite-simt-engine	docs/manual/ds/parts/01-architecture.tex	11	GPU-lite SIMT engine
+ds:ch:interface-definitions	docs/manual/ds/parts/01-architecture.tex	31	Interface definitions
+ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	39	Locked architecture decisions
+ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	27	Memory map
+ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	23	Mixed-signal PLL
+ds:ch:mod-cdc-primitives	docs/manual/ds/parts/03-module-contracts.tex	19	CDC primitives
+ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
+ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	35	Crypto accelerator
+ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	23	DFT blocks
+ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	43	FPGA wrappers
+ds:ch:mod-gpu	docs/manual/ds/parts/03-module-contracts.tex	11	GPU
+ds:ch:mod-memory-and-caches	docs/manual/ds/parts/03-module-contracts.tex	7	Memory and caches
+ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	39	NPU
+ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	31	Peripherals
+ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	27	PLL subsystem
+ds:ch:mod-soc-fabric	docs/manual/ds/parts/03-module-contracts.tex	15	SoC fabric
+ds:ch:phase-6-ip-expansion	docs/manual/ds/parts/01-architecture.tex	19	Phase 6 IP expansion
+ds:ch:power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	7	Power intent
+ds:ch:reference-models	docs/manual/ds/parts/01-architecture.tex	35	Reference models
+ds:ch:soc-integration	docs/manual/ds/parts/01-architecture.tex	15	SoC integration
+ds:ch:system-overview	docs/manual/ds/parts/01-architecture.tex	3	System overview
+ds:ch:timing-constraints	docs/manual/ds/parts/02-constraints-and-power-intent.tex	3	Timing constraints
+ds:ch:verification-strategy	docs/manual/ds/parts/04-verification-plan.tex	3	Verification strategy
+ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
+ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
+ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
+ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verification plan
+tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	78	Labels
+tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
+tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	19	Analog PLL
+tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	19	ASAP7 flow
+tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	11	CDC and lint checks
+tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	27	Commercial flow comparison
+tm:ch:constraint-files	docs/manual/tm/parts/02-physical-design.tex	11	Constraint files
+tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	7	Coverage
+tm:ch:decision-log	docs/manual/tm/parts/05-decisions.tex	3	Decision log
+tm:ch:dft-architecture	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3	DFT architecture
+tm:ch:flow-overview	docs/manual/tm/parts/02-physical-design.tex	3	Flow overview
+tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11	FPGA prototyping
+tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	23	FreePDK45 flow
+tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	15	High-level synthesis
+tm:ch:mod-cdc-primitives	docs/manual/tm/parts/01-module-reference.tex	19	CDC primitives
+tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
+tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	35	Crypto accelerator
+tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	23	DFT blocks
+tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	43	FPGA wrappers
+tm:ch:mod-gpu	docs/manual/tm/parts/01-module-reference.tex	11	GPU
+tm:ch:mod-memory-and-caches	docs/manual/tm/parts/01-module-reference.tex	7	Memory and caches
+tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	39	NPU
+tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	31	Peripherals
+tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	27	PLL subsystem
+tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	15	SoC fabric
+tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	19	Proprietary simulators
+tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	15	Sky130 flow
+tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	15	Synthesis undefined-value gate
+tm:ch:technology-node-strategy	docs/manual/tm/parts/02-physical-design.tex	7	Technology node strategy
+tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7	Tessent flows
+tm:ch:test-benches-and-suites	docs/manual/tm/parts/03-verification-infrastructure.tex	3	Test benches and suites
+tm:ch:tool-defects-and-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	3	Tool defects and caveats
+tm:part:decisions	docs/manual/tm/parts/05-decisions.tex	1	Decisions
+tm:part:dft-fpga-hls-and-analog	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1	DFT, FPGA, HLS and analog
+tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module reference
+tm:part:physical-design	docs/manual/tm/parts/02-physical-design.tex	1	Physical design
+tm:part:tool-defects-and-standing-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	1	Tool defects and standing caveats
+tm:part:verification-infrastructure	docs/manual/tm/parts/03-verification-infrastructure.tex	1	Verification infrastructure
+um:app:cleanup-recommendations	docs/manual/um/parts/99-appendix.tex	3	Cleanup recommendations
+um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	9	Build and run commands
+um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	21	Coding guidelines
+um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	29	Continuous integration
+um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	17	Debug interface
+um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	37	Documentation system
+um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
+um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	33	Issue tracking
+um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	25	Local quality checks
+um:ch:project-status	docs/manual/um/parts/01-chapters.tex	141	Project status
+um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	5	Project structure
+um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	13	Supported instructions
