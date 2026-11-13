@@ -16,6 +16,12 @@ cr:part:investigations	docs/manual/cr/parts/03-investigations.tex	1	Investigatio
 cr:part:phase-and-status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	1	Phase and status history
 cr:part:run-histories	docs/manual/cr/parts/02-run-histories.tex	1	Run histories
 cr:part:source-file-history	docs/manual/cr/parts/05-source-file-history.tex	1	Source-file history
+cr:status:ai-human-boundaries	docs/manual/cr/parts/01-phase-and-status-history.tex	1166	AI/Human Boundaries
+cr:status:ai-human-boundaries:ai-may-assist-with	docs/manual/cr/parts/01-phase-and-status-history.tex	1168	AI MAY assist with
+cr:status:ai-human-boundaries:human-must	docs/manual/cr/parts/01-phase-and-status-history.tex	1185	Human MUST
+cr:status:claude-md-overview	docs/manual/cr/parts/01-phase-and-status-history.tex	12	Project Overview
+cr:status:claude-md-overview:project-phases	docs/manual/cr/parts/01-phase-and-status-history.tex	298	Project Phases
+cr:status:phase5-workflow	docs/manual/cr/parts/01-phase-and-status-history.tex	360	Current Workflow (Phase 5 --- SoC Integration)
 ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	7	CPU phases 0 to 3
 ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	11	DFT requirements
 ds:ch:functional-coverage	docs/manual/ds/parts/04-verification-plan.tex	7	Functional coverage
@@ -36,12 +42,18 @@ ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	31	Peripheral
 ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	27	PLL subsystem
 ds:ch:mod-soc-fabric	docs/manual/ds/parts/03-module-contracts.tex	15	SoC fabric
 ds:ch:phase-6-ip-expansion	docs/manual/ds/parts/01-architecture.tex	19	Phase 6 IP expansion
+ds:ch:phase4-5-architecture	docs/manual/ds/parts/01-architecture.tex	130	Phase 4: GPU-Lite SIMT Engine (frozen)
+ds:ch:phase4-5-architecture:phase-5-soc-integration-white-check-mark-complete-2026-06-24	docs/manual/ds/parts/01-architecture.tex	159	\texorpdfstring{Phase 5: SoC Integration (\ok{} COMPLETE 2026-06-24)}{Phase 5: SoC Integration ( COMPLETE 2026-06-24)}
 ds:ch:power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	7	Power intent
 ds:ch:reference-models	docs/manual/ds/parts/01-architecture.tex	35	Reference models
 ds:ch:soc-integration	docs/manual/ds/parts/01-architecture.tex	15	SoC integration
 ds:ch:system-overview	docs/manual/ds/parts/01-architecture.tex	3	System overview
 ds:ch:timing-constraints	docs/manual/ds/parts/02-constraints-and-power-intent.tex	3	Timing constraints
 ds:ch:verification-strategy	docs/manual/ds/parts/04-verification-plan.tex	3	Verification strategy
+ds:dec:key-design-decisions	docs/manual/ds/parts/01-architecture.tex	44	Key Design Decisions (From Specifications)
+ds:dec:locked-phase5	docs/manual/ds/parts/01-architecture.tex	87	Phase 5 SoC locked architecture decisions
+ds:inv:strict-elaboration	docs/manual/ds/parts/01-architecture.tex	217	Strict elaboration rule
+ds:inv:struct-member-select	docs/manual/ds/parts/01-architecture.tex	201	Struct-member select rule
 ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
@@ -49,16 +61,16 @@ ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verifi
 tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	78	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
 tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	19	Analog PLL
-tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	19	ASAP7 flow
+tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	15	ASAP7 flow
 tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	11	CDC and lint checks
-tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	27	Commercial flow comparison
-tm:ch:constraint-files	docs/manual/tm/parts/02-physical-design.tex	11	Constraint files
+tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	23	Commercial flow comparison
+tm:ch:constraint-files	docs/manual/tm/parts/02-physical-design.tex	7	Constraint files
 tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	7	Coverage
 tm:ch:decision-log	docs/manual/tm/parts/05-decisions.tex	3	Decision log
 tm:ch:dft-architecture	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3	DFT architecture
 tm:ch:flow-overview	docs/manual/tm/parts/02-physical-design.tex	3	Flow overview
 tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11	FPGA prototyping
-tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	23	FreePDK45 flow
+tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	19	FreePDK45 flow
 tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	15	High-level synthesis
 tm:ch:mod-cdc-primitives	docs/manual/tm/parts/01-module-reference.tex	19	CDC primitives
 tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
@@ -72,9 +84,8 @@ tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	31	Peripheral
 tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	27	PLL subsystem
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	15	SoC fabric
 tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	19	Proprietary simulators
-tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	15	Sky130 flow
+tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	11	Sky130 flow
 tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	15	Synthesis undefined-value gate
-tm:ch:technology-node-strategy	docs/manual/tm/parts/02-physical-design.tex	7	Technology node strategy
 tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7	Tessent flows
 tm:ch:test-benches-and-suites	docs/manual/tm/parts/03-verification-infrastructure.tex	3	Test benches and suites
 tm:ch:tool-defects-and-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	3	Tool defects and caveats
@@ -84,6 +95,13 @@ tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module r
 tm:part:physical-design	docs/manual/tm/parts/02-physical-design.tex	1	Physical design
 tm:part:tool-defects-and-standing-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	1	Tool defects and standing caveats
 tm:part:verification-infrastructure	docs/manual/tm/parts/03-verification-infrastructure.tex	1	Verification infrastructure
+tm:pd:node-strategy	docs/manual/tm/parts/02-physical-design.tex	28	Technology Node Strategy
+tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20	docs/manual/tm/parts/02-physical-design.tex	197	ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
+tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative	docs/manual/tm/parts/02-physical-design.tex	79	\texorpdfstring{Commercial flows (\src{pnr/commercial/}, Sky130 only, indicative)}{Commercial flows (, Sky130 only, indicative)}
+tm:pd:node-strategy:freepdk45nangate45-ready-to-run	docs/manual/tm/parts/02-physical-design.tex	188	\texorpdfstring{FreePDK45/\allowbreak{}NanGate45 (ready to run)}{FreePDK45/NanGate45 (ready to run)}
+tm:pd:node-strategy:legacy-pr-directories-superseded-do-not-start-new-work-here	docs/manual/tm/parts/02-physical-design.tex	93	Legacy P\&R directories (superseded --- do not start new work here)
+tm:pd:node-strategy:sky130-ppa-ceiling-assessed-2026-03-28	docs/manual/tm/parts/02-physical-design.tex	151	Sky130 PPA ceiling (assessed 2026-03-28)
+tm:pd:node-strategy:sky130-real-drclvs-sign-off-gh-epic-102-stages-12-complete-2026-07-31	docs/manual/tm/parts/02-physical-design.tex	116	Sky130 real DRC/LVS sign-off (GH epic \#102, Stages 1--2 complete 2026-07-31)
 um:app:cleanup-recommendations	docs/manual/um/parts/99-appendix.tex	3	Cleanup recommendations
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	9	Build and run commands
 um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	21	Coding guidelines
@@ -96,3 +114,15 @@ um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	25	Local quality
 um:ch:project-status	docs/manual/um/parts/01-chapters.tex	141	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	5	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	13	Supported instructions
+um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	377	Commit Message Convention
+um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	387	Coding Guidelines
+um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	395	Questions?
+um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	294	Frequently Used Commands
+um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	329	Project Structure
+um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	146	Key Documentation
+um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	152	Architecture \& Design
+um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	209	Physical Design
+um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	283	README detail set
+um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	243	Verification \& Fixes
+um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	342	Reference Model (Python)
+um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	358	Verification Strategy

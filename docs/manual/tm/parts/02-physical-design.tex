@@ -4,10 +4,6 @@
 
 This chapter describes the physical design flow. It shows the steps from netlist to layout.
 
-\chapter{Technology node strategy}\label{tm:ch:technology-node-strategy}
-
-This chapter compares the technology nodes of the project. It states the use of each node.
-
 \chapter{Constraint files}\label{tm:ch:constraint-files}
 
 This chapter describes the constraint files of the flows.
@@ -27,3 +23,210 @@ This chapter describes the FreePDK45 flow. It gives the configuration and the st
 \chapter{Commercial flow comparison}\label{tm:ch:commercial-flow-comparison}
 
 This chapter compares the open flow with the commercial flows for one macro.
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Technology Node Strategy}\label{tm:pd:node-strategy}
+\begin{relocated}{CLAUDE.md}
+
+Three nodes are supported by the existing \src{pnr/Makefile}. Use the
+right node for the right goal:
+
+{\footnotesize\setlength{\tabcolsep}{3pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*111/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*214/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*214/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*111/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*83/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-10\tabcolsep)*246/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Node
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Makefile target
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Config status
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Realistic CPU freq
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Fabricatable
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Best use
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{Sky130 130nm} & \code{librelane-sky130-cpu},
+\code{librelane-sky130-soc} & \ok{} Complete (\src{pnr/sky130/}) &
+75--100 MHz & \ok{} Yes (SkyWater MPW) & Functional sign-off; tape-out
+candidate \\
+\textbf{FreePDK45 / NanGate45 45nm} & \code{librelane-nangate45} & \ok{}
+Complete (\src{pnr/freepdk45/}) & 150--250 MHz & No (predictive) & First
+non-Sky130 exploration; SRAM macros available \\
+\textbf{ASAP7 7nm FinFET} & \code{librelane-asap7} & \ok{} Complete
+(\src{pnr/asap7/}); Run 43 signoff 2026-05-20 & \textbf{1418 MHz
+achieved (Run 43)} & No (predictive) & Phase 2+3 RTL PPA sign-off
+completed at 1418 MHz / 27.27 mW / 3 844 µm² \\
+\end{longtable}
+}
+
+}
+
+\section{\texorpdfstring{Commercial flows (\src{pnr/commercial/}, Sky130
+only, indicative)}{Commercial flows (, Sky130 only, indicative)}}\label{tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative}
+
+DC -\textgreater{} ICC2 and Genus -\textgreater{} Innovus flows for the
+Sky130 CPU macro \code{rv32i_cpu_top}, built on the EDA host (no nix).
+They are judged with OpenROAD B2 by one StarRC -\textgreater{}
+PrimeTime/\allowbreak{}PrimePower chain, plus
+KLayout/\allowbreak{}Magic/\allowbreak{}Netgen,
+Formality/\allowbreak{}Conformal and RedHawk. Final arms are ICC2 b6 and
+Innovus b6. All figures are indicative: StarRC is calibrated to OpenRCX,
+not silicon, and the SRAM Liberty is TT-only (\code{o1i}). No arm meets
+sign-off. Results and caveats are in
+\src{docs/COMMERCIAL_FLOW_COMPARISON.md}.
+
+\section{Legacy P\&R directories (superseded --- do not start new work
+here)}\label{tm:pd:node-strategy:legacy-pr-directories-superseded-do-not-start-new-work-here}
+
+\src{pnr/librelane/} and \src{pnr/openlane1/} are the pre-per-node
+Sky130 CPU flows. Both are \textbf{superseded by \src{pnr/sky130/cpu/}
+and \src{pnr/sky130/soc/}}, which are the live Sky130 flows and the only
+ones with real Magic DRC + Netgen LVS enabled.
+\src{pnr/sky130/cpu/config.json} was forked from
+\src{pnr/librelane/config.json} (see
+\src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §Stage 1). Their targets
+(\code{librelane-sky130},
+\code{docker-run}/\code{docker-synth}/\code{docker-results}) still exist
+as a fallback, but neither directory has run since 2026-03-25 and both
+carry the stale \code{VERILOG_FILES} package-closure gap tracked in bead
+\bead{135} --- run
+\texttt{python3\ tools/\allowbreak{}verif/\allowbreak{}check\_\allowbreak{}source\_\allowbreak{}closure.\allowbreak{}py\ <config>}
+before trusting either. \code{pnr/openlane/} was speculative OpenLane-2
+scaffolding that was never wired to any Makefile target and has been
+deleted (LibreLane is the OL2-lineage tool this project actually uses).
+\src{pnr/freepdk45/} is \textbf{not} superseded --- it is a
+dormant-but-intentional third node with no per-node replacement, and
+\code{librelane-nangate45} remains the only path to it.
+
+\section{Sky130 real DRC/LVS sign-off (GH epic \#102, Stages 1--2
+complete 2026-07-31)}\label{tm:pd:node-strategy:sky130-real-drclvs-sign-off-gh-epic-102-stages-12-complete-2026-07-31}
+
+Sky130 is the \textbf{only} node in this project with genuine physical
+verification --- ASAP7 skips
+Magic/\allowbreak{}KLayout/\allowbreak{}Netgen entirely (predictive PDK)
+and FreePDK45 has them permanently blocked.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Stage 1} --- CPU standalone (\src{pnr/sky130/cpu/}): KLayout
+  DRC 0, Netgen LVS MATCH, +0.366 ns setup @ 75 MHz. Magic DRC 27.7 M is
+  a waived PDK artifact --- 100 \% of violations sit inside SRAM macro
+  footprints (bead \bead{45a}).
+\item
+  \textbf{Stage 2} --- CPU macro + peripherals SoC, no GPU
+  (\src{pnr/sky130/soc/}): LVS PASSED, routing DRC 0, PDN 0, hold clean,
+  40 MHz, nom\_tt 37.63 mW, die 6700 × 3100 µm. Residual gates, neither
+  open work: ss setup fail (\code{ujv}, deferred host-blocked), antenna
+  140/120 (\code{58q}, closed as an accepted trade-off against hold).
+\item
+  \warn{} \textbf{Stage-2 timing is typical-corner (nom\_tt) only.} The
+  SRAM macro is characterized at TT alone, so "clean at 9 corners" means
+  9 corner \emph{labels} backed by one macro model. Physical gates
+  (LVS/\allowbreak{}DRC/\allowbreak{}PDN) are unaffected. Per-corner
+  SRAM characterization is host-blocked (\textasciitilde80--95 h SPICE;
+  bead \bead{o1i}).
+\item
+  \textbf{Stages 3--4} (GPU, \ghref{105}/\allowbreak{}\#106): host-gated on
+  ≥32 GB RAM + \textasciitilde500 GB scratch. GPU stays
+  ASAP7-indicative.
+\item
+  Detail → \src{docs/SKY130_REAL_DRC_LVS_EVALUATION.md} §7.
+\end{itemize}
+
+\section{Sky130 PPA ceiling (assessed 2026-03-28)}\label{tm:pd:node-strategy:sky130-ppa-ceiling-assessed-2026-03-28}
+
+Sky130 130nm is frequency-limited by cell drive strength and clock tree
+skew. The realistic ceiling for this pipeline topology is
+\textbf{\textasciitilde100--120 MHz} with all optimisations applied ---
+not the 200--500 MHz originally targeted.
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*517/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*127/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*336/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Technique
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Gain
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Effort
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Switch to \code{sky130_fd_sc_hs} (high-speed cell library) & +10--30 MHz
+& Low --- Makefile config change \\
+EX-stage retiming (split ALU + branch-compare) & +15--25 MHz & Medium
+--- re-verify forwarding paths \\
+SDC multi-cycle exemptions for CSR/debug paths & +5--10 MHz & Low ---
+SDC annotation only \\
+Floorplan: place forwarding mux adjacent to ALU & +5--10 MHz & Medium
+--- P\&R iteration \\
+\textbf{Combined ceiling} & \textbf{\textasciitilde100--120 MHz} & \\
+\end{longtable}
+}
+
+\section{\texorpdfstring{FreePDK45/\allowbreak{}NanGate45 (ready to
+run)}{FreePDK45/NanGate45 (ready to run)}}\label{tm:pd:node-strategy:freepdk45nangate45-ready-to-run}
+
+\src{pnr/freepdk45/} is fully configured: \code{config.json} (2.5 ns /
+400 MHz target), SRAM macros (\code{sram_1rw_256x32_freepdk45} with
+LEF/\allowbreak{}LIB/\allowbreak{}GDS), \code{macro_placement.cfg},
+\code{pdn.tcl}, \code{freepdk45.sdc}, \code{freepdk45.upf}. Run with
+\texttt{make\ librelane-\allowbreak{}nangate45}. Expected Phase 2
+result: 150--250 MHz, \textasciitilde8--10× logic density vs Sky130.
+
+\section{ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)}\label{tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20}
+
+\src{pnr/asap7/} is fully configured and signed off: \code{config.json}
+(705 ps / 1418 MHz, CTS clustering 8/10, density 50 \%),
+\code{constraints/asap7.sdc} (single-period clock,
+hold/\allowbreak{}setup uncertainty 10/15 ps, SRAM ICG \code{gclk_sram}
+generated clock + false-paths), \code{macro_placement.cfg},
+\code{pdn.tcl}, \code{sram_1rw_256x32_asap7_TT_0p7V_25C.lib} (RVT TT 0.7
+V / 25 °C). Run with \texttt{make\ librelane-\allowbreak{}asap7}. Phase
+2+3 PPA (no perf counters): \textbf{1418 MHz fmax, 27.27 mW power, 3 844
+µm² stdcell, 0 DRC, 0 antenna \warn{} unsupported --- see bead
+\bead{xy6}, +5.97 ps setup slack, +22.54 ps hold slack} at run
+\code{pnr/asap7/runs/RUN_2026-05-20_06-27-10/} (run directory no longer
+on disk to re-verify directly; \code{drt.tcl}\textquotesingle s
+catch-and-continue patch was already in place before this run per
+\src{docs/ASAP7_RUN_HISTORY.md}\textquotesingle s caveat banner, so
+timing/\allowbreak{}power/\allowbreak{}area stand but the
+DRC/\allowbreak{}antenna claim does not). \textbf{Phase 5 M7 update
+(2026-06-02):} adding the perf-monitoring CSRs lowers the standalone CPU
+sign-off to \textbf{1282 MHz (780 ps, +24 ps setup, +28 ps hold, 24.38
+mW, 4 058 µm²; achievable \textasciitilde1323 MHz)} at run
+\code{pnr/asap7/cpu/runs/RUN_2026-06-02_20-37-12/} --- the 1418 MHz
+number does not hold with M7 (limiter = 836-fanout counter-write-enable
+cone). Moot for the SoC (GPU-governed \textasciitilde571 MHz).
+\src{pnr/asap7/cpu/config.json} + \code{constraints/asap7.sdc} are now
+at 780 ps. See \src{docs/ASAP7_RUN_HISTORY.md} for the full campaign
+history. \warn{} \textbf{Both the 1418 MHz and 1282 MHz figures above
+are \code{8f3}-affected} (bead \bead{8f3}/\code{0p6}, 2026-09-16): stock
+\code{OpenROAD.STAMidPNR-3} without an in-session re-route, same
+zero-wire STA defect as the SoC. Run 43\textquotesingle s own artifacts
+are gone (unrecoverable); the M7 1282 MHz point \textbf{was re-measured
+on current RTL with the fix} (\code{STA_POSTGRT_INSESSION_GRT=1}, run
+tag \code{bpp7_postgrt_set}) and does \textbf{not} hold --- honest
+result is setup WNS \textbf{−169.7 ps / TNS −70,913 ps / 1008 violators}
+(hold clean, unaffected). Full detail: \src{docs/ASAP7_RUN_HISTORY.md}.
+\end{relocated}

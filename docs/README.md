@@ -1,6 +1,7 @@
 # Documentation
 
 The project documentation is in four LaTeX books. Each book builds to a PDF.
+The guide for agents and contributors is [`AGENTS.md`](../AGENTS.md) in the repository root.
 
 | Book | Source | Content |
 | :--- | :----- | :------ |

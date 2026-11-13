@@ -39,3 +39,190 @@ This chapter describes the Python reference models. It defines the model API.
 \chapter{Locked architecture decisions}\label{ds:ch:locked-architecture-decisions}
 
 This chapter lists the architecture decisions that stay fixed. It gives the reason for each decision.
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Key Design Decisions (From Specifications)}\label{ds:dec:key-design-decisions}
+\begin{relocated}{CLAUDE.md}
+
+\textbf{Phase 1 CPU}:
+
+\begin{itemize}
+\tightlist
+\item
+  Single-cycle execution with AXI stalls for memory operations
+\item
+  Unified AXI4-Lite bus for instruction fetch and data access
+\item
+  x0 register hardwired to zero (per RV32I spec)
+\item
+  EBREAK instruction triggers CPU halt; debug writes only allowed when
+  halted
+\item
+  Only illegal instruction traps supported (no interrupts in Phase 1)
+\item
+  Naturally aligned memory accesses only (misaligned = trap)
+\end{itemize}
+
+\textbf{Phase 4 GPU}:
+
+\begin{itemize}
+\tightlist
+\item
+  SIMT execution model (8 lanes per warp); single compute unit
+\item
+  Round-robin warp scheduling; one-level divergence handling
+\item
+  No cache coherence with CPU; memory coalescing when possible
+\end{itemize}
+
+\textbf{Sky130 frequency ceiling}: \textasciitilde100--120 MHz maximum
+for this CPU pipeline topology (see Technology Node Strategy). PDK
+limitation --- not an RTL issue. For higher frequencies, target
+FreePDK45/\allowbreak{}NanGate45 (150--250 MHz) or ASAP7 (\textbf{1418
+MHz demonstrated} at Run 43, 2026-05-20).
+\end{relocated}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Phase 5 SoC locked architecture decisions}\label{ds:dec:locked-phase5}
+\begin{relocated}{CLAUDE.md}
+
+\textbf{Phase 5 SoC --- Locked Architecture Decisions} (confirmed
+2026-03-28):
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Cache line size}: 16 bytes locked for Phase 3. Revisit 32-byte
+  lines only if/when an L2 cache is added.
+\item
+  \textbf{Cache associativity}: Direct-mapped locked. \textbf{M10
+  RESOLVED (2026-06-21): stays direct-mapped.} A 2-way D\$ was
+  prototyped + benchmarked (\code{experiment/dcache-2way}): it
+  eliminates synthetic K=2 conflict misses (153/\allowbreak{}kI→0) but
+  representative firmware (CoreMark, 232 B working set) fits L1 with 18×
+  margin and shows no conflict pressure --- so 2-way is not adopted
+  (adds \textasciitilde100--200 ps hit-path mux for no real benefit).
+  See \src{docs/M10_L2_DECISION_ANALYSIS.md}.
+\item
+  \textbf{AXI4 burst upgrade}: Phase 3 refill FSMs use 4 sequential
+  AXI4-Lite transactions. These are upgraded to AXI4 burst mode during
+  Phase 5 SoC integration --- do not change Phase 3 FSMs before then.
+\item
+  \textbf{L2 cache}: Not in Phase 5 scope. \textbf{M10 RESOLVED
+  (2026-06-21): NO-GO.} Benchmarking (\src{sw/bench/}
+  sweep/\allowbreak{}conflict/\allowbreak{}CoreMark on \code{soc_top})
+  found the L1 capacity wall (\textgreater4 KB) is synthetic-only;
+  representative firmware fits the 4 KB L1; the GPU carries bulk data.
+  No real L1 bottleneck → no L2. Revisit only if a future on-core
+  workload sustains \textgreater4 KB working sets. See
+  \src{docs/M10_L2_DECISION_ANALYSIS.md}.
+\item
+  \textbf{DRAM controller}: Use behavioral AXI4-slave SRAM model for
+  Phase 5. Real DRAM controller (with refresh) is a Phase 6+ stretch
+  goal only if tape-out is targeted.
+\end{enumerate}
+\end{relocated}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Phase 4: GPU-Lite SIMT Engine (frozen)}\label{ds:ch:phase4-5-architecture}
+\begin{relocated}{CLAUDE.md}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{ISA}: Custom 32-bit vector encoding --- VADD, VSUB, VMUL,
+  VAND, VOR, VSLL, VLD, VST, VBEQ, VBNE, VJMP, VRET, VSYNC
+\item
+  \textbf{Execution}: Single compute unit; 8 SIMD lanes; 8 warps max; 64
+  total threads
+\item
+  \textbf{Register file}: 32 registers × 8 threads per warp (1 KB)
+\item
+  \textbf{Divergence}: Single-level SIMT stack with per-lane active
+  mask; round-robin scheduler
+\item
+  \textbf{Shared memory}: 16 KB scratchpad, 32 banks
+\item
+  \textbf{Memory}: AXI4 master (burst) + memory coalescer (8-lane →
+  fewer AXI4 bursts)
+\item
+  \textbf{Coherency}: Software-managed --- CPU flushes D-cache before
+  launch, invalidates after completion. No HW coherence.
+\item
+  \textbf{Spec}: \src{docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md}
+\end{itemize}
+
+\section{\texorpdfstring{Phase 5: SoC Integration (\ok{} COMPLETE
+2026-06-24)}{Phase 5: SoC Integration ( COMPLETE 2026-06-24)}}\label{ds:ch:phase4-5-architecture:phase-5-soc-integration-white-check-mark-complete-2026-06-24}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Interconnect}: AXI4 crossbar (data fabric) + AXI-Lite bus
+  (control/\allowbreak{}config)
+
+  \begin{itemize}
+  \tightlist
+  \item
+    AXI4 masters: CPU D-cache (upgraded to burst), GPU, DMA engine
+  \item
+    AXI4 slave: behavioral SRAM controller (no DRAM refresh)
+  \item
+    AXI-Lite slaves: GPU/DMA config registers, UART, SPI, timer, IRQ
+    controller
+  \end{itemize}
+\item
+  \textbf{Cache upgrade}: Phase 3 refill FSMs upgraded from 4 sequential
+  AXI4-Lite beats to AXI4 burst transactions
+\item
+  \textbf{DMA engine}: Descriptor queue, AXI4 master, interrupt output
+  to CPU
+\item
+  \textbf{Memory model}: Behavioral AXI4-slave SRAM (no DRAM refresh
+  logic)
+\item
+  \textbf{Power domains}: PD\_CPU, PD\_GPU, PD\_SRAM, PD\_PERIPH (clock
+  + power gating per \code{UPF_POWER_SPEC.md})
+\item
+  \textbf{Performance counters}: CSR-mapped --- cycle count,
+  instructions retired, branch mispredictions, I\(/D\) miss counts,
+  active warps, warp stall cycles, divergence events
+\item
+  \textbf{Roadmap}: \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (12
+  milestones M1--M12, golden spec)
+\end{itemize}
+\end{relocated}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Struct-member select rule}\label{ds:inv:struct-member-select}
+\begin{relocated}{CLAUDE.md}
+
+\textbf{Struct-member select rule (\prref{275}, bead \bead{ainf}; enforced
+by a blocking \code{qa-checks} gate)}: no bit, part or element select
+may be taken directly on a struct member anywhere in \src{rtl/}, read or
+write. Copy the member to a named wire first. The checker is
+\src{tools/verif/check_struct_member_select.py}, and its waiver file
+\src{tools/verif/struct_member_select_baseline.txt} must stay empty.
+Synlig elaborates this idiom silently and wrongly
+(\src{docs/SYNLIG_STRUCT_SELECT_AINF.md}); the \code{ma7}/\code{dud4}
+entries above trace to the same defect class.
+\end{relocated}
+
+
+% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
+\chapter{Strict elaboration rule}\label{ds:inv:strict-elaboration}
+\begin{relocated}{CLAUDE.md}
+
+\textbf{Strict elaboration rule (bead \bead{lvdk}; blocking
+\code{qa-checks} gate)}: \src{tools/verif/check_elab_strict.py} runs
+pyslang over \code{soc_top}, \code{rv32i_cpu_top} and \code{gpu_top} on
+6 arms (3 default, FPGA, 2 macro), because Verilator and sv2v accept
+use-before-declare while VCS and Xcelium reject it. Add a new define arm
+to its \code{ARMS} table. Only macro arms may use
+\code{--ignore-unknown-modules}, which also hides genuinely missing
+modules.
+\end{relocated}
