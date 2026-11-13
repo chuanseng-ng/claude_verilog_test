@@ -334,7 +334,7 @@ def test_missing_pandoc_exit_code(tmp_path, monkeypatch):
 def test_status_marks_follow_the_pictograph_table(tmp_path):
     """Check every pictograph maps to its mark and the variation selector is removed."""
     md = (
-        "# T\n\n🟡 a 🟠 b ✋ c 🛑 d 🚫 e ❗ f 🚨 g 🚩 h 🎉 i 🎯 j 🔄 k ⏭ l "
+        "# T\n\n🟡 a 🟠 b ✋ c 🛑 d 🚫 e ❗ f 🚨 g 🚩 h 🎉 i 🎯 j 🔄 k ⏭ l ⏳ l2 "
         "ℹ️ m 📝 n 👉 o 🔥 p ⚡ q ❓ r 🤔 s 📉 t 📈 u 📊 v 🔧 w 🚀 x\n"
     )
     tex, _, warns = conv(tmp_path, md)
@@ -342,7 +342,7 @@ def test_status_marks_follow_the_pictograph_table(tmp_path):
     assert tex.count("\\hold{}") == 3
     assert tex.count("\\warn{}") == 5
     assert tex.count("\\ok{}") == 2
-    assert tex.count("\\wip{}") == 2
+    assert tex.count("\\wip{}") == 3
     assert tex.count("\\notemark{}") == 8
     assert tex.count("\\openmark{}") == 2
     assert "\ufe0f" not in tex

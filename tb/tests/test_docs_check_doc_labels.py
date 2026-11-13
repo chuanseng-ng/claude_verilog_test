@@ -205,6 +205,18 @@ def test_src_to_missing_path(tmp_path, capsys) -> None:  # type: ignore[no-untyp
     assert "gone.sv" in joined and "nodir/" in joined and "nomatch" in joined
 
 
+def test_src_path_with_line_suffix(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A \\src path may carry a :line or :first-last suffix; the file must still exist."""
+    text = (
+        GOOD_DS
+        + "\\src{rtl/soc/apb_cdc_bridge.sv:12} \\src{rtl/soc/apb_cdc_bridge.sv:3-9}\n"
+        + "\\src{rtl/soc/gone.sv:5}\n"
+    )
+    files = {"docs/manual/ds/ds.tex": text, "rtl/soc/apb_cdc_bridge.sv": "module m; endmodule\n"}
+    rc, out = run(tree(good(tmp_path), files), capsys)
+    assert rc == 1 and len(out) == 1 and "gone.sv" in out[0]
+
+
 def test_labels_tsv_drift(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
     """A stale labels.tsv fails, --write-labels repairs it."""
     root = good(tmp_path)

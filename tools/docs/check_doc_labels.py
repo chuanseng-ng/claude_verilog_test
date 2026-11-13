@@ -217,6 +217,8 @@ class Checker:
         files = self.repo_files()
         for rel, line, raw in self.srcs:
             path = raw.replace("\\_", "_").replace("\\", "")
+            # Historical text may cite "file:line" or "file:first-last"; the file must exist.
+            path = re.sub(r":\d+(?:-\d+)?$", "", path)
             if "*" in path or "?" in path:
                 ok = any(fnmatch.fnmatch(f, path) for f in files)
             elif path.endswith("/"):
