@@ -4,6 +4,1626 @@
 
 This chapter states the verification strategy. It defines the checks for each phase.
 
+\begin{relocated}{docs/verification/VERIFICATION_PLAN.md}
+% Converted from docs/verification/VERIFICATION_PLAN.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{Verification Plan}\label{ds:ch:verification-plan}
+
+Phase-Aligned Verification Strategy with AI/Human Responsibilities
+
+Document status: Frozen Last updated: 2026-01-17
+
+\subsection{Overview}\label{ds:ch:verification-plan:overview}
+
+This document defines the verification strategy for all project phases,
+detailing what to verify, how to verify it, and clear AI vs Human
+responsibilities for verification tasks.
+
+\subsubsection{Core Principles}\label{ds:ch:verification-plan:core-principles}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Python is the golden reference}: Reference models define
+  correctness
+\item
+  \textbf{Scoreboards decide truth}: RTL behavior compared against
+  reference models
+\item
+  \textbf{Randomized stress \textgreater{} Directed tests}: After smoke
+  tests pass, emphasize random testing
+\item
+  \textbf{Verification precedes optimization}: Never optimize unverified
+  RTL
+\item
+  \textbf{Specification-driven}: All verification derives from
+  architectural specs
+\end{enumerate}
+
+\subsubsection{Verification Stack}\label{ds:ch:verification-plan:verification-stack}
+
+\textbf{Tools}:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{cocotb}: Signal-level drivers, monitors, clocking, resets
+\item
+  \textbf{pyuvm}: Structure, sequences, agents, scoreboards
+\item
+  \textbf{Python reference models}: Golden behavioral models (see
+  REFERENCE\_\allowbreak{}MODEL\_\allowbreak{}SPEC.md)
+\item
+  \textbf{pytest}: Unit testing for reference models and testbench
+  components
+\end{itemize}
+
+\textbf{Simulation}:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Verilator}: Fast, free, linting
+\item
+  \textbf{Questa/\allowbreak{}Xcelium}: Full-featured (if available)
+\end{itemize}
+
+\subsection{Phase 0 Verification}\label{ds:ch:verification-plan:phase-0-verification}
+
+\textbf{Status}: Specification and model development (no RTL)
+
+\subsubsection{Objectives}\label{ds:ch:verification-plan:objectives}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Validate that specifications are complete and unambiguous
+\item
+  Implement Python reference models
+\item
+  Develop testbench infrastructure
+\item
+  Create initial test sequences
+\end{enumerate}
+
+\subsubsection{Deliverables}\label{ds:ch:verification-plan:deliverables}
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*193/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*427/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*360/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Deliverable
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+AI/Human Responsibility
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CPU reference model & RV32IModel class implementing all 37 instructions
+& \textbf{Human writes}, AI assists with boilerplate \\
+GPU reference model & GPUKernelModel class (skeleton only) &
+\textbf{Human designs}, AI assists \\
+Memory model & MemoryModel class for sparse memory & AI may generate,
+\textbf{Human reviews} \\
+cocotb infrastructure & Clock, reset, basic drivers & AI may generate,
+\textbf{Human reviews} \\
+Model unit tests & pytest tests for reference models & \textbf{Human
+writes critical tests}, AI assists \\
+\end{longtable}
+}
+
+\subsubsection{AI Responsibilities (Phase 0)}\label{ds:ch:verification-plan:ai-responsibilities-phase-0}
+
+AI MAY assist with:
+
+\begin{itemize}
+\tightlist
+\item
+  Generating Python class boilerplate
+\item
+  Simple instruction implementations (ADD, SUB, AND, OR, etc.)
+\item
+  Memory model read/\allowbreak{}write functions
+\item
+  cocotb clock and reset utilities
+\item
+  Test case scaffolding
+\end{itemize}
+
+AI MUST NOT:
+
+\begin{itemize}
+\tightlist
+\item
+  Decide instruction semantics (must follow spec exactly)
+\item
+  Design verification architecture
+\item
+  Define what "correct" means
+\end{itemize}
+
+\subsubsection{Human Responsibilities (Phase 0)}\label{ds:ch:verification-plan:human-responsibilities-phase-0}
+
+Human MUST:
+
+\begin{itemize}
+\tightlist
+\item
+  Write and verify all branch instruction implementations
+\item
+  Write and verify all load/\allowbreak{}store instructions
+\item
+  Implement sign extension correctly
+\item
+  Design scoreboard comparison strategy
+\item
+  Cross-verify reference model against RISC-V ISA simulator
+  (spike/\allowbreak{}QEMU)
+\item
+  Review all AI-generated code
+\end{itemize}
+
+\subsubsection{Exit Criteria (Phase 0)}\label{ds:ch:verification-plan:exit-criteria-phase-0}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} CPU reference model implements all 37 RV32I instructions
+\item
+  \ok{} Reference model passes 100+ unit tests
+\item
+  \ok{} Reference model cross-validated against spike (10k+
+  instructions)
+\item
+  \ok{} cocotb infrastructure can drive reset and clock
+\item
+  \ok{} Memory model tested with various access patterns
+\item
+  \ok{} All team members agree specifications are complete
+\end{itemize}
+
+\subsubsection{Test Metrics (Phase 0)}\label{ds:ch:verification-plan:test-metrics-phase-0}
+
+{
+\begin{longtable}[]{@{}cc@{}}
+\toprule\noalign{}
+Metric & Target \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Reference model instruction coverage & 37/37 (100\%) \\
+Reference model unit test pass rate & 100\% \\
+Cross-validation vs spike agreement & 100\% \\
+\end{longtable}
+}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Phase 1 Verification}\label{ds:ch:verification-plan:phase-1-verification}
+
+\textbf{Status}: Single-cycle CPU with interfaces
+
+\subsubsection{Objectives}\label{ds:ch:verification-plan:objectives-1}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Verify RV32I instruction correctness
+\item
+  Verify AXI4-Lite protocol compliance
+\item
+  Verify APB3 debug interface
+\item
+  Verify commit interface correctness
+\item
+  Prove RTL matches reference model
+\end{enumerate}
+
+\subsubsection{Test Architecture}\label{ds:ch:verification-plan:test-architecture}
+
+\begin{textblock}
+pyuvm Test
+    └── pyuvm Environment
+        ├── AXI4-Lite Agent (memory)
+        │   ├── Driver (memory slave model)
+        │   ├── Monitor (transaction logging)
+        │   └── Sequencer (back-pressure randomization)
+        ├── APB3 Agent (debug master)
+        │   ├── Driver (debug commands)
+        │   ├── Monitor (response checking)
+        │   └── Sequencer (halt/resume/step sequences)
+        ├── Commit Monitor
+        │   └── Captures commit_valid, commit_pc, commit_insn
+        └── Scoreboard
+            ├── RV32IModel instance
+            ├── Compare commits against model
+            └── Flag mismatches
+\end{textblock}
+
+\subsubsection{Test Categories}\label{ds:ch:verification-plan:test-categories}
+
+\paragraph{Smoke Tests (Directed)}\label{ds:ch:verification-plan:1-smoke-tests-directed}\origsec{1}
+
+\textbf{Purpose}: Verify basic functionality before random testing
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*256/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*415/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*309/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Test Name
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+AI/Human
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{test_reset} & Verify PC = 0x0000\_\allowbreak{}0000, all regs = 0
+& AI may write, \textbf{Human reviews} \\
+\code{test_simple_add} & Execute ADD, verify result & AI may write,
+\textbf{Human reviews} \\
+\code{test_branch_taken} & Execute BEQ with true condition &
+\textbf{Human writes} \\
+\code{test_load_store} & LW then SW to same address & \textbf{Human
+writes} \\
+\code{test_halt_resume} & Debug halt and resume sequence & \textbf{Human
+writes} \\
+\end{longtable}
+}
+
+\textbf{AI assistance}: AI may generate test structure, human must
+verify logic.
+
+\textbf{Human responsibility}: Review and approve all smoke tests.
+
+\textbf{Exit criteria}: All smoke tests pass.
+
+\paragraph{ISA Compliance Tests (Directed)}\label{ds:ch:verification-plan:2-isa-compliance-tests-directed}\origsec{2}
+
+\textbf{Purpose}: Test every instruction in isolation
+
+\textbf{Test generation}:
+
+\begin{lstlisting}[language=Python]
+# Example: Test all arithmetic instructions
+@cocotb.test()
+async def test_isa_arithmetic(dut):
+    instructions = [
+        ("ADD",  0x002081b3, x1=10, x2=20, expect_x3=30),
+        ("SUB",  0x402081b3, x1=30, x2=10, expect_x3=20),
+        # ... all 37 instructions
+    ]
+\end{lstlisting}
+
+\textbf{AI may assist}: Generating instruction encodings and test loops
+
+\textbf{Human must}: Verify expected values, edge cases (overflow,
+signed, etc.)
+
+\textbf{Coverage target}: 37/37 instructions executed at least once
+
+\paragraph{Random Instruction Tests (Constrained Random)}\label{ds:ch:verification-plan:3-random-instruction-tests-constrained-random}\origsec{3}
+
+\textbf{Purpose}: Stress test with random legal instruction sequences
+
+\textbf{Strategy}:
+
+\begin{lstlisting}[language=Python]
+class RandomInstructionSequence(uvm_sequence):
+    def body(self):
+        for _ in range(10000):
+            insn = self.generate_random_instruction()
+            self.start_item(insn)
+\end{lstlisting}
+
+\textbf{Constraints}:
+
+\begin{itemize}
+\tightlist
+\item
+  Only generate legal RV32I instructions
+\item
+  Ensure memory addresses are in valid range
+\item
+  Avoid infinite loops (use instruction count limit)
+\end{itemize}
+
+\textbf{AI may}: Generate random instruction generator framework
+
+\textbf{Human must}: Define constraints, verify randomization quality
+
+\textbf{Coverage target}: 10,000+ random instructions, zero failures
+
+\paragraph{AXI4-Lite Protocol Tests}\label{ds:ch:verification-plan:4-axi4-lite-protocol-tests}\origsec{4}
+
+\textbf{Purpose}: Verify AXI4-Lite master compliance
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Test Name & Description & AI/Human \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{test_axi_read_basic} & Simple read transaction & AI may write \\
+\code{test_axi_write_basic} & Simple write transaction & AI may write \\
+\code{test_axi_backpressure} & Randomize READY signals & \textbf{Human
+writes} \\
+\code{test_axi_error_response} & SLVERR/\allowbreak{}DECERR handling &
+\textbf{Human writes} \\
+\end{longtable}
+}
+
+\textbf{Protocol checker}: Use cocotb AXI monitor to check protocol
+violations
+
+\textbf{AI may}: Generate basic transaction tests
+
+\textbf{Human must}: Test error cases, back-pressure, edge conditions
+
+\paragraph{Debug Interface Tests}\label{ds:ch:verification-plan:5-debug-interface-tests}\origsec{5}
+
+\textbf{Purpose}: Verify APB3 debug functionality
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*346/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*300/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*334/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Test Name
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+AI/Human
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{test_debug_halt} & Halt CPU via DBG\_CTRL & \textbf{Human
+writes} \\
+\code{test_debug_resume} & Resume execution & \textbf{Human writes} \\
+\code{test_debug_single_step} & Execute one instruction & \textbf{Human
+writes} \\
+\code{test_debug_breakpoint} & Breakpoint triggers halt & \textbf{Human
+writes} \\
+\code{test_debug_reg_read} & Read GPRs when halted & AI may write,
+\textbf{Human reviews} \\
+\code{test_debug_reg_write} & Write GPRs when halted & \textbf{Human
+writes} \\
+\end{longtable}
+}
+
+\textbf{Human responsibility}: All debug tests due to complexity
+
+\subsubsection{Scoreboard Implementation}\label{ds:ch:verification-plan:scoreboard-implementation}
+
+\begin{lstlisting}[language=Python]
+class CPUScoreboard(uvm_component):
+    def __init__(self, name, parent):
+        super().__init__(name, parent)
+        self.model = RV32IModel()  # Reference model
+        self.mismatches = 0
+
+    def write_commit(self, txn):
+        """Called when RTL commits an instruction"""
+        # Step reference model with same instruction
+        ref_result = self.model.step(txn.insn)
+
+        # Compare PC
+        if txn.pc != ref_result['pc']:
+            self.log.error(f"PC mismatch: RTL={txn.pc:08x}, Model={ref_result['pc']:08x}")
+            self.mismatches += 1
+
+        # Compare register writes
+        if ref_result['rd'] is not None:
+            rtl_rd_val = self.get_rtl_register(ref_result['rd'])
+            if rtl_rd_val != ref_result['rd_value']:
+                self.log.error(f"Register x{ref_result['rd']} mismatch")
+                self.mismatches += 1
+
+        # Compare memory writes
+        if ref_result['mem_write']:
+            # Check memory write matches
+            pass  # Implementation details
+
+    def report_phase(self):
+        if self.mismatches == 0:
+            self.log.info("PASS: No mismatches detected")
+        else:
+            self.log.error(f"FAIL: {self.mismatches} mismatches")
+\end{lstlisting}
+
+\textbf{Human responsibility}: Design and implement scoreboard logic
+
+\textbf{AI may assist}: Boilerplate pyuvm structure
+
+\subsubsection{AI/Human Responsibilities (Phase 1)}\label{ds:ch:verification-plan:aihuman-responsibilities-phase-1}
+
+\paragraph{AI MAY assist with}\label{ds:ch:verification-plan:ai-may-assist-with}
+
+\begin{itemize}
+\tightlist
+\item
+  cocotb drivers for AXI4-Lite and APB3
+\item
+  Simple directed test generation
+\item
+  Random instruction generator framework
+\item
+  pyuvm agent boilerplate
+\item
+  Monitor transaction capture
+\item
+  Coverage collection setup
+\end{itemize}
+
+\paragraph{Human MUST}\label{ds:ch:verification-plan:human-must}
+
+\begin{itemize}
+\tightlist
+\item
+  Design scoreboard comparison algorithm
+\item
+  Implement complex test scenarios (debug, errors, back-pressure)
+\item
+  Verify all test results
+\item
+  Analyze failures and waveforms
+\item
+  Decide when verification is "complete"
+\item
+  Write assertions for critical properties
+\end{itemize}
+
+\subsubsection{Assertions (SystemVerilog)}\label{ds:ch:verification-plan:assertions-systemverilog}
+
+\textbf{Note}: SVA assertions in separate files, not in RTL
+
+\textbf{Critical assertions}:
+
+\begin{lstlisting}[language=Verilog]
+// No double write-back in same cycle
+assert property (@(posedge clk) disable iff (!rst_n)
+    commit_valid |-> ##1 !commit_valid || (commit_pc != $past(commit_pc))
+);
+
+// x0 always zero
+assert property (@(posedge clk) disable iff (!rst_n)
+    regfile.regs[0] == 0
+);
+
+// AXI4-Lite protocol: valid must not deassert after assert until ready
+assert property (@(posedge clk) disable iff (!rst_n)
+    $rose(axi_arvalid) |-> axi_arvalid throughout axi_arready[->1]
+);
+\end{lstlisting}
+
+\textbf{AI may}: Generate assertion templates
+
+\textbf{Human must}: Define critical properties to assert
+
+\subsubsection{Coverage}\label{ds:ch:verification-plan:coverage}
+
+\textbf{Instruction coverage}:
+
+\begin{itemize}
+\tightlist
+\item
+  Track which instructions executed
+\item
+  Target: 100\% of 37 RV32I instructions
+\end{itemize}
+
+\textbf{State coverage}:
+
+\begin{itemize}
+\tightlist
+\item
+  CPU states visited (FETCH, DECODE, EXECUTE, etc.)
+\item
+  Debug states (HALTED, RUNNING)
+\end{itemize}
+
+\textbf{Edge coverage}:
+
+\begin{itemize}
+\tightlist
+\item
+  Transitions between states
+\item
+  Halt while in different CPU states
+\end{itemize}
+
+\textbf{Cross coverage}:
+
+\begin{itemize}
+\tightlist
+\item
+  Instruction × CPU state
+\item
+  Memory access × alignment
+\end{itemize}
+
+\textbf{AI may}: Generate coverage bins
+
+\textbf{Human must}: Define coverage goals and analyze coverage gaps
+
+\subsubsection{Exit Criteria (Phase 1)}\label{ds:ch:verification-plan:exit-criteria-phase-1}
+
+{
+\begin{longtable}[]{@{}cc@{}}
+\toprule\noalign{}
+Criterion & Target \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Instruction coverage & 37/37 (100\%) \\
+Smoke tests & 100\% pass \\
+Random instruction tests & 10,000+ instructions, 0 failures \\
+AXI4-Lite protocol tests & 100\% pass \\
+Debug interface tests & 100\% pass \\
+Scoreboard mismatches & 0 \\
+Known failing seeds & 0 \\
+Code coverage & \textgreater95\% (RTL lines) \\
+State coverage & 100\% (all states visited) \\
+\end{longtable}
+}
+
+\begin{quote}
+SoC / peripheral / NPU line + toggle coverage (\ghref{216}): measured,
+triaged and enforced as a nightly gate (95 \% per-module line floor +
+control-signal toggle floor, triaged trees only; bead \bead{s1cg}) in
+\src{docs/verification/SOC_COVERAGE_REPORT.md}; reproduce with
+\texttt{make\ -\allowbreak{}C\ tb/\allowbreak{}cocotb/\allowbreak{}soc\ soc\_\allowbreak{}coverage}
+(nightly CI: \src{.github/workflows/soc_coverage.yml}).
+
+CPU / cache / GPU (\texttt{rtl/\allowbreak{}cpu|mem|gpu}) line coverage
+is part of the same nightly gate since bead \bead{a5ze} (slice 2): every
+module of those three trees must reach the 95 \% line floor on the
+combined SoC + CPU/\allowbreak{}cache/\allowbreak{}GPU data (category-b
+waivers for unreachable points). The 100 \% control-toggle gate is
+deliberately NOT applied to them. See
+\src{docs/verification/SOC_COVERAGE_REPORT.md}, sections "Gate decision"
+and "line triage, slice 2".
+\end{quote}
+
+\subsubsection{Debugging Strategy}\label{ds:ch:verification-plan:debugging-strategy}
+
+When failures occur:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Check scoreboard logs}: Identify first mismatch
+\item
+  \textbf{Dump waveforms}: Examine cycle-by-cycle behavior
+\item
+  \textbf{Compare with reference model}: Step through both RTL and model
+\item
+  \textbf{Simplify test case}: Minimize failing sequence
+\item
+  \textbf{Add targeted assertions}: Catch bug earlier
+\end{enumerate}
+
+\textbf{AI may}: Help analyze logs, suggest debugging approaches
+
+\textbf{Human must}: Root-cause failures, fix RTL or model
+
+\subsubsection{Physical Design Verification (NEW in Phase 1)}\label{ds:ch:verification-plan:physical-design-verification-new-in-phase-1}
+
+\textbf{Status}: Integrated with RTL verification flow
+
+\textbf{Purpose}: Verify that the design is physically implementable and
+meets timing, power, and area targets.
+
+\paragraph{Synthesis and Place \& Route Verification}\label{ds:ch:verification-plan:6-synthesis-and-place-route-verification}\origsec{6}
+
+\textbf{Flow Integration}:
+
+The OpenROAD back-end flow runs after RTL verification passes:
+
+\begin{textblock}
+RTL Verification (cocotb + pyuvm)
+    └── Pass smoke tests + ISA tests
+        └── Synthesis (Yosys)
+            └── Place & Route (OpenROAD)
+                └── Static Timing Analysis (OpenSTA)
+                    └── Power Analysis (OpenROAD)
+                        └── Gate-Level Simulation (Verilator + SDF)
+\end{textblock}
+
+\textbf{Test Categories}:
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*129/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*395/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*251/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*205/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Test Category
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Tool
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+AI/Human
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Synthesis lint & Check for synthesis warnings & Yosys & AI may run,
+\textbf{Human reviews} \\
+CDC check & Clock-domain-crossing anti-patterns (\texttt{make\ cdc}) &
+Bedrock cdc\_\allowbreak{}snitch (sv2v→yosys) & AI may run,
+\textbf{Human reviews} \\
+Timing analysis & Check setup/\allowbreak{}hold violations & OpenSTA &
+\textbf{Human analyzes} \\
+Power analysis & Validate power budget & OpenROAD & \textbf{Human
+analyzes} \\
+DRC/LVS & Physical verification & KLayout & \textbf{Human reviews} \\
+Gate-level sim & Functional + timing verification & Verilator &
+\textbf{Human validates} \\
+\end{longtable}
+}
+
+}
+
+\begin{quote}
+\textbf{CDC check note:} \texttt{make\ -\allowbreak{}C\ sim\ cdc} runs
+Bedrock\textquotesingle s \code{cdc_snitch} (sv2v → yosys → analysis).
+It is \textbf{informational / parked} --- on the current single-clock
+SoC its \code{BAD} count is dominated by false positives (the async
+reset and synchronous APB/SPI ports are each modeled as a separate clock
+domain). It becomes a real \code{BAD=0} gate at Phase 6+ once actual
+clock domains exist. Full writeup:
+\src{docs/verification/CDC_SNITCH_POC.md}.
+\end{quote}
+
+\textbf{AI may assist with}:
+
+\begin{itemize}
+\tightlist
+\item
+  Running synthesis and P\&R scripts automatically
+\item
+  Parsing timing/\allowbreak{}power/\allowbreak{}area reports
+\item
+  Generating gate-level simulation testbenches
+\item
+  Collecting metrics (WNS, TNS, power, area)
+\end{itemize}
+
+\textbf{Human must}:
+
+\begin{itemize}
+\tightlist
+\item
+  Analyze timing violations and determine root cause
+\item
+  Decide on timing constraint adjustments
+\item
+  Validate power analysis results
+\item
+  Debug gate-level simulation mismatches
+\item
+  Approve physical design sign-off
+\end{itemize}
+
+\paragraph{Gate-Level Simulation}\label{ds:ch:verification-plan:7-gate-level-simulation}\origsec{7}
+
+\textbf{Purpose}: Verify that the gate-level netlist matches RTL
+functionality and meets timing with back-annotated delays.
+
+\textbf{Setup}:
+
+\begin{lstlisting}[language=Python]
+# cocotb gate-level simulation
+import cocotb
+from cocotb_test.simulator import run
+
+def test_gate_level():
+    run(
+        verilog_sources=["pnr/results/rv32i_cpu_top.v"],  # Gate-level netlist
+        toplevel="rv32i_cpu_top",
+        module="tb_rv32i_cpu_top",
+        simulator="verilator",
+        compile_args=["--timing"],  # Enable timing checks
+        extra_env={
+            "SDF_FILE": "pnr/results/rv32i_cpu_top.sdf"  # Back-annotated delays
+        }
+    )
+\end{lstlisting}
+
+\textbf{Tests to Run}:
+
+\begin{itemize}
+\tightlist
+\item
+  All Phase 1 smoke tests (from RTL verification)
+\item
+  Subset of random instruction tests (1,000+)
+\item
+  Timing-sensitive scenarios (back-to-back instructions, memory access)
+\end{itemize}
+
+\textbf{Comparison}:
+
+\begin{itemize}
+\tightlist
+\item
+  Gate-level commits must match RTL commits
+\item
+  Timing violations (setup/\allowbreak{}hold) = 0
+\end{itemize}
+
+\textbf{AI may}: Run gate-level tests automatically
+
+\textbf{Human must}: Investigate any mismatches between RTL and
+gate-level
+
+\paragraph{Power-Aware Simulation (UPF)}\label{ds:ch:verification-plan:8-power-aware-simulation-upf}\origsec{8}
+
+\textbf{Purpose}: Verify power intent and
+isolation/\allowbreak{}retention strategies (Phase 2+ only,
+infrastructure in Phase 1).
+
+\textbf{Phase 1 Scope}:
+
+\begin{itemize}
+\tightlist
+\item
+  Single power domain (no power gating)
+\item
+  UPF infrastructure setup
+\item
+  Supply net connectivity verification
+\end{itemize}
+
+\textbf{Phase 2+ Scope}:
+
+\begin{itemize}
+\tightlist
+\item
+  Multi-domain power gating
+\item
+  Isolation cell functionality
+\item
+  Retention cell functionality
+\item
+  Power state transitions
+\end{itemize}
+
+\textbf{Test Approach (Phase 2+)}:
+
+\begin{lstlisting}[language=Python]
+@cocotb.test()
+async def test_power_down_core(dut):
+    """Test core power-down and isolation"""
+
+    # Run some instructions
+    await run_instructions(dut, count=100)
+
+    # Save state
+    pc_before = dut.i_rv32i_core.pc_reg.value
+
+    # Power down core domain
+    await power_ctrl.power_down_domain("PD_CORE")
+    await Timer(100, units='us')
+
+    # Check isolation (no X propagation)
+    assert dut.commit_valid.value != 'x', "Isolation failed!"
+
+    # Power up core domain
+    await power_ctrl.power_up_domain("PD_CORE")
+
+    # Check retention (state preserved)
+    pc_after = dut.i_rv32i_core.pc_reg.value
+    assert pc_before == pc_after, "Retention failed!"
+
+    # Resume execution
+    await run_instructions(dut, count=100)
+\end{lstlisting}
+
+\textbf{AI may}:
+
+\begin{itemize}
+\tightlist
+\item
+  Generate UPF test sequences
+\item
+  Check for X propagation in waveforms
+\item
+  Compare state before/\allowbreak{}after power cycling
+\end{itemize}
+
+\textbf{Human must}:
+
+\begin{itemize}
+\tightlist
+\item
+  Design power state transition sequences
+\item
+  Validate isolation clamp values
+\item
+  Verify retention register behavior
+\item
+  Approve power-aware verification results
+\end{itemize}
+
+\subsubsection{Physical Design Exit Criteria (Phase 1)}\label{ds:ch:verification-plan:physical-design-exit-criteria-phase-1}
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Criterion & Target & Tool \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Synthesis warnings (critical) & 0 & Yosys \\
+WNS (worst negative slack) & \textgreater{} 0 ns & OpenSTA \\
+TNS (total negative slack) & 0 ns & OpenSTA \\
+Setup violations (all corners) & 0 & OpenSTA \\
+Hold violations (all corners) & 0 & OpenSTA \\
+Clock skew & \textless{} 100 ps & OpenSTA \\
+Total power @ 100 MHz & \textless{} 10 mW & OpenROAD \\
+IR drop on power grid & \textless{} 5\% & OpenROAD \\
+DRC violations & 0 & KLayout \\
+LVS errors & 0 & KLayout \\
+Gate-level sim vs RTL match & 100\% & Verilator \\
+Gate-level timing violations & 0 & Verilator + SDF \\
+\end{longtable}
+}
+
+\textbf{Documentation}:
+
+\begin{itemize}
+\tightlist
+\item
+  Timing report summary (setup, hold, clock)
+\item
+  Power report summary (total, per-module, clock tree)
+\item
+  Area report summary (cell count, total area)
+\item
+  Physical design lessons learned
+\end{itemize}
+
+\textbf{Sign-off}:
+
+Human must review all reports and approve physical design before
+declaring Phase 1 complete.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Phase 2 Verification}\label{ds:ch:verification-plan:phase-2-verification}
+
+\textbf{Status}: Pipelined CPU (5-stage)
+
+\subsubsection{New Verification Challenges}\label{ds:ch:verification-plan:new-verification-challenges}
+
+\begin{itemize}
+\tightlist
+\item
+  Hazard detection and forwarding
+\item
+  Pipeline stalls and flushes
+\item
+  Speculative execution (if added)
+\item
+  Branch misprediction recovery
+\end{itemize}
+
+\subsubsection{Test Additions}\label{ds:ch:verification-plan:test-additions}
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*190/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*390/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*400/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Test Category
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+AI/Human
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Hazard tests & RAW, WAR, WAW dependencies & \textbf{Human designs}, AI
+generates variants \\
+Pipeline stress & Back-to-back dependent instructions & AI may generate,
+\textbf{Human reviews} \\
+Flush tests & Branch taken/\allowbreak{}not-taken sequences &
+\textbf{Human writes} \\
+Forwarding tests & Data forwarding paths & \textbf{Human writes} \\
+\end{longtable}
+}
+
+\subsubsection{Assertions (Phase 2)}\label{ds:ch:verification-plan:assertions-phase-2}
+
+\begin{lstlisting}[language=Verilog]
+// No architectural state change on flush
+assert property (@(posedge clk) disable iff (!rst_n)
+    flush |-> (regfile_state == $past(regfile_state))
+);
+
+// Forwarding correctness
+assert property (@(posedge clk) disable iff (!rst_n)
+    (ex_rs1 == mem_rd) && mem_reg_write |-> (ex_rs1_value == mem_alu_result)
+);
+\end{lstlisting}
+
+\textbf{Human must}: Define all pipeline invariants
+
+\subsubsection{Exit Criteria (Phase 2)}\label{ds:ch:verification-plan:exit-criteria-phase-2}
+
+\begin{itemize}
+\tightlist
+\item
+  All Phase 1 criteria still met
+\item
+  Zero false commits (wrong register writes)
+\item
+  Zero pipeline deadlocks
+\item
+  Hazard scenarios: 1000+ tests, 0 failures
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Phase 3 Verification}\label{ds:ch:verification-plan:phase-3-verification}
+
+\textbf{Status}: \ok{} COMPLETE (2026-05-21) --- I-cache 7/7, D-cache
+8/8, integration 5/5, full regression 139/139; ASAP7 PPA sign-off at
+1418 MHz / 27.27 mW / 3,844 µm² (Run 43, 2026-05-20)
+
+\subsubsection{New Verification Challenges}\label{ds:ch:verification-plan:new-verification-challenges-1}
+
+\begin{itemize}
+\tightlist
+\item
+  Cache hit/miss behavior
+\item
+  Cache refill logic
+\item
+  Write-back correctness
+\item
+  Memory ordering preservation
+\end{itemize}
+
+\subsubsection{Reference Model Enhancement}\label{ds:ch:verification-plan:reference-model-enhancement}
+
+\textbf{Cache model}:
+
+\begin{lstlisting}[language=Python]
+class CacheModel:
+    def read(self, addr):
+        if addr in self.cache:
+            return self.cache[addr]  # Hit
+        else:
+            data = self.memory.read(addr)
+            self.cache[addr] = data  # Refill
+            return data
+\end{lstlisting}
+
+\textbf{Human must}: Implement cache model matching RTL behavior
+
+\subsubsection{Test Additions}\label{ds:ch:verification-plan:test-additions-1}
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Test Category & Description & AI/Human \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Cache hit tests & Repeated access to same address & AI may generate \\
+Cache miss tests & Access to uncached addresses & AI may generate \\
+Thrashing tests & Access pattern causing evictions & \textbf{Human
+designs} \\
+Write-back tests & Verify dirty line write-back & \textbf{Human
+writes} \\
+\end{longtable}
+}
+
+\subsubsection{Exit Criteria (Phase 3)}\label{ds:ch:verification-plan:exit-criteria-phase-3}
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} All Phase 2 criteria still met (139/139 regression)
+\item
+  \ok{} No cache coherence violations (scoreboard verified)
+\item
+  \ok{} No lost writes (write-back verified; D-cache 8/8)
+\item
+  \ok{} Cache stress cycles with 0 failures (integration 5/5, 139 total
+  tests)
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Phase 4 Verification}\label{ds:ch:verification-plan:phase-4-verification}
+
+\textbf{Status}: GPU added
+
+\subsubsection{GPU-Specific Verification}\label{ds:ch:verification-plan:gpu-specific-verification}
+
+\textbf{Reference model}: \code{GPUKernelModel} (see
+REFERENCE\_\allowbreak{}MODEL\_\allowbreak{}SPEC.md)
+
+\subsubsection{Test Categories}\label{ds:ch:verification-plan:test-categories-1}
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*198/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*448/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*334/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Test Category
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+AI/Human
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Vector kernels & Simple SIMT kernels (vec add, scalar mul) & AI may
+write, \textbf{Human reviews} \\
+Divergence tests & if/else with different paths & \textbf{Human
+writes} \\
+Memory coalescing & Verify coalesced vs serialized access &
+\textbf{Human writes} \\
+Grid/\allowbreak{}block sweep & Various grid/\allowbreak{}block
+dimensions & AI may generate, \textbf{Human reviews} \\
+\end{longtable}
+}
+
+\subsubsection{Scoreboard}\label{ds:ch:verification-plan:scoreboard}
+
+\begin{lstlisting}[language=Python]
+class GPUScoreboard(uvm_component):
+    def __init__(self, name, parent):
+        super().__init__(name, parent)
+        self.model = GPUKernelModel(warp_size=8)
+
+    def write_kernel_done(self, txn):
+        # Compare RTL memory output with model
+        model_result = self.model.execute_kernel()
+
+        for addr in model_result['memory']:
+            rtl_val = self.read_rtl_memory(addr)
+            model_val = model_result['memory'][addr]
+            if rtl_val != model_val:
+                self.log.error(f"Memory mismatch at 0x{addr:08x}")
+\end{lstlisting}
+
+\textbf{Human must}: Implement GPU scoreboard and divergence
+verification
+
+\subsubsection{Exit Criteria (Phase 4)}\label{ds:ch:verification-plan:exit-criteria-phase-4}
+
+\begin{itemize}
+\tightlist
+\item
+  All directed GPU kernels pass
+\item
+  Divergence tests pass (mask correctness verified)
+\item
+  No GPU deadlocks in 100k+ cycle runs
+\item
+  CPU-GPU integration tests pass
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Phase 5 Verification}\label{ds:ch:verification-plan:phase-5-verification}
+
+\textbf{Status}: \ok{} COMPLETE (2026-06-24, M1--M12); live status in
+\texttt{Doc:\allowbreak{}\ cr:\allowbreak{}status:\allowbreak{}phase-\allowbreak{}status}
+
+\subsubsection{System-Level Verification}\label{ds:ch:verification-plan:system-level-verification}
+
+\begin{itemize}
+\tightlist
+\item
+  Boot sequence
+\item
+  Peripheral access (UART, SPI, Timer)
+\item
+  Interrupt handling (requires Phase 2+ CPU with interrupts)
+\item
+  DMA transfers
+\end{itemize}
+
+\subsubsection{Test Additions}\label{ds:ch:verification-plan:test-additions-2}
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*232/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*335/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*413/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Test Category
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+AI/Human
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Boot tests & Verify boot from ROM & \textbf{Human writes} \\
+Firmware tests & Run simple firmware & \textbf{Human provides
+firmware} \\
+Peripheral tests & UART TX/RX, SPI transfer & AI may write,
+\textbf{Human reviews} \\
+Stress tests & Long random regressions & AI may generate, \textbf{Human
+reviews} \\
+\end{longtable}
+}
+
+\subsubsection{Exit Criteria (Phase 5)}\label{ds:ch:verification-plan:exit-criteria-phase-5}
+
+\begin{itemize}
+\tightlist
+\item
+  Boots firmware reliably from ROM loaded with C code (100/100 attempts)
+\item
+  Sustains 1M+ cycle random tests, 0 failures
+\item
+  All peripherals functional
+\item
+  System-level assertions pass
+\end{itemize}
+
+\subsubsection{CDC Verification (GH epic \#90, 2-domain multi-clock
+SoC)}\label{ds:ch:verification-plan:cdc-verification-gh-epic-90-2-domain-multi-clock-soc}
+
+The SoC is single-clock through Phase 5, so it has \textbf{no genuine
+internal CDC}. Epic \#90 introduces exactly one crossing (CPU ↔ crossbar
+M0) and with it the project\textquotesingle s first CDC verification.
+
+\textbf{\code{test_async_axi_fifo} (\ghref{91}, 22/22)} --- unit suite for
+\src{rtl/soc/async_axi_fifo.sv} and the \src{rtl/soc/cdc/} primitives.
+First testbench in the repo to drive \textbf{two independent
+\code{Clock()} coroutines}. Clock-ratio matrix (ns): 4/9 (the real
+\textasciitilde2.25 CPU:fabric ratio), 9/4, 4/20, 20/4, 10/10 (the
+\texttt{PLL\_\allowbreak{}IMPL=\allowbreak{}"STUB"} equal-clock case),
+10/11 (coprime --- edges slide continuously through each other, the
+closest simulatable proxy for a violation window).
+
+Load-bearing cases, none of which may be dropped:
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*407/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*573/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Test
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What it catches
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+exact-depth-full & ±1 error in the gray full-comparison (accepted count
+must equal \code{*_depth_o} exactly) \\
+pointer wrap + near-empty ping-pong & wrap bug at the pointer MSB; every
+pointer value visited at depth 0/1 \\
+cross-flush (assert ONE reset only) & one-sided reset injecting
+fabricated AXI beats --- the failure the cross-coupled reset exists to
+prevent \\
+no-combinational-crossing (freeze \code{s_clk}) & any combinational path
+across the domain boundary \\
+white-box gray pointer & multi-bit gray transitions
+(\texttt{popcount(prev\textasciicircum{}curr)\ <=\allowbreak{}\ 1}) \\
+\end{longtable}
+}
+
+}
+
+\textbf{Not simulatable --- do not mistake a green run for silicon
+confidence.} Verilator is 2-state and zero-delay, so metastability, a
+missing synchronizer stage, or a raw binary pointer crossing would all
+pass. The real mitigations are structural:
+\texttt{(*\ magic\_\allowbreak{}cdc\ *)} on the primitives feeding \ghref{95}\textquotesingle s \code{cdc_snitch} BAD=0 gate, and --- since bead
+claude\_\allowbreak{}verilog\_\allowbreak{}test-k07 (2026-08-02) ---
+\src{pnr/constraints/phase5_soc_multiclock.sdc}\textquotesingle s
+\texttt{set\_\allowbreak{}clock\_\allowbreak{}groups\ -\allowbreak{}asynchronous}
+(for real synthesis/\allowbreak{}P\&R) PLUS a separate
+\src{pnr/constraints/phase5_soc_multiclock_check.sdc} carrying
+\code{set_max_delay} (no \code{-datapath_only} --- OpenSTA does not
+implement that flag; tool-verified, see that file\textquotesingle s
+header) on the \code{mem_q} read and the two pointer crossings, read
+post-route for targeted CDC budget verification only. The original
+single-file design (one SDC with both
+\texttt{set\_\allowbreak{}clock\_\allowbreak{}groups\ -\allowbreak{}asynchronous}
+and
+\texttt{set\_\allowbreak{}max\_\allowbreak{}delay\ -\allowbreak{}datapath\_\allowbreak{}only})
+was tool-verified to never apply those budgets at all --- OpenSTA aborts
+\code{read_sdc} on the unrecognised \code{-datapath_only} flag, and even
+with that flag removed,
+\texttt{set\_\allowbreak{}clock\_\allowbreak{}groups\ -\allowbreak{}asynchronous}
+(or an equivalent \code{set_false_path} between the two clocks)
+suppresses the \code{set_max_delay} exception outright, regardless of
+its \code{-through} specificity --- hence the OpenTitan-precedent split.
+The PR review checklist in the module headers is unaffected by this
+correction.
+
+\textbf{Coverage gap to close in \#92:} with
+\texttt{PLL\_\allowbreak{}IMPL=\allowbreak{}"STUB"},
+\texttt{core\_\allowbreak{}clk\ =\allowbreak{}=\allowbreak{}\ clk\_\allowbreak{}i},
+so after \#93 the \code{soc_all} integration suites exercise the bridge
+at ratio 1:1 and contribute \textbf{zero} CDC coverage. Until the two
+stub PLLs get different ratios, \code{test_async_axi_fifo} is the only
+CDC coverage there is.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Regression Testing}\label{ds:ch:verification-plan:regression-testing}
+
+\subsubsection{Continuous Integration}\label{ds:ch:verification-plan:continuous-integration}
+
+\textbf{On every commit}:
+
+\begin{itemize}
+\tightlist
+\item
+  Run smoke tests (\textless{} 1 minute)
+\item
+  Run ISA tests (\textless{} 5 minutes)
+\item
+  Check for new lint warnings
+\end{itemize}
+
+\textbf{Nightly}:
+
+\begin{itemize}
+\tightlist
+\item
+  Run full random regression (10k+ instructions)
+\item
+  Run cache stress tests
+\item
+  Generate coverage reports
+\end{itemize}
+
+\textbf{Weekly}:
+
+\begin{itemize}
+\tightlist
+\item
+  Run extended random tests (100k+ instructions)
+\item
+  Cross-validate reference model vs spike
+\end{itemize}
+
+\subsubsection{Seed Management}\label{ds:ch:verification-plan:seed-management}
+
+\begin{itemize}
+\tightlist
+\item
+  Log random seeds for reproducibility
+\item
+  Archive failing seeds
+\item
+  Regression suite includes all previously failing seeds
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Tools and Infrastructure}\label{ds:ch:verification-plan:tools-and-infrastructure}
+
+\subsubsection{cocotb Setup}\label{ds:ch:verification-plan:cocotb-setup}
+
+\begin{lstlisting}[language=bash]
+# Install cocotb
+pip install cocotb cocotb-bus pytest
+
+# Run simulation
+make -C sim sim
+make -C sim test TEST=test_simple_add
+\end{lstlisting}
+
+\subsubsection{Waveform Viewing}\label{ds:ch:verification-plan:waveform-viewing}
+
+\begin{lstlisting}[language=bash]
+# Generate waveforms
+make -C sim waves
+
+# View with GTKWave
+gtkwave sim/dump.vcd
+\end{lstlisting}
+
+\subsubsection{Coverage Collection}\label{ds:ch:verification-plan:coverage-collection}
+
+\begin{lstlisting}[language=bash]
+# Run with coverage
+make -C sim coverage
+
+# View coverage report
+firefox sim/coverage/index.html
+\end{lstlisting}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{Summary: AI vs Human Responsibilities}\label{ds:ch:verification-plan:summary-ai-vs-human-responsibilities}
+
+\subsubsection{AI Responsibilities (Across All Phases)}\label{ds:ch:verification-plan:ai-responsibilities-across-all-phases}
+
+AI MAY assist with:
+
+\begin{itemize}
+\tightlist
+\item
+  \ok{} cocotb driver boilerplate
+\item
+  \ok{} Simple directed test generation
+\item
+  \ok{} Random instruction generator frameworks
+\item
+  \ok{} pyuvm agent/\allowbreak{}monitor scaffolding
+\item
+  \ok{} Coverage bin generation
+\item
+  \ok{} Waveform analysis suggestions
+\item
+  \ok{} Log parsing and pattern detection
+\end{itemize}
+
+\subsubsection{Human Responsibilities (Across All Phases)}\label{ds:ch:verification-plan:human-responsibilities-across-all-phases}
+
+Human MUST:
+
+\begin{itemize}
+\tightlist
+\item
+  \warn{} Design verification architecture
+\item
+  \warn{} Implement reference models
+\item
+  \warn{} Define "correctness" (scoreboard logic)
+\item
+  \warn{} Write complex tests (debug, hazards, divergence, caches)
+\item
+  \warn{} Analyze failures and debug
+\item
+  \warn{} Define coverage goals
+\item
+  \warn{} Decide when verification is complete
+\item
+  \warn{} Review all AI-generated code
+\item
+  \warn{} Define critical assertions
+\item
+  \warn{} Cross-validate reference models
+\end{itemize}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{pyuvm Migration Status}\label{ds:ch:verification-plan:pyuvm-migration-status}
+
+\textbf{Status}: \ok{} COMPLETE (Phase G - 2026-01-31)
+
+\subsubsection{Migration Summary}\label{ds:ch:verification-plan:migration-summary}
+
+The RV32I CPU verification infrastructure has been successfully migrated
+from raw cocotb to pyuvm (Python UVM) following a systematic 7-phase
+approach (Phases A through G).
+
+\textbf{Completion Date}: 2026-01-31 \textbf{Duration}: 2 days
+(2026-01-30 to 2026-01-31) \textbf{Total Code}: \textasciitilde1,800
+lines of pyuvm infrastructure + 18 component files
+
+\subsubsection{What Was Migrated}\label{ds:ch:verification-plan:what-was-migrated}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*215/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*118/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*646/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Component
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Status
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Location
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{AXI Memory Driver} & \ok{} Complete &
+\src{tb/cpu_uvm/agents/axi_agent/axi_driver.py} \\
+\textbf{APB Debug Driver} & \ok{} Complete &
+\src{tb/cpu_uvm/agents/apb_agent/apb_driver.py} \\
+\textbf{Commit Monitor} & \ok{} Complete &
+\src{tb/cpu_uvm/monitors/commit_monitor.py} \\
+\textbf{CPU Scoreboard} & \ok{} Complete &
+\src{tb/cpu_uvm/scoreboards/cpu_scoreboard.py} \\
+\textbf{AXI Agent} & \ok{} Complete &
+\src{tb/cpu_uvm/agents/axi_agent/axi_agent.py} \\
+\textbf{APB Agent} & \ok{} Complete &
+\src{tb/cpu_uvm/agents/apb_agent/apb_agent.py} \\
+\textbf{CPU Environment} & \ok{} Complete &
+\src{tb/cpu_uvm/env/cpu_env.py} \\
+\textbf{Base Sequence} & \ok{} Complete &
+\src{tb/cpu_uvm/sequences/base_sequence.py} \\
+\textbf{Directed Sequences} & \ok{} Complete &
+\src{tb/cpu_uvm/sequences/directed_sequences.py} \\
+\textbf{Random Sequence} & \ok{} Complete &
+\src{tb/cpu_uvm/sequences/random_instr_sequence.py} \\
+\textbf{Base Test} & \ok{} Complete &
+\src{tb/cpu_uvm/tests/base_test.py} \\
+\textbf{Smoke Tests} & \ok{} Complete &
+\src{tb/cpu_uvm/tests/test_smoke_uvm.py} (4/4 PASSING) \\
+\textbf{Random Tests} & \ok{} Complete &
+\src{tb/cpu_uvm/tests/test_random_uvm.py} (2/2 PASSING) \\
+\end{longtable}
+}
+
+\subsubsection{Test Results}\label{ds:ch:verification-plan:test-results}
+
+\textbf{Smoke Tests} (4 tests):
+
+\begin{lstlisting}[language={}]
+make smoke_uvm
+** TESTS=4 PASS=4 FAIL=0 SKIP=0 **
+  - test_addi_uvm: PASS
+  - test_branch_taken_uvm: PASS
+  - test_branch_not_taken_uvm: PASS
+  - test_jal_uvm: PASS
+\end{lstlisting}
+
+\textbf{Random Tests} (2 tests):
+
+\begin{textblock}
+make random_uvm
+** TESTS=2 PASS=2 FAIL=0 SKIP=0 **
+  - test_random_single_uvm: PASS (100 instructions, seed=42)
+  - test_random_multi_seed_uvm: PASS (10 seeds × 100 instructions)
+\end{textblock}
+
+\subsubsection{Legacy Tests Archived}\label{ds:ch:verification-plan:legacy-tests-archived}
+
+Original cocotb tests (2,749 lines) have been archived to
+\src{tb/cocotb/cpu/legacy/}:
+
+\begin{itemize}
+\tightlist
+\item
+  \code{test_smoke.py} → Replaced by \code{test_smoke_uvm.py}
+\item
+  \code{test_random_instructions.py} → Replaced by
+  \code{test_random_uvm.py}
+\item
+  \code{test_isa_compliance.py} → Migration planned for future phase
+\end{itemize}
+
+All duplicate helper classes (\code{APBDebugInterface},
+\code{SimpleAXIMemory}) have been removed from active tests.
+
+\subsubsection{Key Improvements}\label{ds:ch:verification-plan:key-improvements}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{No Duplication}: Single APBDebugDriver replaces 3+ duplicated
+  implementations
+\item
+  \textbf{UVM Structure}: Proper test → environment → agent → driver
+  hierarchy
+\item
+  \textbf{Reusable Components}: All agents/\allowbreak{}drivers shared
+  across tests
+\item
+  \textbf{Reference Model Integration}: Automatic validation via
+  CPUScoreboard
+\item
+  \textbf{Maintainability}: Clean separation of concerns, no raw signal
+  manipulation
+\end{enumerate}
+
+\subsubsection{Documentation}\label{ds:ch:verification-plan:documentation}
+
+Complete migration documentation available at:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Migration Plan}: \code{docs/pyuvm_migration/MIGRATION_PLAN.md}
+\item
+  \textbf{Migration Status}:
+  \texttt{Doc:\allowbreak{}\ cr:\allowbreak{}status:\allowbreak{}pyuvm-\allowbreak{}migration}
+\item
+  \textbf{Lessons Learned}:
+  \code{docs/pyuvm_migration/LESSONS_LEARNED.md}
+\item
+  \textbf{pyuvm Infrastructure Guide}: \src{tb/cpu_uvm/README.md}
+\item
+  \textbf{Test Guide}: \src{tb/cocotb/cpu/README.md}
+\end{itemize}
+
+\subsubsection{Next Steps}\label{ds:ch:verification-plan:next-steps}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Migrate ISA compliance tests (37 RV32I instructions) - Planned
+\item
+  Add coverage collection - Planned
+\item
+  Expand random test seed count (10 → 100) - Optional
+\end{enumerate}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\subsection{References}\label{ds:ch:verification-plan:references}
+
+\begin{itemize}
+\tightlist
+\item
+  PHASE0\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md: CPU
+  architectural requirements
+\item
+  PHASE1\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md: CPU
+  implementation details
+\item
+  PHASE4\_\allowbreak{}GPU\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md:
+  GPU architecture
+\item
+  REFERENCE\_\allowbreak{}MODEL\_\allowbreak{}SPEC.md: Python reference
+  model API
+\item
+  MEMORY\_\allowbreak{}MAP.md: Address space and register definitions
+\item
+  Doc: cr:status:roadmap: Project phase plan
+\end{itemize}
+\end{relocated}
+
 \chapter{Functional coverage}\label{ds:ch:functional-coverage}
 
 This chapter states the coverage goals. It lists the coverage points of each block.

@@ -39,7 +39,7 @@ genuine physical verification (ASAP7 and FreePDK45 skip Magic/KLayout/Netgen ent
 (bead `45a`); and KLayout DRC is currently **deferred, not waived** (it OOM-killed an 8.5 GB step on a
 15 GB host). Detail → [`docs/SKY130_REAL_DRC_LVS_EVALUATION.md`](docs/SKY130_REAL_DRC_LVS_EVALUATION.md).
 
-**Latest batched Sky130 SoC harden (Gate B, `RUN_2026-10-05_06-50-11`, bead `f7vs.15`, PR #214)** covers all Phase 6 IP: setup met at all 9 corners (worst is max_ss **+0.579 ns**, the thin corner to watch), hold 0 violators at all 9, Netgen LVS clear, routing DRC 0, 81.0 mW total, 44.8 % utilisation, 1 703 620 µm² stdcell. KLayout DRC skipped, not waived. Antenna 210 nets / 305 pins accepted by user decision (2026-10-05); the `e45j` slew/cap counts are recorded, not gating. Source: `docs/PHASE6_IP_EXPANSION_PLAN.md` §8.
+**Latest batched Sky130 SoC harden (Gate B, `RUN_2026-10-05_06-50-11`, bead `f7vs.15`, PR #214)** covers all Phase 6 IP: setup met at all 9 corners (worst is max_ss **+0.579 ns**, the thin corner to watch), hold 0 violators at all 9, Netgen LVS clear, routing DRC 0, 81.0 mW total, 44.8 % utilisation, 1 703 620 µm² stdcell. KLayout DRC skipped, not waived. Antenna 210 nets / 305 pins accepted by user decision (2026-10-05); the `e45j` slew/cap counts are recorded, not gating. Source: Doc: ds:ch:phase6-ip-expansion-plan:8-physical-design-two-gates-not-one.
 
 ⚠️ **Every ASAP7 figure below is unvalidated**, and the ASAP7 CPU/GPU macros additionally rest on a
 netlist with a **proven frontend miscompile** (beads `u99`/`ma7` — a Synlig-built netlist mis-executes
@@ -103,17 +103,17 @@ Core specifications in `docs/`:
 | :------- | :------ |
 | `Doc: cr:status:roadmap` | Project phases and overall plan |
 | `Doc: cr:status:phase-status` | Current phase status and next steps |
-| `design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements |
-| `design/PHASE1_ARCHITECTURE_SPEC.md` | Phase 1 CPU spec (single-cycle) ✅ Complete |
-| `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ Complete |
-| `design/PHASE3_ARCHITECTURE_SPEC.md` | Phase 3 cache spec (I-cache + D-cache) ✅ Complete |
-| `design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture specification (Phase 4) |
-| `design/RTL_DEFINITION.md` | Interface signal definitions |
-| `design/MEMORY_MAP.md` | Address space and register map |
-| `design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
+| `Doc: ds:ch:phase0-architecture` | CPU architectural requirements |
+| `Doc: ds:ch:phase1-architecture` | Phase 1 CPU spec (single-cycle) ✅ Complete |
+| `Doc: ds:ch:phase2-architecture` | Phase 2 CPU spec (5-stage pipeline) ✅ Complete |
+| `Doc: ds:ch:phase3-architecture` | Phase 3 cache spec (I-cache + D-cache) ✅ Complete |
+| `Doc: ds:ch:phase4-gpu-architecture` | GPU architecture specification (Phase 4) |
+| `Doc: ds:ch:rtl-definition` | Interface signal definitions |
+| `Doc: ds:mm:memory-map` | Address space and register map |
+| `Doc: ds:ch:reference-model` | Python reference model API |
 | `SKY130_REAL_DRC_LVS_EVALUATION.md` | Sky130 real DRC/LVS sign-off — the only genuinely verified node |
 | `LIBRELANE_PATCHING_EVALUATION.md` | Whether/how to patch the shared LibreLane install |
-| `verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
+| `Doc: ds:ch:verification-plan` | Verification strategy by phase |
 | `design/DFT_ARCHITECTURE.md` | DFT scan + MBIST + JTAG architecture for the Sky130 SoC (epic `j41m`) |
 | `FPGA_STAGE0_EVALUATION.md` | FPGA Stage 0 feasibility: yosys resource counts, no hardware (epic `hlrm`) |
 | `FPGA_BOARD_SELECTION.md` | FPGA board recommendation and measured ECP5 fmax lower bound (epic `hlrm`) |
@@ -140,7 +140,7 @@ Doc: um:guide:supported-instructions.
 
 APB3 slave: halt/resume/step, register and PC access, 2 hardware breakpoints. Register
 map in Doc: um:guide:debug-interface;
-complete definitions in [`docs/design/MEMORY_MAP.md`](docs/design/MEMORY_MAP.md).
+complete definitions in Doc: ds:mm:memory-map.
 
 ## Contributing
 

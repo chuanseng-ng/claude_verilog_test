@@ -417,8 +417,8 @@ All Phase 1 instructions PLUS:
   (MEIP)
 \end{itemize}
 
-See \src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} for RV32I semantics
-and \src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} for CSR and interrupt
+See \src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase0-architecture}) for RV32I semantics
+and \src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase2-architecture}) for CSR and interrupt
 details.
 \end{relocated}
 
@@ -468,7 +468,7 @@ address \\
 \end{longtable}
 }
 
-See \src{docs/design/MEMORY_MAP.md} for complete register definitions.
+See \src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) for complete register definitions.
 \end{relocated}
 
 \chapter{Coding guidelines}\label{um:ch:coding-guidelines}
@@ -3737,7 +3737,7 @@ Potential workflow improvements:
   \textbf{Makefile}: \src{tb/cocotb/cpu/Makefile}
 \item
   \textbf{Verification Plan}:
-  \src{docs/verification/VERIFICATION_PLAN.md}
+  \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan})
 \item
   \textbf{Random Tests Status}: \cref{cr:status:random-tests-status}
 \end{itemize}
@@ -6139,21 +6139,21 @@ Purpose
 \endlastfoot
 \cref{cr:status:roadmap} & High-level project plan and phases \\
 \cref{cr:status:phase-status} & Current project status and next steps \\
-\src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} & CPU architectural
+\src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase0-architecture}) & CPU architectural
 requirements (Phase 0) \\
-\src{docs/design/PHASE1_ARCHITECTURE_SPEC.md} & CPU implementation spec
+\src{docs/design/PHASE1_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase1-architecture}) & CPU implementation spec
 (Phase 1) - \ok{} Complete \\
-\src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} & Pipelined CPU spec
+\src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase2-architecture}) & Pipelined CPU spec
 (Phase 2) - \ok{} Complete \\
-\src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} & Cache architecture spec
+\src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase3-architecture}) & Cache architecture spec
 (Phase 3) - \ok{} Approved \\
-\src{docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md} & GPU architecture
+\src{docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase4-gpu-architecture}) & GPU architecture
 spec (Phase 4) --- frozen ISA/\allowbreak{}execution model \\
-\src{docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md} & Phase 3 closure + Phase 4
+\src{docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md} (\cref{ds:ch:phase3-closure-phase4-plan}) & Phase 3 closure + Phase 4
 implementation plan (golden spec) \\
-\src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} & Phase 5 SoC integration
+\src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (\cref{ds:ch:phase5-soc-integration-plan}) & Phase 5 SoC integration
 roadmap --- 12 milestones M1--M12 (golden spec) \\
-\src{docs/PHASE6_IP_EXPANSION_PLAN.md} & Phase 6 IP expansion ---
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) & Phase 6 IP expansion ---
 remaining 6a peripherals + 6b crypto + 6c NPU (golden spec) \\
 \src{docs/design/DFT_ARCHITECTURE.md} & DFT scan + MBIST + JTAG
 architecture for the Sky130 SoC (epic \code{j41m}) \\
@@ -6162,14 +6162,14 @@ Siemens Tessent MemoryBIST vs the in-house MBIST (flow in
 \src{dft/tessent/mbist/}; epic \code{j41m}) \\
 \src{docs/FPGA_BOARD_SELECTION.md} & FPGA board recommendation and
 measured ECP5 fmax lower bound (epic \code{hlrm}) \\
-\src{docs/design/RTL_DEFINITION.md} & Interface signal definitions \\
-\src{docs/design/MEMORY_MAP.md} & Address space and register map \\
+\src{docs/design/RTL_DEFINITION.md} (\cref{ds:ch:rtl-definition}) & Interface signal definitions \\
+\src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) & Address space and register map \\
 \src{docs/design/DFT_ARCHITECTURE.md} & Sky130 DFT (scan + MBIST) Stage
 0 feasibility, architecture, decisions (\ghref{244}) \\
 \src{docs/design/TESSENT_ATPG_FLOW.md} & Tessent scan insertion + ATPG
 evaluation flow for the Sky130 SoC fabric (\src{dft/tessent/atpg/}, epic
 \code{j41m}, Stage 2 evaluation) \\
-\src{docs/design/REFERENCE_MODEL_SPEC.md} & Python reference model
+\src{docs/design/REFERENCE_MODEL_SPEC.md} (\cref{ds:ch:reference-model}) & Python reference model
 API \\
 \end{longtable}
 }
@@ -6196,9 +6196,9 @@ Purpose
 \endlastfoot
 \src{docs/design/OPENROAD_FLOW_SPEC.md} & Complete OpenROAD flow
 documentation \\
-\src{docs/design/UPF_POWER_SPEC.md} & Power intent and UPF
+\src{docs/design/UPF_POWER_SPEC.md} (\cref{ds:ch:upf-power-spec}) & Power intent and UPF
 specification \\
-\src{docs/design/SDC_TIMING_SPEC.md} & Timing constraints and STA
+\src{docs/design/SDC_TIMING_SPEC.md} (\cref{ds:ch:sdc-timing-spec}) & Timing constraints and STA
 guidelines \\
 \src{pnr/README.md} & Physical design directory structure \\
 \src{docs/COMMERCIAL_FLOW_COMPARISON.md} & Sky130 CPU macro: OpenROAD vs
@@ -6228,7 +6228,7 @@ Purpose
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\src{docs/verification/VERIFICATION_PLAN.md} & Verification strategy
+\src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) & Verification strategy
 (RTL + physical design) \\
 \cref{um:flow:proprietary-sim} & VCS / Xcelium setup,
 regression run, portability rules (EDA hosts without nix) \\
@@ -6294,7 +6294,7 @@ flow state lives in
 root. Full-SoC AMS cosim (RNM PLL through \code{Vtop}) needs
 \code{MAKEFLAGS=-j2} (OOM on a 15 GiB host otherwise) with
 \code{SIM_BUILD} routed to \code{/nobackup}. See
-\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md}.
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (\cref{ds:ch:phase7-pll-plan}).
 
 \section{Project Structure}\label{um:guide:frequently-used-commands:project-structure}
 
@@ -6316,7 +6316,7 @@ Python reference models for CPU and GPU live in \src{tb/models/}:
 \code{rv32i_model.py} (CPU instruction-accurate),
 \code{gpu_kernel_model.py} (GPU SIMT), \code{memory_model.py},
 \code{cache_model.py} (DirectMappedCache). See
-\src{docs/design/REFERENCE_MODEL_SPEC.md} for the complete API.
+\src{docs/design/REFERENCE_MODEL_SPEC.md} (\cref{ds:ch:reference-model}) for the complete API.
 
 \begin{lstlisting}[language=Python]
 from tb.models.rv32i_model import RV32IModel
@@ -6338,7 +6338,7 @@ assert result['rd'] == 1
   random instructions.
 \end{itemize}
 
-See \src{docs/verification/VERIFICATION_PLAN.md} for the phase-by-phase
+See \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) for the phase-by-phase
 plan. Per-phase completion history → \cref{cr:status:phase-history}.
 \end{relocated}
 

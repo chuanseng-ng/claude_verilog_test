@@ -2,7 +2,7 @@
 
 **Status:** FINAL 2026-06-21 — **NO-GO on both L2 and 2-way; keep the direct-mapped L1 D$** (human architectural sign-off). M11 floorplan is L2-free; the parameterized 2-way RTL stays on branch `experiment/dcache-2way` as a record and is NOT merged. See §10 for the final decision and its full basis.
 **Date:** 2026-06-21
-**Gate criterion** (`docs/PHASE5_SOC_INTEGRATION_PLAN.md` M10; `CLAUDE.md` locked-decision #4):
+**Gate criterion** (`Doc: ds:ch:phase5-soc-integration-plan` M10; `CLAUDE.md` locked-decision #4):
 > Add `rtl/mem/l2_cache.sv` **only if** Phase 5 benchmarking shows L1 miss rates are a bottleneck. Document the decision either way.
 
 ## 1. What was measured

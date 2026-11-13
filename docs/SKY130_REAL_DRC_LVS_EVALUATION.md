@@ -5,7 +5,7 @@
 ## 1. Findings
 
 - **ASAP7 sign-off has no real DRC/LVS.** `pnr/asap7/soc/config.json:112` (+ cpu/gpu) set `RUN_MAGIC_DRC/RUN_KLAYOUT_DRC/RUN_LVS = false` — predictive PDK, indicative only (`Doc: cr:run:phase5:34`). All three ASAP7 sign-offs (CPU/GPU/SoC) skip physical verification.
-- **Sky130 gives REAL DRC/LVS.** Proven on the Phase 7 charge-pump PLL: real Magic DRC = 0 + Netgen LVS = MATCH on `sky130A.tech` (`Doc: cr:status:phase-status`, `PHASE7_MIXED_SIGNAL_PLL_PLAN.md:4`). Magic + Netgen are in the LibreLane nix-shell (currently `--skip`-ped, not absent). Sky130 is the **fabricatable** node (CLAUDE.md).
+- **Sky130 gives REAL DRC/LVS.** Proven on the Phase 7 charge-pump PLL: real Magic DRC = 0 + Netgen LVS = MATCH on `sky130A.tech` (`Doc: cr:status:phase-status`, `Doc: ds:ch:phase7-pll-plan (line 4 of the original file)`). Magic + Netgen are in the LibreLane nix-shell (currently `--skip`-ped, not absent). Sky130 is the **fabricatable** node (CLAUDE.md).
 - **FreePDK45 ruled out.** `memory/pd/knowledge.md:136`: Magic DRC + Netgen LVS **permanently blocked** for NanGate45 (only KLayout DRC, post-DRT). → Sky130 is the only real-sign-off PDK.
 - **CPU on Sky130 = easy.** Phase 2 already closed 75 MHz / 0 violations on Sky130 (`pnr/librelane/`). Just enable `RUN_MAGIC_DRC/LVS=true`. Hours.
 - **GPU on Sky130 = the gating risk.** GPU = 485k cells / 60.5k µm² on ASAP7 7nm → **~1.2-1.8M µm²** on Sky130 130nm (20-30×). Synthesis already hit OOM on ASAP7 (`Doc: cr:run:asap7-gpu:54`); Sky130 flat ≈ 18-25 h GRT, needs **≥32 GB RAM + ~500 GB scratch** — the **~15 GB host cannot**. Sky130 GPU fmax ~100-150 MHz.

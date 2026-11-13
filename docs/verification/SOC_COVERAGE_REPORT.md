@@ -1,6 +1,6 @@
 # SoC line + toggle coverage report (GH #216)
 
-Bead `nkj7`. Measured 2026-10-06 on branch `feat/soc-coverage-216`. `VERIFICATION_PLAN.md:362` sets a
+Bead `nkj7`. Measured 2026-10-06 on branch `feat/soc-coverage-216`. `Doc: ds:ch:verification-plan (line 362 of the original file)` sets a
 >95 % RTL line-coverage exit criterion; until now only the 9 CPU cocotb modules (`sim/Makefile coverage`)
 were instrumented. This report covers the whole `tb/cocotb/soc` regression (`soc_all_ci`).
 
@@ -673,7 +673,7 @@ previous "reject" was a missing file, not a frontend limitation.
 
 Bead `7ovx` (GH #216 follow-up). Most of the remaining toggle gap on the register-bank peripherals and the fabric was upper
 data/address bits that never saw both edges, because tests wrote small values to a few low offsets. New reusable helper
-`tb/cocotb/soc/reg_walk.py` + documented maps `reg_maps.py` (transcribed from the module headers and `MEMORY_MAP.md`, NOT read
+`tb/cocotb/soc/reg_walk.py` + documented maps `reg_maps.py` (transcribed from the module headers and `Doc: ds:mm:memory-map`, NOT read
 back from the RTL's `RESET_VAL`/`WMASK`) + CPU-firmware generator `soc_reg_fw.py`.
 
 **What a walk checks (behaviour, not just toggles).** Per register: idle/reset value; walking ones (32), walking zeros (32),

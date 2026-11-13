@@ -1257,7 +1257,7 @@ simulation
     \code{BLOCK_X} \textgreater{} 64 is still truncated, now to the 8
     warps that exist (previously 7). The spec text conflicts with the
     frozen Phase 4 architecture
-    (\code{PHASE4_GPU_ARCHITECTURE_SPEC.md:66} says up to 256 threads /
+    (\code{PHASE4_GPU_ARCHITECTURE_SPEC.md:66} (\cref{ds:ch:phase4-gpu-architecture}) says up to 256 threads /
     32 warps per block; CLAUDE.md and the 8-deep warp storage say 8
     warps / 64 threads). Honouring it needs warp storage or multi-pass
     block execution, not a width fix. Pinned by
@@ -1548,7 +1548,7 @@ signal-level probe
   scheduler emptied (\code{n_warps_q}, busy, done, depths, round-robin
   pointer), compute-unit pipeline valids, \code{instr_rdy_q} and
   \code{gpu_error_o} cleared. Configuration registers, the \code{irq_en}
-  bit and the perf counters are kept (contract: \code{MEMORY_MAP.md}
+  bit and the perf counters are kept (contract: \code{MEMORY_MAP.md} (\cref{ds:mm:memory-map})
   "GPU\_\allowbreak{}CTRL.RESET semantics", accepted by the project
   owner 2026-10-11).
 \item
@@ -1817,9 +1817,9 @@ project owner 2026-10-11) \textbf{Found by}: bead \bead{47lf}
   \code{n_warps_q} = 0 after a reset). The tests assert \code{halt_q} =
   1 once ERROR is entered.
 \item
-  \textbf{Spec}: \code{PHASE4_GPU_ARCHITECTURE_SPEC.md} (block
+  \textbf{Spec}: \code{PHASE4_GPU_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase4-gpu-architecture}) (block
   dimensions, warps per block, reconvergence mask, new "Launch
-  validation and partial last warp") and \code{MEMORY_MAP.md}
+  validation and partial last warp") and \code{MEMORY_MAP.md} (\cref{ds:mm:memory-map})
   (\code{GPU_BLOCK_DIM_X}, "GPU\_\allowbreak{}BLOCK\_\allowbreak{}X
   launch contract").
 \item
@@ -2089,13 +2089,13 @@ achieved.
 \begin{itemize}
 \tightlist
 \item
-  \src{docs/design/PHASE1_ARCHITECTURE_SPEC.md} - CPU architecture
+  \src{docs/design/PHASE1_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase1-architecture}) - CPU architecture
 \item
-  \src{docs/design/RTL_DEFINITION.md} - Interface definitions
+  \src{docs/design/RTL_DEFINITION.md} (\cref{ds:ch:rtl-definition}) - Interface definitions
 \item
-  \src{docs/design/MEMORY_MAP.md} - Address space and registers
+  \src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) - Address space and registers
 \item
-  \src{docs/verification/VERIFICATION_PLAN.md} - Test strategy
+  \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) - Test strategy
 \end{itemize}
 
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}

@@ -4,9 +4,1834 @@
 
 This chapter states the timing constraints of the design. It defines the clocks and the timing exceptions.
 
+\begin{relocated}{docs/design/SDC_TIMING_SPEC.md}
+% Converted from docs/design/SDC_TIMING_SPEC.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{SDC Timing Constraints Specification}\label{ds:ch:sdc-timing-spec}
+
+Document status: Phase 1 integration Target audience: Physical design
+engineers, timing engineers, STA analysts Standard: Synopsys Design
+Constraints (SDC) 2.1
+
+\subsection{Overview}\label{ds:ch:sdc-timing-spec:overview}
+
+This document specifies timing constraints for the RV32I+GPU SoC using
+Synopsys Design Constraints (SDC) format. Timing constraints are
+essential for static timing analysis (STA) and guide synthesis and place
+\& route tools.
+
+\subsubsection{Timing Verification Goals}\label{ds:ch:sdc-timing-spec:timing-verification-goals}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Setup timing}: Ensure data arrives before clock edge (with
+  margin)
+\item
+  \textbf{Hold timing}: Ensure data remains stable after clock edge
+\item
+  \textbf{Clock quality}: Minimize skew and jitter
+\item
+  \textbf{Interface timing}: Meet AXI, APB protocol requirements
+\end{enumerate}
+
+\subsubsection{Timing Closure Strategy}\label{ds:ch:sdc-timing-spec:timing-closure-strategy}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Phase 1}: 100 MHz (10ns period), single clock, simple
+  constraints
+\item
+  \textbf{Phase 2}: 200-500 MHz (5-2ns period), pipeline timing critical
+\item
+  \textbf{Phase 3}: Cache access timing, SRAM models
+\item
+  \textbf{Phase 4}: Multi-clock domains (CPU clock + GPU clock)
+\item
+  \textbf{Phase 5}: Full SoC with multiple asynchronous clocks
+\end{itemize}
+
+\subsection{SDC Concepts}\label{ds:ch:sdc-timing-spec:sdc-concepts}
+
+\subsubsection{Clock Definition}\label{ds:ch:sdc-timing-spec:clock-definition}
+
+A \textbf{clock} defines the periodic signal that synchronizes the
+design.
+
+\begin{lstlisting}[language=tcl]
+create_clock -name clk -period 10.0 [get_ports clk]
+\end{lstlisting}
+
+\textbf{Parameters}:
+
+\begin{itemize}
+\tightlist
+\item
+  \code{-name}: Clock name (for reference)
+\item
+  \code{-period}: Clock period in ns
+\item
+  \texttt{[get\_\allowbreak{}ports\ clk]}: Clock source (port or pin)
+\end{itemize}
+
+\subsubsection{Clock Uncertainty}\label{ds:ch:sdc-timing-spec:clock-uncertainty}
+
+\textbf{Clock uncertainty} accounts for jitter and skew in the clock
+network.
+
+\begin{lstlisting}[language=tcl]
+set_clock_uncertainty 0.5 [get_clocks clk]
+\end{lstlisting}
+
+\textbf{Typical values}:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Pre-CTS}: 5-10\% of period (conservative estimate)
+\item
+  \textbf{Post-CTS}: 1-3\% of period (after clock tree is built)
+\end{itemize}
+
+\subsubsection{Clock Latency}\label{ds:ch:sdc-timing-spec:clock-latency}
+
+\textbf{Clock latency} is the delay from clock source to register clock
+pins.
+
+\begin{lstlisting}[language=tcl]
+# Source latency (external delay before chip)
+set_clock_latency -source 1.0 [get_clocks clk]
+
+# Network latency (internal clock tree delay)
+set_clock_latency 0.5 [get_clocks clk]
+\end{lstlisting}
+
+\subsubsection{\texorpdfstring{Input/\allowbreak{}Output
+Delays}{Input/Output Delays}}\label{ds:ch:sdc-timing-spec:inputoutput-delays}
+
+\textbf{Input delay}: Time from external clock edge to data arrival at
+input port \textbf{Output delay}: Time from output port to external
+register clock pin
+
+\begin{lstlisting}[language=tcl]
+# Input delay (external device has tSU = 2ns)
+set_input_delay -clock clk -max 2.0 [get_ports data_in]
+set_input_delay -clock clk -min 0.5 [get_ports data_in]
+
+# Output delay (external device has tH = 1ns)
+set_output_delay -clock clk -max 2.0 [get_ports data_out]
+set_output_delay -clock clk -min 0.5 [get_ports data_out]
+\end{lstlisting}
+
+\subsubsection{False Paths}\label{ds:ch:sdc-timing-spec:false-paths}
+
+\textbf{False paths} are signal paths that do not require timing
+analysis.
+
+\textbf{Examples}:
+
+\begin{itemize}
+\tightlist
+\item
+  Asynchronous reset paths
+\item
+  Paths between unrelated clock domains
+\item
+  Test/\allowbreak{}debug paths
+\end{itemize}
+
+\begin{lstlisting}[language=tcl]
+# Async reset is a false path
+set_false_path -from [get_ports rst_n]
+
+# Debug interface doesn't need to meet AXI timing
+set_false_path -from [get_ports apb_*] -to [get_ports axi_*]
+\end{lstlisting}
+
+\subsubsection{Multi-Cycle Paths}\label{ds:ch:sdc-timing-spec:multi-cycle-paths}
+
+\textbf{Multi-cycle paths} are paths that have more than one clock cycle
+to propagate.
+
+\textbf{Example}: A slow control path that takes 2 cycles
+
+\begin{lstlisting}[language=tcl]
+# This path has 2 cycles instead of 1
+set_multicycle_path 2 -from [get_pins ctrl_reg*] -to [get_pins next_state*]
+set_multicycle_path 1 -hold -from [get_pins ctrl_reg*] -to [get_pins next_state*]
+\end{lstlisting}
+
+\textbf{Note}: Always specify both setup (default) and hold multicycle
+paths.
+
+\subsubsection{Clock Groups}\label{ds:ch:sdc-timing-spec:clock-groups}
+
+\textbf{Clock groups} define relationships between clocks (synchronous,
+asynchronous, exclusive).
+
+\begin{lstlisting}[language=tcl]
+# Define asynchronous clock groups (no timing checks between them)
+set_clock_groups -asynchronous \
+    -group [get_clocks clk_cpu] \
+    -group [get_clocks clk_gpu]
+\end{lstlisting}
+
+\subsection{Phase 1: Single-Cycle CPU}\label{ds:ch:sdc-timing-spec:phase-1-single-cycle-cpu}
+
+\subsubsection{Timing Requirements}\label{ds:ch:sdc-timing-spec:timing-requirements}
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Parameter & Value & Notes \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Target frequency & 100 MHz & 10ns period \\
+Clock uncertainty & 0.5ns (5\%) & Pre-CTS estimate \\
+Setup margin & 10\% & 1ns margin \\
+Hold margin & 0.1ns & Minimal \\
+\end{longtable}
+}
+
+\subsubsection{\texorpdfstring{SDC File:
+phase1\_\allowbreak{}cpu.sdc}{SDC File: phase1\_cpu.sdc}}\label{ds:ch:sdc-timing-spec:sdc-file-phase1-cpusdc}
+
+\begin{lstlisting}[language=tcl]
+#=============================================
+# Phase 1: Single-cycle RV32I CPU
+# Target: 100 MHz (10ns period)
+#=============================================
+
+#---------------------------------------------
+# Clock Definition
+#---------------------------------------------
+
+# Create primary clock
+create_clock -name clk -period 10.0 [get_ports clk]
+
+# Clock uncertainty (pre-CTS)
+set_clock_uncertainty 0.5 [get_clocks clk]
+
+# Clock latency (source: external PLL)
+set_clock_latency -source 1.0 [get_clocks clk]
+
+# Clock transition time (slew)
+set_clock_transition 0.1 [get_clocks clk]
+
+#---------------------------------------------
+# Input Constraints
+#---------------------------------------------
+
+# AXI4-Lite input delays (based on protocol timing)
+# Assume external memory controller with 2ns setup, 0.5ns hold
+set_input_delay -clock clk -max 2.0 [get_ports axi_*ready]
+set_input_delay -clock clk -max 2.0 [get_ports axi_rdata]
+set_input_delay -clock clk -max 2.0 [get_ports axi_rresp]
+set_input_delay -clock clk -max 2.0 [get_ports axi_rvalid]
+set_input_delay -clock clk -max 2.0 [get_ports axi_bvalid]
+set_input_delay -clock clk -max 2.0 [get_ports axi_bresp]
+
+set_input_delay -clock clk -min 0.5 [get_ports axi_*ready]
+set_input_delay -clock clk -min 0.5 [get_ports axi_rdata]
+set_input_delay -clock clk -min 0.5 [get_ports axi_rresp]
+set_input_delay -clock clk -min 0.5 [get_ports axi_rvalid]
+set_input_delay -clock clk -min 0.5 [get_ports axi_bvalid]
+set_input_delay -clock clk -min 0.5 [get_ports axi_bresp]
+
+# APB3 input delays (debug interface, less critical)
+set_input_delay -clock clk -max 3.0 [get_ports apb_paddr]
+set_input_delay -clock clk -max 3.0 [get_ports apb_psel]
+set_input_delay -clock clk -max 3.0 [get_ports apb_penable]
+set_input_delay -clock clk -max 3.0 [get_ports apb_pwrite]
+set_input_delay -clock clk -max 3.0 [get_ports apb_pwdata]
+
+set_input_delay -clock clk -min 1.0 [get_ports apb_*]
+
+#---------------------------------------------
+# Output Constraints
+#---------------------------------------------
+
+# AXI4-Lite output delays
+set_output_delay -clock clk -max 2.0 [get_ports axi_awaddr]
+set_output_delay -clock clk -max 2.0 [get_ports axi_awvalid]
+set_output_delay -clock clk -max 2.0 [get_ports axi_wdata]
+set_output_delay -clock clk -max 2.0 [get_ports axi_wstrb]
+set_output_delay -clock clk -max 2.0 [get_ports axi_wvalid]
+set_output_delay -clock clk -max 2.0 [get_ports axi_araddr]
+set_output_delay -clock clk -max 2.0 [get_ports axi_arvalid]
+set_output_delay -clock clk -max 2.0 [get_ports axi_rready]
+set_output_delay -clock clk -max 2.0 [get_ports axi_bready]
+
+set_output_delay -clock clk -min 0.5 [all_outputs]
+
+# APB3 output delays
+set_output_delay -clock clk -max 3.0 [get_ports apb_prdata]
+set_output_delay -clock clk -max 3.0 [get_ports apb_pready]
+set_output_delay -clock clk -max 3.0 [get_ports apb_pslverr]
+
+# Commit interface (verification only, relaxed)
+set_output_delay -clock clk -max 5.0 [get_ports commit_*]
+set_output_delay -clock clk -max 5.0 [get_ports trap_*]
+
+#---------------------------------------------
+# False Paths
+#---------------------------------------------
+
+# Asynchronous reset
+set_false_path -from [get_ports rst_n]
+
+# Debug paths don't affect AXI timing
+set_false_path -from [get_ports apb_*] -to [get_ports axi_*]
+set_false_path -from [get_ports axi_*] -to [get_ports apb_*]
+
+# Commit interface is for verification only
+set_false_path -to [get_ports commit_*]
+set_false_path -to [get_ports trap_*]
+
+#---------------------------------------------
+# Load and Drive Constraints
+#---------------------------------------------
+
+# Output load (assume 50fF capacitance)
+set_load 0.05 [all_outputs]
+
+# Input drive (assume BUF_X1 driving inputs)
+set_driving_cell -lib_cell BUF_X1 -library sky130_fd_sc_hd [all_inputs]
+
+#---------------------------------------------
+# Area Constraint (for synthesis)
+#---------------------------------------------
+
+# No specific area constraint (optimize for timing)
+set_max_area 0
+
+#---------------------------------------------
+# Environment
+#---------------------------------------------
+
+# Operating conditions
+set_operating_conditions -max typical -min typical
+
+# Wire load model (for pre-layout synthesis)
+# set_wire_load_model -name "conservative" -library sky130_fd_sc_hd
+
+#---------------------------------------------
+# Design Rule Constraints
+#---------------------------------------------
+
+# Max transition time (slew rate)
+set_max_transition 0.5 [current_design]
+
+# Max capacitance
+set_max_capacitance 0.1 [all_outputs]
+
+# Max fanout
+set_max_fanout 16 [current_design]
+\end{lstlisting}
+
+\subsubsection{Post-CTS SDC Updates (Phase 1)}\label{ds:ch:sdc-timing-spec:post-cts-sdc-updates-phase-1}
+
+After clock tree synthesis, update uncertainty:
+
+\begin{lstlisting}[language=tcl]
+# Remove pre-CTS uncertainty
+remove_clock_uncertainty [get_clocks clk]
+
+# Add post-CTS uncertainty (tighter)
+set_clock_uncertainty -setup 0.1 [get_clocks clk]
+set_clock_uncertainty -hold 0.05 [get_clocks clk]
+\end{lstlisting}
+
+\subsection{Phase 2: Pipelined CPU}\label{ds:ch:sdc-timing-spec:phase-2-pipelined-cpu}
+
+\subsubsection{Timing Requirements}\label{ds:ch:sdc-timing-spec:timing-requirements-1}
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Parameter & Value & Notes \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Target frequency & 200-500 MHz & 5-2ns period \\
+Clock uncertainty & 2-5\% & More aggressive \\
+Pipeline stages & 5 & Fetch, Decode, Exec, Mem, WB \\
+Critical path & ALU → register file & \textasciitilde1-2ns \\
+\end{longtable}
+}
+
+\subsubsection{SDC Additions (Phase 2)}\label{ds:ch:sdc-timing-spec:sdc-additions-phase-2}
+
+\begin{lstlisting}[language=tcl]
+#=============================================
+# Phase 2: Pipelined CPU
+# Target: 200 MHz (5ns period)
+#=============================================
+
+# Higher frequency clock
+create_clock -name clk -period 5.0 [get_ports clk]
+
+# Tighter uncertainty
+set_clock_uncertainty 0.25 [get_clocks clk]
+
+# Multi-cycle path for slow control paths
+# Control FSM may take 2 cycles to update
+set_multicycle_path 2 -setup -from [get_pins i_rv32i_control/state_reg*] \
+                              -to [get_pins i_rv32i_control/next_state*]
+set_multicycle_path 1 -hold  -from [get_pins i_rv32i_control/state_reg*] \
+                              -to [get_pins i_rv32i_control/next_state*]
+
+# Pipeline stage boundaries (critical paths)
+# These should meet single-cycle timing
+set_max_delay 5.0 -from [get_pins */fetch_stage/*] -to [get_pins */decode_stage/*]
+set_max_delay 5.0 -from [get_pins */decode_stage/*] -to [get_pins */execute_stage/*]
+set_max_delay 5.0 -from [get_pins */execute_stage/*] -to [get_pins */memory_stage/*]
+set_max_delay 5.0 -from [get_pins */memory_stage/*] -to [get_pins */writeback_stage/*]
+
+# Forwarding paths (critical for hazard handling)
+set_max_delay 4.0 -from [get_pins */execute_stage/alu_result*] \
+                   -to [get_pins */execute_stage/forward_mux*]
+\end{lstlisting}
+
+\subsection{Phase 3: Cache System}\label{ds:ch:sdc-timing-spec:phase-3-cache-system}
+
+\subsubsection{Timing Requirements}\label{ds:ch:sdc-timing-spec:timing-requirements-2}
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Parameter & Value & Notes \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Target frequency & Match CPU & 200-500 MHz \\
+Cache access & 1-2 cycles & Tag + data lookup \\
+SRAM access & 0.5-1ns & Technology dependent \\
+\end{longtable}
+}
+
+\subsubsection{SDC Additions (Phase 3)}\label{ds:ch:sdc-timing-spec:sdc-additions-phase-3}
+
+\begin{lstlisting}[language=tcl]
+#=============================================
+# Phase 3: Cache System
+#=============================================
+
+# SRAM timing models (from memory compiler)
+# These are vendor-specific timing files
+read_liberty -lib_name icache_sram_lib icache_sram_tt_1p0v_25c.lib
+read_liberty -lib_name dcache_sram_lib dcache_sram_tt_1p0v_25c.lib
+
+# Cache access timing (2-cycle for tag + data)
+set_multicycle_path 2 -setup -from [get_pins i_icache/tag_array/*] \
+                              -to [get_pins i_icache/data_array/*]
+set_multicycle_path 1 -hold  -from [get_pins i_icache/tag_array/*] \
+                              -to [get_pins i_icache/data_array/*]
+
+# Write-back buffer timing (D-cache)
+set_max_delay 5.0 -from [get_pins i_dcache/wb_buffer/*] \
+                   -to [get_ports axi_wdata]
+
+# Cache-CPU interface timing
+set_max_delay 3.0 -from [get_pins i_cpu_core/*] -to [get_pins i_icache/*]
+set_max_delay 3.0 -from [get_pins i_dcache/*] -to [get_pins i_cpu_core/*]
+\end{lstlisting}
+
+\subsection{Phase 4: GPU with Multiple Clocks}\label{ds:ch:sdc-timing-spec:phase-4-gpu-with-multiple-clocks}
+
+\subsubsection{Timing Requirements}\label{ds:ch:sdc-timing-spec:timing-requirements-3}
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Parameter & Value & Notes \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CPU clock & 200-500 MHz & 5-2ns period \\
+GPU clock & 100-200 MHz & 10-5ns period (lower for power) \\
+Clock domain crossing & Async FIFO & 2-3 cycle latency \\
+\end{longtable}
+}
+
+\subsubsection{SDC Additions (Phase 4)}\label{ds:ch:sdc-timing-spec:sdc-additions-phase-4}
+
+\begin{lstlisting}[language=tcl]
+#=============================================
+# Phase 4: GPU-Lite Compute Engine
+#=============================================
+
+# GPU clock (independent from CPU)
+create_clock -name clk_gpu -period 10.0 [get_ports clk_gpu]
+set_clock_uncertainty 0.5 [get_clocks clk_gpu]
+
+# Define clock groups (CPU and GPU are asynchronous)
+set_clock_groups -asynchronous \
+    -group [get_clocks clk] \
+    -group [get_clocks clk_gpu]
+
+# False paths between clock domains (handled by async FIFO)
+set_false_path -from [get_clocks clk] -to [get_clocks clk_gpu]
+set_false_path -from [get_clocks clk_gpu] -to [get_clocks clk]
+
+# GPU internal timing
+# Warp scheduler to SIMT lanes
+set_max_delay 10.0 -from [get_pins i_gpu/warp_scheduler/*] \
+                    -to [get_pins i_gpu/simt_lanes/*]
+
+# Vector ALU timing (8 lanes in parallel)
+set_max_delay 8.0 -from [get_pins i_gpu/simt_lanes/lane_*/alu_in*] \
+                   -to [get_pins i_gpu/simt_lanes/lane_*/alu_out*]
+
+# GPU register file access (multi-cycle due to size)
+set_multicycle_path 2 -setup -from [get_pins i_gpu/regfile/*] \
+                              -to [get_pins i_gpu/simt_lanes/*]
+set_multicycle_path 1 -hold  -from [get_pins i_gpu/regfile/*] \
+                              -to [get_pins i_gpu/simt_lanes/*]
+\end{lstlisting}
+
+\subsection{Phase 5: Full SoC with Multiple Clocks}\label{ds:ch:sdc-timing-spec:phase-5-full-soc-with-multiple-clocks}
+
+\subsubsection{Timing Requirements}\label{ds:ch:sdc-timing-spec:timing-requirements-4}
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Parameter & Value & Notes \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+CPU clock & 200-500 MHz & Main system clock \\
+GPU clock & 100-200 MHz & Compute clock \\
+Peripheral clock & 50-100 MHz & UART, SPI, Timer \\
+Always-on clock & 32 kHz & RTC, wake-up logic \\
+\end{longtable}
+}
+
+\subsubsection{\texorpdfstring{SDC File:
+phase5\_\allowbreak{}soc.sdc}{SDC File: phase5\_soc.sdc}}\label{ds:ch:sdc-timing-spec:sdc-file-phase5-socsdc}
+
+\begin{lstlisting}[language=tcl]
+#=============================================
+# Phase 5: Full SoC Integration
+#=============================================
+
+#---------------------------------------------
+# Clock Definitions
+#---------------------------------------------
+
+# Main system clock (CPU)
+create_clock -name clk_sys -period 5.0 [get_ports clk_sys]
+set_clock_uncertainty 0.25 [get_clocks clk_sys]
+
+# GPU compute clock
+create_clock -name clk_gpu -period 10.0 [get_ports clk_gpu]
+set_clock_uncertainty 0.5 [get_clocks clk_gpu]
+
+# Peripheral clock (divided from sys clock)
+create_generated_clock -name clk_periph \
+    -source [get_ports clk_sys] \
+    -divide_by 4 \
+    [get_pins i_clk_div/clk_out]
+set_clock_uncertainty 0.5 [get_clocks clk_periph]
+
+# Always-on clock (RTC)
+create_clock -name clk_aon -period 30517.6 [get_ports clk_aon]
+set_clock_uncertainty 100.0 [get_clocks clk_aon]
+
+#---------------------------------------------
+# Clock Groups
+#---------------------------------------------
+
+# Asynchronous clock groups
+set_clock_groups -asynchronous \
+    -group [get_clocks clk_sys] \
+    -group [get_clocks clk_gpu] \
+    -group [get_clocks clk_periph] \
+    -group [get_clocks clk_aon]
+
+#---------------------------------------------
+# Inter-Domain Timing
+#---------------------------------------------
+
+# CPU <-> GPU interface (async FIFO)
+set_false_path -from [get_clocks clk_sys] -to [get_clocks clk_gpu]
+set_false_path -from [get_clocks clk_gpu] -to [get_clocks clk_sys]
+
+# CPU <-> Peripherals (async FIFO or synchronizer)
+set_max_delay 20.0 -from [get_clocks clk_sys] -to [get_clocks clk_periph]
+set_max_delay 10.0 -from [get_clocks clk_periph] -to [get_clocks clk_sys]
+
+# Always-on <-> System (wake-up path)
+set_max_delay 1000.0 -from [get_clocks clk_aon] -to [get_clocks clk_sys]
+
+#---------------------------------------------
+# False Paths
+#---------------------------------------------
+
+# Test/scan paths
+set_false_path -from [get_ports test_mode]
+set_false_path -from [get_ports scan_enable]
+
+# Power control signals (quasi-static)
+set_false_path -from [get_ports pwr_*]
+
+#---------------------------------------------
+# I/O Timing
+#---------------------------------------------
+
+# External memory interface (DDR-like timing)
+create_clock -name clk_mem -period 2.5 [get_ports mem_clk]
+set_input_delay -clock clk_mem -max 0.5 [get_ports mem_dq*]
+set_input_delay -clock clk_mem -min -0.3 [get_ports mem_dq*]
+set_output_delay -clock clk_mem -max 0.5 [get_ports mem_dq*]
+set_output_delay -clock clk_mem -min -0.3 [get_ports mem_dq*]
+
+# UART (slow, relaxed timing)
+set_input_delay -clock clk_periph -max 10.0 [get_ports uart_rx]
+set_output_delay -clock clk_periph -max 10.0 [get_ports uart_tx]
+
+# SPI (medium speed)
+set_input_delay -clock clk_periph -max 5.0 [get_ports spi_miso]
+set_output_delay -clock clk_periph -max 5.0 [get_ports spi_mosi]
+set_output_delay -clock clk_periph -max 5.0 [get_ports spi_sclk]
+\end{lstlisting}
+
+\subsection{Multi-Corner Analysis}\label{ds:ch:sdc-timing-spec:multi-corner-analysis}
+
+For sign-off, analyze timing across process, voltage, temperature (PVT)
+corners:
+
+\subsubsection{Corner Definitions}\label{ds:ch:sdc-timing-spec:corner-definitions}
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*100/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*276/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*151/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*163/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-8\tabcolsep)*289/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Corner
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Process
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Voltage
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Temp
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Purpose
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{SS} & Slow & 0.9V (min) & 125°C (max) & Worst setup (slowest) \\
+\textbf{FF} & Fast & 1.1V (max) & -40°C (min) & Worst hold (fastest) \\
+\textbf{TT} & Typical & 1.0V (nom) & 25°C (nom) & Typical case \\
+\textbf{SF} & Slow NMOS, Fast PMOS & 0.95V & 85°C & Skew analysis \\
+\textbf{FS} & Fast NMOS, Slow PMOS & 1.05V & 0°C & Skew analysis \\
+\end{longtable}
+}
+
+\subsubsection{Multi-Corner SDC}\label{ds:ch:sdc-timing-spec:multi-corner-sdc}
+
+\begin{lstlisting}[language=tcl]
+# Worst setup corner (SS)
+set_operating_conditions -max ss_1p0v_125c -library sky130_fd_sc_hd__ss_1p0v_125c
+set_timing_derate -early 0.97
+set_timing_derate -late 1.03
+
+# Worst hold corner (FF)
+set_operating_conditions -min ff_1p1v_n40c -library sky130_fd_sc_hd__ff_1p1v_n40c
+set_timing_derate -early 1.03
+set_timing_derate -late 0.97
+
+# Check setup at SS corner
+report_checks -path_delay max -corner SS
+
+# Check hold at FF corner
+report_checks -path_delay min -corner FF
+\end{lstlisting}
+
+\subsection{STA Checks and Reports}\label{ds:ch:sdc-timing-spec:sta-checks-and-reports}
+
+\subsubsection{Key Reports}\label{ds:ch:sdc-timing-spec:key-reports}
+
+\begin{lstlisting}[language=tcl]
+# Setup timing (WNS = Worst Negative Slack)
+report_checks -path_delay max -format full_clock_expanded -nworst 10
+
+# Hold timing
+report_checks -path_delay min -format full_clock_expanded -nworst 10
+
+# Clock skew
+report_clock_skew -hold -setup [get_clocks clk]
+
+# Clock tree summary
+report_clock_properties [all_clocks]
+
+# Unconstrained paths
+report_checks -unconstrained
+
+# Slack summary
+report_tns  # Total negative slack
+report_wns  # Worst negative slack
+
+# Timing by group
+report_timing -group [get_clocks clk] -sort_by slack
+\end{lstlisting}
+
+\subsubsection{Timing Closure Checklist}\label{ds:ch:sdc-timing-spec:timing-closure-checklist}
+
+\begin{itemize}
+\tightlist
+\item[$\square$]
+  WNS (worst negative slack) \textgreater{} 0 (no violations)
+\item[$\square$]
+  TNS (total negative slack) = 0
+\item[$\square$]
+  Hold violations = 0
+\item[$\square$]
+  Clock skew \textless{} 100ps (post-CTS)
+\item[$\square$]
+  All I/O paths constrained
+\item[$\square$]
+  False paths identified
+\item[$\square$]
+  Multi-cycle paths reviewed
+\item[$\square$]
+  All corners passing (SS, FF, TT, SF, FS)
+\end{itemize}
+
+\subsection{SDC Best Practices}\label{ds:ch:sdc-timing-spec:sdc-best-practices}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Constrain all clocks}: Every clock must have
+  \code{create_clock}
+\item
+  \textbf{Constrain all I/Os}: All inputs/\allowbreak{}outputs need
+  delays
+\item
+  \textbf{Use realistic values}: Based on interface specs (AXI, APB)
+\item
+  \textbf{Identify false paths}: Async resets, debug paths
+\item
+  \textbf{Multi-cycle paths}: Document assumptions clearly
+\item
+  \textbf{Check unconstrained paths}: Run
+  \texttt{report\_\allowbreak{}checks\ -\allowbreak{}unconstrained}
+\item
+  \textbf{Multi-corner analysis}: Always check SS (setup) and FF (hold)
+\item
+  \textbf{Incremental refinement}: Start conservative, tighten based on
+  results
+\end{enumerate}
+
+\subsection{AI/Human Responsibilities}\label{ds:ch:sdc-timing-spec:aihuman-responsibilities}
+
+\subsubsection{AI MAY assist with}\label{ds:ch:sdc-timing-spec:ai-may-assist-with}
+
+\begin{itemize}
+\tightlist
+\item
+  SDC template generation (clock definitions, I/O delays)
+\item
+  Basic constraint boilerplate
+\item
+  Report parsing and slack summarization
+\item
+  Multi-corner script generation
+\end{itemize}
+
+\subsubsection{AI MUST NOT decide}\label{ds:ch:sdc-timing-spec:ai-must-not-decide}
+
+\begin{itemize}
+\tightlist
+\item
+  Clock period (target frequency)
+\item
+  Input/\allowbreak{}output delay values
+\item
+  False path identification
+\item
+  Multi-cycle path strategy
+\item
+  Clock group relationships
+\end{itemize}
+
+\subsubsection{Human MUST review}\label{ds:ch:sdc-timing-spec:human-must-review}
+
+\begin{itemize}
+\tightlist
+\item
+  All SDC constraint files
+\item
+  Timing reports (setup, hold, clock)
+\item
+  Critical path analysis
+\item
+  Timing closure strategy
+\item
+  Multi-corner results
+\end{itemize}
+
+\subsection{References}\label{ds:ch:sdc-timing-spec:references}
+
+\begin{itemize}
+\tightlist
+\item
+  Synopsys Design Constraints (SDC) User Guide
+\item
+  OpenSTA Manual:
+  \href{https://github.com/The-OpenROAD-Project/OpenSTA}{https:/\allowbreak{}/\allowbreak{}github.com/\allowbreak{}The-OpenROAD-Project/\allowbreak{}OpenSTA}
+\item
+  IEEE 1364-2005: Verilog Timing Checks
+\item
+  "Static Timing Analysis for Nanometer Designs" by Bhasker \& Chadha
+\end{itemize}
+\end{relocated}
+
 \chapter{Power intent}\label{ds:ch:power-intent}
 
 This chapter states the power intent of the design. It defines the power domains and the power states.
+
+\begin{relocated}{docs/design/UPF_POWER_SPEC.md}
+% Converted from docs/design/UPF_POWER_SPEC.md by tools/docs/md2tex.py; edit this file, not the original.
+\section{UPF Power Intent Specification}\label{ds:ch:upf-power-spec}
+
+Document status: Phase 1 integration Target audience: Physical design
+engineers, power architects, verification engineers Standard: IEEE
+1801-2015 (UPF 3.0)
+
+\subsection{Overview}\label{ds:ch:upf-power-spec:overview}
+
+This document specifies the power intent for the RV32I+GPU SoC using
+Unified Power Format (UPF). Power management is introduced incrementally
+across phases to balance complexity and power savings.
+
+\subsubsection{Power Management Goals}\label{ds:ch:upf-power-spec:power-management-goals}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Reduce dynamic power}: Clock gating, power gating idle blocks
+\item
+  \textbf{Reduce leakage power}: Power down unused domains
+\item
+  \textbf{Preserve functionality}: Isolation and retention strategies
+\item
+  \textbf{Enable flexibility}: Multiple power modes for different
+  workloads
+\end{enumerate}
+
+\subsubsection{Incremental Power Strategy}\label{ds:ch:upf-power-spec:incremental-power-strategy}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Phase 1}: Single domain (prepare infrastructure, no power
+  gating yet)
+\item
+  \textbf{Phase 2}: Core + debug domains (enable basic power gating)
+\item
+  \textbf{Phase 3}: Core + I-cache + D-cache domains (cache power
+  management)
+\item
+  \textbf{Phase 4}: Add GPU domain with DVFS
+  (voltage/\allowbreak{}frequency scaling)
+\item
+  \textbf{Phase 5}: Full system with 5+ domains (always-on, peripherals,
+  etc.)
+\end{itemize}
+
+\subsection{UPF Concepts}\label{ds:ch:upf-power-spec:upf-concepts}
+
+\subsubsection{Power Domains}\label{ds:ch:upf-power-spec:power-domains}
+
+A \textbf{power domain} is a collection of design elements that share
+the same power supply and can be powered on/off together.
+
+\textbf{Example}: CPU core, debug interface, caches, GPU, peripherals
+
+\subsubsection{Supply Networks}\label{ds:ch:upf-power-spec:supply-networks}
+
+A \textbf{supply network} defines the power (VDD) and ground (VSS) nets
+for a domain.
+
+\textbf{Example}: \code{VDD_CORE}, \code{VDD_GPU}, \code{VDD_AON}
+(always-on), \code{VSS}
+
+\subsubsection{Isolation Cells}\label{ds:ch:upf-power-spec:isolation-cells}
+
+\textbf{Isolation cells} prevent X (unknown) values from propagating
+from a powered-down domain to a powered-on domain.
+
+\textbf{Location}: At domain boundaries (outputs of powered-down domain)
+\textbf{Clamp value}: 0 or 1 (designer specifies safe value)
+\textbf{Control}: Enabled when source domain is powered down
+
+\subsubsection{Level Shifters}\label{ds:ch:upf-power-spec:level-shifters}
+
+\textbf{Level shifters} convert signals between domains operating at
+different voltages.
+
+\textbf{Example}: Core at 0.9V, peripherals at 1.8V
+
+\textbf{Direction}: Low-to-high or high-to-low
+
+\subsubsection{Retention Registers}\label{ds:ch:upf-power-spec:retention-registers}
+
+\textbf{Retention registers} preserve their state during power-down
+using a separate always-on supply.
+
+\textbf{Use case}: Save critical state (PC, control registers) during
+sleep mode
+
+\textbf{Restore}: State restored automatically when domain powers back
+on
+
+\subsubsection{Power State Tables (PST)}\label{ds:ch:upf-power-spec:power-state-tables-pst}
+
+A \textbf{power state table} defines the legal combinations of power
+states across domains.
+
+\textbf{States}:
+
+\begin{itemize}
+\tightlist
+\item
+  \code{ON}: Domain fully powered
+\item
+  \code{OFF}: Domain powered down
+\item
+  \code{RETENTION}: Domain powered down but state preserved
+\end{itemize}
+
+\subsection{Phase 1: Single-Domain CPU}\label{ds:ch:upf-power-spec:phase-1-single-domain-cpu}
+
+\subsubsection{Power Architecture}\label{ds:ch:upf-power-spec:power-architecture}
+
+\textbf{Domains}: Single domain (no power gating yet) \textbf{Purpose}:
+Establish UPF infrastructure, prepare for multi-domain in Phase 2
+
+\begin{textblock}
+┌─────────────────────────────┐
+│       PD_TOP (VDD)          │
+│                             │
+│  ┌───────────────────────┐  │
+│  │    RV32I Core         │  │
+│  │  (single-cycle)       │  │
+│  └───────────────────────┘  │
+│                             │
+│  ┌───────────────────────┐  │
+│  │  AXI4-Lite Master     │  │
+│  └───────────────────────┘  │
+│                             │
+│  ┌───────────────────────┐  │
+│  │  APB3 Slave (Debug)   │  │
+│  └───────────────────────┘  │
+│                             │
+└─────────────────────────────┘
+\end{textblock}
+
+\subsubsection{\texorpdfstring{UPF File:
+phase1\_\allowbreak{}cpu.upf}{UPF File: phase1\_cpu.upf}}\label{ds:ch:upf-power-spec:upf-file-phase1-cpuupf}
+
+\begin{lstlisting}[language=tcl]
+# Phase 1: Single-domain CPU (infrastructure only)
+
+# Create top-level power domain
+create_power_domain PD_TOP -include_scope
+
+# Create supply ports
+create_supply_port VDD -direction in
+create_supply_port VSS -direction in
+
+# Create supply nets
+create_supply_net VDD -domain PD_TOP
+create_supply_net VSS -domain PD_TOP -reuse
+
+# Connect supply ports to nets
+connect_supply_net VDD -ports {VDD}
+connect_supply_net VSS -ports {VSS}
+
+# Define primary supply set
+create_supply_set SS_TOP \
+    -function {power VDD} \
+    -function {ground VSS}
+
+# Associate supply set with domain
+associate_supply_set SS_TOP -handle PD_TOP
+
+# Define single power state (always on)
+add_power_state PD_TOP \
+    -state ON {-supply_expr {power == FULL_ON && ground == FULL_ON}}
+
+# Set design top
+set_design_top rv32i_cpu_top
+\end{lstlisting}
+
+\textbf{Notes}:
+
+\begin{itemize}
+\tightlist
+\item
+  No isolation or retention in Phase 1 (single domain)
+\item
+  This UPF establishes the foundation for Phase 2 multi-domain
+\item
+  Gate-level simulation uses this UPF to verify supply connections
+\end{itemize}
+
+\subsection{Phase 2: Pipelined CPU with Power Domains}\label{ds:ch:upf-power-spec:phase-2-pipelined-cpu-with-power-domains}
+
+\subsubsection{Power Architecture}\label{ds:ch:upf-power-spec:power-architecture-1}
+
+\textbf{Domains}: 3 domains (core, debug, always-on) \textbf{Power
+gating}: Core can be powered down (debug remains on) \textbf{Isolation}:
+Between core and debug
+
+\begin{textblock}
+┌─────────────────────────────────────────────┐
+│         PD_AON (VDD_AON - always on)        │
+│  ┌─────────────────────────────────────┐   │
+│  │  Power Control Registers            │   │
+│  └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│         PD_CORE (VDD_CORE - gatable)        │
+│  ┌─────────────────────────────────────┐   │
+│  │  5-Stage Pipeline                   │   │
+│  │  - Fetch, Decode, Execute           │   │
+│  │  - Memory, Writeback                │   │
+│  │  - Register File                    │   │
+│  │  - ALU, Control                     │   │
+│  └─────────────────────────────────────┘   │
+│                                             │
+│       [Isolation Cells] ───────►            │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│      PD_DEBUG (VDD_DEBUG - always on)       │
+│  ┌─────────────────────────────────────┐   │
+│  │  APB3 Debug Interface               │   │
+│  │  - Control registers                │   │
+│  │  - Breakpoint logic                 │   │
+│  └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+\end{textblock}
+
+\subsubsection{\texorpdfstring{UPF File:
+phase2\_\allowbreak{}pipelined\_\allowbreak{}cpu.upf}{UPF File: phase2\_pipelined\_cpu.upf}}\label{ds:ch:upf-power-spec:upf-file-phase2-pipelined-cpuupf}
+
+\begin{lstlisting}[language=tcl]
+# Phase 2: Pipelined CPU with power domains
+
+#=============================================
+# Power Domains
+#=============================================
+
+# Top-level domain (always on)
+create_power_domain PD_TOP -include_scope
+
+# Always-on domain (power control, clock control)
+create_power_domain PD_AON \
+    -elements {i_power_ctrl}
+
+# CPU core domain (can be gated)
+create_power_domain PD_CORE \
+    -elements {i_rv32i_core}
+
+# Debug domain (always on for debugger access)
+create_power_domain PD_DEBUG \
+    -elements {i_rv32i_debug}
+
+#=============================================
+# Supply Ports
+#=============================================
+
+create_supply_port VDD_AON -direction in
+create_supply_port VDD_CORE -direction in
+create_supply_port VDD_DEBUG -direction in
+create_supply_port VSS -direction in
+
+#=============================================
+# Supply Networks
+#=============================================
+
+# Always-on supply
+create_supply_net VDD_AON -domain PD_TOP
+create_supply_net VDD_AON_AON -domain PD_AON -reuse
+
+# Core supply (switchable)
+create_supply_net VDD_CORE -domain PD_TOP
+create_supply_net VDD_CORE_CORE -domain PD_CORE -reuse
+
+# Debug supply (always on)
+create_supply_net VDD_DEBUG -domain PD_TOP
+create_supply_net VDD_DEBUG_DEBUG -domain PD_DEBUG -reuse
+
+# Ground (shared)
+create_supply_net VSS -domain PD_TOP -reuse
+
+# Connect ports to nets
+connect_supply_net VDD_AON -ports {VDD_AON}
+connect_supply_net VDD_CORE -ports {VDD_CORE}
+connect_supply_net VDD_DEBUG -ports {VDD_DEBUG}
+connect_supply_net VSS -ports {VSS}
+
+#=============================================
+# Supply Sets
+#=============================================
+
+create_supply_set SS_AON \
+    -function {power VDD_AON_AON} \
+    -function {ground VSS}
+
+create_supply_set SS_CORE \
+    -function {power VDD_CORE_CORE} \
+    -function {ground VSS}
+
+create_supply_set SS_DEBUG \
+    -function {power VDD_DEBUG_DEBUG} \
+    -function {ground VSS}
+
+# Associate with domains
+associate_supply_set SS_AON -handle PD_AON
+associate_supply_set SS_CORE -handle PD_CORE
+associate_supply_set SS_DEBUG -handle PD_DEBUG
+
+#=============================================
+# Isolation Strategy
+#=============================================
+
+# Isolate core outputs when powered down
+set_isolation ISO_CORE_OUT \
+    -domain PD_CORE \
+    -isolation_supply_set SS_AON \
+    -clamp_value 0 \
+    -applies_to outputs \
+    -isolation_signal iso_core_en \
+    -isolation_sense high \
+    -location parent
+
+# Map isolation control signal
+map_isolation_cell ISO_CORE_OUT \
+    -domain PD_CORE \
+    -lib_cells {ISO_LOW}
+
+#=============================================
+# Retention Strategy
+#=============================================
+
+# Retain critical state (PC, control registers)
+set_retention RET_CORE \
+    -domain PD_CORE \
+    -retention_supply_set SS_AON \
+    -retention_signal ret_core_en \
+    -retention_sense high \
+    -save_signal save_core \
+    -save_sense high \
+    -restore_signal restore_core \
+    -restore_sense high
+
+# Map retention cells
+map_retention_cell RET_CORE \
+    -domain PD_CORE \
+    -lib_cells {RET_DFF}
+
+#=============================================
+# Power State Table
+#=============================================
+
+# Define power states for each domain
+add_power_state PD_AON \
+    -state ON {-supply_expr {power == FULL_ON}}
+
+add_power_state PD_CORE \
+    -state ACTIVE {-supply_expr {power == FULL_ON}} \
+    -state IDLE {-supply_expr {power == FULL_ON}} \
+    -state RETENTION {-supply_expr {power == OFF}} \
+    -state OFF {-supply_expr {power == OFF}}
+
+add_power_state PD_DEBUG \
+    -state ON {-supply_expr {power == FULL_ON}}
+
+# Define system-level power states
+create_pst system_pst -supplies {VDD_AON_AON VDD_CORE_CORE VDD_DEBUG_DEBUG}
+
+# Active mode: all domains on
+add_pst_state ACTIVE -pst system_pst \
+    -state {ON ACTIVE ON}
+
+# Idle mode: core idle but powered
+add_pst_state IDLE -pst system_pst \
+    -state {ON IDLE ON}
+
+# Sleep mode: core in retention
+add_pst_state SLEEP -pst system_pst \
+    -state {ON RETENTION ON}
+
+# Deep sleep: core powered off (no retention)
+add_pst_state DEEP_SLEEP -pst system_pst \
+    -state {ON OFF ON}
+\end{lstlisting}
+
+\subsubsection{Power Mode Transitions (Phase 2)}\label{ds:ch:upf-power-spec:power-mode-transitions-phase-2}
+
+\textbf{ACTIVE → IDLE}:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  CPU idle (WFI instruction or no work)
+\item
+  Clock gating enabled automatically
+\item
+  No state change required
+\end{enumerate}
+
+\textbf{IDLE → SLEEP}:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Software writes to power control register
+\item
+  Assert \code{save_core} signal (save state to retention cells)
+\item
+  Assert \code{iso_core_en} (enable isolation)
+\item
+  Assert \code{ret_core_en} (enable retention supply)
+\item
+  Gate \code{VDD_CORE} supply
+\end{enumerate}
+
+\textbf{SLEEP → ACTIVE}:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Interrupt or wake event
+\item
+  Ungate \code{VDD_CORE} supply
+\item
+  Wait for supply to stabilize
+\item
+  Assert \code{restore_core} (restore state from retention cells)
+\item
+  Deassert \code{ret_core_en}
+\item
+  Deassert \code{iso_core_en}
+\item
+  Resume execution
+\end{enumerate}
+
+\subsection{Phase 3: Cache System with Power Domains}\label{ds:ch:upf-power-spec:phase-3-cache-system-with-power-domains}
+
+\subsubsection{Power Architecture}\label{ds:ch:upf-power-spec:power-architecture-2}
+
+\textbf{Domains}: 5 domains (core, I-cache, D-cache, debug, always-on)
+\textbf{Power gating}: Caches can be powered down independently
+\textbf{Retention}: Cache tags retained (data lost)
+
+\begin{textblock}
+┌─────────────────────────────────────────────┐
+│         PD_AON (VDD_AON - always on)        │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│         PD_CORE (VDD_CORE - gatable)        │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│       PD_ICACHE (VDD_ICACHE - gatable)      │
+│  ┌─────────────────────────────────────┐   │
+│  │  I-Cache Tag Array (retention)      │   │
+│  │  I-Cache Data Array (no retention)  │   │
+│  └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│       PD_DCACHE (VDD_DCACHE - gatable)      │
+│  ┌─────────────────────────────────────┐   │
+│  │  D-Cache Tag Array (retention)      │   │
+│  │  D-Cache Data Array (no retention)  │   │
+│  │  Write-back buffer (retention)      │   │
+│  └─────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│         PD_DEBUG (VDD_DEBUG - always on)    │
+└─────────────────────────────────────────────┘
+\end{textblock}
+
+\subsubsection{UPF Additions (Phase 3)}\label{ds:ch:upf-power-spec:upf-additions-phase-3}
+
+\begin{lstlisting}[language=tcl]
+# Additional domains for Phase 3
+
+create_power_domain PD_ICACHE \
+    -elements {i_icache}
+
+create_power_domain PD_DCACHE \
+    -elements {i_dcache}
+
+# Isolation for caches
+set_isolation ISO_ICACHE_OUT \
+    -domain PD_ICACHE \
+    -isolation_supply_set SS_AON \
+    -clamp_value 0 \
+    -applies_to outputs
+
+set_isolation ISO_DCACHE_OUT \
+    -domain PD_DCACHE \
+    -isolation_supply_set SS_AON \
+    -clamp_value 0 \
+    -applies_to outputs
+
+# Retention for cache tags
+set_retention RET_ICACHE_TAG \
+    -domain PD_ICACHE \
+    -retention_supply_set SS_AON \
+    -elements {i_icache/tag_array}
+
+set_retention RET_DCACHE_TAG \
+    -domain PD_DCACHE \
+    -retention_supply_set SS_AON \
+    -elements {i_dcache/tag_array}
+
+# Power states for caches
+add_power_state PD_ICACHE \
+    -state ACTIVE {-supply_expr {power == FULL_ON}} \
+    -state RETENTION {-supply_expr {power == OFF}} \
+    -state OFF {-supply_expr {power == OFF}}
+
+add_power_state PD_DCACHE \
+    -state ACTIVE {-supply_expr {power == FULL_ON}} \
+    -state RETENTION {-supply_expr {power == OFF}} \
+    -state OFF {-supply_expr {power == OFF}}
+\end{lstlisting}
+
+\subsection{Phase 4: GPU with DVFS}\label{ds:ch:upf-power-spec:phase-4-gpu-with-dvfs}
+
+\subsubsection{Power Architecture}\label{ds:ch:upf-power-spec:power-architecture-3}
+
+\textbf{Domains}: 6 domains (core, caches, GPU, debug, always-on)
+\textbf{Voltage scaling}: GPU operates at lower voltage for power
+efficiency \textbf{Level shifters}: Between core (0.9V) and GPU (0.7V)
+
+\begin{textblock}
+┌─────────────────────────────────────────────┐
+│         PD_AON (1.8V - always on)           │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│         PD_CORE (0.9V - switchable)         │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│          PD_GPU (0.7V - switchable)         │
+│  ┌─────────────────────────────────────┐   │
+│  │  GPU Compute Unit                   │   │
+│  │  - Warp scheduler                   │   │
+│  │  │  - 8-lane SIMT datapath         │   │
+│  │  - Register file                    │   │
+│  └─────────────────────────────────────┘   │
+│                                             │
+│       [Level Shifters] ◄───► Core          │
+└─────────────────────────────────────────────┘
+\end{textblock}
+
+\subsubsection{UPF Additions (Phase 4)}\label{ds:ch:upf-power-spec:upf-additions-phase-4}
+
+\begin{lstlisting}[language=tcl]
+# GPU power domain
+create_power_domain PD_GPU \
+    -elements {i_gpu_compute}
+
+# GPU supply (lower voltage)
+create_supply_port VDD_GPU -direction in
+create_supply_net VDD_GPU -domain PD_TOP
+create_supply_net VDD_GPU_GPU -domain PD_GPU -reuse
+
+create_supply_set SS_GPU \
+    -function {power VDD_GPU_GPU} \
+    -function {ground VSS}
+
+associate_supply_set SS_GPU -handle PD_GPU
+
+# Level shifters (core <-> GPU interface)
+set_level_shifter LS_CORE_TO_GPU \
+    -domain PD_GPU \
+    -applies_to inputs \
+    -rule low_to_high \
+    -location parent
+
+set_level_shifter LS_GPU_TO_CORE \
+    -domain PD_GPU \
+    -applies_to outputs \
+    -rule high_to_low \
+    -location self
+
+# Map level shifter cells
+map_level_shifter_cell LS_CORE_TO_GPU \
+    -domain PD_GPU \
+    -lib_cells {LS_LOHV}
+
+map_level_shifter_cell LS_GPU_TO_CORE \
+    -domain PD_GPU \
+    -lib_cells {LS_HVLO}
+
+# GPU power states
+add_power_state PD_GPU \
+    -state ACTIVE_HIGH {-supply_expr {power == 0.9}} \
+    -state ACTIVE_LOW {-supply_expr {power == 0.7}} \
+    -state OFF {-supply_expr {power == OFF}}
+
+# DVFS modes
+add_pst_state COMPUTE_HIGH_PERF -pst system_pst \
+    -state {ON ACTIVE ON ACTIVE ON ACTIVE_HIGH}
+
+add_pst_state COMPUTE_LOW_POWER -pst system_pst \
+    -state {ON ACTIVE ON ACTIVE ON ACTIVE_LOW}
+\end{lstlisting}
+
+\subsection{Phase 5: Full SoC Integration}\label{ds:ch:upf-power-spec:phase-5-full-soc-integration}
+
+The Phase 5 SoC (\code{soc_top}) has \textbf{four} power domains on one
+nominal voltage, not the seven sketched when this chapter was first
+written. The authoritative description is
+\src{pnr/constraints/phase5_soc.upf} (IEEE 1801-2015 / UPF 3.0); this
+chapter summarises it and records what the RTL does and does not
+implement. The file was rewritten on 2026-10-17 (bead \bead{h3lm}) after
+an audit found it had drifted from the RTL. Its purpose is input for
+UPF-aware test tools.
+
+\subsubsection{Power Architecture}\label{ds:ch:upf-power-spec:power-architecture-4}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*110/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*314/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*267/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*290/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Domain
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Elements
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Primary supply
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Notes
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{PD_CPU} & \code{u_cpu} (hard macro, incl. L1 caches) &
+\code{SS_CPU} (\code{VDD_CPU}, switchable) & gated by clock gate + reset
++ clamp \\
+\code{PD_GPU} & \code{u_gpu} & \code{SS_GPU} (\code{VDD_GPU},
+switchable) & same \\
+\code{PD_SRAM} & \code{u_sram} & \code{SS_AON} (\code{VDD}) & always
+on \\
+\code{PD_PERIPH} & the top scope and every other instance &
+\code{SS_AON} (\code{VDD}) & always on \\
+\end{longtable}
+}
+
+}
+
+\code{PD_PERIPH} is \texttt{-\allowbreak{}elements\ \{.\allowbreak{}\}}
+minus the three carved-out instances, and its \textbf{membership is
+explicit}: the UPF header carries a
+\texttt{\#\ upf-\allowbreak{}check\ aon\ <instance>} roster of the 32
+always-on top-level instances with the reason each must stay powered
+(the CPU-domain synchronisers, both clock gates, the CDC bridges, the
+PMU, the DFT seam, the PLLs, the fabric and the peripherals). The
+checker fails if a top-level instance is added to or removed from
+\code{soc_top} without updating the roster.
+
+\subsubsection{What is modelled, and what is deliberately not}\label{ds:ch:upf-power-spec:what-is-modelled-and-what-is-deliberately-not}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Power switches: none.} \code{pmu.sv} emits no switch control
+  (\code{cpu_pg_ctrl} / \code{gpu_pg_ctrl} do not exist) and no
+  \code{soc_top} net could drive one. The old \code{create_power_switch}
+  commands controlled ports that were never in the RTL and used options
+  no UPF parser accepts. \code{VDD_CPU} / \code{VDD_GPU} are therefore
+  modelled as externally driven supply ports with ON / OFF port states,
+  so each supply net has a source. The UPF header carries the shape of
+  the switch to add once RTL control exists.
+\item
+  \textbf{Isolation: exactly the signals \code{soc_top} clamps}, not
+  every output. \code{ISO_CPU} (6 signals, control
+  \code{pmu_cpu_iso_en_sync}) and \code{ISO_GPU} (8 signals, control
+  \code{pmu_gpu_iso_en}), clamp value 0, sense high,
+  \texttt{-\allowbreak{}location\ parent}, supply \code{SS_AON}. The set
+  is checked for equality with the RTL in both SRAM arms. AXI
+  address/\allowbreak{}data/\allowbreak{}control buses stay unclamped
+  because each is qualified by a clamped valid and is
+  don\textquotesingle t-care once valid is 0. Every other output of
+  \code{u_cpu} / \code{u_gpu} is classified in the UPF (\code{payload},
+  \code{slave_response}, \code{observability}) so a new output cannot
+  escape review.
+\item
+  \textbf{PMU outputs are flop Q pins (bead \bead{ktwt}).}
+  \code{pmu_*_clk_en} / \code{iso_en} / \code{rst_n} / \code{ret_*} are
+  each registered inside \code{pmu.sv} from the decode of the
+  \emph{next} FSM state, so they appear in exactly the cycle the earlier
+  combinational decode showed them (the sequence above and
+  \code{test_pmu}\textquotesingle s per-cycle expectations are
+  unchanged: zero added latency). They feed \code{cdc_sync} D pins, the
+  asynchronous clear of \code{u_cpu_pmu_rst_sync} and the GPU async
+  reset / clamp select, where a decode glitch on the 4-bit binary state
+  (possible on 4 of the 9 transitions, including a runt reset on
+  \code{DOM_PU_RESTORE} -\textgreater{} \code{DOM_PU_ISO}) would be a
+  real event. Zero-delay simulation cannot show a glitch, so
+  \src{tools/verif/check_registered_outputs.py} proves it on the netlist
+  (\src{tb/tests/test_pmu_registered_outputs.py}).
+\item
+  \textbf{Retention: none.} The old header claim that state is "rebuilt
+  from SRAM on wakeup" was never true. \code{pmu.sv} emits
+  \code{ret_save} / \code{ret_restore} in order but \code{soc_top}
+  leaves them unconnected. See \src{docs/POWER_DOMAIN_EVALUATION.md}
+  section 3 for what survives a PMU off/on cycle.
+\item
+  \textbf{Not expressed} because the RTL or library offers nothing to
+  bind: macro PG-pin connections (done by \code{pnr/*/pdn*.tcl}), level
+  shifters (single voltage), isolation and retention cell mapping
+  (neither ASAP7 nor Sky130 ships an isolation cell).
+\end{itemize}
+
+\subsubsection{Power states}\label{ds:ch:upf-power-spec:power-states}
+
+Supply sets carry ON (and OFF for the two switchable rails). The system
+group \code{SOC_PST} has five states whose names and encodings come from
+\src{rtl/soc/pmu.sv} (\code{CTRL[1:0]}, \code{u_pmu/pmu_mode_req}):
+
+{
+\begin{longtable}[]{@{}lllll@{}}
+\toprule\noalign{}
+State & \code{pmu_mode_req} & \code{SS_CPU} & \code{SS_GPU} &
+\code{scan_mode_i} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\code{NORMAL} & \texttt{2'b00} & ON & ON & 0 \\
+\code{CPU_OFF} & \texttt{2'b01} & OFF & ON & 0 \\
+\code{GPU_OFF} & \texttt{2'b10} & ON & OFF & 0 \\
+\code{IDLE} & \texttt{2'b11} & OFF & OFF & 0 \\
+\code{SCAN} & not constrained & ON & ON & 1 \\
+\end{longtable}
+}
+
+\code{pmu_mode_req} is the \emph{requested} mode; the PMU takes four
+single-cycle actions per direction, and those transient cycles belong to
+no named state.
+
+\textbf{\code{SCAN} versus the RTL (confirmed in \code{soc_top.sv} and
+\code{dft_ctrl_ports.sv}):}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*318/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*506/1000\relax}
+  >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-4\tabcolsep)*155/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Aspect under
+\texttt{scan\_\allowbreak{}mode\_\allowbreak{}i\ =\allowbreak{}\ 1}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+RTL behaviour
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Matches "all ON"?
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Clock gates & forced open:
+\texttt{test\_\allowbreak{}en\_\allowbreak{}o\ =\allowbreak{}\ scan\_\allowbreak{}mode\_\allowbreak{}i},
+\code{rv32i_clock_gate} latches \texttt{en\ |\ test\_\allowbreak{}en} &
+yes (checked) \\
+Domain resets & forced to the scan reset (\code{dft_rst_mux},
+\code{cdc_reset_sync} output muxes) & yes \\
+PMU & \textbf{not overridden}: mode register and FSM are ordinary
+scan-chain flops & no \\
+ISO clamps & \textbf{not qualified by \code{scan_mode_i}}; follow
+\code{pmu_*_iso_en} & no \\
+\end{longtable}
+}
+
+}
+
+So under scan a clamp can be active, depending on the PMU state shifted
+in. This is a real mismatch with the intent of the \code{SCAN} state. It
+is documented, not changed (follow-up bead).
+
+\subsubsection{Known gaps and follow-ups}\label{ds:ch:upf-power-spec:known-gaps-and-follow-ups}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Isolation-versus-reset ordering (was: no handshake; FIXED,
+  bead \bead{3ogd}).} The PMU walks the UPF order (down: save, isolate,
+  gate, reset; up: reset release, ungate, restore, de-isolate). The CPU
+  clamp control passes a 2-flop synchroniser into \code{cpu_core_clk}
+  while the reset reaches \code{u_cpu} through a \code{cdc_reset_sync}
+  with asynchronous assertion, so with the actions merely spaced one
+  \code{core_clk} cycle apart "isolate before reset asserts" held only
+  while two \code{cpu_core_clk} edges were shorter than two
+  \code{core_clk} cycles (it failed at a CPU clock 3x slower).
+  \code{soc_top.u_cpu_iso_ack_sync} now synchronises the CPU-domain
+  clamp control back into \code{core_clk} (\code{pmu_cpu_iso_ack}) and
+  the CPU \code{DOM_PD_ISO} state waits for it before the clock gate and
+  the reset; \code{DOM_PU_ISO} waits for it to fall (return-to-zero,
+  which also stops a stale ack from satisfying the next power-down).
+  Power-up needs no ack for the iso-release-vs-reset-release order: the
+  clamp\textquotesingle s consumers are clocked by \code{cpu_gated_clk},
+  which cannot tick before the reset release is observed
+  (\code{cpu_gated_clk_en} includes \code{pmu_cpu_rst_n_cpu_sync}). The
+  GPU needs none (same clock, the clamp control is the PMU flop). The
+  step order of this UPF is unchanged. A dead CPU clock (CPU PLL
+  unlocked) never acks: \code{ISO_ACK_TIMEOUT} (255 \code{core_clk}
+  cycles) lets the PMU proceed and sets \code{STATUS[3]}.
+\item
+  \textbf{Slave-side responses are not isolated} (\code{u_gpu} AXI-Lite
+  \code{rvalid}, \code{awready}, ... and \code{u_cpu} debug APB
+  \code{pready} ...). With a really removed supply they would drive X
+  into the always-on ring.
+\item
+  \textbf{Scan does not force the clamps off} (table above).
+\item
+  \code{m_axil_if_rready} was the one GPU-to-fabric handshake the RTL
+  did not clamp; clamped as part of \code{h3lm}.
+\end{enumerate}
+
+\subsubsection{Checking}\label{ds:ch:upf-power-spec:checking}
+
+\texttt{python3\ tools/\allowbreak{}verif/\allowbreak{}check\_\allowbreak{}upf.\allowbreak{}py}
+(stdlib only, CI gate in \code{qa-checks.yml}) verifies that every
+\code{-elements} path and control net resolves in the elaborated
+\code{soc_top}, that the UPF clamp set equals the RTL clamp set, that
+domain membership is explicit and disjoint, and that state names,
+encodings and per-mode rail states equal \code{pmu.sv}. It reads
+\src{pnr/constraints/phase5_soc_rtl_facts.json}, which
+\texttt{check\_\allowbreak{}upf.\allowbreak{}py\ gen-\allowbreak{}facts}
+generates from \src{rtl/filelist/soc_top.f} with pyslang for both SRAM
+arms (ASAP7 and Sky130);
+\texttt{gen-\allowbreak{}facts\ -\allowbreak{}-\allowbreak{}check} is
+the drift gate. A passing run proves \textbf{references and set
+equalities, not tool acceptance and not electrical sufficiency of a
+clamp.}
+
+\subsubsection{Tool compatibility}\label{ds:ch:upf-power-spec:tool-compatibility}
+
+Measured 2026-10-17 on OpenROAD 26Q2:
+\texttt{read\_\allowbreak{}upf\ -\allowbreak{}file} accepts only a small
+subset (it defines \code{create_power_domain}, \code{set_isolation},
+\code{create_power_switch}, \code{define_power_switch_cell} and
+\code{map_power_switch}; there is no \code{upf_version},
+\code{create_supply_*}, \code{add_power_state}, ...). It fails on the
+first command of both the old file (\code{create_supply_port}) and the
+new one (\code{upf_version}). The file targets full UPF 3.0, so this is
+a tool-subset limitation and no gate depends on it. No UPF-aware
+simulator or linter is available in the open flow.
+
+\subsection{Power-Aware Verification}\label{ds:ch:upf-power-spec:power-aware-verification}
+
+\subsubsection{UPF Simulation Flow}\label{ds:ch:upf-power-spec:upf-simulation-flow}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{Compile with UPF}: Add UPF file to simulation
+
+  \begin{lstlisting}[language=bash]
+  verilator --upf phase2_pipelined_cpu.upf ...
+  \end{lstlisting}
+\item
+  \textbf{Apply power sequences}: Use testbench to control power
+  supplies
+
+  \begin{textblock}
+  # Example: cocotb power sequence
+  await power_ctrl.power_down_core()  # ACTIVE → SLEEP
+  await Timer(100, units='us')
+  await power_ctrl.power_up_core()    # SLEEP → ACTIVE
+  \end{textblock}
+\item
+  \textbf{Check isolation}: Verify no X propagation during power-down
+
+  \begin{lstlisting}[language=Python]
+  assert dut.axi_arvalid.value != "x", "Isolation failed!"
+  \end{lstlisting}
+\item
+  \textbf{Check retention}: Verify state preserved after power cycle
+
+  \begin{lstlisting}[language=Python]
+  pc_before = dut.i_rv32i_core.pc_reg.value
+  await power_cycle()
+  pc_after = dut.i_rv32i_core.pc_reg.value
+  assert pc_before == pc_after, "Retention failed!"
+  \end{lstlisting}
+\end{enumerate}
+
+\subsubsection{UPF Testbench Structure}\label{ds:ch:upf-power-spec:upf-testbench-structure}
+
+\begin{lstlisting}[language=Python]
+# cocotb testbench with UPF support
+
+import cocotb
+from cocotb.triggers import Timer, RisingEdge
+
+@cocotb.test()
+async def test_power_down_core(dut):
+    """Test core power-down and isolation"""
+
+    # Initialize
+    await reset_sequence(dut)
+
+    # Run some instructions
+    await run_instructions(dut, count=100)
+
+    # Save PC value
+    pc_before = dut.i_rv32i_core.pc_reg.value
+
+    # Power down core
+    dut.VDD_CORE.value = 0
+    await Timer(1, units='us')
+
+    # Check isolation (outputs should be clamped)
+    assert dut.commit_valid.value == 0, "Isolation failed"
+
+    # Power up core
+    dut.VDD_CORE.value = 1
+    await Timer(1, units='us')
+
+    # Check retention (PC should be preserved)
+    pc_after = dut.i_rv32i_core.pc_reg.value
+    assert pc_before == pc_after, "Retention failed"
+
+    # Resume execution
+    await run_instructions(dut, count=100)
+\end{lstlisting}
+
+\subsection{UPF Best Practices}\label{ds:ch:upf-power-spec:upf-best-practices}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Start simple}: Phase 1 has single domain, add complexity
+  incrementally
+\item
+  \textbf{Isolate everything}: Always add isolation at domain boundaries
+\item
+  \textbf{Retain critical state}: PC, control registers, cache tags
+\item
+  \textbf{Test extensively}: Power-aware simulation catches 90\% of UPF
+  bugs
+\item
+  \textbf{Document power modes}: Clear PST with mode descriptions
+\item
+  \textbf{Use standard cells}: Isolation, retention, level shifter cells
+  from PDK
+\end{enumerate}
+
+\subsection{AI/Human Responsibilities}\label{ds:ch:upf-power-spec:aihuman-responsibilities}
+
+\subsubsection{AI MAY assist with}\label{ds:ch:upf-power-spec:ai-may-assist-with}
+
+\begin{itemize}
+\tightlist
+\item
+  UPF template generation (domains, supplies, boilerplate)
+\item
+  Basic isolation and retention declarations
+\item
+  Power state definitions
+\item
+  Testbench power control sequences
+\end{itemize}
+
+\subsubsection{AI MUST NOT decide}\label{ds:ch:upf-power-spec:ai-must-not-decide}
+
+\begin{itemize}
+\tightlist
+\item
+  Number and boundaries of power domains
+\item
+  Isolation clamp values (0 vs 1)
+\item
+  Retention strategy (what to retain)
+\item
+  Power state transitions
+\item
+  Voltage levels for DVFS
+\end{itemize}
+
+\subsubsection{Human MUST review}\label{ds:ch:upf-power-spec:human-must-review}
+
+\begin{itemize}
+\tightlist
+\item
+  All UPF power intent files
+\item
+  Power domain architecture
+\item
+  Isolation and retention strategies
+\item
+  Power state tables
+\item
+  Power-aware simulation results
+\end{itemize}
+
+\subsection{References}\label{ds:ch:upf-power-spec:references}
+
+\begin{itemize}
+\tightlist
+\item
+  IEEE 1801-2015: UPF 3.0 Specification
+\item
+  Accellera UPF Guide:
+  \href{https://www.accellera.org/downloads/standards/upf}{https:/\allowbreak{}/\allowbreak{}www.accellera.org/\allowbreak{}downloads/\allowbreak{}standards/\allowbreak{}upf}
+\item
+  OpenROAD Power Analysis:
+  \href{https://openroad.readthedocs.io/en/latest/main/src/pdn/README.html}{https:/\allowbreak{}/\allowbreak{}openroad.readthedocs.io/\allowbreak{}en/\allowbreak{}latest/\allowbreak{}main/\allowbreak{}src/\allowbreak{}pdn/\allowbreak{}README.html}
+\item
+  Verilator UPF Support:
+  \href{https://verilator.org/guide/latest/extensions.html}{https:/\allowbreak{}/\allowbreak{}verilator.org/\allowbreak{}guide/\allowbreak{}latest/\allowbreak{}extensions.html}
+\end{itemize}
+\end{relocated}
 
 \chapter{DFT requirements}\label{ds:ch:dft-requirements}
 

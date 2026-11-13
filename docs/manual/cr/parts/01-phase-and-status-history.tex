@@ -11,7 +11,7 @@ This chapter holds the completion record of each phase.
 
 Detailed completion records for each project phase. For the high-level
 map and current status, see the root \src{README.md} and
-\cref{cr:status:phase-status} (\cref{cr:status:phase-status}).
+\cref{cr:status:phase-status}.
 
 \end{record}
 
@@ -194,7 +194,7 @@ map and current status, see the root \src{README.md} and
 \item
   ASAP7 is out of scope for all of Phase 6 (beads \code{ma7},
   \code{lxv}, \code{2kn}). Sources:
-  \src{docs/PHASE6_IP_EXPANSION_PLAN.md} §8, \cref{cr:status:phase-status}.
+  \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) §8, \cref{cr:status:phase-status}.
 \end{itemize}
 
 \end{record}
@@ -297,7 +297,7 @@ This chapter holds the earlier project status statements.
 \begin{record}
 
 Tracks progress against the golden-plan sign-off checklist
-(\src{docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md} §9). Updated 2026-05-30.
+(\src{docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md} (\cref{ds:ch:phase3-closure-phase4-plan}) §9). Updated 2026-05-30.
 
 \end{record}
 
@@ -1638,7 +1638,7 @@ for reproducible installs)
 \begin{itemize}
 \tightlist
 \item[$\square$]
-  Update \src{docs/verification/VERIFICATION_PLAN.md} - mark pyuvm as IN
+  Update \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) - mark pyuvm as IN
   PROGRESS
 \item[$\square$]
   Add section to VERIFICATION\_\allowbreak{}PLAN about actual
@@ -1707,7 +1707,7 @@ depend on Phase E completion}
 \begin{itemize}
 \tightlist
 \item[$\square$]
-  Update \src{docs/verification/VERIFICATION_PLAN.md} - mark pyuvm as
+  Update \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) - mark pyuvm as
   COMPLETE
 \item[$\square$]
   Create \code{tb/pyuvm/README.md} with usage guide
@@ -1905,7 +1905,7 @@ exceeded!)}\label{cr:status:pyuvm-migration:files-created-29-21-target-138-signi
 \item[$\square$]
   \src{tb/cocotb/cpu/Makefile} - Add pyuvm test targets
 \item[$\square$]
-  \src{docs/verification/VERIFICATION_PLAN.md} - Mark pyuvm status
+  \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) - Mark pyuvm status
 \end{itemize}
 
 \end{record}
@@ -3770,7 +3770,7 @@ Artix-7 run is in progress on a separate branch with no results yet.
 complete (2026-06-20); M-d = documentation (this update). Dual-PDK
 charge-pump PLL via analog-design agents (ASAP7 indicative + Sky130 real
 CP-block DRC/LVS), AMS RNM integrated as SoC clock source. See
-\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md}. (Phase 7 ran alongside the
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (\cref{ds:ch:phase7-pll-plan}). (Phase 7 ran alongside the
 in-progress Phase 5 PD/\allowbreak{}sign-off tail.)
 
 \begin{itemize}
@@ -4056,7 +4056,7 @@ GPU+bus+peripheral domain, giving exactly \textbf{one} CDC boundary (CPU
   point, not a re-run of run 23. See \cref{cr:run:phase5}
   §"Power figure caveat".
 \item
-  Full record: \cref{cr:run:phase5} (\cref{cr:run:phase5})
+  Full record: \cref{cr:run:phase5}
   and \src{docs/3PLL_CDC_EVALUATION.md}.
 \end{itemize}
 
@@ -4329,7 +4329,7 @@ Sky130 130nm
 \textbf{Prerequisites}: \ok{} Phase 1 exit criteria met (2026-02-13)
 
 \textbf{Architecture Spec}:
-\src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} --- APPROVED (2026-02-14),
+\src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase2-architecture}) --- APPROVED (2026-02-14),
 all 7 open questions resolved
 
 \textbf{RTL Modules} (14/14 complete):
@@ -4500,7 +4500,7 @@ passing, 139/139 total tests clean
 \textbf{Prerequisites}: \ok{} Phase 2 exit criteria met (2026-03-08)
 
 \textbf{Architecture Spec}:
-\src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} --- APPROVED (2026-03-08),
+\src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase3-architecture}) --- APPROVED (2026-03-08),
 all 6 open questions resolved
 
 \textbf{RTL Modules} (10/10 complete):
@@ -4757,7 +4757,7 @@ P\&R signed off 571 MHz / 62.9 mW / 520×520 µm / 65.6 \% util / 0 DRC /
 0 antenna \warn{} timing/\allowbreak{}power unvalidated
 post-bead-\code{8f3} (see top of this file)
 (\cref{cr:run:phase5}). Milestone detail in
-\src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (golden spec)
+\src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (\cref{ds:ch:phase5-soc-integration-plan}) (golden spec)
 
 {\small\setlength{\tabcolsep}{4pt}
 
@@ -4813,7 +4813,7 @@ M12 & Sign-off + documentation & \ok{} 2026-06-24 \\
 
 \begin{record}
 
-\textbf{Golden spec}: \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (added
+\textbf{Golden spec}: \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) (added
 2026-09-28, bead \bead{f7vs.1}). \textbf{Tracking}: bead epic
 \code{claude_verilog_test-f7vs}. \textbf{Definition of done, per item}:
 RTL + cocotb verification + SoC integration. Physical design is a
@@ -4883,7 +4883,7 @@ Gate B & Batched Sky130 SoC harden with all Phase 6 IP & --- &
 violators, Netgen LVS clear, routing DRC 0, 81.0 mW total, 44.8 \% util;
 antenna 210 nets / 305 pins accepted by user decision; \code{e45j}
 slew/cap recorded, not a Phase 6 exit criterion. Source:
-\src{docs/PHASE6_IP_EXPANSION_PLAN.md} §8, run 2 \\
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) §8, run 2 \\
 \end{longtable}
 }
 
@@ -4915,7 +4915,7 @@ rather than a porting exercise.
 \textbf{Status}:
 M-a/\allowbreak{}M-b1/\allowbreak{}M-b2/\allowbreak{}M-c \ok{} complete
 (2026-06-20); M-d = documentation (this update). Golden spec:
-\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md}.
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (\cref{ds:ch:phase7-pll-plan}).
 
 Dual-PDK charge-pump integer-N PLL (ring VCO) designed end-to-end via
 the analog-design orchestrator agents, integrated into the SoC as the
@@ -5514,7 +5514,7 @@ The Vivado Artix-7 run is in progress on a separate branch.
 
 Golden specs: \src{docs/design/DFT_ARCHITECTURE.md},
 \src{docs/FPGA_BOARD_SELECTION.md},
-\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (Phase 6, closed).
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) (Phase 6, closed).
 
 \textbf{Regression gates in CI (read 2026-10-15)}:
 
@@ -6301,7 +6301,7 @@ COMPLETE
     Cache arbiter: D-cache priority over I-cache (replaces Phase 2 AXI
     arbiter)
   \item
-    Architecture spec: \src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} ---
+    Architecture spec: \src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase3-architecture}) ---
     APPROVED (2026-03-08)
   \end{itemize}
 \end{itemize}
@@ -6727,7 +6727,7 @@ harden (Gate B) closed 2026-10-05 (bead \bead{f7vs.15}, \prref{214}). ASAP7
 is out of scope for Phase 6 (beads \code{ma7}, \code{lxv}, \code{2kn}).
 
 \begin{quote}
-\textbf{Golden spec:} \src{docs/PHASE6_IP_EXPANSION_PLAN.md} --- full
+\textbf{Golden spec:} \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) --- full
 register maps, address/\allowbreak{}IRQ allocation, per-item acceptance
 criteria and non-goals. This section is the roadmap-level summary; the
 plan is authoritative where they differ.
@@ -6803,7 +6803,7 @@ deterministic and \textbf{explicitly not cryptographic} (it forces
 \texttt{TRNG\_\allowbreak{}STATUS.\allowbreak{}INSECURE\ =\allowbreak{}\ 1}).
 What is Sky130-exclusive is the \textbf{entropy-quality claim}, not the
 RTL, so \code{trng.sv} has zero top-level ports and sits in every file
-list and every PD flow. See \src{docs/PHASE6_IP_EXPANSION_PLAN.md} §7.
+list and every PD flow. See \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) §7.
 
 \textbf{GPIO controller --- status (Phase 6a, bead \bead{ckc},
 2026-09-20).} RTL + SoC integration + cocotb suite landed:
@@ -6839,7 +6839,7 @@ previously said "AXI4-Lite slave". The peripheral-bus standard is
 (\code{docs/PERIPHERAL_BUS_EVALUATION.md:5,43} names AES-SHA
 explicitly). The 2026-09-20 correction reached the 6a heading only and
 never propagated here. Golden spec:
-\src{docs/PHASE6_IP_EXPANSION_PLAN.md} §2.
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) §2.
 \end{quote}
 
 \ok{} \textbf{LANDED 2026-10-03 (bead \bead{f7vs.10})} ---
@@ -6880,7 +6880,7 @@ IRQ bit 10. \code{test_crypto} 41/41, \code{test_soc_crypto} 1/1.
   \textbf{Keys are not bus-readable} (shadow register outside the bank;
   \code{KEY0-3} read 0 forever), but any master can substitute its own
   key and use the block as an oracle --- see the security notes in
-  \src{docs/design/MEMORY_MAP.md}. \textbf{Not production cryptography}:
+  \src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}). \textbf{Not production cryptography}:
   no DPA/\allowbreak{}side-channel resistance, no fault hardening, not
   certified.
 \end{itemize}
@@ -7137,7 +7137,7 @@ Stages 3--4 \hold{} host-gated.
 \textbf{Status}:
 M-a/\allowbreak{}M-b1/\allowbreak{}M-b2/\allowbreak{}M-c complete
 (2026-06-20); M-d = documentation (this update). Full plan →
-\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (golden spec).
+\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (\cref{ds:ch:phase7-pll-plan}) (golden spec).
 
 A dual-PDK charge-pump integer-N PLL (ring VCO) designed end-to-end via
 the \textbf{analog-design orchestrator agents}, then integrated into the
@@ -7510,7 +7510,7 @@ complete 2026-10-05} --- \textbf{6a \ok{}} (GPIO \code{ckc}/\code{00ef}
 (AES-128 + SHA-256, bead \bead{f7vs.10}); \textbf{6c NPU \ok{} done}
 (INT8 4×4, bead \bead{f7vs.11}) --- Phase 6 RTL complete; Gate B batched
 Sky130 harden \ok{} 2026-10-05 (\code{f7vs.15}, \prref{214}); golden spec
-\src{docs/PHASE6_IP_EXPANSION_PLAN.md}, epic \code{f7vs} (closed) \\
+\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}), epic \code{f7vs} (closed) \\
 7 --- Mixed-Signal PLL & Dual-PDK charge-pump PLL (ASAP7 indicative +
 Sky130 real DRC/LVS) via analog-design agents; AMS RNM integrated as SoC
 clock source & done (M-a..M-c) \\
@@ -7528,7 +7528,7 @@ clock source & done (M-a..M-c) \\
 \begin{record}
 
 Legend: \ok{} done · \wip{} in progress · \hold{} not started. Milestone
-status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md}.
+status (M1--M12) tracked in \src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (\cref{ds:ch:phase5-soc-integration-plan}).
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -8364,7 +8364,7 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   architectural decisions
 \end{itemize}
 
-See each phase in \src{docs/verification/VERIFICATION_PLAN.md} for
+See each phase in \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) for
 detailed AI/Human responsibilities.
 
 \end{record}
