@@ -1,0 +1,25 @@
+% Technical Manual (tm). Build with tools/docs/build_books.py.
+\documentclass[book=tm]{cvtdocs}
+
+\cvtexternal{ds}
+\cvtexternal{um}
+\cvtexternal{cr}
+\input{glossary}
+
+\begin{document}
+\cvtmaketitle{Technical Manual}{CVT-TM}{\cvtrevision}
+\tableofcontents
+
+\input{parts/01-module-reference}
+\input{parts/02-physical-design}
+\input{parts/03-verification-infrastructure}
+\input{parts/04-dft-fpga-hls-and-analog}
+\input{parts/05-decisions}
+\input{parts/06-tool-defects-and-standing-caveats}
+\input{parts/99-appendix}
+
+\cleardoublepage
+\printunsrtglossary[type=acronym,title={Acronyms},style=list]
+\printunsrtglossary[title={Terms},style=list]
+\printindex[\cvtbeadindex]
+\end{document}

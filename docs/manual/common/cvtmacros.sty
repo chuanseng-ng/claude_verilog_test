@@ -1,0 +1,182 @@
+% cvtmacros.sty - macros and environments shared by the four project books.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{cvtmacros}[2000/01/01 Project documentation macros]
+\RequirePackage{xparse}
+\RequirePackage{mdframed}
+\RequirePackage{amssymb}
+
+% ---- Status tags -----------------------------------------------------
+\definecolor{cvtwarn}{HTML}{B45F06}
+\definecolor{cvtok}{HTML}{2E7D32}
+\definecolor{cvtbad}{HTML}{B71C1C}
+\definecolor{cvthold}{HTML}{5D4037}
+\definecolor{cvtwip}{HTML}{1565C0}
+\definecolor{cvtpartial}{HTML}{8D6E00}
+\definecolor{cvtnote}{HTML}{455A64}
+\definecolor{cvtopen}{HTML}{6A1B9A}
+\newcommand{\cvttag}[2]{%
+  \begingroup\setlength{\fboxsep}{1.2pt}\setlength{\fboxrule}{0.5pt}%
+  \mbox{\fcolorbox{#1}{white}{\textcolor{#1}{\sffamily\bfseries\scriptsize
+  \strut\,#2\,}}}\endgroup}
+\newcommand{\warn}{\cvttag{cvtwarn}{WARNING}}
+\newcommand{\ok}{\cvttag{cvtok}{OK}}
+\newcommand{\bad}{\cvttag{cvtbad}{FAIL}}
+\newcommand{\hold}{\cvttag{cvthold}{ON HOLD}}
+\newcommand{\wip}{\cvttag{cvtwip}{IN PROGRESS}}
+\newcommand{\partialmark}{\cvttag{cvtpartial}{PARTIAL}}
+\newcommand{\notemark}{\cvttag{cvtnote}{NOTE}}
+\newcommand{\openmark}{\cvttag{cvtopen}{OPEN}}
+% Pictographs of the source text print as the marks above, also inside code.
+% The table is tools/docs/pandoc/marks.tsv; a unit test keeps both in step.
+\newunicodechar{⚠}{\warn{}}
+\newunicodechar{❗}{\warn{}}
+\newunicodechar{🚨}{\warn{}}
+\newunicodechar{🚩}{\warn{}}
+\newunicodechar{🔥}{\warn{}}
+\newunicodechar{⚡}{\warn{}}
+\newunicodechar{✅}{\ok{}}
+\newunicodechar{✔}{\ok{}}
+\newunicodechar{🟢}{\ok{}}
+\newunicodechar{🎉}{\ok{}}
+\newunicodechar{🎯}{\ok{}}
+\newunicodechar{❌}{\bad{}}
+\newunicodechar{🔴}{\bad{}}
+\newunicodechar{⏸}{\hold{}}
+\newunicodechar{✋}{\hold{}}
+\newunicodechar{🛑}{\hold{}}
+\newunicodechar{🚫}{\hold{}}
+\newunicodechar{🚧}{\wip{}}
+\newunicodechar{🔄}{\wip{}}
+\newunicodechar{⏭}{\wip{}}
+\newunicodechar{🟡}{\partialmark{}}
+\newunicodechar{🟠}{\partialmark{}}
+\newunicodechar{ℹ}{\notemark{}}
+\newunicodechar{📝}{\notemark{}}
+\newunicodechar{👉}{\notemark{}}
+\newunicodechar{📉}{\notemark{}}
+\newunicodechar{📈}{\notemark{}}
+\newunicodechar{📊}{\notemark{}}
+\newunicodechar{🔧}{\notemark{}}
+\newunicodechar{🚀}{\notemark{}}
+\newunicodechar{🌊}{\notemark{}}
+\newunicodechar{😱}{\notemark{}}
+\newunicodechar{❓}{\openmark{}}
+\newunicodechar{🤔}{\openmark{}}
+\newunicodechar{⭐}{\textbf{*}}
+
+% ---- Paths and identifiers -------------------------------------------
+% Breakable monospace text. Underscores and other characters are safe.
+\ExplSyntaxOn
+\cs_new:Nn \cvt_char:n
+  {
+    \str_case:nnF {#1}
+      {
+        {/}{/\penalty0\relax}
+        {_}{\char`\_\penalty0\relax}
+        {.}{.\penalty0\relax}
+        {-}{\char`\-\penalty0\relax}
+        {,}{,\penalty0\relax}
+        {=}{=\penalty0\relax}
+        {:}{:\penalty0\relax}
+      }
+      {#1\penalty800\relax}% last resort: a long hash or word may break anywhere
+  }
+\cs_new:Nn \cvt_text:n
+  { \str_map_inline:nn {#1} { \cvt_char:n {##1} } }
+\NewDocumentCommand{\cvtmono}{m}
+  { \begingroup \ttfamily \cvt_text:n {#1} \endgroup }
+\ExplSyntaxOff
+\newcommand{\src}[1]{\cvtmono{#1}}
+\newcommand{\code}[1]{\cvtmono{#1}}
+\newcommand{\runid}[1]{\cvtmono{#1}}
+% Bead identifier: monospace and an entry in the bead index of the book.
+\newcommand{\bead}[1]{\cvtmono{#1}\index[\cvtbeadindex]{#1@\texttt{#1}}}
+\newcommand{\cvtrepo}{https://github.com/chuanseng-ng/claude_verilog_test}
+\newcommand{\ghref}[1]{\href{\cvtrepo/issues/#1}{GH~\##1}}
+\newcommand{\prref}[1]{\href{\cvtrepo/pull/#1}{PR~\##1}}
+
+% ---- Boxes -----------------------------------------------------------
+\mdfsetup{skipabove=0.8\baselineskip,skipbelow=0.8\baselineskip}
+\newmdenv[linewidth=1.2pt,topline=false,bottomline=false,rightline=false,
+  linecolor=cvtwarn,backgroundcolor=cvtwarn!6,innerleftmargin=8pt,
+  innertopmargin=4pt,innerbottommargin=4pt]{cvt@warningbox}
+\newmdenv[linewidth=1.2pt,topline=false,bottomline=false,rightline=false,
+  linecolor=cvtbad,backgroundcolor=cvtbad!6,innerleftmargin=8pt,
+  innertopmargin=4pt,innerbottommargin=4pt]{cvt@cautionbox}
+\newmdenv[linewidth=1.2pt,topline=false,bottomline=false,rightline=false,
+  linecolor=cvtwip,backgroundcolor=cvtwip!6,innerleftmargin=8pt,
+  innertopmargin=4pt,innerbottommargin=4pt]{cvt@notebox}
+
+\newcommand{\cvtcaption}[1]{{\sffamily\scriptsize\color{black!65}#1}\par
+  \vspace{2pt}}
+% Moved and record text sit between two marker lines. The text is not boxed, so it
+% breaks across pages and may hold longtables, listings and landscape pages.
+\newcommand{\cvt@markrule}{\par\nobreak\noindent
+  {\color{black!45}\rule{\linewidth}{0.4pt}}\par\nobreak}
+% Text moved verbatim from a source file. The body is normal LaTeX.
+\NewDocumentEnvironment{relocated}{m}
+  {\par\addvspace{0.6\baselineskip}\cvt@markrule
+   \cvtcaption{Moved from \src{#1}}\nobreak}
+  {\par\nobreak\cvtcaption{End of moved text}\cvt@markrule
+   \addvspace{0.6\baselineskip}}
+% Historical text in the Changes record, with an optional date.
+\NewDocumentEnvironment{record}{o}
+  {\par\addvspace{0.6\baselineskip}\cvt@markrule
+   \cvtcaption{Record\IfValueT{#1}{ \textbullet\ #1}}\nobreak}
+  {\par\nobreak\cvtcaption{End of record}\cvt@markrule
+   \addvspace{0.6\baselineskip}}
+\newenvironment{warningbox}
+  {\begin{cvt@warningbox}\textbf{Warning.}\ }{\end{cvt@warningbox}}
+\newenvironment{cautionbox}
+  {\begin{cvt@cautionbox}\textbf{Caution.}\ }{\end{cvt@cautionbox}}
+\newenvironment{notebox}
+  {\begin{cvt@notebox}\textbf{Note.}\ }{\end{cvt@notebox}}
+\newenvironment{procedure}
+  {\begin{enumerate}}{\end{enumerate}}
+
+% ---- Listings --------------------------------------------------------
+\lstdefinelanguage{SystemVerilog}{%
+  morekeywords={module,endmodule,input,output,inout,logic,wire,reg,assign,
+    always,always_ff,always_comb,always_latch,posedge,negedge,begin,end,if,
+    else,case,casez,endcase,default,for,generate,endgenerate,genvar,
+    parameter,localparam,typedef,struct,enum,packed,package,endpackage,
+    import,interface,endinterface,modport,function,endfunction,task,
+    endtask,return,unique,priority,automatic,int,bit,byte,integer,signed,
+    unsigned,assert,property,sequence,initial,ifdef,ifndef,endif,define,
+    include,timescale},
+  sensitive=true,morecomment=[l]{//},morecomment=[s]{/*}{*/},
+  morestring=[b]"}
+\lstdefinelanguage{YAML}{%
+  morekeywords={true,false,null},sensitive=true,morecomment=[l]{\#},
+  morestring=[b]",morestring=[b]'}
+\lstdefinestyle{cvtstyle}{%
+  basicstyle=\ttfamily\footnotesize,columns=fixed,keepspaces=true,
+  breaklines=true,breakatwhitespace=false,upquote=true,showstringspaces=false,
+  keywordstyle=\bfseries\color{blue!45!black},
+  commentstyle=\itshape\color{green!35!black},
+  stringstyle=\color{red!45!black},
+  frame=single,rulecolor=\color{black!30},framesep=3pt,
+  xleftmargin=3pt,xrightmargin=3pt,aboveskip=0.6\baselineskip,
+  belowskip=0.4\baselineskip,tabsize=2}
+\lstset{style=cvtstyle,language=SystemVerilog}
+\newcommand{\cvtlang}[2]{\lstdefinestyle{#1}{style=cvtstyle,language=#2}}
+% Code with non-ASCII characters (diagrams). Listings sets such a character before
+% the text that precedes it, so this block uses fancyvrb. Columns stay fixed.
+\DefineVerbatimEnvironment{textblock}{Verbatim}{%
+  fontsize=\footnotesize,breaklines=true,breakanywhere=true,
+  frame=single,framesep=3pt,rulecolor=\color{black!30}}
+% Verbatim tool logs with long-line breaking.
+\DefineVerbatimEnvironment{logblock}{Verbatim}{%
+  fontsize=\scriptsize,breaklines=true,breakanywhere=true,
+  frame=lines,framesep=2mm,rulecolor=\color{black!30}}
+
+% ---- Indexes ---------------------------------------------------------
+\makeindex[name=\cvtbeadindex,title={Bead index},columns=2]
+
+% ---- Longtable page break --------------------------------------------
+% Longtable ends a page with \vss, which shrinks without limit. LaTeX 2025 splits
+% the page box to read its marks and reports an error for that glue. The output
+% routine of longtable uses a finite shrink instead.
+\let\cvt@LT@output\LT@output
+\def\LT@output{\def\vss{\vskip\z@\@plus1fil\relax}\cvt@LT@output}
+\endinput

@@ -1,0 +1,20 @@
+% User Manual (um). Build with tools/docs/build_books.py.
+\documentclass[book=um]{cvtdocs}
+
+\cvtexternal{ds}
+\cvtexternal{tm}
+\cvtexternal{cr}
+\input{glossary}
+
+\begin{document}
+\cvtmaketitle{User Manual}{CVT-UM}{\cvtrevision}
+\tableofcontents
+
+\input{parts/01-chapters}
+\input{parts/99-appendix}
+
+\cleardoublepage
+\printunsrtglossary[type=acronym,title={Acronyms},style=list]
+\printunsrtglossary[title={Terms},style=list]
+\printindex[\cvtbeadindex]
+\end{document}

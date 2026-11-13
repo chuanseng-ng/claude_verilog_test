@@ -1,0 +1,308 @@
+# Single source of project terms. Edit this file, then run
+#   python tools/docs/gen_glossary.py
+# kind: acronym | technical-name | technical-verb | tool | pdk
+# glossary: true prints the entry in the glossary of each book.
+
+# --- acronyms ---
+- term: CDC
+  kind: acronym
+  expansion: clock domain crossing
+  definition: A signal path between two clock domains.
+  glossary: true
+- term: STA
+  kind: acronym
+  expansion: static timing analysis
+  definition: A check of all timing paths without simulation.
+  glossary: true
+- term: DRC
+  kind: acronym
+  expansion: design rule check
+  definition: A check of the layout against the rules of the process.
+  glossary: true
+- term: LVS
+  kind: acronym
+  expansion: layout versus schematic
+  definition: A check that the layout matches the netlist.
+  glossary: true
+- term: PDN
+  kind: acronym
+  expansion: power distribution network
+  definition: The metal grid that carries power to the cells.
+  glossary: true
+- term: UPF
+  kind: acronym
+  expansion: Unified Power Format
+  definition: A file format that states the power intent of a design.
+  glossary: true
+- term: SDC
+  kind: acronym
+  expansion: Synopsys Design Constraints
+  definition: A file format that states the timing constraints of a design.
+  glossary: true
+- term: PST
+  kind: acronym
+  expansion: power state table
+  definition: A table of the legal power states of the power domains.
+  glossary: true
+- term: MBIST
+  kind: acronym
+  expansion: memory built-in self-test
+  definition: Logic on the chip that tests its memories.
+  glossary: true
+- term: ATPG
+  kind: acronym
+  expansion: automatic test pattern generation
+  definition: A method that creates the test patterns for manufacturing faults.
+  glossary: true
+- term: TAP
+  kind: acronym
+  expansion: test access port
+  definition: The port and the state machine that control a JTAG interface.
+  glossary: true
+- term: GRT
+  kind: acronym
+  expansion: global routing
+  definition: The step that plans the route of each net before detailed routing.
+  glossary: true
+- term: CTS
+  kind: acronym
+  expansion: clock tree synthesis
+  definition: The step that builds the clock distribution network.
+  glossary: true
+- term: RCX
+  kind: acronym
+  expansion: resistance-capacitance extraction
+  definition: The step that reads the parasitic values from the layout.
+  glossary: true
+- term: SPEF
+  kind: acronym
+  expansion: Standard Parasitic Exchange Format
+  definition: A file format for the parasitic values of a layout.
+  glossary: true
+- term: PPA
+  kind: acronym
+  expansion: power, performance and area
+  definition: The three main quality figures of a design.
+  glossary: true
+- term: DFT
+  kind: acronym
+  expansion: design for test
+  definition: The design methods that make a chip testable.
+  glossary: true
+- term: AMS
+  kind: acronym
+  expansion: analog and mixed signal
+  definition: A design that has analog parts and digital parts.
+  glossary: true
+- term: RNM
+  kind: acronym
+  expansion: real-number modeling
+  definition: A model that uses real values in place of analog waveforms.
+  glossary: true
+- term: PLL
+  kind: acronym
+  expansion: phase-locked loop
+  definition: A circuit that makes a clock from a reference clock.
+  glossary: true
+- term: ISA
+  kind: acronym
+  expansion: instruction set architecture
+  definition: The instructions and the registers that software sees.
+  glossary: true
+- term: SIMT
+  kind: acronym
+  expansion: single instruction, multiple threads
+  definition: An execution model where many threads run one instruction.
+  glossary: true
+- term: APB
+  kind: acronym
+  expansion: Advanced Peripheral Bus
+  definition: A simple bus for control registers.
+  glossary: true
+- term: AXI
+  kind: acronym
+  expansion: Advanced eXtensible Interface
+  definition: A high-performance bus protocol.
+  glossary: true
+- term: ICG
+  kind: acronym
+  expansion: integrated clock gating
+  definition: A cell that stops a clock safely.
+  glossary: true
+- term: LEF
+  kind: acronym
+  expansion: Library Exchange Format
+  definition: A file format for the abstract view of a cell or a macro.
+  glossary: true
+- term: LEC
+  kind: acronym
+  expansion: logical equivalence checking
+  definition: A proof that two designs have the same function.
+  glossary: true
+- term: SoC
+  kind: acronym
+  expansion: system on chip
+  definition: A chip that holds the processors, the memory and the peripherals.
+  glossary: true
+- term: RTL
+  kind: acronym
+  expansion: register-transfer level
+  definition: A design description in terms of registers and logic.
+  glossary: true
+- term: CSR
+  kind: acronym
+  expansion: control and status register
+  definition: A register that controls the CPU or reports its state.
+  glossary: true
+- term: IRQ
+  kind: acronym
+  expansion: interrupt request
+  definition: A signal that asks the CPU to run a handler.
+  glossary: true
+- term: DMA
+  kind: acronym
+  expansion: direct memory access
+  definition: A transfer of data that does not use the CPU.
+  glossary: true
+- term: NPU
+  kind: acronym
+  expansion: neural processing unit
+  definition: A block that runs neural-network operations.
+  glossary: true
+- term: PDK
+  kind: acronym
+  expansion: process design kit
+  definition: The data that a foundry gives for one process.
+  glossary: true
+- term: PMU
+  kind: acronym
+  expansion: power management unit
+  definition: The block that controls the power sequence of the power domains.
+  glossary: true
+- term: GLS
+  kind: acronym
+  expansion: gate-level simulation
+  definition: A simulation of the synthesized netlist.
+  glossary: true
+- term: HLS
+  kind: acronym
+  expansion: high-level synthesis
+  definition: A tool flow that turns C or C++ code into RTL.
+  glossary: true
+- term: FPGA
+  kind: acronym
+  expansion: field-programmable gate array
+  definition: A chip with logic that a user can program.
+  glossary: true
+- term: SRAM
+  kind: acronym
+  expansion: static random-access memory
+  definition: A memory that keeps its data while power is on.
+  glossary: true
+- term: JTAG
+  kind: acronym
+  expansion: Joint Test Action Group
+  definition: The group that defined the IEEE 1149.1 test interface.
+  glossary: true
+- term: WNS
+  kind: acronym
+  expansion: worst negative slack
+  definition: The most negative slack of all timing paths.
+  glossary: true
+- term: TNS
+  kind: acronym
+  expansion: total negative slack
+  definition: The sum of the negative slack of all failing paths.
+  glossary: true
+- term: ECO
+  kind: acronym
+  expansion: engineering change order
+  definition: A small late change to a design.
+  glossary: true
+- term: MMIO
+  kind: acronym
+  expansion: memory-mapped input/output
+  definition: Access to a device through load and store instructions.
+  glossary: true
+
+# --- tools ---
+- term: Verilator
+  kind: tool
+  definition: A simulator that turns SystemVerilog into C++ code.
+  glossary: true
+- term: cocotb
+  kind: tool
+  definition: A Python framework for the verification of RTL.
+  glossary: true
+- term: pyuvm
+  kind: tool
+  definition: A Python implementation of the UVM methodology.
+  glossary: true
+- term: Yosys
+  kind: tool
+  definition: An open-source logic synthesis tool.
+  glossary: true
+- term: sv2v
+  kind: tool
+  definition: A tool that converts SystemVerilog to Verilog.
+  glossary: true
+- term: Synlig
+  kind: tool
+  definition: A Yosys front end for SystemVerilog.
+  glossary: true
+- term: OpenROAD
+  kind: tool
+  definition: An open-source tool for place and route.
+  glossary: true
+- term: LibreLane
+  kind: tool
+  definition: A flow driver that runs the open-source steps from RTL to layout.
+  glossary: true
+- term: OpenSTA
+  kind: tool
+  definition: An open-source static timing analyzer.
+  glossary: true
+- term: Magic
+  kind: tool
+  definition: An open-source layout editor and design rule checker.
+  glossary: true
+- term: KLayout
+  kind: tool
+  definition: An open-source layout viewer and design rule checker.
+  glossary: true
+- term: Netgen
+  kind: tool
+  definition: An open-source tool for layout versus schematic checks.
+  glossary: true
+- term: Verible
+  kind: tool
+  definition: A lint and format tool for SystemVerilog.
+  glossary: true
+- term: pyslang
+  kind: tool
+  definition: The Python interface of the slang SystemVerilog compiler.
+  glossary: true
+- term: pandoc
+  kind: tool
+  definition: A tool that converts documents between formats.
+  glossary: true
+
+# --- process design kits ---
+- term: Sky130
+  kind: pdk
+  definition: The open 130 nm process design kit from SkyWater.
+  glossary: true
+- term: ASAP7
+  kind: pdk
+  definition: A predictive 7 nm process design kit.
+  glossary: true
+- term: FreePDK45
+  kind: pdk
+  definition: A predictive 45 nm process design kit.
+  glossary: true
+
+# --- technical names ---
+# Entries are added during the STE pass.
+
+# --- technical verbs ---
+# Entries are added during the STE pass.
