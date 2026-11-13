@@ -99,7 +99,7 @@ jobs:
       # gpio_controller.sv fail every variant. An advisory step that always reports
       # differences is noise, and CLAUDE.md forbids style-only mass edits, so the
       # step was dropped instead of gated. Formatting is enforced by review against
-      # docs/development/CODING_GUIDELINES.md. Re-add a format gate only together
+      # Doc: um:guide:coding-guidelines. Re-add a format gate only together
       # with a deliberate, verified, one-off whole-tree reformat.
 
   # ==========================================================================

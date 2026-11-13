@@ -22,7 +22,7 @@
 // gray-coded signal must cross clock domains.
 //
 // Reset: asynchronous assert, synchronous deassert, active-low (new-module
-// discipline, docs/development/CODING_GUIDELINES.md §1.4). rst_n_i is
+// discipline, Doc: um:guide:coding-guidelines §1.4). rst_n_i is
 // expected to already be a per-domain-synchronised reset (see
 // cdc_reset_sync.sv) at the instantiation site.
 //

@@ -286,7 +286,7 @@
 // cpu_gated_clk domain).
 //
 // Coding rules: registered FSMs only; async-assert/sync-deassert reset
-// (docs/development/CODING_GUIDELINES.md §1.4), matching cdc_sync /
+// (Doc: um:guide:coding-guidelines §1.4), matching cdc_sync /
 // cdc_reset_sync discipline.
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 

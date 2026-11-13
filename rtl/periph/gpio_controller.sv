@@ -246,7 +246,7 @@ module gpio_controller
     // =========================================================================
     // Edge detection — one further cycle of registration on the synchronised
     // bus. Synchronous reset (peripheral discipline, docs/development/
-    // CODING_GUIDELINES.md §1.4 "grandfathered" note — this subsystem is
+    // Doc: um:guide:coding-guidelines §1.4 "grandfathered" note — this subsystem is
     // uniformly synchronous-reset; see timer.sv/spi_controller.sv).
     // =========================================================================
     logic [N_PINS-1:0] gpio_in_prev_q;

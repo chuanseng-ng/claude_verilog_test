@@ -10,7 +10,7 @@
 #   * Do NOT add the 'undef-range-select' rule here for a design source line unless the replaced
 #     bits are provably dead (state the proof).  That rule is the dud4 defect.
 #
-# --- implicit declarations on dead lint sinks (docs/SKY130_CPU_SYNLIG_DUD4.md, dud4 warning diff)
+# --- implicit declarations on dead lint sinks (Doc: cr:defect:sky130-cpu-synlig-dud4, dud4 warning diff)
 # Synlig reports the initialiser identifier of `logic _unused_x = y;` as implicitly declared.  The
 # `_unused_*` objects are lint sinks that nothing reads, so even if the implicit net is a new
 # undriven wire it has no fanout.  Verified: the sv2v arm (no such warning) and the Synlig arm

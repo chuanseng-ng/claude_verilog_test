@@ -144,7 +144,7 @@
 // would be the INVERSE of the "domain on" sense used internally here
 // (pg_ctrl = 0 means "on"), unlike every other signal in this module.
 //
-// Reset style (explicit decision, see docs/development/CODING_GUIDELINES.md
+// Reset style (explicit decision, see Doc: um:guide:coding-guidelines
 // section 1.4): this module uses SYNCHRONOUS reset (`always_ff @(posedge
 // clk_i)` gated by `if (!rst_n_i)`), matching every other module on the APB
 // peripheral ring it lives on (uart_controller, spi_controller, timer,
@@ -160,7 +160,7 @@
 // subsystem it integrates into. Matching the subsystem was chosen over
 // introducing the project's first reset synchronizer as a side effect of a
 // PMU; full CPU/peripheral reset-discipline unification remains the separate
-// P3 audit item already tracked in CODING_GUIDELINES.md.
+// P3 audit item already tracked in Doc: um:guide:coding-guidelines.
 //
 // Register map (byte offset, 32-bit words) — APB4 slave, reuses
 // apb4_register_bank.sv (all APB4 protocol machinery: pready hardwired 1,

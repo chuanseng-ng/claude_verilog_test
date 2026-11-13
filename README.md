@@ -67,7 +67,7 @@ Full per-phase records and feature lists → Doc: cr:status:phase-history.
 Top level: `rtl/` (CPU, GPU, caches, peripherals, SoC), `tb/` (Python models + cocotb),
 `docs/` (specs), `pnr/` (physical design), `sim/`, `micro_p/` (archived Phase 1).
 
-Full directory tree → [`docs/readme/PROJECT_STRUCTURE.md`](docs/readme/PROJECT_STRUCTURE.md).
+Full directory tree → Doc: um:guide:project-structure.
 
 ## Requirements
 
@@ -93,7 +93,7 @@ pytest -v        # 66 reference-model unit tests
 ```
 
 Per-phase build/run commands (cocotb CPU suites, cache sims, random regression) →
-[`docs/readme/QUICK_START.md`](docs/readme/QUICK_START.md).
+Doc: um:guide:quick-start.
 
 ## Documentation
 
@@ -117,28 +117,29 @@ Core specifications in `docs/`:
 | `design/DFT_ARCHITECTURE.md` | DFT scan + MBIST + JTAG architecture for the Sky130 SoC (epic `j41m`) |
 | `FPGA_STAGE0_EVALUATION.md` | FPGA Stage 0 feasibility: yosys resource counts, no hardware (epic `hlrm`) |
 | `FPGA_BOARD_SELECTION.md` | FPGA board recommendation and measured ECP5 fmax lower bound (epic `hlrm`) |
-| `development/CODING_GUIDELINES.md` | Coding practices & style guidelines (RTL + Python + shell) |
-| `development/CODING_COMPLIANCE_AUDIT.md` | Guidelines compliance audit and remediation backlog |
+| `Doc: um:guide:coding-guidelines` | Coding practices & style guidelines (RTL + Python + shell) |
+| `Doc: um:guide:coding-compliance-audit` | Guidelines compliance audit and remediation backlog |
 
-README detail set in `docs/readme/`:
+The README detail set is in the User Manual and the Changes record
+(`docs/manual/`). To build the PDFs, see [`docs/README.md`](docs/README.md).
 
 | Document | Purpose |
 | :------- | :------ |
 | `Doc: cr:status:phase-history` | Per-phase completion records and feature lists |
-| `readme/QUICK_START.md` | Build/run commands for every phase |
-| `readme/SUPPORTED_INSTRUCTIONS.md` | RV32I + Zicsr instruction tables |
-| `readme/DEBUG_INTERFACE.md` | APB3 debug register map |
-| `readme/PROJECT_STRUCTURE.md` | Full repository directory tree |
+| `Doc: um:guide:quick-start` | Build/run commands for every phase |
+| `Doc: um:guide:supported-instructions` | RV32I + Zicsr instruction tables |
+| `Doc: um:guide:debug-interface` | APB3 debug register map |
+| `Doc: um:guide:project-structure` | Full repository directory tree |
 
 ## Supported Instructions
 
 RV32I base (Phase 1, 37 instructions) + Zicsr/interrupts (Phase 2) — full tables in
-[`docs/readme/SUPPORTED_INSTRUCTIONS.md`](docs/readme/SUPPORTED_INSTRUCTIONS.md).
+Doc: um:guide:supported-instructions.
 
 ## Debug Interface
 
 APB3 slave: halt/resume/step, register and PC access, 2 hardware breakpoints. Register
-map in [`docs/readme/DEBUG_INTERFACE.md`](docs/readme/DEBUG_INTERFACE.md);
+map in Doc: um:guide:debug-interface;
 complete definitions in [`docs/design/MEMORY_MAP.md`](docs/design/MEMORY_MAP.md).
 
 ## Contributing

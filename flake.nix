@@ -230,7 +230,7 @@
             ];
 
             # ── Verible (bead claude_verilog_test-i7vj) ────────────────────────
-            # docs/development/CODING_GUIDELINES.md 1.7 defines the pre-commit gate
+            # Doc: um:guide:coding-guidelines 1.7 defines the pre-commit gate
             # as `cd sim && make lint && make lint_soc && make verible`. Before this
             # was added, neither verible-verilog-lint nor verible-verilog-format
             # existed on PATH or in this flake, so that documented chain could not

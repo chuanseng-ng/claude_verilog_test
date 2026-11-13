@@ -2,7 +2,7 @@
 #
 # LOCAL targets for an EDA host with SpyGlass + HAL licences.  CI does not run them (GitHub runners
 # have no SpyGlass); CI keeps the open-source cdc_snitch gate (sim/Makefile `cdc`).
-# Full description: docs/verification/DQC_FLOW.md
+# Full description: Doc: um:flow:dqc
 #
 #   make -C dqc lint       SpyGlass lint/lint_rtl
 #   make -C dqc cdc        SpyGlass cdc/cdc_setup_check + cdc/cdc_verify_struct
@@ -77,7 +77,7 @@ lint: check-tools sources
 # instead of reporting a vacuous "0 unsynchronised crossings".  `make selftest` proves it.
 # For cdc_setup_check only, Ar_syncrst_setupcheck01 and Ar_converge01 need the cdc_adv_checker licence feature, which the
 # server does not serve (measured: Ac_license01).  They are listed, printed on every run, and the
-# gap is recorded in docs/verification/DQC_FLOW.md; any OTHER not-run rule makes the goal INCOMPLETE.
+# gap is recorded in Doc: um:flow:dqc; any OTHER not-run rule makes the goal INCOMPLETE.
 NOT_RUN_OK := --accept-not-run Ar_syncrst_setupcheck01,Ar_converge01
 
 cdc-setup: check-tools sources
@@ -95,7 +95,7 @@ rdc: check-tools sources
 # -NOHALSYNTH: the synthesizability engine stalled indefinitely on this host (no output for 5+ min
 # on a 40-line design, process alive, "Performing synthesizability checks" -- consistent with a
 # licence wait); lint (halcheck) and structural (halstruct) engines run in seconds.  SpyGlass lint
-# covers synthesizability.  Style-only categories are off: see docs/verification/DQC_FLOW.md.
+# covers synthesizability.  Style-only categories are off: see Doc: um:flow:dqc.
 HAL_NOCHECK ?= RTL_NAMING,RTL_FILEFORMAT,RTL_CODECOMMENT,RTL_CODINGSTYLE,CBPAHI
 .PHONY: hal
 hal: sources

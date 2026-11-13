@@ -70,7 +70,7 @@
 // compare operand (full_cmp_w below); no flop, port or instance name changes.
 //
 // Reset: asynchronous assert, synchronous deassert, active-low per domain
-// (docs/development/CODING_GUIDELINES.md §1.4). wr_rst_n_i / rd_rst_n_i are
+// (Doc: um:guide:coding-guidelines §1.4). wr_rst_n_i / rd_rst_n_i are
 // expected to already be domain-synchronised at the call site (see
 // async_axi_fifo.sv, which drives them from cdc_reset_sync outputs sharing a
 // common `s_rst_n_i & m_rst_n_i` root).
