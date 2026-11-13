@@ -18,20 +18,12 @@
 #                        AXI arbiter, register file, CSR file,
 #                        forwarding/hazard units, interrupt controller
 #
-# Power modes:
-#   RUN   — PD_TOP=ON, PD_CORE=ON    (normal CPU execution)
-#   SLEEP — PD_TOP=ON, PD_CORE=OFF   (CPU halted, pipeline power-gated)
-#           Retention cells preserve CSR state (MTVEC, MIE, MSTATUS,
-#           MEPC) so interrupt delivery and resume are correct on wake.
-#
-# Control signal: dbg_halted (net at rv32i_cpu_top scope)
-#   Driven by u_core output, sampled by PD_TOP logic.
-#   PSW_CORE turns off VDD_CORE when dbg_halted=1, on when dbg_halted=0.
 #=============================================
 
 #---------------------------------------------
 # Design Top
 #---------------------------------------------
+# Doc: tm:pd:phase2-cpu-upf
 
 set_design_top rv32i_cpu_top
 

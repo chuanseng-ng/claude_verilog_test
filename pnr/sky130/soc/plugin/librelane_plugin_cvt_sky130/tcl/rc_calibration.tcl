@@ -1,20 +1,4 @@
-# Project-local wire-RC calibration for the pre-route estimate (bead claude_verilog_test-e45j).
-#
-# WHY: `estimate_parasitics -global_routing` on sky130 uses ground-only per-layer C from the tech
-# LEF (met1 0.085 fF/um ... met5 0.088 fF/um) -- no coupling or fringe. Measured on
-# RUN_2026-10-05_06-50-11 (estimate dumped with `-spef_file` vs OpenRCX SPEF of the SAME nets,
-# 17 525 nets with C > 5 fF), total-cap and total-resistance ratio RCX / estimate:
-#
-#     RC corner   sum C      sum R
-#     min         1.69       0.62
-#     nom         1.88       1.02
-#     max         2.04       1.91
-#
-# Every repair step (28/37/40) therefore sized buffers against about half the real wire C, and the
-# first look at real RC is STAPostPNR (step 51): max_ss slew 7622 vs 307 at the GRT estimate
-# (scripts/cvt_diag, bead e45j notes). This proc scales the per-layer RC used by the estimator
-# per STA corner so the resizer sees what OpenRCX will later extract.
-#
+# Doc: cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration
 # HOW: scripts under librelane/scripts/openroad source common/set_rc.tcl and then estimate. The
 # wrapper script (see steps.py) renames `source` so that this proc runs immediately after every
 # `.../common/set_rc.tcl`, leaving the shared LibreLane install untouched.

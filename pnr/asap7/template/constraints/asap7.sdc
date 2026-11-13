@@ -9,14 +9,6 @@
 # Target:  1408 MHz (710 ps period)
 # Fallback: 1389 MHz (720 ps period)
 #
-# History:
-#   Runs 7-31 wrote time values in ns against a ps-unit Liberty — this made
-#   create_clock -period 1.900 resolve to 1.9 ps instead of 1.9 ns, over-
-#   constraining STA by ~1000×.
-#   Run 33: corrected units (1200 ps). Design passed with +328 ps slack;
-#   report_clock_min_period = 871 ps (fmax 1147 MHz). Run 34: 900 ps, +128 ps
-#   slack, fmax ~1296 MHz. Run 35: 720 ps with EX1c one-hot restructure.
-#
 # ASAP7 timing characteristics (asap7sc7p5t_SIMPLE RVT TT 0.7V 25C):
 #   INV delay:      ~15 ps
 #   FF setup:       ~20 ps
@@ -24,6 +16,7 @@
 #   Clock jitter:   ~10 ps
 ###############################################################################
 
+# Doc: tm:pd:asap7-template-sdc
 ###############################################################################
 # 1. Clock definition
 ###############################################################################
@@ -217,43 +210,11 @@ set_false_path -hold -from [get_cells -hierarchical {*ex1a_ex1b_reg_q*}]
 ###############################################################################
 set_false_path -hold -from [get_cells -hierarchical {*ex1c_ex1b_reg_q*}]
 
-###############################################################################
-# 13. Run 30: AXI IO ports — hold false-paths
-# Run 29 revealed 170 setup violations starting from axi_rvalid_i, each
-# carrying 4 chained HB4xp67 hold buffers (~290 ps overhead). Root cause:
-# set_input_delay -min 10 for AXI ports creates a near-zero minimum path,
-# forcing the router to insert hold cells that then penalise setup paths.
-# External IO ports have no intra-chip hold requirement — suppress hold checks
-# on all AXI master read/write channel inputs.
-###############################################################################
 set_false_path -hold -from [get_ports {axi_rvalid_i axi_rdata_i[*] axi_rresp_i[*]}]
 set_false_path -hold -from [get_ports {axi_awready_i axi_wready_i axi_bvalid_i axi_bresp_i[*]}]
 
 ###############################################################################
 # 14. SRAM gated clocks — ICGx1_ASAP7_75t_R generated clocks (Run 37)
-#
-# Run 36 result: power −50% (52.9→26.6 mW) but timing not closed.
-# Root cause: OpenROAD CTS treated each ICG CLK input as a clock sink and
-# tried to balance all 10 to fixed SRAM macro locations, blowing FF-to-FF
-# skew from 62 ps to 159 ps.  SRAM clk0 arrived 146 ps later than the main
-# clock (288 ps vs 143 ps), creating 4 hold violations on short data paths.
-#
-# Fix: declare all ICGx1 GCLK outputs as a single generated clock.
-#   • CTS excludes gated-clock nets from the main FF clock tree → restores
-#     FF-to-FF skew to Run-35 levels (~62 ps).
-#   • STA models SRAM clk0 latency correctly (clk + ICG insertion + routing)
-#     rather than as an unrelated anomaly.
-#   • Proper cross-domain hold analysis: suppress hold on clk→gclk_sram
-#     paths (gclk_sram rises after clk in the same cycle; hold is structurally
-#     guaranteed — Liberty ICGx1 samples ENA on the low phase before GCLK
-#     rises, so GCLK can only rise later than the main clock edge).
-#
-# Cell hierarchy (confirmed from Run-36 netlist, 10 instances):
-#   u_core.u_icache.u_tag_cg.u_icg
-#   u_core.u_icache.gen_data_sram[0..3].u_data_cg.u_icg
-#   u_core.u_dcache.u_tag_cg.u_icg
-#   u_core.u_dcache.gen_data_sram[0..3].u_data_cg.u_icg
-###############################################################################
 
 create_generated_clock -name gclk_sram \
     -source [get_ports clk_i] \

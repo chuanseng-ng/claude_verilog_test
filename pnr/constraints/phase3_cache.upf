@@ -3,7 +3,6 @@
 # Multi-domain power management
 # File: phase3_cache.upf
 # Standard: IEEE 1801-2015 (UPF 3.0)
-#
 # Extends phase2_cpu.upf by refining PD_CORE to add a
 # dedicated PD_CACHE sub-domain for the cache subsystem.
 #
@@ -22,31 +21,9 @@
 #                     rv32i_cpu_top.u_core.u_cache_arb
 #              Contains: tag/data/valid/dirty SRAM arrays, FSM registers,
 #                        cache arbiter state
-#              Reason: Cache arrays are the largest contributor to leakage
-#                      in Phase 3.  Separate gating allows fine-grained power
-#                      control — e.g., power-gate caches during instruction
-#                      breakpoint halt without disturbing pipeline registers.
-#
-# Power modes:
-#   RUN        — PD_TOP=ON, PD_CORE=ON, PD_CACHE=ON
-#                Normal execution; caches serve requests.
-#   SLEEP      — PD_TOP=ON, PD_CORE=OFF, PD_CACHE=OFF
-#                Full sleep; pipeline + caches power-gated.
-#   CACHE_OFF  — PD_TOP=ON, PD_CORE=ON,  PD_CACHE=OFF
-#                Caches disabled; pipeline runs in bypass mode (future work:
-#                bypass logic in IF/MEM stages to connect directly to AXI).
-#                Currently the same as SLEEP for the cache domain.
-#
-# Control signals:
-#   dbg_halted      — gates PD_CORE (high = gate off)
-#   cache_powerdown — gates PD_CACHE independently (currently tied to
-#                     dbg_halted; a separate signal can be added when
-#                     CACHE_OFF mode is implemented).
 #=============================================
+# Doc: tm:pd:phase3-cache-upf
 
-#---------------------------------------------
-# Design Top
-#---------------------------------------------
 
 set_design_top rv32i_cpu_top
 

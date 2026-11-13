@@ -122,7 +122,7 @@ cr:app:archive-session-summary:verification-status	docs/manual/cr/parts/04-fix-l
 cr:app:archive-session-summary:whats-working-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	9757	\texorpdfstring{What\textquotesingle s Working \ok{}}{What\textquotesingle s Working }
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
-cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	15	Build files
+cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	2694	Build files
 cr:ch:fix-log	docs/manual/cr/parts/04-fix-log-and-archive.tex	3	Fix log
 cr:ch:investigations	docs/manual/cr/parts/03-investigations.tex	3	Investigations
 cr:ch:phase-5-soc-runs	docs/manual/cr/parts/02-run-histories.tex	3	Phase 5 SoC runs
@@ -131,7 +131,7 @@ cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	7	Ph
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
 cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
-cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	11	Test benches
+cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	2690	Test benches
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
 cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
 cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	306	Controls (MEASURED unless marked)
@@ -530,6 +530,27 @@ cr:part:investigations	docs/manual/cr/parts/03-investigations.tex	1	Investigatio
 cr:part:phase-and-status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	1	Phase and status history
 cr:part:run-histories	docs/manual/cr/parts/02-run-histories.tex	1	Run histories
 cr:part:source-file-history	docs/manual/cr/parts/05-source-file-history.tex	1	Source-file history
+cr:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	420	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
+cr:pd:asap7-gpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	528	\texttt{asap7/gpu/macro\_placement\_3014.cfg}
+cr:pd:asap7-gpu-sdc	docs/manual/cr/parts/05-source-file-history.tex	512	\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}
+cr:pd:asap7-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	548	\texttt{asap7/pdn\_asap7\_orfs.tcl}
+cr:pd:asap7-soc-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	894	\texttt{asap7/soc/pdn\_orfs.tcl}
+cr:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	636	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
+cr:pd:asap7-soc-phase5-sdc	docs/manual/cr/parts/05-source-file-history.tex	594	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
+cr:pd:makefile	docs/manual/cr/parts/05-source-file-history.tex	12	\texttt{Makefile}
+cr:pd:phase1-cpu-enhanced-sdc	docs/manual/cr/parts/05-source-file-history.tex	911	\texttt{constraints/phase1\_cpu\_enhanced.sdc}
+cr:pd:phase1-cpu-post-cts-sdc	docs/manual/cr/parts/05-source-file-history.tex	929	\texttt{constraints/phase1\_cpu\_post\_cts.sdc}
+cr:pd:phase5-soc-multiclock-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	1218	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
+cr:pd:phase5-soc-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	967	\texttt{constraints/phase5\_soc\_multiclock.sdc}
+cr:pd:phase5-soc-upf	docs/manual/cr/parts/05-source-file-history.tex	948	\texttt{constraints/phase5\_soc.upf}
+cr:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/cr/parts/05-source-file-history.tex	1896	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
+cr:pd:scripts-check-cdc-timing-tcl	docs/manual/cr/parts/05-source-file-history.tex	1650	\texttt{scripts/check\_cdc\_timing.tcl}
+cr:pd:scripts-check-multiclock-sdc-tcl	docs/manual/cr/parts/05-source-file-history.tex	1912	\texttt{scripts/check\_multiclock\_sdc.tcl}
+cr:pd:sky130-soc-cdc-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	2293	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
+cr:pd:sky130-soc-macro-placement-cfg	docs/manual/cr/parts/05-source-file-history.tex	2332	\texttt{sky130/soc/macro\_placement.cfg}
+cr:pd:sky130-soc-pdn-tcl	docs/manual/cr/parts/05-source-file-history.tex	2443	\texttt{sky130/soc/pdn.tcl}
+cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration	docs/manual/cr/parts/05-source-file-history.tex	2659	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/rc\_calibration.tcl}
+cr:pd:sky130-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	1948	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
 cr:run:asap7	docs/manual/cr/parts/02-run-histories.tex	2452	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu	docs/manual/cr/parts/02-run-histories.tex	4728	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu:era-1-sdc-units-bug-runs-731	docs/manual/cr/parts/02-run-histories.tex	4842	Era 1: SDC Units Bug (Runs 7--31)
@@ -1763,6 +1784,10 @@ tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	39	NPU
 tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	31	Peripherals
 tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	27	PLL subsystem
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	15	SoC fabric
+tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6178	Constraint file notes
+tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	7646	PDN and flow script notes
+tm:ch:pd-macro-placement-notes	docs/manual/tm/parts/02-physical-design.tex	7591	Macro placement and pin order notes
+tm:ch:pd-makefile-notes	docs/manual/tm/parts/02-physical-design.tex	8033	pnr Makefile notes
 tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	6261	Proprietary simulators
 tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	4080	Sky130 flow
 tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	5813	Synthesis undefined-value gate
@@ -2052,6 +2077,20 @@ tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module r
 tm:part:physical-design	docs/manual/tm/parts/02-physical-design.tex	1	Physical design
 tm:part:tool-defects-and-standing-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	1	Tool defects and standing caveats
 tm:part:verification-infrastructure	docs/manual/tm/parts/03-verification-infrastructure.tex	1	Verification infrastructure
+tm:pd:asap7-coalescer-hls-sdc	docs/manual/tm/parts/02-physical-design.tex	6182	\texttt{asap7/coalescer\_hls/constraints/asap7.sdc}
+tm:pd:asap7-coalescer-rtl-sdc	docs/manual/tm/parts/02-physical-design.tex	6197	\texttt{asap7/coalescer\_rtl/constraints/asap7.sdc}
+tm:pd:asap7-cpu-sdc	docs/manual/tm/parts/02-physical-design.tex	6212	\texttt{asap7/cpu/constraints/asap7.sdc}
+tm:pd:asap7-gpu-sdc	docs/manual/tm/parts/02-physical-design.tex	6311	\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}
+tm:pd:asap7-hazard-hls-sdc	docs/manual/tm/parts/02-physical-design.tex	6333	\texttt{asap7/hazard\_hls/constraints/asap7.sdc}
+tm:pd:asap7-hazard-rtl-sdc	docs/manual/tm/parts/02-physical-design.tex	6348	\texttt{asap7/hazard\_rtl/constraints/asap7.sdc}
+tm:pd:asap7-pdn-orfs-tcl	docs/manual/tm/parts/02-physical-design.tex	7650	\texttt{asap7/pdn\_asap7\_orfs.tcl}
+tm:pd:asap7-soc-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	7595	\texttt{asap7/soc/macro\_placement.cfg}
+tm:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	6416	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
+tm:pd:asap7-soc-phase5-sdc	docs/manual/tm/parts/02-physical-design.tex	6363	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
+tm:pd:asap7-template-sdc	docs/manual/tm/parts/02-physical-design.tex	6579	\texttt{asap7/template/constraints/asap7.sdc}
+tm:pd:asap7-valu-hls-comb-sdc	docs/manual/tm/parts/02-physical-design.tex	6657	\texttt{asap7/valu\_hls\_comb/constraints/asap7.sdc}
+tm:pd:asap7-valu-hls-sdc	docs/manual/tm/parts/02-physical-design.tex	6642	\texttt{asap7/valu\_hls/constraints/asap7.sdc}
+tm:pd:asap7-valu-rtl-sdc	docs/manual/tm/parts/02-physical-design.tex	6673	\texttt{asap7/valu\_rtl/constraints/asap7.sdc}
 tm:pd:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	5029	\texorpdfstring{Commercial vs open P\&R flow comparison, Sky130 \code{rv32i_cpu_top} (phase B8)}{Commercial vs open P\&R flow comparison, Sky130 (phase B8)}
 tm:pd:commercial-flow-comparison:1-executive-summary	docs/manual/tm/parts/02-physical-design.tex	5061	Executive summary
 tm:pd:commercial-flow-comparison:2-caveats-apply-to-every-number	docs/manual/tm/parts/02-physical-design.tex	5185	Caveats (apply to every number)
@@ -2069,6 +2108,7 @@ tm:pd:commercial-flow-comparison:5-history-arms-earlier-commercial-iterations-ju
 tm:pd:commercial-flow-comparison:6-lessons-by-tool	docs/manual/tm/parts/02-physical-design.tex	5828	Lessons by tool
 tm:pd:commercial-flow-comparison:7-open-items-and-follow-ups	docs/manual/tm/parts/02-physical-design.tex	5890	Open items and follow-ups
 tm:pd:commercial-flow-comparison:8-files	docs/manual/tm/parts/02-physical-design.tex	5944	Files
+tm:pd:config-vsrc-tcl	docs/manual/tm/parts/02-physical-design.tex	7675	\texttt{config/vsrc.tcl}
 tm:pd:constraints-index	docs/manual/tm/parts/02-physical-design.tex	2504	SDC Constraints Directory - File Index
 tm:pd:constraints-index:all-files	docs/manual/tm/parts/02-physical-design.tex	2513	All Files
 tm:pd:constraints-index:constraint-summary-at-a-glance	docs/manual/tm/parts/02-physical-design.tex	2675	Constraint Summary at a Glance
@@ -2162,6 +2202,7 @@ tm:pd:constraints-sdc-files-summary:synthesis-stage	docs/manual/tm/parts/02-phys
 tm:pd:constraints-sdc-files-summary:total-port-count	docs/manual/tm/parts/02-physical-design.tex	3744	Total Port Count
 tm:pd:constraints-sdc-files-summary:verification-checklist	docs/manual/tm/parts/02-physical-design.tex	3832	Verification Checklist
 tm:pd:constraints-sdc-files-summary:workflow-recommendations	docs/manual/tm/parts/02-physical-design.tex	3756	Workflow Recommendations
+tm:pd:librelane-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	7616	\texttt{librelane/macro\_placement.cfg}
 tm:pd:librelane-patching	docs/manual/tm/parts/02-physical-design.tex	1228	Editing the shared LibreLane install --- evaluation
 tm:pd:librelane-patching:cons-and-real-risks	docs/manual/tm/parts/02-physical-design.tex	1350	Cons and real risks
 tm:pd:librelane-patching:finding-the-install-is-already-extensively-patched	docs/manual/tm/parts/02-physical-design.tex	1255	Finding: the install is already extensively patched
@@ -2169,6 +2210,7 @@ tm:pd:librelane-patching:pros-of-patching-for-a-post-rcx-repair-stage	docs/manua
 tm:pd:librelane-patching:recommendation	docs/manual/tm/parts/02-physical-design.tex	1391	Recommendation
 tm:pd:librelane-patching:the-cautionary-case-drttcl	docs/manual/tm/parts/02-physical-design.tex	1295	\texorpdfstring{The cautionary case: \code{drt.tcl}}{The cautionary case: }
 tm:pd:librelane-patching:the-question	docs/manual/tm/parts/02-physical-design.tex	1234	The question
+tm:pd:makefile	docs/manual/tm/parts/02-physical-design.tex	8037	\texttt{Makefile}
 tm:pd:node-strategy	docs/manual/tm/parts/02-physical-design.tex	5971	Technology Node Strategy
 tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20	docs/manual/tm/parts/02-physical-design.tex	6140	ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
 tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative	docs/manual/tm/parts/02-physical-design.tex	6022	\texorpdfstring{Commercial flows (\src{pnr/commercial/}, Sky130 only, indicative)}{Commercial flows (, Sky130 only, indicative)}
@@ -2222,6 +2264,12 @@ tm:pd:openroad-flow:timing-constraints-sdc	docs/manual/tm/parts/02-physical-desi
 tm:pd:openroad-flow:tool-stack	docs/manual/tm/parts/02-physical-design.tex	53	Tool Stack
 tm:pd:openroad-flow:upf-specification	docs/manual/tm/parts/02-physical-design.tex	733	UPF Specification
 tm:pd:openroad-flow:upf-structure	docs/manual/tm/parts/02-physical-design.tex	758	UPF Structure
+tm:pd:phase2-cpu-upf	docs/manual/tm/parts/02-physical-design.tex	6688	\texttt{constraints/phase2\_cpu.upf}
+tm:pd:phase3-cache-upf	docs/manual/tm/parts/02-physical-design.tex	6710	\texttt{constraints/phase3\_cache.upf}
+tm:pd:phase5-soc-multiclock-check-sdc	docs/manual/tm/parts/02-physical-design.tex	7058	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
+tm:pd:phase5-soc-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	6894	\texttt{constraints/phase5\_soc\_multiclock.sdc}
+tm:pd:phase5-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	6757	\texttt{constraints/phase5\_soc.sdc}
+tm:pd:phase5-soc-upf	docs/manual/tm/parts/02-physical-design.tex	6802	\texttt{constraints/phase5\_soc.upf}
 tm:pd:power-domain-evaluation	docs/manual/tm/parts/02-physical-design.tex	2242	Per-IP Power Domains + On/Off Sequencing --- Evaluation (pre-Phase-6 \#5)
 tm:pd:power-domain-evaluation:1-findings	docs/manual/tm/parts/02-physical-design.tex	2322	Findings
 tm:pd:power-domain-evaluation:2-the-blocker-that-sets-the-scope	docs/manual/tm/parts/02-physical-design.tex	2350	The blocker that sets the scope
@@ -2245,6 +2293,11 @@ tm:pd:rvb-fanout-fix:c2-approval-required	docs/manual/tm/parts/02-physical-desig
 tm:pd:rvb-fanout-fix:c3-verification-plan-once-an-option-is-approved-and-implemented	docs/manual/tm/parts/02-physical-design.tex	2167	C.3 Verification plan (once an option is approved and implemented)
 tm:pd:rvb-fanout-fix:c4-pd-re-run-scope	docs/manual/tm/parts/02-physical-design.tex	2201	C.4 PD re-run scope
 tm:pd:rvb-fanout-fix:d-explicitly-out-of-scope-for-this-study	docs/manual/tm/parts/02-physical-design.tex	2216	D. Explicitly out of scope for this study
+tm:pd:scripts-asap7-macro-power-tcl	docs/manual/tm/parts/02-physical-design.tex	7706	\texttt{scripts/asap7\_macro\_power.tcl}
+tm:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/tm/parts/02-physical-design.tex	7910	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
+tm:pd:scripts-check-cdc-timing-tcl	docs/manual/tm/parts/02-physical-design.tex	7769	\texttt{scripts/check\_cdc\_timing.tcl}
+tm:pd:scripts-report-per-clock-timing-tcl	docs/manual/tm/parts/02-physical-design.tex	7975	\texttt{scripts/report\_per\_clock\_timing.tcl}
+tm:pd:scripts-sta-load-sky130-soc-tcl	docs/manual/tm/parts/02-physical-design.tex	7990	\texttt{scripts/sta\_load\_sky130\_soc.tcl}
 tm:pd:sky130-cdc-maxss	docs/manual/tm/parts/02-physical-design.tex	4560	Sky130 SoC CDC budget failure at the ss corners (bead j41m.5 / j41m.4)
 tm:pd:sky130-cdc-maxss:1-what-fails	docs/manual/tm/parts/02-physical-design.tex	4570	What fails
 tm:pd:sky130-cdc-maxss:2-why-hold-padding-on-the-crossing-not-wire-or-placement	docs/manual/tm/parts/02-physical-design.tex	4622	Why: hold padding on the crossing, not wire or placement
@@ -2255,6 +2308,7 @@ tm:pd:sky130-cdc-maxss:6-scan-mode-hold-the-approach-chosen-and-what-is-not-veri
 tm:pd:sky130-cdc-maxss:7-evidence-run-2026-10-17-14-07-01-read-only-one-sta-at-a-time	docs/manual/tm/parts/02-physical-design.tex	4835	\texorpdfstring{Evidence (RUN\_\allowbreak{}2026-10-17\_\allowbreak{}14-07-01, read-only; one STA at a time)}{Evidence (RUN\_2026-10-17\_14-07-01, read-only; one STA at a time)}
 tm:pd:sky130-cdc-maxss:8-re-harden-5-with-the-hold-exemption-run-2026-10-17-23-06-56-measured-2026-10-18	docs/manual/tm/parts/02-physical-design.tex	4894	\texorpdfstring{Re-harden \#5 with the hold exemption: RUN\_\allowbreak{}2026-10-17\_\allowbreak{}23-06-56 (measured, 2026-10-18)}{Re-harden \#5 with the hold exemption: RUN\_2026-10-17\_23-06-56 (measured, 2026-10-18)}
 tm:pd:sky130-cdc-maxss:scan-view-hold-on-the-34-pins-information-for-stage-2-not-a-passfail	docs/manual/tm/parts/02-physical-design.tex	4979	\texorpdfstring{Scan-view hold on the 34 pins (information for Stage 2, NOT a pass/\allowbreak{}fail)}{Scan-view hold on the 34 pins (information for Stage 2, NOT a pass/fail)}
+tm:pd:sky130-cpu-sdc	docs/manual/tm/parts/02-physical-design.tex	7242	\texttt{sky130/cpu/constraints/sky130\_cpu.sdc}
 tm:pd:sky130-real-drc-lvs	docs/manual/tm/parts/02-physical-design.tex	4087	Sky130 (+FreePDK45) Harden + Real DRC/LVS --- Evaluation (pre-Phase-6 \#6)
 tm:pd:sky130-real-drc-lvs:1-findings	docs/manual/tm/parts/02-physical-design.tex	4099	Findings
 tm:pd:sky130-real-drc-lvs:2-why-go-and-why-staged	docs/manual/tm/parts/02-physical-design.tex	4141	Why GO (and why staged)
@@ -2268,6 +2322,9 @@ tm:pd:sky130-real-drc-lvs:stage-1-cpu-standalone-gh-103-bead-closed	docs/manual/
 tm:pd:sky130-real-drc-lvs:stage-2-cpu-macro-peripherals-soc-no-gpu-gh-104-bead-9t6-closed	docs/manual/tm/parts/02-physical-design.tex	4261	\texorpdfstring{Stage 2 --- CPU macro + peripherals SoC, no GPU (GH \#104, bead \code{9t6} closed)}{Stage 2 --- CPU macro + peripherals SoC, no GPU (GH \#104, bead closed)}
 tm:pd:sky130-real-drc-lvs:stage-2-re-harden-with-phase-6a-gpio-run-2026-09-26-00-07-59-2026-09-26-bead-00ef	docs/manual/tm/parts/02-physical-design.tex	4299	\texorpdfstring{Stage 2 re-harden with Phase 6a GPIO --- \code{RUN_2026-09-26_00-07-59} (2026-09-26, bead \code{00ef})}{Stage 2 re-harden with Phase 6a GPIO --- (2026-09-26, bead )}
 tm:pd:sky130-real-drc-lvs:stages-3-4-gpu-gh-105-106	docs/manual/tm/parts/02-physical-design.tex	4455	Stages 3 \& 4 --- GPU (GH \#105, \#106)
+tm:pd:sky130-soc-cdc-check-sdc	docs/manual/tm/parts/02-physical-design.tex	7421	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
+tm:pd:sky130-soc-plugin-librelane-cvt-tcl-scan-insert	docs/manual/tm/parts/02-physical-design.tex	8004	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/scan\_insert.tcl}
+tm:pd:sky130-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	7274	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
 tm:suite:phase4-random-kernels	docs/manual/tm/parts/03-verification-infrastructure.tex	9	Phase 4 Random-Kernel Regression
 tm:suite:phase4-random-kernels:address-layout	docs/manual/tm/parts/03-verification-infrastructure.tex	184	Address layout
 tm:suite:phase4-random-kernels:broadened-run-2026-06-01-b1-loads-b2-shared-mem-b3-divergence	docs/manual/tm/parts/03-verification-infrastructure.tex	35	Broadened run (2026-06-01) --- B1 loads + B2 shared-mem + B3 divergence

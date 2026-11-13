@@ -1,41 +1,12 @@
-#================================================================
 # Post-route CDC budget verification for the 2-domain ASAP7 SoC
 # Tool: OpenSTA (invoked as 'sta' standalone binary)
-# bead claude_verilog_test-k07 / GH #96
-#
-# Companion to pnr/constraints/phase5_soc_multiclock_check.sdc — see that
-# file's header (and phase5_soc_multiclock.sdc section 3) for WHY this is a
-# separate SDC/script from the normal 07_sta.tcl signoff flow: OpenSTA does
-# not honour set_max_delay exceptions on paths between clocks declared
-# set_clock_groups -asynchronous (tool-verified, bead k07), so the CDC
-# budgets can only be timed by a file that never makes that declaration —
-# which means it cannot be used for a full-chip report_wns/report_tns
-# sweep (every unrelated cross-domain FF pair would show as a fabricated
-# violation). This script therefore only runs TARGETED report_checks
-# queries against the specific CDC endpoints phase5_soc_multiclock_check.sdc
-# excepts, not a general signoff sweep.
-#
 # Invoked via: sta pnr/scripts/check_cdc_timing.tcl
 # (Makefile target: make check-cdc-timing-asap7-soc, see pnr/Makefile)
-#
 # Requires a routed netlist that actually contains the CDC modules
 # (async_axi_fifo / apb_cdc_bridge / second PLL stub) — i.e. a P&R run of
 # pnr/asap7/soc/config.json with PNR_SDC_FILE pointed at
 # phase5_soc_multiclock.sdc instead of the single-clock phase5_soc.sdc.
-# That re-closure run is GH #96's scope, not this bead's — as of
-# 2026-08-02 no such run exists yet (the signed-off run 14 predates GH
-# #91-95's CDC RTL entirely). Until then this script will correctly report
-# "Netlist not found" rather than silently doing nothing.
-#
 # EXIT CODE CONTRACT (bead claude_verilog_test-dwp, 2026-08-03):
-# OpenSTA's batch-mode 'sta' binary returns exit code 0 even when a Tcl
-# script calls the Tcl `error` command (tool-confirmed, both standalone
-# 'sta' and OpenROAD's embedded STA engine) -- so this script must never
-# rely on an uncaught Tcl error to signal failure to its caller. Every
-# check below funnels into one of two explicit `exit` calls at the very
-# end (or an immediate `exit 2` for setup problems), mirroring the
-# convention tools/cdc/cdc_gate.py already uses (see that file -- NOT
-# modified here, this script only mirrors the convention):
 #   exit 0 -- PASS: every CDC exception matched a real object and every
 #             targeted timing budget was met.
 #   exit 1 -- CDC FINDING(S): a design/constraint problem -- one or more
@@ -50,14 +21,8 @@
 #             mechanism below). This is a tool/environment problem, not a
 #             finding about the design -- CI must be able to tell the two
 #             apart.
-# All checks are accumulated (see ::cdc_check_findings /
-# ::cdc_check_finding_msgs below) -- a single run reports every unmatched
-# exception and every violated budget, not just the first one hit.
-#================================================================
+# Doc: tm:pd:scripts-check-cdc-timing-tcl, cr:pd:scripts-check-cdc-timing-tcl
 
-# cdc_fatal_setup: used ONLY for problems that mean the check cannot be
-# meaningfully run at all (missing tool inputs). Exits immediately with
-# code 2 -- see EXIT CODE CONTRACT above. Not used for CDC findings.
 proc cdc_fatal_setup {msg} {
     puts "ERROR: CDC-CHECK-SETUP-ERROR: $msg"
     exit 2
@@ -65,13 +30,6 @@ proc cdc_fatal_setup {msg} {
 
 # cdc_check_findings / cdc_check_finding_msgs: accumulate EVERY CDC
 # finding (unmatched exception collections and violated timing budgets)
-# across the whole run so the final report names all of them, not just
-# the first. Populated by cdc_record_finding below, and by the read_sdc
-# catch block folding in phase5_soc_multiclock_check.sdc's own
-# ::cdc_exception_misses list (that file's cdc_require_match proc is the
-# canonical "does this collection match anything" check; this script
-# reuses it rather than re-implementing the empty-collection idiom --
-# CodeRabbit PR #133 finding 2).
 set ::cdc_check_findings 0
 set ::cdc_check_finding_msgs {}
 
@@ -102,108 +60,10 @@ set NETLIST "$RUN_DIR/final/nl/${TOP_MODULE}.nl.v"
 set REPORTS_DIR "reports"
 file mkdir $REPORTS_DIR
 
-# CDC_CHECK_ODB (bead je8, 2026-09-15): opt-in ODB-based loading path for
-# checkpoints that only have GRT (or later) parasitics, e.g. a run
-# stopped/seeded mid-flow before a `final/nl/*.nl.v` signoff netlist
-# exists. Requires OpenROAD (read_db/global_route/estimate_parasitics are
-# OpenROAD-only commands -- this script's default path below works under
-# plain standalone `sta` precisely because it avoids all of them). Run
-# this script with `openroad` instead of `sta` when CDC_CHECK_ODB is set;
-# it is silently ignored -- and the netlist/link_design path below runs
-# unchanged -- otherwise, so every existing `sta
-# pnr/scripts/check_cdc_timing.tcl` invocation (including the tracked
-# check-cdc-timing-asap7-soc Makefile target) is byte-identical to
-# before.
 set CDC_CHECK_ODB [expr {[info exists ::env(CDC_CHECK_ODB)] ? $::env(CDC_CHECK_ODB) : ""}]
 
-# CDC_CHECK_FORCE_GRT (bead je8, 2026-09-15): ODB-mode only, opt-in.
-#
-# CORRECTED 2026-09-15 (same day, later session) -- the claim this
-# comment originally made ("estimate_parasitics -global_routing off the
-# ODB's own persisted guides, tool-verified to work with no warning") was
-# WRONG. "No warning" was mistaken for "succeeded". Rigorous check:
-# `report_parasitic_annotation` after `read_db` + `estimate_parasitics
-# -global_routing`, with NO global_route/read_guides call at all,
-# reports "Found 204195 unannotated drivers" out of ~204196 total on
-# this SoC's step-02 odb -- i.e. essentially the ENTIRE design, including
-# the specific CDC data nets this check targets (verified by name:
-# u_cpu_axi_cdc.u_r_fifo._1424_/Y, u_cpu_axi_cdc.u_ar_fifo._1509_/Y,
-# u_pll_sub._1_/Y all appear in the unannotated list). This reproduces
-# IDENTICALLY whether read_sdc/clock-mode changes happen before or after
-# estimate_parasitics, and whether CDC_CHECK_PROPAGATED_CLOCK is 0 or 1
-# -- it is not an ordering bug, and neither clock mode's results from
-# 2026-09-15 (the original propagated-clock FAIL, or the later ideal-
-# clock PASS) reflect real post-GRT wire delay. Both were computed on
-# essentially unannotated (effectively zero-wire, same order as the
-# plain-netlist STA-only path's default) parasitics.
-# `read_guides <file>` was tried first as a memory-cheap alternative and
-# is ALSO confirmed not usable: OpenROAD prints "[WARNING GRT-0008] The
-# read_guides command does not allow parasitics estimation from the
-# guides file" -- it loads guide geometry for display/DRT purposes only.
-# The only thing that DOES populate annotatable parasitics is a
-# genuinely fresh, in-session `global_route` (CDC_CHECK_FORCE_GRT=1
-# below) -- but that is memory-heavy regardless of layer range: it
-# OOM'd a 3.5G-capped scope on this SoC (520x520um, 138k+ blockages) at
-# the SAME point (right after GRT's per-layer "Routing resources
-# analysis" table, before any congestion iteration) whether run at the
-# full M2-M9 range, 50 congestion iterations, OR restricted to M2-M5
-# with just 1 iteration -- meaning the dominant memory cost is net-
-# topology/Steiner-tree construction across the whole design, not
-# per-layer grid size, and is NOT reducible via these flags.
-# RESOLVED (bead je8, same day, later session still): at a 9.5G cap
-# (scope je8-cdc-grt2) the full M2-M9/50-iteration global_route
-# completed cleanly -- 0 overflow on every layer, 204,072 routed nets,
-# peak ~5.4 GB, ~24 min wall time -- and the subsequent
-# report_parasitic_annotation dropped from 204,195/204,196 (~100%)
-# unannotated to 123/204,196 (0.06%) unannotated: real annotation,
-# confirmed both by that coverage number and by materially different,
-# structurally distinct per-path delay results vs. the unannotated
-# baseline (not just a clock-latency shift, since clocks were ideal in
-# both). So 3.5G is provably insufficient and ~5.4G peak / 9.5G cap is
-# provably sufficient on this SoC; the true minimum lies somewhere
-# between (not bisected). Every ODB-mode run (regardless of
-# CDC_CHECK_FORCE_GRT/CDC_CHECK_PROPAGATED_CLOCK) still prints an
-# explicit annotation-coverage warning (see below, search
-# ANNOTATION-CHECK) rather than silently proceeding -- treat any
-# CDC-CHECK-RESULT alongside a HIGH unannotated count as datapath-
-# shape-only (real cell delay, real logic depth, real fanout, but
-# wireload-model or zero wire RC), not a genuine post-GRT/post-route
-# timing verdict; a near-zero count (as achieved here) means it IS a
-# genuine one. Set CDC_CHECK_FORCE_GRT=1 with at least ~6G of memory
-# headroom for this SoC's fresh global_route to have a realistic chance
-# of completing (5.4G peak observed once; leave margin).
 set CDC_CHECK_FORCE_GRT [expr {[info exists ::env(CDC_CHECK_FORCE_GRT)] && $::env(CDC_CHECK_FORCE_GRT) == "1"}]
 
-# CDC_CHECK_PROPAGATED_CLOCK (bead je8, 2026-09-15): ODB-mode only,
-# opt-in, OFF by default. The budgets in phase5_soc_multiclock_check.sdc
-# are intended as datapath-only bounds (GH #94 intent,
-# phase5_soc_multiclock.sdc header: launch-flop CK->Q plus data wires/
-# logic to the capture D pin, excluding clock-network latency) --
-# `-datapath_only` is the SDC keyword that would normally express that,
-# but this file's own header (see above, "WHY THIS FILE EXISTS" item 1)
-# already tool-verified OpenSTA 2.6.0 / OpenROAD edf00dff do not
-# implement -datapath_only at all (STA-0563 on read_sdc), so it is never
-# passed by cdc_apply_max_delay / cdc_apply_max_delay_capture_fallback --
-# confirmed again by inspection here, both only ever call plain
-# `set_max_delay $val -from ... -to ...`. Given that, the only way this
-# tool can approximate "datapath-only" is by keeping clocks IDEAL (each
-# clock's SDC-declared `set_clock_latency -source 50` instead of a real,
-# walked clock-tree insertion delay) while STILL using GRT-estimated wire
-# parasitics on the DATA path -- clock propagation mode and parasitics
-# annotation are independent in this tool, so this isolates data-path
-# delay without the ~600-900 ps of real sys_clk clock-tree insertion
-# delay a fully propagated launch clock would fold into the same
-# max_delay budget (bead je8, 2026-09-15: exactly what turned 3 real-
-# parasitics groups VIOLATED on run 9 step 02 under
-# CDC_CHECK_PROPAGATED_CLOCK=1). This default matches how every prior
-# ACCEPTED CDC check in this project's history was run (run 23's
-# original post-route check and this bead's own post-CTS early check
-# both used ideal/unpropagated clocks, via the plain-netlist STA-only
-# path that has no clock-tree structure to propagate at all). Set
-# CDC_CHECK_PROPAGATED_CLOCK=1 to get the fdf166b behaviour back (real
-# propagated clock latency folded into the same budget -- useful for
-# separately characterizing how much of a path's margin is clock-latency
-# vs. datapath, as this bead's own notes do).
 set CDC_CHECK_PROPAGATED_CLOCK [expr {[info exists ::env(CDC_CHECK_PROPAGATED_CLOCK)] && $::env(CDC_CHECK_PROPAGATED_CLOCK) == "1"}]
 
 #----------------------------------------------------------------
@@ -313,27 +173,6 @@ if {[catch {read_sdc $CHECK_SDC} _sdc_err]} {
     }
 }
 
-#----------------------------------------------------------------
-# GRT-parasitics mode (bead je8, 2026-09-15): once the design+SDC are
-# loaded from the ODB, get the SAME parasitic basis the real flow's
-# rsz_timing_postgrt.tcl uses -- set_propagated_clock (real CTS-built
-# clock-tree insertion delay from the loaded odb, not the check SDC's
-# ideal `set_clock_latency -source 50` fallback), the ASAP7-calibrated
-# per-layer RC values and routing-layer range
-# (librelane/scripts/openroad/common/set_rc.tcl /
-# set_routing_layers.tcl), the same GRT layer adjustments
-# (common/set_layer_adjustments.tcl), then estimate_parasitics
-# -global_routing -- by default off the ODB's own persisted routing
-# guides (memory-cheap, tool-verified 2026-09-15 to need no fresh route),
-# or a genuinely fresh global_route if CDC_CHECK_FORCE_GRT=1 (see that
-# variable's header comment above for why re-routing is the heavier,
-# opt-in path; rsz_timing_postgrt.tcl always takes it, citing
-# https://github.com/The-OpenROAD-Project/OpenROAD/issues/5590, but this
-# script defaults to the cheaper odb-persisted path since it was
-# confirmed to work without that warning). No repair_timing call -- this
-# is a read-only timing snapshot of the checkpoint as routed, never
-# modifies the design.
-#----------------------------------------------------------------
 if {$CDC_CHECK_ODB ne ""} {
     puts "================================================================"
     puts "GRT-parasitics mode: estimate_parasitics -global_routing (force_grt=$CDC_CHECK_FORCE_GRT, propagated_clock=$CDC_CHECK_PROPAGATED_CLOCK)"
@@ -423,17 +262,6 @@ if {$CDC_CHECK_ODB ne ""} {
     }
     estimate_parasitics -global_routing
 
-    # ANNOTATION-CHECK (bead je8, 2026-09-15): print real annotation
-    # coverage instead of silently trusting "estimate_parasitics printed
-    # no warning" -- that was mistaken for success once already (see the
-    # CDC_CHECK_FORCE_GRT header comment above for the full writeup: a
-    # `read_db`-only load, with no live global_route in this session,
-    # left ~204195/204196 drivers -- effectively the whole design --
-    # unannotated, reproduced identically regardless of SDC/clock-mode
-    # ordering or CDC_CHECK_PROPAGATED_CLOCK). Always print the summary;
-    # never gate on it silently, since a partially-annotated design (some
-    # real runs may legitimately differ from this one) is still useful
-    # to see stated plainly rather than inferred.
     puts "================================================================"
     puts "ANNOTATION-CHECK: parasitic annotation coverage after estimate_parasitics -global_routing"
     puts "================================================================"
@@ -443,29 +271,6 @@ if {$CDC_CHECK_ODB ne ""} {
     puts "================================================================"
 }
 
-#----------------------------------------------------------------
-# Targeted CDC path reports. -unconstrained is NOT used here: the whole
-# point is to prove these specific paths ARE constrained (report_checks
-# succeeding with a real slack number is the pass signal; "No paths found"
-# or "(Path is unconstrained)" is the bead-k07 failure mode this file
-# exists to prevent from recurring silently).
-#----------------------------------------------------------------
-# cdc_report_through: run a targeted report_checks -through query. Reuses
-# the cdc_require_match proc that $CHECK_SDC defines (in scope here:
-# read_sdc evaluates that file's proc/set statements in this same Tcl
-# interpreter, and it ran above) rather than re-inventing the
-# empty-collection idiom -- CodeRabbit PR #133 finding 2.
-#
-# On an empty collection: record the finding via cdc_record_finding and
-# `return` (skip this one report) instead of `error`-ing out of the whole
-# script -- a single unmatched pattern must not prevent the remaining
-# report_checks queries below from running (bead claude_verilog_test-dwp:
-# "do not bail on the first failure").
-#
-# On a non-empty collection: also inspect the generated report for a
-# VIOLATED slack and record that as a finding too -- the pre-fix script
-# wrote the report but never actually looked at whether the budget was
-# met, so a real timing violation would have passed silently.
 proc cdc_report_through {collection description report_path} {
     if {![cdc_require_match $collection $description]} {
         cdc_record_finding "empty collection: ${description} (see CDC-EXCEPTION-MISS line above; no report written to $report_path)"
@@ -484,14 +289,6 @@ proc cdc_report_through {collection description report_path} {
     }
 }
 
-# cdc_report_domain_wide: companion to cdc_report_through for the section-14
-# domain-wide fallback (phase5_soc_multiclock_check.sdc) -- reports
-# report_checks -from <from_clock> -to <to_clock> instead of -through
-# <collection>, since mem_q / cmd_*/resp_* have no matchable object to query
-# -through post-flatten (bead claude_verilog_test-7l5). from_clock/to_clock
-# are expected to already be non-empty get_clocks results (sys_clk/cpu_clk
-# are declared unconditionally in section 1, so no cdc_require_match guard
-# is needed here the way it is for name-pattern-derived collections).
 proc cdc_report_domain_wide {from_clock to_clock description report_path} {
     report_checks -from $from_clock -to $to_clock \
         -path_delay max -format full_clock_expanded -digits 3 \
@@ -509,47 +306,8 @@ proc cdc_report_domain_wide {from_clock to_clock description report_path} {
 puts "================================================================"
 puts "CDC boundary timing -- async_axi_fifo (u_cpu_axi_cdc), all 5 channels"
 puts "================================================================"
-# Object mapping re-derived under bead claude_verilog_test-7l5 (2026-08-06)
-# against the FLATTENED netlist (SYNTH_HIERARCHY_MODE=flatten) -- see
-# phase5_soc_multiclock_check.sdc's "OBJECT RESOLUTION" header block for the
-# full tool-verified writeup. Three independent things changed vs. the
-# pre-7l5 version of this script, all confirmed empirically against
-# final/nl/soc_top.nl.v, not assumed:
-#   (1) separator: hierarchy survives only as literal '.' in escaped
-#       identifiers, not '/'.
-#   (2) object class: cells are anonymous post-flatten (get_cells/get_pins
-#       hierarchical name patterns always return empty) -- get_nets is the
-#       only name-matchable class, and even then only for nets that kept a
-#       clean RTL-derived name.
-#   (3) filter syntax: a literal '.' inside a `-filter "name =~ <pattern>"`
-#       pattern is NOT a safe glob character on this tool once wildcards
-#       surround it (tool-verified: it either returns 0 or, for a bare
-#       leading `*.`, silently matches almost the entire netlist). Every
-#       pattern below is therefore a '*'-joined chain of dot-free
-#       substrings only.
-#   (4) semantics: q_o (the synchroniser's LAST-stage output) is a
-#       destination-domain-only net, not the crossing itself -- see
-#       cdc_sync.sv. These reports now target the launch->first-capture
-#       segment instead: d_i where it survives as its own net
-#       (u_wr_ptr_to_rd.d_i does), or the source register net directly
-#       where d_i does not survive (u_rd_ptr_to_wr.d_i collapses into
-#       rd_gray_q's net during optimisation -- rd_gray_q is used instead,
-#       same electrical node).
-# mem_q itself (the FIFO storage array's combinational read) has ZERO
-# occurrences anywhere in the routed netlist under any object class or
-# separator -- it cannot be re-expressed by name post-flatten. It is no
-# longer reported here; it is one of the crossings covered by the
-# domain-wide fallback report below (mirrors
-# phase5_soc_multiclock_check.sdc section 14).
 set _fifo_wr2rd_obj [get_nets -hierarchical -filter {name =~ *u_cpu_axi_cdc*u_wr_ptr_to_rd*d_i*} -quiet]
 if {[llength $_fifo_wr2rd_obj] == 0} {
-    # deferred_flatten fallback (bead je8, 2026-09-15) -- same
-    # cdc_capture_flop_d_pins proc phase5_soc_multiclock_check.sdc's
-    # section 11 uses, available here because read_sdc evaluated that
-    # file's procs in this same interpreter above. Per-instance/per-
-    # direction because this one report spans all 5 fifos but AW/W/AR
-    # (cpu_clk->sys_clk) and B/R (sys_clk->cpu_clk) launch/capture in
-    # opposite directions.
     set _fifo_wr2rd_obj [concat \
         [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_aw_fifo u_wr_ptr_to_rd} cpu_clk sys_clk] \
         [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_w_fifo  u_wr_ptr_to_rd} cpu_clk sys_clk] \
@@ -570,18 +328,6 @@ cdc_report_through \
 puts "================================================================"
 puts "CDC boundary timing -- apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc)"
 puts "================================================================"
-# req_q / ack_q are each a direct RTL passthrough into their cdc_sync's
-# d_i (see apb_cdc_bridge.sv), and unlike section 11's gray-pointer case,
-# BOTH source registers keep their own net name here -- matched directly, no
-# d_i lookup needed.
-#
-# NAMES: these were req_toggle_q / ack_toggle_q until bead
-# claude_verilog_test-rfz converted the handshake from 2-phase NRZ to 4-phase
-# RZ. The filters below MUST track that rename -- a stale pattern here matches
-# zero nets and the budget silently goes unchecked, which is exactly bead
-# claude_verilog_test-7l5's failure mode. The cmd_*/resp_* payload capture
-# registers have zero occurrences anywhere in the netlist (same class as
-# mem_q) and are covered by the domain-wide fallback report below instead.
 cdc_report_through \
     [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*req_q* || name =~ *u_apb_pll2_cdc*ack_q*} -quiet] \
     "check_cdc_timing.tcl u_apb_pll2_cdc req_q/ack_q report query" \
@@ -594,25 +340,6 @@ cdc_report_through \
 puts "================================================================"
 puts "CDC boundary timing -- PMU/IRQ single-bit crossings"
 puts "================================================================"
-# u_cpu_clk_dis_sync is fed `.d_i(~pmu_cpu_clk_en)` (an inverter output --
-# real logic between source and synchroniser), so its d_i net survives
-# under its own scoped name. u_cpu_iso_en_sync / u_ext_irq_sync /
-# u_timer_irq_sync are each a direct passthrough whose d_i net does NOT
-# survive; the source signal itself does, as a PLAIN top-level net
-# (pmu_cpu_iso_en / ext_irq / timer_irq). NOTE: OpenSTA's -filter grammar
-# was tool-verified to only evaluate the first two clauses of a 3+-way
-# "||" chain (a latent bug in this script's pre-7l5 4-way OR here, silently
-# dropping u_ext_irq_sync and u_timer_irq_sync from the old report even
-# before the separator/object-class issues) -- this is why the query below
-# is split into two 2-way-OR get_nets calls and concatenated, rather than
-# one 4-way chain.
-# u_cpu_clk_dis_sync's d_i-name sub-match, split out on its own so a
-# deferred_flatten netlist where that name vanishes (bead je8, 2026-09-15)
-# doesn't silently ride the OR with pmu_cpu_iso_en -- an OR'd collection
-# only needs ONE side non-empty to look "matched" via cdc_report_through's
-# llength check, so a vacuous d_i sub-clause was invisible in this report
-# every time pmu_cpu_iso_en's plain net matched, i.e. always. That masked
-# the exact CDC-EXCEPTION-MISS bead je8's early check on run 8 surfaced.
 set _clk_dis_report_obj [get_nets -hierarchical -filter {name =~ *u_cpu_clk_dis_sync*d_i*} -quiet]
 if {[llength $_clk_dis_report_obj] == 0} {
     set _clk_dis_report_obj [cdc_capture_flop_d_pins {u_cpu_clk_dis_sync} sys_clk cpu_clk]
@@ -624,7 +351,6 @@ cdc_report_through \
     "check_cdc_timing.tcl PMU/IRQ single-bit crossing report query" \
     $REPORTS_DIR/cdc_pmu_irq.rpt
 
-# Isolation-ack return crossing (bead 3ogd): cpu_clk -> sys_clk, source net pmu_cpu_iso_en_sync.
 cdc_report_through \
     [get_nets -hierarchical -filter {name == pmu_cpu_iso_en_sync} -quiet] \
     "check_cdc_timing.tcl PMU iso-ack return crossing report query (cpu_clk -> sys_clk)" \

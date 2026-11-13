@@ -1,6 +1,3 @@
-# Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r), reused for the egt
-# follow-up (bead egt): the sdc_longclk combinational-candidate arm.
-#
 # Byte-identical to ../../valu_hls/constraints/asap7.sdc on purpose — same
 # clock port, same 705 ps period, same I/O delays — so this comparison is
 # apples-to-apples against both the hand-RTL and the baseline HLS arm. The
@@ -18,6 +15,7 @@
 # set_input_delay/set_output_delay are 0 so the FULL period is available to the
 # logic. That makes the I/O-bounded paths directly comparable between the
 # hand-RTL and HLS arms, which is the whole point of this comparison.
+# Doc: tm:pd:asap7-valu-hls-comb-sdc
 
 set_units -time 1ps
 

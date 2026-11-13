@@ -5,13 +5,11 @@
 # time_unit : "1ps"; OpenROAD reads create_clock -period raw against that unit).
 # This mirrors pnr/asap7/constraints/asap7.sdc — do NOT write ns values here.
 #
-# Target: 500 MHz (2000 ps period). Real post-CTS fmax measured at ~364 MHz
-# (report_clock_min_period 2744.75 ps, RUN_2026-05-24). 2000 ps gives ~8%
-# headroom above the post-RTL-fix expected fmax.
 # The GPU shared-memory banks are SRAM macros (sram_1rw_128x32_asap7) clocked
 # directly by clk — no ICG, so no generated clock is needed.
 ###############################################################################
 
+# Doc: tm:pd:asap7-gpu-sdc, cr:pd:asap7-gpu-sdc
 ###############################################################################
 # 1. Clock
 ###############################################################################
@@ -66,15 +64,6 @@ set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *din0*"]
 set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *addr0*"]
 set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *csb0*"]
 
-###############################################################################
-# 6. AXI master-interface input hold false-paths
-#    m_axil_if_* and m_axi_* inputs are read/response returns launched by the
-#    REGISTERED SoC fabric on the same clk. Block-level -min 20 ps models an
-#    impossible 20 ps launch and yields 368 fictional hold violations
-#    (register-to-register hold is clean: +16.3 ps, 0 viol).
-#    PHASE-5 NOTE: replace with real fabric register-slice timing at SoC
-#    integration — do NOT carry these false-paths into the SoC SDC blindly.
-###############################################################################
 set _m_axi_inputs {}
 foreach _p [all_inputs] {
     set _n [get_full_name $_p]

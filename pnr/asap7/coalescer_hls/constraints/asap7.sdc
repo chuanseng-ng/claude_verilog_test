@@ -1,5 +1,3 @@
-# Minimal leaf-block SDC — GH #119 Stage 2 (bead r8r).
-#
 # ALL TIME VALUES ARE PICOSECONDS. ASAP7 Liberty declares time_unit : "1ps",
 # while config.json's CLOCK_PERIOD is in ns (0.705 ns = 705 ps). Getting this
 # wrong silently constrains the design ~1000x loose (bead: ASAP7 SDC units).
@@ -10,6 +8,7 @@
 # set_input_delay/set_output_delay are 0 so the FULL period is available to the
 # logic. That makes the I/O-bounded paths directly comparable between the
 # hand-RTL and HLS arms, which is the whole point of this comparison.
+# Doc: tm:pd:asap7-coalescer-hls-sdc
 
 set_units -time 1ps
 

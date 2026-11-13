@@ -1,28 +1,5 @@
 #=================================================================
 # check_multiclock_sdc.tcl — prove the 2-domain SDC actually bound
-#
-# GH #96 / bead claude_verilog_test-8nz.
-#
-# WHY THIS EXISTS
-# ---------------
-# OpenSTA does NOT error when a create_clock's object list resolves to
-# nothing. `create_clock -name cpu_clk -period 780 [get_ports cpu_clk_i]`
-# against a netlist with no cpu_clk_i port silently produces a VIRTUAL
-# cpu_clk: the clock object exists, reports its period, and shows up as a
-# second "Clock:" block in OpenROAD's clock.rpt — but it has no source pin
-# and no registers, so CTS builds no tree for it and every cpu-domain path
-# goes untimed.
-#
-# Verified on 2026-08-05 against the run-14 netlist (which predates GH #93
-# and has no cpu_clk_i port):
-#     PORT-CHECK cpu_clk_i exists: 0
-#     CLOCK cpu_clk is_virtual=1 nsources=0 registers=0
-#     CLOCK sys_clk is_virtual=0 nsources=1 registers=43764
-#
-# So "clock.rpt contains two Clock: blocks" is NOT sufficient evidence of a
-# real two-domain run. The binding checks below are. Run this against the
-# synthesis netlist BEFORE committing to a multi-hour P&R.
-#
 # USAGE
 #   MC_NETLIST=<path to .nl.v>  \
 #   MC_SDC=<path to phase5_soc_multiclock.sdc> \
@@ -40,6 +17,7 @@
 # batch mode does not reliably propagate a Tcl error into the process
 # exit status).
 #=================================================================
+# Doc: cr:pd:scripts-check-multiclock-sdc-tcl
 
 proc mc_env {name default} {
     if {[info exists ::env($name)] && $::env($name) ne ""} {

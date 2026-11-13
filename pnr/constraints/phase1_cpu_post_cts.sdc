@@ -17,6 +17,7 @@
 # Clock Definition
 #---------------------------------------------
 
+# Doc: cr:pd:phase1-cpu-post-cts-sdc
 # Create primary clock (100 MHz)
 create_clock -name clk -period 10.0 [get_ports clk]
 
@@ -186,10 +187,3 @@ set_max_fanout 16 [current_design]
 # After CTS, analyze clock skew to ensure it's acceptable
 # Target: < 100ps between any two flops
 # Run: report_clock_skew -hold -setup [get_clocks clk]
-
-#---------------------------------------------
-# End of Post-CTS SDC
-#---------------------------------------------
-# Generated for Phase 1 RV32I CPU
-# Use this file after clock tree synthesis
-# Last updated: 2026-01-22

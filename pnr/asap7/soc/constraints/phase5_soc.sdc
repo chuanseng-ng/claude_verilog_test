@@ -13,20 +13,11 @@
 #               at the top level.  CTS traces through this buffer so all FFs
 #               (driven by core_clk) are balanced against each other.
 #
-# Run-13 lesson (2026-06-23):
-#   The create_generated_clock on the PLL buf Y pin caused CTS to build TWO
-#   independent clock trees — one for the 3 macro-clk sinks (clk_i tree) and
-#   one for the 43762 std-cell FF sinks (clk_i_regs H-tree).  The two trees
-#   are not balanced against each other, producing 214 ps setup skew (and
-#   -209 ps hold skew).  The create_generated_clock is removed for run 14.
-#   CLOCK_NET is already "clk_i" which lets CTS see through the PLL buffer
-#   to the core_clk fanout.  CTS-0011 then builds one tree for all 43762
-#   sinks under clk_i.  Macro clk pins are balanced along the same tree.
-#
 # SoC fmax target: 571 MHz (GPU-governed), period = 1750 ps.
 # CPU signed-off at 1282 MHz standalone; GPU at 571 MHz standalone.
 ###############################################################################
 
+# Doc: tm:pd:asap7-soc-phase5-sdc, cr:pd:asap7-soc-phase5-sdc
 ###############################################################################
 # 1. Primary clock — clk_i port, 1750 ps (571 MHz)
 ###############################################################################
@@ -39,15 +30,6 @@ set_clock_latency -source 50    [get_clocks clk_i]
 
 ###############################################################################
 # 2. core_clk — generated from clk_i through the PLL stub BUFx2.
-#    Run-13 lesson: create_generated_clock causes CTS to build a SEPARATE
-#    clock tree for the macro sinks (clk_i subtree) vs std-cell sinks
-#    (clk_i_regs subtree), creating ~214 ps inter-tree skew.
-#    Fix for run-14: DO NOT create a generated clock here.
-#    CTS (with CLOCK_NET=clk_i) will trace through the BUFx2 automatically
-#    and include core_clk sinks in the same balanced H-tree as clk_i sinks.
-#    Both the macro clk pins and std-cell CLK pins are co-optimised.
-###############################################################################
-# (no create_generated_clock for core_clk)
 puts "INFO: No generated clock for core_clk — CTS traces through PLL BUFx2 as part of clk_i tree."
 
 ###############################################################################
@@ -55,14 +37,6 @@ puts "INFO: No generated clock for core_clk — CTS traces through PLL BUFx2 as 
 ###############################################################################
 set_false_path -from [get_ports rst_n_i]
 
-# DFT test access (bead claude_verilog_test-j41m.2, GH #244) -- FUNCTIONAL-MODE constraints.
-# soc_top gained scan_mode_i / scan_en_i / scan_rst_ni / scan_clk_i / scan_in_i / scan_out_o.
-# In functional mode scan_mode_i = 0, scan_en_i = 0 and scan_rst_ni = 1, so every scan mux is
-# transparent: pin them with case analysis (this also blocks scan_clk_i out of the clock
-# network, since the dft_clk_mux select is constant 0), and take the test ports out of timing.
-# A separate SCAN-MODE SDC (scan_clk_i as the shift clock, scan_en timing, scan_mode = 1,
-# scan_in / scan_out delays) is a Stage 2 deliverable and does not exist yet. Guarded with
-# -quiet so a netlist from before this change still sources.
 foreach {_dft_p _dft_v} {scan_mode_i 0 scan_en_i 0 scan_rst_ni 1} {
     if {[llength [get_ports -quiet $_dft_p]] > 0} {
         set_case_analysis $_dft_v [get_ports $_dft_p]
@@ -147,36 +121,9 @@ if {[llength $_sram_csb]  > 0} { set_false_path -hold -to $_sram_csb  }
 
 ###############################################################################
 # 9. Hard-macro timing budgets — CPU and GPU are black-box macros.
-#
-#    Run-13 lesson: The worst setup violators are FF → u_gpu/m_axi_rdata[N]
-#    paths (WNS -364 ps).  These paths go FROM a std-cell FF THROUGH
-#    combinational glue TO an OUTPUT port of the GPU macro.  The output port
-#    has a black-box timing model (86 ps library setup time).  These paths are
-#    NOT real physical FF → FF paths — the GPU macro drives m_axi_rdata from
-#    its own internal FFs which are already covered by the GPU macro LIB.
-#    The path from soc_top glue → macro OUTPUT is a block-level timing
-#    artifact.  False-path setup from any std-cell logic to macro output ports
-#    to suppress this.
-#
-#    Two-cycle multicycle on AXI crossbar → macro INPUT interface paths (real).
-###############################################################################
 set _cpu_in  [get_pins -hierarchical -filter "full_name =~ *u_cpu/*" -quiet]
 set _gpu_in  [get_pins -hierarchical -filter "full_name =~ *u_gpu/*" -quiet]
 
-# GH #94 dead-code note: this file previously also declared
-#   set _cpu_out [get_ports -quiet -filter "name =~ *u_cpu*"]
-#   set _gpu_out [get_ports -quiet -filter "name =~ *u_gpu*"]
-# get_ports only ever matches TOP-LEVEL port names, never instance/hierarchy
-# paths — soc_top has no top-level port containing "u_cpu"/"u_gpu" (those
-# are instance name prefixes, found via get_pins -hierarchical above, not
-# get_ports), so both collections were always empty and neither variable was
-# ever read again below. Confirmed unused (repo-wide grep, 2026-08-02) and
-# removed: this is a pure dead local-variable assignment with no downstream
-# reference, so deleting it cannot change any constraint STA applies —
-# run-14's signed-off timing behaviour is unaffected. (Same bug class as the
-# CDC-exception silent-miss hardening added to
-# pnr/constraints/phase5_soc_multiclock.sdc for GH #94 — an empty-collection
-# query that nothing ever consumed, so it never had a chance to bite here.)
 
 # Multicycle on CPU/GPU macro INPUTS (real paths — crossbar → macro regs)
 if {[llength $_cpu_in] > 0} {

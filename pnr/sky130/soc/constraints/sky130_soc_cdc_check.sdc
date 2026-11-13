@@ -1,56 +1,15 @@
-###############################################################################
 # sky130_soc_cdc_check.sdc -- POST-ROUTE CDC BUDGET VERIFICATION ONLY (Sky130 SoC)
-#
-# bead claude_verilog_test-j41m.5 (2026-10-16). Sky130 port of
 # pnr/constraints/phase5_soc_multiclock_check.sdc (ASAP7). Read ONLY by
 # pnr/scripts/check_cdc_timing_sky130.tcl (`make -C pnr check-cdc-timing-sky130-soc`).
 # It is NOT an implementation SDC: sky130_soc.sdc is (it declares core_clk / cpu_clk
 # asynchronous), this file deliberately does not.
-#
-# WHY A SEPARATE FILE (tool-verified by bead k07, OpenSTA 2.6.0 and the OpenROAD-embedded
-# engine, restated in sky130_soc.sdc "Clock groups"):
-#   1. set_max_delay has no -datapath_only flag in OpenSTA; read_sdc aborts with STA-0563.
-#      It is therefore never used here.
-#   2. A set_max_delay between clocks that are declared set_clock_groups -asynchronous (or
-#      false-pathed) is dropped: set_false_path > set_max_delay, whatever the specificity.
 # So the CDC budgets can only be timed by a file that declares BOTH clocks and NEVER relates
 # them. Consequence (same as the ASAP7 file): this file is for TARGETED queries on the
 # crossings below; a full unfiltered report_wns/report_tns against it would show fabricated
 # violations on every unrelated pair of flops that happen to sit in different domains.
-#
-# WHAT IS DIFFERENT FROM THE ASAP7 FILE, AND WHY (tool-verified on the Sky130 SoC netlist, not
-# assumed -- see the object-resolution notes below):
-#   * Time unit is NANOSECONDS (sky130_fd_sc_hd Liberty time_unit 1ns), not picoseconds.
-#   * Both clocks are 25.0 ns, so every budget is a ratio of 25.0 (gray pointers 0.5x, the
-#     handshake and single-bit crossings 1.0x, the domain-wide fallback 0.9x, the same
-#     ratios the ASAP7 file uses against the destination period).
-#   * SYNTH_HIERARCHY_MODE is flatten here too: cells are anonymous (_143120_), hierarchy
-#     survives only as dot-joined escaped NET names. But, unlike ASAP7, the plain top-level
-#     nets pmu_cpu_iso_en / ext_irq / timer_irq / pmu_cpu_rst_n and, for several gray
-#     pointers, the d_i nets do NOT survive. What always survives is the synchroniser's own
-#     stage-0 Q net (`<inst>.sync_q[0]...`), and its driver is by construction the capture
-#     flop. So EVERY crossing below is found structurally from that net: capture flop = the
-#     driver of the stage-0 net; launch flops = the from_clk-domain startpoints in the fan-in
-#     of its D pin (get_fanin -flat traces through any buffer/inverter synthesis inserted).
-#   * Sky130 flops expose Q (ASAP7 ones only QN), so no polarity-inverter hazard, but the
-#     fan-in trace is kept anyway because it is also what makes a shared buffer harmless.
-#   * Async set/reset pins are handled structurally (all_registers -async_pins) instead of by
-#     the "rst_sync" instance-name match the ASAP7 file needs, which cannot work on anonymous
-#     cells.
-#
-# OBJECT-RESOLUTION GOTCHAS carried over from the ASAP7 file and re-verified here:
-#   * `get_nets -hierarchical -filter {name =~ *a.b*}`: a literal '.' inside the pattern is
-#     not a safe glob character in this tool. Patterns below are '*'-joined dot-free tokens;
-#     any finer test is done in Tcl with `string match` on the full name.
-#   * -from/-to exceptions beat -through ones, and between two overlapping -from/-to ones the
-#     LAST DECLARED wins -> the broad domain-wide fallback (section 10) is declared FIRST.
-#   * A non-empty match proves a NAME matched, not that the exception bound. The script checks
-#     every group by reading the budget back out of the timing report.
 ###############################################################################
+# Doc: tm:pd:sky130-soc-cdc-check-sdc, cr:pd:sky130-soc-cdc-check-sdc
 
-###############################################################################
-# 1. Clocks (same period/uncertainty as sky130_soc.sdc; NOT related to each other)
-###############################################################################
 set clock_period 25.0
 
 create_clock -name core_clk -period $clock_period [get_ports clk_i]
@@ -61,12 +20,6 @@ create_clock -name cpu_clk -period $clock_period [get_ports cpu_clk_i]
 set_clock_uncertainty -setup 0.300 [get_clocks cpu_clk]
 set_clock_uncertainty -hold  0.150 [get_clocks cpu_clk]
 
-# Third root: the JTAG TAP clock (bead y5mn / j41m.10). Same period as sky130_soc.sdc's placeholder. It exists
-# here ONLY so the MBIST control-word and status crossings (section 14) have a launch/capture clock; as for
-# the other two clocks it is deliberately NOT related to them. Guarded so an older netlist without the port
-# still sources. The test clock reaches the functional trees through the dft_clk_mux (flow STA), so a flop in
-# core_clk/cpu_clk may carry `tck` as a second clock: section 14 therefore NEVER identifies a TCK-domain cell
-# by `all_registers -clock tck`, only structurally (fan-in of a synchroniser, minus the destination domain).
 set tck_period 100.0
 if {[llength [get_ports -quiet tck_i]] > 0} {
     create_clock -name tck -period $tck_period [get_ports tck_i]
@@ -83,27 +36,7 @@ set_false_path -from [get_ports rst_n_i]
 set_false_path -from [get_ports cpu_rst_n_i]
 foreach _p [get_ports -quiet trst_ni] { set_false_path -from $_p }
 
-###############################################################################
 # 2b. Functional-view case analysis (bead j41m.17, user decision 2026-10-27)
-#
-# This check bounds FUNCTIONAL-mode clock-domain crossings. The scan enable tree (`dft_scan_en` -> the SE pin of
-# every scan flop) is not one: in functional mode it is constant 0, and in scan mode both domains run on the one
-# test clock. But the crypto wipe-done gate (PR #332) makes `dft_scan_en` = (TAP/pin request) & crypto_wipe_done,
-# a core_clk-launched path that reaches the 981 SE pins of the cpu_core_clk scan chain through a 28-buffer tree,
-# which an unconstrained check reads as a core_clk -> cpu_clk crossing (measured -1.581 ns at max_ss against the
-# 0.9 x 25 ns domain-wide fallback, RUN_2026-10-27_05-40-27).
-#
-# The functional view pins the three controls that make the request 0:
-#   scan_mode_i = 0 and scan_en_i = 0 (the pin leg, as sky130_soc.sdc does), and the TAP serial-select flop
-#   `u_dft_ctrl.tap_serial` = 0 (TAP not in serial scan; it selects tap_scan_en over the pin leg).
-# scan_mode_i alone does NOT make dft_scan_en constant (scan_en_o is not gated by scan_mode, and the TAP can raise
-# scan_mode itself), measured: with only scan_mode_i = 0 the crossing still fails. With the three, the request is a
-# constant 0, so the AND (and its resizer clone) is constant and the SE tree drops out. Every other group is
-# unchanged (22 groups, same worst slacks): see Doc: tm:ch:dft-architecture 14.14.1.
-#
-# The SCAN VIEW is not affected: CVT_SDC_SCAN_VIEW=1 in the environment skips this section (same switch as
-# sky130_soc.sdc), and sky130_soc.sdc itself is not touched by this section.
-###############################################################################
 proc cdc_net_driver_pins {full} {
     set out {}
     foreach n [get_nets -quiet -hierarchical *] {
@@ -132,8 +65,6 @@ if {[info exists ::env(CVT_SDC_SCAN_VIEW)] && $::env(CVT_SDC_SCAN_VIEW) eq "1"} 
 set ::cdc_exception_misses {}
 # group name -> list of capture D pins, filled by the appliers, consumed by the script
 set ::cdc_groups [dict create]
-# pointer label ("u_aw_fifo.wr2rd") -> {from_clk to_clk {capture D pins of its bits}}: the unit of the
-# per-pointer bit-skew report (check_cdc_timing_sky130.tcl, bead j41m.5 option C). Filled by sec. 11.
 set ::cdc_ptr_info [dict create]
 # capture D pins of the most recent cdc_apply_sync_budget call (one synchroniser = one pointer)
 set ::cdc_last_pins {}
@@ -241,17 +172,6 @@ proc cdc_apply_sync_budget {group inst_token val from_clk to_clk description} {
     return $_applied
 }
 
-###############################################################################
-# 10. Domain-wide fallback budget for the payload crossings that cannot be found by name
-#     (the 5x async_axi_fifo mem_q combinational reads and the apb_cdc_bridge cmd_*/resp_*
-#     capture registers): 0.9x the destination period, the OpenTitan check_only convention
-#     the ASAP7 file follows. DATA pins only (`all_registers -data_pins`): with a plain
-#     `-to [all_registers -clock X]` the exception also lands on the async RESET_B/SET_B
-#     pins and fabricates a max-delay check against a reset distribution tree (bead je8).
-#
-#     DECLARED BEFORE sections 11-13 on purpose: between two overlapping -from/-to exceptions
-#     the last declared wins, and the per-crossing budgets below are tighter.
-###############################################################################
 set_max_delay [expr {$clock_period * 0.9}] \
     -from [all_registers -clock cpu_clk] -to [all_registers -clock core_clk -data_pins]
 set_max_delay [expr {$clock_period * 0.9}] \
@@ -259,13 +179,6 @@ set_max_delay [expr {$clock_period * 0.9}] \
 
 ###############################################################################
 # 10a. cdc_reset_sync async set/reset pins: cross-domain recovery/removal is waived.
-#      Same class and same justification as ASAP7 sec 10a (bead je8): every always_ff in
-#      rtl/soc/cdc/cdc_reset_sync.sv is async-assert / SYNCHRONOUS-deassert (a constant 1 is
-#      shifted through the chain on the capture clock), and the launching nets are reset
-#      class (rst_both_n = s_rst_n_i & m_rst_n_i, pmu_cpu_rst_n, ...), not data. Recovery
-#      and removal on the SAME clock stay timed -- only the cross-clock check is waived.
-#      Structural (all_registers -async_pins), so it needs no instance name.
-###############################################################################
 set _async_to_cpu  [all_registers -clock cpu_clk  -async_pins]
 set _async_to_core [all_registers -clock core_clk -async_pins]
 if {[llength $_async_to_cpu] > 0}  { set_false_path -from [get_clocks core_clk] -to $_async_to_cpu }
@@ -331,49 +244,9 @@ foreach {_s _g} {u_cpu_clk_dis_sync pmu_clk_dis u_cpu_iso_en_sync pmu_iso_en \
         "sec.13 ${_s} single-bit crossing (core_clk -> cpu_clk)"
 }
 
-# 13a. Isolation-ack RETURN crossing (bead 3ogd): u_cpu_iso_ack_sync samples pmu_cpu_iso_en_sync
-#      (the CPU-domain clamp control, cpu_clk) into core_clk for the PMU's cpu_iso_ack_i. The only
-#      PMU crossing in the cpu_clk -> core_clk direction; same 1.0x destination-period budget and
-#      the same structural binding as every row above. Not yet run on a routed Sky130 netlist.
 cdc_apply_sync_budget pmu_iso_ack u_cpu_iso_ack_sync $clock_period cpu_clk core_clk \
     "sec.13a u_cpu_iso_ack_sync single-bit crossing (cpu_clk -> core_clk)"
 
-###############################################################################
-# 14. MBIST TCK <-> functional crossings (bead y5mn, j41m.10 Q12; Doc: tm:ch:dft-architecture 16.5, 16.11)
-#
-# PR #306 added, per destination domain (core_clk: u_mbist.u_xing_core; cpu_core_clk: u_mbist.g_cpu.u_xing_cpu):
-#   (a) a depth-2 cdc_gray_fifo, write side tck, read side the UNGATED destination clock, rd_ready tied 1:
-#         u_fifo.u_wr_ptr_to_rd  tck -> dst  gray write pointer (2-FF)      GRAY    budget
-#         u_fifo.u_rd_ptr_to_wr  dst -> tck  gray read pointer  (2-FF)      GRAY    budget
-#         u_fifo.mem_q -> mbist_ctl_hold ctl_q  tck -> dst  combinational read of the 2x29-bit storage into the
-#                                                               holding register                    PAYLOAD budget
-#   (b) mbist_status_sync: 69 per-bit single-bit cdc_sync dst -> tck (u_stsync_core / g_cpu.u_stsync_cpu).
-# For the CPU domain the status launch is the CPU hard macro itself (mbist_status_o[], launched by clk_i), so
-# the launch cell is the macro instance; its 35 pins {23,22} U [68:36] (rec_addr[9:8] since AW = 8, rec_port[1], and err_mask, tied 0 since the collar-local compare,
-# Doc: tm:ch:dft-architecture 16.12) have no launching arc, are recognised as constants and are accounted for, not skipped.
-#
-# BUDGETS (new numbers, chosen here; OpenSTA has no -datapath_only, see the header):
-#   * gray pointers, both directions: 0.5 x min(source, destination) period = 12.5 ns. The existing FIFO rows use
-#     0.5 x the DESTINATION period; with a 100 ns tck that rule would give the dst->tck pointer 50 ns, four times
-#     looser than the 25 ns functional clock that launches it, so the faster period governs here.
-#   * mem_q -> ctl_q payload: 0.9 x the destination period = 22.5 ns (the section-10 payload convention). The data
-#     is only consumed after the pointer has crossed (>= 2 destination edges), so this is conservative.
-#   * status bits dst -> tck: 1.0 x min(source, destination) period = 25 ns (single-bit level crossings; the
-#     documented >= 3 TCK settle rule and the done/busy extra flop do the coherency, section 16.5).
-# All three are CLOCKS-IDEAL datapath bounds like every other row.
-#
-# NEGATIVE CONTROL: CDC_CHECK_MBIST_BUDGET_NS=<ns> forces every section-14 budget to that value (e.g. 0.001); the
-# check must then FAIL on every section-14 group. A check that cannot fail is not a check.
-#
-# NOT COVERED HERE, ON PURPOSE (listed so the gap is visible, not hidden):
-#   * mbist_force (TAP falling-edge flop, tck) -> u_cpu_cg enable: a single UNSYNCHRONISED quasi-static control,
-#     the section 15.5 "crossing 2" contract; async-grouped in the implementation SDC. No synchroniser exists to
-#     bind a budget to; a CDC lint rule, not an SDC row, is the right owner.
-#   * mbist_run_i / mbist_cfg_i[25:0] into the CPU macro: launched by the cpu_core_clk holding register, captured by
-#     the macro on cpu_gated_clk (the same clock root), and the macro Liberty carries setup/hold arcs for every one
-#     of them. They are ordinary synchronous cpu_clk paths, timed by the flow STA, not CDC.
-#   * macro mbist_status_o[1:0] -> u_cpu_cg enable (cpu_cg_en feedback): same clock root, ordinary clock-gating check.
-###############################################################################
 set ::cdc_mb_const_bits {}
 set ::cdc_group_from [dict create]
 
