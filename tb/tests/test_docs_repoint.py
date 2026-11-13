@@ -438,3 +438,27 @@ def test_section_label_with_date_falls_back_to_file_label(tmp_path):
     text = read(root, "rtl/a.sv")
     assert "2026-09-18" not in text
     assert text == "// Doc: tm:dec:plan section 5 and more\n"
+
+
+def test_boot_image_sources_never_rewritten(tmp_path):
+    """Check files hashed by the boot image manifest, and the static boot paths, stay untouched."""
+    src = "// see docs/PLAN.md here\n"
+    py_src = "# see docs/PLAN.md here\n"
+    manifest = '{"sources": {"tools/pinned_gen.py": "00", "sw/other/x.c": "11"}}\n'
+    root = make_repo(
+        tmp_path,
+        {
+            "fpga/nexys_video/boot_uart.manifest.json": manifest,
+            "tools/pinned_gen.py": py_src,
+            "sw/other/x.c": src,
+            "sw/bootloader/uart_boot.c": src,
+            "sw/bench/bin2hex.py": py_src,
+            "rtl/a.sv": src,
+        },
+    )
+    run(root, apply=True)
+    assert read(root, "tools/pinned_gen.py") == py_src
+    assert read(root, "sw/other/x.c") == src
+    assert read(root, "sw/bootloader/uart_boot.c") == src
+    assert read(root, "sw/bench/bin2hex.py") == py_src
+    assert read(root, "rtl/a.sv") == "// see Doc: tm:dec:plan here\n"
