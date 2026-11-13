@@ -179,7 +179,7 @@
       # ── Documentation TeX Live set ─────────────────────────────────────────────
       # The books under docs/manual are built with lualatex by tools/docs/build_books.py.
       # scheme-small plus exactly the packages the document class and macros load, so the
-      # closure stays small enough for a CI runner. xr-hyper.sty ships in the `xr` package.
+      # closure stays small enough for a CI runner. xr.sty ships in `tools` and xr-hyper.sty in `hyperref`.
       # CI (.github/workflows/docs.yml) builds the books with this set and is the check
       # that the list is complete.
       docsTexFor = pkgs:
@@ -189,7 +189,7 @@
             latexmk
             fontspec luaotfload lm lm-math unicode-math newunicodechar
             geometry xcolor graphics tools ulem booktabs pdflscape enumitem fancyhdr
-            fvextra fancyvrb listings imakeidx xr hyperref cleveref
+            fvextra fancyvrb listings imakeidx hyperref cleveref
             glossaries glossaries-extra l3packages
             mdframed zref needspace etoolbox kvoptions iftex
             amsmath amsfonts upquote makeindex dejavu xurl;
