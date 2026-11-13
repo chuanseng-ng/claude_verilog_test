@@ -8,11 +8,7 @@ rtl/cpu/core/rv32i_core.sv | bead | 3 |
 rtl/cpu/core/rv32i_core.sv | blk | 4 | 18
 rtl/cpu/core/rv32i_core.sv | meas | 1 |
 sim/Makefile | ghpr | 2 |
-tb/cocotb/soc/Makefile | bead | 83 |
-tb/cocotb/soc/Makefile | date | 4 |
-tb/cocotb/soc/Makefile | ghpr | 26 |
-tb/cocotb/soc/Makefile | meas | 3 |
-tb/cocotb/soc/Makefile | mk | 35 | 55
+tb/cocotb/soc/Makefile | bead | 2 |
 tb/cocotb/soc/integ_fw/gen_integ_hex.py | doc | 1 | 26
 tb/cocotb/soc/jtag_driver.py | doc | 1 | 26
 tb/cocotb/soc/test_async_axi_fifo.py | meas | 2 |
