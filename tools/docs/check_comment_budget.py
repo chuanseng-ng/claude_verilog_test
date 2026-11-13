@@ -481,6 +481,13 @@ BASELINE_HEADER = """\
 # Rules: hdr blk doc mk wf (size budgets); bead ghpr run date meas fline (banned content).
 # Update after a cleanup: python tools/docs/check_comment_budget.py --update-baseline
 # Growth is refused; the check fails if an entry is higher or lower than the measured value.
+#
+# This is a closed list of exceptions. Do not add an entry for a new file. Fix the comment.
+# Each entry is in one of these classes:
+#   1. rtl/cpu/core/rv32i_core.sv: frozen. A sign-off flow edits this file by line number.
+#   2. Makefile "bead" and "ghpr" entries: tab-led comment lines. code_equiv.py treats them as code.
+#   3. Test "doc" entries: the docstring holds rules that a maintainer must read in the file.
+#   4. Test "meas" entries: a comment gives the clock period that the test sets.
 """
 
 
