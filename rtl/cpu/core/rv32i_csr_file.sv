@@ -1,62 +1,34 @@
-// rv32i_csr_file.sv
-// RV32I M-mode CSR Register File (Phase 5)
+// rv32i_csr_file - M-mode CSR file with trap and MRET handling, performance counters and D-cache maintenance triggers.
 //
-// Implements the minimal M-mode CSR set required for interrupt support:
-//   0x300  mstatus      - Machine status (MIE, MPIE, MPP)
-//   0x304  mie          - Machine interrupt enable (MTIE, MEIE)
-//   0x305  mtvec        - Trap vector base address (Direct mode only)
-//   0x320  mcountinhibit- Performance counter inhibit mask
-//   0x341  mepc         - Machine exception PC
-//   0x342  mcause       - Machine trap cause
-//   0x344  mip          - Machine interrupt pending (read-only from software)
-//   0xB00  mcycle       - Cycle counter low 32 bits
-//   0xB02  minstret     - Retired-instruction counter low 32 bits
-//   0xB03  mhpmcounter3 - I-cache miss counter
-//   0xB04  mhpmcounter4 - D-cache miss counter
-//   0xB05  mhpmcounter5 - Branch mispredict counter
-//   0xB80  mcycleh      - Cycle counter high 32 bits
-//   0xB82  minstreth    - Retired-instruction counter high 32 bits
-//   0xF11  mvendorid    - Vendor ID (read-only, 0)
-//   0xF12  marchid      - Architecture ID (read-only, 0)
-//   0xF13  mimpid       - Implementation ID (read-only, phase-specific)
-//   0xF14  mhartid      - Hardware thread ID (read-only, 0)
-//
-// Write priority (highest first): reset > trap_entry > mret > csr instruction
-//
-// OQ-4: CSR write takes effect in EX (at the clock edge ending EX stage).
-//        mstatus_mie_eff reflects what MIE will be AFTER the pending write,
-//        so the interrupt controller sees the correct gating in the same cycle.
-//
-// Performance counters count independently of everything else in EX: every
-// counter whose mcountinhibit bit was clear at the start of the cycle counts its
-// event in EVERY cycle, including cycles a CSR instruction is in EX and cycles a
-// trap is taken or MRET executes (bead kiit / GH #260 — they used to freeze).
-// A CSR instruction that WRITES a counter replaces only that 32-bit register:
-// the write wins over that register's own same-cycle increment, every other
-// counter still counts, and a write to the low word of mcycle / minstret also
-// discards the carry its increment would have made into the high word (a write
-// to the high word leaves the low word counting).  CSRRS/CSRRC with a zero
-// source do not write, so reading a counter never disturbs it.  A write to
-// mcountinhibit takes effect from the next cycle.
-//
-// minstret / minstreth writes (bead f7z3): the write lands here in EX, but the
-// retire strobe trails EX by five stages, so instructions OLDER than the writer
-// are still in flight and the writer's own retirement is still to come.  Per the
-// privileged spec the older ones retire before the write and the writer's own
-// retirement does not increment, so none of them may land on the written value.
-// Each accepted write records, in a two-entry scoreboard, how many retire strobes
-// remain up to and including the writer (inflight_older_i + 1; the strobe of the
-// WB-stage instruction is the one in the write cycle itself and is overridden by
-// the write).  Those strobes are classified in program order:
-//   - the writer's own strobe: no increment at all (neither word);
-//   - older than a low-word (minstret) writer: no increment (overwritten);
-//   - older than a high-word (minstreth) writer: low word +1, but no carry into
-//     the high word it is overwriting.
-// Two entries cover the two writers that can be in flight together (EX-to-EX
-// spacing >= 3 cycles, retire 5 cycles after EX).  A trap entry does not touch the
-// scoreboard: the EX-stage trap point is two stages past EX, so no younger writer has
-// executed yet (spacing >= 3) and every pending writer is older than the trap and
-// still retires (an older writer's own strobe is at EX+5, never after the trap).
+// Function: csr_rdata is the value before this cycle's write. A CSR write takes effect at the clock edge that ends EX.
+//   0x300 mstatus (MIE bit 3, MPIE bit 7, MPP fixed at 2'b11), 0x304 mie (MTIE bit 7, MEIE bit 11),
+//   0x305 mtvec (BASE only, MODE forced to 0), 0x320 mcountinhibit (bits 0, 2, 3, 4, 5), 0x341 mepc, 0x342 mcause,
+//   0x344 mip (read-only; MEIP = ext_irq_i, MTIP = timer_irq_i), 0xB00/0xB80 mcycle low/high, 0xB02/0xB82 minstret low/high,
+//   0xB03 I-cache misses, 0xB04 D-cache misses, 0xB05 branch mispredictions,
+//   0xF11 mvendorid 0, 0xF12 marchid 0, 0xF13 mimpid 5, 0xF14 mhartid 0.
+//   0x7C0 dcache_flush and 0x7C1 dcache_inval are write-only and read 0. A write gives a one-cycle pulse on csr_dcache_flush_o or csr_dcache_inval_o.
+//   Any other address sets csr_illegal while csr_access is 1.
+//   Write priority, highest first: reset, trap_entry, mret, CSR write.
+//   trap_entry loads mepc and mcause, copies MIE to MPIE and clears MIE.
+//   mret copies MPIE to MIE and sets MPIE.
+//   mstatus_mie_eff is MIE after a pending mstatus write in EX. The interrupt controller sees it in the same cycle.
+//   Each counter counts its event in every cycle in which its mcountinhibit bit was 0 at the start of the cycle.
+//   It also counts during a CSR access, a trap entry or an MRET.
+//   A CSR write to a counter replaces only that 32-bit register and wins over its same-cycle increment.
+//   A write to the low word of mcycle or minstret also discards the carry into the high word.
+//   CSRRS and CSRRC with a zero source do not write. A write to mcountinhibit applies from the next cycle.
+//   A minstret write ignores the retire strobes of the writer and of older instructions.
+//   A minstreth write ignores the writer's own strobe. Older strobes still count in the low word without a carry.
+//   Details are in tm:mod:rv32i-csr-file.
+// Parameters: none.
+// Clocks and resets: clk is the clock, rising edge. rst_n is active low and synchronous.
+//   Reset clears every CSR, so all counters run, and clears the maintenance pulses.
+// Caller rules:
+//   - Drive retire_i, branch_mispred_i, icache_miss_i and dcache_miss_i as one-cycle strobes.
+//   - Drive inflight_older_i with the count of older instructions that are past EX and retire after this cycle. Do not count the WB-stage one.
+//   - For CSRRWI, CSRRSI and CSRRCI, drive rs1_addr with the uimm (instr[19:15]).
+//   - Drive csr_stall_i to 1 while EX is frozen. A maintenance pulse then does not fire again.
+// Doc: ds:mod:rv32i-csr-file, tm:mod:rv32i-csr-file
 
 module rv32i_csr_file (
     input  logic        clk,
@@ -326,14 +298,13 @@ module rv32i_csr_file (
     assign csr_dcache_flush_o = csr_dcache_flush_q;
     assign csr_dcache_inval_o = csr_dcache_inval_q;
 
-    // =========================================================================
-    // minstret write scoreboard (bead f7z3) -- see the header.
+    // minstret write scoreboard. See tm:mod:rv32i-csr-file.
     //   pend    : entry holds a writer whose own retire strobe has not been seen
     //   low     : the writer targets minstret (low word) rather than minstreth
     //   pos     : retire strobes left up to and including the writer's own
     //   drop    : the next retire strobe must not increment minstret at all
     //   nocarry : the next retire strobe counts in the low word only
-    // drop / nocarry are registered so the retire -> counter enable sees flops only.
+    // drop and nocarry (mrw_drop_q, mrw_nocarry_q) are registered so the path from retire to the counter enable sees flops only.
     // =========================================================================
     logic       mrw_pend0_q, mrw_pend1_q;
     logic       mrw_low0_q,  mrw_low1_q;
@@ -395,12 +366,8 @@ module rv32i_csr_file (
     // =========================================================================
     always_ff @(posedge clk) begin
         // -------------------------------------------------------------------
-        // Performance counter increments — the DEFAULT for every cycle.  Later
-        // non-blocking assignments to the same register win, so the reset branch
-        // below and a CSR write to that exact register (final else-branch)
-        // override these; nothing else (a CSR access to any other register, a
-        // trap entry, an MRET) can suppress them.  mcountinhibit is read before
-        // any write to it lands, i.e. a write applies from the next cycle.
+        // Counter increments are the default for every cycle. A later assignment to the same register wins: reset, and a CSR write to that exact register.
+        // Nothing else suppresses a counter. mcountinhibit is read before a write to it lands. A write applies from the next cycle.
         // -------------------------------------------------------------------
         // mcycle: always-on event, inhibited by bit0 (carry runs low -> high)
         if (!mcountinhibit_q[0]) begin
@@ -579,14 +546,8 @@ module rv32i_csr_file (
                     // Any non-suppressed write triggers the operation; the written value is
                     // discarded (no register holds state).  CSRW/CSRWI always fire.
                     // CSRS/CSRC fire only when rs1≠x0 / imm≠0 (suppress_if_zero=1).
-                    //
-                    // csr_stall_i gate: when the EX stage is frozen (mem_cache_stall global
-                    // freeze), csr_access re-asserts every stall cycle because id_ex_reg is
-                    // held.  Normal CSR register writes are idempotent under re-fire, but
-                    // maintenance pulses are not — without this gate, the pulse would stay
-                    // high for the entire stall duration, causing the dcache to enter
-                    // CS_FLUSH_SCAN while the stalling store is still in CS_* → deadlock.
-                    // Fire exactly once: on the first (and only un-stalled) EX cycle.
+                    // A maintenance pulse fires only when csr_stall_i is 0, so it fires once.
+                    // Without this gate the pulse stays high for the whole mem_cache_stall freeze and can deadlock the D-cache. See tm:mod:rv32i-csr-file.
                     12'h7C0: begin  // dcache_flush — CSRW dcache_flush, x0 triggers flush-all
                         begin
                             logic do_fire;

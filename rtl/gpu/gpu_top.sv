@@ -1,20 +1,24 @@
-// GPU top: AXI4-Lite control slave + instruction-fetch AXI4-Lite master +
-// data AXI4 master.  Wires gpu_command_queue, warp_scheduler,
-// gpu_compute_unit, gpu_memory_unit, and shared_memory.
+// gpu_top - GPU top level: AXI4-Lite control slave, AXI4-Lite instruction-fetch master and AXI4 data master.
 //
-// AXI4-Lite slave register map (12-bit byte offset within 4 KiB):
-//   0x000 GPU_CTRL      [0]=launch W1S  [1]=reset W1S  [2]=irq_enable
-//   0x004 GPU_STATUS    [0]=idle [1]=done [2]=error  (RO)
-//   0x008 GPU_KERNEL_PC
-//   0x00C GPU_GRID_X    [15:0]
-//   0x010 GPU_GRID_Y    [15:0]
-//   0x014 GPU_GRID_Z    [15:0]
-//   0x018 GPU_BLOCK_X   [9:0]   1..64; 0 or >64 raises a launch ERROR (bead 6hy6)
-//   0x01C GPU_BLOCK_Y   [9:0]
-//   0x020 GPU_BLOCK_Z   [9:0]
-//   0x024 GPU_ARG_PTR
-//   0x028 GPU_IRQ_CLR   [0]=W1C
-//   0x030–0x06C GPU_PERFCNT[0..15]  (RO)
+// Function: Wires gpu_command_queue, warp_scheduler, gpu_compute_unit, gpu_memory_unit and shared_memory.
+//   A launch loads one kernel descriptor. The state is IDLE, RUNNING, DONE or ERROR.
+//   gpu_irq_o is 1 when the irq latch and GPU_CTRL.irq_enable are both 1. The latch sets when RUNNING ends with the kernel done.
+//   GPU_IRQ_CLR, a launch or GPU_CTRL.reset clears the latch.
+//   Slave register map (12-bit byte offset in 4 KiB; bit fields in ds:mod:gpu-top):
+//   0x000 GPU_CTRL [0] launch W1S, [1] reset W1S, [2] irq_enable. 0x004 GPU_STATUS [0] idle, [1] done, [2] error (RO).
+//   0x008 GPU_KERNEL_PC. 0x00C, 0x010, 0x014 GPU_GRID_X, Y, Z [15:0]. 0x018, 0x01C, 0x020 GPU_BLOCK_X, Y, Z [9:0].
+//   0x024 GPU_ARG_PTR. 0x028 GPU_IRQ_CLR [0] W1C. 0x030-0x06C GPU_PERFCNT[0..15] (RO).
+//   Only PERFCNT 0, 1, 2, 3 and 5 count. The others read 0. A kernel launch (sched_launch) clears the counters.
+// Parameters: GPU_ENABLE_COALESCE (default 1'b0; passed to gpu_memory_unit).
+// Clocks and resets: clk is the only clock. rst_n is active low and asynchronous.
+//   GPU_CTRL.reset is a synchronous soft clear (soft_clr). It is not folded into rst_n.
+// Caller rules:
+//   - Set GPU_BLOCK_X from 1 to N_WARPS*N_LANES (64 with the default parameters). 0 or a larger value raises a launch ERROR.
+//   - ERROR is sticky. Only GPU_CTRL.reset or rst_n leaves it. The GPU stays quiescent in ERROR.
+//   - GPU_CTRL.reset works from any state. It waits until the AXI masters are quiet, then clears for one clock.
+//   - The clear covers the state, the descriptor queue, the warp scheduler and the compute unit. It keeps the configuration registers,
+//     the irq_enable bit and the perf counters.
+// Doc: ds:mod:gpu-top, cr:mod:gpu-top
 
 module gpu_top
     import gpu_pkg::*;
@@ -246,32 +250,10 @@ module gpu_top
     assign sched_launch = (state_q == GPS_IDLE) && cq_desc_valid && !rst_pend_q;
 
     // -------------------------------------------------------------------
-    // GPU_CTRL.reset: quiesce, then clear (bead q6w0)
-    //
-    // The reset is synchronous.  It is NOT folded into the asynchronous rst_n
-    // net: a register-driven asynchronous reset is a glitch / CDC / scan hazard.
-    // A write to CTRL.reset from any state (IDLE, RUNNING, DONE, ERROR):
-    //   1. rst_pend_q / halt_q: stop issuing instruction fetches and new
-    //      VLD/VST/VLDS/VSTS requests.  A fetch AR that is valid but not yet
-    //      accepted is never withdrawn (halt_q waits for it).
-    //   2. Wait until the AXI masters are quiet: no accepted fetch AR whose R is
-    //      still to come (if_outst_q), no memory-coalescer burst in flight
-    //      (mu_stall), no shared-memory access in flight (sm_stall).  A beat
-    //      already on the bus completes, so the crossbar never sees an
-    //      abandoned transaction or an orphan response.
-    //   3. soft_clr: one synchronous clock that returns state_q to IDLE and
-    //      clears the descriptor queue, warp scheduler and compute unit
-    //      (including gpu_error_o).  Configuration registers, the CTRL.irq_en
-    //      bit written with the reset, and the perf counters are kept.
-    //
-    // HALT ON ERROR (bead q6w0): the same halt_q gate is also raised by the
-    // compute-unit error (cu_gpu_error), on the same clock edge on which state_q
-    // enters GPS_ERROR.  From then on no new fetch and no new VLD/VST/VLDS/VSTS
-    // request is issued; a transaction already under way drains exactly as for
-    // a reset.  halt_q then stays up with rst_pend_q low, so soft_clr does not
-    // fire: the GPU sits quiescent in ERROR (STATUS keeps reading ERROR, config
-    // and perf counters untouched) until software writes CTRL.reset, which finds
-    // halt_q already up and clears once the masters are quiet.
+    // GPU_CTRL.reset: quiesce, then clear. The reset is synchronous (soft_clr).
+    // Do not fold it into rst_n: a register-driven asynchronous reset is a glitch, CDC and scan hazard.
+    // From any state, halt_q stops new fetches and VLD/VST/VLDS/VSTS requests. The AXI masters drain, then soft_clr clears for one clock.
+    // A compute-unit error also raises halt_q. The GPU then stays quiescent in ERROR until software writes CTRL.reset.
     // -------------------------------------------------------------------
     logic halt_q;       // gate: no new fetch / memory request (soft-reset drain, or ERROR)
     logic if_outst_q;   // instruction-fetch AR accepted, its R beat not yet received
@@ -304,19 +286,9 @@ module gpu_top
     end
 
     // -------------------------------------------------------------------
-    // Launch block-size contract (bead 6hy6, decided 2026-10-11)
-    //
-    //   BLOCK_X in 1..N_WARPS*N_LANES (64): ceil(BLOCK_X / N_LANES) warps; the last warp starts
-    //     with only its valid lanes active (lane l of warp w is valid iff w*N_LANES + l < BLOCK_X).
-    //   BLOCK_X == 0 or > 64: launch ERROR.  blk_illegal makes the accepted launch enter
-    //     GPS_ERROR instead of GPS_RUNNING and raise halt_q on the same edge, exactly as
-    //     cu_gpu_error does for a stack overflow, so the GPU is quiescent in ERROR and only
-    //     soft_clr (GPU_CTRL.reset) or rst_n leaves it.  The warp scheduler is never launched
-    //     (sched_start = 0), so no warp issues and no instruction is fetched.  The descriptor
-    //     is still consumed (sched_launch acks it), the perf counters are cleared and the IRQ
-    //     latch is dropped, as for any accepted launch; no done IRQ is raised.
-    //     if_ar_stuck cannot hold halt_q off here: in GPS_IDLE no fetch AR is ever valid
-    //     (every warp is done, or n_warps_q == 0 after a reset).
+    // Launch block-size contract. BLOCK_X in 1..N_WARPS*N_LANES (64) gives ceil(BLOCK_X / N_LANES) warps. The last warp starts with only its valid lanes active.
+    // A BLOCK_X of 0 or above 64 is a launch ERROR. blk_illegal enters GPS_ERROR and raises halt_q. The warp scheduler is never launched.
+    // The descriptor is still consumed, the perf counters clear and the IRQ latch drops. No done IRQ is raised.
     // -------------------------------------------------------------------
     // Full-member read into a plain wire: every select below is on the wire, not on the struct
     // member (Synlig struct-member select defects, Doc: cr:defect:synlig-struct-select-ainf).
@@ -330,7 +302,7 @@ module gpu_top
     assign sched_start = sched_launch && !blk_illegal;
 
     // n_warps: ceil(block_x / N_LANES) for a legal BLOCK_X.  This is a COUNT (0..N_WARPS), so it
-    // is WARP_CNT_W bits wide, one more than a warp ID (WARP_W) (bead 47lf).  Only meaningful
+    // is WARP_CNT_W bits wide, one more than a warp ID (WARP_W).  Only meaningful
     // when !blk_illegal: for an illegal BLOCK_X the scheduler is not launched and never reads it.
     logic [WARP_CNT_W-1:0] n_warps_w;
     assign n_warps_w = WARP_CNT_W'(cq_block_x[9:3]) + WARP_CNT_W'(|cq_block_x[2:0]);

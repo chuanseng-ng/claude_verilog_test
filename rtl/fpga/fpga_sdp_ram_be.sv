@@ -1,16 +1,18 @@
-// fpga_sdp_ram_be.sv
-// FPGA Stage 0 (bead hlrm, GH #245) -- simple-dual-port, byte-enabled, block-RAM-inferable memory for
-// sram_controller's `FPGA arm (stand-in for sky130_sram_4kbyte_1rw1r_32x1024_8 used as write-port-0 +
-// read-port-1). Selected ONLY under `FPGA.
+// fpga_sdp_ram_be - Simple-dual-port, byte-enabled, block-RAM-inferable memory for the FPGA build.
 //
-//   write port : we_i[b] writes byte b of wdata_i to waddr_i at the posedge
-//   read port  : re_i captures mem[raddr_i] into rdata_o at the posedge (ONE registered-read cycle);
-//                rdata_o holds when re_i is low
-//   same-address read+write in one cycle returns the OLD word (read-first). sram_controller's masters
-//   cannot rely on that window (the Sky130 macro arm races there too); this is the native block-RAM mode.
-//
-// Inference rules: synchronous read, no reset on array or output register, byte-write written as a for-loop
-// over constant byte slices of one array element, array indexed only by waddr_i / raddr_i. No `initial`.
+// Function: Stand-in for sky130_sram_4kbyte_1rw1r_32x1024_8 used as write port 0 plus read port 1.
+//   sram_controller instantiates it only under `FPGA.
+//   Write port: we_i[b] writes byte b of wdata_i to waddr_i at the posedge of clk.
+//   Read port: re_i captures mem[raddr_i] into rdata_o at the posedge. The read takes one registered cycle. rdata_o holds when re_i is low.
+//   A read and a write to the same address in one cycle return the old word (read-first).
+//   Inference rules: synchronous read, no reset on the array or the output register, no `initial`.
+//   The byte write is a for-loop over constant byte slices of one array element. The array is indexed only by waddr_i and raddr_i.
+// Parameters: WORDS (depth in words, a power of two, default 1024). AW is a localparam, $clog2(WORDS).
+// Clocks and resets: clk is the only clock. The array and rdata_o have no reset.
+// Caller rules:
+//   - Masters of sram_controller must not rely on the same-address read and write window.
+//     The Sky130 macro arm races there too. Read-first is the native block-RAM mode.
+// Doc: ds:mod:fpga-sdp-ram-be, tm:mod:fpga-sdp-ram-be, cr:mod:fpga-sdp-ram-be
 
 module fpga_sdp_ram_be #(
     parameter int unsigned WORDS = 1024,         // power of two

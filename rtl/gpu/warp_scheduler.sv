@@ -23,7 +23,7 @@ module warp_scheduler
     input  logic [31:0]             kernel_pc_i,      // entry-point PC for all warps
     input  logic [N_LANES-1:0]      init_mask_i,      // initial active mask of every full warp
     input  logic [N_LANES-1:0]      last_mask_i,      // initial mask of the LAST active warp
-                                                      // (partial block, bead 6hy6)
+                                                      // (partial block)
     input  logic [WARP_CNT_W-1:0]   n_warps_active_i, // number of warps in this block (0..N_WARPS)
 
     // -----------------------------------------------------------------------
@@ -74,7 +74,7 @@ module warp_scheduler
     /* verilator lint_on UNUSEDSIGNAL */
 
     // -----------------------------------------------------------------------
-    // GPU_CTRL.reset (bead q6w0): abort the kernel.  Synchronous, one cycle, issued
+    // GPU_CTRL.reset: abort the kernel.  Synchronous, one cycle, issued
     // by gpu_top once the AXI masters are quiet.  Wins over every other update.
     // -----------------------------------------------------------------------
     input  logic                    soft_clr_i,
@@ -86,18 +86,8 @@ module warp_scheduler
 );
 
     // -----------------------------------------------------------------------
-    // Parameter contract: N_WARPS_P sizes the per-warp arrays below, but the
-    // round-robin scan, reset/launch/completion loops and the `% N_WARPS` wrap
-    // are all bounded by the package constant N_WARPS, and the warp-id width
-    // WARP_W (warp ID) and WARP_CNT_W (n_warps_active_i, 0..N_WARPS) are derived from N_WARPS too.
-    // An override BELOW N_WARPS would index these arrays out of range; an
-    // override ABOVE it would leave the extra entries permanently unreachable
-    // and unrepresentable in WARP_W bits.  Nothing overrides it today
-    // (gpu_top.sv instantiates `warp_scheduler u_sched` with no parameter
-    // block), so this is latent rather than live -- but it is silent, so make
-    // it loud.  Generate-scope $fatal, not `initial $fatal`, so it fires under
-    // lint/synth elaboration and not only in simulation; same idiom as
-    // rtl/soc/cdc/cdc_sync.sv:82-84.
+    // Parameter contract: N_WARPS_P must equal gpu_pkg::N_WARPS. A generate-scope $fatal enforces it. Keep it in generate scope so lint and synthesis elaboration fire it.
+    // The scan, reset and launch loops, the `% N_WARPS` wrap, WARP_W and WARP_CNT_W are bound to N_WARPS.
     // -----------------------------------------------------------------------
     if (N_WARPS_P != N_WARPS) begin : g_n_warps_p_check
         $fatal(1, "warp_scheduler: N_WARPS_P (%0d) must equal gpu_pkg::N_WARPS (%0d) -- the scan/reset loops and WARP_W are bound to N_WARPS",
@@ -273,4 +263,3 @@ module warp_scheduler
     assign kernel_done_o = all_done;
 
 endmodule
-

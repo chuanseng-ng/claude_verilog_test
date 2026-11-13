@@ -61,6 +61,7 @@ module rv32i_control (
   output logic [3:0]  debug_state              // Current FSM state
 );
 
+  // This module is not instantiated in rtl/. The pipelined core does not use it.
   // ================================================================
   // FSM State Definitions
   // ================================================================
@@ -126,13 +127,8 @@ module rv32i_control (
   // ================================================================
   // Branch/Jump Decision Flag (MUST be registered!)
   // ================================================================
-  // CRITICAL: We MUST register the branch/jump decision at the END of EXECUTE
-  // state because:
-  // 1. In EXECUTE state, decoder outputs are valid for current instruction
-  // 2. When we transition to WRITEBACK (or MEM_WAIT), the instruction register
-  //    latches the NEXT instruction, so decoder outputs change!
-  // 3. If we tried to use branch/jump signals combinationally in WRITEBACK,
-  //    they would reflect the NEXT instruction, not the one we're committing!
+  // The branch/jump decision must be registered at the end of EXECUTE state.
+  // When the FSM leaves EXECUTE for WRITEBACK or MEM_WAIT, the instruction register can latch the next instruction, so decoder outputs no longer describe the committing one.
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -165,14 +161,7 @@ module rv32i_control (
   // ================================================================
   // Single-Step In-Progress Flag
   // ================================================================
-  // Purpose: Carry the single-step intent through the pipeline.
-  //
-  // The auto-clear logic in rv32i_cpu_top.sv clears dbg_ctrl_reg[2]
-  // (and therefore dbg_step_req) on the HALTED→FETCH transition edge.
-  // This means dbg_step_req is 0 by the time the CPU reaches WRITEBACK.
-  // Without this flag the WRITEBACK→HALTED path would never be taken.
-  //
-  // Protocol:
+  // step_in_progress carries the single-step intent to WRITEBACK. The Phase 1 rv32i_cpu_top clears dbg_ctrl_reg[2], and so dbg_step_req, on the HALTED to FETCH edge.
   //   - Set when current_state == HALTED and dbg_step_req is asserted
   //     (i.e., the clock cycle where we leave HALTED via a step).
   //   - Cleared when the CPU enters HALTED (completing the step).
@@ -296,22 +285,7 @@ module rv32i_control (
         // Note: Address phase (arvalid/arready) and data phase (rvalid/rready)
         // are independent. rvalid can come many cycles after arready.
         //
-        // Bug fix (stale AXI response after halt/resume):
-        // ar_issued is cleared while in HALTED (the else branch of the
-        // ar_issued block runs when current_state != FETCH/MEM_WAIT).
-        // On HALTED→FETCH the CPU immediately issues a new AR (ar_issued=0,
-        // arvalid=1).  If a stale rvalid is still pending from an in-flight AR
-        // that was interrupted by the halt, the AXI slave holds rvalid=1.
-        // This rvalid arrives while ar_issued=0 (before the new AR handshake
-        // completes).  Detecting rvalid while ar_issued=0 identifies it as
-        // stale: accept the handshake (rready=1) to unblock the slave but do
-        // NOT transition to DECODE.  After the stale rvalid is drained,
-        // ar_issued becomes 1 (new AR handshake completes) and the subsequent
-        // fresh rvalid is accepted normally.
-        //
-        // Normal case (no stale): rvalid always arrives AFTER ar_issued=1
-        // (the AR handshake happens first).  So the gate ar_issued never
-        // spuriously blocks normal rvalid acceptance.
+        // A stale rvalid (ar_issued = 0) is accepted with rready = 1 but does not leave FETCH. See cr:mod:rv32i-control.
         if (axi_rvalid && ar_issued) begin
           // Data received for our current AR, check for AXI error
           if (axi_rresp != 2'b00) begin
@@ -581,48 +555,3 @@ module rv32i_control (
   assign debug_state = current_state;
 
 endmodule
-
-// ============================================================================
-// HUMAN REVIEW CHECKLIST
-// ============================================================================
-//
-// Please verify the following before approving this control FSM:
-//
-// ✓ State transitions are correct and complete
-//   - RESET → FETCH
-//   - FETCH → DECODE (or TRAP on AXI error)
-//   - DECODE → EXECUTE (or TRAP on illegal instruction)
-//   - EXECUTE → MEM_WAIT (if memory op) or WRITEBACK
-//   - MEM_WAIT → WRITEBACK (or TRAP on AXI error)
-//   - WRITEBACK → FETCH
-//   - TRAP → FETCH
-//   - HALTED → FETCH (on resume/step)
-//
-// ✓ AXI handshake logic is correct
-//   - arvalid/arready for read address
-//   - rvalid/rready for read data
-//   - awvalid/awready for write address
-//   - wvalid/wready for write data
-//   - bvalid/bready for write response
-//
-// ✓ Commit signal timing is correct
-//   - commit_valid asserts for 1 cycle in WRITEBACK state
-//   - Includes PC, instruction, and result
-//
-// ✓ Trap handling is correct
-//   - Illegal instructions trigger TRAP state
-//   - AXI errors trigger TRAP state
-//   - Trap updates PC to trap vector
-//
-// ✓ Debug logic is correct
-//   - Halt request transitions to HALTED
-//   - Resume request transitions to FETCH
-//   - Single-step executes one instruction then returns to HALTED
-//
-// ✓ PC update logic is correct
-//   - PC+4 for normal instructions
-//   - Branch target for taken branches
-//   - Jump target for JAL/JALR
-//   - Trap vector for traps
-//
-// ============================================================================

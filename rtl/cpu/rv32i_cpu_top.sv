@@ -89,27 +89,19 @@ module rv32i_cpu_top #(
   input  logic        timer_irq_i,     // Timer interrupt (M-mode MTIP)
 
   // ================================================================
-  // DFT test boundary (bead claude_verilog_test-j41m.4, Doc: tm:ch:dft-architecture 14.10)
+  // DFT test boundary (Doc: tm:ch:dft-architecture 14.10)
   // ================================================================
   // Inactive values (functional mode, bit-identical to the pre-DFT macro):
   // scan_mode_i = 0, scan_en_i = 0, scan_in_i = 0.
   //
-  // NO scan_clk and NO scan_rst_ni port, deliberately:
-  //  * clk_i IS the test clock in scan mode. soc_top muxes the test clock into the
-  //    cpu_clk_i root (dft_clk_mux) ahead of u_cpu_cg, so the macro has one clock root
-  //    and no clock mux of its own (no insertion delay added to this macro's tree).
-  //  * Every reset in this macro is the SYNCHRONOUS rst_n_i itself (no derived or async
-  //    reset exists inside it: tools/dft/check_scan_clk_rst.py reports 0 async pins on
-  //    the macro netlist), and soc_top drives it from cpu_domain_rst_n, which equals
-  //    scan_rst_ni in scan mode. A second mux here would only add delay to the reset
-  //    tree of ~4.8k flops.
+  // No scan_clk and no scan_rst_ni port. clk_i is the test clock in scan mode. rst_n_i is the only reset and is synchronous.
   input  logic        scan_mode_i,     // 1 = test mode (quasi-static)
   input  logic        scan_en_i,       // 1 = shift, 0 = capture (consumer arrives with Stage 2 insertion)
   input  logic [1:0]  scan_in_i,       // chain inputs  (placeholder until Stage 2 insertion)
   output logic [1:0]  scan_out_o,      // chain outputs (tied 0 until Stage 2 insertion)
 
   // ================================================================
-  // MBIST boundary (bead claude_verilog_test-c54a, Doc: tm:ch:dft-architecture 16.7)
+  // MBIST boundary (Doc: tm:ch:dft-architecture 16.7)
   // ================================================================
   // 96 quasi-static pins, no timing path other than the ordinary sync-to-clk_i. Inactive values
   // (functional mode, bit-identical to the pre-MBIST macro): mbist_run_i = 0, mbist_cfg_i = 0.
@@ -124,12 +116,8 @@ module rv32i_cpu_top #(
   // ================================================================
   // DFT seam
   // ================================================================
-  // test_en forces the cache SRAM clock gates open (ASAP7 arm; the Sky130 macro has no
-  // clock gate). Same definition as the fabric's dft_test_en: scan_mode | mbist_en, where
-  // mbist_en is this macro's own controller (bist_en_o, a flop). It reaches the gates only
-  // in the ASAP7 arm (no collar exists there, so the term is a no-op today); in the Sky130
-  // arm the CPU clock gate that must be forced open for an MBIST run is u_cpu_cg in soc_top,
-  // which carries the TAP-launched mbist_force (section 16.6).
+  // test_en forces the cache SRAM clock gates open (ASAP7 arm). It is scan_mode_i | mb_en_w, and mb_en_w is bist_en_o of this macro's MBIST controller.
+  // In the Sky130 arm the macro has no clock gate. u_cpu_cg in soc_top must be forced open for an MBIST run; it carries the TAP-launched mbist_force.
   logic test_en_w;
   logic mb_en_w;
   assign test_en_w = scan_mode_i | mb_en_w;
@@ -152,12 +140,9 @@ module rv32i_cpu_top #(
   // ================================================================
   // One controller INSIDE the macro (the macros' ports are not otherwise reachable), memories in lock-step:
   //   index 0 = I$ tag, 1..4 = I$ data[0..3], 5 = D$ tag, 6..9 = D$ data[0..3]; 256 x 32 each, port 1 unused.
-  // ASYNC_RST = 0: the macro has only the synchronous rst_n_i and check_scan_clk_rst.py forbids an async pin
-  // inside it, so the controller has NO reset pin; the reset is folded into run (run & rst_n_i), and
-  // run = 0 flushes every controller flop within a few clocks (see mbist_ctrl). A functional reset therefore
-  // aborts a running MBIST exactly like a TAP abort; it can never start one.
-  // This instance exists in every SRAM arm. In the arms without the Sky130 macros (default, FPGA, ASAP7) the
-  // caches drive 0 as read data, so an MBIST run there reports a FAIL, never a vacuous pass.
+  // ASYNC_RST = 0: the controller has no reset pin. The reset is folded into run (run & rst_n_i). A functional reset aborts a running MBIST and cannot start one.
+  // The instance exists in every SRAM arm. Where the Sky130 macros are absent, the caches drive 0 as read data. An MBIST run there reports FAIL, not a vacuous pass.
+  // ASYNC_RST must stay 0: tools/dft/check_scan_clk_rst.py forbids an async pin in this macro.
   logic         mb_ce_w;
   logic         mb_we_w;
   logic [3:0]   mb_wmask_w;
@@ -172,7 +157,7 @@ module rv32i_cpu_top #(
 
   assign mb_run_w = mbist_run_i & rst_n_i;
 
-  // Collar-local compare (bead c54a): in the Sky130 arm each mem_collar compares its own macro's read data and
+  // Collar-local compare: in the Sky130 arm each mem_collar compares its own macro's read data and
   // returns one registered mismatch strobe, so the controller sees 10 strobes instead of 320 read-data wires and
   // broadcasts an 8-net expected-data tag (x_*) beside the 47-net op bus. The arms without the macros have no
   // collars and read constant 0: the controller then compares that 0 itself (LOCAL_CMP = 0, as before the change),
@@ -263,14 +248,7 @@ module rv32i_cpu_top #(
   // cleared (and halt re-asserted) when the first instruction commits.
   logic step_pending_q;
 
-  // Latched halt cause register (Bug fix: breakpoint halt_cause reads as 0)
-  // bp0_hit and bp1_hit are combinational signals that pulse for only the
-  // single WRITEBACK cycle in which commit_valid is asserted.  By the time
-  // the CPU transitions to HALTED and the test reads DBG_STATUS, those
-  // signals are 0, so halt_cause reads 0.
-  // Fix: capture the cause in a register when the event fires, and hold it
-  // until the CPU resumes (exits HALTED).
-  //
+  // Latched halt cause register: holds the cause until the CPU resumes (exits HALTED).
   // Encoding matches Doc: ds:mm:memory-map / DBG_STATUS bits [7:4]:
   //   0x1 = debug halt request
   //   0x2 = BP0 hit
@@ -381,33 +359,9 @@ module rv32i_cpu_top #(
   // APB3 Debug Interface
   // ================================================================
 
-  // APB pready / prdata timing (GH #96 bead cyb):
-  //   apb_prdata_o is a *registered* output (see always_ff below) — this
-  //   breaks the ~800 ps combinational paddr[]/psel/pwrite -> prdata_o arc
-  //   that the multi-clock SoC found inside this macro at the 780 ps cpu_clk
-  //   period. Writes stay single-cycle (pready=1 immediately, matching prior
-  //   behaviour exactly — dbg_ctrl_reg / breakpoint / GPR / PC writes are
-  //   unaffected). Reads get exactly one APB3 wait state so the registered
-  //   apb_prdata_o is valid on the same cycle apb_pready_o asserts.
-  //
-  //   apb_pready_o is likewise a PURE registered output. It was previously
-  //   `apb_pwrite_i ? 1'b1 : apb_read_wait_q`, and that one 2:1 mux exported a
-  //   601.9 ps combinational arc from apb_pwrite_i in the macro Liberty —
-  //   the same ~600 ps every APB input pays to cross this block's internal
-  //   distribution, and the same reason apb_pslverr_o had to become a pure
-  //   flop (see its comment below). Left combinational it would simply have
-  //   become the next cpu_clk violator at SoC level after pslverr was fixed.
-  //
-  //   EXTERNAL BEHAVIOUR IS UNCHANGED — writes still complete in one ACCESS
-  //   cycle, reads still take exactly one wait state:
-  //     write: SETUP (psel=1,pen=0,pwrite=1) latches 1 -> pready=1 throughout
-  //            the single ACCESS cycle. Write-commit conditions elsewhere in
-  //            this file stay (psel && penable && pwrite), true for exactly
-  //            that one cycle, so pulse outputs such as dbg_pc_wr_en still
-  //            fire once.
-  //     read:  SETUP latches 0; ACCESS cycle 1 (pready=0) latches 1; ACCESS
-  //            cycle 2 pready=1 completes the transfer alongside the
-  //            registered apb_prdata_o, then self-clears.
+  // APB timing: apb_prdata_o and apb_pready_o are pure registered outputs. See ds:mod:rv32i-cpu-top and tm:mod:rv32i-cpu-top. Do not add a combinational term to apb_pready_o.
+  // Writes complete in one ACCESS cycle with pready = 1. Reads take exactly one wait state.
+  // Write-commit conditions stay (psel && penable && pwrite), true for one cycle, so pulse outputs such as dbg_pc_wr_en fire once.
   always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
       apb_pready_o <= 1'b0;
@@ -417,48 +371,10 @@ module rv32i_cpu_top #(
     end
   end
   // CSR debug registers (0x200-0x214) are read-only — writes return PSLVERR.
-  //
-  // SETUP-PHASE DECODE (GH #96 run-21 follow-up). The address-range compare
-  // used to sit combinationally between the APB input pins and apb_pslverr_o.
-  // At SoC level that exported a 620.67 ps macro in->out arc which, after the
-  // apb_prdata_o register landed, became the LAST remaining cpu_clk violator
-  // (-60.66 ps, 1 endpoint, run 21 / RUN_2026-08-08_04-24-08).
-  //
-  // APB3 guarantees PADDR/PWRITE/PSEL are stable from the SETUP phase through
-  // the whole ACCESS phase, so the decode is evaluated one cycle EARLY (during
-  // SETUP: psel=1, penable=0) and registered. Only a two-gate qualification
-  // with psel/penable is left on the output path.
-  //
-  // Deliberately NOT done by registering the output the way apb_prdata_o was:
-  // that would force a wait state onto WRITES, and writes commit on
-  // (psel && penable && pwrite) at two sites below — including pulse outputs
-  // such as dbg_pc_wr_en — so a two-cycle-long penable would fire them TWICE.
-  // The SETUP-phase decode keeps writes single-cycle and leaves every existing
-  // write-commit condition, and every APB master, untouched.
-  // apb_pslverr_o is a PURE registered output — no combinational qualification
-  // on the output path at all.
-  //
-  // MEASURED, not assumed: an intermediate version of this fix registered the
-  // decode in SETUP but still qualified the output with
-  // (apb_pslverr_q && apb_psel_i && apb_penable_i). That did NOT help — the
-  // regenerated Liberty still reported a 617.9 ps combinational arc, now from
-  // apb_psel_i instead of apb_paddr_i (vs 620.67 ps before). The cost was
-  // never the address decode: apb_psel_i drives a large internal fanout and
-  // its buffered distribution across the block is what spends the ~600 ps
-  // before reaching any output gate. So ANY combinational term on this output,
-  // however shallow it looks in RTL, re-exports the same arc.
-  //
-  // Capturing the whole condition — including the SETUP-phase qualifier — in
-  // one flop leaves clk_i as the only related pin. APB3 runs SETUP (psel=1,
-  // penable=0) for exactly one cycle immediately before ACCESS, so a value
-  // latched at the end of SETUP is asserted precisely during ACCESS, which is
-  // when the master samples PSLVERR alongside PREADY (writes complete in a
-  // single ACCESS cycle — apb_pready_o=1 for pwrite=1). Both masters provide
-  // that SETUP phase: axil_to_apb.sv:158 and apb_cdc_bridge.sv:527-528.
-  //
-  // Harmless corner: if a master stretched SETUP over several cycles, this
-  // would assert during them too, but PSLVERR is only meaningful while PREADY
-  // is high, so nothing samples it there.
+  // The PSLVERR decode runs in the SETUP phase (psel = 1, penable = 0) and is registered.
+  // apb_pslverr_o is a pure registered output. It must have no combinational term, not even a psel/penable AND. Any such term re-exports an input-to-output arc from apb_psel_i.
+  // Do not give PSLVERR a read-style wait state like apb_prdata_o. Writes commit on (psel && penable && pwrite), so a two-cycle ACCESS fires pulse outputs such as dbg_pc_wr_en twice.
+  // The flop is correct in ACCESS because SETUP is the cycle just before ACCESS (axil_to_apb, apb_cdc_bridge).
   always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
       apb_pslverr_o <= 1'b0;
@@ -475,7 +391,7 @@ module rv32i_cpu_top #(
   logic [31:0] last_commit_insn_q;
 
   // Combinational read-mux decode. Feeds the apb_prdata_o register below
-  // rather than driving the port directly (see GH #96 bead cyb header note).
+  // rather than driving the port directly (see ds:mod:rv32i-cpu-top).
   logic [31:0] apb_prdata_comb;
 
   // APB read logic
@@ -722,22 +638,7 @@ module rv32i_cpu_top #(
   // can limit fetches to exactly one when a single-step is in progress.
   assign dbg_step_req   = step_pending_q;
 
-  // ================================================================
-  // Halt Cause Latch
-  // ================================================================
-  // Capture the halt cause in a register so it is stable when DBG_STATUS
-  // is read after the CPU enters HALTED.
-  //
-  // Root problem: bp0_hit / bp1_hit are purely combinational and depend on
-  // commit_valid_o, which is a single-cycle pulse from the FSM WRITEBACK
-  // state.  By the time the CPU transitions to HALTED and the test reads
-  // DBG_STATUS, commit_valid_o = 0, so bp0_hit = 0, and halt_cause = 0.
-  //
-  // Fix: sample and hold the cause using commit_valid_o as the capture
-  // trigger.  commit_valid_o is 1 exactly during WRITEBACK — the same cycle
-  // bp0_hit / bp1_hit are valid.  We also cover the EBREAK case (already
-  // handled by ebreak_halt) and the FETCH-time halt_req case.
-  //
+  // Halt Cause Latch: holds the halt cause for DBG_STATUS. bp0_hit and bp1_hit last only the commit cycle, so the cause must be latched.
   // Encoding (Doc: ds:mm:memory-map DBG_STATUS bits [7:4]):
   //   0x1 = debug halt request (plain halt, no other cause)
   //   0x2 = BP0 hit
@@ -749,9 +650,7 @@ module rv32i_cpu_top #(
     if (!rst_n_i) begin
       halt_cause_lat <= 4'h0;
     end else begin
-      // ==================================================================
       // Priority (highest to lowest):
-      //
       // 1. EBREAK retires at WB (trap_taken_o && trap_cause_o==3)
       //    — fires 1 cycle BEFORE dbg_halted goes high; latch cause now
       // 2. BP hit during commit (commit_valid_o pulse)
@@ -827,44 +726,3 @@ module rv32i_cpu_top #(
   // Breakpoint halt logic integrated above (dbg_halt_req triggers on bp0_hit || bp1_hit)
 
 endmodule
-
-// ============================================================================
-// HUMAN REVIEW CHECKLIST
-// ============================================================================
-//
-// Please verify the following before approving this top-level integration:
-//
-// ✓ Core instantiation is correct:
-//   - All AXI4-Lite signals connected
-//   - Debug signals connected
-//   - Commit signals connected
-//
-// ✓ APB3 debug interface is correct:
-//   - Read/write access to control registers
-//   - Status register reflects CPU state
-//   - PC and instruction registers observable
-//   - PC writable when halted (implemented)
-//   - GPR[0:31] readable via APB (0x010-0x08C) (implemented)
-//   - GPR[0:31] writable when halted (implemented)
-//
-// ✓ Debug control logic is correct:
-//   - Halt request triggers CPU halt
-//   - Resume request resumes execution
-//   - Single-step executes one instruction
-//
-// ✓ Breakpoint logic is correct:
-//   - Breakpoint address comparison
-//   - Breakpoint enable control
-//   - Breakpoint hit detection
-//   - Breakpoint hits trigger CPU halt (integrated)
-//
-// ✓ All Phase 1 debug features implemented:
-//   - GPR read/write access via APB3 (implemented)
-//   - PC write access when halted (implemented)
-//   - All debug TODOs complete
-//
-// ✓ Protocol compliance:
-//   - AXI4-Lite master protocol (handled by core)
-//   - APB3 slave protocol (single-cycle, always ready)
-//
-// ============================================================================

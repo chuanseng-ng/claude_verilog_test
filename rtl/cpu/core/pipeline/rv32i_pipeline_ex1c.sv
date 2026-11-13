@@ -1,27 +1,24 @@
-// rv32i_pipeline_ex1c.sv
-// RV32I Pipeline — Execute Stage 1c (EX1c)
+// rv32i_pipeline_ex1c - Execute stage 1c: trap priority encode, trap pre-decode and store byte alignment.
 //
-// Run-20: new purely-combinational stage inserted between ex1a_ex1b_reg_q
-// and ex1c_ex1b_reg_q to break the -782 ps timing critical path.
-//
-// Run-35: restructured trap logic from 8-way if/else cascade to a
-// tree-balanced one-hot priority encoder + AND-OR mux.  No functional change.
-// The original design serialised: encoder (~7 gate levels) → decoder (~7 gate
-// levels) = ~14 gates deep.  The new design: parallel conditions (1-2 gates) →
-// balanced OR tree (3 gates) → one-hot sel (1 gate) → AND-OR mux (2 gates) =
-// ~7 gates deep, targeting 720 ps / ~1389 MHz.
-//
-// EX1c reads the REGISTERED ex1a_ex1b_t (all inputs already through a FF) and:
-//   1. Re-encodes trap_type via a balanced one-hot priority encoder.
-//   2. Drives dec_* outputs via a one-hot AND-OR mux keyed on sel[].
-//      dec_* do NOT depend on trap_type — they are parallel to it.
-//   3. Computes store byte-alignment (unchanged; not on the critical path).
-//   4. Passes all other ex1a_ex1b_t fields through unchanged.
-//
-// Output type is ex1a_ex1b_t (same struct — no new type needed).
-// EX1b reads ex1c_ex1b_reg_q and uses pre-decoded dec_* fields directly.
-//
-// Branch misprediction penalty: 4 cycles (unchanged from Run-20).
+// Function: Purely combinational. ex1a_i is the registered ex1a_ex1b_t (ex1a_ex1b_reg_q in rv32i_core). All inputs already come from a flop.
+//   The branch misprediction penalty is 4 cycles.
+//   ex1c_o has the same struct type. The caller registers it in ex1c_ex1b_reg_q, and EX1b reads it there.
+//   1. Seven parallel trap conditions give a one-hot select sel[6:0]. Each condition includes ex1a_i.valid.
+//      Priority, highest first: IRQ, ILLEGAL, EBREAK, FENCEI, MRET, JALR, BRANCH. sel is 0 when no trap applies.
+//   2. trap_type is encoded from sel. It is TRAP_NONE when sel is 0.
+//   3. A one-hot AND-OR mux on sel drives the dec_* fields. They do not depend on trap_type.
+//      When sel is not 0, dec_do_redirect is 1. dec_trap_valid is 1 for IRQ, ILLEGAL and EBREAK.
+//      dec_redirect_target is mtvec for IRQ, ILLEGAL and EBREAK. It is pc + 4 for FENCEI and mret_pc for MRET.
+//      It is alu_result with bit 0 cleared for JALR, and pc + immediate for BRANCH.
+//      dec_trap_cause is irq_cause (IRQ), 2 (ILLEGAL), 3 (EBREAK) and 0 otherwise.
+//   4. pre_wstrb and pre_wdata_aligned hold the byte-aligned store strobes and data (mem_size and alu_result[1:0]).
+//      pre_wstrb is 4'b0000 for a mem_size other than byte, halfword and word.
+//   5. All other fields pass through unchanged.
+// Parameters: none.
+// Clocks and resets: none. The module has no clock and no reset.
+// Caller rules:
+//   - none beyond the port semantics.
+// Doc: ds:mod:rv32i-pipeline-ex1c, tm:mod:rv32i-pipeline-ex1c, cr:mod:rv32i-pipeline-ex1c
 
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex1c (
@@ -68,13 +65,7 @@ module rv32i_pipeline_ex1c (
     //
     // sel[k] = cond[k] & ~(any cond with higher priority set).
     // At most one bit of sel is 1; all zero when no trap applies.
-    //   sel[0] = c_irq        (highest)
-    //   sel[1] = c_ill
-    //   sel[2] = c_ebk
-    //   sel[3] = c_fci
-    //   sel[4] = c_mrt
-    //   sel[5] = c_jlr
-    //   sel[6] = c_bch        (lowest)
+    // sel[0] is IRQ (highest priority) and sel[6] is BRANCH (lowest), in the Stage 1 order.
     // =========================================================================
     logic [6:0] sel;
     assign sel[0] = c_irq;
@@ -88,7 +79,7 @@ module rv32i_pipeline_ex1c (
     // =========================================================================
     // Named-signal copies of the struct members that are bit/part-selected below.
     // Selects are taken from these wires, never directly on ex1a_i.<member>
-    // (Synlig mis-elaborates that idiom; bead ainf).
+    // (Synlig mis-elaborates that idiom).
     // =========================================================================
     logic [31:0] ex1a_alu_result_w;
     logic [31:0] ex1a_fwd_store_w;
@@ -171,13 +162,7 @@ module rv32i_pipeline_ex1c (
 
         // =====================================================================
         // Pre-decoded trap outputs — AND-OR one-hot mux keyed on sel[].
-        //
-        // All data inputs (mtvec, irq_cause, pc, mret_pc, alu_result, immediate)
-        // are registered: they are available at t=0 in this combinational stage.
-        // The select (sel[]) resolves at ~4 gate levels; the AND-OR mux adds
-        // ~2 more levels.  Total: ~6 gate levels from registered inputs.
-        //
-        // This path does NOT depend on trap_type — parallel to the encoder above.
+        // All data inputs are registered. This path does not depend on trap_type.
         // =====================================================================
         ex1c_o.dec_trap_valid      = 1'b0;
         ex1c_o.dec_do_redirect     = 1'b0;
@@ -216,4 +201,3 @@ module rv32i_pipeline_ex1c (
     end
 
 endmodule
-

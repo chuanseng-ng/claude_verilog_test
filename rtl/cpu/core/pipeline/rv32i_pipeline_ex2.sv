@@ -1,11 +1,13 @@
-// rv32i_pipeline_ex2.sv
-// RV32I Pipeline — Execute Stage 2 (EX2)
+// rv32i_pipeline_ex2 - Execute stage 2: owns the pipeline register between EX1 and MEM.
 //
-// Owns the pipeline register between EX1 and MEM.
-// EX1 is purely combinational; EX2 captures EX1 outputs at the clock edge
-// and drives ex_mem_reg_o into the MEM stage.
-// This splits the former single EX combinational cone into two independent
-// timing windows, targeting ~200 ps WNS improvement on ASAP7.
+// Function: EX1 is purely combinational. EX2 captures ex1_ex2_reg_i at the clock edge and drives ex_mem_reg_o into MEM.
+//   A reset or a flush loads ex_mem_nop(). A stall holds ex_mem_reg_o. Otherwise every field is copied.
+// Parameters: none.
+// Clocks and resets: clk_i is the clock, rising edge. rst_n_i is active low and synchronous. Reset loads ex_mem_nop().
+// Caller rules:
+//   - Drive stall_ex1_ex2_i to 1 to freeze ex_mem_reg_o.
+//   - flush_ex1_ex2_i has priority over stall_ex1_ex2_i.
+// Doc: ds:mod:rv32i-pipeline-ex2, tm:mod:rv32i-pipeline-ex2
 
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex2 (
@@ -50,4 +52,3 @@ module rv32i_pipeline_ex2 (
     end
 
 endmodule
-

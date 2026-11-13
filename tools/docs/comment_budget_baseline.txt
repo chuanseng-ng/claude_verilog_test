@@ -102,50 +102,9 @@ pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | date | 2 |
 pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | ghpr | 1 |
 pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | run | 1 |
 pnr/sky130/soc/soc_top_ports.v | ghpr | 3 |
-rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv | meas | 1 |
-rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv | blk | 2 | 13
-rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv | meas | 2 |
-rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv | meas | 1 |
-rtl/cpu/core/pipeline/rv32i_pipeline_if.sv | blk | 1 | 13
-rtl/cpu/core/rv32i_alu.sv | meas | 1 |
-rtl/cpu/core/rv32i_control.sv | blk | 4 | 44
 rtl/cpu/core/rv32i_core.sv | bead | 3 |
 rtl/cpu/core/rv32i_core.sv | blk | 4 | 18
 rtl/cpu/core/rv32i_core.sv | meas | 1 |
-rtl/cpu/core/rv32i_csr_file.sv | bead | 2 |
-rtl/cpu/core/rv32i_csr_file.sv | blk | 3 | 12
-rtl/cpu/core/rv32i_csr_file.sv | ghpr | 1 |
-rtl/cpu/core/rv32i_csr_file.sv | hdr | 1 | 59
-rtl/cpu/core/rv32i_decode.sv | blk | 1 | 37
-rtl/cpu/core/rv32i_hazard_unit.sv | blk | 3 | 17
-rtl/cpu/rv32i_cpu_top.sv | bead | 5 |
-rtl/cpu/rv32i_cpu_top.sv | blk | 9 | 43
-rtl/cpu/rv32i_cpu_top.sv | fline | 1 |
-rtl/cpu/rv32i_cpu_top.sv | ghpr | 3 |
-rtl/cpu/rv32i_cpu_top.sv | meas | 9 |
-rtl/cpu/rv32i_cpu_top.sv | run | 1 |
-rtl/fpga/fpga_sdp_ram_be.sv | ghpr | 1 |
-rtl/fpga/fpga_sram_1rw.sv | ghpr | 1 |
-rtl/gpu/gpu_compute_unit.sv | bead | 1 |
-rtl/gpu/gpu_pkg.sv | bead | 1 |
-rtl/gpu/gpu_pkg.sv | ghpr | 1 |
-rtl/gpu/gpu_top.sv | bead | 5 |
-rtl/gpu/gpu_top.sv | blk | 2 | 28
-rtl/gpu/gpu_top.sv | date | 1 |
-rtl/gpu/warp_scheduler.sv | bead | 2 |
-rtl/gpu/warp_scheduler.sv | blk | 1 | 14
-rtl/gpu/warp_scheduler.sv | fline | 1 |
-rtl/mem/rv32i_cache_pkg.sv | bead | 1 |
-rtl/mem/rv32i_cache_pkg.sv | blk | 1 | 16
-rtl/mem/rv32i_clock_gate.sv | bead | 2 |
-rtl/mem/rv32i_clock_gate.sv | meas | 5 |
-rtl/mem/rv32i_clock_gate.sv | run | 2 |
-rtl/mem/rv32i_dcache.sv | bead | 3 |
-rtl/mem/rv32i_dcache.sv | blk | 7 | 16
-rtl/mem/rv32i_dcache.sv | date | 1 |
-rtl/mem/rv32i_icache.sv | bead | 4 |
-rtl/mem/rv32i_icache.sv | blk | 5 | 17
-rtl/mem/rv32i_icache.sv | meas | 1 |
 rtl/soc/pll/pll_apb_regs.sv | ghpr | 1 |
 rtl/soc/pll/pll_clkgen.sv | meas | 1 |
 rtl/soc/soc_periph_map_pkg.sv | bead | 7 |
