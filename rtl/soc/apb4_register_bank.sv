@@ -1,27 +1,17 @@
-// apb4_register_bank.sv
-// Phase 5 (APB migration PR-1) — APB4 slave drop-in for axi_lite_register_bank.
+// apb4_register_bank - APB4 slave register bank with software and hardware write paths.
 //
-// Functionally identical register semantics to axi_lite_register_bank.sv:
-//   * Same parameters (N_REGS, ADDR_W, DW, SW, RESET_VAL, WMASK).
-//   * Same hw_wen_i / hw_wdata_i per-register HW-write bypass (bypasses WMASK).
-//   * Same regs_o output array.
-//   * Same-edge SW/HW collision (bead 6o8w): SW wins on the bits inside WMASK, HW wins
-//     on the bits outside it.  A fully-masked (WMASK=0) register is therefore HW-owned
-//     and a store to it cannot drop a same-cycle HW update.
-//   * Same out-of-range policy: writes dropped (pslverr=0), reads return 0 (pslverr=0).
-//   * Same strb_expand / WMASK masking logic — ported verbatim.
-//
-// APB4 protocol (ARM IHI0024C):
-//   SETUP phase  : psel=1, penable=0 — address/control set up.
-//   ACCESS phase : psel=1, penable=1 — transfer completes when pready=1.
-//   This module drives pready=1 every ACCESS phase (zero wait states); there is
-//   no pipelining — one transfer per SETUP/ACCESS pair.
-//
-// Clock / reset: pclk / presetn (active-low, synchronous deassertion assumed).
-// Data width: 32-bit (DW=32, SW=4) — validated in an initial block.
-//
-// Lint note: paddr[1:0] are unused (word-aligned register file); they are
-// bracketed with a targeted lint_off to keep -Wall clean.
+// Function: The bank holds N_REGS registers of DW bits behind an APB4 slave port.
+//   The module drives pready=1 in every ACCESS phase. It has no wait states and no pipelining.
+//   Software writes obey WMASK and the byte strobes. Hardware writes use hw_wen_i and hw_wdata_i and bypass WMASK.
+//   regs_o shows the current register values.
+// Parameters: N_REGS, ADDR_W, DW, SW, RESET_VAL and WMASK. DW must be 32 and SW must be 4. An initial block checks this.
+// Clocks and resets: pclk is the clock. presetn is active low. The design assumes synchronous deassertion.
+// Caller rules:
+//   - On a same-cycle software and hardware write, software wins inside WMASK and hardware wins outside it.
+//     A register with WMASK=0 is owned by hardware.
+//   - A write outside the range is dropped. A read outside the range returns 0. pslverr stays 0.
+//   - paddr[1:0] are unused.
+// Doc: ds:mod:apb4-register-bank, cr:mod:apb4-register-bank
 
 module apb4_register_bank #(
     parameter int unsigned N_REGS    = 16,
@@ -99,15 +89,12 @@ module apb4_register_bank #(
 
             // 2. SW write on ACCESS phase of a write transfer.
             //    Same-cycle collision: SW wins inside WMASK, HW wins outside it.
-            //    GH #87: zero-extend addr_word to 32 b before comparing with N_REGS
-            //    so that N_REGS == 2**WORDW does not wrap to 0 (truncating cast bug).
+            // Zero-extend addr_word to 32 bits before the N_REGS compare.
             if (access && pwrite) begin
                 if ({{(32-WORDW){1'b0}}, addr_word} < N_REGS) begin
                     automatic logic [IDXW-1:0] ci = addr_word[IDXW-1:0];
                     automatic logic [31:0]     m  = WMASK[ci] & strb_expand(pstrb);
-                    // SW owns the WMASK bits; HW owns the rest.  Folding this
-                    // cycle's HW write into the base keeps a same-edge HW update
-                    // from being clobbered with stale data (bead 6o8w).
+                    // SW owns the WMASK bits. HW owns the rest. Fold the same-cycle HW write into base.
                     automatic logic [31:0]     base =
                         hw_wen_i[ci] ? hw_wdata_i[ci] : regs[ci];
                     regs[ci] <= (base & ~m) | (pwdata & m);
@@ -129,4 +116,3 @@ module apb4_register_bank #(
     end
 
 endmodule : apb4_register_bank
-

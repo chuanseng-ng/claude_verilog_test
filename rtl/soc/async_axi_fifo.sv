@@ -1,82 +1,27 @@
-// async_axi_fifo.sv
-// GH #91 — Dual-clock AXI4 CDC bridge (epic #90, child 1 of 4).
+// async_axi_fifo - dual-clock AXI4 bridge between the CPU domain and the fabric domain.
 //
-// Purely STRUCTURAL: 5x cdc_gray_fifo (AW/W/B/AR/R) + payload concat/slice +
-// 2x cdc_reset_sync. No sequential logic of its own — every register lives
-// inside cdc_gray_fifo or cdc_reset_sync. See Doc: tm:dec:3pll-cdc
-// (DECIDED 2026-06-27) for why this is the SoC's one intentional CDC
-// boundary: CPU @ ~1282 MHz on one side, GPU+bus+peripherals @ 571 MHz on
-// the other, meeting at crossbar M0.
-//
-// !!! s_clk_i is the CPU DOMAIN, NOT sys_clk — the name is confusable !!!
-//   s_clk_i / s_rst_n_i — CPU domain (`cpu_clk` in #93). The s_* face is the
-//     AXI SLAVE port that the CPU's AXI master attaches to (this module is a
-//     slave from the CPU's point of view).
-//   m_clk_i / m_rst_n_i — fabric domain (`sys_clk`). The m_* face is the AXI
-//     MASTER port that drives crossbar M0 (this module is a master from the
-//     fabric's point of view).
-// Field names/widths on both faces mirror rtl/cpu/rv32i_cpu_top.sv:19-51 and
-// rtl/soc/axi4_crossbar.sv:55-86 1:1 so GH #93's wiring is mechanical.
-//
-// ID-LESS on both faces: the crossbar's master-facing port has no id field
-// (axi4_crossbar.sv:55-86; ids only exist slave-side, tagged internally by
-// master index). This bridge never carries an id.
-//
-// Channel payload packing (MSB..LSB), s->m direction unless noted:
-//   AW payload[44:0] = {addr[31:0], len[7:0], size[2:0], burst[1:0]}
-//   W  payload[36:0] = {data[31:0], strb[3:0], last}
-//   B  payload[1:0]  = {resp[1:0]}                                (m->s)
-//   AR payload[44:0] = {addr[31:0], len[7:0], size[2:0], burst[1:0]}
-//   R  payload[34:0] = {data[31:0], resp[1:0], last}               (m->s)
-//
-// !!! mem_q read-domain combinational read path (per fifo instance) !!!
-// Each cdc_gray_fifo's storage array is read combinationally in its
-// destination clock domain and is safe only because the gray pointer has
-// already propagated through SYNC_STAGES receiving flops (see
-// cdc_gray_fifo.sv header). GH #94 MUST add `set_max_delay -datapath_only`
-// on that path AND on the two gray-pointer crossings, in EACH of the 5
-// instances below.
-//
-// ── Reset strategy: hard flush, common root, both domains always together ──
-// assign rst_both_n = s_rst_n_i & m_rst_n_i; feeds BOTH cdc_reset_sync
-// instances. Rationale (failure being designed against): if only one side
-// reset, its pointers would clear while the other's did not, and the read
-// side would then pop 2**PTR_W-N entries of garbage into the crossbar (or
-// the write side would wedge full) once the un-reset side resumed. Tying
-// both domains' resets to the AND of both inputs makes that scenario
-// structurally impossible — both pointer sets always clear together.
-//
-// Reset here is a HARD FLUSH, not a graceful abort: any buffered beats are
-// discarded, there is no synthesized wlast, and no SLVERR is fabricated on
-// B. A burst can be left half-transferred at both faces. Both s_rst_n_i and
-// m_rst_n_i MUST therefore share a common root that ALSO resets the
-// attached master and the fabric — this bridge cannot recover an
-// in-flight transaction across a reset event on its own.
-//
-// Each rst_n_i (s_rst_n_i, m_rst_n_i) must be held low for >= SYNC_STAGES+1
-// periods of the OTHER clock for a clean synchronised deassertion (see
-// cdc_reset_sync.sv). Satisfied trivially while both derive from
-// `rst_n_i & pll_locked` upstream; a future integrator must not wire a
-// short pulsed reset here.
-//
-// While a domain is held in reset, both its ready and valid outputs are 0,
-// so it backpressures the attached master/slave rather than emitting
-// garbage.
-//
-// Performance note (not fixed here, for #93's budget): each channel costs
-// ~SYNC_STAGES+2 receiving-domain cycles per traversal.
-//
-// No bypass/passthrough parameter: the FIFO is already correct at a 1:1
-// clock ratio, which matters because PLL_IMPL="STUB" gives
-// core_clk == clk_i (rtl/soc/pll/pll_subsystem.sv:19-21).
-//
-// Coding rules: no sequential logic in this file — structural instantiation
-// + payload assign only (Doc: um:guide:coding-guidelines).
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The module has five cdc_gray_fifo instances (AW, W, B, AR, R) and two cdc_reset_sync instances.
+//   It has no other sequential logic. Neither face carries an id.
+//   The s_* face is an AXI slave port on s_clk_i and s_rst_n_i. It is the CPU domain, not sys_clk.
+//   The m_* face is an AXI master port on m_clk_i and m_rst_n_i. It drives crossbar master 0.
+// Parameters: AW, DW, SW, LENW and SIZEW set the bus geometry. They default from axi_pkg.
+//   AW_DEPTH, W_DEPTH, B_DEPTH, AR_DEPTH and R_DEPTH set the FIFO depths.
+//   SYNC_STAGES_TO_S and SYNC_STAGES_TO_M set the synchroniser stages.
+// Clocks and resets: s_rst_n_i and m_rst_n_i are active low. rst_both_n is s_rst_n_i & m_rst_n_i.
+//   It feeds both cdc_reset_sync instances. While a domain is in reset, its ready and valid outputs are 0.
+// Caller rules:
+//   - Reset is a hard flush, not a graceful abort. Buffered beats are lost. No wlast and no SLVERR is made.
+//   - s_rst_n_i and m_rst_n_i must share a common root that also resets the master and the fabric.
+//   - Hold each reset low for at least SYNC_STAGES+1 periods of the other clock. Do not wire a short pulse.
+//   - STA must set set_max_delay -datapath_only on the mem_q read path and on both gray-pointer crossings
+//     in each of the five FIFO instances.
+//   - Connect scanmode_i and scan_rst_ni at every instance. Both reach the two cdc_reset_sync instances.
+//   - Each channel costs about SYNC_STAGES+2 receiving-domain cycles per traversal.
+//   - The module has no bypass parameter.
+// Doc: ds:mod:async-axi-fifo, tm:mod:async-axi-fifo
 
 module async_axi_fifo #(
-    // ── Bus geometry (defaults from axi_pkg, scope-resolved — no file-scope
-    //    import; see rtl/soc/axi4_crossbar.sv:40-46) ─────────────────────────
+    // Bus geometry. The defaults come from axi_pkg.
     parameter int unsigned AW    = axi_pkg::AXI_ADDR_WIDTH,
     parameter int unsigned DW    = axi_pkg::AXI_DATA_WIDTH,
     parameter int unsigned SW    = axi_pkg::AXI_STRB_WIDTH,
@@ -99,12 +44,7 @@ module async_axi_fifo #(
     parameter int unsigned SYNC_STAGES_TO_S = 2,
     parameter int unsigned SYNC_STAGES_TO_M = 2
 ) (
-    // ── DFT scan bypass (bead claude_verilog_test-07n) — global, not
-    //    per-face: forwarded to BOTH internal cdc_reset_sync instances
-    //    (u_s_rst_sync, u_m_rst_sync). Must be connected explicitly at
-    //    every instantiation (no SV port defaults); tie scanmode_i=1'b0,
-    //    scan_rst_ni=1'b1 where no scan flow exists — see
-    //    cdc_reset_sync.sv for the full rationale. ─────────────────────────
+    // DFT scan bypass. scanmode_i and scan_rst_ni go to both internal cdc_reset_sync instances. Connect them at every instance.
     input  logic               scanmode_i,
     input  logic               scan_rst_ni,
 

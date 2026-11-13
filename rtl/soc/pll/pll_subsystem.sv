@@ -1,69 +1,18 @@
-// pll_subsystem.sv
-// Pre-Phase-6 bead claude_verilog_test-1xb — PLL subsystem wrapper.
+// pll_subsystem - structural wrapper for the PLL clock generator, its APB4 registers and the reset glue.
 //
-// Collects the three elements that were scattered across soc_top.sv into a
-// single structural wrapper:
-//   1. pll_clkgen      — PDK-agnostic PLL (STUB default / RNM for AMS cosim)
-//   2. pll_apb_regs    — APB4 config slave (CONTROL / STATUS registers)
-//   3. glue assigns    — pll_rst_n  = rst_n_i & pll_enable
-//                        core_rst_n = rst_n_i & pll_locked
-//
-// Clock-domain rule (MUST NOT be changed):
-//   This module, pll_clkgen, and pll_apb_regs all run on clk_i / rst_n_i
-//   (the external reference clock).  They are the *source* of core_clk and
-//   pll_locked.  Placing any of these on core_clk would create a bootstrap
-//   deadlock because core_rst_n requires pll_locked, which requires
-//   pll_enable=1, which comes from pll_apb_regs — which would be held in
-//   reset (core_rst_n=0) forever.
-//
-//   STUB mode (PLL_IMPL="STUB"):
-//     out_clk_o = ref_clk_i, so core_clk == clk_i.  No CDC issue.
-//   RNM mode (PLL_IMPL="RNM"):
-//     core_clk != clk_i.  The apb_interconnect (on core_clk) drives the APB
-//     bus into pll_apb_regs (on clk_i) across a CDC boundary.  FIXED (GH #86,
-//     soc_top.sv): every soc_top instance of this module (u_pll_sub,
-//     u_cpu_pll_sub) has its APB4 slave port fed through an apb_cdc_bridge
-//     instance (u_apb_pll_cdc / u_apb_pll2_cdc respectively) rather than
-//     wired directly to the apb_interconnect slot — see soc_top.sv's
-//     u_apb_pll_cdc instantiation comment for the full CDC argument and the
-//     bootstrap-safety proof. Do NOT remove this comment without confirming
-//     the calling soc_top still bridges this module's APB4 port.
-//
-// Precursor note for #4 (3-PLL: CPU / GPU / bus):
-//   PLL_IMPL and STUB_LOCK_CYCLES are exposed as parameters so that three
-//   independent pll_subsystem instances can be configured independently
-//   (e.g. different lock-cycle counts for simulation speed).  ADDR_W is
-//   similarly parameterised to allow different APB slot sizes.
-//
-// Ports:
-//   clk_i       — reference clock input (100 MHz XO)
-//   ref_clk_o   — clk_i, or scan_clk_i in scan mode: the reference actually in use
-//   rst_n_i     — top-level active-low reset (synchronous inside sub-modules)
-//   PLL_IMPL    — "STUB" (default) or "RNM" (AMS cosim only)
-//   APB4 slave  — psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr
-//                 driven by soc_top from an apb_cdc_bridge DESTINATION (m_*)
-//                 face, not straight off the apb_interconnect slot (GH #86)
-//   core_clk    — PLL output clock; feeds all children of soc_top
-//   core_rst_n  — gated reset: rst_n_i & pll_locked
-//   pll_locked_o — raw PLL lock flag (exported to soc_top port)
-//
-// DFT (bead claude_verilog_test-j41m.2, Doc: tm:ch:dft-architecture sec.4
-// items 7 and 8): scan_mode_i / scan_rst_ni / scan_clk_i make every flop in
-// this module, and the clock and reset it delivers, controllable from ports in
-// test mode.
-//   * clock: the reference is replaced by scan_clk_i in scan mode (dft_clk_mux),
-//     so the lock counter, the APB register file and the stub's passthrough core_clk
-//     all run on the test clock. A non-stub PLL's OUTPUT is muxed separately (below)
-//     because its output is not the reference.
-//   * reset: pll_rst_n and core_rst_n are DERIVED from a register (pll_enable) and a
-//     lock counter (pll_locked). Left alone they would toggle as the chains shift and
-//     clear scanned flops mid-shift, so each is overridden by scan_rst_ni at the net
-//     that feeds the flops (dft_rst_mux), as is the reset of the register file.
-// Functional mode (scan_mode_i = 0, scan_rst_ni = 1, scan_clk_i = 0): all three
-// muxes are pass-through and the module behaves exactly as before.
-//
-// Coding rules: no logic — structural instantiation + assign only.
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The module holds pll_clkgen, pll_apb_regs and two reset assigns:
+//   pll_rst_n = rst_n_i & pll_enable and core_rst_n = rst_n_i & pll_locked.
+//   core_clk is the PLL output clock. ref_clk_o is clk_i, or scan_clk_i in scan mode.
+//   In scan mode dft_clk_mux replaces the reference with scan_clk_i.
+//   pll_rst_n, core_rst_n and the register-file reset take scan_rst_ni through dft_rst_mux.
+//   With a non-STUB PLL, core_clk is also scan_clk_i in scan mode.
+// Parameters: PLL_IMPL ("STUB" by default, "RNM" for AMS co-simulation), STUB_LOCK_CYCLES and ADDR_W.
+// Clocks and resets: the whole module runs on clk_i and rst_n_i, the external reference.
+// Caller rules:
+//   - The module must not run on core_clk. That creates a bootstrap deadlock.
+//   - Always feed the APB4 slave port from the m face of an apb_cdc_bridge. In RNM mode core_clk differs from clk_i.
+//   - Do not wire the APB4 port straight to apb_interconnect.
+// Doc: ds:mod:pll-subsystem, tm:mod:pll-subsystem, cr:mod:pll-subsystem
 
 module pll_subsystem #(
     // PLL implementation selector — "STUB" (default, synth-safe) or "RNM" (cosim)
@@ -90,8 +39,8 @@ module pll_subsystem #(
     // The interconnect runs on core_clk; this module runs on clk_i. In STUB
     // mode those are the same net, but in RNM mode core_clk != clk_i, so
     // soc_top interposes an apb_cdc_bridge (u_apb_pll_cdc for u_pll_sub,
-    // u_apb_pll2_cdc for u_cpu_pll_sub) and drives this port from its m_*
-    // face — GH #86. No longer deferred; see the file header.
+    // u_apb_pll2_cdc for u_cpu_pll_sub) and drives this port from its m face.
+    // See ds:mod:pll-subsystem.
     input  logic              psel,
     input  logic              penable,
     input  logic              pwrite,
@@ -121,7 +70,7 @@ module pll_subsystem #(
     logic pll_rst_n;           // gated PLL reset: de-asserts only when
                                 //   rst_n_i & pll_enable both high
 
-    // ── DFT: test-clock and scan-reset bypass (see the header) ───────────────
+    // ── DFT: test-clock and scan-reset bypass (see ds:mod:pll-subsystem) ───────
     logic ref_clk_w;        // clk_i, or scan_clk_i in scan mode
     logic rst_n_regs;       // rst_n_i, or scan_rst_ni in scan mode
     logic pll_rst_n_func;   // functional pll_rst_n before the scan override
@@ -201,7 +150,7 @@ module pll_subsystem #(
     pll_apb_regs #(
         .ADDR_W (ADDR_W)
     ) u_pll_regs (
-        // Reference clock domain — see clock-domain note in module header.
+        // Reference clock domain. See ds:mod:pll-subsystem.
         .clk_i       (ref_clk_w),
         .rst_n_i     (rst_n_regs),
         // APB4 slave

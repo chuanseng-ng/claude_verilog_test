@@ -1,18 +1,15 @@
-// soc_mbist.sv
-// DFT Stage 4 (beads claude_verilog_test-j41m.14 / j41m.10, GH #244): SoC-level MBIST integration.
-// Specification: Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing.
+// soc_mbist - SoC-level MBIST integration.
 //
-// Contains, for the CORE domain (core_clk: sram_controller + NPU weight memory): the control-word crossing
-// (mbist_xing), the mbist_ctrl and the status return (mbist_status_sync). The collars stay in the memory
-// wrappers; this module drives them through ONE broadcast bus and reads the macro outputs.
-//
-// CPU domain (CPU_PRESENT = 1): the control-word crossing into cpu_core_clk and the status return only. The
-// CPU-domain controller and the ten cache collars live INSIDE the CPU hard macro (section 16.7), so this
-// module exports the holding-register outputs (cpu_run_o / cpu_cfg_o / cpu_ctl_rst_n_o) and takes the macro's
-// status block (cpu_status_i). With CPU_PRESENT = 0 (the shipped value, until the CPU macro is re-hardened)
-// nothing CPU-side exists: the CPU status block reads 0 and cpu_present reads 0.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The core domain (core_clk_i) holds the control-word crossing (mbist_xing), mbist_ctrl and the status return
+//   (mbist_status_sync). It tests the sram_controller memory and the NPU weight memory.
+//   The collars stay in the memory wrappers. The module drives them through one broadcast bus.
+//   CPU domain (CPU_PRESENT = 1): only the control-word crossing into cpu_clk_i and the status return are here.
+//   The CPU controller and its ten cache collars are inside the CPU hard macro.
+//   The module exports cpu_run_o, cpu_cfg_o and cpu_ctl_rst_n_o and takes cpu_status_i.
+//   With CPU_PRESENT = 0 nothing CPU-side exists. The CPU status block reads 0 and cpu_present reads 0.
+// Parameters: CPU_PRESENT, N_MEM, AW and P1_MASK.
+// Clocks and resets: tck_i with rst_tck_n_i, core_clk_i with core_rst_n_i, cpu_clk_i with cpu_rst_n_i, and trst_ni.
+// Doc: ds:mod:soc-mbist
 
 module soc_mbist #(
     parameter bit                  CPU_PRESENT = 1'b0,

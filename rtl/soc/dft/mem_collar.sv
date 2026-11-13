@@ -1,35 +1,16 @@
-// mem_collar.sv
-// DFT Stage 4 (bead claude_verilog_test-j41m.14, GH #244).
+// mem_collar - input-side BIST collar for one OpenRAM macro with one RW port and one R port.
 //
-// Input-side BIST collar for ONE Sky130 OpenRAM macro (1RW + 1R). A pure combinational 2:1 mux on every
-// macro input, selected by bist_en_i (a FLOP output of mbist_ctrl, so no select can glitch). With
-// bist_en_i = 0 every output equals its functional input: the collar is a pass-through and the design
-// is bit-identical to one without it. Macro read data is NOT muxed (it goes to the functional logic
-// unchanged and, separately, to mbist_ctrl), so the read path carries no extra delay.
-//
-// Port 1 (HAS_P1 = 1): the BIST read element reads port 0 AND port 1 at the same address; the controller
-// compares both. HAS_P1 = 0 is for macros whose port 1 is tied off in the functional design (the caches,
-// the NPU weight memory): the port-1 outputs are then constant tie-offs, exactly as the wrapper had them.
-//
-// Local compare (LOCAL_CMP = 1, bead claude_verilog_test-c54a, section 16.7 / 16.12): the collar also owns the
-// read-data comparator of its macro. The controller no longer receives 32 (64 with port 1) read-data wires per
-// memory; it broadcasts a compact expected-data tag instead (x_rd_i, x_xm_i, x_bg_i; 8 nets, shared by all
-// collars) and gets back ONE registered mismatch strobe per read port (cmp_fail0_o / cmp_fail1_o). The expected
-// word is rebuilt locally, exactly as mbist_ctrl builds it: bg_pat(x_bg_i) ^ expand4(x_xm_i).
-//
-// Timing (the Sky130 macro launches dout0/dout1 on the FALLING edge, the cache samples them half a cycle later):
-//   * dout -> XOR2 per bit -> reduce -> flop on the FALLING edge of clk_i. The flop captures one FULL cycle
-//     after the macro launched the data, not the half cycle the cache's own capture gets. The load on dout is
-//     still one XOR2 input per bit, no flop on dout.
-//   * The expected-data tag is launched by the controller on the same falling edge (it holds the tag of the
-//     read whose data the macro launched on that edge), so both operands of the XOR have the same full cycle.
-//   * falling-edge flop -> rising-edge flop (no logic, adjacent, half a cycle) -> the route to the controller,
-//     which is a full-cycle flop-to-flop path. cmp_fail*_o is therefore two clocks after the sample cycle;
-//     mbist_ctrl (LOCAL_CMP = 1) accounts for that.
-// With LOCAL_CMP = 0 (SoC fabric instances) the compare ports are unused: tie the inputs, ignore the outputs.
-//
-// Specification: Doc: tm:ch:dft-architecture:164-controller-and-collar-interfaces.
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: A 2:1 mux on every macro input is selected by bist_en_i. bist_en_i must be a flop output of mbist_ctrl.
+//   With bist_en_i = 0 every output equals its functional input. The collar is a pass-through.
+//   Macro read data is not muxed. It goes to the functional logic and to mbist_ctrl.
+// Parameters: AW, HAS_P1 and LOCAL_CMP.
+//   HAS_P1 = 1: the BIST read element reads port 0 and port 1 at the same address.
+//   HAS_P1 = 0: the port-1 outputs are constant tie-offs. Use it when the functional design ties port 1 off.
+//   LOCAL_CMP = 1: the collar compares the read data. It takes x_rd_i, x_xm_i and x_bg_i and gives cmp_fail0_o and cmp_fail1_o.
+//   The cmp_fail*_o strobes arrive two clocks after the sample cycle.
+//   LOCAL_CMP = 0: tie the compare inputs and ignore the compare outputs.
+// Clocks and resets: clk_i is the clock.
+// Doc: ds:mod:mem-collar
 
 module mem_collar #(
     parameter int unsigned AW     = 10,

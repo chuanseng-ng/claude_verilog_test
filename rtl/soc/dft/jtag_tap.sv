@@ -1,66 +1,18 @@
-// jtag_tap.sv
-// DFT Stage 1b (bead claude_verilog_test-j41m.3, GH #244).
+// jtag_tap - IEEE 1149.1-style TAP controller with instruction and test-data registers.
 //
-// IEEE 1149.1-style TAP controller, instruction register and test-data
-// registers, entirely in the TCK domain. Specification:
-// Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap (instruction map 15.3, output
-// timing 15.2, deviations 15.6). Compliant minus the boundary register: EXTEST
-// and SAMPLE/PRELOAD are not implemented and decode to BYPASS (no pad ring).
-//
-// Registers (IR = 4 bits, capture value 4'b0001):
-//   4'h1 IDCODE      32 bit, 32'h15C0_1001 (version 1, part 16'h5C01, manufacturer
-//                    11'h000 = NOT a JEDEC id, on purpose), reset default
-//   4'h3 SCAN_SEL     3 bit [0] PARALLEL, [2:1] CHAIN_GRP; update register, reset 0
-//   4'h4 SCAN         1 bit stub; selecting it is the ONLY way into TAP scan mode
-//   4'h5 SCAN_RST     1 bit level, update register, reset 0; effective in SCAN only
-//   4'hF BYPASS       1 bit
-//   4'h6 MBIST_CTRL   29 bit update register (Doc: tm:ch:dft-architecture:165-tap-registers-control-word-crossing-j41m10-folded-in), reset 0;
-//                    Capture-DR reads it back. Update-DR (and entry to Test-Logic-Reset, with the default
-//                    word 0) raises mbist_wr_o for exactly one TCK rising edge: the write strobe of the
-//                    control-word crossing (mbist_xing).
-//   4'h7 MBIST_STATUS 140 bit read-only: [0] sticky control-word overflow, [139:1] mbist_status_i
-//   everything else (EXTEST 0, SAMPLE 2, reserved, unknown) -> BYPASS
-//
-// Clocking and reset
-//   * Everything is clocked by tck_i only; nothing here sees a functional clock.
-//   * trst_ni asserts every TAP flop asynchronously; its release goes through one
-//     cdc_reset_sync in the TCK domain (scanmode_i=0, scan_rst_ni=1: the TAP is
-//     reset by nothing else, not by rst_n_i, a PLL, the PMU or the WDT). Five TCK
-//     rising edges with TMS=1 also reach Test-Logic-Reset from any state.
-//   * FSM state, IR shift register and the DR shift registers are rising-edge
-//     flops. The IR update register, the DR update registers, TDO and EVERY
-//     SoC-facing output are FALLING-edge flops: their D input is a function of
-//     the rising-edge flops (stable for half a TCK period) and of the next-state
-//     values ir_d / scan_sel_d / scan_rst_d computed in the same falling-edge
-//     step, so no output is a combinational decode of an update register and none
-//     can glitch. They feed asynchronous resets, clock-mux selects and a
-//     clock-gate latch downstream.
-//   * Test-Logic-Reset returns IR to IDCODE and every update register and output
-//     to its default at the next falling edge.
-//
-// What selecting SCAN does (see dft_ctrl for the combiner):
-//   tap_scan = (IR == SCAN); serial = tap_scan & ~PARALLEL; parallel = tap_scan & PARALLEL.
-//   scan_mode_o     = tap_scan
-//   serial_o        = tap_scan & ~SCAN_SEL[0]  (TAP drives scan_en and the test clock)
-//   parallel_o      = tap_scan &  SCAN_SEL[0]  (pins drive scan_en/scan_clk/scan_in)
-//   chain_grp_o     = tap_scan ? SCAN_SEL[2:1] : 0   (no consumer until Stage 2)
-//   rst_assert_o    = tap_scan & SCAN_RST[0]
-//   scan_en_o       = (state == Shift-DR) & serial
-//   shift_clk_en_o  = (state in {Capture-DR, Shift-DR}) & serial_o. COMBINATIONAL,
-//                     deliberately: it is the D side of a clock-gate latch (in
-//                     dft_ctrl) that is transparent while TCK is low. It changes
-//                     only just after a TCK rising edge (state flops) or on the
-//                     falling edge in an Update state, where the state term is 0.
-//
-// STAGE2_CHAIN: the SCAN data register below is a 1-bit stub with BYPASS timing.
-// Stage 2 replaces this one register with the serial path through the stitched
-// scan chains (capture = chain outputs, shift = chain shift, scan_out -> TDO).
-//
-// No inout, no tristate: the chip top builds the TDO tristate from tdo_oe_o.
-// No runtime-indexed array reads: IR/TDRs are shift registers, DR select is a
-// one-hot AND-OR of registered decodes.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: Everything runs on tck_i. EXTEST and SAMPLE/PRELOAD are not implemented and decode to BYPASS.
+//   IR has 4 bits. 4'h1 IDCODE, 4'h3 SCAN_SEL, 4'h4 SCAN, 4'h5 SCAN_RST, 4'h6 MBIST_CTRL, 4'h7 MBIST_STATUS, 4'hF BYPASS.
+//   Selecting SCAN is the only way into TAP scan mode. tap_scan is (IR == SCAN).
+//   shift_clk_en_o is combinational on purpose. It feeds a clock-gate latch.
+// Clocks and resets: tck_i is the only clock. trst_ni asserts every TAP flop asynchronously.
+//   The release goes through one cdc_reset_sync in the TCK domain. Five TCK edges with TMS=1 also reach Test-Logic-Reset.
+//   Rising-edge flops hold the FSM and the shift registers. Falling-edge flops drive every SoC-facing output.
+// Caller rules:
+//   - The chip top builds the TDO tristate from tdo_oe_o. The module has no inout and no tristate.
+//   - The SCAN register is a 1-bit stub until Stage 2 stitches the scan chains.
+//   - An MBIST_CTRL Update-DR, or entry to Test-Logic-Reset, raises mbist_wr_o for one TCK edge.
+//   - A strobe while mbist_wr_ready_i is 0 loses the word. The TAP then sets the sticky overflow bit MBIST_STATUS[0].
+// Doc: ds:mod:jtag-tap
 
 module jtag_tap (
     // ── JTAG pins ────────────────────────────────────────────────────────────

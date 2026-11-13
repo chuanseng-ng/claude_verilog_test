@@ -1,26 +1,16 @@
-// mbist_xing.sv
-// DFT Stage 4 (bead claude_verilog_test-j41m.10, GH #244): the MBIST control-word crossing,
-// TCK domain -> ONE destination functional domain. Specification: Doc: tm:ch:dft-architecture
-// section 16.5 (resolution of the 15 open questions of PR #276).
+// mbist_xing - MBIST control-word crossing from the TCK domain to one functional domain.
 //
-//   TAP (tck_i) --wr_valid/wr_data--> cdc_gray_fifo (DEPTH 2, write tck_i, read UNGATED clk_dst_i)
-//                                     --> holding register ctl_q (clk_dst_i) --> run_o / cfg_o
-//
-// * The read side is the UNGATED destination clock (core_clk / cpu_core_clk), never a gated clock.
-// * rd_ready is tied 1: every delivered word is captured into ctl_q on the read edge (rd_data_o is a
-//   combinational read of the FIFO storage, valid exactly while rd_valid_o is high).
-// * The TAP can never stall: a write attempted while wr_ready_o is low is LOST and the caller (jtag_tap)
-//   latches its sticky overflow flag from wr_ready_o.
-// * Reset architecture (Q8). Both FIFO resets derive from trst_ni ALONE: write side = rst_tck_n_i (from
-//   a TCK-domain trst synchroniser in dft_ctrl), read side = u_rd_rst, a cdc_reset_sync of trst_ni into
-//   clk_dst_i (with the scan override). They therefore share one root, so a functional reset can never
-//   leave phantom FIFO entries. The holding register and the controller (rst_n_o) are reset by that
-//   AND the functional domain reset dst_rst_n_i, through a dft_rst_mux scan override. A functional reset
-//   therefore leaves MBIST idle (run_o = 0) and the tester must rewrite MBIST_CTRL; rst_n_i can never
-//   start MBIST.
-// * trst_ni = 0 (the idle value of every existing suite) holds all of it in reset: run_o = 0.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: wr_valid_i and the write data move through a depth-2 cdc_gray_fifo (write on tck_i, read on clk_dst_i)
+//   into the holding register ctl_q. ctl_q drives run_o and cfg_o. rd_ready is tied 1.
+// Parameters: CTL_W and DOM_BIT.
+// Clocks and resets: tck_i is the write clock. clk_dst_i is the destination clock. It must be an ungated clock.
+//   Both FIFO resets derive from trst_ni only, so they share one root. ctl_q and rst_n_o reset from trst_ni
+//   and dst_rst_n_i, through a dft_rst_mux scan override (scan_mode_i, scan_rst_ni).
+//   trst_ni = 0 holds all of it in reset. run_o is 0.
+// Caller rules:
+//   - A write while wr_ready_o is low is lost. The caller (jtag_tap) latches a sticky overflow flag from wr_ready_o.
+//   - A functional reset leaves MBIST idle (run_o = 0). The tester must rewrite MBIST_CTRL. dst_rst_n_i can never start MBIST.
+// Doc: ds:mod:mbist-xing
 
 module mbist_xing #(
     parameter int unsigned CTL_W   = 29,

@@ -1,39 +1,14 @@
-// dft_clk_mux.sv
-// DFT Stage 1a (bead claude_verilog_test-j41m.2, GH #244).
+// dft_clk_mux - test-clock bypass for one clock root.
 //
-// Test-clock bypass for one clock root: in scan mode the clock is the tester's
-// test clock, otherwise the functional clock, so that every flop below the
-// root is clocked from a port during test (Doc: tm:ch:dft-architecture
-// sec.9.3). A module of its own, rather than an inline `?:`, so that
-//   * every test-clock mux in the design has one greppable name, and the Stage 2
-//     insertion step and the clock/reset controllability check can find them;
-//   * CTS and STA see a single, deliberately placed cell per root.
-//
-// Plain 2:1 mux, deliberately NOT a glitch-free (enable-before-switch)
-// switcher. sel_i is quasi-static: it is set while neither clock is running
-// and not toggled while either one is, which is how the ATE or the Stage 1b TAP
-// uses scan_mode. A synchronised glitch-free switch needs a clock in each source
-// domain to retire the old selection and deadlocks when the functional clock is
-// stopped; it belongs with the TAP (bead j41m.3), where the select is generated.
-//
-// Functional mode (sel_i = 0): clk_o === func_clk_i, no logic other than the mux.
-//
-// Sky130 SoC clock roots (bead claude_verilog_test-j41m.4, RUN_2026-10-16_04-53-49): under
-// `USE_SKY130_CLKCELLS` (pnr/Makefile SKY130_SOC_SV2V_DEFINES only) every instance is a clock root that CTS
-// builds a tree on (core_clk 17784 sinks, cpu_core_clk 174), so the mux is hand-instantiated:
-//   sky130_fd_sc_hd__mux2_4     the 2:1 mux, same function as the `?:` below (A0 = func, A1 = scan, S = sel)
-//   sky130_fd_sc_hd__buf_16     root buffer driving the CTS-owned net (a plain buffer on purpose, see below)
-// Synthesis had mapped the mux to an a21bo_2 (0.18 pF at ss) that then carried ~0.30 pF of root wire and failed
-// CVT.MaxCapViolations on core_clk at 4 tt/ss corners; repair_design skips clock nets, so the driver must be
-// strong from synthesis on (buf_16: 5.0 pF Liberty limit at ss; clkbuf_16 was 1.017 pF).
-// The root buffer is a plain buf_16, NOT a clkbuf_16: clkbuf_16 is in CTS_CLK_BUFFERS, so TritonCTS treats it as an
-// existing clock buffer on the net ("CTS-0105: Net core_clk already has clock buffer u_pll_sub.u_ref_cm.u_root_buf.
-// Skipping...", RUN_2026-10-17_08-53-43) and builds no tree, which left setup at WNS -130 ns. buf_16 is not in that list.
-// Instance names u_mux / u_root_buf are stable: they are
-// listed in RSZ_DONT_TOUCH_RX in pnr/sky130/soc/config*.json. Functional mode is unchanged: clk_o follows
-// func_clk_i through the mux and the buffer, with no other logic.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: clk_o is scan_clk_i when sel_i is 1. Otherwise clk_o is func_clk_i. The module is a plain 2:1 mux.
+//   It is not a glitch-free switch.
+//   With USE_SKY130_CLKCELLS the instance is hand-built: a mux2_4 cell (u_mux) and a buf_16 root buffer (u_root_buf).
+//   The root buffer is a plain buf_16, not a clkbuf_16, so that CTS builds a tree on the net.
+// Caller rules:
+//   - sel_i must be quasi-static. Set it while neither clock runs. Do not toggle it while either clock runs.
+//   - In functional mode (sel_i = 0) clk_o follows func_clk_i with no other logic.
+//   - Keep the instance names u_mux and u_root_buf. RSZ_DONT_TOUCH_RX lists them.
+// Doc: ds:mod:dft-clk-mux, cr:mod:dft-clk-mux
 
 module dft_clk_mux (
     input  logic func_clk_i,

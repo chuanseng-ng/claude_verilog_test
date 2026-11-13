@@ -1,11 +1,9 @@
-// mbist_ctl_hold.sv
-// DFT Stage 4 (bead claude_verilog_test-j41m.10, GH #244).
+// mbist_ctl_hold - holding register of the MBIST control word in the destination domain.
 //
-// Destination-domain holding register of the MBIST control word (see mbist_xing.sv). A module of its own so
-// tools/dft/check_scan_clk_rst.py --tck-sink can name it as one of the only two cells allowed to read the
-// control-word FIFO's TCK-domain storage.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The register holds a control word of CTL_W bits and loads it when load_i is 1. mbist_xing uses it.
+//   It is a module of its own so that a check can name it as one of the only two cells that read the TCK-domain FIFO storage.
+// Clocks and resets: clk_i is the destination clock. rst_n_i is the reset.
+// Doc: ds:mod:mbist-ctl-hold
 
 module mbist_ctl_hold #(
     parameter int unsigned CTL_W = 29

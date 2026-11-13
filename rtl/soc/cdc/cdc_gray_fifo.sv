@@ -1,81 +1,21 @@
-// cdc_gray_fifo.sv
-// GH #91 — Generic dual-clock gray-pointer FIFO, ready/valid on both faces.
+// cdc_gray_fifo - dual-clock gray-pointer FIFO with ready/valid on both faces.
 //
-// Cummings SNUG-2002 "Simulation and Synthesis Techniques for Asynchronous
-// FIFO Design" style-1 dual-clock FIFO: binary read/write pointers are kept
-// locally in each domain, converted to gray code, and only the REGISTERED
-// gray pointer crosses the clock boundary — through exactly one
-// cdc_sync instance per direction. The full/empty flags are each
-// computed from a comparison between the local combinational next-state
-// gray pointer and the ALREADY-SYNCHRONISED remote gray pointer, then
-// registered. This costs one extra cycle of pointer latency but is what
-// makes the flag timing-closeable (both compare operands are stable for a
-// full local clock period before the flag registers).
-//
-// Params:
-//   WIDTH       — payload width in bits.
-//   DEPTH       — FIFO depth in entries. MUST be a power of two and >= 2.
-//                 Power-of-two is required by the gray-code wrap arithmetic.
-//                 DEPTH=2 (bead claude_verilog_test-3snb) is the minimal variant:
-//                 a 2-entry FIFO whose 2-bit gray pointer is the smallest
-//                 multi-bit bus that can cross safely (see "DEPTH=2 full flag"
-//                 below). DEPTH >= 4 is the original, unchanged behaviour.
-//   SYNC_STAGES — stage count passed to both internal cdc_sync gray
-//                 pointer synchronisers (>= 2 required; see cdc_sync.sv).
-//
-// !!! mem_q is a genuine ASYNCHRONOUS DATA PATH !!!
-// Storage is a flop array (`logic [WIDTH-1:0] mem_q [DEPTH]`), written on
-// wr_clk_i, read COMBINATIONALLY at rd_bin_q on rd_clk_i — with no reset of
-// its own. This is safe ONLY because a written entry cannot become visible
-// to the read side (rd_valid_o) until the write pointer's gray code has
-// propagated through SYNC_STAGES receiving flops in u_wr_ptr_to_rd and been
-// compared into empty_q. Nothing in RTL or simulation constrains the mem_q
-// write-clk -> read-domain-combinational-read timing path structurally.
-// GH #94 MUST add `set_max_delay -datapath_only` (bounded to <= one
-// receiving clock period) on:
-//   (1) this mem_q write-to-read-domain-combinational-read path, and
-//   (2) both registered gray-pointer crossings (u_wr_ptr_to_rd, u_rd_ptr_to_wr).
-//
-// No combinational path crosses the clock boundary anywhere else in this
-// module — both wr_ready_o and rd_valid_o are driven locally from flags that
-// are themselves computed from already-synchronised inputs (wr_ready_o is
-// additionally qualified by its own domain's wr_rst_n_i, a same-domain
-// input, not a cross-domain path — see the reset-gating note above
-// full_q/empty_q's derivation below).
-//
-//
-// DEPTH=2 full flag (bead claude_verilog_test-3snb)
-// ------------------------------------------------
-// Full means "the write pointer is exactly DEPTH ahead of the (synchronised)
-// read pointer", i.e. the two PTR_W-bit BINARY pointers are equal in the low
-// ADDR_W bits and differ in the wrap bit. In gray code that is: the top two
-// bits of the gray pointers are both inverted and every lower bit is equal —
-// the general (DEPTH >= 4) compare
-//     wr_gray_d == {~rd_sync[PTR_W-1:PTR_W-2], rd_sync[PTR_W-3:0]}.
-// At DEPTH=2, PTR_W = 2 and there are no lower bits: rd_sync[PTR_W-3:0] is
-// rd_sync[-1:0], not a legal range, so the compare degenerates to inverting the
-// WHOLE pointer:  wr_gray_d == ~rd_sync.  Checked exhaustively over the four
-// 2-bit pointer values (binary b -> gray g = b ^ (b >> 1)):
-//     rd bin 00 (g 00) -> full at wr bin 10 (g 11) = ~00   ok
-//     rd bin 01 (g 01) -> full at wr bin 11 (g 10) = ~01   ok
-//     rd bin 10 (g 11) -> full at wr bin 00 (g 00) = ~11   ok
-//     rd bin 11 (g 10) -> full at wr bin 01 (g 01) = ~10   ok
-// and no other (wr, rd) pair satisfies it: the four gray codes are all
-// distinct, so wr_gray_d == ~rd_sync selects exactly one wr value per rd value.
-// Inverting only the MSB instead (the naive narrowing of the general form) is
-// WRONG at depth 2: it matches wr bin 11 against rd bin 00, i.e. it reports
-// full only after THREE words are in a two-entry memory (overflow).
-// Everything else — empty compare, pointer crossings, reset gating, storage —
-// is shared with DEPTH >= 4 unchanged. The depth-2 branch only selects the
-// compare operand (full_cmp_w below); no flop, port or instance name changes.
-//
-// Reset: asynchronous assert, synchronous deassert, active-low per domain
-// (Doc: um:guide:coding-guidelines §1.4). wr_rst_n_i / rd_rst_n_i are
-// expected to already be domain-synchronised at the call site (see
-// async_axi_fifo.sv, which drives them from cdc_reset_sync outputs sharing a
-// common `s_rst_n_i & m_rst_n_i` root).
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: Each side keeps a binary pointer in its own clock domain. Only the registered gray pointer crosses.
+//   It crosses through one cdc_sync instance per direction. The flags full_q and empty_q are registered.
+//   Storage is a flop array. mem_q is written on wr_clk_i. It is read in the rd_clk_i domain without a reset.
+//   wr_ready_o and rd_valid_o come from local flags. No other combinational path crosses the clocks.
+// Parameters:
+//   WIDTH        Payload width in bits.
+//   DEPTH        Number of entries. It must be a power of two and at least 2.
+//   SYNC_STAGES  Stages of both pointer synchronisers. It must be at least 2.
+// Clocks and resets: wr_clk_i and rd_clk_i are the two clocks. wr_rst_n_i and rd_rst_n_i are active low.
+//   Each asserts asynchronously and deasserts synchronously. Each is expected to be already synchronised to its own clock.
+//   While wr_rst_n_i is low, wr_ready_o is low.
+// Caller rules:
+//   - mem_q is an asynchronous data path. STA must set set_max_delay -datapath_only on the mem_q read path.
+//     The bound is at most one receiving clock period.
+//   - STA must set the same constraint on both gray-pointer crossings, u_wr_ptr_to_rd and u_rd_ptr_to_wr.
+// Doc: ds:mod:cdc-gray-fifo, tm:mod:cdc-gray-fifo
 
 module cdc_gray_fifo #(
     parameter int unsigned WIDTH       = 32,
@@ -97,11 +37,7 @@ module cdc_gray_fifo #(
     input  logic             rd_ready_i
 );
 
-    // Elaboration-time guard: DEPTH must be a power of two and >= 2 (see
-    // header). Generate-scope $fatal (not wrapped in `initial`) so it fires
-    // under `verilator --lint-only` / synthesis elaboration and not only
-    // under simulation — see rtl/soc/sram_controller.sv:110-126 for the
-    // precedent and the reason `initial $fatal` alone is insufficient here.
+    // DEPTH must be a power of two and at least 2. The $fatal runs at elaboration, outside an `initial` block.
     if ((DEPTH < 2) || ((DEPTH & (DEPTH - 1)) != 0)) begin : g_depth_check
         $fatal(1, "cdc_gray_fifo: DEPTH (%0d) must be a power of two and >= 2", DEPTH);
     end
@@ -176,7 +112,7 @@ module cdc_gray_fifo #(
     );
 
     // ── Full / empty flags ────────────────────────────────────────────────────
-    // Registered comparisons (see header for why this is one cycle "behind"
+    // Registered comparisons (see ds:mod:cdc-gray-fifo for why this is one cycle "behind"
     // the raw combinational condition — that is the intended Cummings style-1
     // trade-off, not a bug).
     logic empty_q;
@@ -191,7 +127,7 @@ module cdc_gray_fifo #(
     end
 
     // Gray value the next write pointer must equal for the FIFO to be full
-    // (see "DEPTH=2 full flag" in the header). Only the compare operand is
+    // (see tm:mod:cdc-gray-fifo). Only the compare operand is
     // generate-selected, so the flop below is identical for every DEPTH.
     logic [PTR_W-1:0] full_cmp_w;
 
@@ -211,22 +147,13 @@ module cdc_gray_fifo #(
         end
     end
 
-    // wr_ready_o is additionally gated by wr_rst_n_i itself: full_q's reset
-    // value is 1'b0 ("not full"), so on its own !full_q would read 1 for the
-    // entire window this domain is held in reset -- a write master could
-    // then complete a handshake (wr_valid_i && wr_ready_o) whose beat is
-    // silently dropped, since wr_bin_q is also held at its reset value and
-    // wr_en's clocked branch never executes while !wr_rst_n_i. Gating on
-    // wr_rst_n_i directly backpressures the attached master until this
-    // domain's own reset has released, matching rd_valid_o's behaviour below
-    // (empty_q already resets to 1'b1, so no equivalent gate is needed there
-    // -- confirmed, not assumed, by inspection of the reset block above).
+    // wr_ready_o also requires wr_rst_n_i. The reset value of full_q is 0, so !full_q alone would accept a beat during reset.
     assign rd_valid_o = !empty_q;
     assign wr_ready_o = wr_rst_n_i && !full_q;
 
     // ── Storage ───────────────────────────────────────────────────────────────
     // Flop-array memory, combinational read at rd_bin_q, no reset — see the
-    // mem_q asynchronous-data-path warning in the header.
+    // mem_q asynchronous-data-path warning. See ds:mod:cdc-gray-fifo.
     logic [WIDTH-1:0] mem_q [DEPTH];
 
     always_ff @(posedge wr_clk_i) begin

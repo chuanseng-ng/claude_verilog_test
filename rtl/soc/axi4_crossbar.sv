@@ -212,15 +212,8 @@ module axi4_crossbar #(
     logic [N_MASTERS-1:0][1:0]         slv_rresp;
     logic [N_MASTERS-1:0]              slv_rlast,   dec_rlast;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Intermediate packed wires for all driven output port arrays.
-    // always_comb drives these (Synlig-safe: internal wires, not ports).
-    // Continuous assign in generate connects them to the unpacked port arrays.
-    // Synlig/UHDM bug: always_comb driving port array slices via loop index
-    // produces empty wire names in RTLIL (kernel/rtlil.cc:2150 assert).
-    // Continuous assign inside generate is not affected by this bug.
-    // ─────────────────────────────────────────────────────────────────────────
-    // Slave-side output intermediates (N_SLAVES slices)
+    // Intermediate packed wires drive the unpacked output port arrays. always_comb drives the wires. A continuous assign in a generate connects them.
+    // Do not drive port array slices from always_comb in a loop. Synlig makes empty wire names. See tm:mod:axi4-crossbar.
     logic [N_SLAVES-1:0][IW-1:0]    _s_awid;
     logic [N_SLAVES-1:0][AW-1:0]    _s_awaddr;
     logic [N_SLAVES-1:0][LENW-1:0]  _s_awlen;

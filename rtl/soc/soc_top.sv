@@ -1,182 +1,29 @@
-// soc_top.sv
-// Phase 5 (M8) / Phase 7 (M-c) / APB migration PR-7 — RV32I + GPU-Lite SoC top-level.
+// soc_top - top level of the RV32I CPU and GPU-lite SoC.
 //
-// Architecture:
-//   Data plane  : AXI4 crossbar, N_MASTERS=4, N_SLAVES=3
-//     M0 = CPU (rv32i_cpu_top AXI4 master)
-//     M1 = GPU ifetch (axilite_to_axi4 read-only adapter)
-//     M2 = GPU data  (gpu_top m_axi_*)
-//     M3 = DMA       (dma_engine m_*)
-//     S0 = Boot ROM  (boot_rom, 0x0000_1000–0x0000_1FFF)
-//     S1 = SRAM ctrl (sram_controller, 0x0000_2000–0x0FFF_FFFF)
-//     S2 = Periph    (axi4_to_axilite → axi_lite_interconnect, 0x2000_1000–9FFF)
-//
-//   Control plane : axi4_to_axilite → axi_lite_interconnect (N_SLAVES=3)
-//     AXIL_GPU=0        @ 0x2000_1000–1FFF  (AXI-Lite direct)
-//     AXIL_APB_BRIDGE=1 @ 0x2000_2000–9FFF  (axil_to_apb → apb_interconnect)
-//     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
-//                                             over APB_BRIDGE window overlap)
-//
-//   APB sub-tree (14 slaves behind axil_to_apb bridge):
-//     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
-//     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
-//     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
-//     APB_IRQ=3   @ 0x2000_6000–6FFF  interrupt_controller
-//     APB_PLL=4   @ 0x2000_7000–7FFF  pll_apb_regs (clk_i domain — system/fabric PLL;
-//                                      bridged from core_clk by apb_cdc_bridge
-//                                      (u_apb_pll_cdc, GH #86 fix))
-//     APB_PMU=5   @ 0x2000_8000–8FFF  pmu (core_clk domain; GH #99/#100)
-//     APB_PLL2=6  @ 0x2000_9000–9FFF  pll_apb_regs (cpu_clk_i domain — CPU-domain
-//                                      PLL, GH #92; output unconsumed until GH #93)
-//     APB_GPIO=7  @ 0x2000_A000–AFFF  gpio_controller (core_clk domain; Phase 6a, bead claude_verilog_test-ckc)
-//     APB_PWM=8   @ 0x2000_B000–BFFF  pwm_controller (core_clk domain; Phase 6a-2, bead claude_verilog_test-f7vs.6)
-//     APB_WDT=9   @ 0x2000_C000–CFFF  watchdog_timer (core_clk domain; Phase 6a-3, bead claude_verilog_test-f7vs.7)
-//     APB_TRNG=10 @ 0x2000_D000–DFFF  trng (core_clk domain; Phase 6a-4, bead claude_verilog_test-f7vs.8)
-//     APB_I2C=11  @ 0x2000_E000–EFFF  i2c_controller (core_clk domain; Phase 6a-5, bead claude_verilog_test-f7vs.9)
-//     APB_CRYPTO=12 @ 0x2000_F000–FFFF  crypto_accel (core_clk domain; Phase 6b, bead claude_verilog_test-f7vs.10)
-//     APB_NPU=13  @ 0x2001_0000–0FFF  npu_top (core_clk domain; Phase 6c, bead claude_verilog_test-f7vs.11)
-//
-//   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
-//     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
-//     clock-seam note below.
-//
-//   PLL config plane (core_clk <-> reference-clock CDC, independent of the
-//   CPU clock seam below): both pll_apb_regs instances run their APB4 slave
-//   port on their OWN raw reference clock (u_pll_sub on clk_i, u_cpu_pll_sub
-//   on cpu_clk_i — pll_subsystem.sv's bootstrap rule), while apb_interconnect
-//   always drives both APB_PLL/APB_PLL2 slots from core_clk. Both crossings
-//   are bridged: APB_PLL by u_apb_pll_cdc (GH #86), APB_PLL2 by
-//   u_apb_pll2_cdc (GH #93) — see each instantiation's comment below. In
-//   STUB mode core_clk == clk_i so both degenerate to a 1:1 handshake with
-//   no real CDC hazard; the hazard is live as soon as PLL_IMPL="RNM" makes
-//   core_clk a generated (non-identical) clock.
-//
-//   Clock seam (Phase 7 M-c / GH #92 dual PLL; GH #93 makes the CPU domain
-//   real — two genuine, non-identical clock roots with one intentional CDC
-//   boundary at the CPU<->fabric AXI4 interface):
-//     clk_i is the external SYSTEM/FABRIC reference clock (100 MHz crystal/XO).
-//       pll_clkgen converts it to core_clk (1.282 GHz in RNM; ref passthrough
-//       in stub). All child instances except the CPU run on core_clk.
-//       core_rst_n = rst_n_i & pll_locked so children are held in reset until
-//       PLL locks. PLL_IMPL parameter selects "STUB" (default, synth-safe) or
-//       "RNM" (M-c cosim).
-//     cpu_clk_i is a SECOND, independent CPU-domain reference clock input
-//       (GH #92), feeding its own pll_subsystem instance (u_cpu_pll_sub) to
-//       produce cpu_core_clk / cpu_core_rst_n / cpu_pll_locked. This gives PD
-//       two genuine, non-identical clock roots for the two create_clock
-//       statements in GH #94 (pll_clkgen_stub.sv is a pure ref_clk passthrough
-//       with no divide/multiply, so two instances fed from ONE reference would
-//       be bit-identical clocks with zero real CDC coverage).
-//     GH #93: the CPU (u_cpu) and its clock gate (u_cpu_cg) now run on
-//       cpu_core_clk / cpu_gated_clk instead of core_clk. Every signal that
-//       crosses the cpu_core_clk <-> core_clk boundary is enumerated below —
-//       nothing crosses unsynchronised:
-//         * CPU AXI4 master <-> crossbar M0: rtl/soc/async_axi_fifo.sv
-//           (u_cpu_axi_cdc) — dual-clock gray-FIFO bridge, GH #91.
-//           GH #95 / bead claude_verilog_test-2k8 fix: its s_rst_n_i is
-//           cpu_core_rst_n (this domain's true POR/PLL-lock reset), NOT
-//           cpu_domain_rst_n — a PMU-driven power-cycle must RETAIN this
-//           bridge's state exactly like it retains u_cpu, not hard-flush it;
-//           see the full rationale at u_cpu_axi_cdc's instantiation below.
-//         * APB_PLL2 (u_cpu_pll_sub) <-> apb_interconnect: rtl/soc/
-//           apb_cdc_bridge.sv (u_apb_pll2_cdc, new in GH #93) — 4-phase RZ
-//           handshake (bead claude_verilog_test-rfz, 2026-08-12; was a
-//           2-phase NRZ toggle handshake before then); see that file's
-//           header for the protocol and why it was converted.
-//         * pmu_cpu_clk_en (core_clk, drives u_cpu_cg's enable): synchronised
-//           INVERTED, as pmu_cpu_clk_dis_sync (cdc_sync of ~pmu_cpu_clk_en),
-//           clocked by cpu_core_clk (NOT cpu_gated_clk — see the bootstrap-
-//           deadlock note above u_cpu_clk_dis_sync below). GH #93-fix
-//           (originally landed as pmu_cpu_clk_en_sync, non-inverted): a
-//           non-inverted enable sync resets to 0 (disabled) while
-//           cpu_core_rst_n is low, stopping cpu_gated_clk for the CPU's
-//           entire reset window and making u_cpu's synchronous reset
-//           unloadable. Inverting so the synchronised value is "disabled"
-//           (0 = not disabled = clock runs) makes cdc_sync's reset-to-0
-//           behavior the SAFE state instead of the unsafe one. See the
-//           detailed ordering note above u_cpu_clk_dis_sync below.
-//         * pmu_cpu_rst_n (core_clk, ANDed into cpu_domain_rst_n): cdc_reset_sync
-//           clocked by cpu_core_clk.
-//         * wdt_cpu_rst_req (core_clk, bite AND WDT_CTRL.RST_EN, ANDed into
-//           cpu_domain_rst_n ONLY): cdc_reset_sync clocked by cpu_core_clk, the
-//           same structure as pmu_cpu_rst_n above. Phase 6a-3, bead
-//           claude_verilog_test-f7vs.7 — see the WDT reset-path block below.
-//         * pmu_cpu_iso_en (core_clk, clamps the CPU->fabric handshake):
-//           cdc_sync clocked by cpu_core_clk; the clamp itself now lives
-//           at the async_axi_fifo s_* (CPU-domain) face — see clamp-scope
-//           note below.
-//         * pmu_cpu_iso_ack (cpu_core_clk -> core_clk, the REVERSE direction;
-//           bead 3ogd): the CPU-domain clamp control pmu_cpu_iso_en_sync
-//           synchronised back into core_clk by u_cpu_iso_ack_sync and fed to
-//           u_pmu.cpu_iso_ack_i. The PMU holds the CPU domain in its
-//           isolation states until it sees the clamp active (power-down) /
-//           released (power-up); see the note above u_cpu_iso_en_sync.
-//         * ext_irq / timer_irq (core_clk, level-held sources — see
-//           interrupt_controller.sv / timer.sv headers): cdc_sync each,
-//           clocked by cpu_core_clk.
-//         * apb_* top-level debug port (core_clk, chip-boundary bus) <->
-//           u_cpu's APB3 debug slave: rtl/soc/apb_cdc_bridge.sv
-//           (u_apb_dbg_cdc, GH #95 fix, bead claude_verilog_test-eg2) — same
-//           4-phase RZ handshake as u_apb_pll2_cdc (bead
-//           claude_verilog_test-rfz), s-face core_clk,
-//           m-face cpu_gated_clk/cpu_domain_rst_n. Closes the cdc_snitch
-//           BAD=233 finding left when GH #93 moved u_cpu onto cpu_gated_clk
-//           without re-homing this chip-boundary bus.
-//       In a single-clock build, tie cpu_clk_i == clk_i and cpu_rst_n_i ==
-//       rst_n_i at the integration site (see tb_soc_top.sv / tb_soc_pll.sv for
-//       the reference tie-off) — every crossing above degenerates to a 1:1
-//       ratio synchroniser, which async_axi_fifo / cdc_sync / cdc_reset_sync
-//       all handle correctly (no bypass path; see async_axi_fifo.sv header).
-//     Known hazard NOT fixed here (documented, reported to the user): the
-//       PMU's CPU power-down sequence has no drain/quiesce step. This
-//       paragraph pre-dates the GH #95 / bead claude_verilog_test-2k8 fix
-//       below u_cpu_axi_cdc's instantiation — that fix rewired
-//       u_cpu_axi_cdc's s_rst_n_i from cpu_domain_rst_n to cpu_core_rst_n,
-//       which CLOSES the specific mechanism this paragraph originally
-//       described (pmu_cpu_rst_n asserting no longer hard-flushes this CDC
-//       bridge, since cpu_core_rst_n does not respond to pmu_cpu_rst_n). The
-//       BROADER gap remains open, do not read the above as resolving it:
-//       axi4_crossbar's per-slave engine (locked to one master for a
-//       transaction's lifetime, see axi4_crossbar.sv:9-12,26-27) has no
-//       drain FSM at all, so a genuine mid-burst reset event of the crossbar
-//       or SRAM/boot-ROM slave side (a true cold reset, not a PMU power-
-//       cycle) can still leave a slave engine waiting for a B/R response
-//       that will never arrive, wedging that engine. This hazard already
-//       existed in the single-clock design and is unrelated to the CDC
-//       bridge's own retain-vs-flush behavior; it is Phase 6 scope (PULP-
-//       style axi_isolate: count outstanding transactions, assert
-//       isolated_o only at zero, then reset) — no drain FSM added here.
-//
-//   Power management (Pre-Phase-6 #5, GH #98/#99/#100 — behavioral PMU only,
-//   see Doc: tm:pd:power-domain-evaluation):
-//     pmu (APB_PMU slot) sequences PD_CPU/PD_GPU per phase5_soc.upf: drives
-//     cpu_clk_en/gpu_clk_en into rv32i_clock_gate cells that gate core_clk
-//     before it reaches u_cpu/u_gpu, cpu_iso_en/gpu_iso_en into output-clamp
-//     muxes on the CPU/GPU->fabric handshake signals (ISO_CPU/ISO_GPU,
-//     `-location parent`, clamp_value 0), and per-domain resets ANDed with
-//     core_rst_n. Reset default (NORMAL, both domains DOM_ON) is functionally
-//     identical to the pre-PMU wiring, so soc_all is unaffected unless
-//     firmware writes pmu CTRL. Real power-switch/retention silicon remains
-//     out of scope (UPF-sim-tooling gated) — see pmu.sv header.
-//
-//   IRQ routing:
-//     irq_src_i = {npu_irq[11], crypto_irq[10], i2c_irq[9], trng_irq[8], wdt_irq[7],
-//                  pwm_irq[6], gpio_irq[5], gpu_irq_o[4], dma_irq[3], timer_irq[2],
-//                  spi_irq[1], uart_irq[0]}
-//     bit 6 (PWM) is now live (Phase 6a-2, bead claude_verilog_test-f7vs.6).
-//     bit 7 (WDT) is now live (Phase 6a-3, bead claude_verilog_test-f7vs.7).
-//     bit 8 (TRNG) is now live (Phase 6a-4, bead claude_verilog_test-f7vs.8).
-//     bit 9 (I2C) is now live (Phase 6a-5, bead claude_verilog_test-f7vs.9).
-//     bit 10 (CRYPTO) is now live (Phase 6b, bead claude_verilog_test-f7vs.10).
-//     bit 11 (NPU) is now live (Phase 6c, bead claude_verilog_test-f7vs.11).
-//     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
-//     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
-//
-// Rules: no logic beyond wiring; clk/rst_n rooted at clk_i/rst_n_i (except the
-// PMU clock-gate/isolation/reset muxing on the CPU/GPU domains, documented above).
-// M7 perf-counter observability outputs from CPU left unconnected (M7 bead).
-//
-// Lint target: verilator -Wall 0 errors 0 warnings.
+// Function: The module wires the CPU, GPU, DMA, crossbar, peripherals, PMU and two PLL subsystems.
+//   It adds no logic beyond wiring, clock gates, isolation clamps and reset combining.
+//   The AXI4 crossbar has four masters (CPU, GPU ifetch, GPU data, DMA) and three slaves (boot ROM, SRAM, peripherals).
+//   The peripheral slave leads through axi4_to_axilite and axi_lite_interconnect to an APB tree of 14 slaves.
+//   The debug plane is an APB3 slave at the top-level ports. It crosses into the CPU domain through u_apb_dbg_cdc.
+// Main parameters: MEM_INIT_FILE, SRAM_MEM_WORDS, PLL_IMPL ("STUB" by default), SCAN_CHAINS and MBIST_CPU.
+// Clocks and resets: clk_i and rst_n_i are the system reference. core_clk comes from u_pll_sub.
+//   core_rst_n is rst_n_i & pll_locked. cpu_clk_i and cpu_rst_n_i feed u_cpu_pll_sub.
+//   The CPU runs on cpu_gated_clk. tck_i is a third, asynchronous clock for the JTAG TAP.
+//   For a single-clock build, tie cpu_clk_i to clk_i and cpu_rst_n_i to rst_n_i.
+// Caller rules:
+//   - u_cpu_axi_cdc is the one intentional CDC boundary between the CPU domain and core_clk.
+//   - Every other signal between cpu_core_clk and core_clk goes through cdc_sync, cdc_reset_sync or apb_cdc_bridge.
+//   - u_pll_sub and u_cpu_pll_sub must stay on their own reference clock. Do not move them onto core_clk.
+//   - The s_rst_n_i of u_cpu_axi_cdc must be cpu_core_rst_n, not cpu_domain_rst_n.
+//   - The crossbar and the PMU power-down have no drain step. A cold reset of the crossbar or slave side in the middle of
+//     a burst, or PMU clock-gating during a CPU burst, can wedge a crossbar slave engine.
+//   - Drive the apb_* debug ports synchronously to core_clk (the same net as clk_i in STUB mode).
+//   - While the WDT reset is asserted, the CPU clock must run.
+//   - Real power switches and retention cells are out of scope.
+//   - irq_src_i bit 0 to 11 are uart, spi, timer, dma, gpu, gpio, pwm, wdt, trng, i2c, crypto, npu.
+//     The timer slot is tied 0 because the timer IRQ goes straight to the CPU.
+// Full contract: ds:mod:soc-top
+// Doc: ds:mod:soc-top, tm:mod:soc-top, cr:mod:soc-top
 
 module soc_top
     import axi_pkg::*;
@@ -196,35 +43,18 @@ module soc_top
     //   "RNM"            — real-number model; use only for M-c AMS co-sim.
     parameter string PLL_IMPL = "STUB",
 
-    // Number of parallel scan chain pairs at the SoC boundary (DFT, j41m.2).
-    // 8 per the chain-count decision (PR #253): [4:0] five clk_i-domain fabric chains
-    // (~17.5 k scannable flops, ~3.5 k each), [5] one cpu_clk_i-domain fabric chain
-    // (~0.9 k flops outside the CPU macro), [7:6] the two CPU-macro chains. The macro has
-    // has two scan pairs since j41m.4 (Doc: tm:ch:dft-architecture 14.10): the top CPU_SCAN_CHAINS
-    // indices [SCAN_CHAINS-1:SCAN_CHAINS-2] are wired straight through to u_cpu's
-    // scan_in_i/scan_out_o; the macro ties its own scan_out_o 0 until Stage 2 stitches it.
+    // Number of scan chain pairs at the SoC boundary. The top CPU_SCAN_CHAINS indices go straight to u_cpu.
     parameter int unsigned SCAN_CHAINS = 8,
-    // DFT Stage 4 (j41m.14 / c54a): 1 (shipped) = the CPU hard macro carries its MBIST controller and cache
-    // collars (Doc: tm:ch:dft-architecture:167-cpu-macro-cache-collars-design-proposal-re-harden-need); the CPU-domain control-word crossing and the u_cpu_cg force
-    // are instantiated and u_cpu's mbist_* boundary ports are driven. 0 = no CPU-domain MBIST: the crossing is
-    // absent, the mbist_* ports are tied inactive and the CPU status block reads 0 (cpu_present = 0).
-    // The committed CPU macro views (pnr/sky130/cpu/macro) predate the 96 mbist_* pins: the SoC flow fails its
-    // macro pin match until the CPU macro is re-hardened (bead c54a, PD step).
+    // MBIST_CPU=1: the CPU hard macro holds its own MBIST controller and cache collars.
+    // MBIST_CPU=0: no CPU-domain MBIST. The mbist_* ports are tied inactive.
     parameter bit MBIST_CPU = 1'b1
 ) (
-    // clk_i is the SYSTEM/FABRIC reference clock input (100 MHz crystal / XO).
-    // Internally the SoC runs on core_clk derived from the PLL.
-    // In STUB mode core_clk == clk_i (lock counter fires after 16 cycles).
+    // clk_i is the system reference clock. The SoC runs on core_clk from the PLL.
     input  logic clk_i,
     input  logic rst_n_i,
 
-    // cpu_clk_i / cpu_rst_n_i (GH #92): a SECOND, independent CPU-domain
-    // reference clock/reset pair, feeding its own pll_subsystem instance
-    // (u_cpu_pll_sub). GH #93: the CPU (u_cpu) is now re-sourced from this
-    // domain (cpu_core_clk / cpu_gated_clk) — every crossing back into the
-    // core_clk fabric domain is synchronised (see clock-seam header note
-    // above). In a single-clock build, tie cpu_clk_i == clk_i and
-    // cpu_rst_n_i == rst_n_i.
+    // cpu_clk_i and cpu_rst_n_i are the CPU-domain reference. u_cpu_pll_sub uses them.
+    // For a single-clock build, tie cpu_clk_i to clk_i and cpu_rst_n_i to rst_n_i.
     input  logic cpu_clk_i,
     input  logic cpu_rst_n_i,
 
@@ -253,13 +83,13 @@ module soc_top
     output logic [31:0] gpio_oe_o,
     input  logic [31:0] gpio_in_i,
 
-    // ── PWM (Phase 6a-2, bead f7vs.6 — tied off until the peripheral lands) ──
+    // PWM pins.
     output logic [3:0]  pwm_o,
 
-    // ── Watchdog (Phase 6a-3, bead f7vs.7) — level-held bite request ──
+    // Watchdog bite request. It is level-held.
     output logic        wdt_rst_req_o,
 
-    // ── I2C (Phase 6a-5, bead f7vs.9 — driven by u_i2c) ──
+    // I2C pins.
     // Open-drain triplet, same convention as GPIO: there is no tristate anywhere
     // in this RTL tree, so `_o` is hard-tied 0 and `_oe_o` is the real control
     // (drive-low = oe 1; release = oe 0 and the external pull-up makes it high).
@@ -278,11 +108,11 @@ module soc_top
     output logic [31:0] commit_insn_o,
     output logic        gpu_irq_o,
 
-    // ── PLL status (Phase 7 M-c; GH #92 adds the CPU-domain PLL) ──────────────
+    // PLL status.
     output logic        pll_locked_o,       // 1 when system/fabric PLL has acquired lock
     output logic        cpu_pll_locked_o,   // 1 when CPU-domain PLL has acquired lock
 
-    // ── DFT test access (bead claude_verilog_test-j41m.2, GH #244) ───────────
+    // DFT test access.
     // Direct (parallel) scan access; the JTAG TAP of Stage 1b (j41m.3, ports
     // below) is OR-ed on top by dft_ctrl. Inactive values
     // (functional mode, bit-identical to the pre-DFT design): scan_mode_i=0,
@@ -295,7 +125,7 @@ module soc_top
     input  logic [SCAN_CHAINS-1:0]  scan_in_i,      // placeholder until Stage 2 insertion
     output logic [SCAN_CHAINS-1:0]  scan_out_o,     // tied 0 until Stage 2 insertion
 
-    // ── JTAG TAP (bead claude_verilog_test-j41m.3, DFT Stage 1b) ─────────────
+    // JTAG TAP pins.
     // Raw pins, no pad ring; TDO is never tri-stated here (no inout): the chip
     // top builds the tristate from tdo_oe_o. TCK is an asynchronous third clock
     // domain. Idle values used by every functional suite: tck_i=0, tms_i=1,
@@ -324,55 +154,22 @@ module soc_top
     localparam int unsigned IW          = AXI_ID_WIDTH;
     localparam int unsigned LENW        = AXI_LEN_WIDTH;
 
-    // Synchroniser depth of the four single-bit core_clk -> cpu_core_clk
-    // crossings below (u_cpu_clk_dis_sync, u_cpu_iso_en_sync, u_ext_irq_sync,
-    // u_timer_irq_sync). A localparam, not a port parameter, matching how the
-    // async_axi_fifo / apb_cdc_bridge instances here take their (default)
-    // SYNC_STAGES_TO_* without a soc_top-level knob. Bead xtaa. Default 2 is
-    // bit-identical to the previous hard-coded `.STAGES (2)`. NOTE: the
-    // reset-release ordering analysis above u_cpu_clk_dis_sync (cycle counts
-    // for u_cpu_pmu_rst_sync vs the enable synchroniser) was done at 2 and
-    // must be re-derived before raising this; the cdc_reset_sync instances
-    // (u_cpu_pmu_rst_sync, the WDT one) keep their own hard-coded STAGES.
+    // Synchroniser depth of the four single-bit core_clk to cpu_core_clk crossings. The default is 2.
+    // Derive the reset-release ordering again before you raise it.
     localparam int unsigned SYNC_STAGES_TO_CPU = 2;
-    // Depth of the one cpu_core_clk -> core_clk crossing (u_cpu_iso_ack_sync, bead 3ogd).
+    // Depth of the cpu_core_clk to core_clk crossing in u_cpu_iso_ack_sync.
     localparam int unsigned SYNC_STAGES_FROM_CPU = 2;
 
-    // ── DFT test controls — SINGLE SOURCE (j41m.2; replaces the 07n tie-offs) ──
-    // Every scan/test consumer in this file takes its control from the five nets
-    // below and from nothing else. They come from ONE dft_ctrl instance (Stage 1b,
-    // j41m.3): the JTAG TAP combined with the Stage 1a pin leg (dft_ctrl_ports,
-    // inside it). With the pins at their inactive values (scan_mode_i=0,
-    // scan_rst_ni=1) and the TAP idle (IR != SCAN, incl. held in reset) every mux
-    // and mask below is a pure pass-through and NOTHING about functional
-    // behaviour changes.
-    //
-    // Consumers: the reset overrides (cdc_reset_sync x2 here, inside async_axi_fifo
-    // and apb_cdc_bridge, dft_rst_mux x3 in each pll_subsystem and one on
-    // gpu_domain_rst_n), the test-clock bypass (dft_clk_mux inside pll_subsystem),
-    // the clock-gate test enable (u_cpu_cg, u_gpu_cg), and the crypto key mask.
+    // Every scan and test consumer takes its control from these nets. They come from one dft_ctrl instance.
+    // In functional mode every mux and mask passes through.
     logic dft_scan_mode;
     logic dft_scan_rst_n;
     logic dft_test_en;
     logic dft_test_clk;
-    // scan_en: the only RTL consumer is the CPU macro's scan_en_i (j41m.4). The fabric
-    // flops have none until Stage 2 inserts them; that step must take their SE pin from
-    // THIS net (dft_scan_en, TAP-or-pin), not from the raw scan_en_i port, or serial
-    // (TAP) scan would shift the macro with scan_en and the fabric without it.
-    // test_clk is consumed only through pll_subsystem's own ports below.
-    //
-    // dft_scan_en is the scan enable AFTER the crypto wipe gate (bead j41m.17): dft_ctrl's
-    // request (dft_scan_en_req) ANDed with u_crypto's scan_wipe_done_o. crypto_accel zeroizes its
-    // key and state through functional D logic on every scan_mode edge, and the scan mux sits after
-    // that logic, so a shift edge before the wipe lands would load scan_in over the cleared value.
-    // Withholding scan_en until the wipe is applied closes that for any tester. Every consumer
-    // (the macro's scan_en_i, the Stage 2 SE pins) keeps taking the net NAMED dft_scan_en.
-    // Functional mode: scan_wipe_done_o is a constant 1 once scan_mode has been 0 for 3 core_clk
-    // edges, so dft_scan_en == dft_scan_en_req there. Doc: tm:ch:dft-architecture sec.14.14.
+    // dft_scan_en is dft_scan_en_req ANDed with scan_wipe_done_o of u_crypto.
+    // The Stage 2 SE pins must take dft_scan_en, not the raw scan_en_i port.
     logic dft_scan_en_req;
-    // (* keep *): crypto_wipe_done feeds only the AND below, so without it synthesis merges the net into
-    // anonymous logic and the Stage 2 step (pnr/sky130/soc/plugin, CVT_SCAN_OUT_GATE_NET) can no longer find it
-    // to gate scan_out_o[n] (bead j41m.17 decision 5a). The attribute changes no behaviour.
+    // (* keep *) stops synthesis from merging crypto_wipe_done. The Stage 2 step finds the net by name.
     (* keep *) logic crypto_wipe_done;
     logic dft_scan_en;
     assign dft_scan_en = dft_scan_en_req & crypto_wipe_done;
@@ -420,17 +217,8 @@ module soc_top
         .mbist_status_i    (mbist_status)
     );
 
-    // Scan-chain port placeholders. scan_in_i has no consumer and scan_out_o is
-    // driven 0 UNTIL Stage 2 scan insertion (a netlist step, plugin option N in
-    // Doc: tm:ch:dft-architecture sec.1.5) stitches the chains: it removes this tie, then
-    // connects chain k's last flop to scan_out_o[k] and scan_in_i[k] to its first.
-    // The tie is intentionally one `assign` on one vector so that step has a single,
-    // unambiguous thing to replace; the lint waivers are scoped to just these two.
-    //
-    // CPU macro (j41m.4): the top CPU_SCAN_CHAINS pairs belong to u_cpu and go straight
-    // to it. Named wires, constant part-selects only (no runtime index, no struct select).
-    // The macro's own scan_out_o is also a placeholder tie-0 until Stage 2 stitches it
-    // inside the macro flow.
+    // scan_in_i has no consumer. scan_out_o is tied 0 until Stage 2 scan insertion.
+    // The top CPU_SCAN_CHAINS pairs go straight to u_cpu.
 `ifndef __pnr__
     initial begin
         if (SCAN_CHAINS <= CPU_SCAN_CHAINS)
@@ -450,17 +238,7 @@ module soc_top
     assign scan_out_o[FABRIC_SCAN_CHAINS-1:0] = '0;  // DFT_PLACEHOLDER: replaced by Stage 2 insertion
     assign scan_out_o[SCAN_CHAINS-1 -: CPU_SCAN_CHAINS] = cpu_scan_out_w;
 
-    // =========================================================================
-    // Phase 7 M-c / Pre-Phase-6 #3: PLL subsystem
-    //   clk_i  → pll_subsystem.clk_i
-    //   core_clk   = pll_subsystem.core_clk   (all children run on this)
-    //   core_rst_n = pll_subsystem.core_rst_n  (rst_n_i & pll_locked)
-    //
-    // pll_clkgen + pll_apb_regs + reset glue are consolidated inside
-    // pll_subsystem (rtl/soc/pll/pll_subsystem.sv).
-    // The clk_i-domain rule is preserved: pll_subsystem runs entirely on
-    // clk_i / rst_n_i (see pll_subsystem.sv header for the full rationale).
-    // =========================================================================
+    // u_pll_sub runs on clk_i and rst_n_i. core_clk and core_rst_n come from it.
     logic core_clk;     // PLL output clock — feeds all child clk ports
     logic core_rst_n;   // gated reset: rst_n_i & pll_locked (from pll_subsystem)
     logic pll_locked;   // raw PLL lock flag — export to top-level port
@@ -470,15 +248,8 @@ module soc_top
     logic pll_ref_clk;
     logic cpu_pll_ref_clk;
 
-    // =========================================================================
-    // GH #92/#93: second (CPU-domain) PLL subsystem — now the CPU's real
-    // clock root.
-    //   cpu_clk_i → u_cpu_pll_sub.clk_i  (independent reference clock root)
-    //   cpu_core_clk / cpu_core_rst_n feed u_cpu_cg and the CPU-domain reset
-    //   tree below (GH #93 — see "PMU sequencing nets" / "CPU-domain reset
-    //   tree" sections further down). cpu_pll_locked is exported at
-    //   cpu_pll_locked_o.
-    // =========================================================================
+    // Second PLL subsystem. cpu_clk_i feeds it.
+    // cpu_core_clk and cpu_core_rst_n feed u_cpu_cg and the CPU-domain reset tree.
     logic cpu_core_clk;
     logic cpu_core_rst_n;
     logic cpu_pll_locked;   // raw CPU-domain PLL lock flag — export to top-level port
@@ -600,7 +371,7 @@ module soc_top
     logic        apb_pslverr [N_APB_SLV];
 
     // =========================================================================
-    // Pre-Phase-6 #5 (GH #98/#99/#100) — PMU sequencing nets
+    // PMU sequencing nets.
     // =========================================================================
     // CPU/GPU domain sequencing outputs from pmu (core_clk domain, PD_PERIPH).
     logic pmu_cpu_clk_en, pmu_gpu_clk_en;
@@ -615,136 +386,11 @@ module soc_top
     logic cpu_gated_clk, gpu_gated_clk;
 
     // =========================================================================
-    // GH #93: CPU-domain CDC synchronisers for the PMU control signals.
-    //
-    // pmu_cpu_clk_en / pmu_cpu_rst_n / pmu_cpu_iso_en are all generated in
-    // the core_clk domain (by u_pmu below) but now gate/reset/clamp CPU-domain
-    // (cpu_core_clk) logic, so each needs its own crossing.
-    //
-    // u_cpu_clk_dis_sync clock choice (bootstrap-deadlock avoidance): this
-    // synchroniser MUST be clocked by cpu_core_clk, the UNGATED PLL output —
-    // never by cpu_gated_clk. cpu_gated_clk is itself gated by this
-    // synchroniser's own (inverted) output (via u_cpu_cg below); clocking the
-    // synchroniser from its own gated output would mean the enable that
-    // opens the gate can only advance once the gate is already open, a
-    // circular dependency that never resolves. cpu_core_clk is the PLL's raw,
-    // never-gated output, so it is always available to drive this crossing.
-    //
-    // ---- BUG (fixed here) + reset-release ordering, with cycle counts -----
-    // The original (non-inverted) u_cpu_clk_en_sync synchronised pmu_cpu_clk_en
-    // directly and was reset by cpu_core_rst_n. cdc_sync resets its flop
-    // chain to 0 (see cdc_sync.sv), so that synchroniser's output was 0
-    // (clock DISABLED) for the entire time cpu_core_rst_n was low, and for
-    // STAGES=2 more cpu_core_clk edges after cpu_core_rst_n released (pipeline
-    // fill latency) before it could reach 1. Meanwhile pmu_cpu_rst_n defaults
-    // to 1 at the PMU's own reset (DOM_ON, see pmu.sv reset-defaults comment),
-    // so u_cpu_pmu_rst_sync's chain filled to 1 within STAGES=2 cpu_core_clk
-    // edges of cpu_core_clk simply toggling — independent of, and much faster
-    // than, cpu_core_rst_n's release. Net effect: cpu_domain_rst_n
-    // (= cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync) tracked cpu_core_rst_n almost
-    // exactly, releasing on the SAME edge cpu_core_rst_n released — the exact
-    // edge at which cpu_gated_clk was still 2 cycles away from resuming. Zero
-    // cpu_gated_clk edges ever occurred while cpu_domain_rst_n was low, so
-    // u_cpu's `if (!rst_n_i) ... else ...` synchronous reset never executed
-    // its reset branch.
-    //
-    // Fix: synchronise the INVERTED enable, pmu_cpu_clk_dis_sync = sync(
-    // ~pmu_cpu_clk_en). cdc_sync's reset-to-0 value now means "NOT
-    // disabled", i.e. the safe/reset state is "clock running", not "clock
-    // stopped". u_cpu_cg's en input is ~pmu_cpu_clk_dis_sync.
-    //
-    // Revised ordering (cold-boot / PLL-(re)lock, the scenario this bug
-    // report is about): while cpu_core_rst_n is low, pmu_cpu_clk_dis_sync is
-    // held at its async-reset value of 0 (not disabled), so
-    // cpu_gated_clk = cpu_core_clk unconditionally for the ENTIRE duration
-    // cpu_core_rst_n (and therefore cpu_domain_rst_n, which can only release
-    // no earlier than cpu_core_rst_n) is low — i.e. as many cpu_gated_clk
-    // edges as cpu_core_rst_n's assertion lasts (STUB_LOCK_CYCLES=16 in the
-    // PLL stub, or the real PLL's lock time), far more than the 1 edge
-    // u_cpu's synchronous reset needs to load RESET_PC and its other reset
-    // values. cpu_core_rst_n releases; pmu_cpu_rst_n_cpu_sync is already 1
-    // (per the analysis above); cpu_domain_rst_n releases on that same edge,
-    // and cpu_gated_clk has been ticking every cycle before, through, and
-    // after that edge — no gap, so the release edge itself is also cleanly
-    // observed by u_cpu. Only afterward, once firmware ever asserts
-    // pmu_cpu_clk_en=0, does pmu_cpu_clk_dis_sync begin tracking it (2-cycle
-    // pipeline latency), which is the normal, intended clock-gating path.
-    //
-    // GH #90 bead 542 fix (live PMU power-cycle ordering hazard, found during
-    // the GH #93 sanity check above and deliberately deferred at the time):
-    // pmu.sv's per-domain sequencer asserts rst_n_w=1 one full core_clk cycle
-    // BEFORE it asserts clk_en_w=1 on the power-UP path (DOM_PU_RST releases
-    // reset; DOM_PU_CLK, the next state, ungates the clock) — and mirrors
-    // that on power-DOWN (clk_en_w drops one cycle before rst_n_w drops).
-    // This ordering is NOT a pmu.sv implementation choice: docs/
-    // Doc: tm:pd:power-domain-evaluation:3-what-is-doable-now-the-scoped-go and pmu.sv's own header fix this
-    // order as the UPF-mandated sequence, and it is the mechanism that lets
-    // this behavioral model preserve CPU architectural state (PC/MSTATUS/
-    // MTVEC) across an off->on cycle WITHOUT real retention-cell silicon: as
-    // long as u_cpu's clock never ticks while its domain reset is asserted,
-    // its synchronous `if (!rst_n)` branch never executes during a PMU
-    // power-cycle, so its flops simply hold whatever value they had before
-    // the domain went quiet. Editing pmu.sv's state order to fix this bead
-    // would either violate that documented UPF sequencing or defeat the
-    // retention-by-construction trick (see pmu.sv header) — so this fix is
-    // deliberately in soc_top.sv, not pmu.sv. (That trick is CPU-only and a
-    // behavioural-model artifact: the GPU domain is async-reset, so a PMU
-    // power-cycle DOES clear GPU state — bead 4a7i, pmu.sv header.)
-    //
-    // Hazard: pmu_cpu_rst_n and pmu_cpu_clk_en are two independently-timed
-    // core_clk-domain signals crossing into the asynchronous, independently-
-    // clocked (GH #92 dual-PLL) cpu_core_clk domain through two SEPARATE
-    // synchronisers (u_cpu_pmu_rst_sync / u_cpu_clk_dis_sync above). Two
-    // independent synchronisers do not preserve a source-side 1-cycle
-    // offset — after crossing, either signal can settle first, in either
-    // direction, for any relative skew. If pmu_cpu_clk_dis_sync clears
-    // (clock re-enabled) at or before pmu_cpu_rst_n_cpu_sync releases, the
-    // CPU domain would see a clock edge while cpu_domain_rst_n is still low,
-    // its synchronous reset branch would fire, and the "retained" PC/state
-    // this power-cycle was supposed to preserve would be silently
-    // overwritten with RESET_PC/RESET_VAL instead — a data-corrupting CDC
-    // race, not merely a missed reset.
-    //
-    // Fix: gate u_cpu_cg's enable with the ALREADY cpu_core_clk-domain-native
-    // pmu_cpu_rst_n_cpu_sync (see cpu_gated_clk_en below, used at the u_cpu_cg
-    // instantiation), so cpu_gated_clk is structurally forbidden from ticking
-    // whenever the CPU-domain-observed PMU reset is asserted — regardless of
-    // what pmu_cpu_clk_dis_sync (the independent clk-enable synchroniser) is
-    // doing. This is a same-domain combinational AND of two flops already
-    // registered on cpu_core_clk (pmu_cpu_rst_n_cpu_sync from
-    // u_cpu_pmu_rst_sync, ~pmu_cpu_clk_dis_sync from u_cpu_clk_dis_sync) — it
-    // adds no new CDC crossing and does not touch pmu.sv or any rtl/soc/cdc/*
-    // primitive.
-    //
-    // Worst-case skew tolerance: UNBOUNDED. The fix does not rely on
-    // bounding, matching, or reasoning about the relative latency of the two
-    // independent synchronisers at all — it makes cpu_domain-observed PMU
-    // reset the master gating term for the CPU's own clock, so no amount of
-    // relative skew between u_cpu_pmu_rst_sync and u_cpu_clk_dis_sync can
-    // produce a clock edge while that reset is asserted. It is symmetric
-    // across both directions: on power-up, the gate cannot open until
-    // pmu_cpu_rst_n_cpu_sync is already 1; on power-down, the gate closes the
-    // instant pmu_cpu_rst_n_cpu_sync drops to 0, even if
-    // pmu_cpu_clk_dis_sync has not yet caught up to reflect clk_en_w=0.
-    //
-    // Cold-boot regression check (GH #93's own fix, re-verified here): during
-    // cpu_core_rst_n=0 (PLL not locked), the PMU's own dom_state_q is held at
-    // its synchronous reset default DOM_ON (pmu.sv's rst_n_i is core_rst_n),
-    // so pmu_cpu_rst_n=1 constant throughout — pmu_cpu_rst_n_cpu_sync tracks
-    // to 1 well within cold boot's multi-cycle PLL-lock window and stays
-    // there. cpu_gated_clk_en is therefore unaffected by this fix during cold
-    // boot (gated only by ~pmu_cpu_clk_dis_sync, exactly as GH #93 left it) —
-    // this fix only changes behavior once the PMU's OWN FSM genuinely drives
-    // pmu_cpu_rst_n low, which happens only on a live, firmware-initiated
-    // power-cycle.
-    //
-    // Test-suite note: test_pmu.py's DUT (tb_pmu.sv) instantiates pmu.sv
-    // standalone with no CDC and no soc_top glue, so its per-cycle ordering
-    // assertions exercise pmu.sv's own (unchanged) FSM outputs only and are
-    // unaffected by this fix. soc_multiclock / soc_pll_multiclock exercise
-    // soc_top's synchronisers at a divergent clock ratio but do not drive a
-    // live PMU power-cycle, so they do not currently cover this path either
-    // (see "Residual risk" callout in CLAUDE.md's GH #90 status entry).
+    // CPU-domain synchronisers for the PMU control signals.
+    // u_cpu_clk_dis_sync must use cpu_core_clk, never cpu_gated_clk. The gated clock would wait on its own enable.
+    // pmu_cpu_clk_dis_sync is the synchronised inverse of pmu_cpu_clk_en. The reset value 0 of cdc_sync means the clock runs.
+    // The u_cpu_cg enable is ~pmu_cpu_clk_dis_sync ANDed with pmu_cpu_rst_n_cpu_sync.
+    // cpu_gated_clk cannot tick while the PMU reset is asserted in cpu_core_clk, whatever the skew of the two synchronisers.
     // =========================================================================
     logic pmu_cpu_clk_dis_sync;
     cdc_sync #(
@@ -762,18 +408,7 @@ module soc_top
     // Clocked/reset the same way as u_cpu_clk_dis_sync, for the same reason
     // (this clamp gates signals that feed u_cpu_axi_cdc's s_* inputs, which
     // run on cpu_gated_clk; cpu_core_clk is the safe, always-running root).
-    //
-    // Safe-reset-value sanity check (GH #93-fix review): unlike the clk_en
-    // crossing above, this one is NOT inverted, and that is correct.
-    // cdc_sync resets pmu_cpu_iso_en_sync to 0 = "not isolated", which
-    // matches pmu_cpu_iso_en's own PMU-side reset default (DOM_ON: iso_en_w=0,
-    // see pmu.sv reset-defaults comment) — the synchroniser's safe state and
-    // the source signal's safe state agree, so there is no cold-boot window
-    // where this crossing disagrees with its source the way the un-inverted
-    // clk_en sync did. (Whether "not isolated" is itself the physically safe
-    // choice for isolation cells in general is a separate, pre-existing
-    // design decision — see the ISO_CPU clamp-scope note below — not one this
-    // fix revisits.)
+    // pmu_cpu_iso_en_sync is not inverted. Its reset value 0 means not isolated, like the PMU reset default.
     logic pmu_cpu_iso_en_sync;
     cdc_sync #(
         .WIDTH  (1),
@@ -785,39 +420,9 @@ module soc_top
         .q_o     (pmu_cpu_iso_en_sync)
     );
 
-    // ---- Isolation-ack handshake (bead 3ogd) -----------------------------------------------
-    // PROBLEM. pmu_cpu_iso_en reaches the clamp above through a 2-flop cdc_sync clocked by
-    // cpu_core_clk, but pmu_cpu_rst_n reaches u_cpu_pmu_rst_sync's ASYNCHRONOUS clear directly
-    // (async assert), so the reset takes effect on the very core_clk edge the PMU drops it. The
-    // PMU spaced the two by 2 core_clk cycles; "isolate first" therefore held only while
-    // 2 x cpu_core_clk period < 2 x core_clk period, and failed for a CPU clock slower than the
-    // fabric clock (the clamp became active 6 core cycles after a reset that asserted at 2, at 3x).
-    //
-    // FIX. pmu_cpu_iso_en_sync -- the clamp control AS THE CPU DOMAIN SEES IT, i.e. the actual
-    // select of the clamp muxes below -- is synchronised back into core_clk (u_cpu_iso_ack_sync)
-    // and returned to the PMU as cpu_iso_ack_i. The sequencer waits in DOM_PD_ISO for the ack
-    // before it gates the clock (DOM_PD_GATE) and asserts reset (DOM_OFF), so the UPF order
-    // "isolate, then gate, then reset" holds for ANY ratio of the two clocks: the ack is the
-    // output of a synchroniser, so it can be late but never early. It also waits in DOM_PU_ISO for
-    // the ack to FALL after the PMU de-asserts iso_en (the return-to-zero half of the handshake):
-    // without it a power-down requested right after a power-up would meet the previous cycle's
-    // still-high ack and skip its own wait (a stale ack). pmu.sv's header has the full argument,
-    // including why power-up needs no ack for the iso-release-vs-reset-release order.
-    //
-    // CLOCK GATING ORDER (a hang check, as the ack travels cpu_core_clk -> core_clk): the source
-    // flop is the last stage of u_cpu_iso_en_sync, clocked by cpu_core_clk, the UNGATED PLL output.
-    // It is never clocked by cpu_gated_clk, so closing the gate (DOM_PD_GATE, which the PMU only
-    // reaches AFTER the ack) cannot starve the ack path, and the PMU never waits on a clock that
-    // its own wait is meant to stop. The one case in which cpu_core_clk's flops do not run is
-    // cpu_core_rst_n low (CPU PLL unlocked/disabled), which holds u_cpu_iso_en_sync at 0: the ack
-    // never rises, and pmu.sv's ISO_ACK_TIMEOUT (STATUS[3]) bounds the wait instead of hanging.
-    //
-    // CDC. d_i is a flop Q (the last stage of u_cpu_iso_en_sync), single bit, so no combinational
-    // decode feeds this D pin (bead ktwt's rule). It is level-held by the handshake itself: the PMU
-    // does not move iso_en again until the ack has followed the previous move (DOM_PD_ISO waits for
-    // the rise, DOM_PU_ISO for the fall), so a slow cpu_core_clk can never miss either phase and a
-    // plain 2-FF level synchroniser is sufficient in both directions. cdc_sync resets to 0 = "clamp
-    // not active", which is the PMU-side reset default as well.
+    // Isolation-ack handshake.
+    // u_cpu_iso_ack_sync returns pmu_cpu_iso_en_sync to core_clk as pmu_cpu_iso_ack. The PMU waits for it in DOM_PD_ISO and DOM_PU_ISO.
+    // The source flop uses cpu_core_clk, never cpu_gated_clk. If cpu_core_rst_n is low, ISO_ACK_TIMEOUT bounds the wait.
     logic pmu_cpu_iso_ack;
     cdc_sync #(
         .WIDTH  (1),
@@ -831,24 +436,8 @@ module soc_top
 
     // pmu_cpu_rst_n: synchronised into the cpu_core_clk domain with
     // cdc_reset_sync (async-assert / sync-deassert) — this is exactly the
-    // "per-domain PMU reset" reuse cdc_reset_sync.sv's header anticipates.
-    //
-    // Ordering sanity check (GH #93-fix review): rst_n_i here is deliberately
-    // pmu_cpu_rst_n, NOT cpu_core_rst_n. cdc_reset_sync's rst_n_i is the
-    // SOURCE async reset event being synchronised into clk_i's domain (see
-    // cdc_reset_sync.sv header and its other two uses inside
-    // async_axi_fifo.sv, which feed it s_rst_n_i/m_rst_n_i — the real per-
-    // domain reset events, never a foreign domain's reset). cpu_core_rst_n is
-    // already NATIVE to the cpu_core_clk destination domain (produced by
-    // u_cpu_pll_sub, synchronous to cpu_core_clk already), so it needs no
-    // synchroniser of its own; it is combined with pmu_cpu_rst_n_cpu_sync by
-    // the plain AND below instead. Feeding cpu_core_rst_n into this
-    // synchroniser's rst_n_i in place of pmu_cpu_rst_n would be wrong (it
-    // would synchronise the wrong signal) and feeding it in ADDITION (e.g. as
-    // an extra async clear) would be redundant — cpu_domain_rst_n's
-    // combinational AND already asserts whenever EITHER source is low. No
-    // ordering surprise: this is the correct, intentional use of the
-    // primitive.
+    // "per-domain PMU reset" reuse. See ds:mod:cdc-reset-sync.
+    // The source reset of this cdc_reset_sync is pmu_cpu_rst_n, not cpu_core_rst_n. cpu_core_rst_n already belongs to cpu_core_clk.
     logic pmu_cpu_rst_n_cpu_sync;
     cdc_reset_sync #(
         .STAGES (2)
@@ -861,46 +450,10 @@ module soc_top
     );
 
     // =========================================================================
-    // Phase 6a-3 (bead claude_verilog_test-f7vs.7): WDT bite -> CPU-domain reset.
-    //
-    // The first peripheral output in this SoC that feeds a RESET. Per
-    // Doc: ds:ch:phase6-ip-expansion-plan Sec.7 (6a-3), when WDT_CTRL.RST_EN == 1 a
-    // bite asserts the CPU-domain reset, and ONLY the CPU-domain reset:
-    //   * NOT the whole SoC — that would also reset the WDT itself (a
-    //     self-clearing pulse no cocotb test can scoreboard) and tear down the
-    //     APB fabric mid-transaction. The CPU is what hung.
-    //   * NOT through pmu.sv — its per-domain FSM only re-samples its target
-    //     while settled at ON/OFF, so an emergency request would need a new
-    //     priority path through verified, UPF-sequenced RTL (see the bead 2k8
-    //     rationale above). Instead it takes the same soc_top-level AND-in point
-    //     the PMU reset uses, through its own cdc_reset_sync.
-    //
-    // RST_EN resets to 0 => wdt_cpu_rst_req_q is constant 0 => the sync's
-    // rst_n_i is constant 1 => wdt_cpu_rst_n_cpu_sync is constant 1 after its
-    // 2-edge fill following the (synchronous) reset of wdt_cpu_rst_req_q, so
-    // cpu_domain_rst_n degenerates to its pre-WDT value.
-    // wdt_rst_req_o (the top-level pin) is NOT gated by RST_EN: a bite asserts it
-    // regardless; RST_EN gates only this internal path.
-    //
-    // wdt_cpu_rst_req_q is a REGISTERED AND (not a bare `bite & rst_en`): it is
-    // the async-assert source of a cdc_reset_sync, so it must be glitch-free, and
-    // a combinational AND of two flops is not. Cost: one core_clk of latency on a
-    // once-per-lifetime, level-held (until external reset) event.
-    //
-    // The CPU clock must keep running while this reset is asserted, otherwise
-    // u_cpu's synchronous reset never executes. It does: cpu_gated_clk_en
-    // (below) is gated only by the PMU terms, deliberately NOT by this one.
-    //
-    // ---- RST_EN comes from a real port ---------------------------------------
-    // watchdog_timer exports WDT_CTRL[1] as rst_en_o, and this block consumes
-    // that port directly. An earlier revision reconstructed the bit here by
-    // snooping the WDT's own APB face, which was correct but was duplicated
-    // state with no structural link to the register it mirrored: the two could
-    // only stay in step for as long as someone kept the snoop aligned with
-    // apb4_register_bank's write rule by hand, nothing tested the equivalence,
-    // and a silent divergence would mis-arm a CPU-domain reset. Bead 6o8w's
-    // proposed change to that shared write rule would have altered it for all
-    // ten APB peripherals at once. Replaced with the port (bead f7vs.14).
+    // WDT bite to CPU-domain reset.
+    // When WDT_CTRL.RST_EN is 1, a bite resets the CPU domain only. It does not pass through pmu.sv.
+    // wdt_cpu_rst_req_q is a registered AND of bite and RST_EN. wdt_rst_req_o is not gated by RST_EN.
+    // The CPU clock must run while this reset is asserted. cpu_gated_clk_en has no WDT term.
     // =========================================================================
     logic wdt_rst_en_w;      // driven by u_wdt.rst_en_o (real port, not a shadow)
     logic wdt_cpu_rst_req_q;
@@ -923,11 +476,7 @@ module soc_top
     // =========================================================================
     // IRQ signals
     // =========================================================================
-    // Declared here (ahead of u_ext_irq_sync / u_timer_irq_sync below, which
-    // read ext_irq/timer_irq as CDC synchroniser inputs) rather than further
-    // down with the rest of the IRQ signal group, so every use is strictly
-    // after its declaration (yosys-slang strict-mode requirement; no
-    // functional change — see bead q7n).
+    // ext_irq and timer_irq are declared here so that every use follows its declaration.
     logic uart_irq;
     logic spi_irq;
     logic timer_irq;
@@ -935,49 +484,22 @@ module soc_top
     logic gpio_irq;
     // gpu_irq_o is exposed at top-level port; driven by gpu_top
 
-    // Phase 6 (bead claude_verilog_test-f7vs.2): interrupt-source pre-allocation for
-    // bits 6-11 (PWM/WDT/TRNG/I2C/CRYPTO/NPU). Each was tied 1'b0 here until its
-    // peripheral instance existed, and the tie is replaced with the real IRQ output
-    // when that peripheral lands, matching the existing TIMER-tied-0 idiom below.
-    // pwm_irq (bit 6) landed in Phase 6a-2 (bead claude_verilog_test-f7vs.6) — it is
-    // now driven by u_pwm below, not tied here.
+    // IRQ bits 6 to 11 come from the peripheral instances below.
     logic pwm_irq;
     logic wdt_irq;
     logic trng_irq;
     logic i2c_irq;
     logic crypto_irq;
     logic npu_irq;
-    // wdt_irq (bit 7) landed in Phase 6a-3 (bead claude_verilog_test-f7vs.7) — it is
-    // now driven by u_wdt below, not tied here.
-    // trng_irq (bit 8) landed in Phase 6a-4 (bead claude_verilog_test-f7vs.8) — it is
-    // now driven by u_trng below, not tied here.
-    // i2c_irq (bit 9) landed in Phase 6a-5 (bead claude_verilog_test-f7vs.9) — it is
-    // now driven by u_i2c below, not tied here.
-    // crypto_irq (bit 10) landed in Phase 6b (bead claude_verilog_test-f7vs.10) — it is
-    // now driven by u_crypto below, not tied here.
-    // npu_irq (bit 11) landed in Phase 6c (bead claude_verilog_test-f7vs.11) — it is
-    // now driven by u_npu below, not tied here.
 
-    // Phase 6 (bead claude_verilog_test-f7vs.3): top-level port pre-allocation for
-    // PWM/WDT/I2C (the three Phase 6 items that add pins at all — TRNG's entropy
-    // source is an `ifdef`-swapped sub-module, CRYPTO/NPU are register-only). Each
-    // output was tied to its inert value here; the tie is replaced with the real
-    // peripheral connection when that peripheral lands, matching the IRQ-tie idiom
-    // above.
-    // pwm_o landed in Phase 6a-2 (bead claude_verilog_test-f7vs.6) — it is now
-    // driven by u_pwm below, not tied here.
-    // wdt_rst_req_o landed in Phase 6a-3 (bead claude_verilog_test-f7vs.7) — it is
-    // now driven by u_wdt below, not tied here.
-    // i2c_* pins landed in Phase 6a-5 (bead claude_verilog_test-f7vs.9) — they are now
-    // driven by / feed u_i2c below, not tied here.
+    // The pins pwm_o, wdt_rst_req_o and i2c_* come from the peripheral instances below.
 
     logic ext_irq;    // interrupt_controller output → CPU ext_irq_i
 
     // ext_irq / timer_irq: level-held sources (see interrupt_controller.sv /
     // timer.sv — irq_o is `|masked` / `irq_en & irq_pending_q`, both sticky
     // until explicitly cleared, never a single-cycle pulse), so a plain 2-FF
-    // level synchroniser cannot miss the assertion — see soc_top.sv header
-    // "IRQ routing" note.
+    // level synchroniser cannot miss the assertion. See ds:mod:soc-top.
     logic ext_irq_cpu_sync, timer_irq_cpu_sync;
     cdc_sync #(
         .WIDTH  (1),
@@ -999,39 +521,10 @@ module soc_top
     );
 
     // =========================================================================
-    // GH #93: per-domain reset trees.
-    //
-    // CPU domain: recomposed entirely from CPU-domain-synchronised sources —
-    // cpu_core_rst_n (this domain's own PLL-lock reset) ANDed with
-    // pmu_cpu_rst_n_cpu_sync (the PMU's per-domain reset, synchronised
-    // above) and wdt_cpu_rst_n_cpu_sync (the WDT bite, gated by RST_EN and
-    // synchronised above; Phase 6a-3, bead claude_verilog_test-f7vs.7). core_rst_n does NOT appear in this expression any more; the CPU
-    // domain reset is now fully rooted in its own clock domain.
-    //
-    // GPU/fabric domain: left UNCHANGED (core_rst_n & pmu_gpu_rst_n, no new
-    // reset synchroniser added). Rationale: the GPU/bus/peripherals all still
-    // share the single core_clk domain (only the CPU moved), so there is no
-    // new clock boundary here to synchronise across, and gpu_domain_rst_n's
-    // existing timing has 142/142 soc_all regression history behind it.
-    // Inserting a cdc_reset_sync here would add STAGES cycles of reset-
-    // deassert latency to every peripheral for zero CDC benefit and is
-    // deliberately NOT done, to avoid perturbing that regression baseline.
-    //
-    // GH #93-fix note: cpu_domain_rst_n release timing (cold boot) and the
-    // requirement that u_cpu see clock edges throughout its assertion are
-    // analysed in full above u_cpu_clk_dis_sync — that is where the reset-
-    // release ordering and cycle counts for this signal are documented, not
-    // here, to keep the analysis next to the fix it justifies.
-    //
-    // GH #95 / bead claude_verilog_test-2k8 note: cpu_domain_rst_n correctly
-    // remains u_cpu's own reset (retention-by-construction: it folds in the
-    // PMU's retention-hold signal, which never fires cpu_gated_clk while
-    // asserted — see u_cpu_cg's gating note above) and u_apb_dbg_cdc's m_*
-    // face reset. It is DELIBERATELY NOT used as u_cpu_axi_cdc's s_rst_n_i —
-    // that CDC bridge uses cpu_core_rst_n instead, because the bridge must
-    // retain (not hard-flush) its in-flight state across a PMU power-cycle
-    // just like u_cpu does. See the full rationale at u_cpu_axi_cdc's
-    // instantiation below.
+    // Reset trees. cpu_domain_rst_n is cpu_core_rst_n ANDed with pmu_cpu_rst_n_cpu_sync and wdt_cpu_rst_n_cpu_sync.
+    // gpu_domain_rst_n is core_rst_n & pmu_gpu_rst_n. No reset synchroniser is added, because the GPU stays on core_clk.
+    // cpu_domain_rst_n resets u_cpu and the m face of u_apb_dbg_cdc.
+    // u_cpu_axi_cdc uses cpu_core_rst_n as s_rst_n_i, not cpu_domain_rst_n.
     // =========================================================================
     logic cpu_domain_rst_n, gpu_domain_rst_n;
     assign cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync & wdt_cpu_rst_n_cpu_sync;
@@ -1050,28 +543,9 @@ module soc_top
         .rst_n_o      (gpu_domain_rst_n)
     );
 
-    // ISO_CPU / ISO_GPU clamp scope (functional isolation, `-location parent`,
-    // clamp_value 0): the master-side AXI4 request/accept handshake signals
-    // that leave each domain toward the always-on fabric, plus the domain's
-    // top-level observability/IRQ outputs. Address/data/control payload bits
-    // are NOT individually clamped -- they are qualified by the corresponding
-    // valid signal (already forced to 0 below) and are therefore don't-care
-    // downstream once valid=0, so clamping them adds no functional isolation
-    // value in this cycle-accurate behavioral model. Slave-side (control-
-    // register) response ports of u_gpu / the CPU debug port are likewise not
-    // clamped: an access into a powered-down domain's registers stalling while
-    // the domain is off is acceptable/expected behavior for a sequencing-only
-    // PMU (Doc: tm:pd:power-domain-evaluation) -- full per-port isolation-cell
-    // coverage is part of the deferred true-power-gating scope.
-    //
-    // GH #93: ISO_CPU's clamp point MOVED from xbar_m_*[0] (the fabric side
-    // of the old direct connection) to u_cpu_axi_cdc's s_* (CPU-domain) face
-    // below — the clamp is CPU-domain infrastructure (it isolates PD_CPU's
-    // output), so it belongs on the CPU side of the CDC bridge, not the
-    // fabric side. It is qualified by pmu_cpu_iso_en_sync (cpu_core_clk-
-    // synchronised, see PMU sequencing nets above), not the raw core_clk
-    // pmu_cpu_iso_en. ISO_GPU is unaffected (GPU stays in the core_clk
-    // domain; no bridge, no re-sync needed).
+    // ISO_CPU and ISO_GPU clamp the master-side request and accept handshakes and the domain outputs.
+    // Payload bits are not clamped. The valid signal qualifies them. Slave-side responses of u_gpu and the CPU debug port are not clamped.
+    // The ISO_CPU clamp is at the s face of u_cpu_axi_cdc, qualified by pmu_cpu_iso_en_sync. ISO_GPU stays on core_clk.
     logic cpu_axi_awvalid_raw, cpu_axi_wvalid_raw, cpu_axi_arvalid_raw;
     logic cpu_axi_bready_raw, cpu_axi_rready_raw;
     logic cpu_commit_valid_raw;
@@ -1198,40 +672,9 @@ module soc_top
     /* verilator lint_on  UNUSEDSIGNAL */
 
     // =========================================================================
-    // GH #95 fix (bead claude_verilog_test-eg2): APB3 debug-port CDC bridge.
-    //
-    // The top-level apb_* debug ports fed u_cpu DIRECTLY until this fix. GH
-    // #93 moved u_cpu onto cpu_gated_clk, so this chip-boundary bus silently
-    // migrated from the fabric (core_clk) domain into the CPU domain with no
-    // synchroniser — a cdc_snitch BAD=233 finding (all one root cause:
-    // apb_paddr_i/apb_pwdata_i/psel/penable/pwrite captured unsynchronised by
-    // u_cpu.dbg_pc_wr_data/dbg_ctrl_reg/dbg_reg_wr_en/halt_latch_q).
-    //
-    // Fix: a second apb_cdc_bridge instance, u_apb_dbg_cdc, restores the
-    // pre-#93 external contract ("drive apb_* synchronously to clk_i") by
-    // bridging INTO the CPU domain instead of redefining that contract.
-    // Modelled on ARM CoreSight SoC-400's DAPBUS async bridge (DDI 0480F
-    // §4.2.6/§4.2.8): the debug port clock is asynchronous to the block it
-    // drives by construction (an external probe cannot guarantee edge
-    // alignment with cpu_clk_i), and the async bridge is what lets debug stay
-    // power-isolated from the domain it accesses.
-    //   s-face: core_clk / core_rst_n — matches every other fabric-domain
-    //     block (same domain as apb_interconnect / axil_to_apb).
-    //   m-face: cpu_gated_clk / cpu_domain_rst_n — matches u_cpu itself, so a
-    //     PMU-gated CPU correctly stalls debug accesses (already the
-    //     documented intent below: "stalling ... into a gated CPU domain is
-    //     expected/OK"). NOT cpu_clk_i/cpu_rst_n_i raw (unlike u_apb_pll2_cdc,
-    //     whose bootstrap reasoning at its instantiation does not apply here).
-    //
-    // APB3/APB4 pstrb mismatch: apb_cdc_bridge is APB4 (has pstrb); the CPU's
-    // debug slave (rv32i_cpu_top) is APB3 (no pstrb port) and — confirmed by
-    // inspection of rv32i_cpu_top.sv's debug-write block — every debug
-    // register write captures the full 32-bit apb_pwdata_i unconditionally
-    // (`dbg_ctrl_reg <= apb_pwdata_i;` etc.), with no per-byte/strobe-
-    // qualified partial write anywhere in that logic. s_pstrb_i is therefore
-    // tied to all-ones (full-word strobe, matching the top-level apb_* ports'
-    // own lack of a pstrb signal) and m_pstrb_o is sunk to a dedicated unused
-    // net (the CPU has no pstrb input to connect it to).
+    // APB3 debug-port CDC bridge u_apb_dbg_cdc.
+    // The s face of u_apb_dbg_cdc uses core_clk and core_rst_n. The m face uses cpu_gated_clk and cpu_domain_rst_n.
+    // apb_cdc_bridge is APB4. The CPU debug slave is APB3. s_pstrb_i is tied to all ones. m_pstrb_o goes to an unused net.
     // =========================================================================
     logic        dbg_bridge_m_psel, dbg_bridge_m_penable, dbg_bridge_m_pwrite;
     logic [11:0] dbg_bridge_m_paddr;
@@ -1271,7 +714,7 @@ module soc_top
     );
 
     // =========================================================================
-    // GH #93: CPU-domain face of the CPU<->crossbar-M0 AXI4 CDC bridge.
+    // CPU-domain face of the CPU to crossbar M0 AXI4 CDC bridge.
     // u_cpu's AXI4 master now terminates here (not at xbar_m_*[0] directly);
     // u_cpu_axi_cdc's m_* face (fabric domain) drives xbar_m_*[0] below.
     // =========================================================================
@@ -1330,8 +773,7 @@ module soc_top
         .axi_rvalid_i               (cpu_bridge_s_rvalid),
         .axi_rlast_i                (cpu_bridge_s_rlast),
         .axi_rready_o               (cpu_axi_rready_raw),
-        // APB3 debug slave — GH #95 fix: now fed from u_apb_dbg_cdc's m_*
-        // (CPU-domain) face instead of the top-level apb_* ports directly
+        // APB3 debug slave. It takes the m face of u_apb_dbg_cdc, in the CPU domain.
         // (see u_apb_dbg_cdc above). Not isolation-clamped — stalling a
         // debug access into a gated CPU domain is expected/OK.
         .apb_paddr_i                (dbg_bridge_m_paddr),
@@ -1356,8 +798,7 @@ module soc_top
         .debug_pc_src_o             (cpu_debug_pc_src),
         .debug_state_o              (cpu_debug_state),
         .debug_ebreak_o             (cpu_debug_ebreak),
-        // Interrupt inputs — GH #93: synchronised into the CPU domain (see
-        // PMU sequencing nets above; both sources are level-held, not pulses)
+        // Interrupt inputs. They are synchronised into the CPU domain. Both sources are level-held.
         .ext_irq_i                  (ext_irq_cpu_sync),
         .timer_irq_i                (timer_irq_cpu_sync),
         // DFT (j41m.4). clk_i above is already the test clock in scan mode (dft_clk_mux
@@ -1378,8 +819,6 @@ module soc_top
     // ISO_CPU functional-isolation clamp (`-location parent`, clamp_value 0):
     // forces the CPU->fabric handshake + commit observability to 0 while
     // pmu_cpu_iso_en_sync is asserted. See clamp-scope note above u_cpu.
-    // GH #93: now applied at u_cpu_axi_cdc's s_* (CPU-domain) inputs instead
-    // of xbar_m_*[0] directly.
     assign cpu_bridge_s_awvalid = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_awvalid_raw;
     assign cpu_bridge_s_wvalid  = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_wvalid_raw;
     assign cpu_bridge_s_arvalid = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_arvalid_raw;
@@ -1388,98 +827,12 @@ module soc_top
     assign commit_valid_o       = pmu_cpu_iso_en_sync ? 1'b0 : cpu_commit_valid_raw;
 
     // =========================================================================
-    // GH #93: dual-clock AXI4 CDC bridge — CPU domain (cpu_gated_clk) <->
-    // fabric domain (core_clk), the SoC's one intentional CDC boundary
-    // (Doc: tm:dec:3pll-cdc). m_rst_n_i matches crossbar M0's domain
-    // (core_rst_n), unchanged. async_axi_fifo internally ANDs s_rst_n_i and
-    // m_rst_n_i together for its two cdc_reset_sync instances (see
-    // async_axi_fifo.sv header) — this bridge's hard-flush reset is discussed
-    // in the clock-seam header note above (known hazard, not fixed here).
-    //
-    // GH #95 / bead claude_verilog_test-2k8 fix: s_rst_n_i is
-    // cpu_core_rst_n, DELIBERATELY NOT cpu_domain_rst_n. Do not "fix" this
-    // back — see the full retain-vs-flush rationale below.
-    //
-    // RETAIN vs FLUSH — the actual bug this rewiring closes: a PMU-driven
-    // live CPU-domain power-cycle must RETAIN u_cpu's architectural state
-    // (that is the entire point of clock-gate-only power-down — see
-    // pmu_cpu_rst_n_cpu_sync's ordering note above u_cpu_cg: u_cpu is
-    // synchronous-reset and cpu_gated_clk is forbidden from ticking while
-    // that reset is asserted, so u_cpu structurally never reboots). But
-    // cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync ALSO drops
-    // to 0 for the PMU's own retention-hold reset (pmu_cpu_rst_n_cpu_sync),
-    // not just for a genuine POR/PLL-unlock event. Wiring s_rst_n_i to
-    // cpu_domain_rst_n therefore hard-FLUSHED this bridge's gray-code
-    // pointers and any FIFO'd beats on every PMU power-down — a HARD FLUSH
-    // is a fabricated, asynchronous, mid-transaction abort (see the "Reset
-    // here is a HARD FLUSH" note in async_axi_fifo.sv's header), the exact
-    // opposite of the retention the CPU side of the same power-cycle
-    // guarantees. On resume, u_cpu's cache/AXI-arbiter FSM (rv32i_cache_arbiter.sv)
-    // was still correctly waiting for the response to its outstanding
-    // request (its own state WAS retained, per the CPU-side contract), but
-    // the bridge that was supposed to deliver that response had already
-    // discarded it — permanent deadlock (bead 2k8: instrumented evidence
-    // showed dc_stall stuck at 1 forever post-resume with arvalid=0,
-    // rvalid=0, i.e. the D-cache's AR handshake had already completed and it
-    // was blocked waiting in the R phase for a beat the flush erased).
-    //
-    // Fix: s_rst_n_i = cpu_core_rst_n, the CPU's TRUE reset (POR + PLL lock
-    // only — see cpu_core_rst_n's declaration comment above), so the
-    // bridge's CPU-side face retains exactly like the CPU it serves and
-    // asserts ONLY for the same events that would legitimately reboot u_cpu
-    // (never for a PMU power-cycle, which leaves cpu_core_rst_n at 1
-    // throughout). u_cpu itself, u_apb_dbg_cdc's m_rst_n_i, and the ISO_CPU
-    // clamp all correctly stay on cpu_domain_rst_n / pmu_cpu_iso_en_sync —
-    // this fix touches ONLY u_cpu_axi_cdc's s_rst_n_i.
-    //
-    // Safety re-verified (bead 2k8 task; do not re-derive, but do re-check
-    // if this bridge's parameters or the arbiter's grant policy ever change):
-    //   1. R-FIFO depth sufficiency: rv32i_cache_arbiter.sv's grant_q FSM
-    //      (GRANT_NONE/GRANT_IC_RD/GRANT_DC_RD/GRANT_DC_WR) holds a single
-    //      grant until RLAST (read) or BVALID+BREADY (write) before it can
-    //      grant again, so at most ONE outstanding read burst exists at a
-    //      time = 4 beats for a 16 B cache line. async_axi_fifo's R_DEPTH
-    //      defaults to 8 and this instantiation below does not override any
-    //      *_DEPTH parameter — 2x margin, confirmed.
-    //   2. Cross-coupled reset root stays legitimate: rst_both_n =
-    //      s_rst_n_i & m_rst_n_i becomes cpu_core_rst_n & core_rst_n — both
-    //      still POR/PLL-lock-derived (see their respective declaration
-    //      comments above), still a common root, satisfying the same
-    //      contract OpenTitan's prim_sync_reqack and AMD PG059 require.
-    //   3. No retention mode is lost: PMU power-down never reset u_cpu even
-    //      before this fix (gated clock + synchronous reset already made it
-    //      retention-by-construction on the CPU side), so nothing depended
-    //      on the bridge flushing during a power-cycle.
-    //   Also re-verified: async_axi_fifo.sv's ">= SYNC_STAGES+1 periods of
-    //   the OTHER clock" reset contract still holds for s_rst_n_i under the
-    //   new wiring — cpu_core_rst_n's low window is a SUBSET of
-    //   cpu_domain_rst_n's old low window (cpu_domain_rst_n additionally
-    //   drops for PMU-only events cpu_core_rst_n does not), and s_clk_i
-    //   (cpu_gated_clk) is proven (see u_cpu_clk_dis_sync's ordering note
-    //   above) to tick throughout cpu_core_rst_n's own low window — the same
-    //   property the pre-fix analysis below this note used to rely on.
-    //
-    // NOT fixed by this change (still open, still accepted, Phase 6 scope):
-    // the no-drain/quiesce gap at soc_top.sv:83-93 — a mid-burst CPU AXI
-    // transaction in flight when the PMU clock-gates is unaddressed by this
-    // rewiring; it can still leave a crossbar SLAVE engine wedged on a
-    // response that will never come, independent of whether this CDC
-    // bridge's own pointers are retained. The upstream fix is PULP-style
-    // axi_isolate (count outstanding transactions, assert isolated_o only at
-    // zero, then reset) — not implemented here.
-    //
-    // async_axi_fifo.sv's contract requires each of s_rst_n_i/m_rst_n_i to be
-    // held low for >= SYNC_STAGES+1 periods of the OTHER face's clock (see
-    // async_axi_fifo.sv header). Before the GH #93-fix above, this was
-    // VIOLATED for s_rst_n_i (= cpu_domain_rst_n as it was wired THEN): s_clk_i
-    // is cpu_gated_clk, which the pre-fix clk_en sync stopped completely for
-    // the entire time cpu_domain_rst_n was low — i.e. s_clk_i saw ZERO
-    // periods (not SYNC_STAGES+1) during s_rst_n_i's assertion. With the
-    // GH #93 u_cpu_clk_dis_sync fix, cpu_gated_clk = cpu_core_clk runs
-    // unconditionally throughout the entire cpu_core_rst_n-low window (see
-    // the ordering note above u_cpu_clk_dis_sync), so s_clk_i ticks
-    // throughout s_rst_n_i's assertion under the CURRENT (cpu_core_rst_n)
-    // wiring too — the contract is met for the cold-boot/PLL-relock case.
+    // u_cpu_axi_cdc is the one CDC boundary between cpu_gated_clk and core_clk. Its reset is a hard flush.
+    // s_rst_n_i is cpu_core_rst_n. Do not change it to cpu_domain_rst_n.
+    // A PMU power cycle must keep the bridge state, as it keeps u_cpu. cpu_domain_rst_n also drops for the PMU reset.
+    // A flush would lose a response that u_cpu still waits for.
+    // Known gap: a mid-burst CPU transaction at clock gating can still wedge a crossbar slave engine. No drain step exists.
+    // s_clk_i ticks throughout the cpu_core_rst_n low window, so the reset-width rule of async_axi_fifo holds.
     // =========================================================================
     async_axi_fifo u_cpu_axi_cdc (
         .scanmode_i  (dft_scan_mode),
@@ -1692,9 +1045,7 @@ module soc_top
     assign xbar_m_bready  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_bready_raw;
     assign xbar_m_rready  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_rready_raw;
     assign gif_axil_arvalid   = pmu_gpu_iso_en ? 1'b0 : gpu_gif_arvalid_raw;
-    // bead h3lm: m_axil_if_rready is the ifetch R-channel accept - the one GPU->fabric
-    // handshake output the original ISO_GPU clamp set missed (found by the UPF audit,
-    // tools/verif/check_upf.py). Clamped like the other four ready/valid outputs.
+    // gif_axil_rready is clamped by pmu_gpu_iso_en like the other ready and valid outputs.
     assign gif_axil_rready    = pmu_gpu_iso_en ? 1'b0 : gpu_gif_rready_raw;
     assign gpu_irq_o          = pmu_gpu_iso_en ? 1'b0 : gpu_irq_raw;
 
@@ -1947,12 +1298,8 @@ module soc_top
     );
 
     // =========================================================================
-    // MBIST (DFT Stage 4, beads j41m.14 / j41m.10; Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing)
-    //   Core-domain controller for the two SoC-level SRAM macros (index 0 = u_sram, 1 = u_npu weight memory),
-    //   the TCK -> core_clk control-word crossing (depth-2 cdc_gray_fifo) and the status return. Started and
-    //   read ONLY through the TAP (MBIST_CTRL / MBIST_STATUS); no bus slave decodes to it. With the TAP idle or
-    //   in reset (trst_ni = 0) bist_en is 0 and both collars are pass-through.
-    //   The CPU-domain half (MBIST_CPU = 1) drives the CPU macro's mbist_* boundary ports (section 16.7).
+    // MBIST. The core-domain controller tests the two SoC-level SRAM macros, u_sram and the NPU weight memory.
+    // Only the TAP starts it. No bus slave decodes to it.
     // =========================================================================
     logic         mb_bist_en;
     logic         mb_ce;
@@ -2138,7 +1485,7 @@ module soc_top
     );
 
     // =========================================================================
-    // PWM — APB slave (apb_psel[APB_PWM]), Phase 6a-2 (bead claude_verilog_test-f7vs.6)
+    // PWM APB slave (apb_psel[APB_PWM]).
     // =========================================================================
     pwm_controller #(
         .ADDR_W (12),
@@ -2160,7 +1507,7 @@ module soc_top
     );
 
     // =========================================================================
-    // WDT — APB slave (apb_psel[APB_WDT]), Phase 6a-3 (bead claude_verilog_test-f7vs.7)
+    // WDT APB slave (apb_psel[APB_WDT]).
     // core_clk domain. irq_o -> interrupt_controller bit 7; wdt_rst_req_o is the
     // top-level bite pin AND (via RST_EN) the CPU-domain reset source, see
     // u_cpu_wdt_rst_sync above.
@@ -2185,7 +1532,7 @@ module soc_top
     );
 
     // =========================================================================
-    // TRNG — APB slave (apb_psel[APB_TRNG]), Phase 6a-4 (bead claude_verilog_test-f7vs.8)
+    // TRNG APB slave (apb_psel[APB_TRNG]).
     // core_clk domain, no top-level pins: the entropy source is an `ifdef-swapped
     // sub-module (trng_lfsr_entropy by default, trng_ro_sky130 under TRNG_RO_SKY130),
     // not a port. irq_o -> interrupt_controller bit 8. The default build is a
@@ -2209,7 +1556,7 @@ module soc_top
     );
 
     // =========================================================================
-    // I2C — APB slave (apb_psel[APB_I2C]), Phase 6a-5 (bead claude_verilog_test-f7vs.9)
+    // I2C APB slave (apb_psel[APB_I2C]).
     // core_clk domain. Open-drain triplets, NO tristate (same convention as GPIO): `_oe_o` is
     // the real control (1 = drive low, 0 = release), `_o` is hard-tied 0 inside the module and
     // dead, `_i` is the asynchronous sensed pad level (synchronised inside u_i2c). External
@@ -2240,13 +1587,9 @@ module soc_top
     );
 
     // =========================================================================
-    // CRYPTO — AES-128 / SHA-256 accelerator, APB slave (apb_psel[APB_CRYPTO]),
-    // Phase 6b (bead claude_verilog_test-f7vs.10). core_clk domain, single clock, NO asynchronous
-    // inputs and NO top-level pins (register-only), so no cdc_sync and no SDC false-path apply.
-    // aes128_core / sha256_core are instantiated inside crypto_accel. Default EN_AES = EN_SHA = 1,
-    // SBOX_PARALLEL = 16. irq_o -> interrupt_controller bit 10 (level-held).
-    // NOT production cryptography: see the crypto_accel.sv header NON-GOALS (no side-channel
-    // resistance; the key is writable by any bus master and its shadow is exposed through scan).
+    // CRYPTO - AES-128 / SHA-256 accelerator, APB slave (apb_psel[APB_CRYPTO]).
+    // core_clk domain only. It has no asynchronous inputs and no top-level pins. irq_o goes to interrupt_controller bit 10.
+    // This block is not production cryptography. See the crypto_accel.sv header NON-GOALS.
     // =========================================================================
     crypto_accel #(
         .ADDR_W (12)
@@ -2270,8 +1613,8 @@ module soc_top
     );
 
     // =========================================================================
-    // NPU — INT8 4x4 weight-stationary MAC array, APB slave (apb_psel[APB_NPU]),
-    // Phase 6c (bead claude_verilog_test-f7vs.11). core_clk domain, single clock, NO asynchronous
+    // NPU - INT8 4x4 weight-stationary MAC array, APB slave (apb_psel[APB_NPU]).
+    // core_clk domain, single clock, NO asynchronous
     // inputs and NO top-level pins (register-only), so no cdc_sync and no SDC false-path apply.
     // npu_mac_array / npu_weight_mem are instantiated inside npu_top; the weight store is one
     // 4 KB SRAM macro. Default EN_NPU = 1. irq_o -> interrupt_controller bit 11 (level-held).
@@ -2306,14 +1649,6 @@ module soc_top
     //                     GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
     // TIMER slot tied 0: timer IRQ goes directly to CPU MTIP; routing it here
     // too would double-count the event.
-    // Phase 6 (bead claude_verilog_test-f7vs.2): N_SOURCES pre-allocated 6 -> 12;
-    // bit 6 (PWM) is now driven by u_pwm above (Phase 6a-2, bead
-    // claude_verilog_test-f7vs.6); bit 7 (WDT) by u_wdt above (Phase 6a-3, bead
-    // claude_verilog_test-f7vs.7); bit 8 (TRNG) by u_trng above (Phase 6a-4, bead
-    // claude_verilog_test-f7vs.8); bit 9 (I2C) by u_i2c above (Phase 6a-5, bead
-    // claude_verilog_test-f7vs.9); bit 10 (CRYPTO) by u_crypto above (Phase 6b, bead
-    // claude_verilog_test-f7vs.10); bit 11 (NPU) by u_npu above (Phase 6c, bead
-    // claude_verilog_test-f7vs.11).
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),
@@ -2336,44 +1671,10 @@ module soc_top
     );
 
     // =========================================================================
-    // GH #86: APB4 CDC bridge for the APB_PLL slot.
-    //
-    // apb_interconnect is purely combinational (no clock port, see
-    // soc_bus.sv "5. APB interconnect"); the APB transaction is driven by
-    // axil_to_apb in the core_clk domain, while u_pll_sub samples
-    // psel/penable and returns pready/prdata on clk_i / rst_n_i — the raw
-    // reference clock, per pll_subsystem.sv's bootstrap rule (u_pll_sub is
-    // the SOURCE of core_clk/pll_locked, so it cannot itself run on core_clk
-    // without a deadlock — see pll_subsystem.sv header). With PLL_IMPL=
-    // "RNM", core_clk != clk_i, so psel/penable/pready/prdata on this slot
-    // crossed a clock boundary with no synchroniser. GH #93 fixed the
-    // identical mechanism for the SECOND PLL (APB_PLL2, see u_apb_pll2_cdc
-    // below) and explicitly named this slot (GH #86) as the same bug left
-    // unfixed; this bridge closes it, modelled line-for-line on
-    // u_apb_pll2_cdc.
-    //
-    // Source (s_*) face is core_clk / core_rst_n (matches
-    // apb_interconnect/axil_to_apb, same as u_apb_pll2_cdc's s_* face).
-    // Destination (m_*) face is clk_i / rst_n_i — the RAW reference clock,
-    // NOT core_clk and NOT cpu_clk_i — matching u_pll_sub's own clk_i /
-    // rst_n_i (pll_subsystem.sv's bootstrap rule).
-    //
-    // Instantiated UNCONDITIONALLY (not generate-guarded on PLL_IMPL=="RNM"):
-    // a guarded bridge would mean the default STUB regression exercises a
-    // different netlist from the one being fixed, and u_apb_pll2_cdc set the
-    // precedent of an unconditional bridge. In STUB mode core_clk == clk_i,
-    // so this is a latency change only (one 4-phase RZ handshake added to
-    // every APB_PLL access), not a functional one.
-    //
-    // Bootstrap safety (no self-brick risk): the bridge's source face is
-    // held in reset by core_rst_n = rst_n_i & pll_locked, i.e. the bridge
-    // cannot pass a transaction until the PLL has already locked once. This
-    // cannot deadlock the PLL itself: pll_apb_regs' CONTROL register resets
-    // to 32'h0000_0001 (pll_enable=1) and bit[0] is excluded from WMASK
-    // (non-clearable — the GH #89 anti-brick fix, commit 110d7ac), so the
-    // PLL always enables and locks with zero APB access required. Putting a
-    // reset-gated bridge in front of the (already non-clearable) enable
-    // register therefore cannot recreate that self-brick.
+    // APB4 CDC bridge for the APB_PLL slot (u_apb_pll_cdc).
+    // The s face uses core_clk and core_rst_n. The m face uses clk_i and rst_n_i, the raw reference of u_pll_sub.
+    // The bridge is instantiated for every PLL_IMPL. In STUB mode it only adds latency.
+    // The bridge cannot deadlock the PLL. pll_enable resets to 1 and bit 0 cannot be cleared.
     // =========================================================================
     logic        pll_m_psel, pll_m_penable, pll_m_pwrite;
     logic [11:0] pll_m_paddr;
@@ -2413,22 +1714,8 @@ module soc_top
     );
 
     // =========================================================================
-    // Pre-Phase-6 #3: PLL subsystem (pll_clkgen + pll_apb_regs + reset glue)
-    //
-    // pll_subsystem encapsulates:
-    //   • pll_clkgen (STUB or RNM via PLL_IMPL)
-    //   • pll_apb_regs (APB4 config slave for CONTROL/STATUS registers)
-    //   • pll_rst_n = rst_n_i & pll_enable
-    //   • core_rst_n = rst_n_i & pll_locked
-    //
-    // IMPORTANT — clock-domain rule (preserved from prior inline form):
-    //   u_pll_sub and all logic inside it run on clk_i / rst_n_i.
-    //   They are the SOURCE of core_clk and pll_locked; placing them on
-    //   core_clk creates a bootstrap deadlock.  See pll_subsystem.sv header
-    //   for the full rationale. The core_clk <-> clk_i CDC on this module's
-    //   APB4 port (GH #86) is fixed by u_apb_pll_cdc above — u_pll_sub's
-    //   psel/penable/... are now driven by that bridge's m_* face, not
-    //   directly by apb_interconnect.
+    // pll_subsystem wraps pll_clkgen and pll_apb_regs. u_pll_sub and all its logic run on clk_i and rst_n_i.
+    // Running them on core_clk creates a bootstrap deadlock.
     // =========================================================================
     pll_subsystem #(
         .PLL_IMPL        (PLL_IMPL),
@@ -2443,8 +1730,7 @@ module soc_top
         .scan_rst_ni (dft_scan_rst_n),
         .scan_clk_i  (dft_test_clk),
         .ref_clk_o   (pll_ref_clk),
-        // APB4 slave ← u_apb_pll_cdc m_* face (clk_i domain — GH #86 fix,
-        // see CDC bridge note above)
+        // APB4 slave. It takes the m face of u_apb_pll_cdc, in the clk_i domain.
         .psel        (pll_m_psel),
         .penable     (pll_m_penable),
         .pwrite      (pll_m_pwrite),
@@ -2464,27 +1750,8 @@ module soc_top
     assign pll_locked_o = pll_locked;
 
     // =========================================================================
-    // GH #93: APB4 CDC bridge for the APB_PLL2 slot.
-    //
-    // apb_interconnect is purely combinational (no clock port, see
-    // soc_bus.sv "5. APB interconnect"); the APB transaction is driven by
-    // axil_to_apb in the core_clk domain, while u_cpu_pll_sub samples
-    // psel/penable and returns pready/prdata in the cpu_clk_i domain. Once
-    // GH #93 makes cpu_clk_i a genuinely independent reference (no longer
-    // required to equal clk_i for correctness elsewhere), that handshake
-    // would cross a clock boundary with no synchroniser — the same
-    // mechanism GH #86 fixed for the APB_PLL slot (see u_apb_pll_cdc above),
-    // but live in the DEFAULT STUB build as soon as the two reference
-    // clocks differ.
-    //
-    // Fixed here (not deferred): apb_cdc_bridge.sv implements a 4-phase RZ
-    // handshake between the two domains (bead claude_verilog_test-rfz;
-    // originally a 2-phase NRZ toggle handshake) — see that file's header
-    // for the full protocol and CDC argument. Source (s_*) face is core_clk
-    // (matches apb_interconnect/axil_to_apb); destination (m_*) face is
-    // cpu_clk_i (matches u_cpu_pll_sub's own clk_i — pll_subsystem.sv:11-17's
-    // bootstrap rule requires its APB regs run on the raw reference, not
-    // cpu_core_clk).
+    // APB4 CDC bridge for the APB_PLL2 slot (u_apb_pll2_cdc).
+    // apb_cdc_bridge crosses the APB_PLL2 slot. The s face uses core_clk. The m face uses cpu_clk_i, the raw reference of u_cpu_pll_sub.
     // =========================================================================
     logic        pll2_m_psel, pll2_m_penable, pll2_m_pwrite;
     logic [11:0] pll2_m_paddr;
@@ -2524,14 +1791,8 @@ module soc_top
     );
 
     // =========================================================================
-    // GH #92/#93: second pll_subsystem instance — CPU-domain reference clock,
-    // now the CPU's real clock root.
-    //
-    // Same bootstrap rule as u_pll_sub above: u_cpu_pll_sub and everything
-    // inside it run on cpu_clk_i / cpu_rst_n_i (its own raw reference), never
-    // on a generated clock. cpu_core_clk / cpu_core_rst_n feed u_cpu_cg and
-    // the CPU-domain reset tree (see PMU sequencing nets above). cpu_pll_locked
-    // is exported at cpu_pll_locked_o for observability, mirroring pll_locked_o.
+    // Second pll_subsystem, on the CPU-domain reference. Everything inside runs on cpu_clk_i and cpu_rst_n_i.
+    // cpu_core_clk and cpu_core_rst_n feed u_cpu_cg and the CPU-domain reset tree. cpu_pll_locked goes to cpu_pll_locked_o.
     // =========================================================================
     pll_subsystem #(
         .PLL_IMPL        (PLL_IMPL),
@@ -2558,7 +1819,7 @@ module soc_top
         .prdata      (pll2_m_prdata),
         .pready      (pll2_m_pready),
         .pslverr     (pll2_m_pslverr),
-        // PLL outputs — feed u_cpu_cg and the CPU-domain reset tree (GH #93)
+        // PLL outputs. They feed u_cpu_cg and the CPU-domain reset tree.
         .core_clk    (cpu_core_clk),
         .core_rst_n  (cpu_core_rst_n),
         .pll_locked_o(cpu_pll_locked)
@@ -2568,12 +1829,7 @@ module soc_top
     assign cpu_pll_locked_o = cpu_pll_locked;
 
     // =========================================================================
-    // Pre-Phase-6 #5 (GH #98/#99/#100): PMU (behavioral power-mode sequencer)
-    //
-    // Runs on core_clk/core_rst_n (PD_PERIPH, always-on) — the PMU sequences
-    // the CPU/GPU domains, so it must never itself be clock-gated or held in
-    // one of the domain resets it drives. See pmu.sv header for the register
-    // map, FSM, and reset-style rationale.
+    // PMU. It runs on core_clk and core_rst_n. It must never be clock-gated or held in a domain reset.
     // =========================================================================
     pmu #(
         .ADDR_W (12)
@@ -2605,56 +1861,16 @@ module soc_top
         .gpu_ret_restore_o   (pmu_gpu_ret_restore)
     );
 
-    // CPU/GPU integrated clock gates (glitch-free ICG), enabled by the PMU's
-    // per-domain clk_en. At pmu.sv reset default (clk_en=1) these are
-    // transparent, so cpu_gated_clk == cpu_core_clk / gpu_gated_clk ==
-    // core_clk with no firmware PMU writes.
-    //
-    // GH #93: u_cpu_cg is re-sourced from cpu_core_clk (the CPU's own PLL
-    // output) instead of core_clk, gated by ~pmu_cpu_clk_dis_sync (already
-    // synchronised into the cpu_core_clk domain above, INVERTED for reset
-    // safety — see the ordering note above u_cpu_clk_dis_sync — GH #93-fix).
-    // u_gpu_cg is UNCHANGED (still core_clk / pmu_gpu_clk_en directly; the
-    // GPU did not move domains, so its clk_en/rst_n share one clock domain
-    // with the PMU FSM that drives them — no independent-synchroniser race
-    // is possible there, so it needs no equivalent of the AND below).
-    //
-    // GH #90 bead 542 fix: u_cpu_cg's enable is additionally ANDed with
-    // pmu_cpu_rst_n_cpu_sync (see the detailed hazard/skew-tolerance writeup
-    // above u_cpu_clk_dis_sync) so cpu_gated_clk cannot tick while the
-    // CPU-domain-observed PMU reset is asserted, regardless of the relative
-    // timing of the two independent CDC synchronisers feeding this logic.
-    //
-    // ICG glitch-safety (rv32i_clock_gate.sv): en is latched transparent-low
-    // and ANDed with clk, so `en` may only be sampled while clk is low —
-    // any change to `en` while clk is high is invisible to gclk until the
-    // next low phase, which is exactly what makes this ICG glitch-free
-    // regardless of what drives `en`. cpu_gated_clk_en is a combinational AND
-    // of two flop outputs both registered on cpu_core_clk (the same clk
-    // driving this gate) — ~pmu_cpu_clk_dis_sync (u_cpu_clk_dis_sync) and
-    // pmu_cpu_rst_n_cpu_sync (u_cpu_pmu_rst_sync) — so it is a clean,
-    // synchronously-timed signal with no combinational glitch hazard of its
-    // own, same as the single-signal case it replaces — safe to drive `en`
-    // directly.
+    // u_cpu_cg and u_gpu_cg are clock gates that the PMU clk_en enables. At the reset default they are transparent.
+    // u_cpu_cg runs on cpu_core_clk. Its enable is ~pmu_cpu_clk_dis_sync ANDed with pmu_cpu_rst_n_cpu_sync.
+    // u_gpu_cg stays on core_clk with pmu_gpu_clk_en.
+    // cpu_gated_clk_en is a same-clock AND of two flops, so the ICG enable is glitch-free.
     logic cpu_gated_clk_en;
     assign cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync;
 
-    // DFT (j41m.2): dft_test_en forces both gates open in test mode so every flop
-    // behind them is clocked by the (test) clock whatever the PMU says. In scan mode
-    // cpu_core_clk / core_clk ARE the test clock (pll_subsystem), so the gated
-    // clocks are too.
-    // MBIST_CPU = 1: the CPU-domain MBIST run forces this gate open (a TAP-launched quasi-static level, same
-    // contract as test_en; section 16.6). It is OR-ed into the gate ENABLE, not into test_en, so test_en stays the
-    // dft test-enable net (UPF check U07). With MBIST_CPU = 0 there is no CPU controller and the force is constant 0.
-    // HARD_ROOT: cpu_gated_clk is a CTS root (771 register sinks + the CPU macro clock pin). On the Sky130 SoC build
-    // (USE_SKY130_CLKCELLS) it is a hand-instantiated sdlclkp_4 + buf_16, see rv32i_clock_gate.sv. u_gpu_cg stays
-    // behavioural: its output feeds no CTS tree in the Sky130 SoC (GPU is a tie-off), so it must optimise away.
-    // The force is HELD by the macro controller itself (cpu_mbist_busy = status done | busy, which is st_q != IDLE):
-    // the TAP drops mbist_force at the Update-DR of the run = 0 word, a few cpu_core_clk edges BEFORE that word has
-    // crossed into the macro, and with the PMU gate closed the controller would never see it and would be left
-    // with bist_en = 1 (collars on the BIST bus) behind a stopped clock. With the self-hold the gate stays open
-    // until the controller has cleared (done / busy fall one gated edge after run = 0 arrives), then closes.
-    // Found by test_mbist_cpu_macro.py::test_mbist_force_opens_the_closed_clock_gate (c54a).
+    // dft_test_en forces both gates open in test mode. With MBIST_CPU=1 the CPU MBIST run also forces u_cpu_cg open.
+    // cpu_gated_clk is a CTS root. u_gpu_cg stays behavioural.
+    // The CPU MBIST force is held through cpu_mbist_busy until the controller has cleared.
     logic cpu_mbist_busy;
     logic cpu_cg_en;
     assign cpu_mbist_busy = MBIST_CPU ? (mb_cpu_status[0] | mb_cpu_status[1]) : 1'b0;

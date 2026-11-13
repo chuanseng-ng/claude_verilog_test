@@ -1,121 +1,36 @@
-// cdc_sync.sv
-// GH #91 — Generic multi-flop CDC synchroniser.
+// cdc_sync - multi-flop synchroniser for a single bit or a gray-coded bus.
 //
-// !!! SCOPE WARNING — READ BEFORE INSTANTIATING !!!
-// This module is valid ONLY for:
-//   * single-bit signals (WIDTH = 1), or
-//   * multi-bit buses that are GRAY-CODED such that at most one bit changes
-//     per source-clock edge (e.g. a registered gray pointer).
-// It is NOT safe for an arbitrary multi-bit binary bus. Independent bits can
-// each resolve metastability in a different destination-clock cycle, so the
-// sampled word can transiently equal a value the source side never drove.
-// A binary bus MUST be converted to gray code (see cdc_gray_fifo.sv) or
-// crossed via a full handshake protocol before using this primitive.
-//
-// (* magic_cdc *) is placed on the flop array so GH #95's cdc_snitch
-// structural CDC checker classifies every crossing through this module as an
-// intentional, reviewed synchroniser (`CDC`) rather than an unmarked
-// crossing (`BAD`/`OKX`). Do not remove the attribute.
-//
-// Used 10x by the GH #91 dual-clock AXI4 bridge (2 gray pointers x 5
-// cdc_gray_fifo instances) and reusable anywhere else a single-bit or
-// gray-coded signal must cross clock domains.
-//
-// Reset: asynchronous assert, synchronous deassert, active-low (new-module
-// discipline, Doc: um:guide:coding-guidelines §1.4). rst_n_i is
-// expected to already be a per-domain-synchronised reset (see
-// cdc_reset_sync.sv) at the instantiation site.
-//
-// Parameters (STAGES and RESET_VAL together):
-//   WIDTH      bits crossed; see the scope warning above for WIDTH > 1.
-//   STAGES     number of flop ranks in the chain. Default 2; elaboration
-//              fails below 2 (a single flop gives no settling time). The
-//              latency from a d_i change to q_o is exactly STAGES
-//              destination-clock edges. NOTE: the module name says "2ff" for
-//              historical reasons; STAGES > 2 is legal and the name is then a
-//              slight misnomer.
-//   RESET_VAL  value of EVERY one of the STAGES ranks while rst_n_i is
-//              asserted (bead claude_verilog_test-xtaa). It is therefore the
-//              value q_o shows during reset and, after release, until the
-//              first post-release d_i sample has propagated through STAGES
-//              edges. Default '0 keeps every pre-existing instance
-//              bit-identical. Use RESET_VAL = 1 for an idle-high line (e.g.
-//              uart_rx_i): the reset value must be one that is safe to
-//              advertise downstream -- for an idle-high line a reset value of
-//              0 reads as an active level (a false UART start bit) for the
-//              reset window. This replaces the older invert-in / invert-out
-//              workaround (soc_top.sv u_cpu_clk_dis_sync, commit 4398c2e),
-//              which remains valid and is left as is. RESET_VAL is per-bit,
-//              so a mixed pattern is legal, but the scope warning above still
-//              applies: it does not make a binary bus safe.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
-//
-// ── On simulating CDC delay (bead claude_verilog_test-rvs) ────────────────
-// This module now carries an optional simulation-time randomised settling-
-// delay injector on stage 0 of the flop array (RAND_CDC_DELAY_EN, default
-// OFF at every instantiation site). This is the SECOND attempt: the first
-// (commit 4197139) landed as disabled scaffolding and was reverted (commit
-// be485fd) because its model was wrong — it could latch a hold permanently
-// and stick the synchroniser instead of delaying it by a cycle. See "Why
-// this converges" below for the precise difference.
-//
-// The finding that motivated this stands regardless of either attempt's
-// fate, and is worth recording here because this repo has repeatedly
-// written the opposite: the claim that "metastability injection is not
-// modelable in Verilator/cocotb" (design_state.json, CLAUDE.md, several test
-// docstrings) is imprecise. What IS modelable, and what OpenTitan actually
-// does, is a randomised EXTRA-CYCLE-OF-SETTLING-DELAY on a synchroniser's
-// first stage — plain RTL, no timing control, so it works in a 2-state
-// cycle-based simulator. That is precisely the fault model that reproduces a
-// same-edge-assumption bug, which is the class this repo hit twice in GH #93
-// (fr_57f49b7f9b29 and fr_280f3ac18c66) and which every 1:1-ratio,
-// lockstep-reset unit test was structurally blind to.
-//
-// What remains genuinely NOT modelable here is analog metastability itself —
-// an intermediate, non-0/1, potentially oscillating voltage on Q. 4-state X
-// injection at the setup/hold boundary is a different and heavier technique
-// this module does not attempt.
-//
+// Function: The module passes d_i through STAGES flops on clk_i. q_o shows the result.
+//   A change on d_i reaches q_o after exactly STAGES edges of clk_i.
+//   The flop array carries the magic_cdc attribute. Do not remove it.
+// Parameters:
+//   WIDTH      Number of bits. Use more than 1 only for a gray-coded bus.
+//   STAGES     Number of flop ranks. The default is 2. The value must be at least 2.
+//   RESET_VAL  Value of every rank while rst_n_i is low. The default is '0. Use 1 for an idle-high line.
+//   RAND_CDC_DELAY_EN, RAND_CDC_DELAY_PCT, RAND_CDC_DELAY_SEED  Simulation-only random settling delay. The default is off.
+// Clocks and resets: clk_i is the destination clock. rst_n_i is active low.
+//   It asserts asynchronously and deasserts synchronously. It is expected to be already synchronised to clk_i (see cdc_reset_sync).
+// Caller rules:
+//   - Use WIDTH greater than 1 only if at most one bit changes per source-clock edge.
+//   - Never cross an arbitrary binary bus. Convert it to gray code or use a full handshake.
+//   - RESET_VAL must be a value that is safe to show downstream during reset.
+//   - The module has no `default_nettype directive.
+// Doc: ds:mod:cdc-sync, tm:mod:cdc-sync, cr:mod:cdc-sync
 // Ported from (Apache-2.0, lowRISC contributors — concept and reset/seed
 // discipline adapted to this repo's house style, not a verbatim copy):
 //   https://github.com/lowRISC/opentitan/blob/master/hw/ip/prim/rtl/prim_cdc_rand_delay.sv
 //   https://github.com/lowRISC/opentitan/blob/master/hw/ip/prim_generic/rtl/prim_flop_2sync.sv
-//
-// Why this converges where the reverted attempt did not: the reverted
-// version redrew its hold decision (`hold_sel`) ONLY inside `always @(d_i)`,
-// with nothing that ever cleared it back to 0 once d_i stopped moving — so a
-// hold could latch and stage0_d = sync_q[0] became a permanent self-loop
-// (measured: forcing it on gave async_axi_fifo TESTS=26 PASS=3 FAIL=23).
-// This version instead tracks `d_prev_q`, a plain register that is updated
-// EVERY destination-clock edge unconditionally (`d_prev_q <= d_i`, no
-// dependence on the hold decision). The hold decision is only even DRAWN
-// while `d_i !== d_prev_q`, and because d_prev_q always catches up to d_i on
-// the very next edge regardless of what was decided, that window can never
-// span more than one destination-clock cycle — there is no state here that
-// can persist once d_i has settled. This is the same guarantee OpenTitan's
-// own design provides via a differently-shaped mechanism (an unconditional
-// synchronous clear of `data_sel` on every posedge, racing a combinational,
-// event-gated re-arm on `src_data_i`) — both designs take BOTH the new
-// source value and the previously-captured value and evaluate the decision
-// in the DESTINATION clock's process, which is exactly the property the
-// reverted attempt lacked.
-//
-// Per house style: no `default_nettype` directive (Spyglass IND, CODING
-// GUIDELINES §1.3) — matching pmu.sv:123 and the sibling cdc_reset_sync.sv /
-// cdc_gray_fifo.sv. Implicit-net detection is covered by Verilator
-// (IMPLICIT/UNDRIVEN) and Verible instead.
 
 module cdc_sync #(
     parameter int unsigned WIDTH  = 1,
     parameter int unsigned STAGES = 2,
 
-    // Value of every stage while rst_n_i is asserted (see header). Plain
+    // Value of every stage while rst_n_i is asserted (see ds:mod:cdc-sync). Plain
     // packed-vector parameter sized by WIDTH; no struct member select.
     parameter logic [WIDTH-1:0] RESET_VAL = '0,
 
-    // Simulation-only randomised settling-delay injection on stage 0 (see
-    // header). Defeatable per instance; OFF by default at every existing
+    // Simulation-only randomised settling-delay injection on stage 0 (see cr:mod:cdc-sync).
+    // Defeatable per instance; OFF by default at every existing
     // instantiation site, so today's bit-exact deterministic regression is
     // unaffected unless a testbench explicitly opts in. Unused outside
     // `ifdef SIMULATION (every synthesis/lint/CDC-gate elaboration) — same
@@ -143,12 +58,7 @@ module cdc_sync #(
     output logic [WIDTH-1:0] q_o
 );
 
-    // Elaboration-time guard: STAGES < 2 defeats the purpose of a multi-flop
-    // synchroniser (single-flop capture gives no metastability settling
-    // time). Fails immediately under lint/synth elaboration, not just sim
-    // (generate-scope $fatal, not wrapped in `initial` — see
-    // rtl/soc/sram_controller.sv:110-126 for why `initial $fatal` alone is
-    // not sufficient under `verilator --lint-only`).
+    // STAGES must be at least 2. The $fatal runs at elaboration, outside an `initial` block.
     if (STAGES < 2) begin : g_stages_check
         $fatal(1, "cdc_sync: STAGES (%0d) must be >= 2", STAGES);
     end
@@ -168,7 +78,7 @@ module cdc_sync #(
     if (RAND_CDC_DELAY_EN) begin : g_rand_cdc_delay
         // Tracks d_i unconditionally, every destination-clock edge, with NO
         // dependence on the hold decision below. This is what guarantees
-        // self-clearing convergence (see "Why this converges" in the header)
+        // self-clearing convergence (see tm:mod:cdc-sync)
         // — d_prev_q always catches up to d_i on the very next edge whether
         // or not that edge's capture was held.
         logic [WIDTH-1:0] d_prev_q;

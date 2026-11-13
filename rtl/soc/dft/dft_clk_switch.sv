@@ -1,128 +1,21 @@
-// dft_clk_switch.sv
-// DFT Stage 1b (bead claude_verilog_test-j41m.3, GH #244).
+// dft_clk_switch - glitch-free enable-before-switch clock selector for the TAP clock and the pin test clock.
 //
-// Glitch-free ENABLE-BEFORE-SWITCH clock selector between the TAP's scan clock
-// (A, a gated TCK) and the tester's pin test clock (B, scan_clk_i). It resolves
-// open question Q-CLK of Doc: tm:ch:dft-architecture:155-clockreset-treatment-and-the-declared-crossings: the plain
-// 2:1 mux `serial ? tck_scan_gated : scan_clk_i` is replaced by this module.
-//
-//   clk_o = (clk_a_i & en_a_q & tck_i) | (clk_b_i & en_b_q)
-//
-// en_a_q and en_b_q are enable LATCHES, each transparent while ITS OWN raw clock
-// is low (A's phase reference is the raw tck_i, not the gated clk_a_i, which
-// idles low whether or not TCK runs) and holding while it is high. An enable
-// therefore changes only while the clock it gates is low, so the AND term is 0
-// before, during and after every enable change: no runt pulse and no extra edge
-// on either source, whatever the phase relation between A and B.
-//
-// Why the A term carries a third input, tck_i. clk_a_i is the GATED tck_i (clock
-// gate = latch + AND) and so falls AFTER tck_i: one delta cycle in zero-delay
-// simulation, the gate's delay in silicon. The A latch opens on !tck_i, so with
-// en_a_d already 1, en_a_q can rise while clk_a_i is still high, and
-// (clk_a_i & en_a_q) alone would emit a runt (zero width in RTL; Xcelium reports
-// it, and an event-ordering-dependent result is not acceptable in either
-// simulator). Guarding the A term with tck_i kills the race at the OUTPUT instead:
-// tck_i has already fallen in the delta in which the latch opens, so the A term
-// is 0 when en_a_q rises, whatever the gate's delay. Functionally the term is
-// redundant (clk_a_i high implies tck_i high, apart from that skew interval); it
-// costs one extra AND input on the clock path and is the output-side form of the
-// clock-gating hold check of en_a_q against the fall of clk_a_i.
-//
-// Why the latch itself must stay tck-only. The first fix for this race opened
-// the A latch on `!tck_i && !clk_a_i`. That is correct in simulation but breaks
-// the DFT TAP clock rule: tools/dft/check_scan_clk_rst.py (make dft-scan-check)
-// requires every TAP-domain sequential cell (u_dft_ctrl.u_clk_sw) to be clocked
-// by the tck_i port ONLY, and a latch gated by clk_a_i traces through the TAP
-// clock gate u_tck_cg. The output guard keeps every sequential cell here on
-// tck_i or scan_clk_i. B needs no such term: clk_b_i is both the gated source and
-// the latch phase (one net, no skew between the two uses), so en_b_q can never
-// change while clk_b_i is high.
-//
-// This differs from the usual flop-only enable-before-switch mux ON PURPOSE. A
-// flop retires the old selection only on an edge of the deselected clock, so a
-// stopped deselected clock deadlocks the switch (the reason section 15.5 first
-// rejected the idea: scan_clk_i is normally STOPPED by the tester). A latch is
-// open for the whole low phase, so a source that idles low can be switched OFF
-// with no clock edge at all. The price is that the latch needs the clock to be
-// low, which is the contract below.
-//
-// Handshake (cross-coupled enables, both enables never high together):
-//
-//   en_a_d = ~rst_active &  sel_a_i & b_off_in_a     (b_off_in_a = ~en_b_q seen by tck_i)
-//   en_b_d =  rst_active | (~sel_a_i & ~a_on_in_b)   (a_on_in_b  =  en_a_q seen by clk_b_i)
-//
-// A source is enabled only after the other source's latch has been seen OFF
-// through a 2-FF synchroniser in the enabling source's own clock domain. A
-// source is disabled directly (no synchroniser) by its own select term, which is
-// what lets the deselected source drop with no edge on it.
-//
-// Polarity of the B->A crossing. The B-to-A synchroniser carries ~en_b_q ("B is
-// off"), not en_b_q. cdc_sync resets to 0, and 0 must mean the TRUE reset
-// state: B is ON at reset, so "B off" resets to 0. Carrying en_b_q would reset to
-// "B off" while B is on and let A enable over a running B if sel_a_i were already
-// high at reset release. The A->B crossing carries en_a_q (A is OFF at reset, so
-// 0 is exact). Both synchronisers are cleared by rst_n_i asynchronously, so the
-// post-reset state is defined: en_a_q = 0, en_b_q = 1, b_off_in_a = a_on_in_b = 0.
-//
-// Reset. rst_n_i is a LEVEL: while low, en_a_d = 0 and en_b_d = 1, i.e. the pin
-// clock B is selected and the TAP clock A is off. No reset edge is needed (a run
-// that starts with rst_n_i = 0 comes up with en_b_q = 1 once clk_b_i is low). The
-// Stage 1a pins-only operation (TAP held in reset, TCK stopped, scan_clk_i
-// toggling) therefore passes scan_clk_i through unchanged: clk_o = clk_b_i. The
-// first clk_b_i pulse after power-up is passed only if clk_b_i was low once
-// before it (the latch must have opened); a clk_b_i that powers up HIGH loses
-// nothing but that first partial pulse.
-//
-// Contract and consequences (all four matter to the tester, none is a hazard to
-// the SoC):
-//
-//   1. serial -> parallel (sel_a_i falls, select B). en_a_q drops at once (TCK is
-//      low in Update). en_b_q rises when the A->B synchroniser reports A off AND
-//      clk_b_i is in a low phase. That synchroniser only advances on clk_b_i
-//      edges, so: if clk_b_i was TOGGLING while A was selected, it has seen A on
-//      and needs TWO clk_b_i rising edges (then the next low phase) to see A off:
-//      the first pulse reaches clk_o about 3 clk_b_i cycles after sel_a_i falls,
-//      and until then clk_o stays LOW (safe, no extra edge). If clk_b_i was
-//      STOPPED (idle low) while A was selected, the synchroniser still holds its
-//      pre-A "A off" value and B is enabled at the very next low phase, so the
-//      first clk_b_i pulse after the switch passes at once. Both are glitch-free:
-//      the new enable is raised only in a low phase of its own clock, and A is
-//      low (sel_a_i falls on a TCK falling edge, the gate is closed in Update).
-//      If clk_b_i never runs the enable may never rise and clk_o stays low.
-//   2. parallel -> serial (sel_a_i rises, select A). en_b_d falls the instant
-//      sel_a_i rises, and en_b_q follows during any low phase of clk_b_i: NO edge
-//      on clk_b_i is needed provided clk_b_i idles LOW (the usual tester state).
-//      If clk_b_i is stopped HIGH, its latch stays opaque, en_b_q stays 1 and the
-//      switch cannot complete. en_a_q rises after the B->A synchroniser has seen
-//      B off, which takes TWO tck_i rising edges after sel_a_i rises, then the
-//      next low phase of tck_i. The TAP provides exactly that: sel_a_i is the
-//      falling-edge `serial_o` flop, set after the rising edge that entered an
-//      Update state; Update -> Select-DR -> Capture-DR gives the two TCK rising
-//      edges, en_a_q rises in the low phase of the Capture-DR cycle and the third
-//      rising edge, the one that ends Capture-DR and is the capture edge, passes.
-//      That is zero spare edges; do not shorten the Update -> Capture-DR path.
-//   3. Dwell. sel_a_i must not reverse faster than one full handshake (two clk
-//      cycles of the clock being enabled plus two of the clock being retired).
-//      The TAP cannot reverse it faster than an IR or SCAN_SEL scan (>= 10 TCK).
-//   4. An asynchronous TRST_n (rst_n_i falling) in the middle of an A pulse can
-//      raise en_b_q while the A pulse is still high; clk_o is then the OR of two
-//      high levels, so pulses can MERGE but never get shorter, and no extra edge
-//      is produced. The scan state is destroyed by the reset anyway.
-//
-// Assumptions: clk_b_i idles LOW; clk_a_i idles LOW (a gated TCK always does) and
-// is derived from tck_i, which is RUNNING whenever sel_a_i changes (the TAP's
-// select is a TCK flop, so this holds by construction); sel_a_i changes while
-// clk_a_i is low (true for the TAP: falling TCK edge, gate closed in Update). If
-// a generic user changes sel_a_i while clk_a_i is high the A pulse completes
-// (latch opaque), and a B pulse may MERGE with it, never shorten it.
-//
-// Combinational-clock note: the output OR/AND is a clock-path structure.
-// Synthesis and CTS see two clock roots into one cell and STA sees the enable
-// latches as clock-gating checks (not run in this stage, see Doc: tm:ch:dft-architecture
-// section 15). The two 2-FF synchronisers carry the magic_cdc attribute through
-// cdc_sync. The latches are written with always_latch.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: clk_o = (clk_a_i & en_a_q & tck_i) | (clk_b_i & en_b_q).
+//   A is the gated TCK of the TAP. B is the pin test clock. Each enable is a latch that is open while its own raw clock is low.
+//   A source is enabled only after the other latch is seen off through a 2-FF synchroniser in the enabling clock domain.
+//   A source is disabled directly by its own select term.
+// Clocks and resets: rst_n_i is a level. While it is low, B is selected and A is off.
+//   After reset en_a_q is 0. en_b_q becomes 1 once clk_b_i is low. In the pins-only mode clk_o is clk_b_i.
+// Caller rules:
+//   - clk_b_i must idle low. clk_a_i must idle low and derive from tck_i.
+//   - tck_i must run whenever sel_a_i changes. sel_a_i must change while clk_a_i is low.
+//   - Serial to parallel: the first clk_b_i pulse comes at once if clk_b_i was stopped.
+//     If clk_b_i toggled, it comes about 3 clk_b_i cycles later.
+//   - Parallel to serial: no clk_b_i edge is needed if clk_b_i idles low. If clk_b_i stops high, the switch cannot complete.
+//   - Do not shorten the TAP path Update, Select-DR, Capture-DR. It gives zero spare TCK edges.
+//   - sel_a_i must not reverse faster than one full handshake.
+//   - An asynchronous fall of rst_n_i in the middle of an A pulse can merge pulses. It never shortens one.
+// Doc: ds:mod:dft-clk-switch, tm:mod:dft-clk-switch
 
 module dft_clk_switch (
     input  logic tck_i,     // raw TCK: A-domain handshake clock, A's latch phase and output guard
@@ -150,7 +43,7 @@ module dft_clk_switch (
     // ── Enable latches ───────────────────────────────────────────────────────
     // Transparent while the OWN raw clock is low, hold while it is high. The A latch
     // is deliberately tck_i-only (DFT TAP clock rule); the race with the later fall
-    // of the gated clk_a_i is closed by the tck_i term in the output, see the header.
+    // of the gated clk_a_i is closed by the tck_i term in the output. See tm:mod:dft-clk-switch.
     always_latch begin
         if (!tck_i) begin
             en_a_q = en_a_d;

@@ -1,27 +1,16 @@
-// axi_lite_register_bank.sv
-// Phase 5 (M3) — reusable AXI4-Lite register-file slave.
+// axi_lite_register_bank - AXI4-Lite slave with N_REGS 32-bit registers.
 //
-// A parameterized bank of N_REGS 32-bit registers behind an AXI4-Lite slave
-// port.  M4 peripherals (UART, SPI, timer, IRQ controller, DMA control) instance
-// this for their control/status register space; the M3 interconnect testbench
-// uses it as the stand-in slave for every control-ring slot, so this module is
-// exercised before any peripheral exists.
-//
-// Register semantics
-//   * SW (AXI) writes obey the per-register WMASK: only masked bits change, and
-//     wstrb further gates which byte lanes are written.  A WMASK of all-0 makes
-//     a register read-only to software (status registers).
-//   * HW writes (hw_wen_i / hw_wdata_i) bypass WMASK entirely — peripheral logic
-//     pushes status (e.g. UART RX data, FIFO levels, IRQ pending) directly.  On a
-//     same-cycle SW+HW collision SW wins on the bits inside WMASK and HW wins on the
-//     bits outside it (bead 6o8w), so a fully-masked (WMASK=0) register is HW-owned
-//     and a store to it cannot drop a same-cycle HW update.
-//   * regs_o exposes current values so peripheral logic reads control bits.
-//   * Out-of-range word addresses complete with OKAY: writes are dropped, reads
-//     return 0.  (A 4 KB slot holds far more words than N_REGS.)
-//
-// Protocol: single outstanding write + single outstanding read; AW and W are
-// captured independently then committed together.  Verilator -Wall clean.
+// Function: The bank has one AXI4-Lite slave port. It allows one outstanding write and one outstanding read.
+//   The module captures AW and W independently and commits them together.
+//   Software writes obey WMASK and wstrb. Only masked bits change. WMASK=0 makes a register read-only to software.
+//   Hardware writes use hw_wen_i and hw_wdata_i. They bypass WMASK. regs_o shows the current values.
+// Parameters: N_REGS, ADDR_W, DW, SW, RESET_VAL and WMASK.
+// Clocks and resets: clk is the clock. rst_n is the reset.
+// Caller rules:
+//   - On a same-cycle software and hardware write, software wins inside WMASK and hardware wins outside it.
+//     A register with WMASK=0 is owned by hardware.
+//   - A write outside the range completes with OKAY and is dropped. A read outside the range returns 0.
+// Doc: ds:mod:axi-lite-register-bank, cr:mod:axi-lite-register-bank
 
 module axi_lite_register_bank #(
     parameter int unsigned N_REGS = 16,
@@ -147,9 +136,7 @@ module axi_lite_register_bank #(
                     if (wr_commit) begin
                         // SW commit obeys WMASK & wstrb; in-range only.
                         // Use this cycle's data if it just arrived, else latched.
-                        // GH #87 / bead r5hu: zero-extend commit_word to 32 b before
-                        // comparing with N_REGS so N_REGS == 2**WORDW cannot wrap to 0
-                        // (the old truncating WORDW'(N_REGS) cast made the bank inert).
+                        // Zero-extend commit_word to 32 bits before the N_REGS compare.
                         if ({{(32-WORDW){1'b0}}, commit_word} < N_REGS) begin
                             automatic logic [IDXW-1:0] ci = commit_word[IDXW-1:0];
                             automatic logic [DW-1:0]   wd =
@@ -158,9 +145,7 @@ module axi_lite_register_bank #(
                                 w_now ? s_axil_wstrb : wstrb_q;
                             automatic logic [31:0]     m  =
                                 WMASK[ci] & strb_expand(ws);
-                            // SW owns the WMASK bits; HW owns the rest.  Folding this
-                            // cycle's HW write into the base keeps a same-edge HW update
-                            // from being clobbered with stale data (bead 6o8w).
+                            // SW owns the WMASK bits. HW owns the rest. Fold the same-cycle HW write into base.
                             automatic logic [31:0]     base =
                                 hw_wen_i[ci] ? hw_wdata_i[ci] : regs[ci];
                             regs[ci] <= (base & ~m) | (wd & m);
@@ -196,8 +181,7 @@ module axi_lite_register_bank #(
         end else begin
             unique case (rd_state)
                 RD_IDLE: if (s_axil_arvalid && s_axil_arready) begin
-                    // GH #87 / bead r5hu: zero-extend araddr_word to 32 b before
-                    // comparing with N_REGS so N_REGS == 2**WORDW cannot wrap to 0.
+                    // Zero-extend araddr_word to 32 bits before the N_REGS compare.
                     rdata_q  <= ({{(32-WORDW){1'b0}}, araddr_word} < N_REGS)
                                 ? regs[araddr_word[IDXW-1:0]] : '0;
                     rd_state <= RD_RESP;

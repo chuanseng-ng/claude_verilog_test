@@ -1,44 +1,15 @@
-// pll_apb_regs.sv
-// Phase 7 (APB migration PR-6) — APB4 configuration slave for the PLL clock generator.
+// pll_apb_regs - APB4 configuration slave for the PLL clock generator.
 //
-// Converted from pll_axil_regs.sv (AXI4-Lite) to APB4 bus protocol.
-// The register map, field decode, and HW-write path are unchanged.
-//
-// Register map (byte offset, 32-bit words):
-//
-//   0x00  CONTROL  [RW]
-//           [0]    pll_enable   — set-only/RO-1 (non-clearable; GH #89 anti-brick):
-//                                 PLL is always enabled; firmware cannot hold PLL in reset
-//           [7:4]  div_n[3:0]  — feedback divider ratio (4'h0 → N=13 default)
-//           [9:8]  post_div_sel — post-divider: 2'b00→/1, 2'b01→/2, 2'b10→/4
-//           [31:10] reserved (RO 0)
-//
-//   0x04  STATUS   [RO]
-//           [0]    locked      — mirrors pll_locked_i (RO; HW-driven)
-//           [31:1] reserved (RO 0)
-//
-//   0x08  RSVD     [RO]  — reads 0, writes ignored
-//
-// The module is a structural wrapper around apb4_register_bank.sv so all
-// APB4 protocol machinery (SETUP/ACCESS phases, pready, pslverr) is reused.
-//
-// Output ports drive the PLL wrapper (unchanged from pll_axil_regs):
-//   pll_enable_o   — always 1 at runtime (WMASK bit[0]=0; non-clearable; GH #89)
-//   feedback_div_o — div_n field from CONTROL[7:4]
-//   post_div_sel_o — post_div_sel field from CONTROL[9:8]
-//   pll_locked_i   — status input from pll_clkgen locked_o
-//
-// APB4 clock/reset mapping:
-//   pclk    = clk_i   (reference clock; register block runs at ref clock)
-//   presetn = rst_n_i (active-low synchronous reset)
-//
-// Coding rules:
-//   * No logic — structural instantiation + assign only
-//   * Always-on domain (clk_i): config bus runs at ref clock
-//   * No `timescale directive
-//   * No `default_nettype` directive (Spyglass IND, Doc: um:guide:coding-guidelines §1.3)
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The module wraps apb4_register_bank. CONTROL is at 0x00: bit 0 pll_enable, bits 7:4 div_n, bits 9:8 post_div_sel.
+//   STATUS is at 0x04: bit 0 locked mirrors pll_locked_i. The register at 0x08 reads 0 and ignores writes.
+//   div_n = 0 selects N=13. post_div_sel 0, 1 and 2 select /1, /2 and /4.
+//   The outputs are pll_enable_o, feedback_div_o and post_div_sel_o.
+// Parameters: ADDR_W.
+// Clocks and resets: clk_i is pclk. rst_n_i is presetn. It is active low and synchronous.
+// Caller rules:
+//   - pll_enable resets to 1 and is read-only. Firmware cannot clear it. The PLL is always enabled.
+//   - The module has no `timescale directive and no `default_nettype directive.
+// Doc: ds:mod:pll-apb-regs, cr:mod:pll-apb-regs
 
 module pll_apb_regs #(
     parameter int unsigned ADDR_W = 12  // local byte address width (4 KB slot)
@@ -74,11 +45,7 @@ module pll_apb_regs #(
 
     localparam int unsigned N_REGS = 3;
 
-    // Per-register SW-writable bit masks
-    // CONTROL: bits [9:8] post_div_sel, [7:4] div_n writable.
-    // bit[0] pll_enable is NOT in WMASK — non-clearable by design (GH #89 anti-brick):
-    // apb4_register_bank leaves bit[0] at its reset value (1) on every write, so
-    // firmware can never hold the PLL in reset and deadlock the SoC.
+    // pll_enable (CONTROL bit 0) is not in WMASK. Firmware cannot clear it.
     localparam logic [31:0] WMASK[N_REGS] = '{
         32'h0000_03F0,  // CONTROL: bits [9:8],[7:4] writable; bit[0] non-clearable (GH #89)
         32'h0000_0000,  // STATUS:  RO
@@ -89,8 +56,7 @@ module pll_apb_regs #(
         32'h0000_0001,  // CONTROL: pll_enable=1 (default ON so SoC self-locks
                         //   at reset without firmware intervention).
                         //   div_n=0 (→N=13 default), post_div_sel=0 (→/1).
-                        //   bit[0] excluded from WMASK (GH #89): firmware
-                        //   cannot clear pll_enable — self-brick path unreachable.
+                        // bit[0] is excluded from WMASK. Firmware cannot clear pll_enable.
         32'h0000_0000,  // STATUS:  cleared
         32'h0000_0000  // RSVD
     };

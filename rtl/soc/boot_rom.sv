@@ -30,14 +30,9 @@ module boot_rom
     parameter int unsigned LENW     = axi_pkg::AXI_LEN_WIDTH,
     // ROM depth in 32-bit words (must be a power of two; 1024 = 4 KB).
     parameter int unsigned MEM_WORDS    = 1024,
-    // Optional hex image.  Empty string → ROM contains 0 after reset.
-    // Both branches are parameter string (soc_top always drives a parameter
-    // string down regardless of __pnr__; an int unsigned type on the PnR
-    // side was an implicit string->int conversion under strict SV
-    // elaboration, bead q7n). The __pnr__ branch stays split from the sim
-    // branch because PnR never reads MEM_INIT_FILE (see the initial block
-    // below) — ROM is always zero-init in synthesis, no file load in
-    // silicon anyway.
+    // MEM_INIT_FILE is a parameter string in both branches.
+    // The __pnr__ branch stays split from the sim branch. A PnR build without FPGA never reads MEM_INIT_FILE.
+    // An empty MEM_INIT_FILE gives a ROM of zeros. A PnR build without FPGA always gives a ROM of zeros.
 `ifndef __pnr__
     parameter string       MEM_INIT_FILE = ""
 `else
