@@ -78,6 +78,13 @@ graphify-out/GRAPH_REPORT.md
 # Agents
 memory/
 
+# Local editor and tool directories
+.qoder/
+.vscode/
+
+# Built documentation books (tools/docs/build_books.py)
+docs/manual/_build/
+
 # HDL property graph (hdl-kgraph) - large local Kuzu DB
 .hdl-kgraph/
 
