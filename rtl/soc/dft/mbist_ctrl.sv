@@ -3,7 +3,7 @@
 //
 // Memory BIST controller for ONE clock domain: a ROM-microcode March sequencer, a data-background
 // generator, one comparator per memory (and per read port) and a per-memory sticky fail flag with a
-// first-fail record. Specification: docs/design/DFT_ARCHITECTURE.md section 16.
+// first-fail record. Specification: Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing.
 //
 // All N_MEM memories of a domain are tested in lock-step (same address, same data); they must have
 // the same word count (2**AW). Each memory is reached through a mem_collar, which this module drives

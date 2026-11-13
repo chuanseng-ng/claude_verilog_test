@@ -99,7 +99,7 @@ foreach _p [get_ports -quiet trst_ni] { set_false_path -from $_p }
 # scan_mode_i alone does NOT make dft_scan_en constant (scan_en_o is not gated by scan_mode, and the TAP can raise
 # scan_mode itself), measured: with only scan_mode_i = 0 the crossing still fails. With the three, the request is a
 # constant 0, so the AND (and its resizer clone) is constant and the SE tree drops out. Every other group is
-# unchanged (22 groups, same worst slacks): see DFT_ARCHITECTURE.md 14.14.1.
+# unchanged (22 groups, same worst slacks): see Doc: tm:ch:dft-architecture 14.14.1.
 #
 # The SCAN VIEW is not affected: CVT_SDC_SCAN_VIEW=1 in the environment skips this section (same switch as
 # sky130_soc.sdc), and sky130_soc.sdc itself is not touched by this section.
@@ -339,7 +339,7 @@ cdc_apply_sync_budget pmu_iso_ack u_cpu_iso_ack_sync $clock_period cpu_clk core_
     "sec.13a u_cpu_iso_ack_sync single-bit crossing (cpu_clk -> core_clk)"
 
 ###############################################################################
-# 14. MBIST TCK <-> functional crossings (bead y5mn, j41m.10 Q12; DFT_ARCHITECTURE.md 16.5, 16.11)
+# 14. MBIST TCK <-> functional crossings (bead y5mn, j41m.10 Q12; Doc: tm:ch:dft-architecture 16.5, 16.11)
 #
 # PR #306 added, per destination domain (core_clk: u_mbist.u_xing_core; cpu_core_clk: u_mbist.g_cpu.u_xing_cpu):
 #   (a) a depth-2 cdc_gray_fifo, write side tck, read side the UNGATED destination clock, rd_ready tied 1:
@@ -350,7 +350,7 @@ cdc_apply_sync_budget pmu_iso_ack u_cpu_iso_ack_sync $clock_period cpu_clk core_
 #   (b) mbist_status_sync: 69 per-bit single-bit cdc_sync dst -> tck (u_stsync_core / g_cpu.u_stsync_cpu).
 # For the CPU domain the status launch is the CPU hard macro itself (mbist_status_o[], launched by clk_i), so
 # the launch cell is the macro instance; its 35 pins {23,22} U [68:36] (rec_addr[9:8] since AW = 8, rec_port[1], and err_mask, tied 0 since the collar-local compare,
-# DFT_ARCHITECTURE.md 16.12) have no launching arc, are recognised as constants and are accounted for, not skipped.
+# Doc: tm:ch:dft-architecture 16.12) have no launching arc, are recognised as constants and are accounted for, not skipped.
 #
 # BUDGETS (new numbers, chosen here; OpenSTA has no -datapath_only, see the header):
 #   * gray pointers, both directions: 0.5 x min(source, destination) period = 12.5 ns. The existing FIFO rows use

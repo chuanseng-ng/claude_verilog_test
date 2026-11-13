@@ -28,7 +28,7 @@
 //     mbist_ctrl (LOCAL_CMP = 1) accounts for that.
 // With LOCAL_CMP = 0 (SoC fabric instances) the compare ports are unused: tie the inputs, ignore the outputs.
 //
-// Specification: docs/design/DFT_ARCHITECTURE.md section 16.4.
+// Specification: Doc: tm:ch:dft-architecture:164-controller-and-collar-interfaces.
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module mem_collar #(

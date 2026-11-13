@@ -2065,7 +2065,7 @@ async def test_register_w1p_w1c_semantics(dut):
     rep.assert_clean()
 
 
-# -- DFT scan-mode key mask (bead j41m.2, docs/design/DFT_ARCHITECTURE.md sec.7.3) --------------
+# -- DFT scan-mode key mask (bead j41m.2, Doc: tm:ch:dft-architecture sec.7.3) --------------
 # key_q (crypto_accel) and rk_q (aes128_core) are excluded from scan. Exclusion alone leaks the key:
 # a tester could shift in a state, pulse one capture and shift out f(state, key). So in scan mode
 # the two registers' READ side is forced to 0: key_eff = key_q & ~scan_mode (the aes core's key_i)
@@ -2173,7 +2173,7 @@ async def test_scan_mode_result_is_key_independent_and_matches_model(dut):
     )
 
 
-# -- DFT scan wipe (bead j41m.6, docs/design/DFT_ARCHITECTURE.md sec.14.3) -----------------------
+# -- DFT scan wipe (bead j41m.6, Doc: tm:ch:dft-architecture sec.14.3) -----------------------
 # crypto_accel zeroizes key-, round-, message- and digest-derived state on EVERY scan_mode_i edge
 # (entry and exit). scan_mode_i passes a 2-FF synchroniser plus an edge flop, so wipe_w is high in
 # the cycle after the 2nd edge that follows the change and the flops clear on the 3rd. Every check
@@ -2458,7 +2458,7 @@ async def test_reset_neither_creates_nor_hides_a_scan_edge(dut):
     assert _val(dut.u_dut.key_q) == 0, "exit edge after a scan-mode reset must still wipe"
 
 
-# -- DFT scan-entry wipe handshake (bead j41m.17, docs/design/DFT_ARCHITECTURE.md sec.14.14) -----
+# -- DFT scan-entry wipe handshake (bead j41m.17, Doc: tm:ch:dft-architecture sec.14.14) -----
 # scan_wipe_done_o is 1 iff scan_mode_i has been constant for the last three clock edges and still
 # equals that value now; it falls combinationally when scan_mode_i changes (no clock needed) and
 # rises right after the edge at which the wipe_w-qualified clears take effect. The model below

@@ -1518,7 +1518,7 @@ checker fails if a top-level instance is added to or removed from
   \textbf{Retention: none.} The old header claim that state is "rebuilt
   from SRAM on wakeup" was never true. \code{pmu.sv} emits
   \code{ret_save} / \code{ret_restore} in order but \code{soc_top}
-  leaves them unconnected. See \src{docs/POWER_DOMAIN_EVALUATION.md}
+  leaves them unconnected. See \src{docs/POWER_DOMAIN_EVALUATION.md} (\cref{tm:pd:power-domain-evaluation})
   section 3 for what survives a PMU off/on cycle.
 \item
   \textbf{Not expressed} because the RTL or library offers nothing to

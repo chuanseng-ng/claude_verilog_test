@@ -1,6 +1,6 @@
 // mbist_xing.sv
 // DFT Stage 4 (bead claude_verilog_test-j41m.10, GH #244): the MBIST control-word crossing,
-// TCK domain -> ONE destination functional domain. Specification: docs/design/DFT_ARCHITECTURE.md
+// TCK domain -> ONE destination functional domain. Specification: Doc: tm:ch:dft-architecture
 // section 16.5 (resolution of the 15 open questions of PR #276).
 //
 //   TAP (tck_i) --wr_valid/wr_data--> cdc_gray_fifo (DEPTH 2, write tck_i, read UNGATED clk_dst_i)

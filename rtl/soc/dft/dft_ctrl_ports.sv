@@ -13,7 +13,7 @@
 //                 secret-dependent nets masked. Quasi-static.
 //   scan_en_o     1 = shift, 0 = capture. Consumed only by the scan flops that Stage 2
 //                 inserts (no RTL consumer in 1a; the net is kept so insertion has
-//                 one named driver to connect to -- see docs/design/DFT_ARCHITECTURE.md
+//                 one named driver to connect to -- see Doc: tm:ch:dft-architecture
 //                 section 14, "Scan port contract").
 //   scan_rst_no   scan reset, active low. Delivered to the flops by the dft_rst_mux
 //                 instances and the cdc_reset_sync output muxes while scan_mode_o = 1.

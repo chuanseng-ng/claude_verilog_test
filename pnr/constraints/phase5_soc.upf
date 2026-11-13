@@ -86,7 +86,7 @@
 #                   always-on ring.  soc_top accepts a stalled access into a
 #                   gated domain (soc_top.sv "clamp-scope" note); full per-port
 #                   isolation is part of the deferred true-power-gating scope
-#                   (docs/POWER_DOMAIN_EVALUATION.md section 4).
+#                   (Doc: tm:pd:power-domain-evaluation:4-documented-gap-deferred-needs-new-tooling).
 #   observability   commit / trap / debug outputs to top-level pins; commit_valid_o
 #                   is clamped and qualifies the commit payload.  Also u_cpu's
 #                   scan_out_o (j41m.4): a test-only pin, meaningful only in the
@@ -94,7 +94,7 @@
 #                   macro until Stage 2 stitches its chains, and its mbist_status_o
 #                   (c54a): a 69-bit test-only status block that is read only through
 #                   the TAP (mbist_status_sync) while the CPU domain is powered (the
-#                   MBIST precondition, DFT_ARCHITECTURE.md 16.6); it is 0 while no
+#                   MBIST precondition, Doc: tm:ch:dft-architecture 16.6); it is 0 while no
 #                   run is active, and nothing functional consumes it.
 #
 # upf-check unclamped payload: u_cpu/axi_awaddr_o u_cpu/axi_awlen_o u_cpu/axi_awsize_o u_cpu/axi_awburst_o
@@ -115,7 +115,7 @@
 # PMU off->on cycle the CPU keeps its flops only as a behavioural artefact
 # (synchronous reset asserted while its clock is gated) and the GPU loses state
 # (asynchronous reset); software must re-initialise both after power-up (bead
-# 4a7i, docs/POWER_DOMAIN_EVALUATION.md section 3).  No set_retention appears
+# 4a7i, Doc: tm:pd:power-domain-evaluation:3-what-is-doable-now-the-scoped-go).  No set_retention appears
 # here because the RTL has no retention element to bind it to.
 #
 # Not expressed here (no RTL or library hook): macro PG-pin connections (done

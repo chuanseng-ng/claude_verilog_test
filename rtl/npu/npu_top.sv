@@ -101,7 +101,7 @@ module npu_top #(
     // Interrupt -- level-held, never a pulse
     output logic irq_o,
 
-    // MBIST (DFT Stage 4, DFT_ARCHITECTURE.md section 16): weight-memory collar bus; ignored when EN_NPU = 0.
+    // MBIST (DFT Stage 4, Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing): weight-memory collar bus; ignored when EN_NPU = 0.
     input  logic        mb_en_i,
     input  logic        mb_ce_i,
     input  logic        mb_we_i,

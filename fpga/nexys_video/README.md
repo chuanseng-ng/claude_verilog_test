@@ -21,7 +21,7 @@ Board: Digilent Nexys Video, XC7A200T-1SBG484C. First build is **with GPU**. Pre
 
 One MMCM off the 100 MHz oscillator (VCO 900 MHz): `clk_sys` 50 MHz -> `clk_i`, `clk_cpu` 75 MHz -> `cpu_clk_i`. Both are
 outputs of one MMCM, so they are frequency-locked and do **not** exercise an independent-clock crossing. A later stage adds
-an Si5351A on a Pmod/FMC clock-capable pin (`docs/FPGA_BOARD_SELECTION.md` section 4) for the real CDC soak.
+an Si5351A on a Pmod/FMC clock-capable pin (Doc: tm:dec:fpga-board-selection:4-second-clock-source-add-on) for the real CDC soak.
 
 ## Clock gate
 

@@ -1,6 +1,6 @@
 // soc_mbist.sv
 // DFT Stage 4 (beads claude_verilog_test-j41m.14 / j41m.10, GH #244): SoC-level MBIST integration.
-// Specification: docs/design/DFT_ARCHITECTURE.md section 16.
+// Specification: Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing.
 //
 // Contains, for the CORE domain (core_clk: sram_controller + NPU weight memory): the control-word crossing
 // (mbist_xing), the mbist_ctrl and the status return (mbist_status_sync). The collars stay in the memory

@@ -33,7 +33,7 @@ The physical design flow consists of these stages:
 
 ## Usage
 
-See `docs/design/OPENROAD_FLOW_SPEC.md` for complete flow documentation.
+See `Doc: tm:pd:openroad-flow` for complete flow documentation.
 
 ### Quick Start
 
@@ -64,7 +64,7 @@ make clean
 | `asap7/template/` | Copy-me starting point for a new ASAP7 design; no target of its own. Its `check_source_closure.py` "gap" is a placeholder-path artifact, not a defect |
 | `sky130/cpu/`, `sky130/soc/` | **LIVE** — the only flows with real Magic DRC + Netgen LVS (`librelane-sky130-cpu`, `librelane-sky130-soc`, GH #102/#103/#104). The SoC target runs the RC-calibrated `config_rccal.json` by default (bead `e45j`, Doc: cr:defect:sky130-slew-cap-e45j:7-adoption-2026-10-09-rccal-is-the-default-max-cap-gated-with-a-named-waiver); `sky130-cpu-sv2v` (auto-run by `librelane-sky130-cpu`) flattens the CPU cone with sv2v, since the Synlig frontend mis-elaborated the hazard-unit selects (bead `dud4`); `librelane-sky130-soc-norccal` runs the old `config.json`; `sky130-soc-maxcap-check` re-runs the named max-cap waiver check on a finished run |
 | `freepdk45/` | **DORMANT but intentional** — no per-node replacement exists; `librelane-nangate45` is the only path to that node |
-| `librelane/` | **SUPERSEDED** by `sky130/cpu/`, which was forked from it with DRC/LVS enabled (`docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §Stage 1). Last run 2026-03-25; `librelane-sky130` kept as a fallback |
+| `librelane/` | **SUPERSEDED** by `sky130/cpu/`, which was forked from it with DRC/LVS enabled (`Doc: tm:pd:sky130-real-drc-lvs` §Stage 1). Last run 2026-03-25; `librelane-sky130` kept as a fallback |
 | `openlane1/` | **SUPERSEDED** by `sky130/cpu/`. Docker/OL1 path (`docker-run`, `docker-synth`, `docker-results`) kept as a fallback; last run 2026-03-15 |
 
 Both superseded directories carry the stale `VERILOG_FILES` package-closure gap tracked in bead
@@ -116,7 +116,7 @@ this the cache was shared by every project and worktree (measured stale-source h
 Reports: `<run>/*yosys*/synth_undef_gate.rpt` (includes the per-function count of exempted sv2v function
 temporaries, bead j1b7; the SoC flows run the gate blocking, no warn mode needed). `CVT_SYNTH_GATE=warn|off`
 is an escape hatch for experiments only. Direct `python3 -m librelane` runs outside the Makefile must add
-`PYTHONPATH=<repo>/pnr/plugins` and a private cwd themselves. See `docs/SYNTH_UNDEF_GATE.md`.
+`PYTHONPATH=<repo>/pnr/plugins` and a private cwd themselves. See `Doc: tm:flow:synth-undef-gate`.
 
 ## Quality Gates
 
@@ -144,6 +144,6 @@ Before advancing to the next phase, the design must pass:
 
 ## References
 
-- OpenROAD Flow Spec: `docs/design/OPENROAD_FLOW_SPEC.md`
+- OpenROAD Flow Spec: `Doc: tm:pd:openroad-flow`
 - UPF Power Spec: `Doc: ds:ch:upf-power-spec`
 - SDC Timing Constraints: `constraints/*.sdc`

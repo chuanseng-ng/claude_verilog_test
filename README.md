@@ -37,7 +37,7 @@ genuine physical verification (ASAP7 and FreePDK45 skip Magic/KLayout/Netgen ent
 ⚠️ Caveats that matter: the SRAM macro is characterized at **TT only**, so "9 corners" means 9 corner
 *labels* backed by one macro model; Magic DRC reports 9,081 violations, a waived PDK artifact
 (bead `45a`); and KLayout DRC is currently **deferred, not waived** (it OOM-killed an 8.5 GB step on a
-15 GB host). Detail → [`docs/SKY130_REAL_DRC_LVS_EVALUATION.md`](docs/SKY130_REAL_DRC_LVS_EVALUATION.md).
+15 GB host). Detail → Doc: tm:pd:sky130-real-drc-lvs.
 
 **Latest batched Sky130 SoC harden (Gate B, `RUN_2026-10-05_06-50-11`, bead `f7vs.15`, PR #214)** covers all Phase 6 IP: setup met at all 9 corners (worst is max_ss **+0.579 ns**, the thin corner to watch), hold 0 violators at all 9, Netgen LVS clear, routing DRC 0, 81.0 mW total, 44.8 % utilisation, 1 703 620 µm² stdcell. KLayout DRC skipped, not waived. Antenna 210 nets / 305 pins accepted by user decision (2026-10-05); the `e45j` slew/cap counts are recorded, not gating. Source: Doc: ds:ch:phase6-ip-expansion-plan:8-physical-design-two-gates-not-one.
 
@@ -97,7 +97,7 @@ Doc: um:guide:quick-start.
 
 ## Documentation
 
-Core specifications in `docs/`:
+Core documents (labels in the books in `docs/manual/`):
 
 | Document | Purpose |
 | :------- | :------ |
@@ -111,12 +111,12 @@ Core specifications in `docs/`:
 | `Doc: ds:ch:rtl-definition` | Interface signal definitions |
 | `Doc: ds:mm:memory-map` | Address space and register map |
 | `Doc: ds:ch:reference-model` | Python reference model API |
-| `SKY130_REAL_DRC_LVS_EVALUATION.md` | Sky130 real DRC/LVS sign-off — the only genuinely verified node |
-| `LIBRELANE_PATCHING_EVALUATION.md` | Whether/how to patch the shared LibreLane install |
+| `Doc: tm:pd:sky130-real-drc-lvs` | Sky130 real DRC/LVS sign-off — the only genuinely verified node |
+| `Doc: tm:pd:librelane-patching` | Whether/how to patch the shared LibreLane install |
 | `Doc: ds:ch:verification-plan` | Verification strategy by phase |
-| `design/DFT_ARCHITECTURE.md` | DFT scan + MBIST + JTAG architecture for the Sky130 SoC (epic `j41m`) |
-| `FPGA_STAGE0_EVALUATION.md` | FPGA Stage 0 feasibility: yosys resource counts, no hardware (epic `hlrm`) |
-| `FPGA_BOARD_SELECTION.md` | FPGA board recommendation and measured ECP5 fmax lower bound (epic `hlrm`) |
+| `Doc: tm:ch:dft-architecture` | DFT scan + MBIST + JTAG architecture for the Sky130 SoC (epic `j41m`) |
+| `Doc: tm:dec:fpga-stage0-evaluation` | FPGA Stage 0 feasibility: yosys resource counts, no hardware (epic `hlrm`) |
+| `Doc: tm:dec:fpga-board-selection` | FPGA board recommendation and measured ECP5 fmax lower bound (epic `hlrm`) |
 | `Doc: um:guide:coding-guidelines` | Coding practices & style guidelines (RTL + Python + shell) |
 | `Doc: um:guide:coding-compliance-audit` | Guidelines compliance audit and remediation backlog |
 

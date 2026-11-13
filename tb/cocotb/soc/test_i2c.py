@@ -2400,7 +2400,7 @@ async def test_i2c_condition_tick_reloads_at_clkdiv_ffff(dut):
 
 # ---------------------------------------------------------------------------
 # Functional-coverage closure tests (bead h367): scenarios the I2C coverage model
-# (docs/verification/I2C_FUNCTIONAL_COVERAGE_MODEL.md) showed no other test reached.
+# (Doc: tm:flow:i2c-functional-coverage-model) showed no other test reached.
 # ---------------------------------------------------------------------------
 
 

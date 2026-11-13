@@ -252,7 +252,7 @@ cocotb 1.x \code{make} exits 0 even when tests fail: judge from
 \code{results.xml} (the driver does). Full setup, pass floors,
 portability rules and troubleshooting:
 docs/\allowbreak{}verification/\allowbreak{}PROPRIETARY\_\allowbreak{}SIM\_\allowbreak{}FLOW.md (\cref{um:flow:proprietary-sim}).
-VCS coverage: \src{docs/verification/COMMERCIAL_SIM_COVERAGE.md}.
+VCS coverage: \src{docs/verification/COMMERCIAL_SIM_COVERAGE.md} (\cref{tm:flow:commercial-sim-coverage}).
 
 \subsection{RTL Linting \& Formatting}\label{um:guide:quick-start:rtl-linting-formatting}
 
@@ -809,7 +809,7 @@ Every LibreLane run started from \src{pnr/Makefile} now runs
 edit) and aborts on a hit, naming file:line and the message. It also
 checks the elaborated \code{*.h.json} for any instance input or named
 net wired to constant \code{x}, independent of message wording. Details:
-\src{docs/SYNTH_UNDEF_GATE.md}.
+\src{docs/SYNTH_UNDEF_GATE.md} (\cref{tm:flow:synth-undef-gate}).
 
 \begin{itemize}
 \tightlist
@@ -5158,7 +5158,7 @@ Xcelium & 872 pass / 0 fail / 46 skip & 265 pass / 0 fail &
 
 Both SoC rows use \texttt{-\allowbreak{}-\allowbreak{}jobs\ 3} on an
 8-core, 15 GB host. Code coverage on VCS is a separate flow: see
-\src{docs/verification/COMMERCIAL_SIM_COVERAGE.md}.
+\src{docs/verification/COMMERCIAL_SIM_COVERAGE.md} (\cref{tm:flow:commercial-sim-coverage}).
 
 \subsection{1. Prerequisites}\label{um:flow:proprietary-sim:1-prerequisites}
 
@@ -5539,7 +5539,7 @@ or
 Reports are merged with
 \texttt{urg\ -\allowbreak{}lca\ -\allowbreak{}flex\_\allowbreak{}merge\ modules}.
 Results and the ranked hole review are in
-\src{docs/verification/COMMERCIAL_SIM_COVERAGE.md}.
+\src{docs/verification/COMMERCIAL_SIM_COVERAGE.md} (\cref{tm:flow:commercial-sim-coverage}).
 \texttt{COVERAGE=\allowbreak{}1\ SIM=\allowbreak{}xcelium} is refused
 because \code{imc} is not installed.
 \end{relocated}
@@ -6155,18 +6155,18 @@ implementation plan (golden spec) \\
 roadmap --- 12 milestones M1--M12 (golden spec) \\
 \src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) & Phase 6 IP expansion ---
 remaining 6a peripherals + 6b crypto + 6c NPU (golden spec) \\
-\src{docs/design/DFT_ARCHITECTURE.md} & DFT scan + MBIST + JTAG
+\src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) & DFT scan + MBIST + JTAG
 architecture for the Sky130 SoC (epic \code{j41m}) \\
-\src{docs/design/TESSENT_MBIST_EVALUATION.md} & Parallel evaluation of
+\src{docs/design/TESSENT_MBIST_EVALUATION.md} (\cref{tm:dec:tessent-mbist-evaluation}) & Parallel evaluation of
 Siemens Tessent MemoryBIST vs the in-house MBIST (flow in
 \src{dft/tessent/mbist/}; epic \code{j41m}) \\
-\src{docs/FPGA_BOARD_SELECTION.md} & FPGA board recommendation and
+\src{docs/FPGA_BOARD_SELECTION.md} (\cref{tm:dec:fpga-board-selection}) & FPGA board recommendation and
 measured ECP5 fmax lower bound (epic \code{hlrm}) \\
 \src{docs/design/RTL_DEFINITION.md} (\cref{ds:ch:rtl-definition}) & Interface signal definitions \\
 \src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) & Address space and register map \\
-\src{docs/design/DFT_ARCHITECTURE.md} & Sky130 DFT (scan + MBIST) Stage
+\src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) & Sky130 DFT (scan + MBIST) Stage
 0 feasibility, architecture, decisions (\ghref{244}) \\
-\src{docs/design/TESSENT_ATPG_FLOW.md} & Tessent scan insertion + ATPG
+\src{docs/design/TESSENT_ATPG_FLOW.md} (\cref{tm:flow:tessent-atpg}) & Tessent scan insertion + ATPG
 evaluation flow for the Sky130 SoC fabric (\src{dft/tessent/atpg/}, epic
 \code{j41m}, Stage 2 evaluation) \\
 \src{docs/design/REFERENCE_MODEL_SPEC.md} (\cref{ds:ch:reference-model}) & Python reference model
@@ -6194,14 +6194,14 @@ Purpose
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\src{docs/design/OPENROAD_FLOW_SPEC.md} & Complete OpenROAD flow
+\src{docs/design/OPENROAD_FLOW_SPEC.md} (\cref{tm:pd:openroad-flow}) & Complete OpenROAD flow
 documentation \\
 \src{docs/design/UPF_POWER_SPEC.md} (\cref{ds:ch:upf-power-spec}) & Power intent and UPF
 specification \\
 \src{docs/design/SDC_TIMING_SPEC.md} (\cref{ds:ch:sdc-timing-spec}) & Timing constraints and STA
 guidelines \\
 \src{pnr/README.md} & Physical design directory structure \\
-\src{docs/COMMERCIAL_FLOW_COMPARISON.md} & Sky130 CPU macro: OpenROAD vs
+\src{docs/COMMERCIAL_FLOW_COMPARISON.md} (\cref{tm:pd:commercial-flow-comparison}) & Sky130 CPU macro: OpenROAD vs
 DC-\textgreater ICC2 vs Genus-\textgreater Innovus, one
 StarRC-\textgreater PrimeTime judge; data in
 \src{pnr/commercial/compare/comparison.json} \\
@@ -6236,7 +6236,7 @@ regression run, portability rules (EDA hosts without nix) \\
 lint/\allowbreak{}CDC/\allowbreak{}RDC + Cadence HAL flow
 (\texttt{make\ -\allowbreak{}C\ dqc\ .\allowbreak{}.\allowbreak{}.\allowbreak{}}),
 waivers, licence matrix, open RTL findings \\
-\src{docs/XEZIM_EVALUATION.md} & Measured evaluation of xezim as
+\src{docs/XEZIM_EVALUATION.md} (\cref{tm:dec:xezim}) & Measured evaluation of xezim as
 secondary compile/\allowbreak{}sim tool vs
 Verilator/\allowbreak{}VCS/\allowbreak{}Xcelium/\allowbreak{}slang: not
 adopted for regression; pyslang recommended for use-before-declare (bead

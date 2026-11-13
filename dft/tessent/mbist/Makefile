@@ -1,5 +1,5 @@
 # Tessent MemoryBIST evaluation flow (parallel to the in-house MBIST; commits nothing into rtl/).
-# See docs/design/TESSENT_MBIST_EVALUATION.md.
+# See Doc: tm:dec:tessent-mbist-evaluation.
 #
 #   make mbist-generate   sv2v the evaluation top, read the memory library, run DRC, create the DftSpecification
 #   make mbist-insert     process_dft_specification: generate + insert the MBIST hardware, extract ICL, patterns spec

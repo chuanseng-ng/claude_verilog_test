@@ -148,7 +148,7 @@
 //       isolated_o only at zero, then reset) — no drain FSM added here.
 //
 //   Power management (Pre-Phase-6 #5, GH #98/#99/#100 — behavioral PMU only,
-//   see docs/POWER_DOMAIN_EVALUATION.md):
+//   see Doc: tm:pd:power-domain-evaluation):
 //     pmu (APB_PMU slot) sequences PD_CPU/PD_GPU per phase5_soc.upf: drives
 //     cpu_clk_en/gpu_clk_en into rv32i_clock_gate cells that gate core_clk
 //     before it reaches u_cpu/u_gpu, cpu_iso_en/gpu_iso_en into output-clamp
@@ -200,12 +200,12 @@ module soc_top
     // 8 per the chain-count decision (PR #253): [4:0] five clk_i-domain fabric chains
     // (~17.5 k scannable flops, ~3.5 k each), [5] one cpu_clk_i-domain fabric chain
     // (~0.9 k flops outside the CPU macro), [7:6] the two CPU-macro chains. The macro has
-    // has two scan pairs since j41m.4 (DFT_ARCHITECTURE.md 14.10): the top CPU_SCAN_CHAINS
+    // has two scan pairs since j41m.4 (Doc: tm:ch:dft-architecture 14.10): the top CPU_SCAN_CHAINS
     // indices [SCAN_CHAINS-1:SCAN_CHAINS-2] are wired straight through to u_cpu's
     // scan_in_i/scan_out_o; the macro ties its own scan_out_o 0 until Stage 2 stitches it.
     parameter int unsigned SCAN_CHAINS = 8,
     // DFT Stage 4 (j41m.14 / c54a): 1 (shipped) = the CPU hard macro carries its MBIST controller and cache
-    // collars (DFT_ARCHITECTURE.md section 16.7); the CPU-domain control-word crossing and the u_cpu_cg force
+    // collars (Doc: tm:ch:dft-architecture:167-cpu-macro-cache-collars-design-proposal-re-harden-need); the CPU-domain control-word crossing and the u_cpu_cg force
     // are instantiated and u_cpu's mbist_* boundary ports are driven. 0 = no CPU-domain MBIST: the crossing is
     // absent, the mbist_* ports are tied inactive and the CPU status block reads 0 (cpu_present = 0).
     // The committed CPU macro views (pnr/sky130/cpu/macro) predate the 96 mbist_* pins: the SoC flow fails its
@@ -287,7 +287,7 @@ module soc_top
     // below) is OR-ed on top by dft_ctrl. Inactive values
     // (functional mode, bit-identical to the pre-DFT design): scan_mode_i=0,
     // scan_en_i=0, scan_rst_ni=1, scan_clk_i=0 (any level; never selected).
-    // See docs/design/DFT_ARCHITECTURE.md section 14 for the full contract.
+    // See Doc: tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl for the full contract.
     input  logic                    scan_mode_i,    // 1 = test mode (quasi-static)
     input  logic                    scan_en_i,      // 1 = shift, 0 = capture
     input  logic                    scan_rst_ni,    // scan reset, active low
@@ -300,7 +300,7 @@ module soc_top
     // top builds the tristate from tdo_oe_o. TCK is an asynchronous third clock
     // domain. Idle values used by every functional suite: tck_i=0, tms_i=1,
     // tdi_i=0, trst_ni=0 (TAP held in reset). trst_ni must be asserted at
-    // power-up (open question Q-TRST). See DFT_ARCHITECTURE.md section 15.
+    // power-up (open question Q-TRST). See Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap.
     input  logic                    tck_i,          // JTAG test clock
     input  logic                    tms_i,          // JTAG test mode select
     input  logic                    tdi_i,          // JTAG test data in
@@ -368,7 +368,7 @@ module soc_top
     // Withholding scan_en until the wipe is applied closes that for any tester. Every consumer
     // (the macro's scan_en_i, the Stage 2 SE pins) keeps taking the net NAMED dft_scan_en.
     // Functional mode: scan_wipe_done_o is a constant 1 once scan_mode has been 0 for 3 core_clk
-    // edges, so dft_scan_en == dft_scan_en_req there. DFT_ARCHITECTURE.md sec.14.14.
+    // edges, so dft_scan_en == dft_scan_en_req there. Doc: tm:ch:dft-architecture sec.14.14.
     logic dft_scan_en_req;
     // (* keep *): crypto_wipe_done feeds only the AND below, so without it synthesis merges the net into
     // anonymous logic and the Stage 2 step (pnr/sky130/soc/plugin, CVT_SCAN_OUT_GATE_NET) can no longer find it
@@ -422,7 +422,7 @@ module soc_top
 
     // Scan-chain port placeholders. scan_in_i has no consumer and scan_out_o is
     // driven 0 UNTIL Stage 2 scan insertion (a netlist step, plugin option N in
-    // DFT_ARCHITECTURE.md sec.1.5) stitches the chains: it removes this tie, then
+    // Doc: tm:ch:dft-architecture sec.1.5) stitches the chains: it removes this tie, then
     // connects chain k's last flop to scan_out_o[k] and scan_in_i[k] to its first.
     // The tie is intentionally one `assign` on one vector so that step has a single,
     // unambiguous thing to replace; the lint waivers are scoped to just these two.
@@ -677,7 +677,7 @@ module soc_top
     // reset; DOM_PU_CLK, the next state, ungates the clock) — and mirrors
     // that on power-DOWN (clk_en_w drops one cycle before rst_n_w drops).
     // This ordering is NOT a pmu.sv implementation choice: docs/
-    // POWER_DOMAIN_EVALUATION.md section 3 and pmu.sv's own header fix this
+    // Doc: tm:pd:power-domain-evaluation:3-what-is-doable-now-the-scoped-go and pmu.sv's own header fix this
     // order as the UPF-mandated sequence, and it is the mechanism that lets
     // this behavioral model preserve CPU architectural state (PC/MSTATUS/
     // MTVEC) across an off->on cycle WITHOUT real retention-cell silicon: as
@@ -1061,7 +1061,7 @@ module soc_top
     // register) response ports of u_gpu / the CPU debug port are likewise not
     // clamped: an access into a powered-down domain's registers stalling while
     // the domain is off is acceptable/expected behavior for a sequencing-only
-    // PMU (docs/POWER_DOMAIN_EVALUATION.md) -- full per-port isolation-cell
+    // PMU (Doc: tm:pd:power-domain-evaluation) -- full per-port isolation-cell
     // coverage is part of the deferred true-power-gating scope.
     //
     // GH #93: ISO_CPU's clamp point MOVED from xbar_m_*[0] (the fabric side
@@ -1390,7 +1390,7 @@ module soc_top
     // =========================================================================
     // GH #93: dual-clock AXI4 CDC bridge — CPU domain (cpu_gated_clk) <->
     // fabric domain (core_clk), the SoC's one intentional CDC boundary
-    // (docs/3PLL_CDC_EVALUATION.md). m_rst_n_i matches crossbar M0's domain
+    // (Doc: tm:dec:3pll-cdc). m_rst_n_i matches crossbar M0's domain
     // (core_rst_n), unchanged. async_axi_fifo internally ANDs s_rst_n_i and
     // m_rst_n_i together for its two cdc_reset_sync instances (see
     // async_axi_fifo.sv header) — this bridge's hard-flush reset is discussed
@@ -1947,7 +1947,7 @@ module soc_top
     );
 
     // =========================================================================
-    // MBIST (DFT Stage 4, beads j41m.14 / j41m.10; DFT_ARCHITECTURE.md section 16)
+    // MBIST (DFT Stage 4, beads j41m.14 / j41m.10; Doc: tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing)
     //   Core-domain controller for the two SoC-level SRAM macros (index 0 = u_sram, 1 = u_npu weight memory),
     //   the TCK -> core_clk control-word crossing (depth-2 cdc_gray_fifo) and the status return. Started and
     //   read ONLY through the TAP (MBIST_CTRL / MBIST_STATUS); no bus slave decodes to it. With the TAP idle or

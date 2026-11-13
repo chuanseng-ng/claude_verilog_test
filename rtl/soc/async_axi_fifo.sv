@@ -3,7 +3,7 @@
 //
 // Purely STRUCTURAL: 5x cdc_gray_fifo (AW/W/B/AR/R) + payload concat/slice +
 // 2x cdc_reset_sync. No sequential logic of its own — every register lives
-// inside cdc_gray_fifo or cdc_reset_sync. See docs/3PLL_CDC_EVALUATION.md
+// inside cdc_gray_fifo or cdc_reset_sync. See Doc: tm:dec:3pll-cdc
 // (DECIDED 2026-06-27) for why this is the SoC's one intentional CDC
 // boundary: CPU @ ~1282 MHz on one side, GPU+bus+peripherals @ 571 MHz on
 // the other, meeting at crossbar M0.

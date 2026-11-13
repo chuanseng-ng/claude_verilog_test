@@ -4,7 +4,7 @@
 // Reset override for one reset NET: in scan mode the reset delivered to the
 // flops is the tester's scan reset, otherwise the functional (possibly
 // internally generated) reset. Placed at the net that feeds the flops, not at a
-// synchroniser input (docs/design/DFT_ARCHITECTURE.md sec.4 item 7), because a
+// synchroniser input (Doc: tm:ch:dft-architecture sec.4 item 7), because a
 // reset derived from flops, a register bit or a lock counter would otherwise
 // toggle while the chains shift and clear or set scanned flops mid-shift.
 //

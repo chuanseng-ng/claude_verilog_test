@@ -89,7 +89,7 @@ module rv32i_cpu_top #(
   input  logic        timer_irq_i,     // Timer interrupt (M-mode MTIP)
 
   // ================================================================
-  // DFT test boundary (bead claude_verilog_test-j41m.4, DFT_ARCHITECTURE.md 14.10)
+  // DFT test boundary (bead claude_verilog_test-j41m.4, Doc: tm:ch:dft-architecture 14.10)
   // ================================================================
   // Inactive values (functional mode, bit-identical to the pre-DFT macro):
   // scan_mode_i = 0, scan_en_i = 0, scan_in_i = 0.
@@ -109,7 +109,7 @@ module rv32i_cpu_top #(
   output logic [1:0]  scan_out_o,      // chain outputs (tied 0 until Stage 2 insertion)
 
   // ================================================================
-  // MBIST boundary (bead claude_verilog_test-c54a, DFT_ARCHITECTURE.md 16.7)
+  // MBIST boundary (bead claude_verilog_test-c54a, Doc: tm:ch:dft-architecture 16.7)
   // ================================================================
   // 96 quasi-static pins, no timing path other than the ordinary sync-to-clk_i. Inactive values
   // (functional mode, bit-identical to the pre-MBIST macro): mbist_run_i = 0, mbist_cfg_i = 0.

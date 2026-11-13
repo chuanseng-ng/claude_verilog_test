@@ -6,7 +6,7 @@
 // clock), ENA (active-high enable, latched on low phase), SE (scan/test
 // enable, = test_en), GCLK (gated output).
 //
-// DFT (bead claude_verilog_test-j41m.2, docs/design/DFT_ARCHITECTURE.md sec.4
+// DFT (bead claude_verilog_test-j41m.2, Doc: tm:ch:dft-architecture sec.4
 // item 5): test_en forces the gate open.  In test mode every flop behind the
 // gate must see the (test) clock whatever the functional enable says, or it
 // is unreachable by scan and un-capturable by ATPG.  The behavioural arm

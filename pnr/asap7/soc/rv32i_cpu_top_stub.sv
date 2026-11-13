@@ -82,7 +82,7 @@ module rv32i_cpu_top #(
     input  logic        ext_irq_i,
     input  logic        timer_irq_i,
 
-    // DFT test boundary (bead j41m.4, DFT_ARCHITECTURE.md 14.10). These four ports exist in
+    // DFT test boundary (bead j41m.4, Doc: tm:ch:dft-architecture 14.10). These four ports exist in
     // the RTL and in this stub so the SoC netlist elaborates, but the COMMITTED ASAP7 macro
     // views (pnr/asap7/soc/macro/rv32i_cpu_top.{lef,lib,nl}) are the pre-DFT ones and do not
     // have the pins. An ASAP7 SoC P&R against them fails at the macro pin match until bead
@@ -92,7 +92,7 @@ module rv32i_cpu_top #(
     input  logic [1:0]  scan_in_i,
     output logic [1:0]  scan_out_o,
 
-    // MBIST boundary (bead c54a, DFT_ARCHITECTURE.md 16.7): 96 pins, same status as the four DFT ports
+    // MBIST boundary (bead c54a, Doc: tm:ch:dft-architecture 16.7): 96 pins, same status as the four DFT ports
     // above: present in the RTL and in this stub so the SoC netlist elaborates, absent from the committed
     // ASAP7 macro views and from pnr/asap7/cpu/pin_order.cfg (not changed: the ASAP7 CPU macro re-harden is
     // shelved, blocked on ma7/lxv/2kn; j41m.13 regenerates the views and must add these pins, which carry

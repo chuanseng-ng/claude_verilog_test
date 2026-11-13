@@ -67,11 +67,11 @@ reset_domains:
   # They are not data: scan_rst_ni is a reset (asynchronous by definition, like rst_n_i) and
   # scan_mode_i is a test-mode level that the tester sets before the first test clock edge
   # and never toggles while a clock runs (the contract documented in dft_clk_mux.sv /
-  # dft_rst_mux.sv / DFT_ARCHITECTURE.md sec.14). Listing them here removes them from the
+  # dft_rst_mux.sv / Doc: tm:ch:dft-architecture sec.14). Listing them here removes them from the
   # domain count; it does NOT waive any clock-to-clock crossing.
   - scan_rst_ni
   - scan_mode_i
-  # JTAG TAP (bead j41m.3, DFT Stage 1b), DECLARED CROSSING 2 of DFT_ARCHITECTURE.md sec.15.5.
+  # JTAG TAP (bead j41m.3, DFT Stage 1b), DECLARED CROSSING 2 of Doc: tm:ch:dft-architecture sec.15.5.
   # The TAP is clocked by tck_i, a third asynchronous root. Its static controls (scan_mode,
   # test_en, scan_rst assert, scan_en, the gated TCK) are flop outputs that reach every async
   # reset mux, clock mux, the clock-gate latch D and the crypto key mask, so cdc_snitch would
@@ -86,14 +86,14 @@ reset_domains:
   # Stage 4 MBIST status bit without its 2-FF synchroniser) fails that check even though this
   # gate can no longer see it.
   - tck_i
-  # The glitch-free test-clock switch (dft_clk_switch.sv, DFT_ARCHITECTURE.md 15.5) adds TWO real
+  # The glitch-free test-clock switch (dft_clk_switch.sv, Doc: tm:ch:dft-architecture 15.5) adds TWO real
   # asynchronous crossings, both through cdc_sync with (* magic_cdc *): u_sync_a carries ~en_b_q
   # (scan_clk_i domain latch) into tck_i, u_sync_b carries en_a_q (tck_i domain latch) into
   # scan_clk_i. cdc_snitch classes their first stage `BAD magic` (ROOT CAUSE, reproduced: it counts
   # input PINS of the cells in the launch cone and a latch has two (E and D), so even a
   # single-domain latch, or any 2-input logic, in front of a magic_cdc stage can never classify
   # CDC; the real netlist additionally combines both clocks in the latch D, see
-  # DFT_ARCHITECTURE.md 15.9). They are declared under `required_synchronisers` below with
+  # Doc: tm:ch:dft-architecture 15.9). They are declared under `required_synchronisers` below with
   # `latch_launched: true`: the gate then requires them to exist, to carry magic_cdc, and to be
   # classified CDC or BAD+magic (never an unmarked/bypassed or OKX stage). Their clocking is also
   # enforced by tools/dft/check_scan_clk_rst.py (TAP prefix rule: tck_i or scan_clk_i only).

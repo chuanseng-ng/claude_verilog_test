@@ -410,7 +410,7 @@ cr:fix:fixes-readme:questions	docs/manual/cr/parts/04-fix-log-and-archive.tex	37
 cr:fix:fixes-readme:quick-start	docs/manual/cr/parts/04-fix-log-and-archive.tex	18	Quick Start
 cr:fix:fixes-readme:related-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	267	Related Documentation
 cr:fix:fixes-readme:test-documentation	docs/manual/cr/parts/04-fix-log-and-archive.tex	301	Test Documentation
-cr:fix:fixes-readme:update-fixes-indexmd	docs/manual/cr/parts/04-fix-log-and-archive.tex	351	\texorpdfstring{Update FIXES\_\allowbreak{}INDEX.md}{Update \cref{cr:fix:fixes-index}}
+cr:fix:fixes-readme:update-fixes-indexmd	docs/manual/cr/parts/04-fix-log-and-archive.tex	351	\texorpdfstring{Update FIXES\_\allowbreak{}\cref{tm:pd:constraints-index}}{Update \cref{cr:fix:fixes-index}}
 cr:fix:fixes-readme:when-to-add-new-fix-documents	docs/manual/cr/parts/04-fix-log-and-archive.tex	315	When to Add New Fix Documents
 cr:fix:pc-mismatch-fix	docs/manual/cr/parts/04-fix-log-and-archive.tex	5168	PC Mismatch Error Fix - Monitor Task Cleanup
 cr:fix:pc-mismatch-fix:actual-results	docs/manual/cr/parts/04-fix-log-and-archive.tex	5528	Actual Results
@@ -1644,18 +1644,114 @@ ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module c
 ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verification plan
 tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6048	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
-tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	19	Analog PLL
-tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	15	ASAP7 flow
-tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	11	CDC and lint checks
-tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	23	Commercial flow comparison
-tm:ch:constraint-files	docs/manual/tm/parts/02-physical-design.tex	7	Constraint files
-tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	7	Coverage
+tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11896	Analog PLL
+tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	5339	ASAP7 flow
+tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	5729	CDC and lint checks
+tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	5347	Commercial flow comparison
+tm:ch:constraint-files	docs/manual/tm/parts/02-physical-design.tex	2824	Constraint files
+tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	784	Coverage
 tm:ch:decision-log	docs/manual/tm/parts/05-decisions.tex	3	Decision log
-tm:ch:dft-architecture	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3	DFT architecture
+tm:ch:dft-architecture	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4	DFT Architecture: scan + MBIST + JTAG for the Sky130 SoC (Stage 0)
+tm:ch:dft-architecture:0-decisions-already-taken-2026-10-10	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	23	Decisions already taken (2026-10-10)
+tm:ch:dft-architecture:1-scan-insertion-tool	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	167	Scan insertion tool
+tm:ch:dft-architecture:10-proposed-architecture-and-staged-plan-restaged-for-decision-5	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1758	Proposed architecture and staged plan (restaged for decision 5)
+tm:ch:dft-architecture:11-go-no-go	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1845	Go / no-go
+tm:ch:dft-architecture:11-which-openroad	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	169	Which OpenROAD
+tm:ch:dft-architecture:12-open-items	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1898	Open items
+tm:ch:dft-architecture:12-real-block-experiment-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	219	Real-block experiment {[}M{]}
+tm:ch:dft-architecture:13-not-done-or-not-verified	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2004	Not done or not verified
+tm:ch:dft-architecture:13-what-the-module-cannot-do-and-the-defects-found	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	261	What the module cannot do, and the defects found
+tm:ch:dft-architecture:14-alternatives-not-exercised	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	331	Alternatives (not exercised)
+tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2057	\texorpdfstring{Stage 1a implementation record (bead \code{j41m.2}): scan-ready fabric RTL}{Stage 1a implementation record (bead ): scan-ready fabric RTL}
+tm:ch:dft-architecture:141-ports-added-to-soc-top-and-the-internal-seam	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2066	\texorpdfstring{Ports added to \code{soc_top} and the internal seam}{Ports added to and the internal seam}
+tm:ch:dft-architecture:1410-cpu-macro-scantest-boundary-sky130-half-bead-j41m4-rtl-step-only	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2472	\texorpdfstring{CPU macro scan/test boundary, Sky130 half (bead \code{j41m.4}, RTL step only)}{CPU macro scan/test boundary, Sky130 half (bead , RTL step only)}
+tm:ch:dft-architecture:1410-crypto-scan-wipe-hardware-zeroize-on-scan-entry-and-exit-bead-j41m6-2026-10-17	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4508	\texorpdfstring{Crypto scan wipe: hardware zeroize on scan entry and exit (bead \code{j41m.6}, 2026-10-17)}{Crypto scan wipe: hardware zeroize on scan entry and exit (bead , 2026-10-17)}
+tm:ch:dft-architecture:1411-pd-re-harden-for-the-cpu-macro-scan-boundary-and-the-cpu-clk-i-sdc-beads-j41m4-pd-step-j41m5-2026-10-16	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2629	\texorpdfstring{PD re-harden for the CPU macro scan boundary and the \code{cpu_clk_i} SDC (beads \code{j41m.4} PD step + \code{j41m.5}, 2026-10-16)}{PD re-harden for the CPU macro scan boundary and the SDC (beads PD step + , 2026-10-16)}
+tm:ch:dft-architecture:1412-stage-2-scan-insertion-method-port-reuse-cpu-macro-result-bead-j41m8-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2780	\texorpdfstring{Stage 2 scan insertion: method, port reuse, CPU macro result (bead \code{j41m.8}, 2026-10-26)}{Stage 2 scan insertion: method, port reuse, CPU macro result (bead , 2026-10-26)}
+tm:ch:dft-architecture:1413-stage-2-soc-harden-with-scan-run-2026-10-26-09-59-03-vs-run-2026-10-25-08-28-45-bead-j41m8-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2855	\texorpdfstring{Stage 2 SoC harden with scan: \code{RUN_2026-10-26_09-59-03} vs \code{RUN_2026-10-25_08-28-45} (bead \code{j41m.8}, 2026-10-26)}{Stage 2 SoC harden with scan: vs (bead , 2026-10-26)}
+tm:ch:dft-architecture:1414-scan-en-is-withheld-until-the-crypto-scan-entry-wipe-is-applied-bead-j41m17-user-decision-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3046	\texorpdfstring{\code{scan_en} is withheld until the crypto scan-entry wipe is applied (bead \code{j41m.17}, user decision 2026-10-26)}{is withheld until the crypto scan-entry wipe is applied (bead , user decision 2026-10-26)}
+tm:ch:dft-architecture:14141-re-harden-with-the-crypto-scan-en-withhold-and-scan-out-o-gating-run-2026-10-27-05-40-27-vs-run-2026-10-26-09-59-03-bead-j41m17-2026-10-27	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3246	\texorpdfstring{Re-harden with the crypto \code{scan_en} withhold and \code{scan_out_o} gating: \code{RUN_2026-10-27_05-40-27} vs \code{RUN_2026-10-26_09-59-03} (bead \code{j41m.17}, 2026-10-27)}{Re-harden with the crypto withhold and gating: vs (bead , 2026-10-27)}
+tm:ch:dft-architecture:142-what-each-scope-item-became	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2132	What each scope item became
+tm:ch:dft-architecture:143-findings-the-mask-does-not-close	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2196	Findings the mask does not close
+tm:ch:dft-architecture:144-scan-port-contract-for-stage-2-insertion-a-the-openroad-behaviour-is-untested	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2228	Scan port contract for Stage 2 insertion {[}A: the OpenROAD behaviour is untested{]}
+tm:ch:dft-architecture:145-clockreset-paths-the-new-muxes-sit-on-and-sdc	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2247	\texorpdfstring{Clock/\allowbreak{}reset paths the new muxes sit on, and SDC}{Clock/reset paths the new muxes sit on, and SDC}
+tm:ch:dft-architecture:146-cpu-macro-boundary-deliberately-not-changed-superseded-for-the-sky130-rtl-by-1410-bead-j41m4	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2284	\texorpdfstring{CPU macro boundary: deliberately not changed (SUPERSEDED for the Sky130 RTL by 14.10, bead \code{j41m.4})}{CPU macro boundary: deliberately not changed (SUPERSEDED for the Sky130 RTL by 14.10, bead )}
+tm:ch:dft-architecture:147-checks-added	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2298	Checks added
+tm:ch:dft-architecture:148-stage-1a-done-not-done	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2336	Stage 1a done / not done
+tm:ch:dft-architecture:149-gap-closure-results-2026-10-10-after-the-implementing-agent-ran-out-of-turns	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2378	Gap-closure results (2026-10-10, after the implementing agent ran out of turns)
+tm:ch:dft-architecture:15-slotting-into-librelane-as-a-project-local-plugin	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	354	Slotting into LibreLane as a project-local plugin
+tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3664	\texorpdfstring{Stage 1b specification and implementation record (bead \code{j41m.3}): JTAG TAP}{Stage 1b specification and implementation record (bead ): JTAG TAP}
+tm:ch:dft-architecture:151-modules-and-ports	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3675	Modules and ports
+tm:ch:dft-architecture:152-tap-rules-ieee-11491-where-implemented	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3715	TAP rules (IEEE 1149.1 where implemented)
+tm:ch:dft-architecture:153-instruction-map-private-codes-frozen-by-user-decision-2026-10-11-q-op-do-not-renumber	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3766	Instruction map (private codes; FROZEN by user decision 2026-10-11, Q-OP: do not renumber)
+tm:ch:dft-architecture:154-what-the-tap-drives-and-how-it-combines-with-the-1a-pins	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3821	What the TAP drives, and how it combines with the 1a pins
+tm:ch:dft-architecture:155-clockreset-treatment-and-the-declared-crossings	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3882	\texorpdfstring{Clock/\allowbreak{}reset treatment and the declared crossings}{Clock/reset treatment and the declared crossings}
+tm:ch:dft-architecture:156-documented-deviations-from-ieee-11491-and-from-section-9	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4085	Documented deviations from IEEE 1149.1 and from section 9
+tm:ch:dft-architecture:157-tests-and-checks-required-of-this-stage	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4123	Tests and checks required of this stage
+tm:ch:dft-architecture:158-implementation-record-2026-10-11-pr-270	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4136	Implementation record (2026-10-11, PR \#270)
+tm:ch:dft-architecture:159-q-clk-change-record-2026-10-11-glitch-free-test-clock-switch-supersedes-the-plain-mux-statements-above	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4259	Q-CLK change record (2026-10-11): glitch-free test-clock switch, supersedes the "plain mux" statements above
+tm:ch:dft-architecture:1591-user-decisions-of-2026-10-12-and-the-tester-contract-stated-plainly	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4331	User decisions of 2026-10-12 and the tester contract (stated plainly)
+tm:ch:dft-architecture:1592-cdc-snitch-bad-magic-on-the-two-handshake-synchronisers-investigation-2026-10-12	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4363	\texorpdfstring{cdc\_\allowbreak{}snitch \texttt{BAD\ magic} on the two handshake synchronisers: investigation (2026-10-12)}{cdc\_snitch on the two handshake synchronisers: investigation (2026-10-12)}
+tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4632	\texorpdfstring{Stage 4 specification (beads \code{j41m.14} MBIST, \code{j41m.10} control-word crossing)}{Stage 4 specification (beads MBIST, control-word crossing)}
+tm:ch:dft-architecture:160-user-decisions-of-2026-10-17-and-what-this-stage-lands	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4642	User decisions of 2026-10-17 and what this stage lands
+tm:ch:dft-architecture:161-memory-inventory-reconciled-with-the-beads-x12-r-re-checked-2026-10-17	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4688	Memory inventory, reconciled with the bead\textquotesingle s "x12" {[}R, re-checked 2026-10-17{]}
+tm:ch:dft-architecture:1610-implementation-record-2026-10-18-pr-306	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5416	Implementation record (2026-10-18, PR \#306)
+tm:ch:dft-architecture:1611-cpu-macro-cache-collars-rtl-step-bead-c54a-2026-10-18-pr-313	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5465	\texorpdfstring{CPU-macro cache collars: RTL step (bead \code{c54a}, 2026-10-18, PR \#313)}{CPU-macro cache collars: RTL step (bead , 2026-10-18, PR \#313)}
+tm:ch:dft-architecture:1612-cpu-macro-collar-local-compare-bead-c54a-2026-10-23	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5612	\texorpdfstring{CPU-macro collar-local compare (bead \code{c54a}, 2026-10-23)}{CPU-macro collar-local compare (bead , 2026-10-23)}
+tm:ch:dft-architecture:1613-parallel-evaluation-of-siemens-tessent-memorybist-pointer	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5726	Parallel evaluation of Siemens Tessent MemoryBIST (pointer)
+tm:ch:dft-architecture:162-algorithms-encoding-and-architecture-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4753	Algorithms, encoding and architecture decision
+tm:ch:dft-architecture:163-smarchchkb-family-evaluation-decision-d1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4903	SMarchCHKB-family evaluation (decision D1)
+tm:ch:dft-architecture:164-controller-and-collar-interfaces	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4943	Controller and collar interfaces
+tm:ch:dft-architecture:165-tap-registers-control-word-crossing-j41m10-folded-in	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4994	TAP registers, control word, crossing (j41m.10 folded in)
+tm:ch:dft-architecture:166-clocking-scan-mode-pmu	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5195	\texorpdfstring{Clocking, scan\_\allowbreak{}mode, PMU}{Clocking, scan\_mode, PMU}
+tm:ch:dft-architecture:167-cpu-macro-cache-collars-design-proposal-re-harden-need	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5239	CPU-macro cache collars: design, proposal, re-harden need
+tm:ch:dft-architecture:168-verification-required-of-this-stage-non-negotiable-per-the-bead	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5319	Verification required of this stage (non-negotiable per the bead)
+tm:ch:dft-architecture:169-area-m-2026-10-18	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5354	Area {[}M, 2026-10-18{]}
+tm:ch:dft-architecture:17-tessent-scan-atpg-evaluation-pointer	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5737	Tessent scan + ATPG evaluation (pointer)
+tm:ch:dft-architecture:18-stage-3-atpg-tool-spike-record-bead-j41m15-2026-10-28	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5749	\texorpdfstring{Stage 3 ATPG tool spike record (bead \code{j41m.15}, 2026-10-28)}{Stage 3 ATPG tool spike record (bead , 2026-10-28)}
+tm:ch:dft-architecture:181-what-quaigh-006-does-step-0-r-quaigh-006srcatpgrs-simfaultrs-equivrs-cmdrs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5782	\texorpdfstring{What Quaigh 0.0.6 does (Step 0) {[}R: \code{quaigh-0.0.6/src/atpg.rs}, \code{sim/fault.rs}, \code{equiv.rs}, \code{cmd.rs}{]}}{What Quaigh 0.0.6 does (Step 0) {[}R: , , , {]}}
+tm:ch:dft-architecture:182-method-rm	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5838	Method {[}R/M{]}
+tm:ch:dft-architecture:183-ladder-m-each-metricsjson-and-qreportjson-under-nobackupclaude-sim-buildj41m15rung	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5904	\texorpdfstring{Ladder {[}M: each \code{metrics.json} and \code{q/report.json} under \code{/nobackup/claude_sim_build/j41m15/<rung>/}{]}}{Ladder {[}M: each and under {]}}
+tm:ch:dft-architecture:184-exclusion-manifest-m-fabricexclusionsjson-hold-mask-1028json	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5995	\texorpdfstring{Exclusion manifest {[}M \code{fabric/exclusions.json}, \code{hold_mask_1028.json}{]}}{Exclusion manifest {[}M , {]}}
+tm:ch:dft-architecture:185-sanity-checks	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6071	Sanity checks
+tm:ch:dft-architecture:186-delta-against-tessent-9417-test-9325-fault-tessent-atpg-flowmd-42-43-a	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6157	\texorpdfstring{Delta against Tessent (94.17 \% test / 93.25 \% fault, \code{TESSENT_ATPG_FLOW.md} (\cref{tm:flow:tessent-atpg}) 4.2, 4.3) {[}A{]}}{Delta against Tessent (94.17 \% test / 93.25 \% fault, 4.2, 4.3) {[}A{]}}
+tm:ch:dft-architecture:187-limits-and-what-was-not-done-a-unless-noted	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6226	Limits and what was not done {[}A unless noted{]}
+tm:ch:dft-architecture:188-proposed-restated-target-not-adopted-the-owner-decides	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6278	Proposed restated target (NOT adopted: the owner decides)
+tm:ch:dft-architecture:189-patched-quaigh-fabric-result-bead-j41m18-2026-10-29	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6324	\texorpdfstring{Patched Quaigh: fabric result (bead \code{j41m.18}, 2026-10-29)}{Patched Quaigh: fabric result (bead , 2026-10-29)}
+tm:ch:dft-architecture:1a-summary	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	97	1a. Summary
+tm:ch:dft-architecture:2-atpg-tool-coverage-target-pattern-export	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	443	ATPG tool, coverage target, pattern export
+tm:ch:dft-architecture:21-coverage-goal-decision-8-a-goal-not-a-commitment-a	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	446	Coverage goal (decision 8: a GOAL, not a commitment) {[}A{]}
+tm:ch:dft-architecture:22-tools-licences-packaging	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	520	Tools, licences, packaging
+tm:ch:dft-architecture:23-pattern-export-to-a-tester-decision-1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	626	Pattern export to a tester (decision 1)
+tm:ch:dft-architecture:24-what-the-open-source-tools-cannot-deliver-strict-list-tape-out-context-a-unless-noted	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	641	What the open-source tools cannot deliver (strict list, tape-out context) {[}A unless noted{]}
+tm:ch:dft-architecture:3-memory-inventory	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	705	Memory inventory
+tm:ch:dft-architecture:31-hard-macros-12-instances-147456-bits-18-kib	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	707	Hard macros (12 instances, 147,456 bits = 18 KiB)
+tm:ch:dft-architecture:32-not-hard-macros-but-memory-like-flops	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	804	Not hard macros but memory-like (flops)
+tm:ch:dft-architecture:4-scan-readiness-audit-source-reading-plus-netlist-counts	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	816	Scan-readiness audit (source reading plus netlist counts)
+tm:ch:dft-architecture:5-hard-macros	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	991	Hard macros
+tm:ch:dft-architecture:6-mbist-architecture-tester-only-tap-driven-decisions-4-and-5	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1051	MBIST architecture (tester-only, TAP-driven; decisions 4 and 5)
+tm:ch:dft-architecture:61-algorithm-and-coverage	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1085	Algorithm and coverage
+tm:ch:dft-architecture:62-control-and-observation-through-the-tap-only-decision-4	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1118	Control and observation through the TAP only (decision 4)
+tm:ch:dft-architecture:63-collar-placement-scan-interaction-sram-boundary-shadowing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1163	Collar placement, scan interaction, SRAM-boundary shadowing
+tm:ch:dft-architecture:7-crypto-key-registers-excluded-from-scan-decision-3	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1211	Crypto key registers: EXCLUDED from scan (decision 3)
+tm:ch:dft-architecture:71-what-is-excluded-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1213	What is excluded {[}M{]}
+tm:ch:dft-architecture:72-coverage-lost-quantified-m-graph-analysis-not-atpg	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1226	Coverage lost, quantified {[}M, graph analysis, not ATPG{]}
+tm:ch:dft-architecture:73-exclusion-alone-leaks-the-key-masking-is-mandatory-a-reasoned	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1272	Exclusion alone leaks the key; masking is mandatory {[}A, reasoned{]}
+tm:ch:dft-architecture:74-how-the-exclusion-is-enforced-in-the-insertion-flow-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1295	How the exclusion is enforced in the insertion flow {[}M{]}
+tm:ch:dft-architecture:75-how-it-is-checked-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1310	How it is checked {[}M{]}
+tm:ch:dft-architecture:76-residual	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1326	Residual
+tm:ch:dft-architecture:8-cost-estimate	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1334	Cost estimate
+tm:ch:dft-architecture:9-test-access-ieee-11491-tap-decisions-5-and-6	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1519	Test access: IEEE 1149.1 TAP (decisions 5 and 6)
+tm:ch:dft-architecture:91-architecture	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1521	Architecture
+tm:ch:dft-architecture:92-instruction-set-private-codes-to-be-fixed-in-the-rtl-spec	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1540	Instruction set (private codes to be fixed in the RTL spec)
+tm:ch:dft-architecture:93-clocking-domains-reset	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1592	Clocking, domains, reset
+tm:ch:dft-architecture:94-the-taps-own-flops	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1664	The TAP\textquotesingle s own flops
+tm:ch:dft-architecture:95-raw-ports-on-the-core-macro-decisions-6-and-7	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1672	Raw ports on the core macro (decisions 6 and 7)
+tm:ch:dft-architecture:96-throughput-and-at-speed-with-parallel-ports-decision-7-a-unless-noted	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1705	Throughput and at-speed with parallel ports (decision 7) {[}A unless noted{]}
 tm:ch:flow-overview	docs/manual/tm/parts/02-physical-design.tex	3	Flow overview
-tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11	FPGA prototyping
-tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	19	FreePDK45 flow
-tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	15	High-level synthesis
+tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7878	FPGA prototyping
+tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	5343	FreePDK45 flow
+tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10042	High-level synthesis
 tm:ch:mod-cdc-primitives	docs/manual/tm/parts/01-module-reference.tex	19	CDC primitives
 tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
 tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	35	Crypto accelerator
@@ -1667,25 +1763,524 @@ tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	39	NPU
 tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	31	Peripherals
 tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	27	PLL subsystem
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	15	SoC fabric
-tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	19	Proprietary simulators
-tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	11	Sky130 flow
-tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	15	Synthesis undefined-value gate
-tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7	Tessent flows
+tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	6380	Proprietary simulators
+tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	4406	Sky130 flow
+tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	5932	Synthesis undefined-value gate
+tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6523	Tessent flows
 tm:ch:test-benches-and-suites	docs/manual/tm/parts/03-verification-infrastructure.tex	3	Test benches and suites
 tm:ch:tool-defects-and-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	3	Tool defects and caveats
+tm:dec:3pll-cdc	docs/manual/tm/parts/05-decisions.tex	9	3-PLL Multi-Clock + CDC Evaluation (pre-Phase-6 \#4)
+tm:dec:3pll-cdc:1-where-we-are-today	docs/manual/tm/parts/05-decisions.tex	23	Where we are today
+tm:dec:3pll-cdc:2-the-upside-why-3-pll-was-proposed	docs/manual/tm/parts/05-decisions.tex	49	The upside (why 3-PLL was proposed)
+tm:dec:3pll-cdc:3-the-cost-this-is-the-hard-part	docs/manual/tm/parts/05-decisions.tex	70	The cost (this is the hard part)
+tm:dec:3pll-cdc:4-key-scoping-insight-the-full-3-domain-split-is-over-scoped	docs/manual/tm/parts/05-decisions.tex	118	Key scoping insight --- the full 3-domain split is over-scoped
+tm:dec:3pll-cdc:5-recommendation	docs/manual/tm/parts/05-decisions.tex	139	Recommendation
+tm:dec:3pll-cdc:6-if-go-a-implementation-sketch-own-prs-each-re-verified	docs/manual/tm/parts/05-decisions.tex	181	If GO (A) --- implementation sketch (own PRs, each re-verified)
+tm:dec:3pll-cdc:7-verdict-line	docs/manual/tm/parts/05-decisions.tex	210	Verdict line
+tm:dec:3pll-cdc:decision-options-this-pr	docs/manual/tm/parts/05-decisions.tex	154	Decision options (this PR)
+tm:dec:3pll-cdc:folds-in	docs/manual/tm/parts/05-decisions.tex	174	Folds in
+tm:dec:agent-improvement-proposal	docs/manual/tm/parts/05-decisions.tex	1630	\texorpdfstring{Proposed improvements to \code{digital-chip-design-agents}}{Proposed improvements to }
+tm:dec:agent-improvement-proposal:1-guards-firmware-orchestrator-uniquely-lacks	docs/manual/tm/parts/05-decisions.tex	1705	\texorpdfstring{Guards \code{firmware-orchestrator} uniquely lacks}{Guards uniquely lacks}
+tm:dec:agent-improvement-proposal:2-an-outright-defect-the-experience-log-hardcodes-success	docs/manual/tm/parts/05-decisions.tex	1761	An outright defect: the experience log hardcodes success
+tm:dec:agent-improvement-proposal:caveats-on-this-evidence	docs/manual/tm/parts/05-decisions.tex	1903	Caveats on this evidence
+tm:dec:agent-improvement-proposal:p1-add-a-reporting-contract-to-every-orchestrator-template-wide	docs/manual/tm/parts/05-decisions.tex	1784	\texorpdfstring{P1 --- Add a Reporting Contract to every orchestrator \emph{(template-wide)}}{P1 --- Add a Reporting Contract to every orchestrator (template-wide)}
+tm:dec:agent-improvement-proposal:p2-add-a-long-running-job-protocol-template-wide-generalise-pds	docs/manual/tm/parts/05-decisions.tex	1810	\texorpdfstring{P2 --- Add a Long-Running Job protocol \emph{(template-wide; generalise PD\textquotesingle s)}}{P2 --- Add a Long-Running Job protocol (template-wide; generalise PD\textquotesingle s)}
+tm:dec:agent-improvement-proposal:p3-give-firmware-orchestrator-the-missing-sections	docs/manual/tm/parts/05-decisions.tex	1827	\texorpdfstring{P3 --- Give \code{firmware-orchestrator} the missing sections}{P3 --- Give the missing sections}
+tm:dec:agent-improvement-proposal:p4-fix-the-hardcoded-signoff-achieved	docs/manual/tm/parts/05-decisions.tex	1839	\texorpdfstring{P4 --- Fix the hardcoded \code{signoff_achieved}}{P4 --- Fix the hardcoded }
+tm:dec:agent-improvement-proposal:p5-add-an-artifact-provenance-guard-new-from-a-defect-that-reached-a-pr	docs/manual/tm/parts/05-decisions.tex	1846	\texorpdfstring{P5 --- Add an artifact-provenance guard \emph{(new; from a defect that reached a PR)}}{P5 --- Add an artifact-provenance guard (new; from a defect that reached a PR)}
+tm:dec:agent-improvement-proposal:priority	docs/manual/tm/parts/05-decisions.tex	1863	Priority
+tm:dec:agent-improvement-proposal:proposed-changes	docs/manual/tm/parts/05-decisions.tex	1780	Proposed changes
+tm:dec:agent-improvement-proposal:the-finding-that-matters-most	docs/manual/tm/parts/05-decisions.tex	1683	The finding that matters most
+tm:dec:agent-improvement-proposal:what-happened	docs/manual/tm/parts/05-decisions.tex	1640	What happened
+tm:dec:cpp-to-rtl-hls-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10049	C++ → SystemVerilog (HLS) Flow Evaluation \& RTL-Generation Approach Decision
+tm:dec:cpp-to-rtl-hls-evaluation:1-memory-coalescer-equivalent-with-a-6-control-path-latency-penalty	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10473	\texorpdfstring{\code{memory_coalescer} --- equivalent, with a 6× control-path latency penalty}{--- equivalent, with a 6× control-path latency penalty}
+tm:dec:cpp-to-rtl-hls-evaluation:2-rv32i-hazard-unit-the-control-pole-substituted-and-doubly-negative	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10499	\texorpdfstring{\code{rv32i_hazard_unit} --- the control pole, substituted and doubly negative}{--- the control pole, substituted and doubly negative}
+tm:dec:cpp-to-rtl-hls-evaluation:3-rv32i-cache-arbiter-outside-the-expressible-domain	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10542	\texorpdfstring{\code{rv32i_cache_arbiter} --- outside the expressible domain}{--- outside the expressible domain}
+tm:dec:cpp-to-rtl-hls-evaluation:backlog-item-empirical-confirmation-pilot	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10250	Backlog item --- Empirical confirmation pilot
+tm:dec:cpp-to-rtl-hls-evaluation:baseline-fsm-arm-valu-hls-use-synligtrue-warning-resolved-2026-09-18-confirmed-corrupt	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11570	\texorpdfstring{Baseline FSM arm (\code{valu_hls}, \code{USE_SYNLIG:true}) --- \warn{} RESOLVED 2026-09-18: \textbf{CONFIRMED CORRUPT}}{Baseline FSM arm (, ) --- RESOLVED 2026-09-18: CONFIRMED CORRUPT}
+tm:dec:cpp-to-rtl-hls-evaluation:bug-1-found-and-fixed-synth-share-resources-left-enabled	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11044	\texorpdfstring{Bug 1 (found and fixed): \code{SYNTH_SHARE_RESOURCES} left enabled}{Bug 1 (found and fixed): left enabled}
+tm:dec:cpp-to-rtl-hls-evaluation:bug-2-found-not-fixed-the-post-fix-netlist-still-discards-most-of-rs2-i	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11071	\texorpdfstring{Bug 2 (found, NOT fixed): the post-fix netlist still discards most of \code{rs2_i}}{Bug 2 (found, NOT fixed): the post-fix netlist still discards most of }
+tm:dec:cpp-to-rtl-hls-evaluation:comparison-table-rtl-and-hls-only-comb-excluded-per-above	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11141	\texorpdfstring{Comparison table (\code{rtl} and \code{hls} only --- \code{comb} excluded per above)}{Comparison table ( and only --- excluded per above)}
+tm:dec:cpp-to-rtl-hls-evaluation:corrected-comb-metrics-run-2026-09-15-15-06-29-use-synligfalse-sv2v	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11439	\texorpdfstring{Corrected comb metrics (\code{RUN_2026-09-15_15-06-29}, \code{USE_SYNLIG:false} + sv2v)}{Corrected comb metrics (, + sv2v)}
+tm:dec:cpp-to-rtl-hls-evaluation:cpugpu-hand-rtl-exposure-verdict-not-exposed-to-this-specific-construct	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11734	CPU/GPU hand-RTL exposure verdict: NOT exposed to this specific construct
+tm:dec:cpp-to-rtl-hls-evaluation:effect-on-the-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10815	Effect on the recommendation
+tm:dec:cpp-to-rtl-hls-evaluation:effect-on-the-recommendation-1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10979	Effect on the recommendation
+tm:dec:cpp-to-rtl-hls-evaluation:gh-119-egt-follow-up-the-combinational-candidate-ppa-attempt-is-invalid-2026-09-15	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11017	\texorpdfstring{GH \#119 \code{egt} follow-up --- the combinational-candidate PPA attempt is INVALID (2026-09-15)}{GH \#119 follow-up --- the combinational-candidate PPA attempt is INVALID (2026-09-15)}
+tm:dec:cpp-to-rtl-hls-evaluation:gh-119-gcd-follow-up-comb-candidate-root-caused-synlig-and-fixed-2026-09-15	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11293	\texorpdfstring{GH \#119 \code{gcd} follow-up --- comb candidate root-caused (Synlig) and fixed (2026-09-15)}{GH \#119 follow-up --- comb candidate root-caused (Synlig) and fixed (2026-09-15)}
+tm:dec:cpp-to-rtl-hls-evaluation:method	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10642	Method
+tm:dec:cpp-to-rtl-hls-evaluation:method-the-reference-rtl-body-was-withheld	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10420	Method: the reference RTL body was withheld
+tm:dec:cpp-to-rtl-hls-evaluation:original-superseded-verdict-inconclusive-not-re-fixed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11704	Original (superseded) verdict: INCONCLUSIVE, not re-fixed
+tm:dec:cpp-to-rtl-hls-evaluation:part-1-available-open-source-chls-systemverilog-tools	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10099	Part 1 --- Available open-source C++/HLS → (System)Verilog tools
+tm:dec:cpp-to-rtl-hls-evaluation:part-2-why-not-for-this-projects-core-quality-ppa-timing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10168	Part 2 --- Why not for this project\textquotesingle s core (quality / PPA / timing)
+tm:dec:cpp-to-rtl-hls-evaluation:recommended-approach-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10062	Recommended Approach (decision)
+tm:dec:cpp-to-rtl-hls-evaluation:references	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10213	References
+tm:dec:cpp-to-rtl-hls-evaluation:result-1-the-coalescer-hls-won-on-speed-and-that-was-not-the-hypothesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10712	\texorpdfstring{Result 1 --- the coalescer: HLS \emph{won} on speed, and that was not the hypothesis}{Result 1 --- the coalescer: HLS won on speed, and that was not the hypothesis}
+tm:dec:cpp-to-rtl-hls-evaluation:result-2-the-hazard-unit-regression-on-every-axis-that-matters	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10747	Result 2 --- the hazard unit: regression on every axis that matters
+tm:dec:cpp-to-rtl-hls-evaluation:result-3-netlist-quality-undriven-wires-only-in-the-hls-arms	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10771	Result 3 --- netlist quality: undriven wires, only in the HLS arms
+tm:dec:cpp-to-rtl-hls-evaluation:results	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10431	Results
+tm:dec:cpp-to-rtl-hls-evaluation:setup	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11031	Setup
+tm:dec:cpp-to-rtl-hls-evaluation:stage-1-results-the-pilot-was-run-2026-09-07	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10382	Stage 1 results --- the pilot was run (2026-09-07)
+tm:dec:cpp-to-rtl-hls-evaluation:stage-2-results-the-ppa-table-2026-09-07	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10633	Stage 2 results --- the PPA table (2026-09-07)
+tm:dec:cpp-to-rtl-hls-evaluation:stage-2-what-it-may-and-may-not-claim	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10608	Stage 2 --- what it may and may not claim
+tm:dec:cpp-to-rtl-hls-evaluation:stage-3-results-the-datapath-pole-2026-09-07-bead-gg8	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10846	\texorpdfstring{Stage 3 results --- the datapath pole (2026-09-07, bead \code{gg8})}{Stage 3 results --- the datapath pole (2026-09-07, bead )}
+tm:dec:cpp-to-rtl-hls-evaluation:the-fsm-is-structural-not-an-authoring-or-clock-artifact	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10956	The FSM is structural, not an authoring or clock artifact
+tm:dec:cpp-to-rtl-hls-evaluation:the-table	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10654	The table
+tm:dec:cpp-to-rtl-hls-evaluation:the-table-1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10862	The table
+tm:dec:cpp-to-rtl-hls-evaluation:two-caveats-both-cutting-in-the-hls-arms-favour	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10907	Two caveats, both cutting in the HLS arm\textquotesingle s favour
+tm:dec:cpp-to-rtl-hls-evaluation:verdict	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11266	Verdict
+tm:dec:cpp-to-rtl-hls-evaluation:verification	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11002	Verification
+tm:dec:cpp-to-rtl-hls-evaluation:what-must-not-be-read-into-this-table	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10796	What must not be read into this table
+tm:dec:cpp-to-rtl-hls-evaluation:what-this-does-to-the-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10565	What this does to the recommendation
+tm:dec:cpp-to-rtl-hls-evaluation:what-was-pinned	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10394	What was pinned
+tm:dec:cpp-to-rtl-hls-evaluation:worst-arc-decomposition-comb-mandatory-per-the	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11519	\texorpdfstring{Worst-arc decomposition (\code{comb}, mandatory per the}{Worst-arc decomposition (, mandatory per the}
+tm:dec:cpp-to-rtl-hls-evaluation:worst-arc-decomposition-mandatory-before-quoting-any-fmax-ratio-per-the	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11216	Worst-arc decomposition (mandatory before quoting any fmax ratio, per the
+tm:dec:fpga-board-selection	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7885	\texorpdfstring{FPGA board selection (bead \code{hlrm}, GH \#245)}{FPGA board selection (bead , GH \#245)}
+tm:dec:fpga-board-selection:1-how-much-fpga-the-design-needs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7895	How much FPGA the design needs
+tm:dec:fpga-board-selection:2-candidates-with-singapore-price-and-stock	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7964	Candidates, with Singapore price and stock
+tm:dec:fpga-board-selection:3-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8020	Recommendation
+tm:dec:fpga-board-selection:4-second-clock-source-add-on	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8050	Second clock source (add-on)
+tm:dec:fpga-board-selection:5-clock-speed-sanity-check-tool-availability-checked-2026-10-14	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8117	Clock-speed sanity check: tool availability (checked 2026-10-14)
+tm:dec:fpga-board-selection:measured-artix-7-xc7a200t-vivado-20261	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8392	Measured: Artix-7 XC7A200T (Vivado 2026.1)
+tm:dec:fpga-board-selection:measured-ecp5-lower-bound-2026-10-14-cpu-only-build-post-place-and-route	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8175	Measured: ECP5 lower bound (2026-10-14, CPU-only build, post place-and-route)
+tm:dec:fpga-board-selection:measured-kintex-7-xc7k325t-2-vivado-20261-the-genesys-2-part-bead-hlrm1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8860	\texorpdfstring{Measured: Kintex-7 XC7K325T-2 (Vivado 2026.1), the Genesys 2 part (bead \code{hlrm.1})}{Measured: Kintex-7 XC7K325T-2 (Vivado 2026.1), the Genesys 2 part (bead )}
+tm:dec:fpga-board-selection:sources	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9168	Sources
+tm:dec:fpga-stage0-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9228	\texorpdfstring{FPGA Stage 0 evaluation (bead \code{hlrm}, GH \#245, PR \#279)}{FPGA Stage 0 evaluation (bead , GH \#245, PR \#279)}
+tm:dec:fpga-stage0-evaluation:1-method	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9236	Method
+tm:dec:fpga-stage0-evaluation:10-what-was-not-verified	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10022	What was NOT verified
+tm:dec:fpga-stage0-evaluation:2-results	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9328	Results
+tm:dec:fpga-stage0-evaluation:21-resource-table-measured-yosys-062-stat-json-flatten-no-pr	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9332	\texorpdfstring{Resource table (measured: yosys 0.62 \code{stat} / JSON, \code{-flatten}, no P\&R)}{Resource table (measured: yosys 0.62 / JSON, , no P\&R)}
+tm:dec:fpga-stage0-evaluation:22-which-memories-inferred-block-ram-measured-mapping-memory-lines-in-the-logs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9391	\texorpdfstring{Which memories inferred block RAM (measured: \texttt{mapping\ memory\ .\allowbreak{}.\allowbreak{}.\allowbreak{}} lines in the logs)}{Which memories inferred block RAM (measured: lines in the logs)}
+tm:dec:fpga-stage0-evaluation:23-blackboxes-undefined-modules	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9449	Blackboxes / undefined modules
+tm:dec:fpga-stage0-evaluation:24-latches-measured-latch-inferred-lines	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9460	\texorpdfstring{Latches (measured: \texttt{Latch\ inferred} lines)}{Latches (measured: lines)}
+tm:dec:fpga-stage0-evaluation:25-fmax-not-measured-ecp5-lower-bound-measured-later	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9474	fmax: NOT MEASURED (ECP5 lower bound measured later)
+tm:dec:fpga-stage0-evaluation:3-the-fpga-arms-what-was-written-by-whom-what-each-infers	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9531	The FPGA arms (what was written, by whom, what each infers)
+tm:dec:fpga-stage0-evaluation:4-non-fpga-identity-proof	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9599	Non-FPGA identity proof
+tm:dec:fpga-stage0-evaluation:5-regression-with-the-fpga-define	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9662	Regression with the FPGA define
+tm:dec:fpga-stage0-evaluation:6-clock-gating-no-arm-written-decision-needed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9758	Clock gating: no arm written (decision needed)
+tm:dec:fpga-stage0-evaluation:7-what-does-not-map-to-an-fpga-or-maps-only-conditionally	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9813	What does not map to an FPGA (or maps only conditionally)
+tm:dec:fpga-stage0-evaluation:8-device-class-sizing-inference-from-vendor-datasheet-figures-as-i-remember-them-verify-before-buying	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9871	Device-class sizing (INFERENCE from vendor datasheet figures as I remember them; verify before buying)
+tm:dec:fpga-stage0-evaluation:9-board-options-and-go-no-go-options-for-the-user-not-a-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9933	Board options and go / no-go (options for the user, not a decision)
+tm:dec:fpga-stage0-evaluation:open-human-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9988	Open human decisions
+tm:dec:fpga-stage0-evaluation:tool-versions-and-where-they-came-from	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9282	Tool versions and where they came from
+tm:dec:m10-l2	docs/manual/tm/parts/05-decisions.tex	220	Phase 5 M10 --- L2 Cache Decision Analysis
+tm:dec:m10-l2:1-what-was-measured	docs/manual/tm/parts/05-decisions.tex	236	What was measured
+tm:dec:m10-l2:10-final-decision-2026-06-21-no-go-on-l2-and-2-way-keep-direct-mapped	docs/manual/tm/parts/05-decisions.tex	753	Final Decision (2026-06-21) --- NO-GO on L2 and 2-way; keep direct-mapped
+tm:dec:m10-l2:2-result-a-hard-capacity-cliff-at-the-4-kb-l1-boundary	docs/manual/tm/parts/05-decisions.tex	266	Result --- a hard capacity cliff at the 4 KB L1 boundary
+tm:dec:m10-l2:3-interpretation	docs/manual/tm/parts/05-decisions.tex	310	Interpretation
+tm:dec:m10-l2:4-recommendation	docs/manual/tm/parts/05-decisions.tex	346	Recommendation
+tm:dec:m10-l2:5-2-way-d-re-benchmark-m10b-2-2026-06-21	docs/manual/tm/parts/05-decisions.tex	390	2-Way D\$ Re-benchmark (M10b-2, 2026-06-21)
+tm:dec:m10-l2:51-comparison-table-direct-mapped-vs-2-way-same-4-kb-capacity	docs/manual/tm/parts/05-decisions.tex	414	Comparison table --- direct-mapped vs 2-way (same 4 KB capacity)
+tm:dec:m10-l2:52-capacity-vs-conflict-decomposition	docs/manual/tm/parts/05-decisions.tex	452	Capacity vs conflict decomposition
+tm:dec:m10-l2:53-residual-capacity-wall	docs/manual/tm/parts/05-decisions.tex	487	Residual capacity wall
+tm:dec:m10-l2:54-implication-for-l2	docs/manual/tm/parts/05-decisions.tex	501	Implication for L2
+tm:dec:m10-l2:6-reproduce	docs/manual/tm/parts/05-decisions.tex	531	Reproduce
+tm:dec:m10-l2:7-conflict-stress-benchmark-m10c-2026-06-21	docs/manual/tm/parts/05-decisions.tex	543	Conflict-stress benchmark (M10c, 2026-06-21)
+tm:dec:m10-l2:71-results-dmisski-by-k-value	docs/manual/tm/parts/05-decisions.tex	553	Results --- D\$miss/kI by K-value
+tm:dec:m10-l2:72-k2-headline-numbers	docs/manual/tm/parts/05-decisions.tex	599	K=2 headline numbers
+tm:dec:m10-l2:73-interpretation	docs/manual/tm/parts/05-decisions.tex	626	Interpretation
+tm:dec:m10-l2:74-final-architecture-observation	docs/manual/tm/parts/05-decisions.tex	666	Final architecture observation
+tm:dec:m10-l2:8-reproduce-m10c	docs/manual/tm/parts/05-decisions.tex	701	Reproduce (M10c)
+tm:dec:m10-l2:9-coremark-real-workload-run-m10c-3	docs/manual/tm/parts/05-decisions.tex	715	CoreMark Real-Workload Run (M10c-3)
+tm:dec:m10-l2:decision	docs/manual/tm/parts/05-decisions.tex	796	Decision
+tm:dec:m10-l2:disposition	docs/manual/tm/parts/05-decisions.tex	831	Disposition
+tm:dec:m10-l2:evidence-summary	docs/manual/tm/parts/05-decisions.tex	757	Evidence summary
+tm:dec:peripheral-bus	docs/manual/tm/parts/05-decisions.tex	854	Peripheral Bus Evaluation --- AXI4-Lite vs APB (pre-Phase-6)
+tm:dec:peripheral-bus:1-question	docs/manual/tm/parts/05-decisions.tex	864	Question
+tm:dec:peripheral-bus:2-findings-evidence-based	docs/manual/tm/parts/05-decisions.tex	871	Findings (evidence-based)
+tm:dec:peripheral-bus:3-recommendation-hybrid-axi-lite-fabric-apb-peripheral-subtree	docs/manual/tm/parts/05-decisions.tex	959	Recommendation --- hybrid: AXI-Lite fabric + APB peripheral subtree
+tm:dec:peripheral-bus:4-migration-plan-if-approved-per-module-prs-linked-to-this-one	docs/manual/tm/parts/05-decisions.tex	1000	Migration plan (if approved) --- per-module PRs linked to this one
+tm:dec:peripheral-bus:5-decision	docs/manual/tm/parts/05-decisions.tex	1035	Decision
+tm:dec:peripheral-bus:alternative-considered-keep-all-axi4-lite	docs/manual/tm/parts/05-decisions.tex	991	Alternative considered --- keep all AXI4-Lite
+tm:dec:peripheral-bus:the-4-simple-peripherals-are-apb-equivalent	docs/manual/tm/parts/05-decisions.tex	906	The 4 simple peripherals are APB-equivalent
+tm:dec:peripheral-bus:the-ring-carries-two-different-classes-of-slave	docs/manual/tm/parts/05-decisions.tex	873	The ring carries two different classes of slave
+tm:dec:peripheral-bus:which-axi4-lite-features-are-genuinely-used	docs/manual/tm/parts/05-decisions.tex	917	Which AXI4-Lite features are genuinely used
+tm:dec:tessent-mbist-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7098	Siemens Tessent MemoryBIST vs the in-house MBIST (parallel evaluation)
+tm:dec:tessent-mbist-evaluation:1-what-was-built	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7116	What was built
+tm:dec:tessent-mbist-evaluation:10-reproducing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7864	Reproducing
+tm:dec:tessent-mbist-evaluation:2-memory-library-what-is-in-the-tcd-and-what-was-assumed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7189	Memory library: what is in the TCD and what was assumed
+tm:dec:tessent-mbist-evaluation:3-comparison-tessent-vs-in-house	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7261	Comparison, Tessent vs in-house
+tm:dec:tessent-mbist-evaluation:4-rules-violations-and-warnings-triaged	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7385	Rules, violations and warnings triaged
+tm:dec:tessent-mbist-evaluation:5-simulation-and-fault-injection-results-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7466	Simulation and fault-injection results {[}M{]}
+tm:dec:tessent-mbist-evaluation:51-fault-free-simulation-on-vcs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7468	Fault-free simulation on VCS
+tm:dec:tessent-mbist-evaluation:52-fault-injection	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7509	Fault injection
+tm:dec:tessent-mbist-evaluation:53-retention	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7632	Retention
+tm:dec:tessent-mbist-evaluation:6-area	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7667	Area
+tm:dec:tessent-mbist-evaluation:61-method-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7669	Method {[}M{]}
+tm:dec:tessent-mbist-evaluation:62-results-um2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7684	Results (um2)
+tm:dec:tessent-mbist-evaluation:7-integration-findings	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7759	Integration findings
+tm:dec:tessent-mbist-evaluation:71-soc-top-as-the-tessent-target	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7762	\texorpdfstring{\code{soc_top} as the Tessent target}{as the Tessent target}
+tm:dec:tessent-mbist-evaluation:72-access-to-the-existing-tap	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7785	Access to the existing TAP
+tm:dec:tessent-mbist-evaluation:8-not-done-and-limits	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7797	Not done, and limits
+tm:dec:tessent-mbist-evaluation:9-recommendation-the-decision-is-the-users	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7826	Recommendation (the decision is the user\textquotesingle s)
+tm:dec:xezim	docs/manual/tm/parts/05-decisions.tex	1047	\texorpdfstring{Xezim evaluation: secondary compile + simulation tool (bead \code{qd9l})}{Xezim evaluation: secondary compile + simulation tool (bead )}
+tm:dec:xezim:1-method	docs/manual/tm/parts/05-decisions.tex	1065	Method
+tm:dec:xezim:10-what-was-not-verified	docs/manual/tm/parts/05-decisions.tex	1595	What was NOT verified
+tm:dec:xezim:2-elaboration-measured	docs/manual/tm/parts/05-decisions.tex	1082	Elaboration (measured)
+tm:dec:xezim:3-cocotb-measured	docs/manual/tm/parts/05-decisions.tex	1205	cocotb (measured)
+tm:dec:xezim:4-silent-miscompile-measured-reproduced-twice-independently	docs/manual/tm/parts/05-decisions.tex	1268	Silent miscompile (measured, reproduced twice independently)
+tm:dec:xezim:5-slang-as-use-before-declare-check-measured	docs/manual/tm/parts/05-decisions.tex	1331	Slang as use-before-declare check (measured)
+tm:dec:xezim:6-differentiators-measured	docs/manual/tm/parts/05-decisions.tex	1388	Differentiators (measured)
+tm:dec:xezim:7-pros-and-cons-per-option	docs/manual/tm/parts/05-decisions.tex	1431	Pros and cons per option
+tm:dec:xezim:8-improvement-areas	docs/manual/tm/parts/05-decisions.tex	1492	Improvement areas
+tm:dec:xezim:9-recommendation-and-open-decisions	docs/manual/tm/parts/05-decisions.tex	1539	Recommendation and open decisions
+tm:dec:xezim:can-xezims-misses-be-fixed-source-read-nothing-built	docs/manual/tm/parts/05-decisions.tex	1167	Can xezim\textquotesingle s misses be fixed? (source read, nothing built)
+tm:flow:cdc-snitch-poc	docs/manual/tm/parts/03-verification-infrastructure.tex	5735	CDC Snitch integration --- feasibility POC
+tm:flow:cdc-snitch-poc:decision	docs/manual/tm/parts/03-verification-infrastructure.tex	5890	Decision
+tm:flow:cdc-snitch-poc:follow-ups	docs/manual/tm/parts/03-verification-infrastructure.tex	5878	Follow-ups
+tm:flow:cdc-snitch-poc:goal	docs/manual/tm/parts/03-verification-infrastructure.tex	5743	Goal
+tm:flow:cdc-snitch-poc:result-full-soc-top-52-rtl-files-32k-registers	docs/manual/tm/parts/03-verification-infrastructure.tex	5814	\texorpdfstring{Result (full \code{soc_top}, 52 RTL files, \textasciitilde32k registers)}{Result (full , 52 RTL files, \textasciitilde32k registers)}
+tm:flow:cdc-snitch-poc:the-5234-bad-are-100-false-positives	docs/manual/tm/parts/03-verification-infrastructure.tex	5838	\texorpdfstring{The 5234 \code{BAD} are \textasciitilde100\% false positives}{The 5234 are \textasciitilde100\% false positives}
+tm:flow:cdc-snitch-poc:to-make-it-a-real-gate-deferred-to-phase-6	docs/manual/tm/parts/03-verification-infrastructure.tex	5908	To make it a real gate (deferred to Phase 6+)
+tm:flow:cdc-snitch-poc:toolchain-what-actually-worked	docs/manual/tm/parts/03-verification-infrastructure.tex	5785	Toolchain (what actually worked)
+tm:flow:cdc-snitch-poc:what-cdc-snitch-does	docs/manual/tm/parts/03-verification-infrastructure.tex	5750	\texorpdfstring{What cdc\_\allowbreak{}snitch does}{What cdc\_snitch does}
+tm:flow:commercial-sim-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	790	VCS code coverage and hole review (Step 4, report-only)
+tm:flow:commercial-sim-coverage:1-how-to-run	docs/manual/tm/parts/03-verification-infrastructure.tex	815	How to run
+tm:flow:commercial-sim-coverage:2-results	docs/manual/tm/parts/03-verification-infrastructure.tex	970	Results
+tm:flow:commercial-sim-coverage:21-overall	docs/manual/tm/parts/03-verification-infrastructure.tex	977	Overall
+tm:flow:commercial-sim-coverage:22-per-module-scores	docs/manual/tm/parts/03-verification-infrastructure.tex	1100	Per-module scores
+tm:flow:commercial-sim-coverage:3-ranked-hole-list-highest-risk-first	docs/manual/tm/parts/03-verification-infrastructure.tex	1680	Ranked hole list (highest risk first)
+tm:flow:commercial-sim-coverage:31-top-15	docs/manual/tm/parts/03-verification-infrastructure.tex	1731	Top 15
+tm:flow:commercial-sim-coverage:32-further-holes-ranks-16-onward-grouped	docs/manual/tm/parts/03-verification-infrastructure.tex	1950	Further holes (ranks 16 onward, grouped)
+tm:flow:commercial-sim-coverage:4-toggle-coverage-how-it-was-treated	docs/manual/tm/parts/03-verification-infrastructure.tex	2082	Toggle coverage: how it was treated
+tm:flow:commercial-sim-coverage:5-proposed-waivers-nothing-is-written-for-a-human-to-accept	docs/manual/tm/parts/03-verification-infrastructure.tex	2134	Proposed waivers (nothing is written; for a human to accept)
+tm:flow:commercial-sim-coverage:6-caveats-and-tool-behaviour-that-affects-reading-the-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	2207	Caveats and tool behaviour that affects reading the numbers
+tm:flow:commercial-sim-coverage:7-functional-coverage-that-already-exists-and-how-it-relates	docs/manual/tm/parts/03-verification-infrastructure.tex	2270	Functional coverage that already exists, and how it relates
+tm:flow:commercial-sim-coverage:8-reproducibility-and-provenance	docs/manual/tm/parts/03-verification-infrastructure.tex	2326	Reproducibility and provenance
+tm:flow:commercial-sim-coverage:instrumentation-did-not-change-passfail	docs/manual/tm/parts/03-verification-infrastructure.tex	919	Instrumentation did not change pass/fail
+tm:flow:commercial-sim-coverage:what-coverage1-simvcs-does-tbcocotbcommonsim-portabilitymk	docs/manual/tm/parts/03-verification-infrastructure.tex	845	\texorpdfstring{What \texttt{COVERAGE=\allowbreak{}1\ SIM=\allowbreak{}vcs} does (tb/\allowbreak{}cocotb/\allowbreak{}common/\allowbreak{}sim\_\allowbreak{}portability.mk)}{What does (tb/cocotb/common/sim\_portability.mk)}
+tm:flow:control-signals-analysis	docs/manual/tm/parts/03-verification-infrastructure.tex	324	\texorpdfstring{Control Signal Analysis for rv32i\_\allowbreak{}decode.sv}{Control Signal Analysis for rv32i\_decode.sv}
+tm:flow:control-signals-analysis:1-mem-to-reg-write-back-mux-control	docs/manual/tm/parts/03-verification-infrastructure.tex	362	\texorpdfstring{\code{mem_to_reg} (Write-Back Mux Control)}{(Write-Back Mux Control)}
+tm:flow:control-signals-analysis:2-pc-wr-en-program-counter-write-enable	docs/manual/tm/parts/03-verification-infrastructure.tex	431	\texorpdfstring{\code{pc_wr_en} (Program Counter Write Enable)}{(Program Counter Write Enable)}
+tm:flow:control-signals-analysis:3-pc-src-program-counter-source-mux	docs/manual/tm/parts/03-verification-infrastructure.tex	469	\texorpdfstring{\code{pc_src} (Program Counter Source Mux)}{(Program Counter Source Mux)}
+tm:flow:control-signals-analysis:4-result-src-or-wb-src-alternative-name-for-mem-to-reg	docs/manual/tm/parts/03-verification-infrastructure.tex	524	\texorpdfstring{\code{result_src} or \code{wb_src} (Alternative name for mem\_\allowbreak{}to\_\allowbreak{}reg)}{or (Alternative name for mem\_to\_reg)}
+tm:flow:control-signals-analysis:5-alu-zero-alu-zero-output	docs/manual/tm/parts/03-verification-infrastructure.tex	546	\texorpdfstring{\code{alu_zero} (ALU Zero Output)}{(ALU Zero Output)}
+tm:flow:control-signals-analysis:6-trap-or-exception-trapexception-flag	docs/manual/tm/parts/03-verification-infrastructure.tex	568	\texorpdfstring{\code{trap} or \code{exception} (Trap/\allowbreak{}Exception Flag)}{or (Trap/Exception Flag)}
+tm:flow:control-signals-analysis:currently-proposed-signals-in-example	docs/manual/tm/parts/03-verification-infrastructure.tex	331	Currently Proposed Signals (in EXAMPLE)
+tm:flow:control-signals-analysis:instruction-by-instruction-control-signal-table	docs/manual/tm/parts/03-verification-infrastructure.tex	684	Instruction-by-Instruction Control Signal Table
+tm:flow:control-signals-analysis:must-add-critical	docs/manual/tm/parts/03-verification-infrastructure.tex	594	Must Add (Critical)
+tm:flow:control-signals-analysis:overview	docs/manual/tm/parts/03-verification-infrastructure.tex	326	Overview
+tm:flow:control-signals-analysis:potentially-missing-signals	docs/manual/tm/parts/03-verification-infrastructure.tex	359	Potentially Missing Signals
+tm:flow:control-signals-analysis:questions-for-human-review	docs/manual/tm/parts/03-verification-infrastructure.tex	730	Questions for Human Review
+tm:flow:control-signals-analysis:recommendation	docs/manual/tm/parts/03-verification-infrastructure.tex	767	Recommendation
+tm:flow:control-signals-analysis:should-not-add-handled-elsewhere	docs/manual/tm/parts/03-verification-infrastructure.tex	620	Should NOT Add (Handled Elsewhere)
+tm:flow:control-signals-analysis:summary-and-recommendations	docs/manual/tm/parts/03-verification-infrastructure.tex	592	Summary and Recommendations
+tm:flow:control-signals-analysis:updated-decoder-interface-proposal	docs/manual/tm/parts/03-verification-infrastructure.tex	638	Updated Decoder Interface Proposal
+tm:flow:functional-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	2352	Functional coverage in the cocotb flow (bead h367)
+tm:flow:functional-coverage:1-evaluation	docs/manual/tm/parts/03-verification-infrastructure.tex	2363	Evaluation
+tm:flow:functional-coverage:2-flow	docs/manual/tm/parts/03-verification-infrastructure.tex	2450	Flow
+tm:flow:functional-coverage:3-the-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	2489	The gate
+tm:flow:functional-coverage:4-rolling-out-to-another-peripheral	docs/manual/tm/parts/03-verification-infrastructure.tex	2516	Rolling out to another peripheral
+tm:flow:functional-coverage:5-what-this-does-not-do	docs/manual/tm/parts/03-verification-infrastructure.tex	2567	What this does not do
+tm:flow:i2c-functional-coverage-model	docs/manual/tm/parts/03-verification-infrastructure.tex	2589	I2C functional-coverage model (bead h367 pilot)
+tm:flow:i2c-functional-coverage-model:bus-what-the-master-did-on-the-wire-source-bus	docs/manual/tm/parts/03-verification-infrastructure.tex	2607	bus: what the master did on the wire (source: bus)
+tm:flow:i2c-functional-coverage-model:cfg-configuration-programmed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	2695	cfg: configuration programmed (source: apb)
+tm:flow:i2c-functional-coverage-model:cmd-the-i2c-cmd-words-issued-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	2658	cmd: the I2C\_CMD words issued (source: apb)
+tm:flow:i2c-functional-coverage-model:err-error-and-recovery-paths	docs/manual/tm/parts/03-verification-infrastructure.tex	2770	err: error and recovery paths
+tm:flow:i2c-functional-coverage-model:irq-status-fifo-what-software-observed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	2733	irq / status / fifo: what software observed (source: apb)
+tm:flow:i2c-functional-coverage-model:known-limits-of-the-model	docs/manual/tm/parts/03-verification-infrastructure.tex	2867	Known limits of the model
+tm:flow:i2c-functional-coverage-model:reachability-and-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	2830	Reachability and waivers
+tm:flow:i2c-functional-coverage-model:soc-reached-through-the-real-fabric-test-soc-i2cpy-source-scenario	docs/manual/tm/parts/03-verification-infrastructure.tex	2819	\texorpdfstring{soc: reached through the real fabric (\code{test_soc_i2c.py}, source: scenario)}{soc: reached through the real fabric (, source: scenario)}
+tm:flow:soc-coverage-report	docs/manual/tm/parts/03-verification-infrastructure.tex	2887	SoC line + toggle coverage report (GH \#216)
+tm:flow:soc-coverage-report:05wf-re-measurement-uart-controller-spi-controller-unit-level-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	5120	\texorpdfstring{05wf re-measurement: \code{uart_controller} / \code{spi_controller} (unit level, 2026-10-08)}{05wf re-measurement: / (unit level, 2026-10-08)}
+tm:flow:soc-coverage-report:7ovx-register-walk-re-measurement-2026-10-09	docs/manual/tm/parts/03-verification-infrastructure.tex	4687	7ovx register-walk re-measurement (2026-10-09)
+tm:flow:soc-coverage-report:adjusted-totals-before-after-triaged-trees-pr-226-data	docs/manual/tm/parts/03-verification-infrastructure.tex	5189	Adjusted totals, before / after (triaged trees, PR \#226 data)
+tm:flow:soc-coverage-report:ci-and-recommendation	docs/manual/tm/parts/03-verification-infrastructure.tex	3731	CI and recommendation
+tm:flow:soc-coverage-report:combined-report-soc-cpu-cache-gpu-suites-bead-1eyv-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	3462	\texorpdfstring{Combined report: SoC + CPU / cache / GPU suites (bead \code{1eyv}, 2026-10-10)}{Combined report: SoC + CPU / cache / GPU suites (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:coverage-cleanup-beads-j41m7-34dv-4pl8-0ntg-xkw5-pr-316-2026-10-18	docs/manual/tm/parts/03-verification-infrastructure.tex	4217	Coverage cleanup: beads j41m.7, 34dv, 4pl8, 0ntg, xkw5 (PR \#316, 2026-10-18)
+tm:flow:soc-coverage-report:coverage-cleanup-second-pass-bead-xkw5-leftovers-pr-320-2026-10-19	docs/manual/tm/parts/03-verification-infrastructure.tex	4364	Coverage cleanup, second pass: bead xkw5 leftovers (PR \#320, 2026-10-19)
+tm:flow:soc-coverage-report:ej6j-axi4-fabric-re-measurement-2026-10-07	docs/manual/tm/parts/03-verification-infrastructure.tex	4924	ej6j AXI4-fabric re-measurement (2026-10-07)
+tm:flow:soc-coverage-report:findings-no-rtl-change-made	docs/manual/tm/parts/03-verification-infrastructure.tex	4636	Findings (no RTL change made)
+tm:flow:soc-coverage-report:findings-rtl-bugs-not-fixed-per-scope	docs/manual/tm/parts/03-verification-infrastructure.tex	4143	Findings (RTL bugs; not fixed, per scope)
+tm:flow:soc-coverage-report:gate-decision	docs/manual/tm/parts/03-verification-infrastructure.tex	5482	Gate decision
+tm:flow:soc-coverage-report:gate-what-is-and-is-not-covered	docs/manual/tm/parts/03-verification-infrastructure.tex	4190	Gate: what is and is not covered
+tm:flow:soc-coverage-report:gh-222-waiver-audit-bead-kp61-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	5004	\texorpdfstring{GH \#222 waiver audit (bead \code{kp61}, 2026-10-08)}{GH \#222 waiver audit (bead , 2026-10-08)}
+tm:flow:soc-coverage-report:how-to	docs/manual/tm/parts/03-verification-infrastructure.tex	5666	How to
+tm:flow:soc-coverage-report:informational-trees-before-soc-suites-only-after-combined	docs/manual/tm/parts/03-verification-infrastructure.tex	3567	Informational trees, before (SoC suites only) / after (combined)
+tm:flow:soc-coverage-report:informational-trees-no-triage-no-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	3349	Informational trees (no triage, no waivers)
+tm:flow:soc-coverage-report:method	docs/manual/tm/parts/03-verification-infrastructure.tex	2901	Method
+tm:flow:soc-coverage-report:method-1	docs/manual/tm/parts/03-verification-infrastructure.tex	3471	Method
+tm:flow:soc-coverage-report:new-tests	docs/manual/tm/parts/03-verification-infrastructure.tex	3949	New tests
+tm:flow:soc-coverage-report:new-tests-no-rtl-change	docs/manual/tm/parts/03-verification-infrastructure.tex	4259	New tests (no RTL change)
+tm:flow:soc-coverage-report:new-tests-no-rtl-change-1	docs/manual/tm/parts/03-verification-infrastructure.tex	4507	New tests (no RTL change)
+tm:flow:soc-coverage-report:per-module-result-ci-run-above-adjusted-toggle-hittotal-rows-shown-only-where-the-module-changed	docs/manual/tm/parts/03-verification-infrastructure.tex	4586	\texorpdfstring{Per-module result (CI run above; adjusted toggle, hit/\allowbreak{}total; rows shown only where the module changed)}{Per-module result (CI run above; adjusted toggle, hit/total; rows shown only where the module changed)}
+tm:flow:soc-coverage-report:per-module-result-line-hittotal-waived-category-b-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	3796	\texorpdfstring{Per-module result (line \%, hit/\allowbreak{}total; "waived" = category-b points removed from the denominator)}{Per-module result (line \%, hit/total; "waived" = category-b points removed from the denominator)}
+tm:flow:soc-coverage-report:remaining-slice-2-and-what-is-not-verified	docs/manual/tm/parts/03-verification-infrastructure.tex	4021	Remaining (slice 2) and what is not verified
+tm:flow:soc-coverage-report:reproducing	docs/manual/tm/parts/03-verification-infrastructure.tex	5719	Reproducing
+tm:flow:soc-coverage-report:results	docs/manual/tm/parts/03-verification-infrastructure.tex	3211	Results
+tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-1-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	3762	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-2-remaining-gaps-same-head-measurement-gate-flip-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	4056	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:still-open	docs/manual/tm/parts/03-verification-infrastructure.tex	4660	Still open
+tm:flow:soc-coverage-report:still-open-xkw5-stays-open	docs/manual/tm/parts/03-verification-infrastructure.tex	4342	Still open (xkw5 stays open)
+tm:flow:soc-coverage-report:the-prover-waivers-cite-a-proof-not-a-netlist-lookup	docs/manual/tm/parts/03-verification-infrastructure.tex	4415	The prover: waivers cite a proof, not a netlist lookup
+tm:flow:soc-coverage-report:triage	docs/manual/tm/parts/03-verification-infrastructure.tex	5229	Triage
+tm:flow:soc-coverage-report:triage-of-every-uncovered-point-head-line-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	3857	Triage of every uncovered point (HEAD line numbers)
+tm:flow:soc-coverage-report:triaged-trees-after-60-waivers-48-line-and-950-toggle-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	3226	Triaged trees (after 60 waivers: 48 line and 950 toggle points removed from the denominator)
+tm:flow:soc-coverage-report:waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	4312	Waivers
+tm:flow:soc-coverage-report:waivers-added	docs/manual/tm/parts/03-verification-infrastructure.tex	4013	Waivers added
+tm:flow:soc-coverage-report:what-closed-the-slice-1-open-points	docs/manual/tm/parts/03-verification-infrastructure.tex	4092	What closed the slice-1 open points
+tm:flow:synth-undef-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	5939	\texorpdfstring{Synthesis undef-elaboration gate (bead \code{gc0y})}{Synthesis undef-elaboration gate (bead )}
+tm:flow:synth-undef-gate:allowlist	docs/manual/tm/parts/03-verification-infrastructure.tex	6308	Allowlist
+tm:flow:synth-undef-gate:ci-job-githubworkflowssynth-undef-gateyml-toolsverifsynth-gateci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6330	\texorpdfstring{CI job (\src{.github/workflows/synth-undef-gate.yml}, \src{tools/verif/synth_gate/ci_smoke.sh})}{CI job (, )}
+tm:flow:synth-undef-gate:components	docs/manual/tm/parts/03-verification-infrastructure.tex	5952	Components
+tm:flow:synth-undef-gate:controls-all-in-blocking-mode-run-by-ci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6225	\texorpdfstring{Controls (all in blocking mode, run by \code{ci_smoke.sh})}{Controls (all in blocking mode, run by )}
+tm:flow:synth-undef-gate:flow-wiring	docs/manual/tm/parts/03-verification-infrastructure.tex	6278	Flow wiring
+tm:flow:synth-undef-gate:measured-yosys-046-sv2v-00131-toolsverifsynth-gateelab-gatesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6156	\texorpdfstring{Measured (yosys 0.46, sv2v 0.0.13.1; \src{tools/verif/synth_gate/elab_gate.sh})}{Measured (yosys 0.46, sv2v 0.0.13.1; )}
+tm:flow:synth-undef-gate:mechanism-read-from-the-rtlil-tbtestsfixturessynth-undeffunctemp	docs/manual/tm/parts/03-verification-infrastructure.tex	6074	\texorpdfstring{Mechanism (read from the RTLIL, \code{tb/tests/fixtures/synth_undef/functemp_*})}{Mechanism (read from the RTLIL, )}
+tm:flow:synth-undef-gate:netlist-census-tripwire-toolsverifcheck-cpu-netlist-censuspy	docs/manual/tm/parts/03-verification-infrastructure.tex	6366	\texorpdfstring{Netlist census tripwire (\src{tools/verif/check_cpu_netlist_census.py})}{Netlist census tripwire ()}
+tm:flow:synth-undef-gate:pattern-list-evidence-probe-designs-through-yosys-046-synlig-plugin-and-through-sv2v-read-verilog-strings-of-yosys-046062-and-synlig-svso	docs/manual/tm/parts/03-verification-infrastructure.tex	5985	\texorpdfstring{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + \code{read_verilog}; \code{strings} of yosys 0.46/0.62 and \code{synlig-sv.so})}{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + ; of yosys 0.46/0.62 and )}
+tm:flow:synth-undef-gate:post-incrementation-operations-are-handled-as-pre-incrementation	docs/manual/tm/parts/03-verification-infrastructure.tex	6288	\texorpdfstring{\texttt{Post-\allowbreak{}incrementation\ operations\ are\ handled\ as\ pre-\allowbreak{}incrementation}}{}
+tm:flow:synth-undef-gate:report	docs/manual/tm/parts/03-verification-infrastructure.tex	6138	Report
+tm:flow:synth-undef-gate:sv2v-function-temporaries-on-the-soc-bead-j1b7	docs/manual/tm/parts/03-verification-infrastructure.tex	6060	\texorpdfstring{sv2v function temporaries on the SoC (bead \code{j1b7})}{sv2v function temporaries on the SoC (bead )}
+tm:flow:synth-undef-gate:the-rule-func-temp-dead-init	docs/manual/tm/parts/03-verification-infrastructure.tex	6094	\texorpdfstring{The rule \code{func-temp-dead-init}}{The rule }
+tm:flow:synth-undef-gate:what-the-gate-does-not-cover	docs/manual/tm/parts/03-verification-infrastructure.tex	6318	What the gate does not cover
+tm:flow:tessent-atpg	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6530	Tessent scan insertion + ATPG evaluation flow (Sky130 SoC fabric)
+tm:flow:tessent-atpg:1-how-to-run	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6545	How to run
+tm:flow:tessent-atpg:2-flow-and-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6574	Flow and decisions
+tm:flow:tessent-atpg:3-cell-library-liberty-import-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6648	Cell library (Liberty import) {[}M{]}
+tm:flow:tessent-atpg:4-results-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6698	Results {[}M{]}
+tm:flow:tessent-atpg:41-scan-insertion-and-drc	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6700	Scan insertion and DRC
+tm:flow:tessent-atpg:42-coverage-and-patterns	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6764	Coverage and patterns
+tm:flow:tessent-atpg:43-where-the-stuck-at-coverage-goes-583-not-detected	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6818	Where the stuck-at coverage goes (5.83 \% not detected)
+tm:flow:tessent-atpg:5-pattern-verification-vcs-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6877	Pattern verification (VCS) {[}M{]}
+tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6920	\texorpdfstring{Runtime and memory {[}M \code{reports/runtime.txt}{]}}{Runtime and memory {[}M {]}}
+tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6927	Testability findings (proposals; no RTL changed)
+tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6987	Notes on tooling (for the next person)
+tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7035	Gap list toward real Stage 2
 tm:part:decisions	docs/manual/tm/parts/05-decisions.tex	1	Decisions
 tm:part:dft-fpga-hls-and-analog	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1	DFT, FPGA, HLS and analog
 tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module reference
 tm:part:physical-design	docs/manual/tm/parts/02-physical-design.tex	1	Physical design
 tm:part:tool-defects-and-standing-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	1	Tool defects and standing caveats
 tm:part:verification-infrastructure	docs/manual/tm/parts/03-verification-infrastructure.tex	1	Verification infrastructure
-tm:pd:node-strategy	docs/manual/tm/parts/02-physical-design.tex	28	Technology Node Strategy
-tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20	docs/manual/tm/parts/02-physical-design.tex	197	ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
-tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative	docs/manual/tm/parts/02-physical-design.tex	79	\texorpdfstring{Commercial flows (\src{pnr/commercial/}, Sky130 only, indicative)}{Commercial flows (, Sky130 only, indicative)}
-tm:pd:node-strategy:freepdk45nangate45-ready-to-run	docs/manual/tm/parts/02-physical-design.tex	188	\texorpdfstring{FreePDK45/\allowbreak{}NanGate45 (ready to run)}{FreePDK45/NanGate45 (ready to run)}
-tm:pd:node-strategy:legacy-pr-directories-superseded-do-not-start-new-work-here	docs/manual/tm/parts/02-physical-design.tex	93	Legacy P\&R directories (superseded --- do not start new work here)
-tm:pd:node-strategy:sky130-ppa-ceiling-assessed-2026-03-28	docs/manual/tm/parts/02-physical-design.tex	151	Sky130 PPA ceiling (assessed 2026-03-28)
-tm:pd:node-strategy:sky130-real-drclvs-sign-off-gh-epic-102-stages-12-complete-2026-07-31	docs/manual/tm/parts/02-physical-design.tex	116	Sky130 real DRC/LVS sign-off (GH epic \#102, Stages 1--2 complete 2026-07-31)
+tm:pd:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	5355	\texorpdfstring{Commercial vs open P\&R flow comparison, Sky130 \code{rv32i_cpu_top} (phase B8)}{Commercial vs open P\&R flow comparison, Sky130 (phase B8)}
+tm:pd:commercial-flow-comparison:1-executive-summary	docs/manual/tm/parts/02-physical-design.tex	5387	Executive summary
+tm:pd:commercial-flow-comparison:2-caveats-apply-to-every-number	docs/manual/tm/parts/02-physical-design.tex	5511	Caveats (apply to every number)
+tm:pd:commercial-flow-comparison:3-method-and-fairness-rules	docs/manual/tm/parts/02-physical-design.tex	5573	Method and fairness rules
+tm:pd:commercial-flow-comparison:4-final-arms-judge-results-per-corner	docs/manual/tm/parts/02-physical-design.tex	5667	Final arms: judge results per corner
+tm:pd:commercial-flow-comparison:41-shared-sdc-base	docs/manual/tm/parts/02-physical-design.tex	5675	Shared SDC (base)
+tm:pd:commercial-flow-comparison:42-iolat-sdc-virtual-io-clock-comparison-only	docs/manual/tm/parts/02-physical-design.tex	5733	iolat SDC (virtual I/O clock, comparison only)
+tm:pd:commercial-flow-comparison:43-own-sdc-what-each-commercial-tool-closed-against	docs/manual/tm/parts/02-physical-design.tex	5781	Own SDC (what each commercial tool closed against)
+tm:pd:commercial-flow-comparison:44-power-primepower-nom-tt-vectorless-variant-b-mw-judge	docs/manual/tm/parts/02-physical-design.tex	5827	Power (PrimePower, nom\_tt, vectorless variant B, mW, judge)
+tm:pd:commercial-flow-comparison:45-native-tool-view-own-rc-own-sdc-not-ranked-across-tools	docs/manual/tm/parts/02-physical-design.tex	5846	Native tool view (own RC, own SDC; not ranked across tools)
+tm:pd:commercial-flow-comparison:46-physical-and-sign-off-detail	docs/manual/tm/parts/02-physical-design.tex	5902	Physical and sign-off detail
+tm:pd:commercial-flow-comparison:47-run-cost-derived-from-usrbintime-and-librelane-runtimetxt	docs/manual/tm/parts/02-physical-design.tex	5965	\texorpdfstring{Run cost (derived from \code{/usr/bin/time} and LibreLane \code{runtime.txt})}{Run cost (derived from and LibreLane )}
+tm:pd:commercial-flow-comparison:48-quantus-cross-check-of-the-starrc-judge-nom-min-max	docs/manual/tm/parts/02-physical-design.tex	6005	Quantus cross-check of the StarRC judge (nom, min, max)
+tm:pd:commercial-flow-comparison:5-history-arms-earlier-commercial-iterations-judge-on-the-same-chain	docs/manual/tm/parts/02-physical-design.tex	6075	History arms (earlier commercial iterations, judge on the same chain)
+tm:pd:commercial-flow-comparison:6-lessons-by-tool	docs/manual/tm/parts/02-physical-design.tex	6154	Lessons by tool
+tm:pd:commercial-flow-comparison:7-open-items-and-follow-ups	docs/manual/tm/parts/02-physical-design.tex	6216	Open items and follow-ups
+tm:pd:commercial-flow-comparison:8-files	docs/manual/tm/parts/02-physical-design.tex	6270	Files
+tm:pd:constraints-index	docs/manual/tm/parts/02-physical-design.tex	2830	SDC Constraints Directory - File Index
+tm:pd:constraints-index:all-files	docs/manual/tm/parts/02-physical-design.tex	2839	All Files
+tm:pd:constraints-index:constraint-summary-at-a-glance	docs/manual/tm/parts/02-physical-design.tex	3001	Constraint Summary at a Glance
+tm:pd:constraints-index:documentation-files-4-files	docs/manual/tm/parts/02-physical-design.tex	2857	Documentation Files (4 files)
+tm:pd:constraints-index:file-sizes	docs/manual/tm/parts/02-physical-design.tex	2919	File Sizes
+tm:pd:constraints-index:getting-help	docs/manual/tm/parts/02-physical-design.tex	3011	Getting Help
+tm:pd:constraints-index:next-steps	docs/manual/tm/parts/02-physical-design.tex	3026	Next Steps
+tm:pd:constraints-index:power-constraints-existing	docs/manual/tm/parts/02-physical-design.tex	2892	Power Constraints (existing)
+tm:pd:constraints-index:quick-start	docs/manual/tm/parts/02-physical-design.tex	2832	Quick Start
+tm:pd:constraints-index:read-documentation	docs/manual/tm/parts/02-physical-design.tex	2958	Read documentation
+tm:pd:constraints-index:sdc-constraint-files-3-files	docs/manual/tm/parts/02-physical-design.tex	2841	SDC Constraint Files (3 files)
+tm:pd:constraints-index:usage-examples	docs/manual/tm/parts/02-physical-design.tex	2933	Usage Examples
+tm:pd:constraints-index:use-in-makefile	docs/manual/tm/parts/02-physical-design.tex	2949	Use in Makefile
+tm:pd:constraints-index:validate-sdc-file-quick-check-no-tools-required	docs/manual/tm/parts/02-physical-design.tex	2935	Validate SDC file (quick check, no tools required)
+tm:pd:constraints-index:verification-tools-3-files	docs/manual/tm/parts/02-physical-design.tex	2876	Verification Tools (3 files)
+tm:pd:constraints-index:verify-constraints-with-opensta	docs/manual/tm/parts/02-physical-design.tex	2942	Verify constraints with OpenSTA
+tm:pd:constraints-index:what-each-file-does	docs/manual/tm/parts/02-physical-design.tex	2971	What Each File Does
+tm:pd:constraints-quick-reference	docs/manual/tm/parts/02-physical-design.tex	3051	SDC Quick Reference Card - Phase 1 CPU
+tm:pd:constraints-quick-reference:apb3-debug-interface	docs/manual/tm/parts/02-physical-design.tex	3092	APB3 (Debug Interface)
+tm:pd:constraints-quick-reference:axi4-lite-memory-interface	docs/manual/tm/parts/02-physical-design.tex	3069	AXI4-Lite (Memory Interface)
+tm:pd:constraints-quick-reference:clock-constraints	docs/manual/tm/parts/02-physical-design.tex	3053	Clock Constraints
+tm:pd:constraints-quick-reference:common-sta-commands	docs/manual/tm/parts/02-physical-design.tex	3137	Common STA Commands
+tm:pd:constraints-quick-reference:critical-path-examples	docs/manual/tm/parts/02-physical-design.tex	3239	Critical Path Examples
+tm:pd:constraints-quick-reference:design-rules	docs/manual/tm/parts/02-physical-design.tex	3123	Design Rules
+tm:pd:constraints-quick-reference:false-paths	docs/manual/tm/parts/02-physical-design.tex	3108	False Paths
+tm:pd:constraints-quick-reference:file-locations	docs/manual/tm/parts/02-physical-design.tex	3291	File Locations
+tm:pd:constraints-quick-reference:io-timing-quick-reference	docs/manual/tm/parts/02-physical-design.tex	3067	I/O Timing Quick Reference
+tm:pd:constraints-quick-reference:multi-corner-corners	docs/manual/tm/parts/02-physical-design.tex	3183	Multi-Corner Corners
+tm:pd:constraints-quick-reference:port-count-reference	docs/manual/tm/parts/02-physical-design.tex	3198	Port Count Reference
+tm:pd:constraints-quick-reference:target-metrics-100-mhz	docs/manual/tm/parts/02-physical-design.tex	3164	Target Metrics (100 MHz)
+tm:pd:constraints-quick-reference:timing-budget-breakdown	docs/manual/tm/parts/02-physical-design.tex	3218	Timing Budget Breakdown
+tm:pd:constraints-quick-reference:troubleshooting-quick-guide	docs/manual/tm/parts/02-physical-design.tex	3252	Troubleshooting Quick Guide
+tm:pd:constraints-readme-sdc	docs/manual/tm/parts/02-physical-design.tex	3313	SDC Timing Constraints - Phase 1 CPU
+tm:pd:constraints-readme-sdc:1-pre-synthesis-initial-synthesis	docs/manual/tm/parts/02-physical-design.tex	3483	Pre-Synthesis / Initial Synthesis
+tm:pd:constraints-readme-sdc:2-after-clock-tree-synthesis	docs/manual/tm/parts/02-physical-design.tex	3492	After Clock Tree Synthesis
+tm:pd:constraints-readme-sdc:3-verify-constraints	docs/manual/tm/parts/02-physical-design.tex	3501	Verify Constraints
+tm:pd:constraints-readme-sdc:4-check-timing	docs/manual/tm/parts/02-physical-design.tex	3512	Check Timing
+tm:pd:constraints-readme-sdc:apb3-interface-debug	docs/manual/tm/parts/02-physical-design.tex	3404	Interface Timing Constraints
+tm:pd:constraints-readme-sdc:axi4-lite-interface-memory	docs/manual/tm/parts/02-physical-design.tex	3370	Interface Timing Constraints
+tm:pd:constraints-readme-sdc:clock-specification	docs/manual/tm/parts/02-physical-design.tex	3350	Clock Specification
+tm:pd:constraints-readme-sdc:commit-interface-verification	docs/manual/tm/parts/02-physical-design.tex	3437	Interface Timing Constraints
+tm:pd:constraints-readme-sdc:constraint-summary	docs/manual/tm/parts/02-physical-design.tex	3348	Constraint Summary
+tm:pd:constraints-readme-sdc:critical-paths	docs/manual/tm/parts/02-physical-design.tex	3570	Critical Paths
+tm:pd:constraints-readme-sdc:design-rules	docs/manual/tm/parts/02-physical-design.tex	3453	Design Rules
+tm:pd:constraints-readme-sdc:false-paths	docs/manual/tm/parts/02-physical-design.tex	3531	False Paths
+tm:pd:constraints-readme-sdc:files-overview	docs/manual/tm/parts/02-physical-design.tex	3318	Files Overview
+tm:pd:constraints-readme-sdc:interface-timing-constraints	docs/manual/tm/parts/02-physical-design.tex	3368	Interface Timing Constraints
+tm:pd:constraints-readme-sdc:issue-hold-violations	docs/manual/tm/parts/02-physical-design.tex	3677	Issue: Hold Violations
+tm:pd:constraints-readme-sdc:issue-unconstrained-paths	docs/manual/tm/parts/02-physical-design.tex	3706	Issue: Unconstrained Paths
+tm:pd:constraints-readme-sdc:issue-wns-worst-negative-slack-0	docs/manual/tm/parts/02-physical-design.tex	3646	Issue: WNS (Worst Negative Slack) \textless{} 0
+tm:pd:constraints-readme-sdc:maintenance-notes	docs/manual/tm/parts/02-physical-design.tex	3779	Maintenance Notes
+tm:pd:constraints-readme-sdc:multi-corner-analysis	docs/manual/tm/parts/02-physical-design.tex	3614	Multi-Corner Analysis
+tm:pd:constraints-readme-sdc:references	docs/manual/tm/parts/02-physical-design.tex	3760	References
+tm:pd:constraints-readme-sdc:timing-closure-checklist	docs/manual/tm/parts/02-physical-design.tex	3734	Timing Closure Checklist
+tm:pd:constraints-readme-sdc:troubleshooting	docs/manual/tm/parts/02-physical-design.tex	3644	Troubleshooting
+tm:pd:constraints-readme-sdc:usage-guide	docs/manual/tm/parts/02-physical-design.tex	3481	Usage Guide
+tm:pd:constraints-sdc-files-summary	docs/manual/tm/parts/02-physical-design.tex	3819	SDC Files Summary - Phase 1 RV32I CPU
+tm:pd:constraints-sdc-files-summary:1-sdc-constraint-files	docs/manual/tm/parts/02-physical-design.tex	3830	SDC Constraint Files
+tm:pd:constraints-sdc-files-summary:2-verification-and-documentation	docs/manual/tm/parts/02-physical-design.tex	3916	Verification and Documentation
+tm:pd:constraints-sdc-files-summary:2026-01-22-initial-sdc-files-created	docs/manual/tm/parts/02-physical-design.tex	4346	2026-01-22 - Initial SDC Files Created
+tm:pd:constraints-sdc-files-summary:aggressive-post-cts-values	docs/manual/tm/parts/02-physical-design.tex	4201	Aggressive Post-CTS Values
+tm:pd:constraints-sdc-files-summary:change-log	docs/manual/tm/parts/02-physical-design.tex	4344	Change Log
+tm:pd:constraints-sdc-files-summary:check-constraintstcl-verification-script	docs/manual/tm/parts/02-physical-design.tex	3919	Verification and Documentation
+tm:pd:constraints-sdc-files-summary:clock-domain	docs/manual/tm/parts/02-physical-design.tex	4022	Clock Domain
+tm:pd:constraints-sdc-files-summary:clock-tree-synthesis-stage	docs/manual/tm/parts/02-physical-design.tex	4113	Clock Tree Synthesis Stage
+tm:pd:constraints-sdc-files-summary:conservative-pre-cts-values	docs/manual/tm/parts/02-physical-design.tex	4186	Conservative Pre-CTS Values
+tm:pd:constraints-sdc-files-summary:constraint-philosophy	docs/manual/tm/parts/02-physical-design.tex	4184	Constraint Philosophy
+tm:pd:constraints-sdc-files-summary:contact-and-support	docs/manual/tm/parts/02-physical-design.tex	4378	Contact and Support
+tm:pd:constraints-sdc-files-summary:created-files	docs/manual/tm/parts/02-physical-design.tex	3828	Created Files
+tm:pd:constraints-sdc-files-summary:design-specifications	docs/manual/tm/parts/02-physical-design.tex	4020	Design Specifications
+tm:pd:constraints-sdc-files-summary:final-sta	docs/manual/tm/parts/02-physical-design.tex	4143	Final STA
+tm:pd:constraints-sdc-files-summary:floorplanplacement-stage	docs/manual/tm/parts/02-physical-design.tex	4100	\texorpdfstring{Floorplan/\allowbreak{}Placement Stage}{Floorplan/Placement Stage}
+tm:pd:constraints-sdc-files-summary:future-phase-updates	docs/manual/tm/parts/02-physical-design.tex	4254	Future Phase Updates
+tm:pd:constraints-sdc-files-summary:future-updates	docs/manual/tm/parts/02-physical-design.tex	4365	Future Updates
+tm:pd:constraints-sdc-files-summary:interface-summary	docs/manual/tm/parts/02-physical-design.tex	4039	Interface Summary
+tm:pd:constraints-sdc-files-summary:interface-timing-rationale	docs/manual/tm/parts/02-physical-design.tex	4216	Interface Timing Rationale
+tm:pd:constraints-sdc-files-summary:overview	docs/manual/tm/parts/02-physical-design.tex	3821	Overview
+tm:pd:constraints-sdc-files-summary:phase-2-pipelined-cpu	docs/manual/tm/parts/02-physical-design.tex	4256	Phase 2 (Pipelined CPU)
+tm:pd:constraints-sdc-files-summary:phase-3-cache-system	docs/manual/tm/parts/02-physical-design.tex	4270	Phase 3 (Cache System)
+tm:pd:constraints-sdc-files-summary:phase-4-gpu-integration	docs/manual/tm/parts/02-physical-design.tex	4282	Phase 4 (GPU Integration)
+tm:pd:constraints-sdc-files-summary:phase-5-full-soc	docs/manual/tm/parts/02-physical-design.tex	4294	Phase 5 (Full SoC)
+tm:pd:constraints-sdc-files-summary:phase1-cpu-enhancedsdc-white-check-mark-recommended	docs/manual/tm/parts/02-physical-design.tex	3858	SDC Constraint Files
+tm:pd:constraints-sdc-files-summary:phase1-cpu-post-ctssdc-post-cts	docs/manual/tm/parts/02-physical-design.tex	3889	SDC Constraint Files
+tm:pd:constraints-sdc-files-summary:phase1-cpusdc-baseline	docs/manual/tm/parts/02-physical-design.tex	3833	SDC Constraint Files
+tm:pd:constraints-sdc-files-summary:quick-referencemd-quick-lookup	docs/manual/tm/parts/02-physical-design.tex	3982	Verification and Documentation
+tm:pd:constraints-sdc-files-summary:readme-sdcmd-complete-documentation	docs/manual/tm/parts/02-physical-design.tex	3953	Verification and Documentation
+tm:pd:constraints-sdc-files-summary:references	docs/manual/tm/parts/02-physical-design.tex	4308	References
+tm:pd:constraints-sdc-files-summary:routing-stage	docs/manual/tm/parts/02-physical-design.tex	4128	Routing Stage
+tm:pd:constraints-sdc-files-summary:sdc-files-summarymd-this-file	docs/manual/tm/parts/02-physical-design.tex	4012	Verification and Documentation
+tm:pd:constraints-sdc-files-summary:synthesis-stage	docs/manual/tm/parts/02-physical-design.tex	4084	Synthesis Stage
+tm:pd:constraints-sdc-files-summary:total-port-count	docs/manual/tm/parts/02-physical-design.tex	4070	Total Port Count
+tm:pd:constraints-sdc-files-summary:verification-checklist	docs/manual/tm/parts/02-physical-design.tex	4158	Verification Checklist
+tm:pd:constraints-sdc-files-summary:workflow-recommendations	docs/manual/tm/parts/02-physical-design.tex	4082	Workflow Recommendations
+tm:pd:librelane-patching	docs/manual/tm/parts/02-physical-design.tex	1228	Editing the shared LibreLane install --- evaluation
+tm:pd:librelane-patching:cons-and-real-risks	docs/manual/tm/parts/02-physical-design.tex	1350	Cons and real risks
+tm:pd:librelane-patching:finding-the-install-is-already-extensively-patched	docs/manual/tm/parts/02-physical-design.tex	1255	Finding: the install is already extensively patched
+tm:pd:librelane-patching:pros-of-patching-for-a-post-rcx-repair-stage	docs/manual/tm/parts/02-physical-design.tex	1317	Pros of patching for a post-RCX repair stage
+tm:pd:librelane-patching:recommendation	docs/manual/tm/parts/02-physical-design.tex	1391	Recommendation
+tm:pd:librelane-patching:the-cautionary-case-drttcl	docs/manual/tm/parts/02-physical-design.tex	1295	\texorpdfstring{The cautionary case: \code{drt.tcl}}{The cautionary case: }
+tm:pd:librelane-patching:the-question	docs/manual/tm/parts/02-physical-design.tex	1234	The question
+tm:pd:node-strategy	docs/manual/tm/parts/02-physical-design.tex	6297	Technology Node Strategy
+tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20	docs/manual/tm/parts/02-physical-design.tex	6466	ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
+tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative	docs/manual/tm/parts/02-physical-design.tex	6348	\texorpdfstring{Commercial flows (\src{pnr/commercial/}, Sky130 only, indicative)}{Commercial flows (, Sky130 only, indicative)}
+tm:pd:node-strategy:freepdk45nangate45-ready-to-run	docs/manual/tm/parts/02-physical-design.tex	6457	\texorpdfstring{FreePDK45/\allowbreak{}NanGate45 (ready to run)}{FreePDK45/NanGate45 (ready to run)}
+tm:pd:node-strategy:legacy-pr-directories-superseded-do-not-start-new-work-here	docs/manual/tm/parts/02-physical-design.tex	6362	Legacy P\&R directories (superseded --- do not start new work here)
+tm:pd:node-strategy:sky130-ppa-ceiling-assessed-2026-03-28	docs/manual/tm/parts/02-physical-design.tex	6420	Sky130 PPA ceiling (assessed 2026-03-28)
+tm:pd:node-strategy:sky130-real-drclvs-sign-off-gh-epic-102-stages-12-complete-2026-07-31	docs/manual/tm/parts/02-physical-design.tex	6385	Sky130 real DRC/LVS sign-off (GH epic \#102, Stages 1--2 complete 2026-07-31)
+tm:pd:openroad-flow	docs/manual/tm/parts/02-physical-design.tex	9	OpenROAD Physical Design Flow Specification
+tm:pd:openroad-flow:ai-may-assist-with	docs/manual/tm/parts/02-physical-design.tex	1087	AI MAY assist with
+tm:pd:openroad-flow:ai-must-not-decide	docs/manual/tm/parts/02-physical-design.tex	1103	AI MUST NOT decide
+tm:pd:openroad-flow:aihuman-responsibilities	docs/manual/tm/parts/02-physical-design.tex	1085	AI/Human Responsibilities
+tm:pd:openroad-flow:directory-structure	docs/manual/tm/parts/02-physical-design.tex	891	Directory Structure
+tm:pd:openroad-flow:flow-automation-makefile	docs/manual/tm/parts/02-physical-design.tex	931	Flow Automation (Makefile)
+tm:pd:openroad-flow:gate-1-synthesis	docs/manual/tm/parts/02-physical-design.tex	1009	Gate 1: Synthesis
+tm:pd:openroad-flow:gate-2-place-route	docs/manual/tm/parts/02-physical-design.tex	1023	Gate 2: Place \& Route
+tm:pd:openroad-flow:gate-3-timing-closure	docs/manual/tm/parts/02-physical-design.tex	1037	Gate 3: Timing Closure
+tm:pd:openroad-flow:gate-4-power-closure	docs/manual/tm/parts/02-physical-design.tex	1049	Gate 4: Power Closure
+tm:pd:openroad-flow:gate-5-physical-verification	docs/manual/tm/parts/02-physical-design.tex	1061	Gate 5: Physical Verification
+tm:pd:openroad-flow:gate-6-gate-level-simulation	docs/manual/tm/parts/02-physical-design.tex	1073	Gate 6: Gate-Level Simulation
+tm:pd:openroad-flow:goals	docs/manual/tm/parts/02-physical-design.tex	20	Goals
+tm:pd:openroad-flow:human-must-review	docs/manual/tm/parts/02-physical-design.tex	1119	Human MUST review
+tm:pd:openroad-flow:openroad-tools	docs/manual/tm/parts/02-physical-design.tex	55	OpenROAD Tools
+tm:pd:openroad-flow:overview	docs/manual/tm/parts/02-physical-design.tex	14	Overview
+tm:pd:openroad-flow:phase-1-single-cycle-cpu	docs/manual/tm/parts/02-physical-design.tex	1141	Phase 1: Single-Cycle CPU
+tm:pd:openroad-flow:phase-2-pipelined-cpu	docs/manual/tm/parts/02-physical-design.tex	1154	Phase 2: Pipelined CPU
+tm:pd:openroad-flow:phase-3-cache-system	docs/manual/tm/parts/02-physical-design.tex	1166	Phase 3: Cache System
+tm:pd:openroad-flow:phase-4-gpu-compute-unit	docs/manual/tm/parts/02-physical-design.tex	1178	Phase 4: GPU Compute Unit
+tm:pd:openroad-flow:phase-5-full-soc	docs/manual/tm/parts/02-physical-design.tex	1191	Phase 5: Full SoC
+tm:pd:openroad-flow:phase-specific-considerations	docs/manual/tm/parts/02-physical-design.tex	1139	Phase-Specific Considerations
+tm:pd:openroad-flow:physical-design-flow	docs/manual/tm/parts/02-physical-design.tex	108	Physical Design Flow
+tm:pd:openroad-flow:power-aware-design-flow-upf	docs/manual/tm/parts/02-physical-design.tex	731	Power-Aware Design Flow (UPF)
+tm:pd:openroad-flow:power-aware-simulation	docs/manual/tm/parts/02-physical-design.tex	804	Power-Aware Simulation
+tm:pd:openroad-flow:quality-gates	docs/manual/tm/parts/02-physical-design.tex	1004	Quality Gates
+tm:pd:openroad-flow:references	docs/manual/tm/parts/02-physical-design.tex	1203	References
+tm:pd:openroad-flow:scope	docs/manual/tm/parts/02-physical-design.tex	37	Scope
+tm:pd:openroad-flow:sdc-best-practices	docs/manual/tm/parts/02-physical-design.tex	871	SDC Best Practices
+tm:pd:openroad-flow:sdc-structure	docs/manual/tm/parts/02-physical-design.tex	840	SDC Structure
+tm:pd:openroad-flow:stage-1-rtl-to-netlist-synthesis	docs/manual/tm/parts/02-physical-design.tex	110	Stage 1: RTL to Netlist (Synthesis)
+tm:pd:openroad-flow:stage-10-gate-level-simulation	docs/manual/tm/parts/02-physical-design.tex	676	Stage 10: Gate-Level Simulation
+tm:pd:openroad-flow:stage-2-floorplanning	docs/manual/tm/parts/02-physical-design.tex	176	Stage 2: Floorplanning
+tm:pd:openroad-flow:stage-3-placement	docs/manual/tm/parts/02-physical-design.tex	240	Stage 3: Placement
+tm:pd:openroad-flow:stage-4-clock-tree-synthesis-cts	docs/manual/tm/parts/02-physical-design.tex	303	Stage 4: Clock Tree Synthesis (CTS)
+tm:pd:openroad-flow:stage-5-routing	docs/manual/tm/parts/02-physical-design.tex	364	Stage 5: Routing
+tm:pd:openroad-flow:stage-6-parasitic-extraction	docs/manual/tm/parts/02-physical-design.tex	428	Stage 6: Parasitic Extraction
+tm:pd:openroad-flow:stage-7-static-timing-analysis-sta	docs/manual/tm/parts/02-physical-design.tex	477	Stage 7: Static Timing Analysis (STA)
+tm:pd:openroad-flow:stage-8-power-analysis	docs/manual/tm/parts/02-physical-design.tex	548	Stage 8: Power Analysis
+tm:pd:openroad-flow:stage-9-physical-verification	docs/manual/tm/parts/02-physical-design.tex	611	Stage 9: Physical Verification
+tm:pd:openroad-flow:supporting-tools	docs/manual/tm/parts/02-physical-design.tex	76	Supporting Tools
+tm:pd:openroad-flow:technology-libraries	docs/manual/tm/parts/02-physical-design.tex	92	Technology Libraries
+tm:pd:openroad-flow:timing-constraints-sdc	docs/manual/tm/parts/02-physical-design.tex	838	Timing Constraints (SDC)
+tm:pd:openroad-flow:tool-stack	docs/manual/tm/parts/02-physical-design.tex	53	Tool Stack
+tm:pd:openroad-flow:upf-specification	docs/manual/tm/parts/02-physical-design.tex	733	UPF Specification
+tm:pd:openroad-flow:upf-structure	docs/manual/tm/parts/02-physical-design.tex	758	UPF Structure
+tm:pd:power-domain-evaluation	docs/manual/tm/parts/02-physical-design.tex	2568	Per-IP Power Domains + On/Off Sequencing --- Evaluation (pre-Phase-6 \#5)
+tm:pd:power-domain-evaluation:1-findings	docs/manual/tm/parts/02-physical-design.tex	2648	Findings
+tm:pd:power-domain-evaluation:2-the-blocker-that-sets-the-scope	docs/manual/tm/parts/02-physical-design.tex	2676	The blocker that sets the scope
+tm:pd:power-domain-evaluation:3-what-is-doable-now-the-scoped-go	docs/manual/tm/parts/02-physical-design.tex	2689	What IS doable now (the scoped GO)
+tm:pd:power-domain-evaluation:4-documented-gap-deferred-needs-new-tooling	docs/manual/tm/parts/02-physical-design.tex	2767	Documented gap (deferred, needs new tooling)
+tm:pd:power-domain-evaluation:5-decision-options-this-pr	docs/manual/tm/parts/02-physical-design.tex	2776	Decision options (this PR)
+tm:pd:power-domain-evaluation:6-if-go-a-implementation-sketch-own-prs-each-re-verified	docs/manual/tm/parts/02-physical-design.tex	2795	If GO (A) --- implementation sketch (own PRs, each re-verified)
+tm:pd:power-domain-evaluation:7-verdict-line	docs/manual/tm/parts/02-physical-design.tex	2818	Verdict line
+tm:pd:power-domain-evaluation:update-2026-10-17-bead-h3lm-the-upf-was-audited-and-rewritten	docs/manual/tm/parts/02-physical-design.tex	2580	\texorpdfstring{Update 2026-10-17 (bead \code{h3lm}): the UPF was audited and rewritten}{Update 2026-10-17 (bead ): the UPF was audited and rewritten}
+tm:pd:rvb-fanout-fix	docs/manual/tm/parts/02-physical-design.tex	1433	RVB --- SRAM Write-Decode / GPU Read-Data Fan-out: Root Cause \& RTL Fix Proposal
+tm:pd:rvb-fanout-fix:0-two-independent-problems-one-shared-shape	docs/manual/tm/parts/02-physical-design.tex	1458	Two independent problems, one shared shape
+tm:pd:rvb-fanout-fix:a-root-cause-analysis	docs/manual/tm/parts/02-physical-design.tex	1520	A. Root-cause analysis
+tm:pd:rvb-fanout-fix:a1-path-a-u-gpum-axi-wvalid-sram-controller-write-enable-fan-out	docs/manual/tm/parts/02-physical-design.tex	1524	\texorpdfstring{A.1 Path A --- \code{u_gpu/m_axi_wvalid} → \code{sram_controller} write-enable fan-out}{A.1 Path A --- → write-enable fan-out}
+tm:pd:rvb-fanout-fix:a2-path-b-u-gpu-axi-lite-s-axil-rdata-u-busu-periph-bridge-register	docs/manual/tm/parts/02-physical-design.tex	1633	\texorpdfstring{A.2 Path B --- \code{u_gpu} AXI-Lite \code{s_axil_rdata} → \code{u_bus.u_periph_bridge} register}{A.2 Path B --- AXI-Lite → register}
+tm:pd:rvb-fanout-fix:b-candidate-fixes	docs/manual/tm/parts/02-physical-design.tex	1712	B. Candidate fixes
+tm:pd:rvb-fanout-fix:b1-path-a-sram-write-enableindex-decode-fan-out	docs/manual/tm/parts/02-physical-design.tex	1716	\texorpdfstring{B.1 Path A --- SRAM write-enable/\allowbreak{}index-decode fan-out}{B.1 Path A --- SRAM write-enable/index-decode fan-out}
+tm:pd:rvb-fanout-fix:b2-path-b-gpu-axi-lite-read-data-fan-out-into-u-periph-bridge	docs/manual/tm/parts/02-physical-design.tex	2079	\texorpdfstring{B.2 Path B --- GPU AXI-Lite read-data fan-out into \code{u_periph_bridge}}{B.2 Path B --- GPU AXI-Lite read-data fan-out into }
+tm:pd:rvb-fanout-fix:c-recommendation	docs/manual/tm/parts/02-physical-design.tex	2399	C. Recommendation
+tm:pd:rvb-fanout-fix:c1-ranked-shortlist	docs/manual/tm/parts/02-physical-design.tex	2401	C.1 Ranked shortlist
+tm:pd:rvb-fanout-fix:c2-approval-required	docs/manual/tm/parts/02-physical-design.tex	2453	C.2 Approval required
+tm:pd:rvb-fanout-fix:c3-verification-plan-once-an-option-is-approved-and-implemented	docs/manual/tm/parts/02-physical-design.tex	2493	C.3 Verification plan (once an option is approved and implemented)
+tm:pd:rvb-fanout-fix:c4-pd-re-run-scope	docs/manual/tm/parts/02-physical-design.tex	2527	C.4 PD re-run scope
+tm:pd:rvb-fanout-fix:d-explicitly-out-of-scope-for-this-study	docs/manual/tm/parts/02-physical-design.tex	2542	D. Explicitly out of scope for this study
+tm:pd:sky130-cdc-maxss	docs/manual/tm/parts/02-physical-design.tex	4886	Sky130 SoC CDC budget failure at the ss corners (bead j41m.5 / j41m.4)
+tm:pd:sky130-cdc-maxss:1-what-fails	docs/manual/tm/parts/02-physical-design.tex	4896	What fails
+tm:pd:sky130-cdc-maxss:2-why-hold-padding-on-the-crossing-not-wire-or-placement	docs/manual/tm/parts/02-physical-design.tex	4948	Why: hold padding on the crossing, not wire or placement
+tm:pd:sky130-cdc-maxss:3-regression-or-pre-existing	docs/manual/tm/parts/02-physical-design.tex	4976	Regression or pre-existing?
+tm:pd:sky130-cdc-maxss:4-options	docs/manual/tm/parts/02-physical-design.tex	5001	Options
+tm:pd:sky130-cdc-maxss:5-decision-user-2026-10-17-b-c-implemented-flow-not-re-run	docs/manual/tm/parts/02-physical-design.tex	5034	Decision (user, 2026-10-17): B + C. Implemented, flow NOT re-run
+tm:pd:sky130-cdc-maxss:6-scan-mode-hold-the-approach-chosen-and-what-is-not-verified	docs/manual/tm/parts/02-physical-design.tex	5076	Scan-mode hold: the approach chosen, and what is NOT verified
+tm:pd:sky130-cdc-maxss:7-evidence-run-2026-10-17-14-07-01-read-only-one-sta-at-a-time	docs/manual/tm/parts/02-physical-design.tex	5161	\texorpdfstring{Evidence (RUN\_\allowbreak{}2026-10-17\_\allowbreak{}14-07-01, read-only; one STA at a time)}{Evidence (RUN\_2026-10-17\_14-07-01, read-only; one STA at a time)}
+tm:pd:sky130-cdc-maxss:8-re-harden-5-with-the-hold-exemption-run-2026-10-17-23-06-56-measured-2026-10-18	docs/manual/tm/parts/02-physical-design.tex	5220	\texorpdfstring{Re-harden \#5 with the hold exemption: RUN\_\allowbreak{}2026-10-17\_\allowbreak{}23-06-56 (measured, 2026-10-18)}{Re-harden \#5 with the hold exemption: RUN\_2026-10-17\_23-06-56 (measured, 2026-10-18)}
+tm:pd:sky130-cdc-maxss:scan-view-hold-on-the-34-pins-information-for-stage-2-not-a-passfail	docs/manual/tm/parts/02-physical-design.tex	5305	\texorpdfstring{Scan-view hold on the 34 pins (information for Stage 2, NOT a pass/\allowbreak{}fail)}{Scan-view hold on the 34 pins (information for Stage 2, NOT a pass/fail)}
+tm:pd:sky130-real-drc-lvs	docs/manual/tm/parts/02-physical-design.tex	4413	Sky130 (+FreePDK45) Harden + Real DRC/LVS --- Evaluation (pre-Phase-6 \#6)
+tm:pd:sky130-real-drc-lvs:1-findings	docs/manual/tm/parts/02-physical-design.tex	4425	Findings
+tm:pd:sky130-real-drc-lvs:2-why-go-and-why-staged	docs/manual/tm/parts/02-physical-design.tex	4467	Why GO (and why staged)
+tm:pd:sky130-real-drc-lvs:2026-10-11-re-harden-on-the-sv2v-frontend-bead-dud4-supersedes-every-earlier-sky130-cpu-and-soc-result-above	docs/manual/tm/parts/02-physical-design.tex	4791	\texorpdfstring{2026-10-11 re-harden on the sv2v frontend (bead \code{dud4}) --- supersedes every earlier Sky130 CPU and SoC result above}{2026-10-11 re-harden on the sv2v frontend (bead ) --- supersedes every earlier Sky130 CPU and SoC result above}
+tm:pd:sky130-real-drc-lvs:3-risks	docs/manual/tm/parts/02-physical-design.tex	4500	Risks
+tm:pd:sky130-real-drc-lvs:4-decision-options-this-pr	docs/manual/tm/parts/02-physical-design.tex	4524	Decision options (this PR)
+tm:pd:sky130-real-drc-lvs:5-if-go-a-implementation-sketch-own-prs	docs/manual/tm/parts/02-physical-design.tex	4539	If GO (A) --- implementation sketch (own PRs)
+tm:pd:sky130-real-drc-lvs:6-verdict-line	docs/manual/tm/parts/02-physical-design.tex	4565	Verdict line
+tm:pd:sky130-real-drc-lvs:7-results-added-2026-07-31-sections-1-6-above-are-the-original-2026-06-27-plan	docs/manual/tm/parts/02-physical-design.tex	4572	Results (added 2026-07-31 --- sections 1-6 above are the original 2026-06-27 plan)
+tm:pd:sky130-real-drc-lvs:stage-1-cpu-standalone-gh-103-bead-closed	docs/manual/tm/parts/02-physical-design.tex	4574	Stage 1 --- CPU standalone (GH \#103, bead closed)
+tm:pd:sky130-real-drc-lvs:stage-2-cpu-macro-peripherals-soc-no-gpu-gh-104-bead-9t6-closed	docs/manual/tm/parts/02-physical-design.tex	4587	\texorpdfstring{Stage 2 --- CPU macro + peripherals SoC, no GPU (GH \#104, bead \code{9t6} closed)}{Stage 2 --- CPU macro + peripherals SoC, no GPU (GH \#104, bead closed)}
+tm:pd:sky130-real-drc-lvs:stage-2-re-harden-with-phase-6a-gpio-run-2026-09-26-00-07-59-2026-09-26-bead-00ef	docs/manual/tm/parts/02-physical-design.tex	4625	\texorpdfstring{Stage 2 re-harden with Phase 6a GPIO --- \code{RUN_2026-09-26_00-07-59} (2026-09-26, bead \code{00ef})}{Stage 2 re-harden with Phase 6a GPIO --- (2026-09-26, bead )}
+tm:pd:sky130-real-drc-lvs:stages-3-4-gpu-gh-105-106	docs/manual/tm/parts/02-physical-design.tex	4781	Stages 3 \& 4 --- GPU (GH \#105, \#106)
+tm:suite:phase4-random-kernels	docs/manual/tm/parts/03-verification-infrastructure.tex	9	Phase 4 Random-Kernel Regression
+tm:suite:phase4-random-kernels:address-layout	docs/manual/tm/parts/03-verification-infrastructure.tex	184	Address layout
+tm:suite:phase4-random-kernels:broadened-run-2026-06-01-b1-loads-b2-shared-mem-b3-divergence	docs/manual/tm/parts/03-verification-infrastructure.tex	35	Broadened run (2026-06-01) --- B1 loads + B2 shared-mem + B3 divergence
+tm:suite:phase4-random-kernels:divergence-diamond-shape	docs/manual/tm/parts/03-verification-infrastructure.tex	229	Divergence diamond shape
+tm:suite:phase4-random-kernels:how-to-run	docs/manual/tm/parts/03-verification-infrastructure.tex	72	How to run
+tm:suite:phase4-random-kernels:kernel-building-blocks	docs/manual/tm/parts/03-verification-infrastructure.tex	148	Kernel building blocks
+tm:suite:phase4-random-kernels:methodology	docs/manual/tm/parts/03-verification-infrastructure.tex	113	Methodology
+tm:suite:phase4-random-kernels:original-run-2026-05-23-straight-line-only	docs/manual/tm/parts/03-verification-infrastructure.tex	16	Original run (2026-05-23) --- straight-line only
+tm:suite:phase4-random-kernels:reproducing-a-specific-seed	docs/manual/tm/parts/03-verification-infrastructure.tex	311	Reproducing a specific seed
+tm:suite:phase4-random-kernels:results	docs/manual/tm/parts/03-verification-infrastructure.tex	14	Results
+tm:suite:phase4-random-kernels:rollup-integration	docs/manual/tm/parts/03-verification-infrastructure.tex	92	Rollup integration
+tm:suite:phase4-random-kernels:scope-rationale	docs/manual/tm/parts/03-verification-infrastructure.tex	262	Scope rationale
+tm:suite:phase4-random-kernels:scoreboard	docs/manual/tm/parts/03-verification-infrastructure.tex	202	Scoreboard
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	102	Build and run commands
 um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	474	Coding guidelines
 um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2688	Continuous integration

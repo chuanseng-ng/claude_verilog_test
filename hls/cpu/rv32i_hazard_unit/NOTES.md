@@ -2,7 +2,7 @@
 
 GH #119 bead `gvr`, the **control pole** of the pilot. Companion to
 `hls/gpu/memory_coalescer/NOTES.md` (the datapath pole). Part of the reproducibility pin required
-by `docs/CPP_TO_RTL_HLS_EVALUATION.md` L127-133.
+by `Doc: tm:dec:cpp-to-rtl-hls-evaluation` L127-133.
 
 ## Method: the RTL body was withheld
 
@@ -28,7 +28,7 @@ scheduling a wide 32-bit comparison network against a 0.705 ns clock, not an aut
 
 For a block whose entire purpose is to resolve hazards **within one cycle**, a 6-9 cycle
 data-dependent replacement is not a drop-in substitute at any clock period. This is the
-"HLS is weaker on control logic" claim of `CPP_TO_RTL_HLS_EVALUATION.md`, measured on this
+"HLS is weaker on control logic" claim of `Doc: tm:dec:cpp-to-rtl-hls-evaluation`, measured on this
 project's own RTL — and it is a stronger statement than a PPA delta, because no amount of
 tuning converts a multi-cycle FSM back into a combinational cloud.
 

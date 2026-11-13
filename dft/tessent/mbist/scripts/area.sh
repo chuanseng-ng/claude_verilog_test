@@ -1,6 +1,6 @@
 #!/bin/bash
 # area.sh -- sky130_fd_sc_hd area of the in-house MBIST blocks and of the Tessent insertion delta, synthesised the
-# SAME way (docs/design/DFT_ARCHITECTURE.md 16.9): yosys synth, dfflibmap, abc -liberty, no timing-driven sizing.
+# SAME way (Doc: tm:ch:dft-architecture 16.9): yosys synth, dfflibmap, abc -liberty, no timing-driven sizing.
 #   usage: area.sh inhouse | base | tessent
 # Env: YOSYS (default yosys), SKY130_LIB (sky130_fd_sc_hd__tt_025C_1v80.lib), SV2V.
 set -e

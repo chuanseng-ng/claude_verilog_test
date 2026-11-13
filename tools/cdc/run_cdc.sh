@@ -10,7 +10,7 @@
 # canonicalizes domains (per tools/cdc/cdc_config.yml, mirroring
 # pnr/constraints/phase5_soc_multiclock.sdc) and applies explicit justified
 # waivers. The GATE's exit status is the verdict. See tools/cdc/README.md and
-# docs/verification/CDC_SNITCH_POC.md.
+# Doc: tm:flow:cdc-snitch-poc.
 #
 # Env (all optional except CDC_FLIST):
 #   CDC_FLIST    newline-separated list of source files (required)

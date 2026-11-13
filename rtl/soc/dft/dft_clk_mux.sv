@@ -3,7 +3,7 @@
 //
 // Test-clock bypass for one clock root: in scan mode the clock is the tester's
 // test clock, otherwise the functional clock, so that every flop below the
-// root is clocked from a port during test (docs/design/DFT_ARCHITECTURE.md
+// root is clocked from a port during test (Doc: tm:ch:dft-architecture
 // sec.9.3). A module of its own, rather than an inline `?:`, so that
 //   * every test-clock mux in the design has one greppable name, and the Stage 2
 //     insertion step and the clock/reset controllability check can find them;

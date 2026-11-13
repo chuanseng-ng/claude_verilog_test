@@ -25,7 +25,7 @@ What this proves, and what it does not
     re-run through the TAP: they exercise dft_rst_mux, which is driven by the same dft_scan_mode /
     dft_scan_rst_n nets proven here.
 
-Timing contract (docs/design/DFT_ARCHITECTURE.md 15.4): the TAP's scan clock exists only on TCK
+Timing contract (Doc: tm:ch:dft-architecture 15.4): the TAP's scan clock exists only on TCK
 edges that end Capture-DR and Shift-DR, so "N test clocks" below means one DR scan of N-1 bits (1
 capture + N-1 shifts), counted from the dft_test_clk net.
 

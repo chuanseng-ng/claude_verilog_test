@@ -3,7 +3,7 @@
 //
 // The TAP-driven DFT controller. Same five outputs and the same four test inputs
 // as dft_ctrl_ports (Stage 1a), plus the JTAG pins, so soc_top swaps one module
-// for the other and no consumer changes (docs/design/DFT_ARCHITECTURE.md
+// for the other and no consumer changes (Doc: tm:ch:dft-architecture
 // section 15). Contents:
 //   * u_tap          jtag_tap, TCK domain, all outputs falling-edge flops
 //   * u_pins         the UNCHANGED 1a pin leg (dft_ctrl_ports)

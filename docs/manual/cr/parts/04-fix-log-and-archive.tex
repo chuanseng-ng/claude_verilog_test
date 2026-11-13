@@ -20,7 +20,7 @@ discovered and fixed during Phase 1 development (2026-01-19 to
 \begin{record}
 
 \textbf{\notemark{} Start here}:
-FIXES\_\allowbreak{}INDEX.md (\cref{cr:fix:fixes-index})
+FIXES\_\allowbreak{}\cref{tm:pd:constraints-index} (\cref{cr:fix:fixes-index})
 
 The FIXES\_\allowbreak{}INDEX provides:
 
@@ -167,7 +167,7 @@ Issues)}{Medium Priority Fixes (Test/Debug Issues)}}\label{cr:fix:fixes-readme:m
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  Check \textbf{FIXES\_\allowbreak{}INDEX.md} table for the fix
+  Check \textbf{FIXES\_\allowbreak{}\cref{tm:pd:constraints-index}} table for the fix
   you\textquotesingle re interested in
 \item
   Click the link to the detailed fix document
@@ -185,7 +185,7 @@ Issues)}{Medium Priority Fixes (Test/Debug Issues)}}\label{cr:fix:fixes-readme:m
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  Read \textbf{FIXES\_\allowbreak{}INDEX.md} "Fix Timeline" and "Impact
+  Read \textbf{FIXES\_\allowbreak{}\cref{tm:pd:constraints-index}} "Fix Timeline" and "Impact
   Summary" sections
 \item
   See how bugs were discovered and resolved chronologically
@@ -223,7 +223,7 @@ Issues)}{Medium Priority Fixes (Test/Debug Issues)}}\label{cr:fix:fixes-readme:m
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  Use FIXES\_\allowbreak{}INDEX.md to understand what files were
+  Use FIXES\_\allowbreak{}\cref{tm:pd:constraints-index} to understand what files were
   modified
 \item
   Check severity ratings to prioritize review
@@ -348,7 +348,7 @@ Create a new fix document when:
 \end{record}
 
 \subsubsection{\texorpdfstring{Update
-FIXES\_\allowbreak{}INDEX.md}{Update \cref{cr:fix:fixes-index}}}\label{cr:fix:fixes-readme:update-fixes-indexmd}
+FIXES\_\allowbreak{}\cref{tm:pd:constraints-index}}{Update \cref{cr:fix:fixes-index}}}\label{cr:fix:fixes-readme:update-fixes-indexmd}
 
 \begin{record}
 
@@ -382,7 +382,7 @@ For questions about:
 \item
   \textbf{Specific fixes}: Read the individual fix document
 \item
-  \textbf{Overall fix history}: See FIXES\_\allowbreak{}INDEX.md
+  \textbf{Overall fix history}: See FIXES\_\allowbreak{}\cref{tm:pd:constraints-index}
 \item
   \textbf{Current project status}: See
   ../\allowbreak{}TODO\_\allowbreak{}PHASE1\_\allowbreak{}VERIFICATION.md
@@ -1483,7 +1483,7 @@ a strict \code{expect_fail})
   \textbf{Consequence for recorded numbers}: any cycle count taken from
   \code{mcycle} before this fix under-counts by one per CSR instruction
   executed in the window (see the dated note in
-  \src{docs/M10_L2_DECISION_ANALYSIS.md}). The Sky130 and ASAP7 CPU
+  \src{docs/M10_L2_DECISION_ANALYSIS.md} (\cref{tm:dec:m10-l2})). The Sky130 and ASAP7 CPU
   hard-macro views are built from the pre-fix RTL and stay behind it
   until re-hardened; this fix should be on main before the planned
   Sky130 CPU re-harden (bead \bead{dud4}).
@@ -7563,7 +7563,7 @@ needed in the root directory but is preserved for reference.
   \item
     Info consolidated into
     TODO\_\allowbreak{}PHASE1\_\allowbreak{}VERIFICATION.md and
-    fixes/\allowbreak{}FIXES\_\allowbreak{}INDEX.md
+    fixes/\allowbreak{}FIXES\_\allowbreak{}\cref{tm:pd:constraints-index}
   \end{itemize}
 \end{itemize}
 
@@ -7616,9 +7616,9 @@ For current project documentation, see:
 \begin{itemize}
 \tightlist
 \item
-  \src{docs/design/} - All architecture and design specifications
+  \code{docs/design/} - All architecture and design specifications
 \item
-  \src{docs/verification/} - Verification plans and strategies
+  \code{docs/verification/} - Verification plans and strategies
 \end{itemize}
 
 \end{record}
@@ -8134,7 +8134,7 @@ gtkwave dump.vcd
     \ok{} GPUKernelModel ready for Phase 4
   \end{itemize}
 \item
-  \textbf{Specifications} (\src{docs/design/})
+  \textbf{Specifications} (\code{docs/design/})
 
   \begin{itemize}
   \tightlist
@@ -8148,7 +8148,7 @@ gtkwave dump.vcd
     PHASE1\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md
   \end{itemize}
 \item
-  \textbf{Verification Plan} (\src{docs/verification/})
+  \textbf{Verification Plan} (\code{docs/verification/})
 
   \begin{itemize}
   \tightlist

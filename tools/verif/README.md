@@ -114,7 +114,7 @@ python3 tools/verif/coverage_report.py --dat merged.dat \
   fails (check `stale-waiver`). `--check-waivers` runs the same resolution with no `.dat` (the
   per-PR QA job), `--migrate-waivers FILE` rewrites old `^L<n>\b` entries.
 - Exit 0 at any coverage level (the gate is informational, see
-  `docs/verification/SOC_COVERAGE_REPORT.md`); exit 2 on a missing/malformed/empty `.dat`, a bad
+  `Doc: tm:flow:soc-coverage-report`); exit 2 on a missing/malformed/empty `.dat`, a bad
   waiver file, or when nothing in the triaged trees was measured -- never a vacuous pass.
 - Tests: `python3 -m pytest tb/tests/test_coverage_report.py tb/tests/test_coverage_waiver_anchors.py`.
 

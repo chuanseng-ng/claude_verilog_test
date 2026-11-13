@@ -168,7 +168,7 @@ set_false_path -from [get_ports rst_n_i]
 set_false_path -from [get_ports ext_irq_i]
 set_false_path -from [get_ports timer_irq_i]
 
-# DFT scan/test boundary (bead claude_verilog_test-j41m.4, DFT_ARCHITECTURE.md 14.10).
+# DFT scan/test boundary (bead claude_verilog_test-j41m.4, Doc: tm:ch:dft-architecture 14.10).
 # rv32i_cpu_top gained scan_mode_i, scan_en_i, scan_in_i[1:0], scan_out_o[1:0]. Today they
 # have NO functional consumer: scan_mode_i/scan_en_i/scan_in_i drive no cell input and
 # scan_out_o is a constant-0 tie (Stage 2 stitches the two chains inside this flow). They are

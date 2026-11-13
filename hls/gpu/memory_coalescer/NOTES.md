@@ -1,7 +1,7 @@
 # `memory_coalescer` HLS arm — authoring record and results
 
 GH #119 bead `cfi`. This file is part of the reproducibility pin required by
-`docs/CPP_TO_RTL_HLS_EVALUATION.md` L127-133: it records **how** the C was authored, not just
+`Doc: tm:dec:cpp-to-rtl-hls-evaluation` L127-133: it records **how** the C was authored, not just
 what it produced, because the authoring step is itself the thing under test.
 
 ## Method: the RTL body was withheld
@@ -79,7 +79,7 @@ specified requirement. The properties the test actually needs to pin (`done_o` e
 change applies to both arms, since it is one shared file.
 
 This is the pilot's first quantified QoR result and belongs in Stage 2's write-up: it is exactly
-the "HLS is weaker on control logic" claim that `docs/CPP_TO_RTL_HLS_EVALUATION.md` argues from
+the "HLS is weaker on control logic" claim that `Doc: tm:dec:cpp-to-rtl-hls-evaluation` argues from
 literature, now measured on this project's own RTL.
 
 ## The shim is wire-only

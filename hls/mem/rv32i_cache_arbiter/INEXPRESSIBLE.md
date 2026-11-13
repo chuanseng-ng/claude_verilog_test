@@ -107,7 +107,7 @@ invert that. It would not be a weak result; it would be a false one.
 
 ## What this does to the evaluation document's argument
 
-`docs/CPP_TO_RTL_HLS_EVALUATION.md` currently argues, from literature, that hand-RTL beats HLS on
+`Doc: tm:dec:cpp-to-rtl-hls-evaluation` currently argues, from literature, that hand-RTL beats HLS on
 "control-heavy, timing-critical, cycle-accurate microarchitecture… crossbar arbitration/handshake".
 This block upgrades that claim for one named case:
 

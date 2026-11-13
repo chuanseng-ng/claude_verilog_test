@@ -2,7 +2,7 @@
 test_jtag_tap.py -- bead claude_verilog_test-j41m.3 (DFT Stage 1b), unit suite for jtag_tap.
 
 DUT: tb_jtag_tap -> jtag_tap (rtl/soc/dft/jtag_tap.sv) alone.
-Specification: docs/design/DFT_ARCHITECTURE.md section 15 (15.2 TAP rules, 15.3 instruction map).
+Specification: Doc: tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap (15.2 TAP rules, 15.3 instruction map).
 
 How the checking works
   Every test drives the TAP through jtag_driver.JtagDriver, which runs an independent spec model

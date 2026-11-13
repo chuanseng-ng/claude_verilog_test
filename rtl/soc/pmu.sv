@@ -2,7 +2,7 @@
 // Pre-Phase-6 #5 (GH epic #98, this file: GH #99) — behavioral power-management
 // unit (PMU): power-mode APB4 register block + per-domain sequencer FSM.
 //
-// SCOPE (per docs/POWER_DOMAIN_EVALUATION.md, DECIDED 2026-06-27, "GO (scoped):
+// SCOPE (per Doc: tm:pd:power-domain-evaluation, DECIDED 2026-06-27, "GO (scoped):
 // behavioral PMU sequencer only"): this is a clock-gate / reset / functional-
 // isolation *sequencing* controller, modeled as ordinary synchronous RTL and
 // fully verifiable under Verilator. It does NOT model real supply removal,

@@ -17,7 +17,7 @@ What this proves, and what it does not:
   * DOES NOT prove that EVERY async reset and clock in the netlist is
     controllable: that is an all-nets property and is checked structurally by
     tools/dft/check_scan_clk_rst.py on the synthesised netlist (see
-    docs/design/DFT_ARCHITECTURE.md section 14).
+    Doc: tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl).
   * Functional-mode bit-identity is established by the existing suites, which
     run with these ports tied inactive by soc_clocks.drive_dft_inactive().
 
@@ -263,7 +263,7 @@ async def test_cpu_macro_scan_boundary(dut):
     dut.scan_in_i.value = 0
     # Control: macro mirrors the dft_ctrl nets (pin leg here; TAP leg is dft_ctrl's own suite).
     # j41m.17: scan_en is withheld until the crypto scan-entry wipe is applied, so the scan-entry
-    # protocol (DFT_ARCHITECTURE.md 14.14) is followed: scan_mode with scan_en low, three test
+    # protocol (Doc: tm:ch:dft-architecture 14.14) is followed: scan_mode with scan_en low, three test
     # clock edges plus one spare, THEN scan_en. Before this change the test raised both at once
     # and passed only because the previous test left the wipe pipeline settled in scan mode
     # (run alone it failed on HEAD with dft_scan_en = 0).
@@ -313,7 +313,7 @@ async def test_cpu_macro_scan_boundary_tap_leg(dut):
     await drv.enter_scan(sel=0, rst=1)
     await drv.goto("RTI")
     # j41m.17: the shift enable is withheld until the crypto wipe is applied: three Capture-DR
-    # passes (one test edge each) plus one spare before Shift-DR (DFT_ARCHITECTURE.md 14.14).
+    # passes (one test edge each) plus one spare before Shift-DR (Doc: tm:ch:dft-architecture 14.14).
     # Without them this test depended on the previous test's wipe-pipeline history.
     for _ in range(4):
         await drv.goto("CAPDR")

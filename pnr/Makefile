@@ -2807,7 +2807,7 @@ librelane-asap7-valu-hls: check-asap7-openroad r8r-valu-hls-sv2v
 # (ui_cond_expr_FU, vector_alu_synth.v:346) loses its masking branch, leaking
 # raw rs1_i/rs2_i values into result_o for inactive lanes (proven by SAT miter
 # + eval against the real ASAP7-mapped netlist; see
-# docs/CPP_TO_RTL_HLS_EVALUATION.md and bd show claude_verilog_test-gcd).
+# Doc: tm:dec:cpp-to-rtl-hls-evaluation and bd show claude_verilog_test-gcd).
 # Root-caused to the Synlig frontend, not LibreLane's opt passes (SHARE and
 # SYNTH_TIE_UNDEFINED were both ruled out empirically). Fix: bypass Synlig for
 # this leaf -- pre-process gpu_pkg.sv + the shim through sv2v (already the
