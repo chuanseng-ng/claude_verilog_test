@@ -66,6 +66,39 @@
    "spef_bytes": 109487773,
    "spef_md5": "d7e39173089fee0543572ce69d585401"
   },
+  "innovusb11_max": {
+   "wall_s": 72.0,
+   "max_single_process_rss_kb": 66632,
+   "session_peak_rss_kb": 1211716,
+   "rc": "0",
+   "nets_extracted": 45947,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 176689922,
+   "spef_md5": "b890ddca7ec137d840f2f14df5db15e5"
+  },
+  "innovusb11_min": {
+   "wall_s": 72.1,
+   "max_single_process_rss_kb": 69200,
+   "session_peak_rss_kb": 1233860,
+   "rc": "0",
+   "nets_extracted": 45947,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 175603707,
+   "spef_md5": "a5a01fe40e0fe38907128cb6f1842443"
+  },
+  "innovusb11_nom": {
+   "wall_s": 78.7,
+   "max_single_process_rss_kb": 68896,
+   "session_peak_rss_kb": 1234120,
+   "rc": "0",
+   "nets_extracted": 45947,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 176849256,
+   "spef_md5": "0e11e61d378a6d62df4016f271967f37"
+  },
   "innovusb6_max": {
    "wall_s": 72.6,
    "max_single_process_rss_kb": 67296,
@@ -275,6 +308,35 @@
     "hold_wns_ns": 0.050827,
     "hold_tns_ns": 20.42459,
     "total_power_mW": -0.4
+   }
+  },
+  "innovusb11": {
+   "starrc": {
+    "setup_wns_ns": 2.719475,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.541455,
+    "hold_tns_ns": -139.847487,
+    "hold_viol": 377,
+    "total_power_mW": 74.5,
+    "p2p_unannotated_nets": 0
+   },
+   "quantus": {
+    "setup_wns_ns": 2.63256,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.571773,
+    "hold_tns_ns": -147.248231,
+    "hold_viol": 385,
+    "total_power_mW": 74.7,
+    "p2p_unannotated_nets": 0
+   },
+   "delta": {
+    "setup_wns_ns": -0.086915,
+    "setup_tns_ns": 0.0,
+    "hold_wns_ns": -0.030318,
+    "hold_tns_ns": -7.400744,
+    "total_power_mW": 0.2
    }
   }
  }

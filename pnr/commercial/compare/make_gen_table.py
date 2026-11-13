@@ -6,7 +6,7 @@ import json, sys, os
 HERE = os.path.dirname(os.path.abspath(__file__))
 d = json.load(open(os.path.join(HERE, "comparison.json")))
 tool = sys.argv[1] if len(sys.argv) > 1 else "icc2"
-arms = [f"{tool}_b6", f"{tool}_b7", f"{tool}_b8", f"{tool}_b9", f"{tool}_b10"]
+arms = [f"{tool}_b6", f"{tool}_b7", f"{tool}_b8", f"{tool}_b9", f"{tool}_b10", f"{tool}_b11"]
 arms = [a for a in arms if a in d["arms"] and "base" in (d["judge"].get(a) or {})]
 def S(a, var, k):
     try: return d["judge"][a][var]["summary"]["values"][k]

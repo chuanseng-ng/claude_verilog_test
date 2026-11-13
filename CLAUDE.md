@@ -141,7 +141,7 @@ Three nodes are supported by the existing `pnr/Makefile`. Use the right node for
 | **ASAP7 7nm FinFET** | `librelane-asap7` | ✅ Complete (`pnr/asap7/`); Run 43 signoff 2026-05-20 | **1418 MHz achieved (Run 43)** | No (predictive) | Phase 2+3 RTL PPA sign-off completed at 1418 MHz / 27.27 mW / 3 844 µm² |
 
 ### Commercial flows (`pnr/commercial/`, Sky130 only, indicative)
-DC -> ICC2 and Genus -> Innovus flows for the Sky130 CPU macro `rv32i_cpu_top`, built on the EDA host (no nix). They are judged with OpenROAD B2 by one StarRC -> PrimeTime/PrimePower chain, plus KLayout/Magic/Netgen, Formality/Conformal and RedHawk. Final arms are ICC2 b6 and Innovus b6. All figures are indicative: StarRC is calibrated to OpenRCX, not silicon, and the SRAM Liberty is TT-only (`o1i`). No arm meets sign-off. Results and caveats are in `docs/COMMERCIAL_FLOW_COMPARISON.md`.
+DC -> ICC2 and Genus -> Innovus flows for the Sky130 CPU macro `rv32i_cpu_top`, built on the EDA host (no nix). They are judged with OpenROAD B2 by one StarRC -> PrimeTime/PrimePower chain, plus KLayout/Magic/Netgen, Formality/Conformal and RedHawk. Final arms are ICC2 b9 (user decision 2026-11-09) and Innovus b11 (2026-11-13: b10 with its three repeaters resized `buf_6` -> `buf_12`; meets the adoption rule, section 4.9), plus OpenROAD B2. All figures are indicative: StarRC is calibrated to OpenRCX, not silicon, and the SRAM Liberty is TT-only (`o1i`). No arm meets sign-off. Results and caveats are in `docs/COMMERCIAL_FLOW_COMPARISON.md`.
 
 ### Legacy P&R directories (superseded — do not start new work here)
 `pnr/librelane/` and `pnr/openlane1/` are the pre-per-node Sky130 CPU flows. Both are

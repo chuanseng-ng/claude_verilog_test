@@ -1,0 +1,77 @@
+corner rc=min lib=ff
+=== variant buf_6 : N1=buf_6 N2=buf_6 N3=buf_6
+  B10N1/A B10N1/X                                    tran 0.2410
+  B10N1/X g46138/A2 g46154/A2 g46161/A2 g46169/A2 g46203/A2 g46251/A2 g46268/A2 g46301/A2 g46310/A2 tran 0.2442
+  FE_OFC9939_u_mbist_ctrl_tg_addr_q_3__7/Y B10N1/A g46110/A2 tran 0.1437
+  u_core/B10N2/A u_core/B10N2/X                      tran 0.2941
+  u_core/B10N2/X u_core/g372541/B u_core/g372543/B u_core/FE_OFC8791_n_12617/A u_core/FE_OFC8792_n_12617/A tran 0.2980
+  u_core/B10N3/A u_core/B10N3/X                      tran 0.1878
+  u_core/B10N3/X u_core/g372593/B u_core/g372600/B   tran 0.0962
+  u_core/FE_OFC4502_n_12583/Y u_core/B10N3/A u_core/FE_OFC18230_n_12583/A u_core/g372566/B u_core/g372576/B u_core/g372609/B u_core/FE_OFC2826_n_12583/A tran 0.1878
+  u_core/FE_OFC5226_n_12617/Y u_core/B10N2/A u_core/g372537/B tran 0.1223
+  slack_max through B10N1 = 11.9001
+  slack_min through B10N1 = 0.5465
+  slack_max through u_core/B10N2 = 10.0439
+  slack_min through u_core/B10N2 = 1.3686
+  slack_max through u_core/B10N3 = 10.4068
+  slack_min through u_core/B10N3 = 0.9321
+  global_max_wns 4.8571
+  global_min_wns -0.9216
+  MAXTRAN_VIOLATOR_PINS 0
+=== variant buf_8 : N1=buf_8 N2=buf_8 N3=buf_8
+  B10N1/A B10N1/X                                    tran 0.1947
+  B10N1/X g46138/A2 g46154/A2 g46161/A2 g46169/A2 g46203/A2 g46251/A2 g46268/A2 g46301/A2 g46310/A2 tran 0.1985
+  FE_OFC9939_u_mbist_ctrl_tg_addr_q_3__7/Y B10N1/A g46110/A2 tran 0.1461
+  u_core/B10N2/A u_core/B10N2/X                      tran 0.2440
+  u_core/B10N2/X u_core/g372541/B u_core/g372543/B u_core/FE_OFC8791_n_12617/A u_core/FE_OFC8792_n_12617/A tran 0.2488
+  u_core/B10N3/A u_core/B10N3/X                      tran 0.1904
+  u_core/B10N3/X u_core/g372593/B u_core/g372600/B   tran 0.0820
+  u_core/FE_OFC4502_n_12583/Y u_core/B10N3/A u_core/FE_OFC18230_n_12583/A u_core/g372566/B u_core/g372576/B u_core/g372609/B u_core/FE_OFC2826_n_12583/A tran 0.1904
+  u_core/FE_OFC5226_n_12617/Y u_core/B10N2/A u_core/g372537/B tran 0.1246
+  slack_max through B10N1 = 11.9125
+  slack_min through B10N1 = 0.5181
+  slack_max through u_core/B10N2 = 10.0604
+  slack_min through u_core/B10N2 = 1.3355
+  slack_max through u_core/B10N3 = 10.4062
+  slack_min through u_core/B10N3 = 0.9206
+  global_max_wns 4.8571
+  global_min_wns -0.9216
+  MAXTRAN_VIOLATOR_PINS 0
+=== variant buf_12 : N1=buf_12 N2=buf_12 N3=buf_12
+  B10N1/A B10N1/X                                    tran 0.1484
+  B10N1/X g46138/A2 g46154/A2 g46161/A2 g46169/A2 g46203/A2 g46251/A2 g46268/A2 g46301/A2 g46310/A2 tran 0.1499
+  FE_OFC9939_u_mbist_ctrl_tg_addr_q_3__7/Y B10N1/A g46110/A2 tran 0.1484
+  u_core/B10N2/A u_core/B10N2/X                      tran 0.1735
+  u_core/B10N2/X u_core/g372541/B u_core/g372543/B u_core/FE_OFC8791_n_12617/A u_core/FE_OFC8792_n_12617/A tran 0.1811
+  u_core/B10N3/A u_core/B10N3/X                      tran 0.1929
+  u_core/B10N3/X u_core/g372593/B u_core/g372600/B   tran 0.0653
+  u_core/FE_OFC4502_n_12583/Y u_core/B10N3/A u_core/FE_OFC18230_n_12583/A u_core/g372566/B u_core/g372576/B u_core/g372609/B u_core/FE_OFC2826_n_12583/A tran 0.1929
+  u_core/FE_OFC5226_n_12617/Y u_core/B10N2/A u_core/g372537/B tran 0.1268
+  slack_max through B10N1 = 11.9260
+  slack_min through B10N1 = 0.4864
+  slack_max through u_core/B10N2 = 10.0798
+  slack_min through u_core/B10N2 = 1.2990
+  slack_max through u_core/B10N3 = 10.4075
+  slack_min through u_core/B10N3 = 0.9118
+  global_max_wns 4.8571
+  global_min_wns -0.9216
+  MAXTRAN_VIOLATOR_PINS 0
+=== variant buf_16 : N1=buf_16 N2=buf_16 N3=buf_16
+  B10N1/A B10N1/X                                    tran 0.1531
+  B10N1/X g46138/A2 g46154/A2 g46161/A2 g46169/A2 g46203/A2 g46251/A2 g46268/A2 g46301/A2 g46310/A2 tran 0.1495
+  FE_OFC9939_u_mbist_ctrl_tg_addr_q_3__7/Y B10N1/A g46110/A2 tran 0.1531
+  u_core/B10N2/A u_core/B10N2/X                      tran 0.1719
+  u_core/B10N2/X u_core/g372541/B u_core/g372543/B u_core/FE_OFC8791_n_12617/A u_core/FE_OFC8792_n_12617/A tran 0.1795
+  u_core/B10N3/A u_core/B10N3/X                      tran 0.1980
+  u_core/B10N3/X u_core/g372593/B u_core/g372600/B   tran 0.0674
+  u_core/FE_OFC4502_n_12583/Y u_core/B10N3/A u_core/FE_OFC18230_n_12583/A u_core/g372566/B u_core/g372576/B u_core/g372609/B u_core/FE_OFC2826_n_12583/A tran 0.1980
+  u_core/FE_OFC5226_n_12617/Y u_core/B10N2/A u_core/g372537/B tran 0.1312
+  slack_max through B10N1 = 11.9118
+  slack_min through B10N1 = 0.4870
+  slack_max through u_core/B10N2 = 10.0630
+  slack_min through u_core/B10N2 = 1.2981
+  slack_max through u_core/B10N3 = 10.3981
+  slack_min through u_core/B10N3 = 0.9163
+  global_max_wns 4.8571
+  global_min_wns -0.9216
+  MAXTRAN_VIOLATOR_PINS 0

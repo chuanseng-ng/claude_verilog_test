@@ -10,7 +10,11 @@ def sub(m):
 def subr(m):
     out = subprocess.run([sys.executable, "-I", os.path.join(HERE, "regress_check.py"), m.group(1), m.group(2)] + ([m.group(3)] if m.group(3) else []), capture_output=True, text=True, check=True).stdout
     return f"<!-- GEN-REGRESS {m.group(1)} {m.group(2)}{' ' + m.group(3) if m.group(3) else ''} -->\n{out}<!-- /GEN-REGRESS -->"
-s2 = re.sub(r"<!-- GEN-TABLE (\w+) -->.*?<!-- /GEN-TABLE -->", sub, s, flags=re.S)
+def subf(m):
+    out = subprocess.run([sys.executable, "-I", os.path.join(HERE, "make_final_tables.py"), m.group(1)], capture_output=True, text=True, check=True).stdout
+    return out.rstrip("\n")
+s2 = re.sub(r"<!-- FINAL-TABLE (\w+) -->.*?<!-- /FINAL-TABLE -->", subf, s, flags=re.S)
+s2 = re.sub(r"<!-- GEN-TABLE (\w+) -->.*?<!-- /GEN-TABLE -->", sub, s2, flags=re.S)
 s2 = re.sub(r"<!-- GEN-REGRESS (\w+) (\w+)(?: (\w+))? -->.*?<!-- /GEN-REGRESS -->", subr, s2, flags=re.S)
 open(DOC, "w").write(s2)
 print("updated" if s2 != s else "unchanged")

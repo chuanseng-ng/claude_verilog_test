@@ -19,6 +19,7 @@ arm_def() {
     innovusb8) echo pnr/commercial/impl/innovus/runs/b8_innovus/out/rv32i_cpu_top.def ;;
     innovusb9) echo pnr/commercial/impl/innovus/runs/b9_innovus/out/rv32i_cpu_top.def ;;   # b6: DC v2 MCMM netlist, ICC2 MCMM flow
     innovusb10) echo pnr/commercial/impl/innovus/runs/b10_innovus/out/rv32i_cpu_top.def ;;   # b10 = b9 + max-transition root-cause ECO
+    innovusb11) echo pnr/commercial/impl/innovus/runs/b11_innovus/out/rv32i_cpu_top.def ;;   # b11 = b10 + repeaters resized buf_6 -> buf_12
     icc2b5i) echo pnr/commercial/impl/icc2/runs/b5i_icc2/out/rv32i_cpu_top.def ;;   # b5i: b5e routed + in-place met1-short / met4-spacing ECO (arm name has no '_')
     innovusb5j) echo pnr/commercial/impl/innovus/runs/b5j_innovus/out/rv32i_cpu_top.def ;;   # b5j: b5h routed + endcap n-well tie ECO (in-place)
     innovusb5k) echo pnr/commercial/impl/innovus/runs/b5k_innovus/out/rv32i_cpu_top.def ;;   # b5k: round 2 ECOs (hold, port repeaters, pin stubs, antenna diodes, npc.2 fill swap)

@@ -42,12 +42,13 @@ VARIANTS = ("own", "base", "iolat", "iolat_pv", "iolat_pvs")
 # ADOPT_B7 decides which generation is the FINAL arm of the comparison (the other becomes a history arm); set by the sign-off decision, never silently.
 # b8 = b6 flow on the FLIPPED I-cache floorplan (pnr/sky130/cpu/macro_placement_flipic.cfg) + the b7 ECO set with dout0 buffers on every max-cap pin (user decision 2026-11-08).
 # b9 = b8 + ICC2 ECO round 3 (ICC2 only): the two input-port diodes moved next to their loads, one antenna diode moved off an abutting li1 pin pair (docs section 4.9, items 12-14).  Innovus b9 (2026-11-12) = Innovus b8 + one post-route optDesign re-time of the APB read path (section 4.9); judged against Innovus b6 by regress_check.py and NOT adopted (FINAL_GEN_INN stays b6).
-# FINAL_GEN is the generation that is the FINAL arm of the comparison ("b6" .. "b10"); the others are history arms.  Set by the sign-off decision, never silently.
+# FINAL_GEN is the generation that is the FINAL arm of the comparison ("b6" .. "b11"); the others are history arms.  Set by the sign-off decision, never silently.
 ADOPT_B7 = False
 # 2026-11-09 user decision: the FINAL generation is set per tool.  ICC2 -> b9 (user sign-off: the ss setup margin shift of the I-cache SRAM flip is accepted).
-# Innovus -> set by the Innovus b9 adoption rule (no check worse than Innovus b6 apart from measured buffer cost); stays "b6" until that is decided.
+# Innovus -> set by the Innovus adoption rule (no check worse than Innovus b6 apart from measured buffer cost and the user-accepted MET setup/hold shifts of the I-cache flip; no check worse than the previous generation).
+# 2026-11-13: Innovus b9 and b10 did not meet it (max-transition at ss); Innovus b11 (b10 + the three repeaters resized buf_6 -> buf_12) does: regress_check.py innovus b11 = 25 worse (all the accepted 7 setup + 18 hold shifts), innovus b11 b10 = 0 worse.
 FINAL_GEN_ICC2 = "b9"
-FINAL_GEN_INN = "b6"
+FINAL_GEN_INN = "b11"
 FINAL_GEN = FINAL_GEN_ICC2  # legacy name: the ICC2 generation
 
 
@@ -64,6 +65,7 @@ _R7_INN = _role("innovus", "b7")
 _R8_INN = _role("innovus", "b8")
 _R9_INN = _role("innovus", "b9")
 _R10_INN = _role("innovus", "b10")
+_R11_INN = _role("innovus", "b11")
 
 # arm id -> PT arm name, display name, role, synthesis, notes
 ARMS = {
@@ -137,6 +139,13 @@ ARMS = {
         synthesis="Genus 23.14 v1 (tt only)",
         pnr="Innovus 23.14, b9 + max-transition root-cause ECO (3 buf_6 repeaters in the SRAM gap columns on the three scattered-load nets; the apb_prdata_o port nets are left as in b9)",
     ),
+    "innovus_b11": dict(
+        pt="innovusb11",
+        name="Innovus b11",
+        role=_R11_INN,
+        synthesis="Genus 23.14 v1 (tt only)",
+        pnr="Innovus 23.14, b10 + slew fix (the three b10 repeaters B10N1, u_core/B10N2, u_core/B10N3 resized buf_6 -> buf_12 in place; nothing else changes)",
+    ),
     "icc2_b5e": dict(
         pt="icc2",
         name="ICC2 b5e",
@@ -193,6 +202,7 @@ SDC_FILES = {
     "own:innovus_b8": f"{COM}/constraints/sky130_cpu_innovus_b8_own_pt.sdc",
     "own:innovus_b9": f"{COM}/constraints/sky130_cpu_innovus_b9_own_pt.sdc",
     "own:innovus_b10": f"{COM}/constraints/sky130_cpu_innovus_b10_own_pt.sdc",
+    "own:innovus_b11": f"{COM}/constraints/sky130_cpu_innovus_b11_own_pt.sdc",
     "own:innovus_b7": f"{COM}/constraints/sky130_cpu_innovus_b7_own_pt.sdc",
     "own:innovus_b6": f"{COM}/constraints/sky130_cpu_innovus_b6_own_pt.sdc",
     "own:innovus_b5k": f"{COM}/constraints/sky130_cpu_innovus_b5k_own_pt.sdc",
@@ -1040,8 +1050,10 @@ def innovus_arm(b="b6"):
         grab(f, r"Density:\s*([\d.]+)%") / 100, "fraction", "native", f, note="Innovus density"
     )
     dr = f"{r6}/final_drc.txt"
+    m_drc = re.search(r"Total Violations\s*:\s*(\d+)", text(dr))
     out["native_route_drc"] = E(
-        0 if "No DRC violations were found" in text(dr) else None, "count", "native", dr
+        0 if "No DRC violations were found" in text(dr) else (int(m_drc.group(1)) if m_drc else None), "count", "native", dr,
+        note="Innovus verify_drc; the 24 items of the flipped I-cache generations (b8..b11) are ParallelRunLength Spacing markers against the SRAM LEF met3 OBS: LEF-abstract pessimism, 24 of 24 evidenced against the SRAM GDS (docs section 7 item 13; written justification, not a waiver)",
     )
     an = f"{d}/final_antenna.txt"
     out["native_antenna"] = E(
@@ -1076,10 +1088,10 @@ def innovus_arm(b="b6"):
         note="power view av_ss (ss leakage), activity 0.1: not comparable with tt figures",
     )
     tot, peak, srcs = 0.0, 0, []
-    stage_dirs = ([f"{SNAP}/innovus_b6"] if b in ("b6", "b7") else []) + ([f"{SNAP}/innovus_b8"] if b in ("b9", "b10") else []) + ([f"{SNAP}/innovus_b9"] if b == "b10" else []) + ([d] if b != "b6" else [])  # b7 = the b6 flow + the b7 ECO / finish / restream stages; b8 has its own full chain
+    stage_dirs = ([f"{SNAP}/innovus_b6"] if b in ("b6", "b7") else []) + ([f"{SNAP}/innovus_b8"] if b in ("b9", "b10", "b11") else []) + ([f"{SNAP}/innovus_b9"] if b in ("b10", "b11") else []) + ([f"{SNAP}/innovus_b10"] if b == "b11" else []) + ([d] if b != "b6" else [])  # b7 = the b6 flow + the b7 ECO / finish / restream stages; b8 has its own full chain
     for sd in stage_dirs:
         for t in sorted(p(f"{sd}/stage_time").glob("[01]*.time")):
-            if b != "b6" and (sd.endswith(("innovus_b6", "innovus_b8")) or (b == "b10" and sd.endswith("innovus_b9"))) and t.name.startswith(("06m_finish", "07_restream")):
+            if b != "b6" and (sd.endswith(("innovus_b6", "innovus_b8")) or (b in ("b10", "b11") and sd.endswith("innovus_b9")) or (b == "b11" and sd.endswith("innovus_b10"))) and t.name.startswith(("06m_finish", "07_restream")):
                 continue  # superseded by the b7 finish / restream (b10: also by the b10 ones)
             rel = f"{sd}/stage_time/{t.name}"
             w, rss = time_v(rel)
@@ -1096,7 +1108,7 @@ def innovus_arm(b="b6"):
     out["peak_rss"] = E(round(peak / 1048576, 2), "GB", "derived", srcs, rule="max over stages")
     out["census"] = census(f"{r6}/final_cellcount.txt")
     out.update(drclvs(f"innovus_{b}"))
-    runs = lec_conformal({"b6": "b4m", "b7": "b7m", "b8": "b8m", "b9": "b9m", "b10": "b10m"}[b])
+    runs = lec_conformal({"b6": "b4m", "b7": "b7m", "b8": "b8m", "b9": "b9m", "b10": "b10m", "b11": "b11m"}[b])
     out["lec_runs"] = runs
     out["lec"] = lec_summary(runs, ["innovus_"], ["negctl"], "conformal")
     out.update(redhawk(f"innovus{b}"))
@@ -1121,6 +1133,10 @@ def innovus_b9():
 
 def innovus_b10():
     return innovus_arm("b10")
+
+
+def innovus_b11():
+    return innovus_arm("b11")
 
 
 def history():
@@ -1267,6 +1283,7 @@ def synthesis():
         ("innovus_b8", "genus_v1"),
         ("innovus_b9", "genus_v1"),
         ("innovus_b10", "genus_v1"),
+        ("innovus_b11", "genus_v1"),
         ("icc2_b5e", "dc_v1"),
     ):
         tt, f = rows[(key, "tt")]
@@ -1299,7 +1316,7 @@ def synthesis():
     fm = f"{COM}/signoff/lec/formality/reports/b4a2_dc_v2_vs_rtl/fm_log.txt"
     out["icc2_b6"]["synth_lec"] = lec_formality("b4a2")
     out["innovus_b6"]["synth_lec"] = lec_conformal("b4b_genus")
-    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("icc2_b9", "icc2_b6"), ("innovus_b8", "innovus_b6"), ("innovus_b9", "innovus_b6"), ("innovus_b10", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
+    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("icc2_b9", "icc2_b6"), ("innovus_b8", "innovus_b6"), ("innovus_b9", "innovus_b6"), ("innovus_b10", "innovus_b6"), ("innovus_b11", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
         for k in ("synth_runtime", "synth_peak_rss", "synth_lec"):
             out[b7][k] = out[b6][k]
     _ = fm
@@ -1354,6 +1371,11 @@ def quantus_crosscheck():
         corr_src += [(k, r, rep_b9) for k, r in json.loads(text(rep_b9))["results"].items()]
     else:
         warnings.append("quantus ICC2 b9 correlation report not committed; omitted")
+    rep_i11 = f"{COM}/signoff/quantus/reports/quantus_vs_starrc_innovusb11.json"  # Innovus b11 (2026-11-13): same method, written with CORR_TAG=_innovusb11
+    if tracked(rep_i11):
+        corr_src += [(k, r, rep_i11) for k, r in json.loads(text(rep_i11))["results"].items()]
+    else:
+        warnings.append("quantus Innovus b11 correlation report not committed; omitted")
     for k, r, rep in corr_src:
         out["correlation"][k] = E(
             {
@@ -1511,6 +1533,8 @@ def build():
         natives["innovus_b9"] = innovus_b9()
     if p(f"{SNAP}/innovus_b10").is_dir():
         natives["innovus_b10"] = innovus_b10()
+    if p(f"{SNAP}/innovus_b11").is_dir():
+        natives["innovus_b11"] = innovus_b11()
     natives.update(history())
     core = json.loads(text(f"{SNAP}/openroad/metrics.json"))
     core_src = f"{SNAP}/openroad/metrics.json"

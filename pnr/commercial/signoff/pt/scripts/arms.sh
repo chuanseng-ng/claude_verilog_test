@@ -29,12 +29,13 @@ arm_netlist() {
     innovusb8) echo pnr/commercial/impl/innovus/runs/b8_innovus/out/rv32i_cpu_top.nl.v ;;
     innovusb9) echo pnr/commercial/impl/innovus/runs/b9_innovus/out/rv32i_cpu_top.nl.v ;;   # b9 = b8 + Innovus ECO round (apb retime / DRV)
     innovusb10) echo pnr/commercial/impl/innovus/runs/b10_innovus/out/rv32i_cpu_top.nl.v ;;   # b10 = b9 + max-transition root-cause ECO (port-net repeaters, split scattered nets)
+    innovusb11) echo pnr/commercial/impl/innovus/runs/b11_innovus/out/rv32i_cpu_top.nl.v ;;   # b11 = b10 + the three b10 repeaters resized buf_6 -> buf_12 (ss max-transition)
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
 }
 arm_spef() {
   case "$1" in
-    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|innovusb9|innovusb10) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
+    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|innovusb9|innovusb10|innovusb11) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
     openroad_rcx)          echo pnr/commercial/runs/openroad/rv32i_cpu_top.$2.spef ;;
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
@@ -43,7 +44,7 @@ arm_spef() {
 arm_spef_marker() {
   [ -n "${PT_NO_MARKER:-}" ] && { echo ""; return; }   # non-StarRC SPEF set (e.g. Quantus, PT_STARRC_DIR=.../quantus/runs): no star/.starrc_complete exists
   case "$1" in
-    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|innovusb9|innovusb10) echo $STARRC/$1_$2/star/.starrc_complete ;;
+    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|innovusb9|innovusb10|innovusb11) echo $STARRC/$1_$2/star/.starrc_complete ;;
     *) echo "" ;;
   esac
 }
