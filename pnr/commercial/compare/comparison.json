@@ -10489,6 +10489,69 @@
     }
    }
   },
+  "innovus_b10": {
+   "pt": "innovusb10",
+   "name": "Innovus b10",
+   "role": "history",
+   "synthesis": "Genus 23.14 v1 (tt only)",
+   "pnr": "Innovus 23.14, b9 + max-transition root-cause ECO (3 buf_6 repeaters in the SRAM gap columns on the three scattered-load nets; the apb_prdata_o port nets are left as in b9)",
+   "metrics": {},
+   "synthesis_metrics": {
+    "netlist": "genus_v1",
+    "synth_leaf_cells": {
+     "value": 26347,
+     "unit": "count",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv",
+     "note": "incl. 10 SRAM"
+    },
+    "synth_zero_wire_setup_wns_tt": {
+     "value": 5.498289,
+     "unit": "ns",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv",
+     "note": "PrimeTime, ideal clock, no parasitics, shared SDC"
+    },
+    "synth_zero_wire_setup_wns_ss": {
+     "value": 0.606187,
+     "unit": "ns",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv"
+    },
+    "synth_zero_wire_setup_viol_ss": {
+     "value": 0,
+     "unit": "count",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv"
+    },
+    "synth_runtime": {
+     "value": 704,
+     "unit": "s",
+     "label": "native",
+     "source": "pnr/commercial/reports/genus_synth_summary.md",
+     "kind": "prose",
+     "locator": "QoR table: whole session wall 11:44 (/usr/bin/time)"
+    },
+    "synth_peak_rss": {
+     "value": 2.03,
+     "unit": "GB",
+     "label": "native",
+     "source": "pnr/commercial/reports/genus_synth_summary.md",
+     "kind": "prose",
+     "locator": "QoR table: peak RSS"
+    },
+    "synth_lec": {
+     "b4b_genus_vs_rtl": {
+      "value": "EQUIVALENT",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/conformal/reports/b4b_genus_vs_rtl/lec_log.txt",
+      "compare_points": 1076,
+      "diff_points": 0
+     }
+    }
+   }
+  },
   "icc2_b5e": {
    "pt": "icc2",
    "name": "ICC2 b5e",
@@ -30594,6 +30657,10 @@
     },
     "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
    }
+  },
+  "innovus_b10": {
+   "drv_nom_tt_base": null,
+   "drv_all_corners_base": null
   },
   "icc2_b5e": {
    "base": {

@@ -25,7 +25,7 @@ ARMS = ["openroad", "icc2b6", "innovusb6"]
 # so adding an arm never changes an existing row (the shared latency stays one value per corner, the same for every arm and for b6 vs b7).
 EXTRA_ARMS = [
     a
-    for a in ("icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9", "innovusb9")
+    for a in ("icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9", "innovusb9", "innovusb10")
     if a not in os.environ.get("IOLAT_EXCLUDE", "").split()  # IOLAT_EXCLUDE="icc2b8 innovusb8": leave arms out (e.g. while their layout is being re-run)
     # only arms whose 9 corners are ALL measured: a half-measured arm made this script fail (b7/b8 chains ran it while the other arm was still measuring)
     if all(os.path.isfile(os.path.join(PT, "runs_clklat", f"{a}_{rc}_{lib}", "clk_latency.tsv")) for rc in ("nom", "min", "max") for lib in ("tt", "ss", "ff"))
