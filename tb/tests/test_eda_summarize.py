@@ -2,8 +2,10 @@
 
 The behaviour under test that matters most is the ERROR verdict: a tool that
 exits 0 while producing an empty or unreadable report must never be reported as
-PASS. This repo shipped a CDC timing gate that passed for exactly that reason
-(bead `dwp`), so each parser has an explicit "nothing to parse" case here.
+PASS. This repo once shipped a CDC timing gate that passed for exactly that reason, so each parser
+has an explicit "nothing to parse" case here.
+
+Doc: cr:suite:test-eda-summarize
 """
 
 from __future__ import annotations
@@ -112,7 +114,7 @@ def test_opensta_violated_endpoint_fails_despite_exit_zero() -> None:
 
 
 def test_opensta_empty_report_is_error_not_pass() -> None:
-    """The bead `dwp` failure mode: nothing reported, tool exited 0."""
+    """The empty-report failure mode: nothing reported, tool exited 0."""
     status, summary = summarize.parse_opensta("", 0)
     assert status == ERROR
     assert "dwp" in summary["note"]
@@ -149,7 +151,7 @@ def test_opensta_zero_wns_tns_with_positive_worst_slack_is_pass() -> None:
 
 def test_opensta_worst_slack_only_is_not_empty_report_error() -> None:
     """A report with only a 'worst slack' line (no slack paths, no wns/tns)
-    must not fall into the empty-report ERROR case (bead `dwp`) -- worst_slack
+    must not fall into the empty-report ERROR case -- worst_slack
     alone is enough evidence that report_worst_slack actually ran.
     """
     status, summary = summarize.parse_opensta("worst slack 24.01\n", 0)
@@ -250,7 +252,7 @@ def test_cap_marks_truncation_instead_of_dropping_silently() -> None:
     assert "5 more" in capped[-1]
 
 
-# ------------------------------------------- CodeRabbit PR #134 regressions
+# ------------------------------------------- code-review regressions
 
 
 def test_opensta_negative_worst_slack_alone_fails() -> None:
@@ -284,7 +286,7 @@ def test_cocotb_zero_test_tally_is_error_not_pass() -> None:
 
 # Bambu echoes its own invocation on line 1; the parser reads --simulate from it
 # to decide whether co-simulation results are required. Everything below is
-# trimmed from real Gate A/B logs (GH #119).
+# trimmed from real Gate A/B logs.
 _BAMBU_HEAD = (
     " ==  Bambu executed with: /nix/store/xx/bambu --top-fname=coal_shape "
     "--generate-interface=INFER {sim}--device-name=asap7-TC --clock-period=0.705 gate_b.c \n"
@@ -376,7 +378,7 @@ def test_bambu_normalized_hash_ignores_the_embedded_command_line(tmp_path: Path)
 
     Bambu echoes its full command line, absolute paths and all, into a header
     comment. Stage 1 normalised only the date and missed this, so the "normalized"
-    digest still changed between clones (GH #119 bead r8r).
+    digest still changed between clones.
     """
     body = "module rv32i_hazard_unit(); endmodule\n"
     head = "// Code created using PandA - Date 2026-09-07T12:19:18\n// Bambu executed with: "
@@ -424,13 +426,11 @@ def test_bambu_normalized_hash_ignores_the_generation_timestamp(tmp_path: Path) 
 
 def test_bambu_normalized_hash_ignores_the_internal_id_counter(tmp_path: Path) -> None:
     """Bambu's internal net/instance ID counter is environment-sensitive, not
-    C-source-sensitive, and must not leak into the pinned digest (GH #119 bead
-    wke). Measured on real regenerations: memory_coalescer and
-    rv32i_hazard_unit both carried base ID 428532 in the 2026-09-07 pin-era
-    output and 428528 after a 2026-09-15 /nobackup wipe+remount -- the same
-    constant shift on two unrelated designs, with Bambu's own reported
-    flip-flop/area/cycle counts and the surrounding RTL text unchanged. Two
-    files differing ONLY in that counter must normalize identically.
+    C-source-sensitive, and must not leak into the pinned digest. Two unrelated
+    designs carried the same constant shift in that counter after a regeneration
+    in another environment, with Bambu's own reported flip-flop/area/cycle counts
+    and the surrounding RTL text unchanged. Two files differing ONLY in that
+    counter must normalize identically.
     """
     body_a = (
         "  selector_IN_UNBOUNDED_memory_coalescer_428532_428695,\n"

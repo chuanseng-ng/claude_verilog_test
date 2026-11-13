@@ -5,7 +5,9 @@ TOML file it does not fully parse. It must never guess wrong and corrupt
 content it does not understand -- every case where it cannot safely find
 `transparent_prefixes` inside `[hooks]` must leave the file byte-for-byte
 untouched and report failure, rather than silently doing nothing while
-claiming success (the same discipline as bead `dwp` for the EDA parsers).
+claiming success (the same discipline as the EDA parsers).
+
+Doc: cr:suite:test-sync-rtk-config
 """
 
 from __future__ import annotations

@@ -1,12 +1,14 @@
-"""Tests for the sv2v function-temporary exemption of tools/verif/check_synth_undef.py (bead j1b7).
+"""Tests for the sv2v function-temporary exemption of tools/verif/check_synth_undef.py.
 
 yosys inlines every function call; the function's own argument/local/result wires
 (``<func>$func$<file>:<line>$<n>.<name>``) get a constant-x ``update`` that nothing reads.  The
-structural ``x-driven-net`` rule reported them all on the SoC (509 hits, bead j1b7).  The exemption
+structural ``x-driven-net`` rule reported them all on the SoC.  The exemption
 must be as narrow as that mechanism: a net is exempt only if the PRE-``proc`` RTLIL of the same
 elaboration shows no reader of the wire.  Fixtures are real yosys 0.46 output
 (``fixtures/synth_undef/functemp_*``: ``.v`` source, ``.pre.il`` = ``write_rtlil`` before ``proc``,
 ``.h.json`` = ``write_json`` after ``proc``, exactly the view the flow's JsonHeader step writes).
+
+Doc: cr:suite:test-check-synth-undef-functemp
 """
 
 # pylint: disable=missing-function-docstring,protected-access
@@ -322,7 +324,7 @@ def test_the_exemption_cannot_be_allowlisted_into_existence(tmp_path):
     assert r.returncode == 1
 
 
-# ------------------------------------------ hold reads (call made inside an `if`), bead j1b7
+# ------------------------------------------ hold reads (call made inside an `if`)
 
 
 def test_hold_read_that_only_feeds_dead_temporaries_is_benign():

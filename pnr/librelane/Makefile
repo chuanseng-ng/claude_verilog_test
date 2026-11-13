@@ -2,7 +2,7 @@
 # LibreLane Flow — Makefile
 # Design: rv32i_cpu_top (Phase 3: RV32I CPU + L1 I-Cache + L1 D-Cache)
 # PDK: sky130A / sky130_fd_sc_hd
-# Frequency: 75 MHz (13.333 ns period)
+# Frequency: CLOCK_PERIOD in config.json sets the Phase 3 target clock
 #================================================================
 
 #----------------------------------------------------------------

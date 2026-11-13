@@ -1,4 +1,4 @@
-"""Structural guards for the cache-FSM timing properties added by bead r51p.
+"""Structural guards for the cache-FSM timing properties.
 
 The Sky130 CPU macro's ss setup failure runs through the dcache stall decode
 (Doc: cr:defect:sky130-cpu-ss-setup-r51p).  Two RTL properties keep that decode shallow and
@@ -13,6 +13,8 @@ must not regress silently:
 
 These are text-level checks on purpose (no simulator needed); behaviour is covered by the
 cocotb cache suites and by the RTL-arm differential in tools/verif/gls/sky130.
+
+Doc: cr:suite:test-cache-stall-encoding
 """
 
 import re

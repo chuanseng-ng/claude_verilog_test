@@ -1,8 +1,8 @@
 """Negative controls for the SoC cocotb Makefile's content-keyed Verilator build directories.
 
-Bead b079.  tb/cocotb/soc/Makefile derives ``SIM_BUILD`` from a sha256 of everything that
+tb/cocotb/soc/Makefile derives ``SIM_BUILD`` from a sha256 of everything that
 determines the compiled model, so suites with an identical model share ONE Verilator build while
-anything that changes the model gets its own directory.  The danger this guards is the PR #142
+anything that changes the model gets its own directory.  The danger this guards is the stale-model
 class: cocotb rebuilds on VERILOG_SOURCES timestamps but not on changed defines, parameters or
 tool versions, so a directory shared across a real difference silently reuses a stale ``Vtop`` and
 a suite passes against the wrong model.
@@ -11,6 +11,8 @@ These tests only call ``make print-sim-build`` / ``make -n`` (no simulator run) 
 ``test_touching_a_source_forces_rebuild``, which runs Verilator's elaboration (not the C++ build)
 on a ten-line module.  They need ``make``, ``verilator`` and ``cocotb-config`` and skip cleanly
 without them, so the generic QA job (no simulator) is unaffected; the cocotb CI job runs them.
+
+Doc: cr:suite:test-sim-build-key
 """
 
 from __future__ import annotations
@@ -102,7 +104,7 @@ def test_compile_time_inputs_change_the_directory(
 
 
 def test_coverage_directory_is_suffixed(tmp_path: Path) -> None:
-    """An instrumented model must never land in an uninstrumented directory (PR #142 class)."""
+    """An instrumented model must never land in an uninstrumented directory."""
     assert _dir(tmp_path, COVERAGE="1").endswith("_cov")
     assert not _dir(tmp_path).endswith("_cov")
 
@@ -134,7 +136,7 @@ def test_tb_soc_top_suites_share_one_build(tmp_path: Path) -> None:
 
 
 def test_distinct_models_keep_distinct_directories(tmp_path: Path) -> None:
-    """sram_controller default vs SRAM_TARGET=sky130 is the exact PR #142 false-pass case."""
+    """sram_controller default vs SRAM_TARGET=sky130 is the exact stale-model false-pass case."""
     assert _mdir(tmp_path, "sram_controller") != _mdir(
         tmp_path, "sram_controller", "SRAM_TARGET=sky130"
     )

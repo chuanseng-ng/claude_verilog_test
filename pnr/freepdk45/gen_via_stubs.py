@@ -3,13 +3,15 @@
 Generate a GDS2 stub file containing the router-generated VIA cells
 that are missing from the NanGate45 PDK GDS.
 
-KLayout layer map (from nangate45.lyt, dbu=0.0001 um => 10000 units/um):
+KLayout layer map (from nangate45.lyt; 10000 database units per micron):
   via1=12/0  via2=14/0  via3=16/0  via4=18/0  via5=20/0
   via6=22/0  via7=24/0  via8=26/0  via9=28/0
   metal1=11/0  metal2=13/0  metal3=15/0  metal4=17/0
   metal5=19/0  metal6=21/0  metal7=23/0  metal8=25/0  metal9=27/0
 
-All coordinates are in GDS database units (dbu = 0.0001 um).
+All coordinates are in GDS database units (dbu; 10000 per micron).
+
+Doc: tm:pd:freepdk45-gen-via-stubs-py, cr:pd:freepdk45-gen-via-stubs-py
 """
 
 import struct, datetime, math
@@ -112,7 +114,7 @@ LAYER_MAP = {
     "via9": 28, "via10": 30,
 }
 
-# dbu = 0.0001 um → 1 um = 10000 dbu units
+# 1 micron = 10000 dbu units
 DBU = 10000  # units per micron
 
 def um(x): return int(round(x * DBU))
@@ -178,7 +180,7 @@ def single_via_geom(cut_layer, bot_layer, top_layer, cut_w, cut_h,
 #   via6_7_960_2800_4_1_600_600  VIARULE Via6Array  CUTSIZE 280 280
 #       LAYERS metal6 via6 metal7  CUTSPACING 320 320  ENCLOSURE 0 0 260 360 ROWCOL 4 1
 #
-# DEF units are 2000/um → 280 dbu_DEF = 280/2000 um = 0.14 um = 1400 dbu_GDS
+# DEF units are 2000 per micron: 280 dbu_DEF = 1400 dbu_GDS
 # All values below converted: x_GDS = x_DEF / 2000 * 10000 = x_DEF * 5
 
 def _d(x): return x * 5   # DEF dbu (2000/um) → GDS dbu (10000/um)
@@ -198,8 +200,8 @@ ARRAY_VIAS = [
 ]
 
 # Single-cut vias — standard NanGate45 cut sizes (from tech LEF WIDTH values)
-# via1-3: 0.07 um cut; via4-9: 0.14 um cut
-# Standard enclosure: use minimum from tech LEF (~0.04 um for via1-3, ~0.04 um for via4+)
+# via1-3 and via4-9 use two different cut sizes (see SINGLE_VIA_SPECS below)
+# Standard enclosure: use the minimum from tech LEF (the same value for via1-3 and via4+)
 SINGLE_VIA_SPECS = {
     "via1": ("via1", "metal1", "metal2", um(0.07), um(0.07), um(0.04), um(0.04)),
     "via2": ("via2", "metal2", "metal3", um(0.07), um(0.07), um(0.04), um(0.04)),
@@ -243,7 +245,7 @@ def main():
         geom = single_via_geom(cl, bl, tl, cw, ch, enc_x, enc_y)
         cells_bytes += gds_cell(cell_name, geom)
 
-    # dbu_user = 1e-4 → 1 unit = 0.0001 um (KLayout convention)
+    # dbu_user = 1e-4: one database unit (KLayout convention)
     # dbu_phys = 1e-10 → 1 unit = 0.1 nm
     gds_bytes = gds_library("nangate45_generated_vias", cells_bytes,
                              dbu_user=1e-4,

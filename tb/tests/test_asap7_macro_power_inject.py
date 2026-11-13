@@ -1,12 +1,13 @@
-"""Unit tests for pnr/scripts/asap7_macro_power_inject.py (bead 86a).
+"""Unit tests for pnr/scripts/asap7_macro_power_inject.py.
 
 Why these exist: the injector writes power numbers into the macro Liberty files
 that every SoC-level `report_power` then trusts. A silent unit-parsing error
 there does not crash anything -- it produces a plausible-looking figure that is
-wrong by orders of magnitude, which is exactly the failure mode bead `7l5`
-exists to prevent. The Liberty scalar unit for `internal_power` is declared
+wrong by orders of magnitude. The Liberty scalar unit for `internal_power` is declared
 nowhere in these files and had to be derived empirically, so the header-unit
 parsing in particular is worth pinning down.
+
+Doc: cr:suite:test-asap7-macro-power-inject
 """
 
 import importlib.util
@@ -105,6 +106,6 @@ Total                  2.17e-01   1.10e-02   5.46e-03   2.34e-01
 
     def test_absent_total_row_raises_rather_than_returning_zeros(self):
         # A report that produced no Total row must not be read as 0.00 W --
-        # that is precisely the 0.00 W macro figure this bead exists to fix.
+        # that is precisely the zero macro power figure that these tests exist to catch.
         with pytest.raises(ValueError, match="no 'Total"):
             mod.parse_power_report("Group Internal Switching Leakage Total\n(no rows)\n")

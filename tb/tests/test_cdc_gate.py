@@ -5,6 +5,8 @@ pinned down. The cases that matter most are the ones that would rot silently:
 a waiver that stops matching, a waiver whose regex quietly widens to swallow a
 new crossing, and a change to cdc_snitch's report format that makes lines stop
 parsing (which would otherwise look like "zero findings").
+
+Doc: cr:suite:test-cdc-gate
 """
 
 from __future__ import annotations
@@ -327,7 +329,7 @@ def test_repo_config_loads_and_validates():
 
 
 # --------------------------------------------------------------------------
-# required synchronisers (bead pnfw item 2): the positive check
+# required synchronisers: the positive check
 # --------------------------------------------------------------------------
 
 REQ_CFG = (
@@ -384,13 +386,13 @@ def test_required_synchroniser_missing_field_is_rejected(tmp_path):
 
 
 def test_repo_config_requires_both_i2c_pad_synchronisers():
-    """The committed config must keep guarding both I2C pad synchronisers (bead pnfw)."""
+    """The committed config must keep guarding both I2C pad synchronisers."""
     cfg = cdc_gate.load_config(_GATE_PATH.with_name("cdc_config.yml"))
     ids = {rs["id"] for rs in cfg["required_synchronisers"]}
     assert {"i2c-scl-pad-sync", "i2c-sda-pad-sync"} <= ids
 
 
-# --- latch-launched synchronisers (bead j41m.3): cdc_snitch counts input PINS, so a latch (E and D)
+# --- latch-launched synchronisers: cdc_snitch counts input PINS, so a latch (E and D)
 # or any 2-input logic in front of a magic_cdc stage classifies "BAD magic", never CDC.
 LATCH_REQ_CFG = (
     BASE_CFG

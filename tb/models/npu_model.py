@@ -1,98 +1,26 @@
-"""npu_model.py -- pure-Python golden model of the INT8 NPU's arithmetic (rtl/npu/npu_top.sv +
-rtl/npu/npu_mac_array.sv + rtl/npu/npu_weight_mem.sv; bead claude_verilog_test-f7vs.11, Phase 6c,
-Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU").
+"""npu_model.py -- pure-Python golden model of the arithmetic of the INT8 NPU.
 
-STANDARD LIBRARY ONLY. requirements.txt is deliberately untouched (same promise as
-tb/models/aes128_model.py): this is a test oracle, not a fast implementation.
-
-This module is the authoritative specification of what the RTL must compute; the RTL implements
-what this file computes. It models ONLY THE ARITHMETIC -- not cycle timing, not the register bank,
-not the APB handshake, not the AIN / AOUT FIFO depths or the weight-SRAM read latency
-(tb/cocotb/soc/test_npu.py pins all of that).
-
-WHAT IS COMPUTED
-----------------
-For one inference of KLEN chunks (c = 0 .. KLEN-1) and four output lanes (j = 0 .. 3):
-
-    acc[j] = SUM_c SUM_(i=0..3)  W[c][i][j] * a[c][i]                  (signed INT32)
-    y[j]   = relu?( sat_int8( (acc[j] * SCALE_MULT) >> SCALE_SHIFT ) )
-
-One chunk is one 32-bit AIN word carrying a[c][0..3] and four CONSECUTIVE weight-SRAM words
-carrying W[c][i][0..3], one word per row i, at SRAM[TILEBASE + 4*c + i]. The four accumulators are
-zeroed at START and accumulate across all KLEN chunks; the requantiser then drains the four lanes
-and the four INT8 results are packed into ONE 32-bit AOUT word.
-
-BYTE-LANE CONTRACT (one rule, used for WDATA, AIN and AOUT alike)
------------------------------------------------------------------
-LITTLE-ENDIAN: element / lane index 0 is bits [7:0], index 1 is [15:8], index 2 is [23:16] and
-index 3 is [31:24] of the 32-bit register word.
-
-    word = (e3 & 0xFF) << 24 | (e2 & 0xFF) << 16 | (e1 & 0xFF) << 8 | (e0 & 0xFF)
-
-So a weight word is row i of the tile with W[c][i][j] in byte j; an AIN word is a[c][0..3] with
-a[c][i] in byte i; an AOUT word is y[0..3] with y[j] in byte j. Each byte is a two's-complement
-INT8. Rationale: RV32 is little-endian, so firmware can `memcpy` an `int8_t[4]` straight into a
-register with no byte swap (the opposite choice to the AES model, whose FIPS hex notation forced
-big-endian). `pack_word` / `unpack_word` are the only place the conversion lives.
-
-WEIGHT / ACTIVATION / PRODUCT RANGES
-------------------------------------
-W and a are signed INT8 (-128 .. 127). A product is INT8 x INT8 -> INT16 (-16256 .. 16384). Four
-products per chunk, KLEN chunks per inference.
-
-ACCUMULATOR: SIGNED INT32, SATURATING -- and the saturation can never fire
---------------------------------------------------------------------------
-The accumulator policy is SATURATE (`sat_int32`), not wrap. But the reachable range is tiny: the
-worst case is every operand -128 (product +16384), 4 products per chunk and 64 chunks, i.e.
-256 * 16384 = 2**22 = 4_194_304, which is 2**9 times smaller than INT32_MAX. So for every legal
-(KLEN <= 64) inference the INT32 accumulator CANNOT overflow, and `sat_int32` is the DEFINED
-behaviour for a width the architecture never reaches. Consequences:
-  * the RTL is free to use a narrower accumulator (>= 24 bits signed holds every reachable value)
-    or the full 32 bits; the two are observably identical;
-  * what the RTL must NOT do is truncate or saturate the accumulator x scale PRODUCT to 32 bits
-    (see below) -- that product needs at least 40 bits and is a real, reachable overflow site.
-`accumulate` applies `sat_int32` after every addition so the policy is executable and tested at the
-INT32 limits (tb/tests/test_npu_model.py), even though no legal input reaches them.
-
-REQUANTISE (the shared stage)
------------------------------
-SCALE register: SCALE[15:0] = SCALE_MULT (UNSIGNED 16-bit multiplier), SCALE[20:16] = SCALE_SHIFT
-(unsigned right shift, 0 .. 31).
-
-    p  = acc * SCALE_MULT            exact signed product; NEVER truncated
-    s  = p >> SCALE_SHIFT            ARITHMETIC right shift = FLOOR division by 2**SCALE_SHIFT
-    y  = sat_int8(s)                 clamp to [-128, 127], applied to the FULL-WIDTH shifted value
-    y  = max(0, y)   if CTRL[0] RELU_EN
-
-ROUNDING IS TRUNCATION TO MINUS INFINITY (floor), NOT round-half-up and NOT toward zero:
-    ( 3 * 1) >> 1 =  1      (round-half-up would give 2)
-    (-1 * 1) >> 1 = -1      (toward-zero would give 0)
-    (-3 * 1) >> 1 = -2      (toward-zero and half-up would both give -1)
-In RTL this is `$signed(prod) >>> shift`, with the product held wide enough for every reachable
-value (|acc| <= 2**22 needs 24 signed bits, so 24 + 16 = 40 bits; a full-INT32 accumulator would
-need 48) and the saturation compare done on the shifted full-width value. A 32-bit product
-would wrap for e.g. acc = 2**22, mult = 65535, shift = 0: the true result saturates to 127,
-a 32-bit wrap gives -128.
-SCALE_MULT = 0 gives y = 0 for every lane. ReLU is applied AFTER saturation; since saturation is
-monotone and ReLU is max(0, .), the order does not change the result, but this is the order the
-RTL's requantiser implements.
-
-ILLEGAL STARTS
---------------
-`legal_start` is the legality predicate the RTL's 2-cycle zero-length path uses:
-KLEN in 1 .. 63 and TILEBASE + 4*KLEN <= WEIGHT_WORDS (1024). `infer` refuses an illegal start
-(ValueError) because the RTL computes nothing for one.
-
-KLEN RANGE: 63 AT THE REGISTER, 64 IN THE MODEL (a plan defect, flagged)
--------------------------------------------------------------------------
-The plan documents KLEN[5:0] as "1..64" with KLEN == 0 illegal. A 6-bit field cannot hold 64:
-writing 64 stores 0 (WMASK 0x3F), which is then an illegal start. The register-reachable maximum
-is therefore 63. The ARITHMETIC is defined here for 1 .. KLEN_MAX = 64 because the accumulator
-bound above is stated for the plan's 64; `legal_start` enforces the register's real limit
-(KLEN_REG_MAX = 63). Resolving the discrepancy (KLEN-1 encoding, or "max 63") belongs to the
-plan's owner; the model needs no change either way for 1 .. 63.
-
-Run `python3 tb/models/npu_model.py` to execute the self-check.
+Subject: rtl/npu/npu_top.sv, rtl/npu/npu_mac_array.sv and rtl/npu/npu_weight_mem.sv.
+The module uses the standard library only (requirements.txt stays untouched). It is a test oracle,
+not a fast implementation. It models the arithmetic only: no cycle timing, no register bank, no APB
+handshake, no FIFO depths, no weight-SRAM latency (tb/cocotb/soc/test_npu.py checks those). The RTL
+implements what this file computes. Rules:
+  * One inference: acc[j] = SUM_c SUM_i W[c][i][j] * a[c][i] (signed INT32) over KLEN chunks
+    and four lanes j. y[j] = relu?(sat_int8((acc[j] * SCALE_MULT) >> SCALE_SHIFT)).
+  * Byte lanes are little-endian: lane 0 is bits [7:0]. pack_word and unpack_word are the only place
+    that converts. Each byte is a two's-complement INT8.
+  * The accumulator saturates (sat_int32), but no legal inference (KLEN <= 64) reaches the limit.
+    The RTL must not truncate or saturate the product acc * SCALE_MULT to 32 bits: it needs 40 bits.
+  * The RTL may use any signed accumulator of 24 bits or more. Weight row i of chunk c is at
+    SRAM[TILEBASE + 4*c + i].
+  * Requantise rounds toward minus infinity (arithmetic shift, floor). SCALE_MULT is unsigned
+    16 bit, SCALE_SHIFT is 0 to 31. ReLU applies after saturation.
+  * legal_start is the legality predicate of the RTL: KLEN in 1..63 and TILEBASE + 4*KLEN <=
+    WEIGHT_WORDS. infer raises ValueError for an illegal start.
+  * Known gap: KLEN_MAX is 64 in the model, but the 6-bit register holds at most 63 (KLEN_REG_MAX).
+    The plan owner decides how to close it.
+Run: python3 tb/models/npu_model.py
+Doc: ds:ch:phase6-ip-expansion-plan, tm:suite:npu-model, cr:suite:npu-model
 """
 
 from __future__ import annotations

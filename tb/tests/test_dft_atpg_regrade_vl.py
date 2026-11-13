@@ -1,5 +1,8 @@
 # ruff: noqa: E501
-"""Tests for tools/dft/atpg/regrade_vl.py (bead j41m.15): Verilator + Yosys re-grade, independent of Quaigh."""
+"""Tests for tools/dft/atpg/regrade_vl.py: Verilator + Yosys re-grade, independent of Quaigh.
+
+Doc: cr:suite:test-dft-atpg-regrade-vl
+"""
 
 import shutil
 import sys

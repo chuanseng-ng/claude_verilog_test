@@ -82,20 +82,20 @@ module rv32i_cpu_top #(
     input  logic        ext_irq_i,
     input  logic        timer_irq_i,
 
-    // DFT test boundary (bead j41m.4, Doc: tm:ch:dft-architecture 14.10). These four ports exist in
+    // DFT test boundary (Doc: tm:ch:dft-architecture, CPU macro scan and test boundary). These four ports exist in
     // the RTL and in this stub so the SoC netlist elaborates, but the COMMITTED ASAP7 macro
     // views (pnr/asap7/soc/macro/rv32i_cpu_top.{lef,lib,nl}) are the pre-DFT ones and do not
-    // have the pins. An ASAP7 SoC P&R against them fails at the macro pin match until bead
-    // j41m.13 regenerates the views (blocked on ma7/lxv/2kn, like every ASAP7 SoC re-run).
+    // have the pins. An ASAP7 SoC P&R against them fails at the macro pin match until the
+    // views are regenerated.
     input  logic        scan_mode_i,
     input  logic        scan_en_i,
     input  logic [1:0]  scan_in_i,
     output logic [1:0]  scan_out_o,
 
-    // MBIST boundary (bead c54a, Doc: tm:ch:dft-architecture 16.7): 96 pins, same status as the four DFT ports
+    // MBIST boundary (Doc: tm:ch:dft-architecture, CPU macro cache collars): 96 pins, same status as the four DFT ports
     // above: present in the RTL and in this stub so the SoC netlist elaborates, absent from the committed
     // ASAP7 macro views and from pnr/asap7/cpu/pin_order.cfg (not changed: the ASAP7 CPU macro re-harden is
-    // shelved, blocked on ma7/lxv/2kn; j41m.13 regenerates the views and must add these pins, which carry
+    // shelved; the regenerated views must add these pins, which carry
     // no live logic on the ASAP7 arm: the caches have no collars there and drive 0 as MBIST read data).
     input  logic        mbist_run_i,
     input  logic [25:0] mbist_cfg_i,

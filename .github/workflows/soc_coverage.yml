@@ -1,71 +1,56 @@
 name: SoC Coverage
 
-# GH #216 (bead nkj7): line + toggle coverage for the whole SoC cocotb regression.
-#
-# Runs the entire soc_all_ci regression built with Verilator --coverage-line --coverage-toggle,
-# merges every per-simulation .dat, and renders a per-module table with
-# tools/verif/coverage_report.py.  Method, run command, per-module table, triage and the gating
-# decision: Doc: tm:flow:soc-coverage-report.
-#
-# Sharding (bead 9ayu.1).  This used to be ONE serial job (74 min: 62 min of instrumented SoC
-# suites + 11 min of CPU/cache/GPU suites).  It is now a fan-out that finishes in the time of its
-# slowest leg:
-#
-#   soc_shard (matrix, NSHARDS legs) --\
-#                                       >-- soc_coverage  (merge + report + gate; the job whose
-#   cpu_gpu                          --/                    name is the required check)
-#
-# * The list of suites is ONE variable, SOC_CI_SUITES in tb/cocotb/soc/Makefile (soc_all_ci runs the
-#   whole list, `make soc_ci_shard SHARD=k NSHARDS=n` a balanced slice of it).  The slice is
-#   planned by tools/verif/soc_shards.py from the measured instrumented timings in
-#   tools/verif/soc_shard_weights.json -- deterministic, so every leg and the merge job agree on it
-#   without passing the plan around.  The heaviest suites (i2c, soc_integration, soc_cpu_gpu,
-#   soc_coherency, soc_multiclock, and the slow soc_uart_boot test, which SOC_CI_SPLITS runs as three
-#   TESTCASE slices) land in different shards.
-# * Each shard uploads its per-simulation .dat files, its log and `suites_ran.txt` (every suite its
-#   make completed).  The final job merges ALL shards' .dat with verilator_coverage (the same
-#   operation the serial `soc_coverage` target performed over one directory, so the merged file is
-#   byte-identical to merging the same simulations serially), and fails unless
-#     - the union of the shards' suites_ran.txt is EXACTLY SOC_CI_SUITES (none lost, none run twice,
-#       none unknown): `python3 tools/verif/soc_shards.py union`;
-#     - the SUMMED pass count of all shard logs reaches PASS_FLOOR and no log has a failure (bead
-#       p6t8: a cocotb target exits 0 over failures, so this grep is the only red-suite catch);
-#     - the CPU/cache/GPU log reaches CPU_PASS_FLOOR with no failure.
-# * ccache (bead b079's pattern, copied from cocotb.yml) in every compiling job.  Only main
-#   (the nightly schedule, a manual dispatch on main) saves; pull requests restore.
-# * The final job runs `if: always()` and fails explicitly when any shard or the CPU/GPU job did not
-#   succeed.  A skipped required check counts as passing, so `needs` alone would let a red shard
-#   turn the check grey instead of red.
-#
-# Combined report (bead 1eyv): the CPU / Phase 3 cache / Phase 4 GPU suites run instrumented the
-# same way (`make -C sim coverage_cpu_gpu`, same nix Verilator, so both inputs agree on point
-# identity) and are merged with the SoC data at the report level (`coverage_report.py --dat soc
-# --dat cpu_gpu`).  Since bead a5ze that half is REQUIRED (no `continue-on-error`): the gate
-# evaluates rtl/cpu|mem|gpu on the combined data, so a red suite, a collapsed pass count or a
-# missing `cpu_gpu_merged.dat` fails the job instead of silently dropping three trees.
-#
-# NOT a per-PR gate.  An instrumented -O0 build is far slower than cocotb.yml's soc job, so this
-# runs nightly and on demand.  The pull_request trigger is limited to the files that make up
-# this report, so a change to the script, the waivers, the shard plan or this workflow is validated
-# by a real run before it merges; it does not fire for RTL or testbench edits.
-#
-# Gating (bead s1cg, user decision 2026-10-10): the job fails if the REGRESSION fails (a red
-# suite, a collapsed pass count), if no coverage data was produced, or if the "Coverage gate"
-# step below fails: every triaged module (rtl/soc, rtl/periph, rtl/npu) must reach the 95 % line
-# floor (after category-b waivers) and the control-signal toggle floor (1-bit scalar signals; a
-# per-module ratchet in tools/verif/coverage_toggle_ratchet.txt holds the known gaps).  Bead a5ze:
-# every module of rtl/cpu, rtl/mem and rtl/gpu must also reach the 95 % LINE floor, evaluated on
-# the COMBINED data (SoC + CPU/cache/GPU, produced at the same commit by this workflow); the
-# control-signal toggle gate stays off those three trees.  The gate step runs AFTER the merge
-# steps and the summary / upload steps are `if: always()`, so a red gate or a red suite still
-# publishes the report and the data.  Definition of a control signal, floors, how to add a waiver
-# or raise a ratchet: Doc: tm:flow:soc-coverage-report.
-#
-# The Verilator pin is the same contract as cocotb.yml: nix-installed (flake-pinned) Verilator
-# compiles the sim, cocotb runs on the setup-python interpreter.  `nix profile install
-# .#verilator` puts verilator AND verilator_coverage on PATH, which is what the merge needs
-# (bead hg2's nix-Verilator-vs-coverage crash is side-stepped by the Makefile's
-# PYTHON3=$(SIM_PYTHON3) override; every job here passes SIM_PYTHON3 exactly as cocotb.yml does).
+# Line + toggle coverage for the whole SoC cocotb regression. It runs the entire soc_all_ci regression
+# built with Verilator --coverage-line --coverage-toggle, merges every per-simulation .dat, and renders
+# a per-module table with tools/verif/coverage_report.py.
+# Method, run command, per-module table, triage and the gating decision: Doc: tm:flow:soc-coverage-report.
+# Doc: um:flow:ci-soc-coverage, cr:flow:ci-soc-coverage
+
+# Sharding: soc_shard (matrix, NSHARDS legs) and cpu_gpu feed soc_coverage (merge, report, gate).
+# soc_coverage has the name of the required check. It runs `if: always()` and fails explicitly when any
+# shard or the CPU/GPU job did not succeed. A skipped required check counts as passing, so `needs` alone
+# would turn the check grey instead of red.
+
+# SOC_CI_SUITES in tb/cocotb/soc/Makefile is the one list of suites. soc_all_ci runs all of it.
+# `make soc_ci_shard SHARD=k NSHARDS=n` runs a balanced slice. tools/verif/soc_shards.py plans the slice
+# from the instrumented timings in tools/verif/soc_shard_weights.json. The plan is deterministic, so every
+# leg and the merge job agree on it. The heaviest suites land in different shards.
+
+# Each shard uploads its per-simulation .dat files, its log and `suites_ran.txt`. The final job merges all
+# .dat files with verilator_coverage. The merged file is byte-identical to a serial merge of the same
+# simulations. The final job fails unless the union of the suites_ran.txt files is exactly SOC_CI_SUITES
+# (`python3 tools/verif/soc_shards.py union`), the summed pass count reaches PASS_FLOOR with no failure,
+# and the CPU/cache/GPU log reaches CPU_PASS_FLOOR with no failure.
+
+# A cocotb target exits 0 over failures, so the log grep is the only red-suite catch.
+# ccache follows the pattern of cocotb.yml in every compiling job. Only main saves it (the nightly
+# schedule and a manual dispatch on main). Pull requests restore it.
+
+# Combined report: the CPU, Phase 3 cache and Phase 4 GPU suites run instrumented the same way
+# (`make -C sim coverage_cpu_gpu`, same nix Verilator, so both inputs agree on point identity). The report
+# merges them with the SoC data (`coverage_report.py --dat soc --dat cpu_gpu`). This half is required (no
+# `continue-on-error`): the gate evaluates rtl/cpu|mem|gpu on the combined data, so a red suite, a
+# collapsed pass count or a missing `cpu_gpu_merged.dat` fails the job.
+
+# This is not a per-PR gate. An instrumented -O0 build is far slower than the soc job of cocotb.yml, so it
+# runs nightly and on demand. The pull_request trigger covers only the files that make up this report: the
+# script, waivers, ratchet, shard plan, tb/cocotb/soc/Makefile, their pytest files and this workflow.
+# It does not fire for RTL edits.
+
+# Gating: the job fails if the regression fails, if no coverage data was produced, or if the "Coverage gate"
+# step fails. That step requires, for every triaged module (rtl/soc, rtl/periph, rtl/npu), the 95 % line
+# floor (after category-b waivers) and the control-signal toggle floor (1-bit scalar signals; a per-module
+# ratchet in tools/verif/coverage_toggle_ratchet.txt holds the known gaps). Every module of rtl/cpu, rtl/mem
+# and rtl/gpu must reach the 95 % line floor on the combined data. There is no toggle gate on those trees.
+
+# The gate step runs after the merge steps. The summary and upload steps are `if: always()`, so a red gate
+# or a red suite still publishes the report and the data. Definition of a control signal, floors, how to
+# add a waiver or raise a ratchet: Doc: tm:flow:soc-coverage-report.
+
+# The Verilator pin is the same contract as cocotb.yml: nix-installed (flake-pinned) Verilator compiles the
+# sim, cocotb runs on the setup-python interpreter. `nix profile install .#verilator` puts verilator and
+# verilator_coverage on PATH, which the merge needs. The Makefile override PYTHON3=$(SIM_PYTHON3) side-steps
+# the crash of nix Verilator with coverage, so every job here passes SIM_PYTHON3 as cocotb.yml does.
 
 on:
   schedule:
@@ -160,8 +145,8 @@ jobs:
           verilator --version
           command -v verilator_coverage
 
-      # ccache (bead b079) is installed from apt, not nix: it wraps the SYSTEM g++ that
-      # sim/cxx_shim.sh calls (see the shim), exactly like cocotb.yml.
+      # ccache is installed from apt, not nix: it wraps the SYSTEM g++ that sim/cxx_shim.sh calls
+      # (see the shim), exactly like cocotb.yml.
       - name: Install runtime libs for cocotb
         run: |
           sudo apt-get update
@@ -173,12 +158,10 @@ jobs:
           pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
           pip list
 
-      # Compiler cache for the instrumented Verilated models (bead b079; same rationale and same
-      # correctness argument as cocotb.yml's step: ccache hashes the preprocessed source, the exact
-      # command line and the g++ binary's content, so the key only decides which stale entries are
-      # offered, and a stale one is a miss, never a wrong object).  One cache per shard, because a
-      # shard compiles a fixed subset of the models.  Saved from main only, so PR runs read main's
-      # cache without filling the repo's 10 GB.
+      # Compiler cache for the instrumented Verilated models. The rationale and the correctness argument are
+      # those of cocotb.yml: ccache hashes the preprocessed source, the exact command line and the content of the
+      # g++ binary, so the key only decides which stale entries are offered, and a stale entry is a miss.
+      # One cache per shard, because a shard compiles a fixed subset of the models. Only main saves it.
       - name: Compiler identity (cache key input)
         id: cc
         run: echo "gcc=$(g++ -dumpfullversion)" >> "$GITHUB_OUTPUT"
@@ -192,9 +175,9 @@ jobs:
             ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-shard${{ matrix.shard }}-
             ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-shard${{ matrix.shard }}-
 
-      # pipefail so tee cannot mask make's exit status.  No `|| true`: a failing suite fails this
-      # leg (the Makefile target also refuses to finish from no data).  SIM_BUILD_JOBS: parallel C++
-      # compile of each Verilated model (bead b079); it is not part of the build-directory key.
+      # Use pipefail so tee cannot mask the exit status of make. No `|| true`: a failing suite fails this
+      # leg (the Makefile target also refuses to finish from no data). SIM_BUILD_JOBS sets the parallel C++
+      # compile of each Verilated model; it is not part of the build-directory key.
       - name: Run this shard's suites (instrumented)
         env:
           SIM_CCACHE: '1'
@@ -276,7 +259,7 @@ jobs:
     timeout-minutes: 90
 
     env:
-      # CPU / cache / GPU instrumented build dirs and per-simulation .dat files (bead 1eyv).
+      # CPU / cache / GPU instrumented build dirs and per-simulation .dat files.
       CPU_COV_ROOT: /home/runner/cpu_cov
 
     steps:
@@ -342,8 +325,8 @@ jobs:
             ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-cpugpu-
             ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-cpugpu-
 
-      # Bead 1eyv / a5ze: CPU directed + Phase 3 cache + Phase 4 GPU suites, instrumented.  REQUIRED:
-      # the gate reads rtl/cpu|mem|gpu from this data, so no continue-on-error.
+      # CPU directed + Phase 3 cache + Phase 4 GPU suites, instrumented. Required: the gate reads
+      # rtl/cpu|mem|gpu from this data, so no continue-on-error.
       - name: Run CPU / cache / GPU coverage
         env:
           SIM_CCACHE: '1'
@@ -418,115 +401,13 @@ jobs:
       SOC_COV_ROOT: /home/runner/soc_cov
       # The CPU/GPU .dat is staged here so the combined-report paths are unchanged.
       CPU_COV_ROOT: /home/runner/cpu_cov
-      # 2026-10-07 (merge of beads 8riq + ej6j): 545 = 477 + 31 (8riq, measured 511 on its own branch) + 37 (ej6j, derived).
-      # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
-      # 2026-10-08 (GH #222 W5 / bead kp61): 546 = 545 + 1 (test_axprot_routed_to_selected_slave_only in test_axil_interconnect.py); measured 548 on main.
-      # 2026-10-08 (merge of beads bq2o + 05wf): 568 = 558 measured on PR #233's soc_all CI + 13 new 05wf tests
-      # (9 test_uart.py + 4 test_spi.py) - 3. Measured 571 on PR #234's CI (568 confirmed).
-      # 2026-10-09 (bead oez2): 574 = 571 measured (PR #234 CI) + 6 (new suite soc_integration / test_soc_integration.py:
-      # irq_traps_and_spi_miso, pll_register_programming, gpu_isolation_via_pmu, debug_apb_halt_gpr_step,
-      # debug_apb_ro_write_pslverr, debug_apb_dest_reset_pslverr) - 3. Tighten from this PR's CI if it differs.
-      # 2026-10-09 (bead rqvo): 575 = 574 + 1 (test_rx_false_start_then_real_start in test_uart.py; soc_all_ci
-      # measured 572 pass on the pre-oez2 base). Derived -- tighten to (measured - 3) from this PR's CI.
-      # 2026-10-09 (bead 7ovx): 594 = 597 measured (full local soc_coverage run, CI log-grep formula) - 3. The 597
-      # includes this PR's 19 new tests: 13 test_register_walk (one per register-bank peripheral suite), 5 W1C/W1P
-      # semantic tests (gpio, pwm, wdt, npu, crypto) and test_soc_register_walk in soc_integration.
-      # 2026-10-10 (bead pnfw): 599 = 597 measured (7ovx, full local soc_coverage run) + 5 new I2C tests in test_i2c.py
-      # (stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec [expect_fail, counts as a pass],
-      # fsm_illegal_state_recovers_to_idle, loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter) - 3.
-      # DERIVED, not measured: the i2c suite itself measured 47 -> 52 locally; the full soc_all_ci was not re-run.
-      # Tighten to (measured - 3) from this PR's CI.
-      # 2026-10-10 (bead gecv): 602 = 605 - 3, where 605 = 602 (pnfw's computed 599 + 3) + 3 new I2C tests in test_i2c.py
-      # (start_stop_condition_times_meet_spec, busy_covers_bus_free_time, condition_tick_reloads_at_clkdiv_ffff; the
-      # stop_to_start_bus_free_time_meets_spec expect_fail was removed and it now passes for real, count unchanged).
-      # COMPUTED, not measured: the i2c suite itself measured 52 -> 55 locally (55/55 pass); the full soc_all_ci was
-      # not re-run. Tighten to (measured - 3) from this PR's CI.
-      # 2026-10-10 (bead j41m.2, DFT Stage 1a): 622 = 625 - 3, same value as cocotb.yml. 625 was MEASURED (soc_all_ci from
-      # clean, 625 passed / 0 failed / 17 skipped) on the pre-merge tree: 605 on main + 20 new tests (clock_gate_scan 4,
-      # dft_muxes 3, soc_dft_scan 8, cdc_reset_sync_scan +3, crypto +2). The merge of origin/main (#255-#257) touched no
-      # tb/cocotb/soc file, so the count is carried over, not re-measured on the merged tree.
-      # 2026-10-10 (bead j41m.9): 624 = 627 - 3, same value as cocotb.yml. 627 MEASURED: soc_all_ci from clean on the merged tree
-      # (main incl. #259/#263 + this PR), 627 passed / 0 failed / 17 skipped over 62 suite summaries = the 625 above + 2 new
-      # soc_dft_scan tests (PMU-held GPU/CPU domain reset in scan mode).
-      # 2026-10-11 (bead j41m.3, DFT Stage 1b): 690 = 693 - 3, same value as cocotb.yml. 693 MEASURED by the cocotb soc_all job
-      # of PR 270 (head 9261df1) = the 627 above + 66 new tests (jtag_tap 48, dft_ctrl 7, soc_jtag 11).
-      # 2026-10-12 (bead j41m.3, glitch-free test-clock switch): 719 = 722 - 3, same value as cocotb.yml. 722 MEASURED by the
-      # cocotb soc_all job of PR 270 on head 928b402 = the 693 above + 29 new tests (dft_clk_switch 19, dft_ctrl +9, soc_jtag +1).
-      # 2026-10-12 (bead xtaa, merged onto main incl. PR 270): 727 = 730 - 3, same value as cocotb.yml. 730 = the 722 above
-      # + 8 new tests (cdc_2ff_sync 4, periph_sync_stages 4); the xtaa branch alone MEASURED 635 on head 6759536 against
-      # main's 627. Confirmed against the cocotb soc_all job of PR 274 on the merge head.
-      # 2026-10-13 (bead 3snb, cdc_gray_fifo DEPTH=2): 759 = 762 - 3, same value as cocotb.yml. 762 MEASURED by the cocotb
-      # soc_all job of PR 276 ('cocotb: 762 passed, 0 failed') = the 730 above + 32 new tests (cdc_gray_fifo 16 behaviours x
-      # DEPTH 2 and 4).
-      # 2026-10-15 (bead j41m.4, DFT CPU-macro scan boundary): 761 = 764 - 3, same value as the other workflow. 764 MEASURED:
-      # soc_all_ci from clean on the branch head, 764 passed / 0 failed / 17 skipped over 72 suite summaries (the 762 above
-      # + 2 new soc_dft_scan tests: test_cpu_macro_scan_boundary and test_cpu_macro_scan_boundary_tap_leg).
-      # 2026-10-18 (bead j41m.14, MBIST, merged with #287/#304/#307): 813 = 816 - 3. 816 MEASURED: soc_all_ci from
-      # clean on the merge of origin/main into feat/dft-mbist-j41m14 (e7cf6cf), 816 passed / 0 failed over 79 suite
-      # summaries (MBIST ctrl/tap/soc_slice/fi_equiv suites + soc_uart_boot on top of main). #305's crypto tests land on top.
-      # 2026-10-18 (bead shm5, UART RX re-sync): 826 = 829 - 3. 829 MEASURED: soc_all_ci from clean on the branch head,
-      # 829 passed / 0 failed over 79 suite summaries (the 816 above + #305's crypto tests + 6 new: 5
-      # test_uart test_rx_back_to_back_* and test_uart_boot.test_load_verify_8n1_back_to_back).
-      # 2026-10-18 (beads 0ntg/4pl8/xkw5, PR #316): 823 = 826 - 3. 826 MEASURED by the sharded soc_coverage run of
-      # this PR (summed over 8 shards, 0 failed): 823 on main + test_soc_dma_walk_rom_write_and_decode_errors,
-      # test_soc_i2c_real_pads and test_soc_wdt_rst_en_release.
-      # 2026-10-18 (merge of #316 onto #314): 829 = 832 - 3. 832 (#316 + 6 shm5 tests)
-      # CONFIRMED: 832 passed / 0 failed summed over 4 shards, cocotb run 39126744813.
-      # 2026-10-18 (bead c54a, CPU-macro MBIST collars): 828 = 831 - 3. 831 MEASURED by the CI formula (grep -cE
-      # 'cocotb\.regression .* passed$') on soc_all_ci from clean on this branch, 0 failed: the 816 above + #305's crypto tests
-      # and main's other additions + 7 new test_mbist_cpu_macro + 1 test_sram_fi_equiv (1 KB macro, mbist_fi_equiv_1k).
-      # 2026-10-18 (merge of main into #313 c54a): 837 = 840 - 3. 840 EXPECTED = 832 on main + c54a's 8 (7
-      # test_mbist_cpu_macro + 1 test_sram_fi_equiv 1 KB); confirm against this merge's sharded CI pass count.
-      # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
-      # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
-      # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
-      # 2026-10-18 (bead 3ogd, PMU iso-ack handshake): 835 = 838 - 3. 838 MEASURED: soc_all_ci from clean (fresh SIM_BUILD_ROOT, -j4) on
-      # the merge of origin/main (#312, #315) into fix/pmu-iso-ack-3ogd, 838 passed / 0 failed over 80 suite summaries = the 816 above
-      # + 7 tests already on main since then (inferred from the difference, likely #305 crypto) + 15 new (test_pmu +8, soc_pmu_iso_ack +7).
-      # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #314/#316): 844 = 847 - 3. 847 EXPECTED = 832 (main, itself an
-      # expectation above) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
-      # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 847 against the
-      # merged PR's sharded CI pass count.
-      # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #319): 849 = 852 - 3. 852 EXPECTED = 837 (main, CI-measured
-      # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
-      # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
-      # merged PR's sharded CI pass count.
-      # 2026-10-19 (bead 0oc4, dma_engine CTRL hw-write flop reset): 854 = 857 - 3. 857 EXPECTED = 852 (main, per the 3ogd note above) + 5 new test_dma
-      # tests (test_dma_ctrl_hw_flops_reset_*; no new suite). MEASURED locally: test_dma 18 -> 23 (plain and FPGA=1). Not measured: full soc_all_ci
-      # (a Sky130 PD run held the host). Other open PRs (#313, #320) also move this floor: re-base the number on merge.
-      # 2026-10-19 (bead xkw5 leftovers, PR #320): 854 = 857 - 3. 857 MEASURED by the cocotb soc_all job of this PR on the
-      # merge with #319 ('cocotb: 857 passed, 0 failed (floor 834), summed over 4 shards') = 837 + 20 new tests (timer, wdt, pwm, spi,
-      # pmu, pll_apb_regs, dma, npu, 3 i2c, 2 x 2 for each of the two register-bank builds, test_soc_gpu_walk_both_masters).
-      # 2026-10-19 (merge of main #317 into #320 xkw5): 869 = 872 - 3. 872 EXPECTED = 852 (main, #317 measured)
-      # + xkw5's 20 new tests (857 measured on the 837 base); confirm against this merge's sharded CI pass count.
-      # 2026-10-19 (merge of main #321 into #320 xkw5): 874 = 877 - 3. 877 EXPECTED = 857 (main, #321 measured)
-      # + xkw5's 20 new tests (872 measured on the 852 base); confirm against this merge's sharded CI pass count.
-      # CONFIRMED (h367): 837 passed / 0 failed in #319's CI.
-      # 2026-10-19 (merge of main #319 into #313 c54a): 842 = 845 - 3. 845 EXPECTED = 837 (main, confirmed)
-      # + c54a's 8; confirm against this merge's sharded CI pass count.
-      # 2026-10-19 (merge of main #317/#319 into #313 c54a, incl. #318 r51p): 857 = 860 - 3. 860 EXPECTED = 852
-      # (main, #317 measured) + c54a's 8 cocotb tests (#318 adds pytest only); confirm against this merge's sharded CI pass count.
-      # 2026-10-19 (merge of main #321 into #313 c54a): 862 = 865 - 3. 865 EXPECTED = 857 (main, #321 measured)
-      # + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
-      # 2026-10-19 (merge of main #320 into #313 c54a): 882 = 885 - 3. 885 EXPECTED = 877 (main; #320 CI measured 877
-      # passed / 0 failed, cocotb run 39247547781) + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
-      # 2026-10-26 (bead j41m.17): 896 = 882 + 14 new tests (conservative; measured 911 locally = 15 above this), same value as cocotb.yml. 911 was MEASURED on the
-      # uninstrumented soc_all_ci (clean build, 0 failed); this instrumented workflow was not run, so confirm
-      # against this PR's CI.
+      # The final job fails when the summed pass count of the shards is below PASS_FLOOR. cocotb.yml holds the
+      # same value. Change it when a pull request adds or removes tests. The derivation of the current value
+      # is in the book. Doc: cr:flow:ci-soc-coverage
       PASS_FLOOR: '896'
-      # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
-      # expect_fail tests print "passed: failed as expected" and are NOT counted).
-      # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
-      # coverage_cpu_gpu run on HEAD + this branch (207 at the slice-1 base, +15 slice 1, +10 slice 2:
-      # 2 icache, 5 gpu control-path kernels, 3 other); that run had 1 red line, the then-misdeclared
-      # expect_fail kernel test, fixed and re-run on its own (6/6 pass), so 232 is measured but not from a
-      # single all-green invocation.  Tighten to (measured - 3) from this PR's CI.
-      # 2026-10-11 (bead f7z3): 248 = 251 - 3; 251 measured by a full all-green local coverage_cpu_gpu run
-      # (0 failed), which includes the 11 new test_minstret_write tests.
-      # 2026-10-11 (bead 6hy6): 262 = 265 - 3; 265 passed / 0 failed in CI run 38143377262
-      # (soc_coverage on the merged head b7f737d = this branch + f7z3), i.e. the 254 measured on the
-      # branch before the merge + the 11 minstret tests.  The branch adds 3 kernel_block_warps tests
-      # and 1 warp_scheduler test.
+      # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`). The floor uses the CI log-grep formula (`passed$`):
+      # an expect_fail test prints "passed: failed as expected" and is not counted.
+      # CPU_PASS_FLOOR is the floor of the CPU/cache/GPU pass count. Change it when you add or remove tests there.
       CPU_PASS_FLOOR: '262'
 
     steps:
@@ -588,12 +469,11 @@ jobs:
           name: cpu-gpu-coverage
           path: cpu_gpu
 
-      # The three gates the serial job had, now over the shards:
-      #  1. the suites that ran are EXACTLY SOC_CI_SUITES;
-      #  2. the SUMMED pass count (same log-grep formula as cocotb.yml, bead p6t8/dwp) reaches
-      #     PASS_FLOOR and no log has a failure;
-      #  3. merged.dat exists.  The merge is verilator_coverage over every shard's per-simulation
-      #     .dat -- the same operation the serial `soc_coverage` target ran over one directory.
+      # The three gates of the serial job, now over the shards:
+      #  1. the suites that ran are exactly SOC_CI_SUITES;
+      #  2. the summed pass count (same log-grep formula as cocotb.yml) reaches PASS_FLOOR and no log has a failure;
+      #  3. merged.dat exists. The merge is verilator_coverage over the per-simulation .dat files of every shard,
+      #     the same operation the serial `soc_coverage` target ran over one directory.
       - name: Check the instrumented regression is the whole regression (summed over shards)
         run: |
           set -o pipefail
@@ -651,9 +531,9 @@ jobs:
           test -s "${SOC_COV_ROOT}/coverage/coverage_report.md" \
             || { echo "FAIL: coverage_report.md is missing or empty."; exit 1; }
 
-      # Same log-grep floor as the SoC half (bead p6t8, dwp): a make target can exit 0 over a
-      # suite that never ran, and an instrumented run that lost suites would hand the gate a
-      # smaller regression's coverage as if it were the whole one.
+      # Same log-grep floor as the SoC half: a make target can exit 0 over a suite that never ran, and an
+      # instrumented run that lost suites would hand the gate the coverage of a smaller regression as if it were
+      # the whole one.
       - name: Check the CPU / cache / GPU regression is the whole regression
         run: |
           log=cpu_gpu/cpu_gpu_coverage.log
@@ -693,12 +573,11 @@ jobs:
             --out-md "${CPU_COV_ROOT}/coverage/combined_report.md" \
             --out-json "${CPU_COV_ROOT}/coverage/combined_report.json"
 
-      # Beads s1cg + a5ze: the gate.  NOT continue-on-error.  Evaluated on the COMBINED data (both
-      # .dat inputs, produced by this workflow at one commit with one Verilator): the triaged trees get
-      # the line + control-toggle floors, rtl/cpu|mem|gpu the line floor (the tool's default
-      # --line-gate-trees).  Writes gate_report.{md,json} next to the SoC report (uploaded below).
-      # Exit 1 = a module is under a floor or its inputs disagree, exit 2 = the gate could not be
-      # evaluated (e.g. a line-gated tree was not measured); both fail the job.
+      # The gate. Not continue-on-error. It runs on the combined data (both .dat inputs, one commit, one Verilator):
+      # the triaged trees get the line and control-toggle floors, rtl/cpu|mem|gpu the line floor (the default
+      # --line-gate-trees of the tool). It writes gate_report.{md,json} next to the SoC report (uploaded below).
+      # Exit 1 = a module is under a floor or its inputs disagree. Exit 2 = the gate could not be evaluated (for
+      # example a line-gated tree was not measured). Both fail the job.
       - name: Coverage gate (triaged trees + line floor on cpu/mem/gpu)
         run: |
           set +e

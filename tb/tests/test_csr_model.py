@@ -1,9 +1,11 @@
-"""Unit tests for tb/models/csr_model.py (bead a5ze).
+"""Unit tests for tb/models/csr_model.py.
 
 The model is the expected-value source for tb/cocotb/cpu/test_csr_access.py, so it is pinned here
 against the project spec (Doc: ds:ch:phase2-architecture:42-csr-register-set-minimal-phase-2,
 PHASE5 M7 counters)
 and the Zicsr write-suppression rule, independently of the RTL.
+
+Doc: cr:suite:test-csr-model
 """
 
 import pytest
@@ -157,7 +159,7 @@ def test_64bit_counters_split_across_low_and_high_words():
 
 
 # ---------------------------------------------------------------------------
-# tick(): cycle-accurate counter semantics (bead kiit / GH #260)
+# tick(): cycle-accurate counter semantics
 # ---------------------------------------------------------------------------
 EVENTS = {
     CSR_MHPMCOUNTER3: "icache_miss",
@@ -279,7 +281,7 @@ def test_tick_register_and_immediate_set_clear_forms():
 
 
 # ---------------------------------------------------------------------------
-# minstret / minstreth write semantics (bead f7z3)
+# minstret / minstreth write semantics
 # ---------------------------------------------------------------------------
 def _write(m, csr, value, seq, *, retire=False):
     """Execute ``CSRRW x0, csr, value`` as instruction ``seq`` in the cycle this call ticks."""

@@ -1,4 +1,4 @@
-"""Zicsr reference model for the rv32i_csr_file M-mode CSR set (bead a5ze).
+"""Zicsr reference model for the rv32i_csr_file M-mode CSR set.
 
 Expected-value source for tb/cocotb/cpu/test_csr_access.py.  Written from the project specs, not
 from the RTL: Doc: ds:ch:phase2-architecture:42-csr-register-set-minimal-phase-2
@@ -8,15 +8,17 @@ RISC-V Zicsr rule that CSRRS/CSRRC with a zero source do not write.
 
 execute() is the untimed instruction view: the counters only change through writes, so a test
 that compares a read against it must freeze them with mcountinhibit first.  tick() is the
-cycle-accurate view (bead kiit): it also advances the free-running counters, so a monitor can
+cycle-accurate view: it also advances the free-running counters, so a monitor can
 step it once per clock and compare the whole counter state with the DUT every cycle.
 
-minstret / minstreth (bead f7z3): the RISC-V privileged spec says a CSR write to minstret takes
+minstret / minstreth: the RISC-V privileged spec says a CSR write to minstret takes
 effect as if every OLDER instruction had already retired, and the writing instruction's own
 retirement does not increment the counter.  The DUT applies the write in EX, so tick() models the
 instructions still in flight at that moment by program-order index: the retirement strobes of the
 writer itself and of every older instruction that has not retired yet are absorbed (see
 tick()), never added on top of the written value.
+
+Doc: cr:suite:csr-model
 """
 
 from __future__ import annotations
@@ -144,7 +146,7 @@ class CsrModel:
         access: tuple[str, int, int, bool, bool] | None = None,
         access_seq: int | None = None,
     ) -> None:
-        """Advance the counters by one clock (beads kiit, f7z3).
+        """Advance the counters by one clock.
 
         ``access`` is the CSR instruction in EX this cycle as ``(kind, addr, operand, imm,
         suppress_write)`` (same meaning as execute()); None when there is none, or when it is
@@ -164,7 +166,7 @@ class CsrModel:
           of mcycle / minstret also discards the carry that increment would have produced, while a
           write to the high word leaves the low word counting (its wrap carry is lost);
         * CSRRS/CSRRC with a zero source do not write, so the counter they read keeps counting;
-        * minstret / minstreth (bead f7z3): the strobe of the writing instruction itself never
+        * minstret / minstreth: the strobe of the writing instruction itself never
           increments (neither word).  The strobes of the older instructions still in flight when
           the write executes land BEFORE the write in program order, so they must not land on top
           of it: a low-word write absorbs all of them (nothing is added), a high-word write lets

@@ -1,40 +1,22 @@
 name: Cocotb Regression
 
-# Runs the maintained cocotb regression (tb/cocotb/soc soc_all) in CI.
-#
-# WHY THIS EXISTS (bead claude_verilog_test-50t): before this workflow, CI ran
-# only `make -C sim {lint,format,cdc}`. No cocotb suite was executed anywhere,
-# so a testbench could stop *compiling* while every CI gate stayed green. That
-# is not hypothetical: the whole of tb/cocotb/cpu was failing elaboration with
-# "Import package not found: 'axi_pkg'" since the M2 AXI4 burst upgrade moved
-# the CPU onto axi_pkg types without updating that Makefile's VERILOG_SOURCES,
-# and nobody noticed because lint does assemble the right file list and
-# therefore passed throughout. Fixed 2026-08-11 (VERILOG_SOURCES now closes
-# over axi_pkg/soc_addr_map_pkg + the EX1b/EX1c/EX2 retiming split — see
-# tools/verif/check_source_closure.py, which verifies this class of gap
-# statically without needing a simulator). Both jobs below now run in CI so
-# neither list can silently rot again.
-#
-# Sharding (bead 9ayu.2).  The SoC regression used to be ONE job (28-58 min depending on the runner
-# and the ccache).  It is now
-#
-#   soc_shard (matrix, NSHARDS legs) --> soc_all  (aggregate gate; keeps the old check name)
-#
-# * The list of suites is ONE variable, SOC_CI_SUITES in tb/cocotb/soc/Makefile (shared with
-#   soc_coverage.yml, bead 9ayu.1).  `soc_all_ci` runs all of it; `make soc_ci_shard SHARD=k
-#   NSHARDS=n` runs a deterministic, balanced slice, planned by tools/verif/soc_shards.py from the
-#   UNINSTRUMENTED per-suite times in tools/verif/soc_shard_weights_plain.json.
-# * Each leg uploads its log and `suites_ran.txt`.  The aggregate job fails unless the suites that
-#   ran are EXACTLY SOC_CI_SUITES, the SUMMED pass count reaches PASS_FLOOR and no leg logged a
-#   failure; it runs `if: always()` so a red or cancelled leg cannot leave the check green/grey.
-# * ccache is restored per leg and saved from main only.
-# `cpu_phase2_all`, `sv2v_portability` and `sim_build_key` are unchanged.
-#
-# Tool sourcing mirrors random_tests.yml deliberately: Verilator comes from the
-# repo flake (pinned 5.048 — the version the RTL is known to elaborate under),
-# while cocotb runs on the setup-python interpreter, not on nix. Do not "simplify"
-# this to apt's verilator; the pin is part of the contract, same rationale as the
-# yosys pin in rtl-checks.yml's CDC job.
+# Runs the cocotb regressions in CI: the SoC regression (soc_all_ci, sharded) and the CPU phase2_all.
+# Two more jobs run the sv2v portability gate and the build-directory key self-tests.
+# Doc: um:flow:ci-cocotb, cr:flow:ci-cocotb
+
+# The SoC regression is a matrix job (soc_shard, NSHARDS legs) plus an aggregate gate (soc_all).
+# SOC_CI_SUITES in tb/cocotb/soc/Makefile is the one list of suites. soc_coverage.yml shares it.
+# `make soc_ci_shard SHARD=k NSHARDS=n` runs one balanced slice. tools/verif/soc_shards.py plans it
+# from the uninstrumented per-suite times in tools/verif/soc_shard_weights_plain.json.
+
+# The aggregate job fails unless the suites that ran are exactly SOC_CI_SUITES, the summed pass
+# count reaches PASS_FLOOR and no leg logged a failure. It runs `if: always()`, so a red or
+# cancelled leg cannot leave the check green or grey. Each leg restores ccache. Only main saves it.
+
+# Tool sourcing mirrors random_tests.yml: Verilator comes from the repo flake (pinned 5.048, the
+# version the RTL is known to elaborate under). cocotb runs on the setup-python interpreter, not on nix.
+# Do not change this to the Verilator of apt. The pin is part of the contract, as the yosys pin is
+# in the CDC job of rtl-checks.yml.
 
 on:
   push:
@@ -87,17 +69,16 @@ permissions:
   contents: read
 
 env:
-  # Number of soc_shard matrix legs (bead 9ayu.2).  Must equal the length of the matrix list below:
+  # Number of soc_shard matrix legs. It must equal the length of the matrix list below:
   # every leg asserts it (strategy.job-total) and the aggregate job asserts it against the shard
   # artifacts it received.
   NSHARDS: '4'
 
 jobs:
-  # Aggregate gate (bead 9ayu.2).  This job KEEPS the id and the name of the old single job, so the
-  # check "cocotb soc_all (SoC regression)" that may be listed as required in branch protection still
-  # exists and still means "the whole SoC regression is green".  The regression itself now runs in
-  # the `soc_shard` matrix below; this job runs `if: always()` after the shards, so a red or cancelled
-  # shard turns it RED (a skipped required check counts as passing, so `needs` alone would not do).
+  # Aggregate gate. This job keeps the id and the name of the old single job, so the check
+  # "cocotb soc_all (SoC regression)" still exists and still means "the whole SoC regression is green".
+  # The regression runs in the `soc_shard` matrix below. This job runs `if: always()` after the shards,
+  # so a red or cancelled shard turns it red (a skipped required check counts as passing).
   soc_all:
     name: cocotb soc_all (SoC regression)
     needs: [soc_shard]
@@ -126,181 +107,34 @@ jobs:
           pattern: cocotb-soc-shard-*
           path: shards
 
-      # Belt-and-braces on top of make's exit code, same rationale as bead dwp
-      # (a tool that exits 0 with an empty report must never read as PASS).
-      #
-      # This checks the LOGS, not results.xml, deliberately. soc_all runs 21
-      # suites through the same target and each overwrites the previous
-      # results.xml, so the XML on disk at the end describes only the last
-      # suite — it cannot witness the whole regression. (Its schema is also
-      # <testsuites>/<testsuite>/<testcase> with failures as child ELEMENTS and
-      # no tests=/failures= attributes, so attribute-based counting silently
-      # yields zero.)
-      #
-      # PASS_FLOOR guards the "regression collapsed to a handful of suites"
-      # failure mode, where make still exits 0 -- note that is literal, not
-      # hypothetical: a cocotb target returns exit 0 even with FAIL=7, so this
-      # log-grep floor is currently the ONLY thing that catches a red suite in
-      # CI (bead p6t8). Measured 511 passing tests, 0 failed, 17 skipped on
-      # 2026-10-07 (soc_all_ci from clean, instrumented run via soc_coverage, after bead 8riq:
-      # +31 = 14 from the new axil_apb_fabric suite (its expect_fail guard for RTL bug 3xtv
-      # logs "passed: failed as expected" and is NOT counted by the grep below, so 13 count),
-      # +6 register_bank (3 tests x 2 build points), +2 axil_to_apb, +10 apb_interconnect
-      # (1 test x 10 sweep points); reconciles exactly against the prior 480; 54 TESTS= blocks;
-      # floor 477 -> 508).
-      # Measured 480 passing tests, 0 failed, 16 skipped on
-      # 2026-10-05 (soc_all_ci from clean, after bead wdmo's DMA read-error fix:
-      # +4 from test_dma; reconciles exactly against the prior 476; 53 blocks).
-      # Measured 476 passing tests on 2026-10-04 (soc_all_ci from clean, after Phase 6c NPU: +39 from the
-      # test_npu L1 suite and +1 from the soc_npu fabric test; reconciles
-      # exactly against the prior 436; 53 TESTS= blocks, +2 suites). Measured
-      # 436 passing tests on 2026-10-04 (soc_all_ci from clean, after Phase 6b CRYPTO: +41 from the
-      # test_crypto L1 suite and +1 from the soc_crypto fabric test; reconciles
-      # exactly against the prior 394). All 16 skips are
-      # test_apb_interconnect.test_first_match_wins, which is conditional on the
-      # N_SLAVES sweep point and pre-dates this change. Verified by summing every
-      # TESTS= block (51 of them, final block present), not by reading one line:
-      # a truncated run summed to a plausible 325/0 once before while silently
-      # dropping a suite (b6f1441), and note the exit code cannot substitute for
-      # this check -- see the FAIL=7 caveat above. Measured 394 passing tests on
-      # 2026-10-03 (soc_all_ci, after Phase 6a-5 I2C: +46 from its L1 protocol
-      # suite and +1 from the soc_i2c loopback fabric test; the L1 count includes
-      # test_i2c_clkdiv_100k_400k, which was expect_fail against the bit-period
-      # defect until 684d356 fixed it and it became a real pass); 347 on
-      # 2026-10-02 (soc_all_ci, after bead r5hu: +8 from register_bank's new
-      # -GADDR_W=5 build point and +9 from apb4_register_bank's, the
-      # N_REGS == 2**WORDW truncating-cast boundary; both targets now run two
-      # build points each, so soc_all_ci gained no new target); 330 on
-      # 2026-10-01 (soc_all_ci, after bead 6o8w: +2 from the apb4_register_bank
-      # unit suite and +2 from register_bank, the RO/HW same-edge collision
-      # controls); 326 earlier that day
-      # (after Phase 6a-4 TRNG: +22 from its L1 unit
-      # suite and +1 from the soc_trng fabric test); 303 on
-      # 2026-09-29 (soc_all_ci, after Phase 6a-3 WDT: +22 from its L1 unit suite
-      # and +2 from the soc_wdt fabric test, which covers both the RST_EN=0 and
-      # RST_EN=1 CPU-domain reset paths); 279 on
-      # 2026-09-28 (soc_all_ci, after Phase 6a-2 PWM: +16 from its L1 unit suite
-      # and +1 from the soc_pwm fabric test; 262 earlier the same day after the
-      # Phase 6 groundwork added the apb_interconnect suite, itself +43 from its
-      # N_SLAVES sweep and +1 from test_axil_interconnect's reserved-slot test;
-      # 218 over 28 suites on
-      # 2026-09-27 after the SoC-level GPIO fabric test `soc_gpio`; 217 over 27
-      # suites on 2026-09-20; 178 over 21 suites on 2026-08-07); the floor is
-      # set just under that so a dropped suite trips it rather than passing
-      # unnoticed. Raise it deliberately as suites are added.
-      #
-      # NOTE this floor is measured against soc_all_ci, which is what the shards
-      # run (their union). The `gpio_driver` suite is in soc_all (the full local gate) but not
-      # in soc_all_ci, because it needs sw/bench/build/*.hex from the riscv32
-      # cross toolchain that this job does not install. l2_bench is in neither --
-      # it is a benchmark harness, not a regression. See tb/cocotb/soc/Makefile.
-      #
-      # Sharded (bead 9ayu.2): every shard logs only its own slice of the suites, so no shard can hold
-      # the floor.  This step SUMS the pass counts of all shard logs and applies PASS_FLOOR to the sum,
-      # and it also proves the shards ran EXACTLY the suites of SOC_CI_SUITES (tb/cocotb/soc/Makefile):
-      # none lost, none run twice, none unknown (tools/verif/soc_shards.py union).  Without that, a
-      # shard that silently ran too few suites would only be caught if the floor happened to trip.
+      # This step adds a check on top of the exit code of make. A tool that exits 0 with an empty
+      # report must never read as PASS. The step checks the logs, not results.xml. The SoC regression
+      # runs many suites through one target and each suite overwrites results.xml, so the file on
+      # disk describes only the last suite. Its failures are child elements and it has no tests= or
+      # failures= attributes, so a count of attributes gives zero.
+
+      # A cocotb make target can exit 0 with failed tests. The log grep is the only CI check that
+      # catches a red suite (the failure count and PASS_FLOOR). Do not replace it with the exit code.
+      # PASS_FLOOR also guards against a regression that collapses to a few suites while make still exits 0.
+
+      # Set PASS_FLOOR just under the pass count of soc_all_ci, so that a dropped suite trips it. Raise it on
+      # purpose when you add suites. When you measure the count, count every passing test of the whole log
+      # (the `cocotb.regression ... passed` lines that the grep below counts). Do not read one TESTS= summary
+      # line: a truncated run once gave a plausible count and hid a dropped suite.
+
+      # The floor covers soc_all_ci, the union of the shards. The gpio_driver suite is in soc_all but not in
+      # soc_all_ci: it needs sw/bench/build/*.hex from the riscv32 cross toolchain, which this job does
+      # not install. l2_bench is in neither, because it is a benchmark harness. See tb/cocotb/soc/Makefile.
+
+      # Each shard logs only its own slice, so no shard can hold the floor. This step sums the pass counts
+      # of all shard logs and applies PASS_FLOOR to the sum. It also checks that the shards ran exactly the
+      # suites of SOC_CI_SUITES: none lost, none run twice, none unknown (tools/verif/soc_shards.py union).
       - name: Verify regression actually ran
         if: always() && needs.soc_shard.result == 'success'
         env:
-          # 2026-10-07 (merge of beads 8riq + ej6j): 545 = 477 + 31 (8riq, measured 511 on its own branch) + 37 (ej6j, derived).
-          # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
-          # 2026-10-08 (GH #222 W5 / bead kp61): 546 = 545 + 1 (test_axprot_routed_to_selected_slave_only in test_axil_interconnect.py); measured 548 on main.
-          # 2026-10-08 (merge of beads bq2o + 05wf): 568 = 558 measured on PR #233's soc_all CI + 13 new 05wf tests
-          # (9 test_uart.py + 4 test_spi.py) - 3. Measured 571 on PR #234's CI (568 confirmed).
-          # 2026-10-09 (bead oez2): 574 = 571 measured (PR #234 CI) + 6 (new suite soc_integration / test_soc_integration.py:
-          # irq_traps_and_spi_miso, pll_register_programming, gpu_isolation_via_pmu, debug_apb_halt_gpr_step,
-          # debug_apb_ro_write_pslverr, debug_apb_dest_reset_pslverr) - 3. Tighten from this PR's CI if it differs.
-          # 2026-10-09 (bead rqvo): 575 = 574 + 1 (test_rx_false_start_then_real_start in test_uart.py; soc_all_ci
-          # measured 572 pass on the pre-oez2 base). Derived -- tighten to (measured - 3) from this PR's CI.
-          # 2026-10-09 (bead 7ovx): 594 = 597 measured (full local soc_coverage run, CI log-grep formula) - 3. The 597
-          # includes this PR's 19 new tests: 13 test_register_walk (one per register-bank peripheral suite), 5 W1C/W1P
-          # semantic tests (gpio, pwm, wdt, npu, crypto) and test_soc_register_walk in soc_integration.
-          # 2026-10-10 (bead pnfw): 599 = 597 measured (7ovx, full local soc_coverage run) + 5 new I2C tests in test_i2c.py
-          # (stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec [expect_fail, counts as a pass],
-          # fsm_illegal_state_recovers_to_idle, loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter) - 3.
-          # DERIVED, not measured: the i2c suite itself measured 47 -> 52 locally; the full soc_all_ci was not re-run.
-          # Tighten to (measured - 3) from this PR's CI.
-          # 2026-10-10 (bead gecv): 602 = 605 - 3, where 605 = 602 (pnfw's computed 599 + 3) + 3 new I2C tests in test_i2c.py
-          # (start_stop_condition_times_meet_spec, busy_covers_bus_free_time, condition_tick_reloads_at_clkdiv_ffff; the
-          # stop_to_start_bus_free_time_meets_spec expect_fail was removed and it now passes for real, count unchanged).
-          # COMPUTED, not measured: the i2c suite itself measured 52 -> 55 locally (55/55 pass); the full soc_all_ci was
-          # not re-run. Tighten to (measured - 3) from this PR's CI.
-          # 2026-10-10 (bead j41m.2, DFT Stage 1a): 622 = 625 - 3, MEASURED: soc_all_ci from clean on the final merged tree,
-          # 625 passed / 0 failed / 17 skipped over 62 suite summaries (605 on main + 20 new tests: clock_gate_scan 4,
-          # dft_muxes 3, soc_dft_scan 8, cdc_reset_sync_scan +3, crypto +2).
-          # 2026-10-10 (bead j41m.9): 624 = 627 - 3, same value as cocotb.yml. 627 MEASURED: soc_all_ci from clean on the merged tree
-          # (main incl. #259/#263 + this PR), 627 passed / 0 failed / 17 skipped over 62 suite summaries = the 625 above + 2 new
-          # soc_dft_scan tests (PMU-held GPU/CPU domain reset in scan mode).
-          # 2026-10-11 (bead j41m.3, DFT Stage 1b): 690 = 693 - 3, same value as soc_coverage.yml. 693 MEASURED: the cocotb soc_all
-          # job of PR 270 on head 9261df1 (log: 'cocotb: 693 passed, 0 failed') = the 627 above + 66 new tests (jtag_tap 48 =
-          # 16 x 3 TCK ratios, dft_ctrl 7, soc_jtag 11).
-          # 2026-10-12 (bead j41m.3, glitch-free test-clock switch): 719 = 722 - 3, same value as soc_coverage.yml. 722 MEASURED by
-          # the cocotb soc_all job of PR 270 on head 928b402 ('cocotb: 722 passed, 0 failed') = the 693 above + 29 new tests
-          # (dft_clk_switch 19, dft_ctrl +9, soc_jtag +1).
-          # 2026-10-12 (bead xtaa, merged onto main incl. PR 270): 727 = 730 - 3, same value as soc_coverage.yml. 730 = the 722 above
-          # + 8 new tests (cdc_2ff_sync 4, periph_sync_stages 4); the xtaa branch alone MEASURED 635 on head 6759536 against
-          # main's 627. Confirmed against the cocotb soc_all job of PR 274 on the merge head.
-          # 2026-10-13 (bead 3snb, cdc_gray_fifo DEPTH=2): 759 = 762 - 3, same value as soc_coverage.yml. 762 MEASURED by the cocotb
-          # soc_all job of PR 276 ('cocotb: 762 passed, 0 failed') = the 730 above + 32 new tests (cdc_gray_fifo 16 behaviours x
-          # DEPTH 2 and 4).
-          # 2026-10-15 (bead j41m.4, DFT CPU-macro scan boundary): 761 = 764 - 3, same value as the other workflow. 764 MEASURED:
-          # soc_all_ci from clean on the branch head, 764 passed / 0 failed / 17 skipped over 72 suite summaries (the 762 above
-          # + 2 new soc_dft_scan tests: test_cpu_macro_scan_boundary and test_cpu_macro_scan_boundary_tap_leg).
-          # 2026-10-18 (bead j41m.14, MBIST, merged with #287/#304/#307): 813 = 816 - 3. 816 MEASURED: soc_all_ci from
-          # clean on the merge of origin/main into feat/dft-mbist-j41m14 (e7cf6cf), 816 passed / 0 failed over 79 suite
-          # summaries (MBIST ctrl/tap/soc_slice/fi_equiv suites + soc_uart_boot on top of main). #305's crypto tests land on top.
-          # 2026-10-18 (bead shm5, UART RX re-sync): 826 = 829 - 3. 829 MEASURED: soc_all_ci from clean on the branch head,
-          # 829 passed / 0 failed over 79 suite summaries (the 816 above + #305's crypto tests + 6 new: 5
-          # test_uart test_rx_back_to_back_* and test_uart_boot.test_load_verify_8n1_back_to_back).
-          # 2026-10-18 (beads 0ntg/4pl8/xkw5, PR #316): 823 = 826 - 3. 826 MEASURED by the sharded soc_coverage run of
-          # this PR (summed over 8 shards, 0 failed): 823 on main + test_soc_dma_walk_rom_write_and_decode_errors,
-          # test_soc_i2c_real_pads and test_soc_wdt_rst_en_release.
-          # 2026-10-18 (merge of #316 onto #314): 829 = 832 - 3. 832 (#316 + 6 shm5 tests)
-          # CONFIRMED: 832 passed / 0 failed summed over 4 shards, cocotb run 39126744813.
-          # 2026-10-18 (bead c54a, CPU-macro MBIST collars): 828 = 831 - 3. 831 MEASURED by the CI formula (grep -cE
-          # 'cocotb\.regression .* passed$') on soc_all_ci from clean on this branch, 0 failed: the 816 above + #305's crypto tests
-          # and main's other additions + 7 new test_mbist_cpu_macro + 1 test_sram_fi_equiv (1 KB macro, mbist_fi_equiv_1k).
-          # 2026-10-18 (merge of main into #313 c54a): 837 = 840 - 3. 840 EXPECTED = 832 on main + c54a's 8 (7
-          # test_mbist_cpu_macro + 1 test_sram_fi_equiv 1 KB); confirm against this merge's sharded CI pass count.
-          # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
-          # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
-          # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
-          # 2026-10-18 (bead 3ogd, PMU iso-ack handshake): 835 = 838 - 3. 838 MEASURED: soc_all_ci from clean (fresh SIM_BUILD_ROOT, -j4) on
-          # the merge of origin/main (#312, #315) into fix/pmu-iso-ack-3ogd, 838 passed / 0 failed over 80 suite summaries = the 816 above
-          # + 7 tests already on main since then (inferred from the difference, likely #305 crypto) + 15 new (test_pmu +8, soc_pmu_iso_ack +7).
-          # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #314/#316): 844 = 847 - 3. 847 EXPECTED = 832 (main, itself an
-          # expectation above) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
-          # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 847 against the
-          # merged PR's sharded CI pass count.
-          # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #319): 849 = 852 - 3. 852 EXPECTED = 837 (main, CI-measured
-          # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
-          # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
-          # merged PR's sharded CI pass count.
-          # 2026-10-19 (bead 0oc4, dma_engine CTRL hw-write flop reset): 854 = 857 - 3. 857 EXPECTED = 852 (main, per the 3ogd note above) + 5 new test_dma
-          # tests (test_dma_ctrl_hw_flops_reset_*; no new suite). MEASURED locally: test_dma 18 -> 23 (plain and FPGA=1). Not measured: full soc_all_ci
-          # (a Sky130 PD run held the host). Other open PRs (#313, #320) also move this floor: re-base the number on merge.
-          # 2026-10-19 (bead xkw5 leftovers, PR #320): 854 = 857 - 3. 857 MEASURED by the cocotb soc_all job of this PR on the
-          # merge with #319 ('cocotb: 857 passed, 0 failed (floor 834), summed over 4 shards') = 837 + 20 new tests (timer, wdt, pwm, spi,
-          # pmu, pll_apb_regs, dma, npu, 3 i2c, 2 x 2 for each of the two register-bank builds, test_soc_gpu_walk_both_masters).
-          # 2026-10-19 (merge of main #317 into #320 xkw5): 869 = 872 - 3. 872 EXPECTED = 852 (main, #317 measured)
-          # + xkw5's 20 new tests (857 measured on the 837 base); confirm against this merge's sharded CI pass count.
-          # 2026-10-19 (merge of main #321 into #320 xkw5): 874 = 877 - 3. 877 EXPECTED = 857 (main, #321 measured)
-          # + xkw5's 20 new tests (872 measured on the 852 base); confirm against this merge's sharded CI pass count.
-          # CONFIRMED (h367): 837 passed / 0 failed in #319's CI.
-          # 2026-10-19 (merge of main #319 into #313 c54a): 842 = 845 - 3. 845 EXPECTED = 837 (main, confirmed)
-          # + c54a's 8; confirm against this merge's sharded CI pass count.
-          # 2026-10-19 (merge of main #317/#319 into #313 c54a, incl. #318 r51p): 857 = 860 - 3. 860 EXPECTED = 852
-          # (main, #317 measured) + c54a's 8 cocotb tests (#318 adds pytest only); confirm against this merge's sharded CI pass count.
-          # 2026-10-19 (merge of main #321 into #313 c54a): 862 = 865 - 3. 865 EXPECTED = 857 (main, #321 measured)
-          # + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
-          # 2026-10-19 (merge of main #320 into #313 c54a): 882 = 885 - 3. 885 EXPECTED = 877 (main; #320 CI measured 877
-          # passed / 0 failed, cocotb run 39247547781) + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
-          # 2026-10-26 (bead j41m.17, scan_en gate tests): 896 = 882 + 14 new tests (conservative; measured 911 locally = 15 above this). 911 MEASURED: soc_all_ci from a clean
-          # SIM_BUILD on this branch, CI log-grep formula (`cocotb.regression .* passed$`), 0 failed, 85 suites
-          # (965 tests incl. 54 skipped). Of the 911, 14 are new here (test_soc_scan_en_gate 12 + 2 in test_crypto);
-          # the rest of the step up from 882 is growth on main since that floor was last set. Measured locally and
-          # unsharded; confirm against this PR's sharded CI pass count.
+          # The step fails when the summed pass count of the shards is below PASS_FLOOR. soc_coverage.yml holds
+          # the same value. Change it when a pull request adds or removes tests. The derivation of the
+          # current value is in the book. Doc: cr:flow:ci-cocotb
           PASS_FLOOR: '896'
         run: |
           set -o pipefail
@@ -343,10 +177,10 @@ jobs:
             exit 1
           fi
 
-      # Bead h367: functional (covergroup) coverage.  Every shard exported one YAML per simulator
-      # process (FUNC_COV_DIR); merge them and gate the groups listed in functional_coverage_gates.txt
-      # (floor, min_bins, stale waivers).  Needs only PyYAML: the script does not import
-      # cocotb-coverage.  A group with no data is an error, not a pass.
+      # Functional (covergroup) coverage. Every shard exports one YAML per simulator process (FUNC_COV_DIR).
+      # This step merges them and gates the groups listed in functional_coverage_gates.txt
+      # (floor, min_bins, stale waivers). It needs only PyYAML: the script does not import
+      # cocotb-coverage. A group with no data is an error, not a pass.
       - name: Functional coverage gate
         run: |
           python3 -m pip install pyyaml
@@ -386,12 +220,11 @@ jobs:
             union.txt
           if-no-files-found: warn
 
-  # The SoC regression itself (bead 9ayu.2), split over NSHARDS runners.  `soc_all_ci` is a flat list
-  # of independent sub-makes (SOC_CI_SUITES in tb/cocotb/soc/Makefile); `make soc_ci_shard SHARD=k
-  # NSHARDS=n` runs a deterministic balanced slice of it, planned by tools/verif/soc_shards.py from
-  # tools/verif/soc_shard_weights_plain.json (measured UNINSTRUMENTED per-suite times; the coverage
-  # workflow uses the instrumented file).  The aggregate job `soc_all` above sums the legs.
-  # Same structure as soc_coverage.yml's soc_shard (bead 9ayu.1).
+  # The SoC regression, split over NSHARDS runners. `soc_all_ci` is a flat list of independent sub-makes
+  # (SOC_CI_SUITES in tb/cocotb/soc/Makefile). `make soc_ci_shard SHARD=k NSHARDS=n` runs a balanced slice
+  # of it. tools/verif/soc_shards.py plans the slice from tools/verif/soc_shard_weights_plain.json
+  # (uninstrumented per-suite times; the coverage workflow uses the instrumented file).
+  # The aggregate job `soc_all` above sums the legs. soc_coverage.yml has the same structure.
   soc_shard:
     name: cocotb soc_all shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
@@ -439,8 +272,8 @@ jobs:
       # cocotb runs on the setup-python interpreter, not on nix. sim/Makefile's
       # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
       # so the Verilator sim binary can dlopen libpython/ctypes.
-      # ccache (bead b079) is installed from apt, not nix: it wraps the SYSTEM g++ that
-      # sim/cxx_shim.sh calls (see the shim), exactly like the apt line in random_tests.yml.
+      # ccache is installed from apt, not nix: it wraps the SYSTEM g++ that sim/cxx_shim.sh calls
+      # (see the shim), like the apt line in random_tests.yml.
       - name: Install runtime libs for cocotb
         run: |
           sudo apt-get update
@@ -452,21 +285,16 @@ jobs:
           pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov 'cocotb-coverage==1.2.0' pyyaml
           pip list
 
-      # Static, dependency-free gate: every rtl/periph and rtl/npu module must
-      # appear in all five build source lists. This exists because a module
-      # missing from a *PD* list is silently BLACKBOXED by sv2v -- the flow
-      # completes with a wrong netlist and no cocotb suite below can detect it,
-      # since cocotb never runs the PD flow. Needs no nix shell and no Verilator,
-      # so it runs before the expensive regression and fails fast.
-      # Complements check_source_closure.py, which checks a different property
-      # (does a list close over its own `import pkg::*`), and which passes
-      # happily when a module is absent from a list entirely.
+      # Static gate: every rtl/periph and rtl/npu module must appear in all five build source lists.
+      # sv2v blackboxes a module that a PD list lacks. The flow then completes with a wrong netlist and no
+      # cocotb suite can detect it. This step needs no nix shell and no Verilator, so it runs first.
+      # check_source_closure.py checks a different property (a list closes over its own `import pkg::*`)
+      # and passes when a module is absent from a list entirely.
       - name: Check peripheral file-list membership
         run: python3 tools/verif/check_periph_filelists.py
 
-      # The Verilog-2005 portability gate (sv2v + yosys parse, bead f7vs.12, ~4.5 min) used to run
-      # here as a serial step.  It shares nothing with the regression below, so it is now its own
-      # job `sv2v_portability` (bead b079) and runs on a second runner in parallel.
+      # The sv2v / Verilog-2005 portability gate does not run here. It shares nothing with the regression,
+      # so it is the job `sv2v_portability` and runs on a second runner in parallel.
 
       # The shard planner and the Makefile list it reads, including the tests that expand
       # `soc_all_ci` / `soc_ci_shard` with make (they need Verilator and cocotb, which this job has).
@@ -475,38 +303,28 @@ jobs:
         run: python3 -m pytest tb/tests/test_soc_shards.py -q
 
 
-      # soc_all_ci is the CI-runnable regression: every suite that needs nothing
-      # beyond this repo + the nix sim devshell. It builds its own source list, so
-      # it is unaffected by the tb/cocotb/cpu breakage above.
-      #
-      # It is soc_all_ci and NOT soc_all on purpose. soc_all additionally runs
-      # suites that need the riscv32-none-elf cross toolchain to have produced
-      # sw/bench/build/*.hex (currently gpio_driver); this job installs no cross
-      # toolchain, so those suites die in _parse_hex() with FileNotFoundError --
-      # which is what failed on PR #195. soc_all remains the full local gate and
-      # should be run before pushing. See the split's rationale on the soc_all
-      # target in tb/cocotb/soc/Makefile.
-      #
-      # The aggregate JOB still says soc_all deliberately: the check name
-      # "cocotb soc_all (SoC regression)" may be a required status check in branch
-      # protection, and renaming it would make that requirement unsatisfiable.
-      # (No required status check is configured on main as of bead 9ayu.2: the ruleset only
-      # requires a pull request.  The name is kept anyway, cheaply.)
-      # No `|| true` and no `continue-on-error`: this is a gate.
-      # pipefail matters: without it the tee would mask make's exit status and
-      # the gate would pass on a failing regression.
-      # Compiler cache for the Verilated model (bead b079).  Two layers of reuse:
-      #  * WITHIN a run, the five Verilator runtime objects (verilated.o, verilated_vpi.o, ...) and
-      #    cocotb's verilator.o are byte-identical in every one of the ~45 builds, so only the
-      #    first compiles them.  This holds even on a completely cold cache.
-      #  * ACROSS runs, an unchanged model (Vtop__ALL.o) is a hit.  That is the big win for PRs that
-      #    touch tests, docs or Python but not rtl/ -- and nearly nothing for a PR that edits RTL
-      #    the SoC model contains (the 15 -> 1 shared tb_soc_top build then misses once).
-      # Correctness does not depend on the key below: ccache hashes the preprocessed source, the
-      # exact compiler command line (after sim/cxx_shim.sh stripped its clang-only flags) and the
-      # g++ binary's content (CCACHE_COMPILERCHECK=content, set by the shim).  The key only
-      # decides which stale entries are offered; a stale one is a miss, never a wrong object.
-      # Saved from main pushes only, so PR runs read main's cache without filling the repo's 10 GB.
+      # soc_all_ci is the CI-runnable regression: every suite that needs nothing beyond this repo and
+      # the nix sim devshell. It builds its own source list. Use soc_all_ci here, not soc_all. soc_all also
+      # runs suites that need sw/bench/build/*.hex from the riscv32-none-elf cross toolchain (gpio_driver).
+      # This job installs no cross toolchain, so those suites fail in _parse_hex() with FileNotFoundError.
+      # Run soc_all locally before you push.
+
+      # The aggregate job keeps the name soc_all: the check "cocotb soc_all (SoC regression)" may be a
+      # required status check in branch protection, and a rename would make it unsatisfiable.
+      # See the rationale of the split on the soc_all target in tb/cocotb/soc/Makefile.
+
+      # No `|| true` and no `continue-on-error`: this is a gate. Use pipefail: without it tee masks the
+      # exit status of make and the gate passes on a failing regression.
+
+      # Compiler cache for the Verilated model. Within a run, the five Verilator runtime objects and the
+      # verilator.o of cocotb are byte-identical in every build, so only the first build compiles them.
+      # Across runs, an unchanged model (Vtop__ALL.o) is a cache hit.
+
+      # Correctness does not depend on the key below. ccache hashes the preprocessed source, the exact
+      # compiler command line (after sim/cxx_shim.sh strips its clang-only flags) and the content of the
+      # g++ binary (CCACHE_COMPILERCHECK=content, set by the shim). The key only decides which stale entries
+      # are offered. A stale entry is a miss, never a wrong object. Only pushes to main save the cache, so
+      # PR runs read the cache of main without filling the repository cache.
       - name: Compiler identity (cache key input)
         id: cc
         run: echo "gcc=$(g++ -dumpfullversion)" >> "$GITHUB_OUTPUT"
@@ -525,12 +343,10 @@ jobs:
             ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-
             ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-
 
-      # pipefail so tee cannot mask make's exit status; no `|| true`: a failing suite fails this leg.
-      # SIM_PYTHON3 must be the SAME interpreter cocotb runs on (see the note on the old single job in
-      # git history: /usr/bin/python3 vs the setup-python interpreter dies with "No module named
-      # 'encodings'").  SIM_BUILD_JOBS: parallel C++ compile of each Verilated model (bead b079); it
-      # is not part of the build-directory key.  SOC_SUITES_RAN is the manifest of suites that ran
-      # to completion, which the aggregate job compares with SOC_CI_SUITES.
+      # Use pipefail so tee cannot mask the exit status of make. No `|| true`: a failing suite fails this leg.
+      # SIM_PYTHON3 must be the interpreter cocotb runs on. /usr/bin/python3 dies with "No module named 'encodings'".
+      # SIM_BUILD_JOBS sets the parallel C++ compile of each Verilated model. It is not part of the build-directory key.
+      # SOC_SUITES_RAN is the manifest of suites that ran to completion. The aggregate job compares it with SOC_CI_SUITES.
       - name: Run this shard's suites
         env:
           # Uninstrumented cost model (soc_coverage.yml uses the instrumented default).  Step-level
@@ -542,7 +358,7 @@ jobs:
           # Paths inside the build tree are absolute; with no -g in the flags ccache does not hash
           # the working directory, and BASEDIR makes the workspace prefix irrelevant anyway.
           CCACHE_BASEDIR: ${{ github.workspace }}
-          # Bead h367: each simulator process writes its functional-coverage YAML here
+          # Each simulator process writes its functional-coverage YAML here
           # (tb/cocotb/soc/func_cov.py); the aggregate job merges and gates every shard's files.
           FUNC_COV_DIR: ${{ github.workspace }}/func_cov
         run: |
@@ -669,12 +485,9 @@ jobs:
           make -C tb/cocotb/cpu phase2_all SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cocotb_cpu.log
           echo "::endgroup::"
 
-      # Same belt-and-braces rationale as soc_all's equivalent step (bead
-      # dwp): don't trust a bare exit code, and don't trust results.xml
-      # either (phase2_all's sub-targets each overwrite it in turn).
-      # Measured 112 passing tests on 2026-08-11 (7 suites: smoke_uvm 4,
-      # isa_uvm 54, pipeline_hazards 16, interrupts 13, debug 6,
-      # axi_protocol 12, fault_injection 7). Floor set just under that.
+      # Same rationale as the log check of soc_all: do not trust a bare exit code, and do not trust results.xml
+      # (the sub-targets of phase2_all each overwrite it in turn). Set the floor just under the pass count of
+      # the 7 suites: smoke_uvm, isa_uvm, pipeline_hazards, interrupts, debug, axi_protocol, fault_injection.
       - name: Verify regression actually ran
         if: always()
         env:
@@ -708,21 +521,14 @@ jobs:
             tb/cocotb/cpu/results.xml
           if-no-files-found: warn
 
-  # Verilog-2005 portability gate (bead f7vs.12), moved here from a serial step of the soc_all job
-  # by bead b079: it shares nothing with the regression (no simulator, no cocotb), costs ~4.5 min
-  # (mostly fetching the nix devshell's sv2v + yosys closure), and so ran for nothing but latency.
-  # Run on its own runner it overlaps the regression instead of preceding it.
-  #
-  # NOT a rename of any existing check: a step name is not a status check, and the job name the
-  # soc_all comments warn about ("cocotb soc_all (SoC regression)") is unchanged.  This adds a NEW
-  # check, "sv2v / Verilog-2005 portability gate"; if branch protection ever lists required checks,
-  # add it there so the gate stays blocking.
-  #
-  # This class is INVISIBLE to the cocotb regression: Verilator reads the SystemVerilog directly
-  # and never sees sv2v's output, so the whole suite can be green while the design is
-  # unsynthesisable. A real instance shipped in PWM and broke CI (PR #198, fixed in 2c5f351); it
-  # would equally have broken both PD flows, which are sv2v-fronted.
-  # Negative-controlled: reintroducing the PWM construct makes this exit 2.
+  # Verilog-2005 portability gate (sv2v + yosys parse). It shares nothing with the regression (no simulator,
+  # no cocotb), so it runs on its own runner and overlaps the regression.
+  # It adds a new check, "sv2v / Verilog-2005 portability gate". It renames no existing check. If branch
+  # protection lists required checks, add it there so that the gate stays blocking.
+
+  # The cocotb regression cannot see this class: Verilator reads the SystemVerilog directly and never sees
+  # the sv2v output, so the suite can be green while the design is unsynthesisable. Both PD flows use sv2v.
+  # Negative control: if you reintroduce the PWM construct that once broke CI, the gate exits 2.
   sv2v_portability:
     name: sv2v / Verilog-2005 portability gate
     runs-on: ubuntu-latest
@@ -743,11 +549,10 @@ jobs:
       - name: sv2v / Verilog-2005 portability gate
         run: nix develop --command make -C sim sv2v-parse
 
-  # Self-tests for the content-keyed Verilator build directories (bead b079).  These prove the
-  # sharing introduced for the soc_all job cannot turn into a stale-binary false pass (PR #142
-  # class): a changed define / -G parameter / tool version must change the directory, a touched
-  # RTL file must regenerate the model, and a failing suite in a SHARED directory must still fail
-  # the run.  A separate job so it overlaps the regression instead of lengthening it.
+  # Self-tests for the content-keyed Verilator build directories. They prove that the directory sharing of
+  # the soc_all job cannot turn into a stale-binary false pass. A changed define, -G parameter or tool
+  # version must change the directory. A touched RTL file must regenerate the model. A failing suite in a
+  # shared directory must still fail the run. This is a separate job, so it overlaps the regression.
   sim_build_key:
     name: cocotb build-directory key self-tests
     runs-on: ubuntu-latest

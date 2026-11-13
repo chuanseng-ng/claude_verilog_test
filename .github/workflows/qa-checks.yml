@@ -1,5 +1,7 @@
 name: QA Checks
 
+# Doc: um:flow:ci-qa-checks, cr:flow:ci-qa-checks
+
 on:
   push:
     branches: [ "main" ]
@@ -23,61 +25,52 @@ jobs:
           # 2, not the default 1: the beads reopen gate below needs HEAD^1.
           fetch-depth: 2
 
-      # Bead 78ld. On a pull_request event HEAD is GitHub's PR merge commit and
-      # HEAD^1 is the base-branch tip, so this asks "would merging this PR move a
-      # bead closed on main back to open?". That happens when a checkout's
-      # `bd import` replayed an older .beads/issues.jsonl into the Dolt DB and the
-      # branch's commits then exported the reverted state. Rows the PR never
-      # touched are ignored (the merge keeps main's row). Escape hatch for a
-      # deliberate reopen: a note containing `beads-reopen-ok`. Stdlib only, so
-      # it runs before the dependency install.
+      # Beads reopen gate. On a pull_request event HEAD is the merge commit of the pull request and HEAD^1 is the
+      # tip of the base branch. The gate asks whether merging would move a bead closed on main to any other status. That
+      # happens when a checkout replayed an older .beads/issues.jsonl into the Dolt DB with `bd import` and the commits
+      # of the branch then exported the reverted state. Rows the PR never touched are ignored. To reopen on purpose,
+      # add a new note line that starts with `beads-reopen-ok:`. Stdlib only, so it runs before the dependency install.
       - name: Beads reopen gate (no closed bead reopened by this PR)
         if: github.event_name == 'pull_request' && matrix.python-version == '3.12'
         run: python3 tools/setup/check_beads_reopen.py --base-ref HEAD^1 --head-ref HEAD
 
-      # Bead ainf. BLOCKING, zero allowed sites: no bit/part/element select may be taken directly on
-      # a struct member anywhere in rtl/ (read or write) - copy the member to a named signal first.
-      # Synlig mis-elaborates that idiom, silently and in a way that depends on the struct TYPE
-      # (Doc: cr:defect:synlig-struct-select-ainf). Source-text scan only, stdlib only, no baseline: the
-      # waiver file tools/verif/struct_member_select_baseline.txt must stay empty or this fails.
-      # No `continue-on-error` and no `|| true`: this is a gate. tb/tests/test_check_struct_member_select.py
-      # runs the same check again under pytest below.
+      # BLOCKING, zero allowed sites: no bit, part or element select on a struct member anywhere in rtl/ (read or
+      # write). Copy the member to a named signal first. Synlig mis-elaborates that idiom, silently, depending on the
+      # struct type (Doc: cr:defect:synlig-struct-select-ainf). Source-text scan only, stdlib only, no baseline: the
+      # waiver file tools/verif/struct_member_select_baseline.txt must stay empty or this fails. No `continue-on-error`,
+      # no `|| true`. tb/tests/test_check_struct_member_select.py runs the same check under pytest below.
       - name: Struct-member select gate (no select on a struct member in rtl/)
         run: python3 tools/verif/check_struct_member_select.py -v
 
-      # Bead lu09. BLOCKING: the Sky130 CPU macro's pin coordinates are frozen by pin_template.def
-      # (LibreLane FP_DEF_TEMPLATE, strict). Fails if the template omits or moves any signal pin of the
-      # committed macro LEF, or if two template pins overlap (LibreLane does not check that). Stdlib only.
+      # BLOCKING: pin_template.def freezes the pin coordinates of the Sky130 CPU macro (LibreLane FP_DEF_TEMPLATE,
+      # strict). Fails if the template omits or moves any signal pin of the committed macro LEF, or if two template
+      # pins overlap (LibreLane does not check that). Stdlib only.
       - name: Pin-lock gate (Sky130 CPU macro pin template reproduces the committed LEF)
         run: python3 tools/verif/pin_lock.py check --lef pnr/sky130/cpu/macro/rv32i_cpu_top.lef --def pnr/sky130/cpu/pin_template.def
 
-      # Bead xlc4. BLOCKING: every content-anchored line waiver in tools/verif/coverage_waivers.txt must
-      # still bind to its source line. An RTL edit that touches a waived line (or adds an identical
-      # one) goes stale here, on the PR, instead of turning the nightly soc_coverage gate red. Reads
-      # the waiver file and rtl/ only (no simulation, no coverage data); stdlib only. Exit 1 = stale,
-      # exit 2 = ambiguous or malformed. tb/tests/test_coverage_waiver_anchors.py repeats it under pytest.
+      # BLOCKING: every content-anchored line waiver in tools/verif/coverage_waivers.txt must still bind to its
+      # source line. An RTL edit that touches a waived line (or adds an identical one) goes stale here, on the PR,
+      # instead of turning the nightly soc_coverage gate red. Reads the waiver file and rtl/ only; stdlib only.
+      # Exit 1 = stale, exit 2 = ambiguous or malformed. tb/tests/test_coverage_waiver_anchors.py repeats it.
       - name: Coverage waiver anchors (no stale line waiver)
         run: python3 tools/verif/coverage_report.py --check-waivers --waivers tools/verif/coverage_waivers.txt
 
-      # Bead 1as3. BLOCKING: the committed rtl/filelist/*.f are GENERATED from the Makefile source
-      # lists (tb/cocotb/soc/Makefile PLL_SOURCES, pnr/Makefile CPU_SV_FILES / GPU_SV_FILES). Editing
-      # one of those lists without regenerating (python3 tools/verif/gen_filelist.py) leaves an
-      # external tool compiling a stale file set - and sv2v-based tools silently blackbox a module
-      # missing from a list. Stdlib only. No `continue-on-error`, no `|| true`: this is a gate.
+      # BLOCKING: the committed rtl/filelist/*.f are generated from the Makefile source lists (tb/cocotb/soc/Makefile
+      # PLL_SOURCES, pnr/Makefile CPU_SV_FILES / GPU_SV_FILES). Editing a list without regenerating it
+      # (python3 tools/verif/gen_filelist.py) leaves an external tool with a stale file set, and sv2v-based tools
+      # blackbox a module that a list lacks. Stdlib only. No `continue-on-error`, no `|| true`: this is a gate.
       - name: RTL filelist drift gate (rtl/filelist/*.f match their Makefile sources)
         run: python3 tools/verif/gen_filelist.py --check
 
-      # Bead h3lm. BLOCKING: pnr/constraints/phase5_soc.upf must reference things that exist in soc_top.
-      # The previous UPF named isolation nets and switch controls that were never in the RTL and nothing
-      # noticed for months. tools/verif/check_upf.py checks (stdlib only, no EDA tool) that every
-      # -elements path and control net resolves, that the UPF clamp set EQUALS the clamps soc_top
-      # implements (both arms), that domain membership is explicit, and that the power-state names and
-      # encodings equal rtl/soc/pmu.sv. It reads the committed pnr/constraints/phase5_soc_rtl_facts.json;
-      # the drift step below proves that file still matches the RTL. No `continue-on-error`: a gate.
+      # BLOCKING: pnr/constraints/phase5_soc.upf must reference things that exist in soc_top.
+      # tools/verif/check_upf.py checks (stdlib only, no EDA tool) that every -elements path and control net resolves,
+      # that the UPF clamp set equals the clamps soc_top implements (both arms), that domain membership is explicit,
+      # and that the power-state names and encodings equal rtl/soc/pmu.sv. It reads the committed facts file
+      # pnr/constraints/phase5_soc_rtl_facts.json; the drift step below proves it matches the RTL. No `continue-on-error`.
       - name: UPF structural gate (phase5_soc.upf vs soc_top and pmu.sv)
         run: python3 tools/verif/check_upf.py -v
 
-      # Bead hlrm.4. BLOCKING: fpga/nexys_video/boot_uart.hex (the boot ROM of the Nexys Video bitstream) is generated from
+      # BLOCKING: fpga/nexys_video/boot_uart.hex (the boot ROM of the Nexys Video bitstream) is generated from
       # sw/bootloader by `make -C fpga/nexys_video bootimg`. This job has no RISC-V toolchain, so the gate compares the sha256 of
       # every source file that feeds the image (and the build parameters, and the hex itself) with
       # boot_uart.manifest.json: editing the bootloader without regenerating, or hand-editing the hex, fails here. The byte-for-
@@ -96,13 +89,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Bead h3lm. BLOCKING drift gate for the facts file above: re-elaborates rtl/filelist/soc_top.f
+      # BLOCKING drift gate for the facts file above: re-elaborates rtl/filelist/soc_top.f
       # with pyslang (both SRAM arms) and fails if the committed JSON differs. Fix: run
       # `python3 tools/verif/check_upf.py gen-facts`, review the diff, commit.
       - name: UPF facts drift gate (facts file matches a fresh elaboration of the RTL)
         run: python tools/verif/check_upf.py gen-facts --check
 
-      # Bead lvdk. BLOCKING: strict pyslang elaboration of soc_top/rv32i_cpu_top/gpu_top (6 arms).
+      # BLOCKING: strict pyslang elaboration of soc_top/rv32i_cpu_top/gpu_top (6 arms).
       # Catches what Verilator and sv2v accept but VCS and Xcelium reject, notably use-before-declare.
       # Self-checking: built-in controls must give their expected verdicts or it exits 2. Exit 1 =
       # illegal RTL. tb/tests/test_check_elab_strict.py repeats it under pytest. See Doc: tm:dec:xezim s5.

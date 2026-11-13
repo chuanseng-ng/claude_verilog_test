@@ -1,4 +1,4 @@
-"""CVT.ScanInsert: netlist-level scan insertion as a project-local LibreLane step (bead claude_verilog_test-j41m.8).
+"""CVT.ScanInsert: netlist-level scan insertion as a project-local LibreLane step.
 
 LibreLane has no DFT step.  This module adds one, plus a ``Classic`` subclass that runs it right after the synthesis
 checkers, so the scan flops exist before floorplan, placement, CTS and routing see the design.  Nothing in the shared
@@ -8,15 +8,17 @@ Why a netlist step with OpenROAD 26Q2 (and not the flow's own OpenROAD): Doc: tm
 ``edf00dff`` OpenROAD has a defective stitcher (SET_B left open on negedge flops) and no ``-max_length`` splitting;
 26Q2 chooses the right scan flop and splits a clock domain into chains of at most ``-max_length`` cells.
 
-Port reuse (the question bead j41m.8 asked): 26Q2 ``insert_dft`` does NOT reuse existing ports.  It creates
+Port reuse: 26Q2 ``insert_dft`` does NOT reuse existing ports.  It creates
 ``scan_enable_0`` / ``scan_in_<k>`` / ``scan_out_<k>`` (the ``-scan_*_name_pattern`` options only rename them).  The Tcl
 script (tcl/scan_insert.tcl) therefore merges those nets into the pre-existing ``scan_in_i[n]`` / ``scan_out_o[n]`` /
 ``dft_scan_en`` of the design, drops the placeholder ``conb`` tie on ``scan_out_o[n]`` and puts a buffer between the last
-flop of a chain and its output port.  With ``CVT_SCAN_OUT_GATE_NET`` (SoC only, bead j41m.17) that buffer is an AND2 whose other
+flop of a chain and its output port.  With ``CVT_SCAN_OUT_GATE_NET`` (SoC only) that buffer is an AND2 whose other
 input is the crypto wipe-done net, so ``scan_out_o[n]`` cannot show un-wiped crypto state before the scan-entry wipe lands.
 
 Output: a netlist with no ``assign`` statements (checked here), ``<step_dir>/scan_insert.rpt`` (key=value lines) and the
 metrics ``dft__scan_chains`` / ``dft__scan_flops`` / ``dft__scan_unscanned_flops`` / ``dft__scan_chain_max_length``.
+
+Doc: cr:pd:sky130-soc-plugin-cvt-scan-step-py
 """
 
 import os

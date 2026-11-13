@@ -43,7 +43,7 @@ set_false_path -from [get_ports rst_n_i]
 set_false_path -from [get_ports cpu_rst_n_i]
 foreach _p [get_ports -quiet trst_ni] { set_false_path -from $_p }
 
-# 2b. Functional-view case analysis (bead j41m.17, user decision 2026-10-27)
+# 2b. Functional-view case analysis (user decision)
 proc cdc_net_driver_pins {full} {
     set out {}
     foreach n [get_nets -quiet -hierarchical *] {

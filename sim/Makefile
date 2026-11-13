@@ -1,12 +1,9 @@
-# Makefile for RV32I CPU cocotb simulation
-# Uses Verilator by default
-#
-# NOTE: For simulation tests, run this Makefile in WSL:
+# Makefile for RV32I CPU cocotb simulation. Uses Verilator by default.
+# Run the simulation tests in WSL.
 #   From Windows: wsl bash -c "cd \$(wslpath '\$(pwd)') && make test"
 #   From WSL: make test
-#
-# For lint check, can run from Windows or WSL:
-#   make lint
+# Lint can run from Windows or WSL: make lint
+# Doc: tm:suite:sim-makefile, cr:suite:sim-makefile
 
 # Ensure ~/.local/bin is in PATH for cocotb-config
 export PATH := $(HOME)/.local/bin:$(PATH)
@@ -14,10 +11,9 @@ export PATH := $(HOME)/.local/bin:$(PATH)
 # Paths
 PROJ_ROOT := $(shell cd .. && pwd)
 
-# Bead claude_verilog_test-f97: base directory for the per-target sim_build dirs.
-# Defaults to `.`, so an unset environment behaves exactly as before.  These dirs
-# are large (sim_build_gpu_top alone is ~130 MB) and every one of them is
-# invalidated by any RTL edit.  Point it at scratch when root is tight:
+# Base directory for the per-target sim_build dirs. It defaults to `.`, so with the variable unset the
+# sim_build dirs stay under sim/. These dirs are large and every RTL edit invalidates all of them.
+# Point it at scratch when root is tight:
 #   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/sim gpu_all
 SIM_BUILD_ROOT ?= .
 ifeq ($(strip $(SIM_BUILD_ROOT)),)
@@ -27,9 +23,9 @@ RTL_DIR := $(PROJ_ROOT)/rtl
 TB_DIR := $(PROJ_ROOT)/tb
 SIM_DIR := $(PROJ_ROOT)/sim
 
-# Bead 1eyv: where the instrumented simulations write their per-simulation coverage .dat files
-# and where the merged files / combined report land.  Absolute: every sub-make and simulator
-# process runs from this directory, but a relative path would silently follow a future `-C`.
+# Where the instrumented simulations write their per-simulation coverage .dat files and where the merged
+# files and the combined report land. Absolute: every sub-make and simulator process runs from this
+# directory, but a relative path would silently follow a future `-C`.
 COV_DIR ?= $(SIM_BUILD_ROOT)/coverage
 override COV_DIR := $(abspath $(COV_DIR))
 
@@ -55,25 +51,18 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_minstret_write \
 	tb.cocotb.cpu.test_decode_corners
 
-# RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
-# Packages must appear first so Verilator can resolve them.
-#
-# SRAM model selection — mirrors the `ifdef SRAM_SKY130 switch in cache RTL:
+# RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache). Packages must appear first so Verilator resolves them.
+# SRAM model selection mirrors the `ifdef SRAM_SKY130 switch in the cache RTL:
 #   SRAM_TARGET=freepdk45 (default): OpenRAM FreePDK45 model, no define needed
 #   SRAM_TARGET=sky130             : Sky130 behavioral model, adds +define+SRAM_SKY130
-#
-# Examples:
-#   make lint                          # FreePDK45 (default)
-#   make lint SRAM_TARGET=sky130       # Sky130
-#   make test SRAM_TARGET=sky130       # run full suite against sky130 SRAM
+# Examples: make lint | make lint SRAM_TARGET=sky130 | make test SRAM_TARGET=sky130 (full suite against sky130 SRAM)
 SRAM_TARGET ?= freepdk45
 
 ifeq ($(SRAM_TARGET),sky130)
     SRAM_SIM_MODEL := $(SIM_DIR)/sky130_sram_1kbyte_1rw1r_32x256_8.sv
     COMPILE_ARGS   += +define+SRAM_SKY130
-    # GH #104 Sky130 SoC Stage-2: sram_controller.sv's own backing-store macro
-    # (separate from the cache tag/data SRAM_SIM_MODEL above). Only meaningful
-    # for SoC-level (soc_top) builds — the CPU-only VERILOG_SOURCES/
+    # sram_controller.sv's own backing-store macro (separate from the cache tag/data SRAM_SIM_MODEL above).
+    # Only meaningful for SoC-level (soc_top) builds: the CPU-only VERILOG_SOURCES/
     # CACHE_SOURCES lists below never instantiate sram_controller.
     SRAM_CTRL_SIM_MODEL := $(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv
 else
@@ -225,20 +214,12 @@ ifneq ($(wildcard /nix/store),)
 	  done && \
 	  export LD_LIBRARY_PATH=$(NIX_COMPAT_DIR):$${LD_LIBRARY_PATH} &&
 endif
-# Opt-in line + toggle coverage (GH #216 / bead nkj7 for the SoC flow, bead 1eyv here).  Same
-# flags as tb/cocotb/soc/Makefile so the .dat files from the two flows are point-for-point
-# comparable and tools/verif/coverage_report.py can merge them:
-#  * --coverage-line --coverage-toggle --coverage-max-width 256 instead of the blanket
-#    --coverage (which adds user-coverage pages the report ignores anyway);
-#  * the flags go in COMPILE_ARGS: several targets pass EXTRA_ARGS= on the command line, which
-#    would override a makefile-level `+=`;
-#  * `_cov` is appended to EVERY SIM_BUILD (the per-target ones passed on the command line and the
-#    default), so an instrumented build can never reuse an uninstrumented Vtop or vice versa
-#    (the stale-Vtop false-pass class of PR #142).  `override` is what lets the makefile edit a
-#    command-line value;
-#  * each simulation writes ITS OWN .dat to $(COV_DIR) through the runtime plusarg
-#    +verilator+coverage+file+ (cocotb 1.9.2 honours it).  The old behaviour -- every simulation
-#    writing sim/coverage.dat -- silently lost all but the last Phase 3/GPU run.
+# Opt-in line + toggle coverage. Same flags as tb/cocotb/soc/Makefile, so tools/verif/coverage_report.py can merge the .dat files
+# of the two flows: --coverage-line --coverage-toggle --coverage-max-width 256, not the blanket --coverage.
+# The flags go in COMPILE_ARGS: several targets pass EXTRA_ARGS= on the command line, which would override a `+=`.
+# `_cov` is appended to EVERY SIM_BUILD (command-line ones and the default), so an instrumented build never reuses an
+# uninstrumented Vtop. `override` lets the makefile edit a command-line value. Each simulation writes ITS OWN .dat to
+# $(COV_DIR) through the plusarg +verilator+coverage+file+ (cocotb 1.9.2 honours it); a shared sim/coverage.dat lost runs.
 ifdef COVERAGE
 	COMPILE_ARGS += --coverage-line --coverage-toggle --coverage-max-width 256
 	# Idempotent: cocotb exports SIM_BUILD, so a sub-make that re-reads this makefile would
@@ -468,12 +449,10 @@ lint_soc:
 		$(if $(filter sky130,$(SRAM_TARGET)),+define+SRAM_SKY130) \
 		$(SOC_TOP_SOURCES) 2>&1
 
-# GH #104 Sky130 SoC Stage-2: explicit convenience target so the SRAM_SKY130
-# branch of sram_controller.sv (+ the cache tag/data macros it shares the
-# define with) is actually elaborated with the macro-backed model, not just
-# selected via SRAM_TARGET (the plain `lint`/`lint_soc` targets above never
-# passed +define+SRAM_SKY130 to verilator even when SRAM_TARGET=sky130 was
-# set — this target fixes that gap for soc_top specifically).
+# Explicit convenience target so that the SRAM_SKY130 branch of sram_controller.sv (and the cache tag/data
+# macros that share the define) is elaborated with the macro-backed model, not just selected via SRAM_TARGET.
+# The plain `lint`/`lint_soc` targets above never passed +define+SRAM_SKY130 to verilator, even with
+# SRAM_TARGET=sky130. This target fixes that gap for soc_top specifically.
 .PHONY: lint_soc_sky130
 lint_soc_sky130:
 	@$(MAKE) --no-print-directory lint_soc SRAM_TARGET=sky130
@@ -481,21 +460,12 @@ lint_soc_sky130:
 # disciplines (CPU synchronous per ASIC rule, peripherals async); soc_top only
 # distributes the shared rst_n_i. Frozen leaf RTL — not a SoC integration bug.
 
-# ============================================================================
-# Verible RTL style lint (Phase 5 — complements Verilator lint)
-# ----------------------------------------------------------------------------
-# Verible covers SystemVerilog *style consistency*, which Verilator's semantic
-# --lint-only does not. `nix develop` provides the same binary CI pins.
-#   make lint-verible          # style-lint every rtl/**/*.sv (curated ruleset)
-#   make verible               # alias for lint-verible
-#
-# There are deliberately NO format targets (removed 2026-10-10, bead hn9l
-# follow-up). verible-verilog-format cannot reproduce the hand-aligned house
-# style: on v0.0-4063, 81 of 83 rtl/**/*.sv fail `--verify`, no flag set gets
-# below 72 of 83, and the exemplars timer.sv / gpio_controller.sv fail every
-# variant. An in-place `--inplace` target would be a style-only mass edit of
-# verified RTL, which CLAUDE.md forbids.
-# ============================================================================
+# Verible RTL style lint (complements Verilator lint). Verible covers SystemVerilog style consistency,
+# which Verilator --lint-only does not. `nix develop` provides the same binary that CI pins.
+#   make lint-verible (alias: make verible)  # style-lint every rtl/**/*.sv (curated ruleset)
+# There are deliberately NO format targets: verible-verilog-format cannot reproduce the hand-aligned house
+# style, and an in-place `--inplace` target would be a style-only mass edit of verified RTL, which the coding rules forbid
+# (Doc: um:guide:commit-and-coding-rules).
 VERIBLE_LINT    := verible-verilog-lint
 VERIBLE_RULES   := $(PROJ_ROOT)/.rules.verible_lint
 VERIBLE_SOURCES := $(shell find $(RTL_DIR) -name '*.sv')
@@ -509,18 +479,12 @@ lint-verible:
 	@$(VERIBLE_LINT) --rules_config $(VERIBLE_RULES) $(VERIBLE_SOURCES)
 
 
-# ============================================================================
-# CDC check — BerkeleyLab/Bedrock cdc_snitch (informational; see tools/cdc/)
-# ============================================================================
-# sv2v -> yosys (flatten) -> cdc_snitch.py -> tools/cdc/cdc_gate.py.
-#
-# cdc_snitch's raw BAD count is not the verdict: it models every top-level port
-# as its own clock domain and cannot tell a clock-gate output from its source
-# clock, so on this SoC ~98% of raw BADs are modelling artifacts. cdc_gate.py
-# canonicalizes domains (tools/cdc/cdc_config.yml, mirroring
-# pnr/constraints/phase5_soc_multiclock.sdc) and applies explicit justified
-# waivers; its exit status is the gate. `make cdc CDC_STRICT=1` propagates it.
-# Full writeup: Doc: tm:flow:cdc-snitch-poc
+# CDC check: BerkeleyLab/Bedrock cdc_snitch (informational; see tools/cdc/).
+# Chain: sv2v -> yosys (flatten) -> cdc_snitch.py -> tools/cdc/cdc_gate.py.
+# The raw BAD count of cdc_snitch is not the verdict: it models every top-level port as its own clock domain and
+# cannot tell a clock-gate output from its source clock. cdc_gate.py canonicalizes the domains
+# (tools/cdc/cdc_config.yml, mirroring pnr/constraints/phase5_soc_multiclock.sdc), applies justified waivers, and its
+# exit status is the gate. `make cdc CDC_STRICT=1` propagates it. Full writeup: Doc: tm:flow:cdc-snitch-poc
 CDC_DIR     := $(PROJ_ROOT)/sim/build/cdc
 CDC_STRICT  ?= 0
 # Same file list as lint_soc. axi_lite_register_bank.sv used to be appended here
@@ -530,18 +494,12 @@ CDC_STRICT  ?= 0
 # list; $(sort) also de-dupes if a future edit reintroduces an overlap.
 CDC_SOURCES := $(sort $(SOC_TOP_SOURCES))
 
-# sv2v-parse: Verilog-2005 portability gate (bead f7vs.12).
-# Converts the SoC sources with sv2v and parses + elaborates the result with
-# yosys. No CDC analysis, no synthesis -- seconds once the tools are cached.
-#
-# Exists because Verilator accepts constructs sv2v mistranslates, so the entire
-# cocotb regression can be green while the design is unsynthesisable. A real
-# instance shipped in PWM and broke CI (PR #198, fixed in 2c5f351); it would
-# equally have broken both PD flows, which are sv2v-fronted.
-#
-# The flist is regenerated from $(CDC_SOURCES) on every run, deliberately: a
-# stale list silently omits new modules and the check then passes without
-# examining them.
+# sv2v-parse: Verilog-2005 portability gate. It converts the SoC sources with sv2v and parses + elaborates
+# the result with yosys. No CDC analysis, no synthesis.
+# It exists because Verilator accepts constructs that sv2v mistranslates, so the whole cocotb regression can be
+# green while the design is unsynthesisable. Both PD flows are sv2v-fronted.
+# The flist is regenerated from $(CDC_SOURCES) on every run, on purpose: a stale list silently omits new
+# modules and the check then passes without examining them.
 .PHONY: sv2v-parse
 sv2v-parse:
 	@bash $(PROJ_ROOT)/tools/cdc/fetch_cdc_tools.sh --with-yosys
@@ -734,12 +692,11 @@ coverage:
 		echo "Note: verilator_coverage annotate failed (the merged .dat is still valid)"
 	@echo "Coverage report: reports/coverage_annotated/"
 
-# Bead 1eyv: CPU + Phase 3 cache + Phase 4 GPU suites, instrumented, merged into ONE file
-# ($(COV_DIR)/cpu_gpu_merged.dat) for tools/verif/coverage_report.py to combine with the SoC
-# regression's merged.dat.  Same Verilator, same flags, same report script as `soc_coverage`, so
-# the two inputs agree on point identity.  Separate from `coverage` so the nightly rtl-coverage
-# job's runtime and artifact are unchanged.  Fails (no `|| true`) if a suite fails or nothing was
-# written.
+# CPU + Phase 3 cache + Phase 4 GPU suites, instrumented, merged into ONE file ($(COV_DIR)/cpu_gpu_merged.dat)
+# for tools/verif/coverage_report.py to combine with merged.dat of the SoC regression. Same Verilator, same
+# flags, same report script as `soc_coverage`, so the two inputs agree on point identity. Separate from
+# `coverage`, so the runtime and artifact of the nightly rtl-coverage job are unchanged. Fails (no `|| true`)
+# if a suite fails or nothing was written.
 #   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/cov_cpu_gpu coverage_cpu_gpu
 .PHONY: coverage_cpu_gpu
 coverage_cpu_gpu:
@@ -806,12 +763,10 @@ icache:
 		VERILOG_SOURCES="$(CACHE_SOURCES)" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_icache
 
-# Cache arbiter unit tests (DUT = rv32i_cache_arbiter) -- GH #119 bead 2ft.
-# Standalone coverage for the priority mux (D$ write > D$ read > I$ read),
-# grant-hold-for-the-whole-burst, read-data routing isolation, and the
-# one-cycle registered-grant AR/AW forwarding delay documented in the RTL
-# header. No HLS arm here -- this is hand-written arbitration logic, not an
-# HLS-synthesizable block, so it is held to the normal lint bar.
+# Cache arbiter unit tests (DUT = rv32i_cache_arbiter). Standalone coverage for the priority mux
+# (D$ write > D$ read > I$ read), grant-hold-for-the-whole-burst, read-data routing isolation, and the
+# one-cycle registered-grant AR/AW forwarding delay documented in the RTL header. No HLS arm here: this is
+# hand-written arbitration logic, not an HLS-synthesizable block, so it is held to the normal lint bar.
 .PHONY: mem_cache_arbiter
 mem_cache_arbiter:
 	@echo "Running cache arbiter unit tests (priority, grant hold, isolation)..."
@@ -835,9 +790,8 @@ dcache:
 		VERILOG_SOURCES="$(CACHE_SOURCES)" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_dcache
 
-# rv32i_hazard_unit standalone unit tests (GH #119 bead `gvr`). The DUT is
-# purely combinational (no clock/reset) -- see tb/cocotb/cpu/test_hazard_unit.py
-# for the directed tests (oracle = the RTL's header comment) plus the
+# rv32i_hazard_unit standalone unit tests. The DUT is purely combinational (no clock/reset) -- see
+# tb/cocotb/cpu/test_hazard_unit.py for the directed tests (oracle = the RTL's header comment) plus the
 # randomised cross-arm differential that dumps sim/build/hazard_trace_*.json.
 .PHONY: cpu_hazard_unit
 cpu_hazard_unit:
@@ -850,20 +804,11 @@ cpu_hazard_unit:
 		VERILOG_SOURCES="$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_cpu_hazard_unit
 
-# rv32i_hazard_unit, HLS arm (GH #119 bead `gvr`): the SAME cocotb test
-# module as cpu_hazard_unit above, run against Bambu-generated Verilog
-# wrapped in a port-adapting + clock/reset/start/done handshake shim. The
-# testbench branches on the protocol difference in exactly one place
-# (HazardUnitDriver in test_hazard_unit.py); every vector and expected value
-# is identical for both arms.
-#
-# TOPLEVEL is the SHIM (rv32i_hazard_unit_hls), not the reference name, same
-# convention as gpu_coalescer_hls below.
-#
-# The generated .v and the shim are produced in parallel (not yet committed
-# when this target was authored) -- run the HLS flow first if this guard fires.
-# Recursive (=), not immediate (:=): HLS_OUT is defined later in this file
-# (gpu_coalescer_hls section) and must still be picked up here.
+# rv32i_hazard_unit, HLS arm: the SAME cocotb test module as cpu_hazard_unit above, run against Bambu-generated
+# Verilog wrapped in a port-adapting + clock/reset/start/done handshake shim. Every vector and expected value is
+# identical for both arms; the testbench branches on the protocol in one place (HazardUnitDriver in test_hazard_unit.py).
+# TOPLEVEL is the SHIM (rv32i_hazard_unit_hls), not the reference name, as for gpu_coalescer_hls below. Run the HLS flow first if the guard fires.
+# Recursive (=), not immediate (:=): HLS_OUT is defined later in this file (gpu_coalescer_hls section).
 HLS_HAZARD_UNIT_V = $(HLS_OUT)/rv32i_hazard_unit/rv32i_hazard_unit.v
 HLS_HAZARD_UNIT_SHIM := $(PROJ_ROOT)/hls/cpu/rv32i_hazard_unit/shim/rv32i_hazard_unit_hls.sv
 
@@ -1049,10 +994,9 @@ gpu_coalescer:
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_coalescer
 
-# vector_alu, HLS arm (GH #119 bead gg8 -- the genuine datapath pole). Same
-# unmodified cocotb suite as the hand-RTL gpu_alu target above; see the
-# gpu_coalescer_hls comment for why NO_TRACE / --output-split / -Wno-lint are
-# needed on machine-generated Verilog.
+# vector_alu, HLS arm: the genuine datapath pole. Same unmodified cocotb suite as the hand-RTL gpu_alu target
+# above; see the gpu_coalescer_hls comment for why NO_TRACE / --output-split / -Wno-lint are needed on
+# machine-generated Verilog.
 HLS_VALU_V = $(HLS_OUT)/vector_alu/vector_alu.v
 HLS_VALU_SHIM = $(PROJ_ROOT)/hls/gpu/vector_alu/shim/vector_alu_hls.sv
 
@@ -1072,22 +1016,12 @@ gpu_alu_hls:
 		NO_TRACE=1 EXTRA_BUILD_ARGS="" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_alu_hls
 
-# vector_alu, gate-level sim of a POST-SYNTHESIS ASAP7 netlist (GH #119 beads
-# egt/gcd/b0t -- settling functional correctness between USE_SYNLIG:true and
-# USE_SYNLIG:false+sv2v synthesis frontends). Same unmodified cocotb suite as
-# gpu_alu_hls above; the netlist top module (vector_alu_hls) already exposes
-# the same ports as the pre-synthesis shim, so no separate shim/pkg is needed
-# -- GLS_NETLIST must be a self-contained Verilog file with real gate
-# functionality (e.g. yosys `read_liberty -ignore_miss_func <libs>;
-# read_verilog <nl.v>; hierarchy -top vector_alu_hls; proc; opt_clean;
-# write_verilog`, NOT `flatten`+`opt -full` -- flattening ASAP7 cells to raw
-# yosys primitives explodes a ~50-90K-instance netlist into hundreds of
-# thousands of gates and both Verilator's front end and the g++ build have
-# been observed to not complete; substituting each liberty cell as its own
-# small hierarchical module keeps instance COUNT the same but module TYPE
-# count near ~100, which is what Verilator actually struggles with).
-# GLS_BUILD_TAG picks the SIM_BUILD subdirectory so different netlists don't
-# clobber each other's Verilator build.
+# vector_alu, gate-level sim of a POST-SYNTHESIS ASAP7 netlist: it settles functional correctness between the USE_SYNLIG:true
+# and USE_SYNLIG:false+sv2v frontends. Same unmodified cocotb suite as gpu_alu_hls. GLS_NETLIST must be a self-contained
+# Verilog file with real gate functionality, for example yosys `read_liberty -ignore_miss_func <libs>; read_verilog <nl.v>;
+# hierarchy -top vector_alu_hls; proc; opt_clean; write_verilog`, NOT `flatten` + `opt -full`: that explodes ASAP7 cells into
+# raw primitives and the Verilator and g++ builds did not complete. Keep each Liberty cell as its own small module: Verilator
+# struggles with many module types, not with many instances. GLS_BUILD_TAG picks the SIM_BUILD subdirectory per netlist.
 GLS_NETLIST ?=
 GLS_BUILD_TAG ?= default
 
@@ -1108,25 +1042,12 @@ gpu_alu_hls_gls:
 		NO_TRACE=1 EXTRA_BUILD_ARGS="" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_alu_hls_gls_$(GLS_BUILD_TAG)
 
-# memory_coalescer, HLS arm (GH #119 bead cfi): the SAME cocotb tests as
-# gpu_coalescer above, run against Bambu-generated Verilog wrapped in a
-# port-adapting shim. Running both arms through one unchanged testbench is what
-# makes the equivalence claim mean anything.
-#
-# Two deliberate differences from the hand-RTL target:
-#   * a distinct SIM_BUILD, so the two arms do not invalidate each other's
-#     ~100 MB Verilator build dir on every alternation;
-#   * EXTRA_VERILATOR_FLAGS, because machine-generated Verilog does not lint
-#     clean (20 warnings at Verilator's default, 0 errors) and this repo does not
-#     hold code it did not author to its own bar. The shim IS held to it.
-#
-# TOPLEVEL is the SHIM (memory_coalescer_hls), not the reference name: Bambu's
-# generated core is itself called `memory_coalescer`, and renaming machine-output
-# on every build is one more thing to break silently. The testbench never refers
-# to a module name -- only to dut.<signal> -- so the two coexist happily.
-#
-# The generated .v is not committed; run `make -C hls memory_coalescer` (inside
-# `nix develop .#hls`) to produce it first.
+# memory_coalescer, HLS arm: the SAME cocotb tests as gpu_coalescer above, run against Bambu-generated Verilog wrapped in a
+# port-adapting shim, so one unchanged testbench backs the equivalence claim. It differs from the hand-RTL target in two ways:
+# a distinct SIM_BUILD (the arms do not invalidate each other's build dir) and EXTRA_VERILATOR_FLAGS (generated Verilog does not
+# lint clean and this repo does not hold code it did not author to its bar; the shim IS held to it). TOPLEVEL is the SHIM
+# (memory_coalescer_hls), not the reference name: the generated core is itself called `memory_coalescer`. The testbench refers
+# only to dut.<signal>. Generate the .v first: `make -C hls memory_coalescer` inside `nix develop .#hls` (it is not committed).
 HLS_OUT ?= /nobackup/hls/out
 HLS_COALESCER_V := $(HLS_OUT)/memory_coalescer/memory_coalescer.v
 HLS_COALESCER_SHIM := $(PROJ_ROOT)/hls/gpu/memory_coalescer/shim/memory_coalescer_hls.sv
@@ -1351,10 +1272,8 @@ regression_full:
 		echo "========================================"; \
 	fi
 
-# Bead claude_verilog_test-f97: sweep $(SIM_BUILD_ROOT) rather than a hardcoded
-# CWD-relative list, so a relocated build dir is reclaimed instead of orphaned.
-# The glob also picks up targets added after this was written -- the old explicit
-# list had already drifted out of date.
+# Sweep $(SIM_BUILD_ROOT) rather than a hardcoded CWD-relative list, so a relocated build dir is reclaimed
+# instead of orphaned. The glob also picks up targets added later; an explicit list drifts out of date.
 .PHONY: clean-sim-builds
 clean-sim-builds:
 	@rm -rf $(SIM_BUILD_ROOT)/sim_build $(SIM_BUILD_ROOT)/sim_build_* 2>/dev/null || true

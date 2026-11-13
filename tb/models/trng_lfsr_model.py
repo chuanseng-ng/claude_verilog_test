@@ -1,58 +1,27 @@
-"""trng_lfsr_model.py -- bit-exact pure-Python golden model of the TRNG's default (LFSR) entropy
-source, rtl/periph/trng_lfsr_entropy.sv (bead claude_verilog_test-f7vs.8, Phase 6a-4,
-Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG").
+"""trng_lfsr_model.py -- bit-exact pure-Python golden model of the LFSR entropy source of the TRNG.
 
-THIS IS NOT A RANDOMNESS MODEL. The default-build TRNG is a deterministic pseudo-random generator
-that advertises the fact by forcing TRNG_STATUS.INSECURE = 1. This module exists so the L1 suite
-(tb/cocotb/soc/test_trng.py) can golden-vector the RTL: the whole point of the LFSR arm is that,
-given TRNG_SEED, every word the peripheral ever produces is a pure function of the seed. It is the
-authoritative specification of that function; the RTL implements what this file computes.
+Subject: rtl/periph/trng_lfsr_entropy.sv. This is NOT a randomness model. The default-build
+TRNG is a deterministic generator and forces TRNG_STATUS.INSECURE = 1. The module lets the L1
+suite (tb/cocotb/soc/test_trng.py) golden-vector the RTL: given TRNG_SEED, every word is a
+function of the seed. The RTL implements what this file computes.
 
-Entropy pipeline contract (one enabled, non-stalled core clock == one raw sample):
-
-  1. SEED MAPPING. Three Fibonacci LFSRs are loaded from the 32-bit TRNG_SEED by plain slicing:
-         lfsr31 = seed[30:0]     lfsr29 = seed[28:0]     lfsr23 = seed[22:0]
-     Seed bit 31 is unused. A slice of all zeros is a lock-up state (an LFSR loaded with 0 emits
-     0 forever); that is deliberately NOT rescued -- see TRNG_SEED == 0 below.
-  2. LFSR STEP. Register width n, tap t (1-based bit numbers, MSB = bit n):
-         out  = state[n-1]                          (the bit leaving the register)
-         fb   = state[n-1] ^ state[t-1]
-         state = ((state << 1) | fb) & (2**n - 1)
-     Polynomials (all primitive trinomials, maximal length 2**n - 1; verified by selftest()):
-         31-bit  x^31 + x^28 + 1  taps (31, 28)
-         29-bit  x^29 + x^27 + 1  taps (29, 27)
-         23-bit  x^23 + x^18 + 1  taps (23, 18)
-     The recurrence this realises is out[k] = out[k-n] ^ out[k-t], i.e. the trinomial
-     x^n + x^(n-t) + 1 -- the reciprocal of the well-known x^n + x^t + 1 form, also primitive.
-  3. RAW SAMPLE. raw[k] = out31[k] ^ out29[k] ^ out23[k]; all three registers step once per raw
-     sample. Sample 0 is taken from the freshly loaded state (before any step).
-  4. VON NEUMANN DEBIASER over consecutive NON-overlapping raw pairs (raw[2j], raw[2j+1]):
-         01 -> emit 0,  10 -> emit 1  (i.e. emit the FIRST bit of the pair),  00 / 11 -> discard.
-     For unbiased independent input 50 % of pairs survive, so ~4 raw samples buy 1 output bit.
-  5. WORD ASSEMBLY. Output bits are packed LSB-first: the first emitted bit is word bit 0, the
-     32nd is bit 31. A completed word is pushed to the FIFO; TRNG_DATA pops them in that order.
-  6. BACKPRESSURE IS A STALL, NOT A DROP. When a completed word cannot enter the (4-deep) FIFO,
-     the pipeline stops consuming raw samples (LFSRs hold). No sample is ever discarded for lack
-     of FIFO space, so the SEQUENCE of words popped is a function of the seed alone -- it does not
-     depend on when, or how fast, software reads.
-  7. HEALTH TEST (NIST SP 800-90B Sec.4.4.1 Repetition Count Test) on the RAW samples (the noise-
-     source output, before debiasing): run length of identical consecutive raw samples;
-     reaching CUTOFF = 21 (H = 1 bit/sample, alpha = 2**-20 -> C = 1 + ceil(20/1)) is a failure.
-     The count includes the first sample of a run (a run of 21 identical samples trips).
-  7b. After a health trip the pipeline HALTS (no further raw samples consumed) and the FIFO is
-     flushed; a W1C of STATUS.health_fail resumes it from the current LFSR state with the run
-     length restarted from empty (a still-stuck source therefore re-trips 21 samples later).
-  8. SESSION. The LFSRs load from TRNG_SEED, and the FIFO / word assembler / health run counter
-     are cleared, on every 0 -> 1 edge of CTRL.ENABLE. TRNG_SEED writes at any other time only
-     update the register (they take effect at the next enable edge).
-
-TRNG_SEED == 0 (or any seed whose low 31 bits are 0) therefore loads all three LFSRs with 0: the
-raw stream is constant 0, no pair ever survives the debiaser (no word is ever produced) and the
-repetition-count test trips at raw sample 21. That is the intended behaviour -- a dead source is
-reported (STATUS.health_fail), not silently papered over.
-
-Run `python3 tb/models/trng_lfsr_model.py` to execute the self-check (primitivity of the three
-polynomials, hand-checked first steps, and the known-answer words for the reset seed).
+Pipeline contract (one enabled, non-stalled core clock = one raw sample):
+  1. Seed: three Fibonacci LFSRs (31, 29 and 23 bits) load seed[30:0], seed[28:0], seed[22:0].
+     Seed bit 31 is unused. An all-zero slice locks up and is not rescued.
+  2. Step: out = state[n-1]; fb = state[n-1] ^ state[t-1]; state = ((state << 1) | fb) & mask.
+     Taps (n, t): (31, 28), (29, 27), (23, 18). selftest() checks that each polynomial is primitive.
+  3. Raw sample: raw[k] = out31[k] ^ out29[k] ^ out23[k]. Sample 0 is taken before any step.
+  4. Von Neumann debiaser on non-overlapping raw pairs: 01 emits 0, 10 emits 1, 00/11 drop.
+  5. Words pack LSB first. A full FIFO (4 deep) stalls the pipeline and never drops a sample,
+     so the word sequence depends on the seed alone.
+  6. Health test: repetition count (NIST SP 800-90B) on the raw samples. A run of 21 identical
+     samples trips. A trip halts the pipeline and flushes the FIFO. A W1C of STATUS.health_fail
+     resumes it with the run count restarted.
+  7. Session: every 0 -> 1 edge of CTRL.ENABLE loads the seed and clears the FIFO, the word
+     assembler and the run counter. A TRNG_SEED write at any other time changes only the register.
+     A seed whose low 31 bits are 0 gives a constant 0 stream: no word, trip at raw sample 21.
+Run: python3 tb/models/trng_lfsr_model.py (primitivity, first steps, known-answer words).
+Doc: ds:ch:phase6-ip-expansion-plan, tm:suite:trng-lfsr-model, cr:suite:trng-lfsr-model
 """
 
 from __future__ import annotations

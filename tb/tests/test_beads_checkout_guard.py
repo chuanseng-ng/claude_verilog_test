@@ -1,4 +1,4 @@
-"""Unit tests for tools/setup/beads_checkout_guard.py (bead 78ld).
+"""Unit tests for tools/setup/beads_checkout_guard.py.
 
 beads' post-checkout / post-merge hook runs ``bd import`` on whatever
 ``.beads/issues.jsonl`` the new HEAD carries, overwriting the authoritative
@@ -7,6 +7,8 @@ closed bead back to open, erases notes added after the last commit, and moves
 ``updated_at`` *backwards*. The guard diffs a DB export taken before the hook
 against one taken after, and re-imports the pre-hook rows of every bead the
 import regressed. These tests pin the regression rules and the restore path.
+
+Doc: cr:suite:test-beads-checkout-guard
 """
 
 from __future__ import annotations
@@ -107,14 +109,13 @@ def test_bead_missing_after_is_not_restored() -> None:
 
 
 def test_reopen_marker_never_exempts_a_regression() -> None:
-    """Regression 2026-10-06 (78ld itself): the guard must ignore the CI marker.
+    """Regression: the guard must ignore the CI marker.
 
-    78ld's notes described the escape hatch ("escape hatch 'beads-reopen-ok' in
+    An old note described the escape hatch ("escape hatch 'beads-reopen-ok' in
     notes/comments"). The old guard exempted any row whose notes contained the
-    marker, so a post-checkout import silently moved 78ld closed -> in_progress
-    (Dolt commit 22:10:21, inside the guard's window) and the guard stayed
-    quiet. A file-driven reopen is never deliberate in a single-DB setup; the
-    escape hatch for the guard is BEADS_CHECKOUT_GUARD=off.
+    marker, so a post-checkout import silently moved that bead closed -> in_progress
+    and the guard stayed quiet. A file-driven reopen is never deliberate in a
+    single-DB setup; the escape hatch for the guard is BEADS_CHECKOUT_GUARD=off.
     """
     notes = "FIX: CI gate, escape hatch 'beads-reopen-ok' in notes/comments."
     before = {"a": _row("a", "closed", updated_at=T1, notes=notes)}

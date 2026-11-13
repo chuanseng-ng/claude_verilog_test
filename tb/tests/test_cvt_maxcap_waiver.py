@@ -1,10 +1,12 @@
-"""Unit tests for the Sky130 SoC named max-cap waiver check (bead e45j).
+"""Unit tests for the Sky130 SoC named max-cap waiver check.
 
 The module under test (pnr/sky130/soc/plugin/cvt_maxcap_waiver.py) is pure Python with no LibreLane
 dependency, so these tests run outside the nix-shell.  Fixtures are synthetic: a miniature
 run directory with per-corner ``checks.rpt`` files in OpenSTA's
 ``report_check_types -violators`` layout and a miniature structural netlist in the layout
 OpenROAD writes (escaped names, concatenated bus ports).
+
+Doc: cr:suite:test-cvt-maxcap-waiver
 """
 
 import json
@@ -940,9 +942,9 @@ def test_committed_waiver_file_loads_and_has_the_expected_kinds():
     assert (
         cls.cls_driver_prefix == "sky130_fd_sc_hd__dlygate4sd3_"
         and cls.cls_load_pin == "SCD"
-        and cls.max_cap_pf == 0.12  # 0.115 -> 0.120 (user decision 2026-10-28)
+        and cls.max_cap_pf == 0.12  # 0.115 -> 0.120 (user decision)
     )
-    # the two waivers pinned to RUN_2026-10-27_05-40-27 were deleted (stale on the next run)
+    # the two waivers pinned to one earlier run were deleted (stale on the next run)
     for k in ("gen-a21oi-107570-run-2026-10-27", "gen-or4-076179-run-2026-10-27"):
         assert k not in by_id
     assert not any(i.startswith("sram-din0-") for i in by_id)  # stale ones deleted

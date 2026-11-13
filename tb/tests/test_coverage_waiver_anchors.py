@@ -1,8 +1,8 @@
-"""Unit tests for content-anchored line waivers in tools/verif/coverage_report.py (bead xlc4).
+"""Unit tests for content-anchored line waivers in tools/verif/coverage_report.py.
 
 Line waivers used to be keyed on absolute line numbers (``^L284\\b``).  Any edit above a waived
-point silently un-waived it, and the report only warned: PR #279 shifted ``sram_controller.sv``
-by +16 lines and turned the main ``soc_coverage`` gate red until PR #290 re-keyed it.  A line
+point silently un-waived it, and the report only warned: a shift of ``sram_controller.sv``
+by +16 lines turned the main ``soc_coverage`` gate red until the waiver was re-keyed.  A line
 waiver is now anchored on the stripped TEXT of the waived source line::
 
     module | line | @"default: state_q <= S_IDLE;" | b | why
@@ -18,6 +18,8 @@ with an ordinal ``#k/N`` for identical lines.  The properties pinned here:
   * the migration of numeric waivers resolves to exactly the old line numbers;
   * the report of an anchored waiver is identical to the report of the numeric waiver it
     replaced.
+
+Doc: cr:suite:test-coverage-waiver-anchors
 """
 
 # pylint: disable=missing-function-docstring,too-few-public-methods  # descriptive test names; Repo is a fixture helper
@@ -158,7 +160,7 @@ def test_parse_anchor_rejects_malformed_specs(spec: str) -> None:
 
 def test_shift_above_the_waived_line_keeps_the_waiver(tmp_path: Path) -> None:
     base = Repo(tmp_path / "a")
-    shifted = Repo(tmp_path / "b", pad=16)  # the PR #279 case: +16 lines above
+    shifted = Repo(tmp_path / "b", pad=16)  # the case of a +16 line shift above
     for repo in (base, shifted):
         rep = report_of(repo, tmp_path, [anchored()])
         (row,) = rep.modules

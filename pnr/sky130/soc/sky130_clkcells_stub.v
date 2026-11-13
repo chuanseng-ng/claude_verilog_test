@@ -1,6 +1,6 @@
 // sky130_clkcells_stub.v
 // Black-box stubs for the three sky130_fd_sc_hd library cells that the Sky130 SoC instantiates by hand on its
-// clock roots (bead claude_verilog_test-j41m.4; selected by +define+USE_SKY130_CLKCELLS, see
+// clock roots (selected by +define+USE_SKY130_CLKCELLS, see
 // rtl/mem/rv32i_clock_gate.sv and rtl/soc/dft/dft_clk_mux.sv). They are in SKY130_SOC_SV_FILES so that
 //   * Verilator (LibreLane Verilator.Lint, which reads only soc_top_sv2v.v and the macro blackboxes, not the
 //     standard-cell models) and the yosys elaboration gate (tools/verif/synth_gate) find a definition;

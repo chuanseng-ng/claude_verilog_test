@@ -1,4 +1,4 @@
-"""Unit tests for tools/verif/functional_coverage_report.py (bead h367).
+"""Unit tests for tools/verif/functional_coverage_report.py.
 
 The script merges the per-process YAML files that the cocotb suites export through
 ``cocotb-coverage`` and gates the result.  The properties pinned here, each by a test:
@@ -13,6 +13,8 @@ The script merges the per-process YAML files that the cocotb suites export throu
   * a model that shrinks below ``min_bins`` fails the gate even at 100 %;
   * the merged output is parity-checked against the library's own ``merge_coverage`` (skipped when
     ``cocotb_coverage`` is not installed).
+
+Doc: cr:suite:test-functional-coverage-report
 """
 
 from __future__ import annotations

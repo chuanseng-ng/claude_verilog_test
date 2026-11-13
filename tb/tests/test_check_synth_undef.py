@@ -1,9 +1,11 @@
-"""Tests for tools/verif/check_synth_undef.py (bead gc0y).
+"""Tests for tools/verif/check_synth_undef.py.
 
 The scanner exists because a synthesis frontend (Synlig/UHDM) replaced two hazard-unit port
-connections with ``5'x`` and logged only a Warning (bead dud4).  Every fixture under
+connections with ``5'x`` and logged only a Warning.  Every fixture under
 ``fixtures/synth_undef`` is a REAL excerpt of a yosys 0.46 log or of the pre-synthesis JSON
-header, taken from the dud4 synthesis runs or from the wording probes (see the README there).
+header, taken from the original synthesis runs or from the wording probes (see the README there).
+
+Doc: cr:suite:test-check-synth-undef
 """
 
 # pylint: disable=missing-function-docstring,protected-access,too-many-lines

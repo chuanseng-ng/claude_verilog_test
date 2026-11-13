@@ -1,5 +1,8 @@
 # ruff: noqa: E501
-"""Tests for tools/dft/atpg/regrade.py (bead j41m.15): the independent bit-parallel fault re-grader."""
+"""Tests for tools/dft/atpg/regrade.py: the independent bit-parallel fault re-grader.
+
+Doc: cr:suite:test-dft-atpg-regrade
+"""
 
 import sys
 from pathlib import Path

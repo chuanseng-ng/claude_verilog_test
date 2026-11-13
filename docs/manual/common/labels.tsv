@@ -122,16 +122,16 @@ cr:app:archive-session-summary:verification-status	docs/manual/cr/parts/04-fix-l
 cr:app:archive-session-summary:whats-working-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	9757	\texorpdfstring{What\textquotesingle s Working \ok{}}{What\textquotesingle s Working }
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
-cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	4258	Build files
+cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	5775	Build files
 cr:ch:fix-log	docs/manual/cr/parts/04-fix-log-and-archive.tex	3	Fix log
 cr:ch:investigations	docs/manual/cr/parts/03-investigations.tex	3	Investigations
 cr:ch:phase-5-soc-runs	docs/manual/cr/parts/02-run-histories.tex	3	Phase 5 SoC runs
 cr:ch:phase-history	docs/manual/cr/parts/01-phase-and-status-history.tex	3	Phase history
-cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	1510	Physical design files
+cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	1583	Physical design files
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
 cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
-cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4254	Test benches
+cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
 cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
 cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	306	Controls (MEASURED unless marked)
@@ -525,6 +525,12 @@ cr:fix:timing-analysis:possibility-3-debug-writes-require-cpu-to-be-halted-warni
 cr:fix:timing-analysis:problem-statement	docs/manual/cr/parts/04-fix-log-and-archive.tex	3606	Problem Statement
 cr:fix:timing-analysis:state-machine-flow	docs/manual/cr/parts/04-fix-log-and-archive.tex	3618	State Machine Flow
 cr:fix:timing-analysis:testing-hypothesis-what-if-branch-taken-0	docs/manual/cr/parts/04-fix-log-and-archive.tex	4204	\texorpdfstring{Testing Hypothesis: What if branch\_\allowbreak{}taken = 0?}{Testing Hypothesis: What if branch\_taken = 0?}
+cr:flow:ci-cocotb	docs/manual/cr/parts/05-source-file-history.tex	5780	\texttt{.github/workflows/cocotb.yml}
+cr:flow:ci-qa-checks	docs/manual/cr/parts/05-source-file-history.tex	6132	\texttt{.github/workflows/qa-checks.yml}
+cr:flow:ci-random-tests	docs/manual/cr/parts/05-source-file-history.tex	6223	\texttt{.github/workflows/random\_tests.yml}
+cr:flow:ci-rtl-checks	docs/manual/cr/parts/05-source-file-history.tex	6242	\texttt{.github/workflows/rtl-checks.yml}
+cr:flow:ci-soc-coverage	docs/manual/cr/parts/05-source-file-history.tex	6413	\texttt{.github/workflows/soc\_coverage.yml}
+cr:flow:ci-synth-undef-gate	docs/manual/cr/parts/05-source-file-history.tex	6677	\texttt{.github/workflows/synth-undef-gate.yml}
 cr:mod:apb-cdc-bridge	docs/manual/cr/parts/05-source-file-history.tex	31	\texttt{soc/apb\_cdc\_bridge.sv}
 cr:mod:apb4-register-bank	docs/manual/cr/parts/05-source-file-history.tex	8	\texttt{soc/apb4\_register\_bank.sv}
 cr:mod:axi-lite-interconnect	docs/manual/cr/parts/05-source-file-history.tex	71	\texttt{soc/axi\_lite\_interconnect.sv}
@@ -534,62 +540,75 @@ cr:mod:boot-rom	docs/manual/cr/parts/05-source-file-history.tex	140	\texttt{soc/
 cr:mod:cdc-reset-sync	docs/manual/cr/parts/05-source-file-history.tex	161	\texttt{soc/cdc/cdc\_reset\_sync.sv}
 cr:mod:cdc-sync	docs/manual/cr/parts/05-source-file-history.tex	178	\texttt{soc/cdc/cdc\_sync.sv}
 cr:mod:dft-clk-mux	docs/manual/cr/parts/05-source-file-history.tex	216	\texttt{soc/dft/dft\_clk\_mux.sv}
-cr:mod:fpga-sdp-ram-be	docs/manual/cr/parts/05-source-file-history.tex	1214	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
-cr:mod:fpga-sram-1rw	docs/manual/cr/parts/05-source-file-history.tex	1229	\texttt{fpga/fpga\_sram\_1rw.sv}
-cr:mod:gpu-compute-unit	docs/manual/cr/parts/05-source-file-history.tex	1244	\texttt{gpu/gpu\_compute\_unit.sv}
-cr:mod:gpu-pkg	docs/manual/cr/parts/05-source-file-history.tex	1264	\texttt{gpu/gpu\_pkg.sv}
-cr:mod:gpu-top	docs/manual/cr/parts/05-source-file-history.tex	1278	\texttt{gpu/gpu\_top.sv}
-cr:mod:i2c-bit-engine	docs/manual/cr/parts/05-source-file-history.tex	1394	\texttt{periph/i2c\_bit\_engine.sv}
-cr:mod:interrupt-controller	docs/manual/cr/parts/05-source-file-history.tex	1410	\texttt{periph/interrupt\_controller.sv}
+cr:mod:fpga-sdp-ram-be	docs/manual/cr/parts/05-source-file-history.tex	1278	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
+cr:mod:fpga-sram-1rw	docs/manual/cr/parts/05-source-file-history.tex	1293	\texttt{fpga/fpga\_sram\_1rw.sv}
+cr:mod:gpu-compute-unit	docs/manual/cr/parts/05-source-file-history.tex	1308	\texttt{gpu/gpu\_compute\_unit.sv}
+cr:mod:gpu-pkg	docs/manual/cr/parts/05-source-file-history.tex	1328	\texttt{gpu/gpu\_pkg.sv}
+cr:mod:gpu-top	docs/manual/cr/parts/05-source-file-history.tex	1342	\texttt{gpu/gpu\_top.sv}
+cr:mod:i2c-bit-engine	docs/manual/cr/parts/05-source-file-history.tex	1458	\texttt{periph/i2c\_bit\_engine.sv}
+cr:mod:interrupt-controller	docs/manual/cr/parts/05-source-file-history.tex	1474	\texttt{periph/interrupt\_controller.sv}
 cr:mod:pll-apb-regs	docs/manual/cr/parts/05-source-file-history.tex	232	\texttt{soc/pll/pll\_apb\_regs.sv}
-cr:mod:pll-rnm	docs/manual/cr/parts/05-source-file-history.tex	257	\texttt{soc/pll/pll\_rnm.sv}
-cr:mod:pll-subsystem	docs/manual/cr/parts/05-source-file-history.tex	271	\texttt{soc/pll/pll\_subsystem.sv}
-cr:mod:rv32i-clock-gate	docs/manual/cr/parts/05-source-file-history.tex	1312	\texttt{mem/rv32i\_clock\_gate.sv}
-cr:mod:rv32i-control	docs/manual/cr/parts/05-source-file-history.tex	973	\texttt{cpu/core/rv32i\_control.sv}
-cr:mod:rv32i-cpu-top	docs/manual/cr/parts/05-source-file-history.tex	1101	\texttt{cpu/rv32i\_cpu\_top.sv}
-cr:mod:rv32i-dcache	docs/manual/cr/parts/05-source-file-history.tex	1326	\texttt{mem/rv32i\_dcache.sv}
-cr:mod:rv32i-decode	docs/manual/cr/parts/05-source-file-history.tex	1051	\texttt{cpu/core/rv32i\_decode.sv}
-cr:mod:rv32i-icache	docs/manual/cr/parts/05-source-file-history.tex	1366	\texttt{mem/rv32i\_icache.sv}
-cr:mod:rv32i-pipeline-ex	docs/manual/cr/parts/05-source-file-history.tex	917	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex.sv}
-cr:mod:rv32i-pipeline-ex1c	docs/manual/cr/parts/05-source-file-history.tex	931	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
-cr:mod:rv32i-pipeline-mem	docs/manual/cr/parts/05-source-file-history.tex	945	\texttt{cpu/core/pipeline/rv32i\_pipeline\_mem.sv}
-cr:mod:rv32i-pipeline-wb	docs/manual/cr/parts/05-source-file-history.tex	959	\texttt{cpu/core/pipeline/rv32i\_pipeline\_wb.sv}
-cr:mod:soc-addr-map-pkg	docs/manual/cr/parts/05-source-file-history.tex	286	\texttt{soc/soc\_addr\_map\_pkg.sv}
-cr:mod:soc-periph-map-pkg	docs/manual/cr/parts/05-source-file-history.tex	304	\texttt{soc/soc\_periph\_map\_pkg.sv}
-cr:mod:soc-top	docs/manual/cr/parts/05-source-file-history.tex	389	\texttt{soc/soc\_top.sv}
-cr:mod:spi-controller	docs/manual/cr/parts/05-source-file-history.tex	1424	\texttt{periph/spi\_controller.sv}
-cr:mod:sram-controller	docs/manual/cr/parts/05-source-file-history.tex	788	\texttt{soc/sram\_controller.sv}
-cr:mod:trng	docs/manual/cr/parts/05-source-file-history.tex	1438	\texttt{periph/trng.sv}
-cr:mod:uart-controller	docs/manual/cr/parts/05-source-file-history.tex	1463	\texttt{periph/uart\_controller.sv}
-cr:mod:warp-scheduler	docs/manual/cr/parts/05-source-file-history.tex	1292	\texttt{gpu/warp\_scheduler.sv}
-cr:mod:watchdog-timer	docs/manual/cr/parts/05-source-file-history.tex	1477	\texttt{periph/watchdog\_timer.sv}
+cr:mod:pll-clkgen	docs/manual/cr/parts/05-source-file-history.tex	1568	\texttt{soc/pll/pll\_clkgen.sv}
+cr:mod:pll-rnm	docs/manual/cr/parts/05-source-file-history.tex	265	\texttt{soc/pll/pll\_rnm.sv}
+cr:mod:pll-subsystem	docs/manual/cr/parts/05-source-file-history.tex	279	\texttt{soc/pll/pll\_subsystem.sv}
+cr:mod:rv32i-clock-gate	docs/manual/cr/parts/05-source-file-history.tex	1376	\texttt{mem/rv32i\_clock\_gate.sv}
+cr:mod:rv32i-control	docs/manual/cr/parts/05-source-file-history.tex	1037	\texttt{cpu/core/rv32i\_control.sv}
+cr:mod:rv32i-cpu-top	docs/manual/cr/parts/05-source-file-history.tex	1165	\texttt{cpu/rv32i\_cpu\_top.sv}
+cr:mod:rv32i-dcache	docs/manual/cr/parts/05-source-file-history.tex	1390	\texttt{mem/rv32i\_dcache.sv}
+cr:mod:rv32i-decode	docs/manual/cr/parts/05-source-file-history.tex	1115	\texttt{cpu/core/rv32i\_decode.sv}
+cr:mod:rv32i-icache	docs/manual/cr/parts/05-source-file-history.tex	1430	\texttt{mem/rv32i\_icache.sv}
+cr:mod:rv32i-pipeline-ex	docs/manual/cr/parts/05-source-file-history.tex	981	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex.sv}
+cr:mod:rv32i-pipeline-ex1c	docs/manual/cr/parts/05-source-file-history.tex	995	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
+cr:mod:rv32i-pipeline-mem	docs/manual/cr/parts/05-source-file-history.tex	1009	\texttt{cpu/core/pipeline/rv32i\_pipeline\_mem.sv}
+cr:mod:rv32i-pipeline-wb	docs/manual/cr/parts/05-source-file-history.tex	1023	\texttt{cpu/core/pipeline/rv32i\_pipeline\_wb.sv}
+cr:mod:soc-addr-map-pkg	docs/manual/cr/parts/05-source-file-history.tex	294	\texttt{soc/soc\_addr\_map\_pkg.sv}
+cr:mod:soc-periph-map-pkg	docs/manual/cr/parts/05-source-file-history.tex	312	\texttt{soc/soc\_periph\_map\_pkg.sv}
+cr:mod:soc-top	docs/manual/cr/parts/05-source-file-history.tex	453	\texttt{soc/soc\_top.sv}
+cr:mod:spi-controller	docs/manual/cr/parts/05-source-file-history.tex	1488	\texttt{periph/spi\_controller.sv}
+cr:mod:sram-controller	docs/manual/cr/parts/05-source-file-history.tex	852	\texttt{soc/sram\_controller.sv}
+cr:mod:trng	docs/manual/cr/parts/05-source-file-history.tex	1502	\texttt{periph/trng.sv}
+cr:mod:uart-controller	docs/manual/cr/parts/05-source-file-history.tex	1527	\texttt{periph/uart\_controller.sv}
+cr:mod:warp-scheduler	docs/manual/cr/parts/05-source-file-history.tex	1356	\texttt{gpu/warp\_scheduler.sv}
+cr:mod:watchdog-timer	docs/manual/cr/parts/05-source-file-history.tex	1541	\texttt{periph/watchdog\_timer.sv}
 cr:part:fix-log-and-archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	1	Fix log and archive
 cr:part:investigations	docs/manual/cr/parts/03-investigations.tex	1	Investigations
 cr:part:phase-and-status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	1	Phase and status history
 cr:part:run-histories	docs/manual/cr/parts/02-run-histories.tex	1	Run histories
 cr:part:source-file-history	docs/manual/cr/parts/05-source-file-history.tex	1	Source-file history
-cr:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	1923	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
-cr:pd:asap7-gpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	2031	\texttt{asap7/gpu/macro\_placement\_3014.cfg}
-cr:pd:asap7-gpu-sdc	docs/manual/cr/parts/05-source-file-history.tex	2015	\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}
-cr:pd:asap7-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	2051	\texttt{asap7/pdn\_asap7\_orfs.tcl}
-cr:pd:asap7-soc-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	2397	\texttt{asap7/soc/pdn\_orfs.tcl}
-cr:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	2139	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
-cr:pd:asap7-soc-phase5-sdc	docs/manual/cr/parts/05-source-file-history.tex	2097	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
-cr:pd:makefile	docs/manual/cr/parts/05-source-file-history.tex	1515	\texttt{Makefile}
-cr:pd:phase1-cpu-enhanced-sdc	docs/manual/cr/parts/05-source-file-history.tex	2414	\texttt{constraints/phase1\_cpu\_enhanced.sdc}
-cr:pd:phase1-cpu-post-cts-sdc	docs/manual/cr/parts/05-source-file-history.tex	2432	\texttt{constraints/phase1\_cpu\_post\_cts.sdc}
-cr:pd:phase5-soc-multiclock-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	2754	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
-cr:pd:phase5-soc-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	2503	\texttt{constraints/phase5\_soc\_multiclock.sdc}
-cr:pd:phase5-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	2451	\texttt{constraints/phase5\_soc.sdc}
-cr:pd:phase5-soc-upf	docs/manual/cr/parts/05-source-file-history.tex	2484	\texttt{constraints/phase5\_soc.upf}
-cr:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/cr/parts/05-source-file-history.tex	3460	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
-cr:pd:scripts-check-cdc-timing-tcl	docs/manual/cr/parts/05-source-file-history.tex	3186	\texttt{scripts/check\_cdc\_timing.tcl}
-cr:pd:scripts-check-multiclock-sdc-tcl	docs/manual/cr/parts/05-source-file-history.tex	3476	\texttt{scripts/check\_multiclock\_sdc.tcl}
-cr:pd:sky130-soc-cdc-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	3857	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
-cr:pd:sky130-soc-macro-placement-cfg	docs/manual/cr/parts/05-source-file-history.tex	3896	\texttt{sky130/soc/macro\_placement.cfg}
-cr:pd:sky130-soc-pdn-tcl	docs/manual/cr/parts/05-source-file-history.tex	4007	\texttt{sky130/soc/pdn.tcl}
-cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration	docs/manual/cr/parts/05-source-file-history.tex	4223	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/rc\_calibration.tcl}
-cr:pd:sky130-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	3512	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
+cr:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	1996	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
+cr:pd:asap7-gpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	2104	\texttt{asap7/gpu/macro\_placement\_3014.cfg}
+cr:pd:asap7-gpu-sdc	docs/manual/cr/parts/05-source-file-history.tex	2088	\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}
+cr:pd:asap7-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	2124	\texttt{asap7/pdn\_asap7\_orfs.tcl}
+cr:pd:asap7-soc-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	2470	\texttt{asap7/soc/pdn\_orfs.tcl}
+cr:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	2212	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
+cr:pd:asap7-soc-phase5-sdc	docs/manual/cr/parts/05-source-file-history.tex	2170	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
+cr:pd:asap7-soc-rv32i-cpu-top-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4335	\texttt{asap7/soc/rv32i\_cpu\_top\_stub.sv}
+cr:pd:asap7-soc-soc-top-ports-v	docs/manual/cr/parts/05-source-file-history.tex	4368	\texttt{asap7/soc/soc\_top\_ports.v}
+cr:pd:freepdk45-gen-via-stubs-py	docs/manual/cr/parts/05-source-file-history.tex	4386	\texttt{freepdk45/gen\_via\_stubs.py}
+cr:pd:librelane-makefile	docs/manual/cr/parts/05-source-file-history.tex	4431	\texttt{librelane/Makefile}
+cr:pd:makefile	docs/manual/cr/parts/05-source-file-history.tex	1588	\texttt{Makefile}
+cr:pd:phase1-cpu-enhanced-sdc	docs/manual/cr/parts/05-source-file-history.tex	2487	\texttt{constraints/phase1\_cpu\_enhanced.sdc}
+cr:pd:phase1-cpu-post-cts-sdc	docs/manual/cr/parts/05-source-file-history.tex	2505	\texttt{constraints/phase1\_cpu\_post\_cts.sdc}
+cr:pd:phase5-soc-multiclock-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	2827	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
+cr:pd:phase5-soc-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	2576	\texttt{constraints/phase5\_soc\_multiclock.sdc}
+cr:pd:phase5-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	2524	\texttt{constraints/phase5\_soc.sdc}
+cr:pd:phase5-soc-upf	docs/manual/cr/parts/05-source-file-history.tex	2557	\texttt{constraints/phase5\_soc.upf}
+cr:pd:plugins-librelane-plugin-cvt-synthgate-init-py	docs/manual/cr/parts/05-source-file-history.tex	4445	\texttt{plugins/librelane\_plugin\_cvt\_synthgate/\_\_init\_\_.py}
+cr:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/cr/parts/05-source-file-history.tex	3533	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
+cr:pd:scripts-check-cdc-timing-tcl	docs/manual/cr/parts/05-source-file-history.tex	3259	\texttt{scripts/check\_cdc\_timing.tcl}
+cr:pd:scripts-check-multiclock-sdc-tcl	docs/manual/cr/parts/05-source-file-history.tex	3549	\texttt{scripts/check\_multiclock\_sdc.tcl}
+cr:pd:sky130-soc-cdc-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	3930	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
+cr:pd:sky130-soc-macro-placement-cfg	docs/manual/cr/parts/05-source-file-history.tex	3977	\texttt{sky130/soc/macro\_placement.cfg}
+cr:pd:sky130-soc-openram-sram4k-config-sky130-sram-4kbyte-1rw1r-32x1024-8-py	docs/manual/cr/parts/05-source-file-history.tex	4465	\texttt{sky130/soc/openram\_sram4k/config\_sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8.py}
+cr:pd:sky130-soc-pdn-tcl	docs/manual/cr/parts/05-source-file-history.tex	4088	\texttt{sky130/soc/pdn.tcl}
+cr:pd:sky130-soc-plugin-cvt-maxcap-waiver-py	docs/manual/cr/parts/05-source-file-history.tex	4479	\texttt{sky130/soc/plugin/cvt\_maxcap\_waiver.py}
+cr:pd:sky130-soc-plugin-cvt-scan-step-py	docs/manual/cr/parts/05-source-file-history.tex	4499	\texttt{sky130/soc/plugin/cvt\_scan\_step.py}
+cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration	docs/manual/cr/parts/05-source-file-history.tex	4304	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/rc\_calibration.tcl}
+cr:pd:sky130-soc-rv32i-cpu-top-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4525	\texttt{sky130/soc/rv32i\_cpu\_top\_stub.sv}
+cr:pd:sky130-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	3585	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
+cr:pd:sky130-soc-sky130-clkcells-stub-v	docs/manual/cr/parts/05-source-file-history.tex	4545	\texttt{sky130/soc/sky130\_clkcells\_stub.v}
+cr:pd:sky130-soc-sky130-sram-4kbyte-1rw1r-32x1024-8-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4559	\texttt{sky130/soc/sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8\_stub.sv}
+cr:pd:sky130-soc-soc-top-ports-v	docs/manual/cr/parts/05-source-file-history.tex	4582	\texttt{sky130/soc/soc\_top\_ports.v}
 cr:run:asap7	docs/manual/cr/parts/02-run-histories.tex	2452	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu	docs/manual/cr/parts/02-run-histories.tex	4728	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu:era-1-sdc-units-bug-runs-731	docs/manual/cr/parts/02-run-histories.tex	4842	Era 1: SDC Units Bug (Runs 7--31)
@@ -955,6 +974,48 @@ cr:status:roadmap:project-expectations	docs/manual/cr/parts/01-phase-and-status-
 cr:status:roadmap:target-technologies	docs/manual/cr/parts/01-phase-and-status-history.tex	5907	Target Technologies
 cr:status:roadmap:technology-node-cross-comparison-pd-results-estimates	docs/manual/cr/parts/01-phase-and-status-history.tex	7005	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
 cr:status:roadmap:timing-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	5870	Timing Verification
+cr:suite:aes128-model	docs/manual/cr/parts/05-source-file-history.tex	4903	\texttt{tb/models/aes128\_model.py}
+cr:suite:cpu-uvm-test-isa-uvm	docs/manual/cr/parts/05-source-file-history.tex	4889	\texttt{tb/cpu\_uvm/tests/test\_isa\_uvm.py}
+cr:suite:csr-model	docs/manual/cr/parts/05-source-file-history.tex	4919	\texttt{tb/models/csr\_model.py}
+cr:suite:gpu-kernel-model	docs/manual/cr/parts/05-source-file-history.tex	4957	\texttt{tb/models/gpu\_kernel\_model.py}
+cr:suite:npu-model	docs/manual/cr/parts/05-source-file-history.tex	4977	\texttt{tb/models/npu\_model.py}
+cr:suite:sim-cxx-shim-sh	docs/manual/cr/parts/05-source-file-history.tex	4853	\texttt{sim/cxx\_shim.sh}
+cr:suite:sim-makefile	docs/manual/cr/parts/05-source-file-history.tex	4606	\texttt{sim/Makefile}
+cr:suite:sim-sky130-sram-4kbyte-1rw1r-32x1024-8-sv	docs/manual/cr/parts/05-source-file-history.tex	4867	\texttt{sim/sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8.sv}
+cr:suite:test-aes128-model	docs/manual/cr/parts/05-source-file-history.tex	5009	\texttt{tb/tests/test\_aes128\_model.py}
+cr:suite:test-asap7-macro-power-inject	docs/manual/cr/parts/05-source-file-history.tex	5023	\texttt{tb/tests/test\_asap7\_macro\_power\_inject.py}
+cr:suite:test-beads-checkout-guard	docs/manual/cr/parts/05-source-file-history.tex	5050	\texttt{tb/tests/test\_beads\_checkout\_guard.py}
+cr:suite:test-cache-stall-encoding	docs/manual/cr/parts/05-source-file-history.tex	5077	\texttt{tb/tests/test\_cache\_stall\_encoding.py}
+cr:suite:test-cdc-gate	docs/manual/cr/parts/05-source-file-history.tex	5091	\texttt{tb/tests/test\_cdc\_gate.py}
+cr:suite:test-check-beads-reopen	docs/manual/cr/parts/05-source-file-history.tex	5117	\texttt{tb/tests/test\_check\_beads\_reopen.py}
+cr:suite:test-check-cocotb-results	docs/manual/cr/parts/05-source-file-history.tex	5141	\texttt{tb/tests/test\_check\_cocotb\_results.py}
+cr:suite:test-check-cpu-netlist-census	docs/manual/cr/parts/05-source-file-history.tex	5161	\texttt{tb/tests/test\_check\_cpu\_netlist\_census.py}
+cr:suite:test-check-scan-chains	docs/manual/cr/parts/05-source-file-history.tex	5175	\texttt{tb/tests/test\_check\_scan\_chains.py}
+cr:suite:test-check-synth-undef	docs/manual/cr/parts/05-source-file-history.tex	5189	\texttt{tb/tests/test\_check\_synth\_undef.py}
+cr:suite:test-check-synth-undef-functemp	docs/manual/cr/parts/05-source-file-history.tex	5215	\texttt{tb/tests/test\_check\_synth\_undef\_functemp.py}
+cr:suite:test-check-upf	docs/manual/cr/parts/05-source-file-history.tex	5241	\texttt{tb/tests/test\_check\_upf.py}
+cr:suite:test-coverage-report	docs/manual/cr/parts/05-source-file-history.tex	5255	\texttt{tb/tests/test\_coverage\_report.py}
+cr:suite:test-coverage-waiver-anchors	docs/manual/cr/parts/05-source-file-history.tex	5317	\texttt{tb/tests/test\_coverage\_waiver\_anchors.py}
+cr:suite:test-csr-model	docs/manual/cr/parts/05-source-file-history.tex	5344	\texttt{tb/tests/test\_csr\_model.py}
+cr:suite:test-cvt-maxcap-waiver	docs/manual/cr/parts/05-source-file-history.tex	5370	\texttt{tb/tests/test\_cvt\_maxcap\_waiver.py}
+cr:suite:test-cvt-scan-step	docs/manual/cr/parts/05-source-file-history.tex	5396	\texttt{tb/tests/test\_cvt\_scan\_step.py}
+cr:suite:test-dft-atpg-coverage	docs/manual/cr/parts/05-source-file-history.tex	5416	\texttt{tb/tests/test\_dft\_atpg\_coverage.py}
+cr:suite:test-dft-atpg-hold-mask	docs/manual/cr/parts/05-source-file-history.tex	5442	\texttt{tb/tests/test\_dft\_atpg\_hold\_mask.py}
+cr:suite:test-dft-atpg-prep	docs/manual/cr/parts/05-source-file-history.tex	5462	\texttt{tb/tests/test\_dft\_atpg\_prep.py}
+cr:suite:test-dft-atpg-regrade	docs/manual/cr/parts/05-source-file-history.tex	5476	\texttt{tb/tests/test\_dft\_atpg\_regrade.py}
+cr:suite:test-dft-atpg-regrade-vl	docs/manual/cr/parts/05-source-file-history.tex	5490	\texttt{tb/tests/test\_dft\_atpg\_regrade\_vl.py}
+cr:suite:test-dft-scan-check	docs/manual/cr/parts/05-source-file-history.tex	5504	\texttt{tb/tests/test\_dft\_scan\_check.py}
+cr:suite:test-eda-summarize	docs/manual/cr/parts/05-source-file-history.tex	5548	\texttt{tb/tests/test\_eda\_summarize.py}
+cr:suite:test-functional-coverage-report	docs/manual/cr/parts/05-source-file-history.tex	5606	\texttt{tb/tests/test\_functional\_coverage\_report.py}
+cr:suite:test-gen-filelist	docs/manual/cr/parts/05-source-file-history.tex	5620	\texttt{tb/tests/test\_gen\_filelist.py}
+cr:suite:test-gpu-model	docs/manual/cr/parts/05-source-file-history.tex	5634	\texttt{tb/tests/test\_gpu\_model.py}
+cr:suite:test-gpu-ref-model-block	docs/manual/cr/parts/05-source-file-history.tex	5654	\texttt{tb/tests/test\_gpu\_ref\_model\_block.py}
+cr:suite:test-npu-model	docs/manual/cr/parts/05-source-file-history.tex	5674	\texttt{tb/tests/test\_npu\_model.py}
+cr:suite:test-pin-lock	docs/manual/cr/parts/05-source-file-history.tex	5688	\texttt{tb/tests/test\_pin\_lock.py}
+cr:suite:test-sim-build-key	docs/manual/cr/parts/05-source-file-history.tex	5708	\texttt{tb/tests/test\_sim\_build\_key.py}
+cr:suite:test-soc-shards	docs/manual/cr/parts/05-source-file-history.tex	5740	\texttt{tb/tests/test\_soc\_shards.py}
+cr:suite:test-sync-rtk-config	docs/manual/cr/parts/05-source-file-history.tex	5760	\texttt{tb/tests/test\_sync\_rtk\_config.py}
+cr:suite:trng-lfsr-model	docs/manual/cr/parts/05-source-file-history.tex	4993	\texttt{tb/models/trng\_lfsr\_model.py}
 ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	133	CPU phases 0 to 3
 ds:ch:design-expectation	docs/manual/ds/parts/01-architecture.tex	9	Design Expectation
 ds:ch:design-expectation:cpu	docs/manual/ds/parts/01-architecture.tex	11	CPU
@@ -1764,14 +1825,14 @@ ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
 ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verification plan
-tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6048	Labels
+tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6495	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
 tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11896	Analog PLL
 tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	5339	ASAP7 flow
-tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	5729	CDC and lint checks
+tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	6227	CDC and lint checks
 tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	5347	Commercial flow comparison
 tm:ch:constraint-files	docs/manual/tm/parts/02-physical-design.tex	2824	Constraint files
-tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	784	Coverage
+tm:ch:coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	1282	Coverage
 tm:ch:decision-log	docs/manual/tm/parts/05-decisions.tex	3	Decision log
 tm:ch:dft-architecture	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4	DFT Architecture: scan + MBIST + JTAG for the Sky130 SoC (Stage 0)
 tm:ch:dft-architecture:0-decisions-already-taken-2026-10-10	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	23	Decisions already taken (2026-10-10)
@@ -1888,10 +1949,10 @@ tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	463	SoC fabric
 tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6504	Constraint file notes
 tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9232	PDN and flow script notes
 tm:ch:pd-macro-placement-notes	docs/manual/tm/parts/02-physical-design.tex	8905	Macro placement and pin order notes
-tm:ch:pd-makefile-notes	docs/manual/tm/parts/02-physical-design.tex	10269	pnr Makefile notes
-tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	6380	Proprietary simulators
+tm:ch:pd-makefile-notes	docs/manual/tm/parts/02-physical-design.tex	10316	pnr Makefile notes
+tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	6878	Proprietary simulators
 tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	4406	Sky130 flow
-tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	5932	Synthesis undefined-value gate
+tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	6430	Synthesis undefined-value gate
 tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6523	Tessent flows
 tm:ch:test-benches-and-suites	docs/manual/tm/parts/03-verification-infrastructure.tex	3	Test benches and suites
 tm:ch:tool-defects-and-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	3	Tool defects and caveats
@@ -2050,30 +2111,30 @@ tm:dec:xezim:7-pros-and-cons-per-option	docs/manual/tm/parts/05-decisions.tex	14
 tm:dec:xezim:8-improvement-areas	docs/manual/tm/parts/05-decisions.tex	1492	Improvement areas
 tm:dec:xezim:9-recommendation-and-open-decisions	docs/manual/tm/parts/05-decisions.tex	1539	Recommendation and open decisions
 tm:dec:xezim:can-xezims-misses-be-fixed-source-read-nothing-built	docs/manual/tm/parts/05-decisions.tex	1167	Can xezim\textquotesingle s misses be fixed? (source read, nothing built)
-tm:flow:cdc-snitch-poc	docs/manual/tm/parts/03-verification-infrastructure.tex	5735	CDC Snitch integration --- feasibility POC
-tm:flow:cdc-snitch-poc:decision	docs/manual/tm/parts/03-verification-infrastructure.tex	5890	Decision
-tm:flow:cdc-snitch-poc:follow-ups	docs/manual/tm/parts/03-verification-infrastructure.tex	5878	Follow-ups
-tm:flow:cdc-snitch-poc:goal	docs/manual/tm/parts/03-verification-infrastructure.tex	5743	Goal
-tm:flow:cdc-snitch-poc:result-full-soc-top-52-rtl-files-32k-registers	docs/manual/tm/parts/03-verification-infrastructure.tex	5814	\texorpdfstring{Result (full \code{soc_top}, 52 RTL files, \textasciitilde32k registers)}{Result (full , 52 RTL files, \textasciitilde32k registers)}
-tm:flow:cdc-snitch-poc:the-5234-bad-are-100-false-positives	docs/manual/tm/parts/03-verification-infrastructure.tex	5838	\texorpdfstring{The 5234 \code{BAD} are \textasciitilde100\% false positives}{The 5234 are \textasciitilde100\% false positives}
-tm:flow:cdc-snitch-poc:to-make-it-a-real-gate-deferred-to-phase-6	docs/manual/tm/parts/03-verification-infrastructure.tex	5908	To make it a real gate (deferred to Phase 6+)
-tm:flow:cdc-snitch-poc:toolchain-what-actually-worked	docs/manual/tm/parts/03-verification-infrastructure.tex	5785	Toolchain (what actually worked)
-tm:flow:cdc-snitch-poc:what-cdc-snitch-does	docs/manual/tm/parts/03-verification-infrastructure.tex	5750	\texorpdfstring{What cdc\_\allowbreak{}snitch does}{What cdc\_snitch does}
-tm:flow:commercial-sim-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	790	VCS code coverage and hole review (Step 4, report-only)
-tm:flow:commercial-sim-coverage:1-how-to-run	docs/manual/tm/parts/03-verification-infrastructure.tex	815	How to run
-tm:flow:commercial-sim-coverage:2-results	docs/manual/tm/parts/03-verification-infrastructure.tex	970	Results
-tm:flow:commercial-sim-coverage:21-overall	docs/manual/tm/parts/03-verification-infrastructure.tex	977	Overall
-tm:flow:commercial-sim-coverage:22-per-module-scores	docs/manual/tm/parts/03-verification-infrastructure.tex	1100	Per-module scores
-tm:flow:commercial-sim-coverage:3-ranked-hole-list-highest-risk-first	docs/manual/tm/parts/03-verification-infrastructure.tex	1680	Ranked hole list (highest risk first)
-tm:flow:commercial-sim-coverage:31-top-15	docs/manual/tm/parts/03-verification-infrastructure.tex	1731	Top 15
-tm:flow:commercial-sim-coverage:32-further-holes-ranks-16-onward-grouped	docs/manual/tm/parts/03-verification-infrastructure.tex	1950	Further holes (ranks 16 onward, grouped)
-tm:flow:commercial-sim-coverage:4-toggle-coverage-how-it-was-treated	docs/manual/tm/parts/03-verification-infrastructure.tex	2082	Toggle coverage: how it was treated
-tm:flow:commercial-sim-coverage:5-proposed-waivers-nothing-is-written-for-a-human-to-accept	docs/manual/tm/parts/03-verification-infrastructure.tex	2134	Proposed waivers (nothing is written; for a human to accept)
-tm:flow:commercial-sim-coverage:6-caveats-and-tool-behaviour-that-affects-reading-the-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	2207	Caveats and tool behaviour that affects reading the numbers
-tm:flow:commercial-sim-coverage:7-functional-coverage-that-already-exists-and-how-it-relates	docs/manual/tm/parts/03-verification-infrastructure.tex	2270	Functional coverage that already exists, and how it relates
-tm:flow:commercial-sim-coverage:8-reproducibility-and-provenance	docs/manual/tm/parts/03-verification-infrastructure.tex	2326	Reproducibility and provenance
-tm:flow:commercial-sim-coverage:instrumentation-did-not-change-passfail	docs/manual/tm/parts/03-verification-infrastructure.tex	919	Instrumentation did not change pass/fail
-tm:flow:commercial-sim-coverage:what-coverage1-simvcs-does-tbcocotbcommonsim-portabilitymk	docs/manual/tm/parts/03-verification-infrastructure.tex	845	\texorpdfstring{What \texttt{COVERAGE=\allowbreak{}1\ SIM=\allowbreak{}vcs} does (tb/\allowbreak{}cocotb/\allowbreak{}common/\allowbreak{}sim\_\allowbreak{}portability.mk)}{What does (tb/cocotb/common/sim\_portability.mk)}
+tm:flow:cdc-snitch-poc	docs/manual/tm/parts/03-verification-infrastructure.tex	6233	CDC Snitch integration --- feasibility POC
+tm:flow:cdc-snitch-poc:decision	docs/manual/tm/parts/03-verification-infrastructure.tex	6388	Decision
+tm:flow:cdc-snitch-poc:follow-ups	docs/manual/tm/parts/03-verification-infrastructure.tex	6376	Follow-ups
+tm:flow:cdc-snitch-poc:goal	docs/manual/tm/parts/03-verification-infrastructure.tex	6241	Goal
+tm:flow:cdc-snitch-poc:result-full-soc-top-52-rtl-files-32k-registers	docs/manual/tm/parts/03-verification-infrastructure.tex	6312	\texorpdfstring{Result (full \code{soc_top}, 52 RTL files, \textasciitilde32k registers)}{Result (full , 52 RTL files, \textasciitilde32k registers)}
+tm:flow:cdc-snitch-poc:the-5234-bad-are-100-false-positives	docs/manual/tm/parts/03-verification-infrastructure.tex	6336	\texorpdfstring{The 5234 \code{BAD} are \textasciitilde100\% false positives}{The 5234 are \textasciitilde100\% false positives}
+tm:flow:cdc-snitch-poc:to-make-it-a-real-gate-deferred-to-phase-6	docs/manual/tm/parts/03-verification-infrastructure.tex	6406	To make it a real gate (deferred to Phase 6+)
+tm:flow:cdc-snitch-poc:toolchain-what-actually-worked	docs/manual/tm/parts/03-verification-infrastructure.tex	6283	Toolchain (what actually worked)
+tm:flow:cdc-snitch-poc:what-cdc-snitch-does	docs/manual/tm/parts/03-verification-infrastructure.tex	6248	\texorpdfstring{What cdc\_\allowbreak{}snitch does}{What cdc\_snitch does}
+tm:flow:commercial-sim-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	1288	VCS code coverage and hole review (Step 4, report-only)
+tm:flow:commercial-sim-coverage:1-how-to-run	docs/manual/tm/parts/03-verification-infrastructure.tex	1313	How to run
+tm:flow:commercial-sim-coverage:2-results	docs/manual/tm/parts/03-verification-infrastructure.tex	1468	Results
+tm:flow:commercial-sim-coverage:21-overall	docs/manual/tm/parts/03-verification-infrastructure.tex	1475	Overall
+tm:flow:commercial-sim-coverage:22-per-module-scores	docs/manual/tm/parts/03-verification-infrastructure.tex	1598	Per-module scores
+tm:flow:commercial-sim-coverage:3-ranked-hole-list-highest-risk-first	docs/manual/tm/parts/03-verification-infrastructure.tex	2178	Ranked hole list (highest risk first)
+tm:flow:commercial-sim-coverage:31-top-15	docs/manual/tm/parts/03-verification-infrastructure.tex	2229	Top 15
+tm:flow:commercial-sim-coverage:32-further-holes-ranks-16-onward-grouped	docs/manual/tm/parts/03-verification-infrastructure.tex	2448	Further holes (ranks 16 onward, grouped)
+tm:flow:commercial-sim-coverage:4-toggle-coverage-how-it-was-treated	docs/manual/tm/parts/03-verification-infrastructure.tex	2580	Toggle coverage: how it was treated
+tm:flow:commercial-sim-coverage:5-proposed-waivers-nothing-is-written-for-a-human-to-accept	docs/manual/tm/parts/03-verification-infrastructure.tex	2632	Proposed waivers (nothing is written; for a human to accept)
+tm:flow:commercial-sim-coverage:6-caveats-and-tool-behaviour-that-affects-reading-the-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	2705	Caveats and tool behaviour that affects reading the numbers
+tm:flow:commercial-sim-coverage:7-functional-coverage-that-already-exists-and-how-it-relates	docs/manual/tm/parts/03-verification-infrastructure.tex	2768	Functional coverage that already exists, and how it relates
+tm:flow:commercial-sim-coverage:8-reproducibility-and-provenance	docs/manual/tm/parts/03-verification-infrastructure.tex	2824	Reproducibility and provenance
+tm:flow:commercial-sim-coverage:instrumentation-did-not-change-passfail	docs/manual/tm/parts/03-verification-infrastructure.tex	1417	Instrumentation did not change pass/fail
+tm:flow:commercial-sim-coverage:what-coverage1-simvcs-does-tbcocotbcommonsim-portabilitymk	docs/manual/tm/parts/03-verification-infrastructure.tex	1343	\texorpdfstring{What \texttt{COVERAGE=\allowbreak{}1\ SIM=\allowbreak{}vcs} does (tb/\allowbreak{}cocotb/\allowbreak{}common/\allowbreak{}sim\_\allowbreak{}portability.mk)}{What does (tb/cocotb/common/sim\_portability.mk)}
 tm:flow:control-signals-analysis	docs/manual/tm/parts/03-verification-infrastructure.tex	324	\texorpdfstring{Control Signal Analysis for rv32i\_\allowbreak{}decode.sv}{Control Signal Analysis for rv32i\_decode.sv}
 tm:flow:control-signals-analysis:1-mem-to-reg-write-back-mux-control	docs/manual/tm/parts/03-verification-infrastructure.tex	362	\texorpdfstring{\code{mem_to_reg} (Write-Back Mux Control)}{(Write-Back Mux Control)}
 tm:flow:control-signals-analysis:2-pc-wr-en-program-counter-write-enable	docs/manual/tm/parts/03-verification-infrastructure.tex	431	\texorpdfstring{\code{pc_wr_en} (Program Counter Write Enable)}{(Program Counter Write Enable)}
@@ -2091,74 +2152,74 @@ tm:flow:control-signals-analysis:recommendation	docs/manual/tm/parts/03-verifica
 tm:flow:control-signals-analysis:should-not-add-handled-elsewhere	docs/manual/tm/parts/03-verification-infrastructure.tex	620	Should NOT Add (Handled Elsewhere)
 tm:flow:control-signals-analysis:summary-and-recommendations	docs/manual/tm/parts/03-verification-infrastructure.tex	592	Summary and Recommendations
 tm:flow:control-signals-analysis:updated-decoder-interface-proposal	docs/manual/tm/parts/03-verification-infrastructure.tex	638	Updated Decoder Interface Proposal
-tm:flow:functional-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	2352	Functional coverage in the cocotb flow (bead h367)
-tm:flow:functional-coverage:1-evaluation	docs/manual/tm/parts/03-verification-infrastructure.tex	2363	Evaluation
-tm:flow:functional-coverage:2-flow	docs/manual/tm/parts/03-verification-infrastructure.tex	2450	Flow
-tm:flow:functional-coverage:3-the-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	2489	The gate
-tm:flow:functional-coverage:4-rolling-out-to-another-peripheral	docs/manual/tm/parts/03-verification-infrastructure.tex	2516	Rolling out to another peripheral
-tm:flow:functional-coverage:5-what-this-does-not-do	docs/manual/tm/parts/03-verification-infrastructure.tex	2567	What this does not do
-tm:flow:i2c-functional-coverage-model	docs/manual/tm/parts/03-verification-infrastructure.tex	2589	I2C functional-coverage model (bead h367 pilot)
-tm:flow:i2c-functional-coverage-model:bus-what-the-master-did-on-the-wire-source-bus	docs/manual/tm/parts/03-verification-infrastructure.tex	2607	bus: what the master did on the wire (source: bus)
-tm:flow:i2c-functional-coverage-model:cfg-configuration-programmed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	2695	cfg: configuration programmed (source: apb)
-tm:flow:i2c-functional-coverage-model:cmd-the-i2c-cmd-words-issued-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	2658	cmd: the I2C\_CMD words issued (source: apb)
-tm:flow:i2c-functional-coverage-model:err-error-and-recovery-paths	docs/manual/tm/parts/03-verification-infrastructure.tex	2770	err: error and recovery paths
-tm:flow:i2c-functional-coverage-model:irq-status-fifo-what-software-observed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	2733	irq / status / fifo: what software observed (source: apb)
-tm:flow:i2c-functional-coverage-model:known-limits-of-the-model	docs/manual/tm/parts/03-verification-infrastructure.tex	2867	Known limits of the model
-tm:flow:i2c-functional-coverage-model:reachability-and-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	2830	Reachability and waivers
-tm:flow:i2c-functional-coverage-model:soc-reached-through-the-real-fabric-test-soc-i2cpy-source-scenario	docs/manual/tm/parts/03-verification-infrastructure.tex	2819	\texorpdfstring{soc: reached through the real fabric (\code{test_soc_i2c.py}, source: scenario)}{soc: reached through the real fabric (, source: scenario)}
-tm:flow:soc-coverage-report	docs/manual/tm/parts/03-verification-infrastructure.tex	2887	SoC line + toggle coverage report (GH \#216)
-tm:flow:soc-coverage-report:05wf-re-measurement-uart-controller-spi-controller-unit-level-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	5120	\texorpdfstring{05wf re-measurement: \code{uart_controller} / \code{spi_controller} (unit level, 2026-10-08)}{05wf re-measurement: / (unit level, 2026-10-08)}
-tm:flow:soc-coverage-report:7ovx-register-walk-re-measurement-2026-10-09	docs/manual/tm/parts/03-verification-infrastructure.tex	4687	7ovx register-walk re-measurement (2026-10-09)
-tm:flow:soc-coverage-report:adjusted-totals-before-after-triaged-trees-pr-226-data	docs/manual/tm/parts/03-verification-infrastructure.tex	5189	Adjusted totals, before / after (triaged trees, PR \#226 data)
-tm:flow:soc-coverage-report:ci-and-recommendation	docs/manual/tm/parts/03-verification-infrastructure.tex	3731	CI and recommendation
-tm:flow:soc-coverage-report:combined-report-soc-cpu-cache-gpu-suites-bead-1eyv-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	3462	\texorpdfstring{Combined report: SoC + CPU / cache / GPU suites (bead \code{1eyv}, 2026-10-10)}{Combined report: SoC + CPU / cache / GPU suites (bead , 2026-10-10)}
-tm:flow:soc-coverage-report:coverage-cleanup-beads-j41m7-34dv-4pl8-0ntg-xkw5-pr-316-2026-10-18	docs/manual/tm/parts/03-verification-infrastructure.tex	4217	Coverage cleanup: beads j41m.7, 34dv, 4pl8, 0ntg, xkw5 (PR \#316, 2026-10-18)
-tm:flow:soc-coverage-report:coverage-cleanup-second-pass-bead-xkw5-leftovers-pr-320-2026-10-19	docs/manual/tm/parts/03-verification-infrastructure.tex	4364	Coverage cleanup, second pass: bead xkw5 leftovers (PR \#320, 2026-10-19)
-tm:flow:soc-coverage-report:ej6j-axi4-fabric-re-measurement-2026-10-07	docs/manual/tm/parts/03-verification-infrastructure.tex	4924	ej6j AXI4-fabric re-measurement (2026-10-07)
-tm:flow:soc-coverage-report:findings-no-rtl-change-made	docs/manual/tm/parts/03-verification-infrastructure.tex	4636	Findings (no RTL change made)
-tm:flow:soc-coverage-report:findings-rtl-bugs-not-fixed-per-scope	docs/manual/tm/parts/03-verification-infrastructure.tex	4143	Findings (RTL bugs; not fixed, per scope)
-tm:flow:soc-coverage-report:gate-decision	docs/manual/tm/parts/03-verification-infrastructure.tex	5482	Gate decision
-tm:flow:soc-coverage-report:gate-what-is-and-is-not-covered	docs/manual/tm/parts/03-verification-infrastructure.tex	4190	Gate: what is and is not covered
-tm:flow:soc-coverage-report:gh-222-waiver-audit-bead-kp61-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	5004	\texorpdfstring{GH \#222 waiver audit (bead \code{kp61}, 2026-10-08)}{GH \#222 waiver audit (bead , 2026-10-08)}
-tm:flow:soc-coverage-report:how-to	docs/manual/tm/parts/03-verification-infrastructure.tex	5666	How to
-tm:flow:soc-coverage-report:informational-trees-before-soc-suites-only-after-combined	docs/manual/tm/parts/03-verification-infrastructure.tex	3567	Informational trees, before (SoC suites only) / after (combined)
-tm:flow:soc-coverage-report:informational-trees-no-triage-no-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	3349	Informational trees (no triage, no waivers)
-tm:flow:soc-coverage-report:method	docs/manual/tm/parts/03-verification-infrastructure.tex	2901	Method
-tm:flow:soc-coverage-report:method-1	docs/manual/tm/parts/03-verification-infrastructure.tex	3471	Method
-tm:flow:soc-coverage-report:new-tests	docs/manual/tm/parts/03-verification-infrastructure.tex	3949	New tests
-tm:flow:soc-coverage-report:new-tests-no-rtl-change	docs/manual/tm/parts/03-verification-infrastructure.tex	4259	New tests (no RTL change)
-tm:flow:soc-coverage-report:new-tests-no-rtl-change-1	docs/manual/tm/parts/03-verification-infrastructure.tex	4507	New tests (no RTL change)
-tm:flow:soc-coverage-report:per-module-result-ci-run-above-adjusted-toggle-hittotal-rows-shown-only-where-the-module-changed	docs/manual/tm/parts/03-verification-infrastructure.tex	4586	\texorpdfstring{Per-module result (CI run above; adjusted toggle, hit/\allowbreak{}total; rows shown only where the module changed)}{Per-module result (CI run above; adjusted toggle, hit/total; rows shown only where the module changed)}
-tm:flow:soc-coverage-report:per-module-result-line-hittotal-waived-category-b-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	3796	\texorpdfstring{Per-module result (line \%, hit/\allowbreak{}total; "waived" = category-b points removed from the denominator)}{Per-module result (line \%, hit/total; "waived" = category-b points removed from the denominator)}
-tm:flow:soc-coverage-report:remaining-slice-2-and-what-is-not-verified	docs/manual/tm/parts/03-verification-infrastructure.tex	4021	Remaining (slice 2) and what is not verified
-tm:flow:soc-coverage-report:reproducing	docs/manual/tm/parts/03-verification-infrastructure.tex	5719	Reproducing
-tm:flow:soc-coverage-report:results	docs/manual/tm/parts/03-verification-infrastructure.tex	3211	Results
-tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-1-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	3762	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead , 2026-10-10)}
-tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-2-remaining-gaps-same-head-measurement-gate-flip-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	4056	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead , 2026-10-10)}
-tm:flow:soc-coverage-report:still-open	docs/manual/tm/parts/03-verification-infrastructure.tex	4660	Still open
-tm:flow:soc-coverage-report:still-open-xkw5-stays-open	docs/manual/tm/parts/03-verification-infrastructure.tex	4342	Still open (xkw5 stays open)
-tm:flow:soc-coverage-report:the-prover-waivers-cite-a-proof-not-a-netlist-lookup	docs/manual/tm/parts/03-verification-infrastructure.tex	4415	The prover: waivers cite a proof, not a netlist lookup
-tm:flow:soc-coverage-report:triage	docs/manual/tm/parts/03-verification-infrastructure.tex	5229	Triage
-tm:flow:soc-coverage-report:triage-of-every-uncovered-point-head-line-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	3857	Triage of every uncovered point (HEAD line numbers)
-tm:flow:soc-coverage-report:triaged-trees-after-60-waivers-48-line-and-950-toggle-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	3226	Triaged trees (after 60 waivers: 48 line and 950 toggle points removed from the denominator)
-tm:flow:soc-coverage-report:waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	4312	Waivers
-tm:flow:soc-coverage-report:waivers-added	docs/manual/tm/parts/03-verification-infrastructure.tex	4013	Waivers added
-tm:flow:soc-coverage-report:what-closed-the-slice-1-open-points	docs/manual/tm/parts/03-verification-infrastructure.tex	4092	What closed the slice-1 open points
-tm:flow:synth-undef-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	5939	\texorpdfstring{Synthesis undef-elaboration gate (bead \code{gc0y})}{Synthesis undef-elaboration gate (bead )}
-tm:flow:synth-undef-gate:allowlist	docs/manual/tm/parts/03-verification-infrastructure.tex	6308	Allowlist
-tm:flow:synth-undef-gate:ci-job-githubworkflowssynth-undef-gateyml-toolsverifsynth-gateci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6330	\texorpdfstring{CI job (\src{.github/workflows/synth-undef-gate.yml}, \src{tools/verif/synth_gate/ci_smoke.sh})}{CI job (, )}
-tm:flow:synth-undef-gate:components	docs/manual/tm/parts/03-verification-infrastructure.tex	5952	Components
-tm:flow:synth-undef-gate:controls-all-in-blocking-mode-run-by-ci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6225	\texorpdfstring{Controls (all in blocking mode, run by \code{ci_smoke.sh})}{Controls (all in blocking mode, run by )}
-tm:flow:synth-undef-gate:flow-wiring	docs/manual/tm/parts/03-verification-infrastructure.tex	6278	Flow wiring
-tm:flow:synth-undef-gate:measured-yosys-046-sv2v-00131-toolsverifsynth-gateelab-gatesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6156	\texorpdfstring{Measured (yosys 0.46, sv2v 0.0.13.1; \src{tools/verif/synth_gate/elab_gate.sh})}{Measured (yosys 0.46, sv2v 0.0.13.1; )}
-tm:flow:synth-undef-gate:mechanism-read-from-the-rtlil-tbtestsfixturessynth-undeffunctemp	docs/manual/tm/parts/03-verification-infrastructure.tex	6074	\texorpdfstring{Mechanism (read from the RTLIL, \code{tb/tests/fixtures/synth_undef/functemp_*})}{Mechanism (read from the RTLIL, )}
-tm:flow:synth-undef-gate:netlist-census-tripwire-toolsverifcheck-cpu-netlist-censuspy	docs/manual/tm/parts/03-verification-infrastructure.tex	6366	\texorpdfstring{Netlist census tripwire (\src{tools/verif/check_cpu_netlist_census.py})}{Netlist census tripwire ()}
-tm:flow:synth-undef-gate:pattern-list-evidence-probe-designs-through-yosys-046-synlig-plugin-and-through-sv2v-read-verilog-strings-of-yosys-046062-and-synlig-svso	docs/manual/tm/parts/03-verification-infrastructure.tex	5985	\texorpdfstring{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + \code{read_verilog}; \code{strings} of yosys 0.46/0.62 and \code{synlig-sv.so})}{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + ; of yosys 0.46/0.62 and )}
-tm:flow:synth-undef-gate:post-incrementation-operations-are-handled-as-pre-incrementation	docs/manual/tm/parts/03-verification-infrastructure.tex	6288	\texorpdfstring{\texttt{Post-\allowbreak{}incrementation\ operations\ are\ handled\ as\ pre-\allowbreak{}incrementation}}{}
-tm:flow:synth-undef-gate:report	docs/manual/tm/parts/03-verification-infrastructure.tex	6138	Report
-tm:flow:synth-undef-gate:sv2v-function-temporaries-on-the-soc-bead-j1b7	docs/manual/tm/parts/03-verification-infrastructure.tex	6060	\texorpdfstring{sv2v function temporaries on the SoC (bead \code{j1b7})}{sv2v function temporaries on the SoC (bead )}
-tm:flow:synth-undef-gate:the-rule-func-temp-dead-init	docs/manual/tm/parts/03-verification-infrastructure.tex	6094	\texorpdfstring{The rule \code{func-temp-dead-init}}{The rule }
-tm:flow:synth-undef-gate:what-the-gate-does-not-cover	docs/manual/tm/parts/03-verification-infrastructure.tex	6318	What the gate does not cover
+tm:flow:functional-coverage	docs/manual/tm/parts/03-verification-infrastructure.tex	2850	Functional coverage in the cocotb flow (bead h367)
+tm:flow:functional-coverage:1-evaluation	docs/manual/tm/parts/03-verification-infrastructure.tex	2861	Evaluation
+tm:flow:functional-coverage:2-flow	docs/manual/tm/parts/03-verification-infrastructure.tex	2948	Flow
+tm:flow:functional-coverage:3-the-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	2987	The gate
+tm:flow:functional-coverage:4-rolling-out-to-another-peripheral	docs/manual/tm/parts/03-verification-infrastructure.tex	3014	Rolling out to another peripheral
+tm:flow:functional-coverage:5-what-this-does-not-do	docs/manual/tm/parts/03-verification-infrastructure.tex	3065	What this does not do
+tm:flow:i2c-functional-coverage-model	docs/manual/tm/parts/03-verification-infrastructure.tex	3087	I2C functional-coverage model (bead h367 pilot)
+tm:flow:i2c-functional-coverage-model:bus-what-the-master-did-on-the-wire-source-bus	docs/manual/tm/parts/03-verification-infrastructure.tex	3105	bus: what the master did on the wire (source: bus)
+tm:flow:i2c-functional-coverage-model:cfg-configuration-programmed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	3193	cfg: configuration programmed (source: apb)
+tm:flow:i2c-functional-coverage-model:cmd-the-i2c-cmd-words-issued-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	3156	cmd: the I2C\_CMD words issued (source: apb)
+tm:flow:i2c-functional-coverage-model:err-error-and-recovery-paths	docs/manual/tm/parts/03-verification-infrastructure.tex	3268	err: error and recovery paths
+tm:flow:i2c-functional-coverage-model:irq-status-fifo-what-software-observed-source-apb	docs/manual/tm/parts/03-verification-infrastructure.tex	3231	irq / status / fifo: what software observed (source: apb)
+tm:flow:i2c-functional-coverage-model:known-limits-of-the-model	docs/manual/tm/parts/03-verification-infrastructure.tex	3365	Known limits of the model
+tm:flow:i2c-functional-coverage-model:reachability-and-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	3328	Reachability and waivers
+tm:flow:i2c-functional-coverage-model:soc-reached-through-the-real-fabric-test-soc-i2cpy-source-scenario	docs/manual/tm/parts/03-verification-infrastructure.tex	3317	\texorpdfstring{soc: reached through the real fabric (\code{test_soc_i2c.py}, source: scenario)}{soc: reached through the real fabric (, source: scenario)}
+tm:flow:soc-coverage-report	docs/manual/tm/parts/03-verification-infrastructure.tex	3385	SoC line + toggle coverage report (GH \#216)
+tm:flow:soc-coverage-report:05wf-re-measurement-uart-controller-spi-controller-unit-level-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	5618	\texorpdfstring{05wf re-measurement: \code{uart_controller} / \code{spi_controller} (unit level, 2026-10-08)}{05wf re-measurement: / (unit level, 2026-10-08)}
+tm:flow:soc-coverage-report:7ovx-register-walk-re-measurement-2026-10-09	docs/manual/tm/parts/03-verification-infrastructure.tex	5185	7ovx register-walk re-measurement (2026-10-09)
+tm:flow:soc-coverage-report:adjusted-totals-before-after-triaged-trees-pr-226-data	docs/manual/tm/parts/03-verification-infrastructure.tex	5687	Adjusted totals, before / after (triaged trees, PR \#226 data)
+tm:flow:soc-coverage-report:ci-and-recommendation	docs/manual/tm/parts/03-verification-infrastructure.tex	4229	CI and recommendation
+tm:flow:soc-coverage-report:combined-report-soc-cpu-cache-gpu-suites-bead-1eyv-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	3960	\texorpdfstring{Combined report: SoC + CPU / cache / GPU suites (bead \code{1eyv}, 2026-10-10)}{Combined report: SoC + CPU / cache / GPU suites (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:coverage-cleanup-beads-j41m7-34dv-4pl8-0ntg-xkw5-pr-316-2026-10-18	docs/manual/tm/parts/03-verification-infrastructure.tex	4715	Coverage cleanup: beads j41m.7, 34dv, 4pl8, 0ntg, xkw5 (PR \#316, 2026-10-18)
+tm:flow:soc-coverage-report:coverage-cleanup-second-pass-bead-xkw5-leftovers-pr-320-2026-10-19	docs/manual/tm/parts/03-verification-infrastructure.tex	4862	Coverage cleanup, second pass: bead xkw5 leftovers (PR \#320, 2026-10-19)
+tm:flow:soc-coverage-report:ej6j-axi4-fabric-re-measurement-2026-10-07	docs/manual/tm/parts/03-verification-infrastructure.tex	5422	ej6j AXI4-fabric re-measurement (2026-10-07)
+tm:flow:soc-coverage-report:findings-no-rtl-change-made	docs/manual/tm/parts/03-verification-infrastructure.tex	5134	Findings (no RTL change made)
+tm:flow:soc-coverage-report:findings-rtl-bugs-not-fixed-per-scope	docs/manual/tm/parts/03-verification-infrastructure.tex	4641	Findings (RTL bugs; not fixed, per scope)
+tm:flow:soc-coverage-report:gate-decision	docs/manual/tm/parts/03-verification-infrastructure.tex	5980	Gate decision
+tm:flow:soc-coverage-report:gate-what-is-and-is-not-covered	docs/manual/tm/parts/03-verification-infrastructure.tex	4688	Gate: what is and is not covered
+tm:flow:soc-coverage-report:gh-222-waiver-audit-bead-kp61-2026-10-08	docs/manual/tm/parts/03-verification-infrastructure.tex	5502	\texorpdfstring{GH \#222 waiver audit (bead \code{kp61}, 2026-10-08)}{GH \#222 waiver audit (bead , 2026-10-08)}
+tm:flow:soc-coverage-report:how-to	docs/manual/tm/parts/03-verification-infrastructure.tex	6164	How to
+tm:flow:soc-coverage-report:informational-trees-before-soc-suites-only-after-combined	docs/manual/tm/parts/03-verification-infrastructure.tex	4065	Informational trees, before (SoC suites only) / after (combined)
+tm:flow:soc-coverage-report:informational-trees-no-triage-no-waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	3847	Informational trees (no triage, no waivers)
+tm:flow:soc-coverage-report:method	docs/manual/tm/parts/03-verification-infrastructure.tex	3399	Method
+tm:flow:soc-coverage-report:method-1	docs/manual/tm/parts/03-verification-infrastructure.tex	3969	Method
+tm:flow:soc-coverage-report:new-tests	docs/manual/tm/parts/03-verification-infrastructure.tex	4447	New tests
+tm:flow:soc-coverage-report:new-tests-no-rtl-change	docs/manual/tm/parts/03-verification-infrastructure.tex	4757	New tests (no RTL change)
+tm:flow:soc-coverage-report:new-tests-no-rtl-change-1	docs/manual/tm/parts/03-verification-infrastructure.tex	5005	New tests (no RTL change)
+tm:flow:soc-coverage-report:per-module-result-ci-run-above-adjusted-toggle-hittotal-rows-shown-only-where-the-module-changed	docs/manual/tm/parts/03-verification-infrastructure.tex	5084	\texorpdfstring{Per-module result (CI run above; adjusted toggle, hit/\allowbreak{}total; rows shown only where the module changed)}{Per-module result (CI run above; adjusted toggle, hit/total; rows shown only where the module changed)}
+tm:flow:soc-coverage-report:per-module-result-line-hittotal-waived-category-b-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	4294	\texorpdfstring{Per-module result (line \%, hit/\allowbreak{}total; "waived" = category-b points removed from the denominator)}{Per-module result (line \%, hit/total; "waived" = category-b points removed from the denominator)}
+tm:flow:soc-coverage-report:remaining-slice-2-and-what-is-not-verified	docs/manual/tm/parts/03-verification-infrastructure.tex	4519	Remaining (slice 2) and what is not verified
+tm:flow:soc-coverage-report:reproducing	docs/manual/tm/parts/03-verification-infrastructure.tex	6217	Reproducing
+tm:flow:soc-coverage-report:results	docs/manual/tm/parts/03-verification-infrastructure.tex	3709	Results
+tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-1-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	4260	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 1 (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:rtlcpu-mem-gpu-line-triage-slice-2-remaining-gaps-same-head-measurement-gate-flip-bead-a5ze-2026-10-10	docs/manual/tm/parts/03-verification-infrastructure.tex	4554	\texorpdfstring{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead \code{a5ze}, 2026-10-10)}{rtl/cpu \textbar{} mem \textbar{} gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead , 2026-10-10)}
+tm:flow:soc-coverage-report:still-open	docs/manual/tm/parts/03-verification-infrastructure.tex	5158	Still open
+tm:flow:soc-coverage-report:still-open-xkw5-stays-open	docs/manual/tm/parts/03-verification-infrastructure.tex	4840	Still open (xkw5 stays open)
+tm:flow:soc-coverage-report:the-prover-waivers-cite-a-proof-not-a-netlist-lookup	docs/manual/tm/parts/03-verification-infrastructure.tex	4913	The prover: waivers cite a proof, not a netlist lookup
+tm:flow:soc-coverage-report:triage	docs/manual/tm/parts/03-verification-infrastructure.tex	5727	Triage
+tm:flow:soc-coverage-report:triage-of-every-uncovered-point-head-line-numbers	docs/manual/tm/parts/03-verification-infrastructure.tex	4355	Triage of every uncovered point (HEAD line numbers)
+tm:flow:soc-coverage-report:triaged-trees-after-60-waivers-48-line-and-950-toggle-points-removed-from-the-denominator	docs/manual/tm/parts/03-verification-infrastructure.tex	3724	Triaged trees (after 60 waivers: 48 line and 950 toggle points removed from the denominator)
+tm:flow:soc-coverage-report:waivers	docs/manual/tm/parts/03-verification-infrastructure.tex	4810	Waivers
+tm:flow:soc-coverage-report:waivers-added	docs/manual/tm/parts/03-verification-infrastructure.tex	4511	Waivers added
+tm:flow:soc-coverage-report:what-closed-the-slice-1-open-points	docs/manual/tm/parts/03-verification-infrastructure.tex	4590	What closed the slice-1 open points
+tm:flow:synth-undef-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	6437	\texorpdfstring{Synthesis undef-elaboration gate (bead \code{gc0y})}{Synthesis undef-elaboration gate (bead )}
+tm:flow:synth-undef-gate:allowlist	docs/manual/tm/parts/03-verification-infrastructure.tex	6806	Allowlist
+tm:flow:synth-undef-gate:ci-job-githubworkflowssynth-undef-gateyml-toolsverifsynth-gateci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6828	\texorpdfstring{CI job (\src{.github/workflows/synth-undef-gate.yml}, \src{tools/verif/synth_gate/ci_smoke.sh})}{CI job (, )}
+tm:flow:synth-undef-gate:components	docs/manual/tm/parts/03-verification-infrastructure.tex	6450	Components
+tm:flow:synth-undef-gate:controls-all-in-blocking-mode-run-by-ci-smokesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6723	\texorpdfstring{Controls (all in blocking mode, run by \code{ci_smoke.sh})}{Controls (all in blocking mode, run by )}
+tm:flow:synth-undef-gate:flow-wiring	docs/manual/tm/parts/03-verification-infrastructure.tex	6776	Flow wiring
+tm:flow:synth-undef-gate:measured-yosys-046-sv2v-00131-toolsverifsynth-gateelab-gatesh	docs/manual/tm/parts/03-verification-infrastructure.tex	6654	\texorpdfstring{Measured (yosys 0.46, sv2v 0.0.13.1; \src{tools/verif/synth_gate/elab_gate.sh})}{Measured (yosys 0.46, sv2v 0.0.13.1; )}
+tm:flow:synth-undef-gate:mechanism-read-from-the-rtlil-tbtestsfixturessynth-undeffunctemp	docs/manual/tm/parts/03-verification-infrastructure.tex	6572	\texorpdfstring{Mechanism (read from the RTLIL, \code{tb/tests/fixtures/synth_undef/functemp_*})}{Mechanism (read from the RTLIL, )}
+tm:flow:synth-undef-gate:netlist-census-tripwire-toolsverifcheck-cpu-netlist-censuspy	docs/manual/tm/parts/03-verification-infrastructure.tex	6864	\texorpdfstring{Netlist census tripwire (\src{tools/verif/check_cpu_netlist_census.py})}{Netlist census tripwire ()}
+tm:flow:synth-undef-gate:pattern-list-evidence-probe-designs-through-yosys-046-synlig-plugin-and-through-sv2v-read-verilog-strings-of-yosys-046062-and-synlig-svso	docs/manual/tm/parts/03-verification-infrastructure.tex	6483	\texorpdfstring{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + \code{read_verilog}; \code{strings} of yosys 0.46/0.62 and \code{synlig-sv.so})}{Pattern list (evidence: probe designs through yosys 0.46 + Synlig plugin and through sv2v + ; of yosys 0.46/0.62 and )}
+tm:flow:synth-undef-gate:post-incrementation-operations-are-handled-as-pre-incrementation	docs/manual/tm/parts/03-verification-infrastructure.tex	6786	\texorpdfstring{\texttt{Post-\allowbreak{}incrementation\ operations\ are\ handled\ as\ pre-\allowbreak{}incrementation}}{}
+tm:flow:synth-undef-gate:report	docs/manual/tm/parts/03-verification-infrastructure.tex	6636	Report
+tm:flow:synth-undef-gate:sv2v-function-temporaries-on-the-soc-bead-j1b7	docs/manual/tm/parts/03-verification-infrastructure.tex	6558	\texorpdfstring{sv2v function temporaries on the SoC (bead \code{j1b7})}{sv2v function temporaries on the SoC (bead )}
+tm:flow:synth-undef-gate:the-rule-func-temp-dead-init	docs/manual/tm/parts/03-verification-infrastructure.tex	6592	\texorpdfstring{The rule \code{func-temp-dead-init}}{The rule }
+tm:flow:synth-undef-gate:what-the-gate-does-not-cover	docs/manual/tm/parts/03-verification-infrastructure.tex	6816	What the gate does not cover
 tm:flow:tessent-atpg	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6530	Tessent scan insertion + ATPG evaluation flow (Sky130 SoC fabric)
 tm:flow:tessent-atpg:1-how-to-run	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6545	How to run
 tm:flow:tessent-atpg:2-flow-and-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6574	Flow and decisions
@@ -2354,6 +2415,7 @@ tm:pd:constraints-sdc-files-summary:synthesis-stage	docs/manual/tm/parts/02-phys
 tm:pd:constraints-sdc-files-summary:total-port-count	docs/manual/tm/parts/02-physical-design.tex	4070	Total Port Count
 tm:pd:constraints-sdc-files-summary:verification-checklist	docs/manual/tm/parts/02-physical-design.tex	4158	Verification Checklist
 tm:pd:constraints-sdc-files-summary:workflow-recommendations	docs/manual/tm/parts/02-physical-design.tex	4082	Workflow Recommendations
+tm:pd:freepdk45-gen-via-stubs-py	docs/manual/tm/parts/02-physical-design.tex	10270	\texttt{freepdk45/gen\_via\_stubs.py}
 tm:pd:freepdk45-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9096	\texttt{freepdk45/macro\_placement.cfg}
 tm:pd:freepdk45-sdc	docs/manual/tm/parts/02-physical-design.tex	8460	\texttt{freepdk45/constraints/freepdk45.sdc}
 tm:pd:librelane-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9133	\texttt{librelane/macro\_placement.cfg}
@@ -2364,7 +2426,7 @@ tm:pd:librelane-patching:pros-of-patching-for-a-post-rcx-repair-stage	docs/manua
 tm:pd:librelane-patching:recommendation	docs/manual/tm/parts/02-physical-design.tex	1391	Recommendation
 tm:pd:librelane-patching:the-cautionary-case-drttcl	docs/manual/tm/parts/02-physical-design.tex	1295	\texorpdfstring{The cautionary case: \code{drt.tcl}}{The cautionary case: }
 tm:pd:librelane-patching:the-question	docs/manual/tm/parts/02-physical-design.tex	1234	The question
-tm:pd:makefile	docs/manual/tm/parts/02-physical-design.tex	10273	\texttt{Makefile}
+tm:pd:makefile	docs/manual/tm/parts/02-physical-design.tex	10320	\texttt{Makefile}
 tm:pd:node-strategy	docs/manual/tm/parts/02-physical-design.tex	6297	Technology Node Strategy
 tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20	docs/manual/tm/parts/02-physical-design.tex	6466	ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
 tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative	docs/manual/tm/parts/02-physical-design.tex	6348	\texorpdfstring{Commercial flows (\src{pnr/commercial/}, Sky130 only, indicative)}{Commercial flows (, Sky130 only, indicative)}
@@ -2498,6 +2560,8 @@ tm:pd:sky130-soc-pdn-tcl	docs/manual/tm/parts/02-physical-design.tex	10157	\text
 tm:pd:sky130-soc-plugin-librelane-cvt-tcl-scan-insert	docs/manual/tm/parts/02-physical-design.tex	10211	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/scan\_insert.tcl}
 tm:pd:sky130-soc-plugin-librelane-cvt-tcl-wrap	docs/manual/tm/parts/02-physical-design.tex	10184	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/cvt\_wrap.tcl}
 tm:pd:sky130-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	8557	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
+tm:suite:aes128-model	docs/manual/tm/parts/03-verification-infrastructure.tex	972	\texttt{tb/models/aes128\_model.py}
+tm:suite:npu-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1056	\texttt{tb/models/npu\_model.py}
 tm:suite:phase4-random-kernels	docs/manual/tm/parts/03-verification-infrastructure.tex	9	Phase 4 Random-Kernel Regression
 tm:suite:phase4-random-kernels:address-layout	docs/manual/tm/parts/03-verification-infrastructure.tex	184	Address layout
 tm:suite:phase4-random-kernels:broadened-run-2026-06-01-b1-loads-b2-shared-mem-b3-divergence	docs/manual/tm/parts/03-verification-infrastructure.tex	35	Broadened run (2026-06-01) --- B1 loads + B2 shared-mem + B3 divergence
@@ -2511,18 +2575,21 @@ tm:suite:phase4-random-kernels:results	docs/manual/tm/parts/03-verification-infr
 tm:suite:phase4-random-kernels:rollup-integration	docs/manual/tm/parts/03-verification-infrastructure.tex	92	Rollup integration
 tm:suite:phase4-random-kernels:scope-rationale	docs/manual/tm/parts/03-verification-infrastructure.tex	262	Scope rationale
 tm:suite:phase4-random-kernels:scoreboard	docs/manual/tm/parts/03-verification-infrastructure.tex	202	Scoreboard
+tm:suite:sim-makefile	docs/manual/tm/parts/03-verification-infrastructure.tex	785	\texttt{sim/Makefile}
+tm:suite:soc-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1168	\texttt{tb/models/soc\_model.py}
+tm:suite:trng-lfsr-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1209	\texttt{tb/models/trng\_lfsr\_model.py}
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	102	Build and run commands
 um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	474	Coding guidelines
 um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2688	Continuous integration
 um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	425	Debug interface
-um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6007	Documentation system
+um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6454	Documentation system
 um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
-um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6003	Issue tracking
+um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6450	Issue tracking
 um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2233	Local quality checks
-um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6111	Project status
+um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6558	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	40	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	360	Supported instructions
-um:ch:tool-flows	docs/manual/um/parts/01-chapters.tex	5116	Simulator and lint tool flows
+um:ch:tool-flows	docs/manual/um/parts/01-chapters.tex	5563	Simulator and lint tool flows
 um:flow:badges	docs/manual/um/parts/01-chapters.tex	5042	GitHub Actions Badges
 um:flow:badges:badge-markdown	docs/manual/um/parts/01-chapters.tex	5047	Badge Markdown
 um:flow:badges:code-coverage-badge-if-using-codecov	docs/manual/um/parts/01-chapters.tex	5061	Code Coverage Badge (if using Codecov)
@@ -2575,6 +2642,10 @@ um:flow:ci-cd-workflow:troubleshooting	docs/manual/um/parts/01-chapters.tex	3648
 um:flow:ci-cd-workflow:usage-examples	docs/manual/um/parts/01-chapters.tex	3211	Usage Examples
 um:flow:ci-cd-workflow:viewing-results	docs/manual/um/parts/01-chapters.tex	3242	Viewing Results
 um:flow:ci-cd-workflow:workflow-triggers	docs/manual/um/parts/01-chapters.tex	2712	Workflow Triggers
+um:flow:ci-cocotb	docs/manual/um/parts/01-chapters.tex	5117	\texttt{.github/workflows/cocotb.yml}
+um:flow:ci-qa-checks	docs/manual/um/parts/01-chapters.tex	5272	\texttt{.github/workflows/qa-checks.yml}
+um:flow:ci-random-tests	docs/manual/um/parts/01-chapters.tex	5337	\texttt{.github/workflows/random\_tests.yml}
+um:flow:ci-rtl-checks	docs/manual/um/parts/01-chapters.tex	5356	\texttt{.github/workflows/rtl-checks.yml}
 um:flow:ci-setup	docs/manual/um/parts/01-chapters.tex	3765	CI/CD Setup Guide
 um:flow:ci-setup:auto-fix-issues	docs/manual/um/parts/01-chapters.tex	3902	Auto-fix Issues
 um:flow:ci-setup:ci-badge-status	docs/manual/um/parts/01-chapters.tex	3931	CI Badge Status
@@ -2591,16 +2662,17 @@ um:flow:ci-setup:run-qa-checks-locally	docs/manual/um/parts/01-chapters.tex	3883
 um:flow:ci-setup:tests-workflow	docs/manual/um/parts/01-chapters.tex	3845	Tests Workflow
 um:flow:ci-setup:troubleshooting	docs/manual/um/parts/01-chapters.tex	3942	Troubleshooting
 um:flow:ci-setup:workflow-fails-on-first-run	docs/manual/um/parts/01-chapters.tex	3944	Workflow Fails on First Run
-um:flow:dqc	docs/manual/um/parts/01-chapters.tex	5551	\texorpdfstring{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on \code{soc_top}}{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on }
-um:flow:dqc:constraints-dqcsgdcsoc-topsgdc-and-why	docs/manual/um/parts/01-chapters.tex	5663	\texorpdfstring{Constraints (\src{dqc/sgdc/soc_top.sgdc}) and why}{Constraints () and why}
-um:flow:dqc:findings	docs/manual/um/parts/01-chapters.tex	5904	Findings
-um:flow:dqc:how-to-run	docs/manual/um/parts/01-chapters.tex	5563	How to run
-um:flow:dqc:negative-control-make-c-dqc-selftest	docs/manual/um/parts/01-chapters.tex	5842	\texorpdfstring{Negative control (\texttt{make\ -\allowbreak{}C\ dqc\ selftest})}{Negative control ()}
-um:flow:dqc:open-work-exact-resume-point	docs/manual/um/parts/01-chapters.tex	5977	Open work / exact resume point
-um:flow:dqc:results-arm-default	docs/manual/um/parts/01-chapters.tex	5774	\texorpdfstring{Results (arm \code{default})}{Results (arm )}
-um:flow:dqc:tool-and-licence-matrix-measured-2026-10-24	docs/manual/um/parts/01-chapters.tex	5719	Tool and licence matrix (measured 2026-10-24)
-um:flow:dqc:waivers-dqcwaivers	docs/manual/um/parts/01-chapters.tex	5857	\texorpdfstring{Waivers (\src{dqc/waivers/})}{Waivers ()}
-um:flow:dqc:what-is-analysed	docs/manual/um/parts/01-chapters.tex	5618	What is analysed
+um:flow:ci-soc-coverage	docs/manual/um/parts/01-chapters.tex	5465	\texttt{.github/workflows/soc\_coverage.yml}
+um:flow:dqc	docs/manual/um/parts/01-chapters.tex	5998	\texorpdfstring{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on \code{soc_top}}{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on }
+um:flow:dqc:constraints-dqcsgdcsoc-topsgdc-and-why	docs/manual/um/parts/01-chapters.tex	6110	\texorpdfstring{Constraints (\src{dqc/sgdc/soc_top.sgdc}) and why}{Constraints () and why}
+um:flow:dqc:findings	docs/manual/um/parts/01-chapters.tex	6351	Findings
+um:flow:dqc:how-to-run	docs/manual/um/parts/01-chapters.tex	6010	How to run
+um:flow:dqc:negative-control-make-c-dqc-selftest	docs/manual/um/parts/01-chapters.tex	6289	\texorpdfstring{Negative control (\texttt{make\ -\allowbreak{}C\ dqc\ selftest})}{Negative control ()}
+um:flow:dqc:open-work-exact-resume-point	docs/manual/um/parts/01-chapters.tex	6424	Open work / exact resume point
+um:flow:dqc:results-arm-default	docs/manual/um/parts/01-chapters.tex	6221	\texorpdfstring{Results (arm \code{default})}{Results (arm )}
+um:flow:dqc:tool-and-licence-matrix-measured-2026-10-24	docs/manual/um/parts/01-chapters.tex	6166	Tool and licence matrix (measured 2026-10-24)
+um:flow:dqc:waivers-dqcwaivers	docs/manual/um/parts/01-chapters.tex	6304	\texorpdfstring{Waivers (\src{dqc/waivers/})}{Waivers ()}
+um:flow:dqc:what-is-analysed	docs/manual/um/parts/01-chapters.tex	6065	What is analysed
 um:flow:pre-commit-setup	docs/manual/um/parts/01-chapters.tex	4030	Pre-commit Hooks Setup Guide
 um:flow:pre-commit-setup:add-custom-hooks	docs/manual/um/parts/01-chapters.tex	4418	Add custom hooks
 um:flow:pre-commit-setup:advanced-configuration	docs/manual/um/parts/01-chapters.tex	4399	Advanced Configuration
@@ -2634,19 +2706,19 @@ um:flow:pre-commit-setup:usage	docs/manual/um/parts/01-chapters.tex	4185	Usage
 um:flow:pre-commit-setup:what-are-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	4035	What Are Pre-commit Hooks?
 um:flow:pre-commit-setup:what-hooks-are-configured	docs/manual/um/parts/01-chapters.tex	4083	What Hooks Are Configured?
 um:flow:pre-commit-setup:when-hooks-fail	docs/manual/um/parts/01-chapters.tex	4208	When Hooks Fail
-um:flow:proprietary-sim	docs/manual/um/parts/01-chapters.tex	5122	Proprietary simulator flow: Synopsys VCS and Cadence Xcelium
-um:flow:proprietary-sim:1-prerequisites	docs/manual/um/parts/01-chapters.tex	5163	1. Prerequisites
-um:flow:proprietary-sim:2-one-time-setup	docs/manual/um/parts/01-chapters.tex	5212	2. One-time setup
-um:flow:proprietary-sim:3-every-shell	docs/manual/um/parts/01-chapters.tex	5228	3. Every shell
-um:flow:proprietary-sim:4-running	docs/manual/um/parts/01-chapters.tex	5253	4. Running
-um:flow:proprietary-sim:5-how-it-works-tbcocotbcommonsim-portabilitymk	docs/manual/um/parts/01-chapters.tex	5335	\texorpdfstring{5. How it works (\src{tb/cocotb/common/sim_portability.mk})}{5. How it works ()}
-um:flow:proprietary-sim:6-writing-portable-tests	docs/manual/um/parts/01-chapters.tex	5407	6. Writing portable tests
-um:flow:proprietary-sim:7-known-noise-not-failures	docs/manual/um/parts/01-chapters.tex	5447	7. Known noise (not failures)
-um:flow:proprietary-sim:8-troubleshooting	docs/manual/um/parts/01-chapters.tex	5489	8. Troubleshooting
-um:flow:proprietary-sim:9-coverage	docs/manual/um/parts/01-chapters.tex	5533	9. Coverage
-um:flow:proprietary-sim:a-single-suite-through-the-makefiles	docs/manual/um/parts/01-chapters.tex	5255	A single suite, through the Makefiles
-um:flow:proprietary-sim:pass-criteria-and-floors	docs/manual/um/parts/01-chapters.tex	5301	Pass criteria and floors
-um:flow:proprietary-sim:the-full-regression-through-the-driver	docs/manual/um/parts/01-chapters.tex	5274	The full regression, through the driver
+um:flow:proprietary-sim	docs/manual/um/parts/01-chapters.tex	5569	Proprietary simulator flow: Synopsys VCS and Cadence Xcelium
+um:flow:proprietary-sim:1-prerequisites	docs/manual/um/parts/01-chapters.tex	5610	1. Prerequisites
+um:flow:proprietary-sim:2-one-time-setup	docs/manual/um/parts/01-chapters.tex	5659	2. One-time setup
+um:flow:proprietary-sim:3-every-shell	docs/manual/um/parts/01-chapters.tex	5675	3. Every shell
+um:flow:proprietary-sim:4-running	docs/manual/um/parts/01-chapters.tex	5700	4. Running
+um:flow:proprietary-sim:5-how-it-works-tbcocotbcommonsim-portabilitymk	docs/manual/um/parts/01-chapters.tex	5782	\texorpdfstring{5. How it works (\src{tb/cocotb/common/sim_portability.mk})}{5. How it works ()}
+um:flow:proprietary-sim:6-writing-portable-tests	docs/manual/um/parts/01-chapters.tex	5854	6. Writing portable tests
+um:flow:proprietary-sim:7-known-noise-not-failures	docs/manual/um/parts/01-chapters.tex	5894	7. Known noise (not failures)
+um:flow:proprietary-sim:8-troubleshooting	docs/manual/um/parts/01-chapters.tex	5936	8. Troubleshooting
+um:flow:proprietary-sim:9-coverage	docs/manual/um/parts/01-chapters.tex	5980	9. Coverage
+um:flow:proprietary-sim:a-single-suite-through-the-makefiles	docs/manual/um/parts/01-chapters.tex	5702	A single suite, through the Makefiles
+um:flow:proprietary-sim:pass-criteria-and-floors	docs/manual/um/parts/01-chapters.tex	5748	Pass criteria and floors
+um:flow:proprietary-sim:the-full-regression-through-the-driver	docs/manual/um/parts/01-chapters.tex	5721	The full regression, through the driver
 um:flow:qa-workflow-diagram	docs/manual/um/parts/01-chapters.tex	4473	QA Workflow Diagram
 um:flow:qa-workflow-diagram:before-creating-pr	docs/manual/um/parts/01-chapters.tex	4725	Before Creating PR
 um:flow:qa-workflow-diagram:complete-qa-flow	docs/manual/um/parts/01-chapters.tex	4478	Complete QA Flow
@@ -2726,17 +2798,17 @@ um:guide:coding-guidelines:72-banned-content	docs/manual/um/parts/01-chapters.te
 um:guide:coding-guidelines:73-citation-line	docs/manual/um/parts/01-chapters.tex	1152	7.3 Citation line
 um:guide:coding-guidelines:74-moving-comment-text	docs/manual/um/parts/01-chapters.tex	1165	7.4 Moving comment text
 um:guide:coding-guidelines:scope-and-enforcement-policy	docs/manual/um/parts/01-chapters.tex	497	Scope and enforcement policy
-um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	6347	Commit Message Convention
-um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	6357	Coding Guidelines
-um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	6365	Questions?
+um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	6794	Commit Message Convention
+um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	6804	Coding Guidelines
+um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	6812	Questions?
 um:guide:debug-interface	docs/manual/um/parts/01-chapters.tex	431	Debug Interface (Phase 1+)
-um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	6264	Frequently Used Commands
-um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	6299	Project Structure
-um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	6116	Key Documentation
-um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	6122	Architecture \& Design
-um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	6179	Physical Design
-um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	6253	README detail set
-um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	6213	Verification \& Fixes
+um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	6711	Frequently Used Commands
+um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	6746	Project Structure
+um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	6563	Key Documentation
+um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	6569	Architecture \& Design
+um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	6626	Physical Design
+um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	6700	README detail set
+um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	6660	Verification \& Fixes
 um:guide:local-qa	docs/manual/um/parts/01-chapters.tex	2239	Local QA Setup Guide
 um:guide:local-qa:all-checks	docs/manual/um/parts/01-chapters.tex	2369	All Checks
 um:guide:local-qa:automatically-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	2259	Automatically (Pre-commit Hooks)
@@ -2781,8 +2853,8 @@ um:guide:quick-start:rtl-linting-formatting	docs/manual/um/parts/01-chapters.tex
 um:guide:quick-start:soc-cocotb-regression-tbcocotbsoc	docs/manual/um/parts/01-chapters.tex	210	\texorpdfstring{SoC cocotb regression (\src{tb/cocotb/soc})}{SoC cocotb regression ()}
 um:guide:quick-start:tool-input-rtl-filelists-rtlfilelist	docs/manual/um/parts/01-chapters.tex	293	\texorpdfstring{Tool-input RTL filelists (\src{rtl/filelist/})}{Tool-input RTL filelists ()}
 um:guide:readme-index	docs/manual/um/parts/01-chapters.tex	7	README Detail Set
-um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	6312	Reference Model (Python)
-um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	6328	Verification Strategy
+um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	6759	Reference Model (Python)
+um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	6775	Verification Strategy
 um:guide:spyglass-lint-remediation	docs/manual/um/parts/01-chapters.tex	1621	Spyglass Lint Remediation Plan (Handoff)
 um:guide:spyglass-lint-remediation:0-ground-rules-context	docs/manual/um/parts/01-chapters.tex	1633	0. Ground rules \& context
 um:guide:spyglass-lint-remediation:1-violation-catalog-disposition-summary	docs/manual/um/parts/01-chapters.tex	1673	1. Violation catalog \& disposition summary

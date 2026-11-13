@@ -1,4 +1,7 @@
-"""Unit tests for tools/verif/pin_lock.py (bead lu09): the Sky130 CPU macro pin-coordinate lock."""
+"""Unit tests for tools/verif/pin_lock.py: the Sky130 CPU macro pin-coordinate lock.
+
+Doc: cr:suite:test-pin-lock
+"""
 
 import argparse
 import sys
@@ -165,7 +168,7 @@ def test_too_close_template_pins_fail(tmp_path: Path) -> None:
     ext = tmp_path / "ext.lef"
     ext.write_text(
         _lef(dict(BASE, extra=(10.35, 49.0, 10.63, 50.0))), encoding="utf-8"
-    )  # 0.07 um gap
+    )  # the extra pin sits too close to its neighbour
     deff = tmp_path / "ext.def"
     deff.write_text(pl.gen_def(ext), encoding="utf-8")
     assert pl.cmd_check(_args(lef, deff)) == 1

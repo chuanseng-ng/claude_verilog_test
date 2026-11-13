@@ -47,7 +47,7 @@ module pll_apb_regs #(
 
     // pll_enable (CONTROL bit 0) is not in WMASK. Firmware cannot clear it.
     localparam logic [31:0] WMASK[N_REGS] = '{
-        32'h0000_03F0,  // CONTROL: bits [9:8],[7:4] writable; bit[0] non-clearable (GH #89)
+        32'h0000_03F0,  // CONTROL: bits [9:8],[7:4] writable; bit[0] non-clearable
         32'h0000_0000,  // STATUS:  RO
         32'h0000_0000  // RSVD:    RO
     };

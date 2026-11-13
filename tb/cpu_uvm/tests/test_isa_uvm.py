@@ -10,6 +10,8 @@ Priority 1: Load/Store instructions (LW, SW, LB, LBU, LH, LHU, SB, SH)
 Priority 2: Arithmetic/Logical instructions (TBD)
 Priority 3: Control flow instructions (TBD)
 Priority 4: Shift/Upper immediate instructions (TBD)
+
+Doc: cr:suite:cpu-uvm-test-isa-uvm
 """
 
 import sys
@@ -1581,7 +1583,6 @@ async def test_isa_auipc_nonzero_pc_uvm(dut):
 # =============================================================================
 # TOTAL: 54 tests covering all 37 RV32I instructions
 # Status: Phase E.3 ISA migration COMPLETE!
-# Migration completed: 2026-02-01
 # Previous status: 27 tests (21/37 instructions, 57% complete)
 # New status: 54 tests (37/37 instructions, 100% COMPLETE!)
 # Added: 27 tests for 16 missing instructions
