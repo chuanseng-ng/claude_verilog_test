@@ -10,7 +10,12 @@ for references to the old paths: root-relative, file-relative, or a bare .md
 basename that is unique in the map. A section reference after the path (section
 sign and number, "section N", or a quoted title) is resolved with the
 *.sections.tsv sidecars written by md2tex. Replacement: "Doc: <label>" in
-comments and Markdown, \\cref{<label>} in .tex under docs/manual/. Only comment
+comments and Markdown, \\cref{<label>} in .tex under docs/manual/. In .tex a path
+inside \\code, \\src, \\texttt, \\path, \\url or \\runid stays and " (\\cref{<label>})" is
+appended after the macro once; the argument of \\begin{relocated} and \\begin{record}
+and the "% Converted from" comment lines are never touched. A "path.md:123" suffix
+becomes "<label> (line 123 of the original file)". A section label that holds an ISO
+date is never used; the file-level label is used and the case is reported. Only comment
 text and docstrings are rewritten in source files; other lines are reported as
 code references. Line counts and newline styles are preserved. Default is a dry
 run that prints a preview; --apply writes the files.
@@ -56,7 +61,11 @@ SEC_QUOTED = re.compile(r"[ \t]*§[ \t]*([\"“'`])([^\n]+?)([\"”'`])")
 SEC_BARE = re.compile(
     r"[ \t]*§[ \t]*([A-Z][^\n\"“”'`)\];,:]{2,80}?)(?=$|[)\"”'`\];,:]|\.[ \t]|\.$)"
 )
-TEX_WRAP = re.compile(r"\\(?:src|code|path|texttt|url)\{$")
+TEX_OPEN = re.compile(r"\\(?:src|code|path|texttt|url|runid)\{[^{}]*$")
+TEX_PROVENANCE = re.compile(r"\\begin\{(?:relocated|record)\}\{[^{}]*\}")
+TEX_PROVENANCE_COMMENT = re.compile(r"^\s*%\s*(?:Converted|Moved)\b.*\bfrom\b")
+LINE_SUFFIX = re.compile(r":(\d+)(?:-(\d+))?(?![\w])")
+ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 FENCE = re.compile(r"^\s*(```|~~~)")
 TEX_VERB_BEGIN = re.compile(r"\\begin\{(lstlisting|logblock|textblock|verbatim|Verbatim)\}")
 TEX_VERB_END = re.compile(r"\\end\{(lstlisting|logblock|textblock|verbatim|Verbatim)\}")
@@ -309,10 +318,18 @@ def regions(kind: str, text: str, lines: list[str]) -> list[list[tuple[int, int]
         for ln in lines:
             if TEX_VERB_BEGIN.search(ln):
                 verb = True
-            if verb or ln.startswith("% Converted from"):
+            if verb or TEX_PROVENANCE_COMMENT.match(ln):
                 out.append([])
             else:
-                out.append([(0, len(ln))])
+                ivs = [(0, len(ln))]
+                for pm in TEX_PROVENANCE.finditer(ln):
+                    ivs = [
+                        piece
+                        for s, e in ivs
+                        for piece in ((s, min(e, pm.start())), (max(s, pm.end()), e))
+                        if piece[0] < piece[1]
+                    ]
+                out.append(ivs)
             if TEX_VERB_END.search(ln):
                 verb = False
         return out
@@ -415,9 +432,16 @@ def process(
                 new = f"Doc: {label}" if same or not text_norm else f"{m.group(1)} (Doc: {label})"
                 edits.append((m.start(), m.end(), new))
                 claimed.append(m.span())
+        skip: list[tuple[int, int]] = []
+        if kind == "tex":
+            skip = [pm.span() for pm in TEX_PROVENANCE.finditer(line)]
+            if TEX_PROVENANCE_COMMENT.match(line):
+                skip = [(0, len(line))]
         for m in tok_re.finditer(line):
             a, b = m.span(1)
             if not free(a, b):
+                continue
+            if any(s <= a and b <= e for s, e in skip):
                 continue
             old, unm = res.resolve(m.group(1), citing_dir)
             if old is None:
@@ -431,64 +455,91 @@ def process(
             bt_open = start > 0 and line[start - 1] == "`"
             close_tick = tail.startswith("`")
             if kind == "tex":
-                pre = line[:start]
-                w = TEX_WRAP.search(pre)
-                if w and tail.startswith("}"):
-                    start, end = w.start(), end + 1
-                    tail = line[end:]
+                mac = TEX_OPEN.search(line[:start])
+                if mac:
+                    close = line.find("}", end)
+                    if close < 0 or "{" in line[end:close]:
+                        rep.code_refs.append(f"{rel}:{ln_no}: {line.strip()[:100]}")
+                        claimed.append((start, end))
+                        continue
+                    ins = close + 1
+                    claimed.append((start, end))
+                    if not re.match(rf"[ \t]*\(?\\cref\{{{re.escape(label)}\}}", line[ins:]) and (
+                        ins not in {e[0] for e in edits}
+                    ):
+                        edits.append((ins, ins, f" (\\cref{{{label}}})"))
+                    continue
             elif bt_open and close_tick:
                 pass
             elif m.group(1).endswith(".md") and tail.startswith("#") and ANCHOR.match(tail):
                 am = ANCHOR.match(tail)
                 assert am is not None
                 sub = f"{label}:{am.group(1).lower()}"
-                if sub in sec.labels:
+                if sub in sec.labels and not ISO_DATE.search(sub):
                     label = sub
                     end += am.end()
                     tail = line[end:]
-            # section reference
+            # line suffix: the original file line, not a section
+            suffix = LINE_SUFFIX.match(tail)
             sm_end = None
             sub_label = None
-            probe = tail[1:] if (close_tick and kind != "tex") else tail
-            probe_off = 1 if (close_tick and kind != "tex") else 0
-            sm = SEC_NUM.match(probe)
-            q = SEC_QUOTED.match(probe) if not sm else None
-            bare = SEC_BARE.match(probe) if not sm and not q else None
-            if sm or q or bare:
-                rep.sec_total += 1
-                if sm:
-                    sub_label, why = resolve_section(sec, label, sm.group(1), None)
-                    span_end = end + probe_off + sm.end()
-                    desc = f"section {sm.group(1)}"
-                elif q:
-                    sub_label, why = resolve_section(sec, label, None, q.group(2))
-                    span_end = end + probe_off + q.end()
-                    desc = f'section "{q.group(2)}"'
-                else:
-                    assert bare is not None
-                    sub_label, why = resolve_section(sec, label, None, bare.group(1).strip())
-                    span_end = end + probe_off + bare.end()
-                    desc = f"section {bare.group(1).strip()!r}"
-                if sub_label:
-                    rep.sec_resolved += 1
-                    sm_end = span_end
-                else:
-                    rep.unresolved.append(f"{rel}:{ln_no}: {m.group(1)} {desc} -> {label} ({why})")
+            if suffix is None:
+                probe = tail[1:] if (close_tick and kind != "tex") else tail
+                probe_off = 1 if (close_tick and kind != "tex") else 0
+                sm = SEC_NUM.match(probe)
+                q = SEC_QUOTED.match(probe) if not sm else None
+                bare = SEC_BARE.match(probe) if not sm and not q else None
+                if sm or q or bare:
+                    rep.sec_total += 1
+                    if sm:
+                        sub_label, why = resolve_section(sec, label, sm.group(1), None)
+                        span_end = end + probe_off + sm.end()
+                        desc = f"section {sm.group(1)}"
+                    elif q:
+                        sub_label, why = resolve_section(sec, label, None, q.group(2))
+                        span_end = end + probe_off + q.end()
+                        desc = f'section "{q.group(2)}"'
+                    else:
+                        assert bare is not None
+                        sub_label, why = resolve_section(sec, label, None, bare.group(1).strip())
+                        span_end = end + probe_off + bare.end()
+                        desc = f"section {bare.group(1).strip()!r}"
+                    if sub_label and kind != "tex" and ISO_DATE.search(sub_label):
+                        sub_label, why = None, "section label contains a date"
+                    if sub_label:
+                        rep.sec_resolved += 1
+                        sm_end = span_end
+                    else:
+                        rep.unresolved.append(
+                            f"{rel}:{ln_no}: {m.group(1)} {desc} -> {label} ({why})"
+                        )
             if not _in_regions(ivs, start, end):
                 rep.code_refs.append(f"{rel}:{ln_no}: {line.strip()[:100]}")
                 claimed.append((start, end))
                 continue
             final_label = sub_label or label
-            if sm_end is not None:
+            note = ""
+            if suffix is not None:
+                end += suffix.end()
+                lo, hi = suffix.group(1), suffix.group(2)
+                note = (
+                    f" (lines {lo}-{hi} of the original file)"
+                    if hi
+                    else f" (line {lo} of the original file)"
+                )
+            elif sm_end is not None:
                 end = sm_end
                 if bt_open and close_tick and kind != "tex":
                     start -= 1
-            elif bt_open and close_tick and kind != "tex":
-                pass  # keep the backticks around the replacement
             repl = repl_text(kind, final_label)
             if kind != "tex" and re.search(r"Doc:[ \t]*$", line[:start]):
                 repl = final_label
-            edits.append((start, end, repl))
+            if kind == "tex" and re.match(
+                rf"[ \t]*\(\\cref\{{{re.escape(final_label)}\}}\)", line[end:]
+            ):
+                claimed.append((start, end))
+                continue
+            edits.append((start, end, repl + note))
             claimed.append((start, end))
         new_line = line
         for s, e, t in sorted(edits, reverse=True):

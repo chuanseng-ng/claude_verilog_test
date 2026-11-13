@@ -227,7 +227,9 @@ def test_tex_form(tmp_path):
     root = make_repo(tmp_path, {"docs/manual/tm/a.tex": tex})
     run(root, apply=True)
     new = read(root, "docs/manual/tm/a.tex")
-    assert new.startswith("see \\cref{tm:dec:plan} and \\cref{tm:dec:plan} and")
+    assert new.startswith(
+        "see \\cref{tm:dec:plan} and \\src{docs/PLAN.md} (\\cref{tm:dec:plan}) and"
+    )
 
 
 def test_tex_verbatim_untouched(tmp_path):
@@ -344,3 +346,95 @@ def test_usage_errors(tmp_path):
         )
         == 2
     )
+
+
+def test_provenance_argument_and_comment_untouched(tmp_path):
+    """Check the relocated and record arguments and the Converted-from comment stay."""
+    src = (
+        "% Converted from docs/PLAN.md by tools/docs/md2tex.py; edit this file.\n"
+        "\\begin{relocated}{docs/PLAN.md}\n"
+        "text\n"
+        "\\end{relocated}\n"
+        "\\begin{record}{docs/PLAN.md}\n"
+        "\\end{record}\n"
+    )
+    root = make_repo(tmp_path, {"docs/manual/tm/a.tex": src})
+    assert run(root, apply=True) == 0
+    assert read(root, "docs/manual/tm/a.tex") == src
+
+
+def test_provenance_line_still_repoints_other_paths(tmp_path):
+    """Check only the provenance argument is protected, not the rest of the line."""
+    src = "\\begin{relocated}{docs/PLAN.md} see docs/design/SPEC.md\n"
+    root = make_repo(tmp_path, {"docs/manual/tm/a.tex": src})
+    run(root, apply=True)
+    assert read(root, "docs/manual/tm/a.tex") == (
+        "\\begin{relocated}{docs/PLAN.md} see \\cref{ds:ch:spec}\n"
+    )
+
+
+@pytest.mark.parametrize("macro", ["code", "src", "texttt", "runid"])
+def test_tex_macro_argument_kept_and_cref_appended_once(tmp_path, macro):
+    """Check a path in a text macro stays and a cref follows the macro, once."""
+    src = f"see \\{macro}{{docs/PLAN.md}} now\n"
+    root = make_repo(tmp_path, {"docs/manual/tm/a.tex": src})
+    run(root, apply=True)
+    once = f"see \\{macro}{{docs/PLAN.md}} (\\cref{{tm:dec:plan}}) now\n"
+    assert read(root, "docs/manual/tm/a.tex") == once
+    run(root, apply=True)
+    assert read(root, "docs/manual/tm/a.tex") == once
+
+
+def test_tex_macro_with_line_suffix_and_existing_cref(tmp_path):
+    """Check a macro with a line suffix gets a cref; an existing cref is not doubled."""
+    src = (
+        "a \\code{docs/PLAN.md:431} b\n"
+        "c \\src{docs/PLAN.md} (\\cref{tm:dec:plan}) d\n"
+        "e \\src{docs/PLAN.md}\\cref{tm:dec:plan} f\n"
+    )
+    root = make_repo(tmp_path, {"docs/manual/tm/a.tex": src})
+    run(root, apply=True)
+    lines = read(root, "docs/manual/tm/a.tex").splitlines()
+    assert lines[0] == "a \\code{docs/PLAN.md:431} (\\cref{tm:dec:plan}) b"
+    assert lines[1] == "c \\src{docs/PLAN.md} (\\cref{tm:dec:plan}) d"
+    assert lines[2] == "e \\src{docs/PLAN.md}\\cref{tm:dec:plan} f"
+    assert "\\code{\\cref" not in "".join(lines)
+
+
+def test_tex_bare_path_before_existing_cref_not_doubled(tmp_path):
+    """Check a bare path that a cref already follows does not give a doubled cref."""
+    src = "see docs/PLAN.md (\\cref{tm:dec:plan}) here\n"
+    root = make_repo(tmp_path, {"docs/manual/tm/a.tex": src})
+    run(root, apply=True)
+    assert read(root, "docs/manual/tm/a.tex") == src
+
+
+def test_line_suffix_in_comment_never_joins_label(tmp_path):
+    """Check path.md:123 becomes a label plus a line note, never label:123."""
+    root = make_repo(
+        tmp_path,
+        {
+            "rtl/a.sv": "// see docs/PLAN.md:123 and docs/PLAN.md:10-20 end\n",
+            "docs/manual/tm/a.tex": "x docs/PLAN.md:123 y\n",
+        },
+    )
+    run(root, apply=True)
+    assert read(root, "rtl/a.sv") == (
+        "// see Doc: tm:dec:plan (line 123 of the original file) and "
+        "Doc: tm:dec:plan (lines 10-20 of the original file) end\n"
+    )
+    assert read(root, "docs/manual/tm/a.tex") == (
+        "x \\cref{tm:dec:plan} (line 123 of the original file) y\n"
+    )
+
+
+def test_section_label_with_date_falls_back_to_file_label(tmp_path):
+    """Check a section label that holds an ISO date is never emitted in a comment."""
+    root = make_repo(tmp_path, {"rtl/a.sv": "// docs/PLAN.md section 5 and more\n"})
+    (root / "_sections" / "plan.tex.sections.tsv").write_text(
+        "number\tlabel\ttitle\n5\ttm:dec:plan:2026-09-18-update\t5 Update\n", encoding="utf-8"
+    )
+    assert run(root, apply=True) == 1
+    text = read(root, "rtl/a.sv")
+    assert "2026-09-18" not in text
+    assert text == "// Doc: tm:dec:plan section 5 and more\n"

@@ -600,3 +600,26 @@ def test_deleting_a_word_or_a_sentence_is_still_reported(tmp_path, capsys):
     no_sentence = _w(tmp_path, "s.tex", "The arbiter grants one \\code{req\\_i} per cycle.\n")
     code, out = _run(capsys, "--from", md, "--to", no_sentence)
     assert code == 1 and "spare words stay here" in out
+
+
+def test_origsec_counts_as_the_heading_number(tmp_path, capsys):
+    """Check a heading that moved its number to origsec loses no token."""
+    md = _w(tmp_path, "a.md", "## 7.3 Citation line\n\nBody words here.\n")
+    good = _w(
+        tmp_path,
+        "good.tex",
+        "\\section{Citation line}\\label{x:y}\\origsec{7.3}\nBody words here.\n",
+    )
+    code, out = _run(capsys, "--from", md, "--to", good)
+    assert code == 0, out
+    wrapped = _w(
+        tmp_path,
+        "wrapped.tex",
+        "\\section{\\texorpdfstring{Citation\nline}{Citation line}}\\label{x:y}\\origsec{7.3}\n"
+        "Body words here.\n",
+    )
+    code, out = _run(capsys, "--from", md, "--to", wrapped)
+    assert code == 0, out
+    stripped = _w(tmp_path, "bad.tex", "\\section{Citation line}\\label{x:y}\nBody words here.\n")
+    code, out = _run(capsys, "--from", md, "--to", stripped)
+    assert code == 1 and "7.3" in out

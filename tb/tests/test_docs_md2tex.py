@@ -403,3 +403,43 @@ def test_wide_table_uses_smaller_font(tmp_path):
     assert "\\footnotesize\\setlength{\\tabcolsep}{3pt}" in tex
     tex2, _, _ = conv(tmp_path, "# T\n\n| a | b |\n|---|---|\n| 1 | 2 |\n")
     assert "\\footnotesize" not in tex2 and "\\small" not in tex2
+
+
+@needs_pandoc
+def test_relocated_option_wraps_output(tmp_path):
+    """Check the relocated option wraps the whole output in the relocated environment."""
+    tex, _, _ = conv(tmp_path, "# T\n\ntext\n", level="section", relocated="docs/design/OLD_X.md")
+    assert tex.startswith("\\begin{relocated}{docs/design/OLD_X.md}\n% Converted from")
+    assert tex.endswith("\\end{relocated}\n")
+    assert tex.count("\\begin{relocated}") == 1
+    plain, _, _ = conv(tmp_path, "# T\n\ntext\n", level="section")
+    assert "relocated" not in plain
+
+
+@needs_pandoc
+def test_strip_heading_numbers_keeps_number_in_origsec(tmp_path):
+    """Check a leading heading number leaves the title and stays as origsec."""
+    md = (
+        "# T\n\n## 7.3 Citation line\n\n## 7. Results\n\n## 14 Scrub\n\n## Plain\n\n"
+        "## 2026-09-18 Update\n"
+    )
+    tex, out, _ = conv(tmp_path, md, strip_numbers=True)
+    assert "\\section{Citation line}\\label{cr:inv:a:73-citation-line}\\origsec{7.3}" in tex
+    assert "\\section{Results}\\label{cr:inv:a:7-results}\\origsec{7}" in tex
+    assert "\\section{Scrub}\\label{cr:inv:a:14-scrub}\\origsec{14}" in tex
+    assert "\\section{Plain}\\label{cr:inv:a:plain}\n" in tex
+    assert "\\section{2026-09-18 Update}" in tex and "origsec{2026" not in tex
+    rows = Path(str(out) + ".sections.tsv").read_text("utf-8")
+    assert "7.3\tcr:inv:a:73-citation-line\t7.3 Citation line" in rows
+    off, _, _ = conv(tmp_path, md)
+    assert "origsec" not in off and "\\section{7.3 Citation line}" in off
+
+
+def test_strip_heading_numbers_texorpdfstring_and_no_remainder():
+    """Check the number goes from both arguments of texorpdfstring; a bare number stays."""
+    src = "\\section{\\texorpdfstring{5 Use of \\code{x}}{5 Use of x}}\\label{a:b}\n\\section{12}\n"
+    got = md2tex.strip_heading_numbers(src)
+    assert got.startswith(
+        "\\section{\\texorpdfstring{Use of \\code{x}}{Use of x}}\\label{a:b}\\origsec{5}\n"
+    )
+    assert got.endswith("\\section{12}\n")
