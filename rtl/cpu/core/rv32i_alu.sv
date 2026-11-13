@@ -1,21 +1,17 @@
-// rv32i_alu.sv
-// RV32I Arithmetic Logic Unit — shared-adder design
+// rv32i_alu - RV32I arithmetic logic unit with a shared adder.
 //
-// Implements all 10 RV32I ALU operations.
-// ADD/SUB/SLT/SLTU share one 33-bit adder, eliminating the redundant parallel
-// carry chains that were the binding setup-critical path (EX1a, Run 38 -3.89 ps).
-//
-// Specification: RISC-V ISA Manual, Volume I
-// - ADD, SUB
-// - AND, OR, XOR
-// - SLL, SRL, SRA (shift operations)
-// - SLT, SLTU (comparison operations)
-//
-// Notes:
-// - Shift amount uses only lower 5 bits of operand_b[4:0]
-// - SRA preserves sign bit (arithmetic right shift)
-// - All operations wrap (no saturation)
-// - SLT uses signed comparison, SLTU uses unsigned comparison
+// Function: Combinational. result is computed from operand_a, operand_b and alu_op.
+//   ALU_ADD 4'b0000, ALU_SUB 4'b0001, ALU_SLL 4'b0010, ALU_SLT 4'b0011, ALU_SLTU 4'b0100,
+//   ALU_XOR 4'b0101, ALU_SRL 4'b0110, ALU_SRA 4'b0111, ALU_OR 4'b1000, ALU_AND 4'b1001.
+//   ADD, SUB, SLT and SLTU share one 33-bit adder.
+//   Shifts use only operand_b[4:0]. SRA preserves the sign bit. All operations wrap. There is no saturation.
+//   SLT uses signed comparison and SLTU uses unsigned comparison.
+//   An alu_op above 4'b1001 gives result = 0.
+// Parameters: none.
+// Clocks and resets: none. The module is purely combinational.
+// Caller rules:
+//   - Drive alu_op with one of the ten encodings above. Any other value gives result = 0.
+// Doc: ds:mod:rv32i-alu, tm:mod:rv32i-alu
 
 module rv32i_alu (
   // Operands

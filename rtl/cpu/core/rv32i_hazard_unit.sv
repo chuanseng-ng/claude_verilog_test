@@ -121,20 +121,8 @@ module rv32i_hazard_unit (
 
     // =========================================================================
     // Load-use hazard detection
-    //
-    // Run-20: the pipeline has THREE register stages between EX1a and MEM
-    // (ex1a_ex1b_reg_q → EX1c comb → ex1c_ex1b_reg_q → EX1b comb →
-    //  ex1_ex2_reg FF → MEM).  Three stall conditions are required:
-    //
-    //   load_use_ex1   : load in EX1a (id_ex), consumer in ID (if_id)     → stall 1
-    //   load_use_ex1c  : load in EX1c (ex1a_ex1b_reg_q, ex1b_ ports),
-    //                    consumer still in ID                               → stall 2
-    //   load_use_ex1b  : load in EX1b (ex1c_ex1b_reg_q, ex1c_ ports),
-    //                    consumer still in ID                               → stall 3
-    //
-    // After 3 stalls the consumer enters EX1a while the load is in MEM.
-    // The D-cache stall (3 cycles) then holds the consumer in id_ex until
-    // the load data appears in mem_wb_reg, which WB→EX1a forwarding delivers.
+    // Four load-use conditions stall the consumer in ID: load_use_ex1, load_use_ex1c, load_use_ex1b and load_use_ex2.
+    // The load is in EX1a, EX1c, EX1b or EX1b2, and the consumer is still in ID.
     // =========================================================================
     logic load_use_ex1;
     logic load_use_ex1c;
@@ -169,19 +157,8 @@ module rv32i_hazard_unit (
 
     // =========================================================================
     // Forwarding selects
-    //
-    // Tier priority (highest → lowest) for instruction consuming in EX1a:
-    //   2'b11 = EX1b tier (ex1a_ex1b_reg — producer completed EX1a, now in EX1c)
-    //           1 cycle behind consumer (highest priority non-load fwd)
-    //   ex1c  = EX1c tier (ex1c_ex1b_reg — producer completed EX1c, now in EX1b)
-    //           2 cycles behind consumer
-    //   2'b01 = EX2  tier (ex_mem_reg — 3 cycles behind, entering MEM)
-    //   2'b10 = WB   tier (mem_wb_reg — covers load-use after stall)
-    //   2'b00 = regfile (no forwarding)
-    //
-    // The EX1c tier uses separate 1-bit outputs (fwd_a_ex1c / fwd_b_ex1c /
-    // fwd_store_ex1c) because fwd_*_sel has only 4 encodings already in use.
-    // The forwarding unit checks fwd_a_ex1c between the 2'b11 and 2'b01 cases.
+    // Priority for the consumer in EX1a, highest first: EX1b (fwd_*_sel = 2'b11), EX1c (fwd_a_ex1c, fwd_b_ex1c, fwd_store_ex1c), EX1b2 (fwd_a_ex1b2, fwd_b_ex1b2, fwd_store_ex1b2),
+    // EX2 (2'b01), WB (2'b10), regfile (2'b00). The EX1c and EX1b2 tiers use separate 1-bit outputs because fwd_*_sel has no free encoding.
     // =========================================================================
 
     // ALU operand A (rs1 in EX1a)
@@ -260,18 +237,8 @@ module rv32i_hazard_unit (
 
     // =========================================================================
     // Pre-decoded forwarding selects (one cycle early — consumer in ID)
-    //
-    // Uses if_id_rs*_addr (consumer currently in ID) against producer addresses
-    // shifted one stage earlier vs the normal forwarding logic.  These outputs
-    // are registered in rv32i_core.sv so they arrive at EX1a exactly when needed,
-    // breaking the 18-gate combinational chain that is the WNS bottleneck.
-    //
-    // Stage mapping (each tier shifted one stage earlier):
-    //   Normal EX1b  (2'b11):  ex1b_rd_addr  == id_ex_rs1   →  id_ex_rd_addr  == if_id_rs1
-    //   Normal EX1c  (ex1c):   ex1c_rd_addr  == id_ex_rs1   →  ex1b_rd_addr   == if_id_rs1
-    //   Normal EX1b2 (ex1b2):  ex1b2_rd_addr == id_ex_rs1   →  ex1c_rd_addr   == if_id_rs1
-    //   Normal EX2   (2'b01):  ex_mem_rd_addr== id_ex_rs1   →  ex1b2_rd_addr  == if_id_rs1
-    //   Normal WB    (2'b10):  mem_wb_rd_addr== id_ex_rs1   →  ex_mem_rd_addr == if_id_rs1
+    // These selects use if_id_rs1_addr and if_id_rs2_addr (consumer in ID). The producer addresses are one stage earlier than in the normal selects.
+    // rv32i_core registers them.
     // =========================================================================
 
     // Pre-decode: ALU operand A (rs1 consumer currently in ID)

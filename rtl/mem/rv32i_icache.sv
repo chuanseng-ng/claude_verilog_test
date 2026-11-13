@@ -42,14 +42,14 @@ module rv32i_icache (
     input  logic        clk,
     input  logic        rst_n,
 
-    // DFT (bead j41m.4): forces the SRAM clock gates open in test mode. Used by the
+    // DFT: forces the SRAM clock gates open in test mode. Used by the
     // `SRAM_ASAP7 arm only (the other arms instantiate no clock gate); quasi-static,
     // tie 1'b0 when not testing. See Doc: tm:ch:dft-architecture section 14.10.
     /* verilator lint_off UNUSEDSIGNAL */
     input  logic        test_en_i,
     /* verilator lint_on  UNUSEDSIGNAL */
 
-    // MBIST (bead claude_verilog_test-c54a, Doc: tm:ch:dft-architecture 16.7): the CPU-macro controller's broadcast
+    // MBIST (Doc: tm:ch:dft-architecture 16.7): the CPU-macro controller's broadcast
     // bus and expected-data tag in, one registered mismatch strobe per macro out ({data[3], data[2], data[1],
     // data[0], tag}). Each mem_collar compares its own macro's port-0 read data locally (LOCAL_CMP), so the
     // 32-bit read data of the five macros never leaves the collars. Active only in the SRAM_SKY130 arm
@@ -359,12 +359,9 @@ module rv32i_icache (
 
     // =========================================================================
     // Address mismatch detection
-    // After a branch redirect, pc_q changes while the cache may still be
-    // processing the old (pre-redirect) address.  Detect this by comparing
-    // the live fetch address (ic_addr_i = pc_q) against the latched address
-    // (ic_addr_q) in the states that complete the previous SRAM lookup.
-    // When a mismatch is detected the in-flight result is discarded and the
-    // cache restarts for the new address.
+    // A branch redirect can change ic_addr_i while the cache still processes the old address.
+    // The cache compares ic_addr_i with ic_addr_q in the states that complete the previous SRAM lookup.
+    // A mismatch discards the in-flight result and restarts the cache for the new address.
     // =========================================================================
     logic addr_mismatch;
     assign addr_mismatch = ic_valid_i
@@ -386,7 +383,7 @@ module rv32i_icache (
     // Stall output
     // =========================================================================
     // state_q[3] = LATCH or REFILL here (the only unconditional-stall states this FSM uses;
-    // HIT_PENDING / WRITEBACK / UNCACHED_* / *_SCAN are D$-only). See rv32i_cache_pkg.sv, bead r51p.
+    // HIT_PENDING / WRITEBACK / UNCACHED_* / *_SCAN are D$-only). See rv32i_cache_pkg.sv.
     assign ic_stall_o =
         state_q[3]                                ||   // Waiting for pipeline reg / refill in progress
         (state_q == CS_IDLE       &&  ic_valid_i) ||   // Initiating SRAM read
@@ -418,11 +415,7 @@ module rv32i_icache (
     //   ARLEN=3 (4 beats), ARSIZE=4B, ARBURST=INCR (constant).
     //   cancel_ar_q holds arvalid after a cancel to satisfy AXI A3.2.1.
     //   cancel_draining: burst accepted at abort — drain all 4 R beats silently.
-    //   TRUSTED-SLAVE ASSUMPTION: refill completion keys on rvalid && rlast and
-    //   trusts the slave to deliver exactly ARLEN+1 beats (AXI4 requires this).
-    //   A protocol-violating early RLAST would mark a partially-filled line
-    //   valid; slave conformance is pinned by test_sram_controller.py
-    //   test_rlast_position rather than defended here.
+    // Refill completion keys on rvalid && rlast and trusts the slave to deliver ARLEN+1 beats. An early RLAST marks a partly filled line valid. test_sram_controller.py test_rlast_position checks it (ds:mod:rv32i-icache).
     // =========================================================================
     assign axi_araddr_o  = {refill_line_addr_q[31:4], 4'b0000};
     assign axi_arlen_o   = axi_pkg::AXI_LEN_LINE;
@@ -432,21 +425,11 @@ module rv32i_icache (
     assign axi_rready_o  = 1'b1;  // Always accept R responses (drains in-flight beats)
 
     // =========================================================================
-    // Tag SRAM write — registered commit (Run-17 P2 timing fix)
-    //
-    // The combinational cone from state_q (CS_REFILL one-hot bit) into
-    // tag_web0/tag_din0 had 298 fanout sinks and was the second-worst ASAP7
-    // critical path at -606 ps.  Inserting a 1-cycle pipeline register
-    // between the commit condition and the SRAM ports breaks this cone.
-    //
-    // Latency impact: the tag SRAM write occurs 1 cycle after the last AXI
-    // beat arrives instead of the same cycle.  The valid_array[idx] set is
-    // delayed by the same 1 cycle (see valid_array always_ff below).
-    // CS_REFILL transitions to CS_DONE (or CS_IDLE on mismatch) on the same
-    // cycle as before — the registered write simply completes in the background
-    // during CS_DONE, which is a no-stall cycle.  Correctness is preserved
-    // because the CPU reads ic_rdata_o from refill_buf_q in CS_DONE, not from
-    // the tag SRAM.
+    // Tag SRAM write: registered commit.
+    // The tag SRAM write occurs 1 cycle after the last AXI beat arrives. The valid_array[idx] set is delayed by the same cycle.
+    // CS_REFILL leaves for CS_DONE (or CS_IDLE on mismatch) in the cycle of the last beat. The write completes during CS_DONE.
+    // The register breaks the timing cone from state_q to the SRAM ports.
+    // The CPU reads ic_rdata_o from refill_buf_q in CS_DONE, not from the tag SRAM.
     // =========================================================================
     logic        tag_write_commit; // combinational commit qualifier
     logic        tag_we_q;         // registered: assert SRAM write next cycle
@@ -473,20 +456,11 @@ module rv32i_icache (
     end
 
     // =========================================================================
-    // SRAM read enable in CS_IDLE (bead r51p)
-    //
-    // Functional arms: read only for a live fetch (ic_valid_i && !ic_invalidate_i).
-    //
-    // Sky130 arm: read in every CS_IDLE cycle. A read issued while ic_valid_i = 0 (or during
-    // FENCE.I) is never consumed: tag_dout_r / data_dout_r capture dout0 only in CS_SRAM_LATCH,
-    // and CS_SRAM_LATCH is entered only from a CS_IDLE cycle with ic_valid_i = 1 and
-    // ic_invalidate_i = 0, whose own read is the one that is captured. A read has no side
-    // effect on the macro. In exchange csb0/addr0 no longer depend on ic_valid_i, i.e. on
-    // the dcache-stall -> hazard-priority -> redirect/halt network that dominated the ss
-    // setup failure of the CPU macro (Doc: cr:defect:sky130-cpu-ss-setup-r51p). Only that arm is
-    // changed: on ASAP7 csb0 feeds the SRAM clock gate (extra enabled cycles = extra dynamic
-    // power on a flow signed off as-is) and the other arms have no timing problem here.
-    // Writes (tag_we_q / data_we_q) override below and are unaffected.
+    // SRAM read enable in CS_IDLE.
+    // Every arm except SRAM_SKY130 reads only for a live fetch (ic_valid_i && !ic_invalidate_i). The Sky130 arm reads in every CS_IDLE cycle.
+    // It is safe: tag_dout_r and data_dout_r capture dout0 only in CS_SRAM_LATCH, which follows only a live-fetch CS_IDLE cycle.
+    // Only the SRAM_SKY130 arm does this: on ASAP7 csb0 drives the SRAM clock gate, so extra reads cost dynamic power.
+    // A read that is not consumed has no side effect on the macro. Writes (tag_we_q / data_we_q) override below.
     // =========================================================================
     logic idle_read_en;
 `ifdef SRAM_SKY130
@@ -532,20 +506,10 @@ module rv32i_icache (
     end
 
     // =========================================================================
-    // Data SRAM write — registered commit (Run-22 timing fix)
-    //
-    // The combinational cone from state_q (CS_REFILL) + axi_rvalid_i into
-    // data_csb0/web0/addr0/din0 had ~530+ fanout sinks and was the dominant
-    // ASAP7 critical-path cluster after Run 21.  Inserting a 1-cycle pipeline
-    // register between the commit condition and the SRAM ports breaks this cone,
-    // mirroring the Run-17 P2 tag-SRAM registered-commit fix (tag_we_q above).
-    //
-    // Latency impact: each refill beat's data SRAM write occurs 1 cycle after
-    // the AXI beat arrives.  Beat 3 fires during CS_DONE (the no-stall cycle),
-    // same timing as the tag write.  Correctness is preserved because the CPU
-    // reads ic_rdata_o from refill_buf_q in CS_DONE, not from the data SRAMs.
-    // valid_array is gated on tag_we_q, so the line is not visible as valid
-    // until the tag write commits — by then all 4 data writes have also fired.
+    // Data SRAM write: registered commit.
+    // Each refill beat's data SRAM write occurs 1 cycle after the AXI beat arrives. Beat 3 fires during CS_DONE.
+    // The register breaks the timing cone from state_q to the SRAM ports. valid_array is gated on tag_we_q. A line is valid only after the tag write commits. By then all 4 data writes have fired.
+    // The CPU reads ic_rdata_o from refill_buf_q in CS_DONE, not from the data SRAMs.
     // =========================================================================
     logic        data_write_commit;
     logic        data_we_q;

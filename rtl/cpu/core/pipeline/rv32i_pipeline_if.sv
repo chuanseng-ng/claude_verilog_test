@@ -154,14 +154,8 @@ module rv32i_pipeline_if #(
     // Debug halt detection
     // Halted when: halt requested AND no active cache miss AND IF/ID empty.
     //
-    // Condition: !(ic_valid_o && ic_stall_i)
-    //   When dbg_halt_req=1, ic_valid_o=0 (fetch is suppressed), so even if the
-    //   I-cache has an in-flight AXI refill from before the halt arrived, the stall
-    //   is for an abandoned request.  Blocking dbg_halted on ic_stall_i in that case
-    //   deadlocks when the AXI handler has not yet started (e.g. ISA tests halt
-    //   immediately after reset before starting AXI background tasks).
-    //   Using ic_valid_o && ic_stall_i only stalls halt when the cache stall is for
-    //   a live fetch request, preventing spurious halts mid-instruction.
+    // dbg_halted waits only for a cache stall of a live fetch (ic_valid_o && ic_stall_i).
+    // Do not wait on ic_stall_i alone: while halting ic_valid_o is 0, so the stall belongs to an abandoned fetch and waiting on it can deadlock. See tm:mod:rv32i-pipeline-if.
     // =========================================================================
     assign dbg_halted = dbg_halt_req && !(ic_valid_o && ic_stall_i) && !if_id_reg_o.valid;
 

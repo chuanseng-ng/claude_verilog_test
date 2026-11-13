@@ -1,23 +1,22 @@
-// fpga_sram_1rw.sv
-// FPGA Stage 0 (bead hlrm, GH #245) -- block-RAM-inferable stand-in for every 32-bit-wide 1RW SRAM hard macro
-// (sram_1rw_256x32_*, sram_1rw_128x32_asap7). Selected ONLY under `FPGA; no other arm references it.
+// fpga_sram_1rw - Block-RAM-inferable stand-in for the 32-bit-wide 1RW SRAM hard macros.
 //
-// Port contract is the macro/sim contract, so a site changes nothing but the module name:
-//   - csb0 active-low chip select, web0 active-low write enable (low = write)
-//   - write commits at the posedge; a READ captures mem[addr0] into the output register at the posedge
-//   - dout0 HOLDS its last value on a write cycle and when csb0 is high -- identical to
-//     sim/sram_1rw_256x32_verilator.v and sim/sram_1rw_128x32_asap7.v, the models every cocotb build
-//     compiles. (rtl/mem/sram_1rw_256x32_freepdk45.sv, the lint stub, instead refreshes dout on a write;
-//     it is not what the regression uses and is deliberately not copied.)
-//
-// Block-RAM inference rules honoured: synchronous read, NO reset on the array or the read register, ONE
-// address shared by read and write, the array indexed only by that address (no runtime-indexed mux of
-// flops). No `initial`, no vendor primitive: the same file is valid for yosys synth_xilinx / synth_ecp5 /
-// vendor tools. Read-during-write cannot occur (one port, read and write are exclusive by web0).
-//
-// The "hold on a write" semantic is a read-enable (csb0 low AND web0 high) on the output register, which is
-// the no-change / enable behaviour block RAMs have natively; if a toolchain cannot map it, it falls back to
-// a read-first block RAM plus a feedback mux and the report must say so.
+// Function: Replaces sram_1rw_256x32_* and sram_1rw_128x32_asap7. Only the `FPGA arm references it.
+//   The port contract is the macro and simulation contract, so a site changes only the module name.
+//   csb0 is an active-low chip select. web0 is an active-low write enable (low = write).
+//   A write commits at the posedge of clk0. A read captures mem[addr0] into the output register at the posedge.
+//   dout0 holds its last value on a write cycle and when csb0 is high.
+//   This matches sim/sram_1rw_256x32_verilator.v and sim/sram_1rw_128x32_asap7.v, the models every cocotb build compiles.
+//   rtl/mem/sram_1rw_256x32_freepdk45.sv (the lint stub) refreshes dout on a write. This module does not copy that.
+//   Inference rules: synchronous read, no reset on the array or the read register, one address shared by read and write, no `initial`, no vendor primitive.
+//   The array is indexed only by addr0.
+//   A read during a write cannot occur, because one port makes read and write exclusive by web0.
+// Parameters: AW (address bits, default 8; depth = 2**AW words).
+// Clocks and resets: clk0 is the only clock. The array and dout0 have no reset.
+// Caller rules:
+//   - Instantiate it only under `FPGA.
+//   - If a toolchain cannot map hold-on-write to a block RAM, it builds a read-first block RAM plus a feedback mux.
+//     The synthesis report must say so.
+// Doc: ds:mod:fpga-sram-1rw, tm:mod:fpga-sram-1rw, cr:mod:fpga-sram-1rw
 
 module fpga_sram_1rw #(
     parameter int unsigned AW = 8               // address bits; depth = 2**AW words

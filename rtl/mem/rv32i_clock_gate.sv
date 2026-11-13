@@ -1,40 +1,21 @@
-// rv32i_clock_gate.sv
-// Glitch-free integrated clock gate for SRAM clk0 power reduction.
+// rv32i_clock_gate - Glitch-free integrated clock gate for SRAM clk0 power reduction.
 //
-// Synthesis (__pnr__ defined by LibreLane Yosys steps): directly instantiates
-// ICGx1_ASAP7_75t_R from the ASAP7 RVT SEQ liberty.  Pins: CLK (source
-// clock), ENA (active-high enable, latched on low phase), SE (scan/test
-// enable, = test_en), GCLK (gated output).
-//
-// DFT (bead claude_verilog_test-j41m.2, Doc: tm:ch:dft-architecture sec.4
-// item 5): test_en forces the gate open.  In test mode every flop behind the
-// gate must see the (test) clock whatever the functional enable says, or it
-// is unreachable by scan and un-capturable by ATPG.  The behavioural arm
-// latches (en | test_en) on the clock-low phase, i.e. the OR is in front of
-// the latch exactly as in a library ICG with a scan-enable pin, so test_en
-// inherits the same glitch-free guarantee as en.  test_en is quasi-static
-// (a test-mode level, never toggled while the clock is running); tie it to
-// 1'b0 where the gated clock feeds no scannable flop (SRAM-macro clocks).
-//
-// Simulation / lint (__pnr__ not defined): behavioral latch-AND model that is
-// cycle-accurate and glitch-free.  Verilator LATCH warning suppressed here.
-
-// Sky130 SoC clock roots (bead claude_verilog_test-j41m.4, Sky130 re-harden RUN_2026-10-16_04-53-49):
-// `USE_SKY130_CLKCELLS` (pnr/Makefile SKY130_SOC_SV2V_DEFINES only) selects, for an instance that sets
-// HARD_ROOT, a hand-instantiated library gate instead of the behavioural latch + AND:
-//   sky130_fd_sc_hd__sdlclkp_4  integrated clock gate, scan-enable pin (GATE | SCE latched while CLK is low,
-//                               exactly the (en | test_en) structure below)  ->  icg_gclk
-//   sky130_fd_sc_hd__buf_16     root buffer, driving the net CTS owns (plain buf, not clkbuf: see CTS-0105 below)
-// Why: synthesis mapped the behavioural AND to an and2_2 (max_capacitance 0.19 pF at ss) and CTS then hung
-// ~0.68 pF of root wire on it (the register-tree root buffer is placed at the sink centroid, ~4 mm from the
-// gate), failing CVT.MaxCapViolations at 8 corners. repair_design skips clock nets, so nothing else can fix
-// it; the driver has to be right from synthesis on. buf_16 has a 5.0 pF Liberty max_capacitance at ss (clkbuf_16: 1.017 pF
-// at ss, 1.53 pF at tt). It is a plain buffer, NOT a clkbuf_16, on purpose: clkbuf_16 is in CTS_CLK_BUFFERS, so TritonCTS
-// sees it as an existing clock buffer and skips the net ("CTS-0105: Net cpu_gated_clk already has clock buffer ...
-// Skipping...", RUN_2026-10-17_08-53-43: no clock tree built, setup WNS -130 ns). A gate whose output feeds no CTS tree (HARD_ROOT = 0) keeps the behavioural
-// arm, so an unloaded gate (u_gpu_cg on the Sky130 SoC, whose GPU is a tie-off) still optimises away.
-// The instance names u_icg / u_root_buf are stable on purpose: pnr/sky130/soc/config*.json lists them in
-// RSZ_DONT_TOUCH_RX, and the netlist checks grep for them.
+// Function: gclk is clk gated by an enable. The enable is latched while clk is low and is (en | test_en).
+//   test_en forces the gate open. The OR sits in front of the latch, so test_en has the same glitch-free guarantee as en.
+//   Arms, in the order the code tests them:
+//   `FPGA_BUFGCE: a Xilinx BUFGCE with CE = en | test_en. Simulation and lint use the stub rtl/fpga/sim/BUFGCE.v.
+//   `USE_ICG_CELL: ICGx1_ASAP7_75t_R (CLK, ENA = en, SE = test_en, GCLK). The define is set for Yosys, not for Verilator.
+//   Neither FPGA_BUFGCE nor USE_ICG_CELL defined, HARD_ROOT = 1 and `USE_SKY130_CLKCELLS: sky130_fd_sc_hd__sdlclkp_4 (u_icg), then sky130_fd_sc_hd__buf_16 (u_root_buf).
+//   Neither define set, and HARD_ROOT = 0 or no `USE_SKY130_CLKCELLS: a behavioural latch and AND, cycle-accurate and glitch-free.
+// Parameters: HARD_ROOT (1 = clock root with a CTS tree; used only under `USE_SKY130_CLKCELLS; default 1'b0).
+// Clocks and resets: clk is the source clock. The module has no reset.
+// Caller rules:
+//   - Keep test_en quasi-static: a test-mode level that never toggles while the clock runs.
+//   - test_en can be tied to 1'b0 where gclk feeds no scannable flop. The cache SRAM gates (SRAM_ASAP7 arm) take the cache port test_en_i, so scan and MBIST can open them.
+//   - Set HARD_ROOT = 1 for a gate that is a clock root with a CTS tree. A gate with HARD_ROOT = 0 keeps the behavioural arm.
+//   - Do not rename u_icg or u_root_buf. pnr/sky130/soc/config*.json lists them in RSZ_DONT_TOUCH_RX. The netlist checks grep for them.
+//   - u_root_buf must be a plain buf_16, not clkbuf_16. clkbuf_16 is in CTS_CLK_BUFFERS, so TritonCTS treats the net as already buffered and builds no clock tree.
+// Doc: ds:mod:rv32i-clock-gate, tm:mod:rv32i-clock-gate, cr:mod:rv32i-clock-gate, tm:ch:dft-architecture
 
 /* verilator lint_off UNOPTFLAT */
 module rv32i_clock_gate #(
@@ -48,7 +29,7 @@ module rv32i_clock_gate #(
     output logic gclk
 );
 `ifdef FPGA_BUFGCE
-    // FPGA prototype (bead hlrm.2): Xilinx 7-series global clock buffer with clock enable. CE is latched while the
+    // FPGA prototype: Xilinx 7-series global clock buffer with clock enable. CE is latched while the
     // input clock is low (same glitch-free contract as the ICG / latch+AND arms), O is a dedicated global-clock
     // tree. The board build feeds `clk` from the same MMCM output as the ungated BUFG (see fpga/nexys_video/),
     // so gated and ungated domains stay matched. Simulation / lint use the stub in rtl/fpga/sim/BUFGCE.v.

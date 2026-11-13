@@ -103,7 +103,7 @@ module gpu_compute_unit
     input  div_entry_t                  div_stack_top_i,
 
     // -----------------------------------------------------------------------
-    // GPU_CTRL.reset (bead q6w0): flush the pipeline and clear the sticky error.
+    // GPU_CTRL.reset: flush the pipeline and clear the sticky error.
     // Synchronous, one cycle, issued by gpu_top once the AXI masters are quiet.
     // -----------------------------------------------------------------------
     input  logic                        soft_clr_i
@@ -375,7 +375,7 @@ module gpu_compute_unit
     // Named-signal copies of the id_ex_q members that are element/bit-selected below.  Selects are
     // taken from these wires, never directly on id_ex_q.<member>: Synlig reads
     // id_ex_q.rs1_data[l] (multi-dim packed array member) as ONE BIT instead of the 32-bit element
-    // (defect D3, bead ainf).  The copies keep the same lane-index select.
+    // (defect D3).  The copies keep the same lane-index select.
     logic [N_LANES-1:0][31:0] id_ex_rs1_data_w, id_ex_rs2_data_w;
     logic [11:0]              id_ex_imm_w;
     assign id_ex_rs1_data_w = id_ex_q.rs1_data;
@@ -547,4 +547,3 @@ module gpu_compute_unit
     assign exec_warp_id_o = id_ex_q.warp_id;
 
 endmodule
-

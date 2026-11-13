@@ -106,7 +106,7 @@ module rv32i_pipeline_ex(
     // For register variants, write data is the forwarded rs1.
     // =========================================================================
     // csr_op_w: named-signal copy of the struct member so the bit-select below is not taken
-    // directly on a struct member (Synlig mis-elaborates that; bead ainf).
+    // directly on a struct member (Synlig mis-elaborates that).
     logic [2:0]  csr_op_w;
     logic [31:0] csr_wd;
     assign csr_op_w = id_ex_reg_i.csr_op;
@@ -181,4 +181,3 @@ module rv32i_pipeline_ex(
     assign ex1a_ex1b_o = ex1a_to_ex1b;
 
 endmodule
-

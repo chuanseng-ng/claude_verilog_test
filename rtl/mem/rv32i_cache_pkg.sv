@@ -30,19 +30,10 @@ package rv32i_cache_pkg;
 
     // =========================================================================
     // Cache FSM state encoding
-    // Extended to 3 bits to accommodate synchronous-SRAM pipeline stages.
-    // CS_HIT_PENDING added (Run 15 timing fix): one extra register stage between
-    // CS_SRAM_LATCH and CS_TAG_CHECK so hit_comb is registered before it fans
-    // out to the data SRAM mux network (~821 loads → registered hit_q/hit_bank_q).
-    //
-    // Encoding rule (bead r51p, timing only, no behavioural change): state_q[3] = 1
-    // exactly for the states that stall the pipeline in EVERY cycle they are occupied
-    // (LATCH, HIT_PENDING, REFILL, WRITEBACK, UNCACHED_RD/WR, FLUSH_SCAN, INVAL_SCAN).
-    // IDLE (stalls only with a request), TAG_CHECK (stalls only on a miss) and DONE
-    // (never stalls) have state_q[3] = 0. dc_stall_o / ic_stall_o then need one state
-    // bit instead of a 4-bit decode, which sat at the head of the Sky130 ss critical
-    // cone (Doc: cr:defect:sky130-cpu-ss-setup-r51p). CS_IDLE stays 0 (reset state).
-    // tb/tests/test_cache_stall_encoding.py guards the rule.
+    // state_q[3] = 1 exactly for the states that stall the pipeline in every cycle they are occupied:
+    // LATCH, HIT_PENDING, REFILL, WRITEBACK, UNCACHED_RD/WR, FLUSH_SCAN and INVAL_SCAN.
+    // IDLE (stalls only with a request), TAG_CHECK (stalls only on a miss) and DONE (never stalls) have state_q[3] = 0.
+    // The stall outputs of rv32i_dcache and rv32i_icache then need one state bit. CS_IDLE stays 0 (reset state). tb/tests/test_cache_stall_encoding.py guards the rule.
     // =========================================================================
     typedef enum logic [3:0] {
         CS_IDLE          = 4'b0000,  // Idle: issue SRAM read on new request

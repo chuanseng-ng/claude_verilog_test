@@ -1,20 +1,22 @@
-// rv32i_pipeline_ex1b.sv
-// RV32I Pipeline — Execute Stage 1b (EX1b)
+// rv32i_pipeline_ex1b - Execute stage 1b: combinational field pack, PC redirect and trap side effects.
 //
-// Run-31: simplified field-pack stage — the 8-way case-mux has been removed.
-// EX1c now pre-decodes all trap outputs into dec_* fields registered in
-// ex1c_ex1b_reg_q.  EX1b reads those fields directly (1 gate each) instead
-// of re-computing from trap_type, eliminating the NOR5/NAND5 bottleneck
-// (~20 gate levels, 812 ps data arrival) that was the dominant timing violator
-// on the ex1c_ex1b_reg_q → EX2 path.
-//
-// EX1b is still purely combinational — no registers.  It consumes
-// ex1a_ex1b_t (now carrying the dec_* fields from EX1c) and produces
-// ex1_ex2_reg_t for EX2 (the FF).
-//
-// Branch/JALR redirect penalty: unchanged at 4 cycles.  The redirect fires
-// combinationally from EX1b using the registered dec_do_redirect /
-// dec_redirect_target rather than a case-mux derived value.
+// Function: Purely combinational. It has no registers.
+//   It reads ex1a_i (ex1a_ex1b_t). The dec_* fields in ex1a_i are pre-decoded by EX1c and registered in ex1c_ex1b_reg_q.
+//   It builds ex1_ex2_reg_o (ex1_ex2_reg_t) for EX2. EX2 owns the flop.
+//   ex_pc_redirect_o = dec_do_redirect && valid && !flush_ex_mem. ex_pc_target_o = dec_redirect_target.
+//   ex_pc_redirect_o drives IF and the hazard unit.
+//   trap_entry_o = dec_trap_valid && valid. trap_pc_o = ex1a_i.pc. trap_cause_o = dec_trap_cause.
+//   mret_o, dbg_halt_req_o (EBREAK) and fence_i_o are dec_mret, dec_dbg_halt and dec_fence_i, each gated with valid && !flush_ex_mem.
+//   ex1_ex2_reg_o is a NOP bubble when valid is 0 or flush_ex_mem is 1.
+//   Otherwise, with dec_trap_valid set, ex1_ex2_reg_o carries pc, instruction, trap_valid, trap_cause, pc_redirect, pc_target and valid.
+//   Otherwise it carries pc, instruction, alu_result, mem_wdata_aligned, mem_wstrb, csr_rdata, rd_addr, reg_wr_en, mem_rd, mem_wr,
+//   mem_size, mem_unsigned, csr_access, csr_addr, csr_wdata, jump, jalr, pc_redirect, pc_target and valid. trap_valid and trap_cause are 0.
+//   The branch and JALR redirect penalty is 4 cycles.
+// Parameters: none.
+// Clocks and resets: none. The module has no clock and no reset.
+// Caller rules:
+//   - ex1a_i must carry the registered dec_* fields of EX1c. EX1b does not recompute them from trap_type.
+// Doc: ds:mod:rv32i-pipeline-ex1b, tm:mod:rv32i-pipeline-ex1b
 
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex1b (
@@ -117,4 +119,3 @@ module rv32i_pipeline_ex1b (
     end
 
 endmodule
-
