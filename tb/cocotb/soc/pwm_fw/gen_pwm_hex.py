@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_pwm_hex.py — generate pwm_fw.hex for the Phase 6a-2 SoC-level PWM test
-(bead claude_verilog_test-f7vs.6 item 5, docs/PHASE6_IP_EXPANSION_PLAN.md §10).
+(bead claude_verilog_test-f7vs.6 item 5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
 
 Modelled directly on gpio_fw/gen_gpio_hex.py — same Assembler/lui_addi/CSRRW/MRET
 machinery, same commit_pc_o marker-PC synchronisation idiom, same ISR register

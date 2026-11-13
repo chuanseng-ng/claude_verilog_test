@@ -358,7 +358,7 @@ async def test_exit_scan_restores_functional(dut):
 # ---------------------------------------------------------------------------
 # j41m.9: scan-mode resets while the PMU holds a domain in reset (mutant g).
 # ---------------------------------------------------------------------------
-PMU_CTRL_UPPER20 = 0x20008  # PMU CTRL @ 0x2000_8000 (docs/design/MEMORY_MAP.md)
+PMU_CTRL_UPPER20 = 0x20008  # PMU CTRL @ 0x2000_8000 (Doc: ds:mm:memory-map)
 MODE_GPU_OFF = 0x2  # pmu.sv CTRL[1:0]: CPU on, GPU off
 DOM_OFF = 4  # pmu.sv pmu_dom_state_e
 DOM_CPU, DOM_GPU = 0, 1  # pmu.sv N_DOM index

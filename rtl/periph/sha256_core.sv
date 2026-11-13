@@ -1,6 +1,6 @@
 // sha256_core.sv
 // Phase 6b -- SHA-256 single-block compression core, one round per cycle (bead
-// claude_verilog_test-f7vs.10, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.6b "6b -- CRYPTO"). Sub-core of
+// claude_verilog_test-f7vs.10, Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "6b -- CRYPTO"). Sub-core of
 // crypto_accel.sv: no APB, no sticky flags, no clock-domain crossing. The parent owns the message
 // shadow, the chaining register (the DIGEST bank words) and the sticky done flag.
 //

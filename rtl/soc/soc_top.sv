@@ -864,7 +864,7 @@ module soc_top
     // Phase 6a-3 (bead claude_verilog_test-f7vs.7): WDT bite -> CPU-domain reset.
     //
     // The first peripheral output in this SoC that feeds a RESET. Per
-    // docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 (6a-3), when WDT_CTRL.RST_EN == 1 a
+    // Doc: ds:ch:phase6-ip-expansion-plan Sec.7 (6a-3), when WDT_CTRL.RST_EN == 1 a
     // bite asserts the CPU-domain reset, and ONLY the CPU-domain reset:
     //   * NOT the whole SoC — that would also reset the WDT itself (a
     //     self-clearing pulse no cocotb test can scoreboard) and tear down the

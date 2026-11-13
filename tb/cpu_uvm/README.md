@@ -372,7 +372,7 @@ This infrastructure was created during Phase A-G migration (2026-01-30 to 2026-0
 
 ## References
 
-- **Verification Plan**: `docs/verification/VERIFICATION_PLAN.md`
+- **Verification Plan**: `Doc: ds:ch:verification-plan`
 - **Migration Plan**: `docs/pyuvm_migration/MIGRATION_PLAN.md`
 - **pyuvm Documentation**: https://github.com/pyuvm/pyuvm
 - **UVM 1.2 Standard**: IEEE 1800.2-2017

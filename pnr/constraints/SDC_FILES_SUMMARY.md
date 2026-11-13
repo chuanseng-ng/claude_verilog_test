@@ -210,10 +210,10 @@ The post-CTS SDC uses tighter values because:
 
 | Document | Location | Purpose |
 |:---------|:---------|:--------|
-| SDC Timing Spec | `docs/design/SDC_TIMING_SPEC.md` | Complete SDC specification |
-| Phase 1 Architecture | `docs/design/PHASE1_ARCHITECTURE_SPEC.md` | CPU architecture details |
-| RTL Definition | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
-| Memory Map | `docs/design/MEMORY_MAP.md` | Address space and registers |
+| SDC Timing Spec | `Doc: ds:ch:sdc-timing-spec` | Complete SDC specification |
+| Phase 1 Architecture | `Doc: ds:ch:phase1-architecture` | CPU architecture details |
+| RTL Definition | `Doc: ds:ch:rtl-definition` | Interface signal definitions |
+| Memory Map | `Doc: ds:mm:memory-map` | Address space and registers |
 | OpenROAD Flow | `docs/design/OPENROAD_FLOW_SPEC.md` | Physical design flow |
 
 ## Change Log
@@ -237,7 +237,7 @@ For questions about SDC constraints:
 1. Refer to `README_SDC.md` for detailed documentation
 2. Use `QUICK_REFERENCE.md` for quick lookups
 3. Run `check_constraints.tcl` to verify coverage
-4. See `docs/design/SDC_TIMING_SPEC.md` for specification
+4. See `Doc: ds:ch:sdc-timing-spec` for specification
 
 ---
 

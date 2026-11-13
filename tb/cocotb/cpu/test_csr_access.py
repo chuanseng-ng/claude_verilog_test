@@ -3,7 +3,7 @@ CSR-file access coverage for rv32i_cpu_top (bead a5ze, Zicsr / Phase 5 M7).
 
 Every test runs a generated CSR instruction sequence on the DUT and compares each rd with the
 expected value from tb/models/csr_model.py, which is written from the project spec
-(docs/design/PHASE2_ARCHITECTURE_SPEC.md 4.2, PHASE5 M7 counter map), not from the RTL.  The
+(Doc: ds:ch:phase2-architecture 4.2, PHASE5 M7 counter map), not from the RTL.  The
 GPR results are read back through the APB debug window, so no internal signal is touched.
 
   test_mstatus_all_ops              CSRRW/RS/RC and the three immediate forms on mstatus, incl.

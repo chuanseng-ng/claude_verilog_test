@@ -1,7 +1,8 @@
 """Unit tests for tb/models/csr_model.py (bead a5ze).
 
 The model is the expected-value source for tb/cocotb/cpu/test_csr_access.py, so it is pinned here
-against the project spec (docs/design/PHASE2_ARCHITECTURE_SPEC.md section 4.2, PHASE5 M7 counters)
+against the project spec (Doc: ds:ch:phase2-architecture:42-csr-register-set-minimal-phase-2,
+PHASE5 M7 counters)
 and the Zicsr write-suppression rule, independently of the RTL.
 """
 

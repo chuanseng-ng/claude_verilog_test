@@ -35,14 +35,14 @@ What the audit found beyond syntax, kept here because they are design facts, not
    See the "Isolation handshake" block in `rtl/soc/pmu.sv`.
 4. **Scan mode does not override the PMU or the clamps.** Clock gates (`test_en`) and resets are forced
    by `scan_mode_i`, but the PMU is ordinary scan-chain state, so a clamp can be active under scan. The
-   UPF `SCAN` state says "all ON"; the mismatch is documented in `docs/design/UPF_POWER_SPEC.md`.
+   UPF `SCAN` state says "all ON"; the mismatch is documented in `Doc: ds:ch:upf-power-spec`.
 5. Slave-side response outputs of `u_gpu` / `u_cpu` are unclamped by design (section 4 scope).
 
 ## 1. Findings
 
 - **UPF is spec-only.** `pnr/constraints/phase5_soc.upf` *declares* 4 domains (PD_CPU/GPU/SRAM/PERIPH) + 2 power switches (PSW_CPU/GPU) + isolation (ISO_CPU/GPU) + a 4-state PST (NORMAL/CPU_OFF/GPU_OFF/IDLE) — but lines 17-18 and `pnr/asap7/soc/pdn.tcl:7-9` state explicitly: **OpenROAD does not insert switches; single-VDD; UPF carried for formal/sim only.** M11 signed off single-domain (62.9 mW, all logic powered).
 - **Zero RTL hooks.** `grep cpu_pg_ctrl|gpu_pg_ctrl|cpu_iso_en|gpu_iso_en rtl/` = 0. No PMU, no power-mode registers, no retention logic. `soc_top` has no power-control ports.
-- **No power-aware verification.** Verilator has **no UPF support** — it cannot model isolation-cell clamping, retention save/restore, or supply-off X-propagation. The `VERIFICATION_PLAN.md` power-down tests are aspirational/unimplemented.
+- **No power-aware verification.** Verilator has **no UPF support** — it cannot model isolation-cell clamping, retention save/restore, or supply-off X-propagation. The `Doc: ds:ch:verification-plan` power-down tests are aspirational/unimplemented.
 
 ## 2. The blocker that sets the scope
 

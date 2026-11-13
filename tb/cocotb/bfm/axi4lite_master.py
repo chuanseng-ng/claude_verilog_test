@@ -15,7 +15,7 @@ class AXI4LiteMaster:
     Implements an AXI4-Lite master that can initiate read and write
     transactions. Useful for testing AXI4-Lite slave devices.
 
-    Per PHASE1_ARCHITECTURE_SPEC.md:
+    Per Doc: ds:ch:phase1-architecture:
     - Address width: 32 bits
     - Data width: 32 bits
     - Outstanding transactions: 1 (simple design)

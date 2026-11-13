@@ -1,6 +1,6 @@
 // npu_weight_mem.sv
 // Phase 6c -- NPU weight memory: one 4 KB (1024 x 32) store, ALL HARD MACRO, 3-way ifdef
-// (bead claude_verilog_test-f7vs.11, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6c -- NPU",
+// (bead claude_verilog_test-f7vs.11, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU",
 // "Weight-SRAM instantiation").
 //
 //   `ifdef SRAM_SKY130   1 x sky130_sram_4kbyte_1rw1r_32x1024_8   (port 0 only, port 1 tied off)

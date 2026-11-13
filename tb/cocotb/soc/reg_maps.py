@@ -2,7 +2,7 @@
 reg_maps.py -- the DOCUMENTED register maps the register-walk (reg_walk.py) checks against
 (bead claude_verilog_test-7ovx).
 
-Source of truth: docs/design/MEMORY_MAP.md and each module's header comment (register table,
+Source of truth: Doc: ds:mm:memory-map and each module's header comment (register table,
 reset values, RO / W1C / W1P / WO classification).  The values here are transcribed from those
 documents, NOT read back from the RTL's RESET_VAL / WMASK parameters: a walk that took its
 expectations from the RTL it checks could never disagree with it.  A mismatch is therefore
@@ -29,7 +29,7 @@ from reg_walk import M32, Reg
 RW, RO = "rw", "ro"
 
 # Absolute SoC addresses of each peripheral window (rtl/soc/soc_periph_map_pkg.sv,
-# docs/design/MEMORY_MAP.md).
+# Doc: ds:mm:memory-map).
 SOC_BASE = {
     "uart": 0x2000_2000,
     "spi": 0x2000_3000,
@@ -103,7 +103,7 @@ def irq_regs(n_sources: int) -> list:
 
 
 # ---------------------------------------------------------------------------------------------
-# GPIO (gpio_controller.sv header, MEMORY_MAP.md "GPIO Registers"); 32 pins.
+# GPIO (gpio_controller.sv header, Doc: ds:mm:memory-map "GPIO Registers"); 32 pins.
 # ---------------------------------------------------------------------------------------------
 GPIO = [
     Reg("GPIO_DATA_IN", _w(0), reset=0, wmask=0),          # pins driven low by the testbench
@@ -112,7 +112,7 @@ GPIO = [
     Reg("GPIO_IRQ_EN", _w(3), reset=0, wmask=M32),
     Reg("GPIO_IRQ_TYPE", _w(4), reset=0, wmask=M32),
     Reg("GPIO_IRQ_POL", _w(5), reset=0, wmask=M32),
-    # Edge-sticky / level-live (MEMORY_MAP.md): with TYPE/POL being walked, the live level bits
+    # Edge-sticky / level-live (Doc: ds:mm:memory-map): with TYPE/POL being walked, the live level bits
     # and any latched edge change by design, so STAT is not compared.  Its RO-ness is covered by
     # the other 31 registers' cross-talk checks and by test_gpio's W1C tests.
     Reg("GPIO_IRQ_STAT", _w(6), reset=0, wmask=0, live=M32),
@@ -120,7 +120,7 @@ GPIO = [
 ]
 
 # ---------------------------------------------------------------------------------------------
-# PWM (pwm_controller.sv header, MEMORY_MAP.md "PWM Registers"); 4 channels.
+# PWM (pwm_controller.sv header, Doc: ds:mm:memory-map "PWM Registers"); 4 channels.
 # ---------------------------------------------------------------------------------------------
 PWM = [
     Reg("PWM_CTRL", _w(0), reset=0, wmask=0xFF),           # [3:0] enable, [7:4] polarity
@@ -134,7 +134,7 @@ PWM = [
 ]
 
 # ---------------------------------------------------------------------------------------------
-# Watchdog (watchdog_timer.sv header, MEMORY_MAP.md "WDT Registers")
+# Watchdog (watchdog_timer.sv header, Doc: ds:mm:memory-map "WDT Registers")
 # ---------------------------------------------------------------------------------------------
 WDT = [
     # CTRL[0] (enable) is never driven: enabling starts a down-counter that barks, bites and
@@ -152,7 +152,7 @@ WDT = [
 ]
 
 # ---------------------------------------------------------------------------------------------
-# TRNG (trng.sv header, MEMORY_MAP.md "TRNG Registers"); LFSR build => STATUS[3] INSECURE = 1.
+# TRNG (trng.sv header, Doc: ds:mm:memory-map "TRNG Registers"); LFSR build => STATUS[3] INSECURE = 1.
 # ---------------------------------------------------------------------------------------------
 TRNG = [
     # CTRL[0] (enable) is never driven: it starts entropy production, fills the FIFO and samples
@@ -168,7 +168,7 @@ TRNG = [
 ]
 
 # ---------------------------------------------------------------------------------------------
-# I2C (i2c_controller.sv header, MEMORY_MAP.md "I2C Registers")
+# I2C (i2c_controller.sv header, Doc: ds:mm:memory-map "I2C Registers")
 # ---------------------------------------------------------------------------------------------
 I2C = [
     Reg("I2C_CTRL", _w(0), reset=0, wmask=0x0F03),         # [0]EN [1]LOOPBACK [11:8]RX_THR
@@ -189,7 +189,7 @@ I2C = [
 ]
 
 # ---------------------------------------------------------------------------------------------
-# CRYPTO (crypto_accel.sv header, MEMORY_MAP.md "CRYPTO Registers"); 32 words.
+# CRYPTO (crypto_accel.sv header, Doc: ds:mm:memory-map "CRYPTO Registers"); 32 words.
 # ---------------------------------------------------------------------------------------------
 _AP_KEY = "aperture: key words load the shadow key and latch key_valid for good"
 _AP_DIN = "aperture: DIN words load the message shadow (write order is the contract)"
@@ -209,7 +209,7 @@ CRYPTO = (
 )
 
 # ---------------------------------------------------------------------------------------------
-# NPU (npu_top.sv header, MEMORY_MAP.md "NPU Registers"); 16 words.
+# NPU (npu_top.sv header, Doc: ds:mm:memory-map "NPU Registers"); 16 words.
 # ---------------------------------------------------------------------------------------------
 NPU = (
     # CTRL[2] START is W1P: never driven, must read 0.  [0] RELU_EN and [3] IRQ_EN are walked.

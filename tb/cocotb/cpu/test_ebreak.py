@@ -128,7 +128,7 @@ async def test_ebreak_instruction(dut):
             dut._log.info(f"Halt cause: 0x{halt_cause:x}")
 
             # Check halt cause
-            # Per MEMORY_MAP.md:
+            # Per Doc: ds:mm:memory-map:
             # 0x1 = Debug halt request
             # 0x8 = EBREAK instruction
             if halt_cause == 0x8:

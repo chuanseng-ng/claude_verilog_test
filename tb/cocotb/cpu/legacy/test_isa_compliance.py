@@ -13,7 +13,7 @@ PYUVM MIGRATION WAIVER
 STATUS: This test currently uses raw cocotb instead of pyuvm UVM infrastructure.
 
 JUSTIFICATION:
-  Phase 1 verification plan (docs/verification/VERIFICATION_PLAN.md) specifies
+  Phase 1 verification plan (Doc: ds:ch:verification-plan) specifies
   that tests should use pyuvm sequences and scoreboards for better methodology
   and reusability. However, this test file contains 1875 lines of working,
   validated ISA compliance tests that provide critical verification coverage.
@@ -46,7 +46,7 @@ MIGRATION PLAN (DEFERRED TO PHASE 2):
   5. Remove cocotb version only after full pyuvm coverage verified
 
 REFERENCES:
-  - Phase 1 Verification Plan: docs/verification/VERIFICATION_PLAN.md
+  - Phase 1 Verification Plan: Doc: ds:ch:verification-plan
   - pyuvm Documentation: https://github.com/pyuvm/pyuvm
   - Current test coverage: All 37 RV32I instructions ✓
 

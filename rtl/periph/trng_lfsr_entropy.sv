@@ -1,6 +1,6 @@
 // trng_lfsr_entropy.sv
 // Phase 6a-4 -- default (LFSR) entropy arm of the TRNG (bead claude_verilog_test-f7vs.8,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG"). Selected by trng.sv unless
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG"). Selected by trng.sv unless
 // TRNG_RO_SKY130 is defined. The bit-exact specification of everything in this file is
 // tb/models/trng_lfsr_model.py; this RTL reproduces that model word for word.
 //

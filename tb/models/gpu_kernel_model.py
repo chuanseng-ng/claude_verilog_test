@@ -1,7 +1,7 @@
 """
 GPU SIMT Kernel Execution Model
 
-Instruction-accurate model of GPU SIMT execution per PHASE4_GPU_ARCHITECTURE_SPEC.md.
+Instruction-accurate model of GPU SIMT execution per Doc: ds:ch:phase4-gpu-architecture.
 Implements 8-lane warp execution with basic divergence handling.
 
 Launch contract (bead 6hy6, user decision 2026-10-11): a block holds at most
@@ -28,7 +28,7 @@ class GPUKernelModel:
     """
     GPU SIMT kernel execution model.
 
-    Implements the execution model defined in PHASE4_GPU_ARCHITECTURE_SPEC.md
+    Implements the execution model defined in Doc: ds:ch:phase4-gpu-architecture
     with 8-lane warps, round-robin scheduling, and one-level divergence.
     """
 

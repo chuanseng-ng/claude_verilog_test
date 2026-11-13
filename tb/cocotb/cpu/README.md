@@ -272,7 +272,7 @@ export PATH=$HOME/.local/bin:$PATH
 ## References
 
 - **pyuvm Infrastructure**: `tb/cpu_uvm/README.md`
-- **Verification Plan**: `docs/verification/VERIFICATION_PLAN.md`
+- **Verification Plan**: `Doc: ds:ch:verification-plan`
 - **Migration Documentation**: `docs/pyuvm_migration/`
 - **Legacy Tests**: `legacy/README.md`
 - **Makefile Help**: `make usage`

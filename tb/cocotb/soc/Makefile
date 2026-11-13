@@ -198,7 +198,7 @@ GPIO_SOURCES = \
 # Phase 6a-2 (bead claude_verilog_test-f7vs.6): standalone pwm_controller unit-test sources.
 # apb4_register_bank (register file) + pwm_controller + standalone TB. Unlike GPIO_SOURCES above,
 # there is no cdc_sync here -- PWM has no async input pins at all (push-pull pwm_o only, no
-# oe, no CDC -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-2 -- PWM"). pwm_controller.sv does not
+# oe, no CDC -- Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-2 -- PWM"). pwm_controller.sv does not
 # exist yet as of this line's authorship (strict TDD, step 2 of Sec.9's workflow); the pwm/
 # pwm_lint targets below are expected to fail to elaborate until it does.
 PWM_SOURCES = \
@@ -209,7 +209,7 @@ PWM_SOURCES = \
 # Phase 6a-3 (bead claude_verilog_test-f7vs.7): standalone watchdog_timer unit-test sources.
 # apb4_register_bank (register file) + watchdog_timer + standalone TB. Like PWM there is no
 # cdc_sync here -- the WDT has no async input pins (clk/rst_n/APB4 only; irq_o and
-# wdt_rst_req_o are outputs), so no CDC in this module -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7
+# wdt_rst_req_o are outputs), so no CDC in this module -- Doc: ds:ch:phase6-ip-expansion-plan Sec.7
 # "6a-3 -- WDT". watchdog_timer.sv does not exist yet as of this line's authorship (strict TDD,
 # step 2 of Sec.9's workflow); the wdt/wdt_lint targets below are expected to fail to elaborate
 # until it does.
@@ -225,7 +225,7 @@ WDT_SOURCES = \
 # trng_ro_sky130.sv is deliberately absent (it is a Sky130-only analog stub, exempted in
 # tools/verif/check_periph_filelists.py's EXEMPT map -- never add it to a file list). No
 # cdc_sync here: the LFSR arm has no asynchronous input (clk/rst_n/APB4 only; irq_o is an
-# output) -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG". trng.sv and
+# output) -- Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG". trng.sv and
 # trng_lfsr_entropy.sv do not exist yet as of this line's authorship (strict TDD, step 2 of
 # Sec.9's workflow); the trng/trng_lint targets below are expected to fail to elaborate until they
 # do.
@@ -1328,7 +1328,7 @@ apb_interconnect_lint:
 # re-elaborate the whole design once per value; a single cocotb process cannot change it at
 # runtime. Each point gets ITS OWN SIM_BUILD directory -- reusing one across different N_SLAVES
 # values is exactly the stale-Verilator-cache / corrupt-Vtop hazard this phase's groundwork
-# (bead f7vs.3) exists to avoid (docs/PHASE6_IP_EXPANSION_PLAN.md Sec.10 "Operational hazards").
+# (bead f7vs.3) exists to avoid (Doc: ds:ch:phase6-ip-expansion-plan Sec.10 "Operational hazards").
 # test_apb_interconnect.py reads back which N_SLAVES / OVERLAP_TEST this build used via the
 # APB_IC_N_SLAVES / APB_IC_OVERLAP environment variables set below, so the same test module
 # runs unmodified at every sweep point plus the dedicated first-match-wins overlap build.

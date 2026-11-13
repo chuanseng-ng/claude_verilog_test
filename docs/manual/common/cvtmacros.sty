@@ -110,6 +110,8 @@
 
 \newcommand{\cvtcaption}[1]{{\sffamily\scriptsize\color{black!65}#1}\par
   \vspace{2pt}}
+% Number that a heading had in its original file; the heading title no longer prints it.
+\newcommand{\origsec}[1]{\par\nobreak\cvtcaption{(original section #1)}\nobreak}
 % Moved and record text sit between two marker lines. The text is not boxed, so it
 % breaks across pages and may hold longtables, listings and landscape pages.
 \newcommand{\cvt@markrule}{\par\nobreak\noindent

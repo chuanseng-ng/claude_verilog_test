@@ -1,7 +1,7 @@
 """
 gpu_top control-plane and error paths (bead a5ze, slice 2).
 
-DUT = gpu_top.  What each test pins (spec: PHASE4_GPU_ARCHITECTURE_SPEC.md "Control Interface":
+DUT = gpu_top.  What each test pins (spec: Doc: ds:ch:phase4-gpu-architecture "Control Interface":
 GPU_CTRL = start / reset, GPU_STATUS = idle / done / error; "nested branches NOT supported in
 Phase 4 (kernel must avoid)" with a 4-deep per-warp divergence stack, gpu_pkg::DIV_STACK_DEPTH):
 
@@ -226,7 +226,7 @@ async def test_stack_overflow_sets_error(dut):
 
 # Bead q6w0 / GH #261: gpu_compute_unit's gpu_error_o used to be cleared only by rst_n, so after
 # CTRL.reset the next launch went straight back to ERROR.  Fixed by the synchronous soft-reset
-# clear (see MEMORY_MAP.md "GPU_CTRL.RESET").
+# clear (see Doc: ds:mm:memory-map "GPU_CTRL.RESET").
 @cocotb.test()
 async def test_soft_reset_recovers_from_error(dut):
     """CTRL.reset leaves ERROR for IDLE, after which a fresh kernel gives the right result."""
@@ -593,7 +593,7 @@ async def test_soft_reset_during_running_is_protocol_clean(dut):
 
 @cocotb.test()
 async def test_soft_reset_contract_config_irq_perf(dut):
-    """What CTRL.reset keeps and what it clears (MEMORY_MAP.md GPU_CTRL.RESET)."""
+    """What CTRL.reset keeps and what it clears (Doc: ds:mm:memory-map GPU_CTRL.RESET)."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     await gpu_reset(dut)
     image = dict(store_kernel())

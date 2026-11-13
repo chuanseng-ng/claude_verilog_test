@@ -895,14 +895,26 @@ cr:status:roadmap:project-expectations	docs/manual/cr/parts/01-phase-and-status-
 cr:status:roadmap:target-technologies	docs/manual/cr/parts/01-phase-and-status-history.tex	5907	Target Technologies
 cr:status:roadmap:technology-node-cross-comparison-pd-results-estimates	docs/manual/cr/parts/01-phase-and-status-history.tex	7005	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
 cr:status:roadmap:timing-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	5870	Timing Verification
-ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	7	CPU phases 0 to 3
-ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	11	DFT requirements
-ds:ch:functional-coverage	docs/manual/ds/parts/04-verification-plan.tex	7	Functional coverage
-ds:ch:gpu-lite-simt-engine	docs/manual/ds/parts/01-architecture.tex	11	GPU-lite SIMT engine
-ds:ch:interface-definitions	docs/manual/ds/parts/01-architecture.tex	31	Interface definitions
-ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	39	Locked architecture decisions
-ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	27	Memory map
-ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	23	Mixed-signal PLL
+ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	133	CPU phases 0 to 3
+ds:ch:design-expectation	docs/manual/ds/parts/01-architecture.tex	9	Design Expectation
+ds:ch:design-expectation:cpu	docs/manual/ds/parts/01-architecture.tex	11	CPU
+ds:ch:design-expectation:gpu	docs/manual/ds/parts/01-architecture.tex	68	GPU
+ds:ch:design-expectation:soc	docs/manual/ds/parts/01-architecture.tex	104	SoC
+ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1836	DFT requirements
+ds:ch:functional-coverage	docs/manual/ds/parts/04-verification-plan.tex	1627	Functional coverage
+ds:ch:gpu-lite-simt-engine	docs/manual/ds/parts/01-architecture.tex	5472	GPU-lite SIMT engine
+ds:ch:gpu-model	docs/manual/ds/parts/01-architecture.tex	6399	GPU Execution Model
+ds:ch:gpu-model:ai-vs-human-scope	docs/manual/ds/parts/01-architecture.tex	6509	AI vs Human scope
+ds:ch:gpu-model:design-goals	docs/manual/ds/parts/01-architecture.tex	6403	Design goals
+ds:ch:gpu-model:divergence-handling	docs/manual/ds/parts/01-architecture.tex	6473	Divergence handling
+ds:ch:gpu-model:execution-model-simple-but-real	docs/manual/ds/parts/01-architecture.tex	6431	Execution model (Simple but real)
+ds:ch:gpu-model:gpu-verification-python	docs/manual/ds/parts/01-architecture.tex	6527	GPU verification (Python)
+ds:ch:gpu-model:memory-model	docs/manual/ds/parts/01-architecture.tex	6497	Memory model
+ds:ch:gpu-model:pipeline-gpu-core	docs/manual/ds/parts/01-architecture.tex	6457	Pipeline (GPU core)
+ds:ch:interface-definitions	docs/manual/ds/parts/01-architecture.tex	13691	Interface definitions
+ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	14961	Locked architecture decisions
+ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	11942	Memory map
+ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	11375	Mixed-signal PLL
 ds:ch:mod-cdc-primitives	docs/manual/ds/parts/03-module-contracts.tex	19	CDC primitives
 ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
 ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	35	Crypto accelerator
@@ -914,19 +926,718 @@ ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	39	NPU
 ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	31	Peripherals
 ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	27	PLL subsystem
 ds:ch:mod-soc-fabric	docs/manual/ds/parts/03-module-contracts.tex	15	SoC fabric
-ds:ch:phase-6-ip-expansion	docs/manual/ds/parts/01-architecture.tex	19	Phase 6 IP expansion
-ds:ch:phase4-5-architecture	docs/manual/ds/parts/01-architecture.tex	130	Phase 4: GPU-Lite SIMT Engine (frozen)
-ds:ch:phase4-5-architecture:phase-5-soc-integration-white-check-mark-complete-2026-06-24	docs/manual/ds/parts/01-architecture.tex	159	\texorpdfstring{Phase 5: SoC Integration (\ok{} COMPLETE 2026-06-24)}{Phase 5: SoC Integration ( COMPLETE 2026-06-24)}
-ds:ch:power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	7	Power intent
-ds:ch:reference-models	docs/manual/ds/parts/01-architecture.tex	35	Reference models
-ds:ch:soc-integration	docs/manual/ds/parts/01-architecture.tex	15	SoC integration
+ds:ch:phase-6-ip-expansion	docs/manual/ds/parts/01-architecture.tex	9156	Phase 6 IP expansion
+ds:ch:phase0-architecture	docs/manual/ds/parts/01-architecture.tex	139	Phase 0 Architecture Specification
+ds:ch:phase0-architecture:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	549	AI MAY assist with
+ds:ch:phase0-architecture:ai-shall-not-decide	docs/manual/ds/parts/01-architecture.tex	565	AI SHALL NOT decide
+ds:ch:phase0-architecture:ai-usage-constraints-normative	docs/manual/ds/parts/01-architecture.tex	547	AI usage constraints (normative)
+ds:ch:phase0-architecture:architectural-overview	docs/manual/ds/parts/01-architecture.tex	218	Architectural overview
+ds:ch:phase0-architecture:architectural-state	docs/manual/ds/parts/01-architecture.tex	234	Architectural state
+ds:ch:phase0-architecture:architectural-state-after-reset	docs/manual/ds/parts/01-architecture.tex	325	Architectural state after reset
+ds:ch:phase0-architecture:commit-definition	docs/manual/ds/parts/01-architecture.tex	424	Commit definition
+ds:ch:phase0-architecture:commit-observability-required-signals	docs/manual/ds/parts/01-architecture.tex	440	Commit observability (required signals)
+ds:ch:phase0-architecture:commit-semantics	docs/manual/ds/parts/01-architecture.tex	422	Commit semantics
+ds:ch:phase0-architecture:control-flow	docs/manual/ds/parts/01-architecture.tex	265	Control flow
+ds:ch:phase0-architecture:determinism	docs/manual/ds/parts/01-architecture.tex	535	Determinism
+ds:ch:phase0-architecture:execution-model	docs/manual/ds/parts/01-architecture.tex	220	Execution model
+ds:ch:phase0-architecture:explicit-non-goals-phase-0-exclusions	docs/manual/ds/parts/01-architecture.tex	189	Explicit non-goals (Phase-0 exclusions)
+ds:ch:phase0-architecture:illegal-instructions	docs/manual/ds/parts/01-architecture.tex	295	Illegal instructions
+ds:ch:phase0-architecture:integer-arithmetic-and-logic	docs/manual/ds/parts/01-architecture.tex	250	Integer arithmetic and logic
+ds:ch:phase0-architecture:load-and-store	docs/manual/ds/parts/01-architecture.tex	275	Load and store
+ds:ch:phase0-architecture:loadstore-rules	docs/manual/ds/parts/01-architecture.tex	482	\texorpdfstring{Load/\allowbreak{}store rules}{Load/store rules}
+ds:ch:phase0-architecture:memory-interface-constraints	docs/manual/ds/parts/01-architecture.tex	499	Memory interface constraints
+ds:ch:phase0-architecture:memory-model	docs/manual/ds/parts/01-architecture.tex	461	Memory model
+ds:ch:phase0-architecture:memory-ordering-rules	docs/manual/ds/parts/01-architecture.tex	459	Memory ordering rules
+ds:ch:phase0-architecture:phase-0-exit-criteria	docs/manual/ds/parts/01-architecture.tex	583	Phase-0 exit criteria
+ds:ch:phase0-architecture:precision-rules	docs/manual/ds/parts/01-architecture.tex	408	Precision rules
+ds:ch:phase0-architecture:reference-model-alignment	docs/manual/ds/parts/01-architecture.tex	517	Reference model alignment
+ds:ch:phase0-architecture:reset-behavior	docs/manual/ds/parts/01-architecture.tex	313	Reset Behavior
+ds:ch:phase0-architecture:reset-exit-guarantees	docs/manual/ds/parts/01-architecture.tex	352	Reset exit guarantees
+ds:ch:phase0-architecture:reset-type	docs/manual/ds/parts/01-architecture.tex	315	Reset type
+ds:ch:phase0-architecture:scope	docs/manual/ds/parts/01-architecture.tex	156	Scope
+ds:ch:phase0-architecture:scope-and-non-goals	docs/manual/ds/parts/01-architecture.tex	154	Scope and non-goals
+ds:ch:phase0-architecture:supported-instruction-subset-rv32i	docs/manual/ds/parts/01-architecture.tex	248	Supported instruction subset (RV32I)
+ds:ch:phase0-architecture:supported-traps-phase-0	docs/manual/ds/parts/01-architecture.tex	368	Supported traps (Phase-0)
+ds:ch:phase0-architecture:trap-behavior	docs/manual/ds/parts/01-architecture.tex	366	Trap behavior
+ds:ch:phase0-architecture:trap-semantics	docs/manual/ds/parts/01-architecture.tex	391	Trap semantics
+ds:ch:phase0-architecture:trap-vector	docs/manual/ds/parts/01-architecture.tex	383	Trap vector
+ds:ch:phase0-architecture:upper-immediates	docs/manual/ds/parts/01-architecture.tex	288	Upper immediates
+ds:ch:phase0-architecture:verification-requirements-phase-0	docs/manual/ds/parts/01-architecture.tex	515	Verification requirements (Phase-0)
+ds:ch:phase1-architecture	docs/manual/ds/parts/01-architecture.tex	610	Phase 1 Architecture Specification
+ds:ch:phase1-architecture:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	1114	AI MAY assist with
+ds:ch:phase1-architecture:ai-must-not-decide	docs/manual/ds/parts/01-architecture.tex	1134	AI MUST NOT decide
+ds:ch:phase1-architecture:aihuman-responsibility-boundaries	docs/manual/ds/parts/01-architecture.tex	1112	AI/Human responsibility boundaries
+ds:ch:phase1-architecture:apb3-slave-interface-debug	docs/manual/ds/parts/01-architecture.tex	860	APB3 slave interface (debug)
+ds:ch:phase1-architecture:architecture-verification	docs/manual/ds/parts/01-architecture.tex	1462	Architecture \& Verification
+ds:ch:phase1-architecture:axi4-lite-master-interface	docs/manual/ds/parts/01-architecture.tex	774	AXI4-Lite master interface
+ds:ch:phase1-architecture:clocking	docs/manual/ds/parts/01-architecture.tex	1088	Clocking
+ds:ch:phase1-architecture:commit-interface-verification	docs/manual/ds/parts/01-architecture.tex	1001	Commit interface (verification)
+ds:ch:phase1-architecture:file-organization	docs/manual/ds/parts/01-architecture.tex	1411	File organization
+ds:ch:phase1-architecture:flow-stages	docs/manual/ds/parts/01-architecture.tex	1229	Flow stages
+ds:ch:phase1-architecture:human-must-review	docs/manual/ds/parts/01-architecture.tex	1152	Human MUST review
+ds:ch:phase1-architecture:interfaces	docs/manual/ds/parts/01-architecture.tex	1100	Interfaces
+ds:ch:phase1-architecture:known-limitations-phase-1	docs/manual/ds/parts/01-architecture.tex	1387	Known limitations (Phase 1)
+ds:ch:phase1-architecture:language	docs/manual/ds/parts/01-architecture.tex	1045	Language
+ds:ch:phase1-architecture:microarchitecture	docs/manual/ds/parts/01-architecture.tex	641	Microarchitecture
+ds:ch:phase1-architecture:module-interfaces	docs/manual/ds/parts/01-architecture.tex	714	Module interfaces
+ds:ch:phase1-architecture:openroad-back-end-flow	docs/manual/ds/parts/01-architecture.tex	1221	OpenROAD back-end flow
+ds:ch:phase1-architecture:openroad-workflow	docs/manual/ds/parts/01-architecture.tex	1360	OpenROAD workflow
+ds:ch:phase1-architecture:overview	docs/manual/ds/parts/01-architecture.tex	621	Overview
+ds:ch:phase1-architecture:physical-design-exit-criteria	docs/manual/ds/parts/01-architecture.tex	1281	Physical design exit criteria
+ds:ch:phase1-architecture:physical-design-new-in-phase-1	docs/manual/ds/parts/01-architecture.tex	1486	Physical Design (NEW in Phase 1)
+ds:ch:phase1-architecture:physical-design-requirements-phase-1	docs/manual/ds/parts/01-architecture.tex	1219	Physical design requirements (Phase 1)
+ds:ch:phase1-architecture:pipeline-organization	docs/manual/ds/parts/01-architecture.tex	643	Pipeline organization
+ds:ch:phase1-architecture:power-intent-upf	docs/manual/ds/parts/01-architecture.tex	1275	Power intent (UPF)
+ds:ch:phase1-architecture:references	docs/manual/ds/parts/01-architecture.tex	1460	References
+ds:ch:phase1-architecture:required-tests	docs/manual/ds/parts/01-architecture.tex	1182	Required tests
+ds:ch:phase1-architecture:resets	docs/manual/ds/parts/01-architecture.tex	1075	Resets
+ds:ch:phase1-architecture:rtl-coding-guidelines	docs/manual/ds/parts/01-architecture.tex	1043	RTL coding guidelines
+ds:ch:phase1-architecture:rtl-module-hierarchy	docs/manual/ds/parts/01-architecture.tex	699	RTL module hierarchy
+ds:ch:phase1-architecture:rtl-verification-exit-criteria	docs/manual/ds/parts/01-architecture.tex	1203	RTL verification exit criteria
+ds:ch:phase1-architecture:rv32i-cpu-top-top-level	docs/manual/ds/parts/01-architecture.tex	717	Module interfaces
+ds:ch:phase1-architecture:state-machine	docs/manual/ds/parts/01-architecture.tex	676	State machine
+ds:ch:phase1-architecture:style	docs/manual/ds/parts/01-architecture.tex	1057	Style
+ds:ch:phase1-architecture:system-interfaces	docs/manual/ds/parts/01-architecture.tex	772	System interfaces
+ds:ch:phase1-architecture:testbench-architecture	docs/manual/ds/parts/01-architecture.tex	1170	Testbench architecture
+ds:ch:phase1-architecture:timing-constraints-sdc	docs/manual/ds/parts/01-architecture.tex	1257	Timing constraints (SDC)
+ds:ch:phase1-architecture:verification-requirements-phase-1	docs/manual/ds/parts/01-architecture.tex	1168	Verification requirements (Phase 1)
+ds:ch:phase2-architecture	docs/manual/ds/parts/01-architecture.tex	1513	Phase 2 Architecture Specification
+ds:ch:phase2-architecture:1-overview	docs/manual/ds/parts/01-architecture.tex	1527	Overview
+ds:ch:phase2-architecture:10-open-questions-human-approval-required	docs/manual/ds/parts/01-architecture.tex	3682	Open Questions --- Human Approval Required
+ds:ch:phase2-architecture:11-appendix-instruction-encoding-reference-for-new-instructions	docs/manual/ds/parts/01-architecture.tex	3768	Appendix: Instruction Encoding Reference for New Instructions
+ds:ch:phase2-architecture:11-what-changes-from-phase-1	docs/manual/ds/parts/01-architecture.tex	1549	What Changes from Phase 1
+ds:ch:phase2-architecture:12-references	docs/manual/ds/parts/01-architecture.tex	3793	References
+ds:ch:phase2-architecture:12-what-does-not-change-from-phase-1	docs/manual/ds/parts/01-architecture.tex	1582	What Does NOT Change from Phase 1
+ds:ch:phase2-architecture:2-microarchitecture	docs/manual/ds/parts/01-architecture.tex	1609	Microarchitecture
+ds:ch:phase2-architecture:21-five-stage-pipeline-overview	docs/manual/ds/parts/01-architecture.tex	1611	Five-Stage Pipeline Overview
+ds:ch:phase2-architecture:22-pipeline-registers	docs/manual/ds/parts/01-architecture.tex	1653	Pipeline Registers
+ds:ch:phase2-architecture:23-ascii-data-path-diagram	docs/manual/ds/parts/01-architecture.tex	1762	ASCII Data Path Diagram
+ds:ch:phase2-architecture:24-key-design-decisions	docs/manual/ds/parts/01-architecture.tex	1803	Key Design Decisions
+ds:ch:phase2-architecture:3-hazard-handling-strategy	docs/manual/ds/parts/01-architecture.tex	1942	Hazard Handling Strategy
+ds:ch:phase2-architecture:31-data-hazards-raw-forwarding	docs/manual/ds/parts/01-architecture.tex	1944	Data Hazards --- RAW Forwarding
+ds:ch:phase2-architecture:32-load-use-hazard-1-cycle-stall	docs/manual/ds/parts/01-architecture.tex	2017	Load-Use Hazard --- 1-Cycle Stall
+ds:ch:phase2-architecture:33-control-hazards-flush-policy	docs/manual/ds/parts/01-architecture.tex	2055	Control Hazards --- Flush Policy
+ds:ch:phase2-architecture:34-structural-hazards-axi-stall-propagation	docs/manual/ds/parts/01-architecture.tex	2096	Structural Hazards --- AXI Stall Propagation
+ds:ch:phase2-architecture:35-hazard-detection-unit-interface	docs/manual/ds/parts/01-architecture.tex	2130	Hazard Detection Unit Interface
+ds:ch:phase2-architecture:4-interrupt-architecture	docs/manual/ds/parts/01-architecture.tex	2181	Interrupt Architecture
+ds:ch:phase2-architecture:41-risc-v-m-mode-interrupt-overview	docs/manual/ds/parts/01-architecture.tex	2183	RISC-V M-Mode Interrupt Overview
+ds:ch:phase2-architecture:42-csr-register-set-minimal-phase-2	docs/manual/ds/parts/01-architecture.tex	2199	CSR Register Set (Minimal --- Phase 2)
+ds:ch:phase2-architecture:43-csr-instruction-set-zicsr-extension	docs/manual/ds/parts/01-architecture.tex	2388	CSR Instruction Set (Zicsr Extension)
+ds:ch:phase2-architecture:44-interrupt-input-signals	docs/manual/ds/parts/01-architecture.tex	2449	Interrupt Input Signals
+ds:ch:phase2-architecture:45-interrupt-handling-flow	docs/manual/ds/parts/01-architecture.tex	2466	Interrupt Handling Flow
+ds:ch:phase2-architecture:46-nested-interrupts-disabled-in-phase-2	docs/manual/ds/parts/01-architecture.tex	2507	Nested Interrupts --- Disabled in Phase 2
+ds:ch:phase2-architecture:5-rtl-module-hierarchy	docs/manual/ds/parts/01-architecture.tex	2535	RTL Module Hierarchy
+ds:ch:phase2-architecture:51-module-hierarchy-diagram	docs/manual/ds/parts/01-architecture.tex	2537	Module Hierarchy Diagram
+ds:ch:phase2-architecture:52-module-reuse-vs-new-development	docs/manual/ds/parts/01-architecture.tex	2560	Module Reuse vs New Development
+ds:ch:phase2-architecture:53-new-file-organization	docs/manual/ds/parts/01-architecture.tex	2689	New File Organization
+ds:ch:phase2-architecture:6-interface-changes	docs/manual/ds/parts/01-architecture.tex	2717	Interface Changes
+ds:ch:phase2-architecture:61-top-level-port-additions	docs/manual/ds/parts/01-architecture.tex	2719	Top-Level Port Additions
+ds:ch:phase2-architecture:62-commit-interface-adaptation	docs/manual/ds/parts/01-architecture.tex	2785	Commit Interface Adaptation
+ds:ch:phase2-architecture:63-debug-interface-pipeline-aware-halt	docs/manual/ds/parts/01-architecture.tex	2824	Debug Interface --- Pipeline-Aware Halt
+ds:ch:phase2-architecture:64-axi-interface-arbitration	docs/manual/ds/parts/01-architecture.tex	2887	AXI Interface --- Arbitration
+ds:ch:phase2-architecture:7-verification-strategy	docs/manual/ds/parts/01-architecture.tex	2913	Verification Strategy
+ds:ch:phase2-architecture:71-testbench-architecture	docs/manual/ds/parts/01-architecture.tex	2915	Testbench Architecture
+ds:ch:phase2-architecture:72-test-plan	docs/manual/ds/parts/01-architecture.tex	2936	Test Plan
+ds:ch:phase2-architecture:73-coverage-goals	docs/manual/ds/parts/01-architecture.tex	3187	Coverage Goals
+ds:ch:phase2-architecture:74-python-reference-model-updates	docs/manual/ds/parts/01-architecture.tex	3223	Python Reference Model Updates
+ds:ch:phase2-architecture:75-random-instruction-testing-phase-2-additions	docs/manual/ds/parts/01-architecture.tex	3252	Random Instruction Testing --- Phase 2 Additions
+ds:ch:phase2-architecture:8-physical-design-targets	docs/manual/ds/parts/01-architecture.tex	3280	Physical Design Targets
+ds:ch:phase2-architecture:81-frequency-and-timing	docs/manual/ds/parts/01-architecture.tex	3282	Frequency and Timing
+ds:ch:phase2-architecture:82-area-target	docs/manual/ds/parts/01-architecture.tex	3311	Area Target
+ds:ch:phase2-architecture:83-power-budget	docs/manual/ds/parts/01-architecture.tex	3344	Power Budget
+ds:ch:phase2-architecture:84-critical-paths-to-watch	docs/manual/ds/parts/01-architecture.tex	3375	Critical Paths to Watch
+ds:ch:phase2-architecture:85-sdc-changes-from-phase-1	docs/manual/ds/parts/01-architecture.tex	3417	SDC Changes from Phase 1
+ds:ch:phase2-architecture:86-clock-gating-opportunities	docs/manual/ds/parts/01-architecture.tex	3447	Clock Gating Opportunities
+ds:ch:phase2-architecture:9-implementation-roadmap	docs/manual/ds/parts/01-architecture.tex	3482	Implementation Roadmap
+ds:ch:phase2-architecture:csr-instructions-zicsr	docs/manual/ds/parts/01-architecture.tex	3770	CSR Instructions (Zicsr)
+ds:ch:phase2-architecture:exmem-pipeline-register	docs/manual/ds/parts/01-architecture.tex	1711	Pipeline Registers
+ds:ch:phase2-architecture:group-1-pipeline-correctness-regression	docs/manual/ds/parts/01-architecture.tex	2938	Test Plan
+ds:ch:phase2-architecture:group-2-data-hazard-tests-new	docs/manual/ds/parts/01-architecture.tex	2970	Test Plan
+ds:ch:phase2-architecture:group-3-control-hazard-tests-new	docs/manual/ds/parts/01-architecture.tex	3017	Test Plan
+ds:ch:phase2-architecture:group-4-interrupt-tests-new	docs/manual/ds/parts/01-architecture.tex	3052	Test Plan
+ds:ch:phase2-architecture:group-5-csr-instruction-tests-new	docs/manual/ds/parts/01-architecture.tex	3093	Test Plan
+ds:ch:phase2-architecture:group-6-debug-interface-updated	docs/manual/ds/parts/01-architecture.tex	3126	Test Plan
+ds:ch:phase2-architecture:group-7-axi-stress-tests-updated	docs/manual/ds/parts/01-architecture.tex	3158	Test Plan
+ds:ch:phase2-architecture:idex-pipeline-register	docs/manual/ds/parts/01-architecture.tex	1675	Pipeline Registers
+ds:ch:phase2-architecture:ifid-pipeline-register	docs/manual/ds/parts/01-architecture.tex	1659	Pipeline Registers
+ds:ch:phase2-architecture:mcause-machine-cause-register-0x342	docs/manual/ds/parts/01-architecture.tex	2320	CSR Register Set (Minimal --- Phase 2)
+ds:ch:phase2-architecture:memwb-pipeline-register	docs/manual/ds/parts/01-architecture.tex	1741	Pipeline Registers
+ds:ch:phase2-architecture:mepc-machine-exception-pc-0x341	docs/manual/ds/parts/01-architecture.tex	2314	CSR Register Set (Minimal --- Phase 2)
+ds:ch:phase2-architecture:mie-machine-interrupt-enable-0x304	docs/manual/ds/parts/01-architecture.tex	2266	CSR Register Set (Minimal --- Phase 2)
+ds:ch:phase2-architecture:mip-machine-interrupt-pending-0x344	docs/manual/ds/parts/01-architecture.tex	2359	CSR Register Set (Minimal --- Phase 2)
+ds:ch:phase2-architecture:modified-from-phase-1	docs/manual/ds/parts/01-architecture.tex	2596	Module Reuse vs New Development
+ds:ch:phase2-architecture:mret-instruction	docs/manual/ds/parts/01-architecture.tex	3782	MRET Instruction
+ds:ch:phase2-architecture:mstatus-machine-status-register-0x300	docs/manual/ds/parts/01-architecture.tex	2232	CSR Register Set (Minimal --- Phase 2)
+ds:ch:phase2-architecture:mtvec-trap-vector-0x305	docs/manual/ds/parts/01-architecture.tex	2283	CSR Register Set (Minimal --- Phase 2)
+ds:ch:phase2-architecture:new-modules	docs/manual/ds/parts/01-architecture.tex	2635	Module Reuse vs New Development
+ds:ch:phase2-architecture:oq-1-in-place-update-vs-new-module-names	docs/manual/ds/parts/01-architecture.tex	3688	OQ-1: In-Place Update vs New Module Names
+ds:ch:phase2-architecture:oq-2-interrupt-priority	docs/manual/ds/parts/01-architecture.tex	3698	OQ-2: Interrupt Priority
+ds:ch:phase2-architecture:oq-3-ebreak-behavior-in-phase-2	docs/manual/ds/parts/01-architecture.tex	3706	OQ-3: EBREAK Behavior in Phase 2
+ds:ch:phase2-architecture:oq-4-csr-write-side-effects-in-ex-stage	docs/manual/ds/parts/01-architecture.tex	3714	OQ-4: CSR Write Side-Effects in EX Stage
+ds:ch:phase2-architecture:oq-5-debug-halt-during-interrupt-handler	docs/manual/ds/parts/01-architecture.tex	3723	OQ-5: Debug Halt During Interrupt Handler
+ds:ch:phase2-architecture:oq-6-axi-transaction-atomicity-during-pipeline-flush	docs/manual/ds/parts/01-architecture.tex	3731	OQ-6: AXI Transaction Atomicity During Pipeline Flush
+ds:ch:phase2-architecture:oq-7-frequency-target-fallback	docs/manual/ds/parts/01-architecture.tex	3742	OQ-7: Frequency Target Fallback
+ds:ch:phase2-architecture:sub-task-1-update-python-reference-model-csr-interrupt-support	docs/manual/ds/parts/01-architecture.tex	3488	Sub-task 1: Update Python Reference Model (CSR + Interrupt Support)
+ds:ch:phase2-architecture:sub-task-10-integrate-rv32i-core-v2sv-depends-3-4-5-6-7-9	docs/manual/ds/parts/01-architecture.tex	3609	\texorpdfstring{Sub-task 10: Integrate rv32i\_\allowbreak{}core\_\allowbreak{}v2.sv {[}depends: 3, 4, 5, 6, 7, 9{]}}{Sub-task 10: Integrate rv32i\_core\_v2.sv {[}depends: 3, 4, 5, 6, 7, 9{]}}
+ds:ch:phase2-architecture:sub-task-11-update-rv32i-cpu-top-v2sv-depends-10	docs/manual/ds/parts/01-architecture.tex	3622	\texorpdfstring{Sub-task 11: Update rv32i\_\allowbreak{}cpu\_\allowbreak{}top\_\allowbreak{}v2.sv {[}depends: 10{]}}{Sub-task 11: Update rv32i\_cpu\_top\_v2.sv {[}depends: 10{]}}
+ds:ch:phase2-architecture:sub-task-12-directed-hazard-verification-tests-depends-10-reference-model-sub-task-1	docs/manual/ds/parts/01-architecture.tex	3631	Sub-task 12: Directed Hazard Verification Tests {[}depends: 10 + reference model sub-task 1{]}
+ds:ch:phase2-architecture:sub-task-13-interrupt-verification-tests-depends-11	docs/manual/ds/parts/01-architecture.tex	3641	Sub-task 13: Interrupt Verification Tests {[}depends: 11{]}
+ds:ch:phase2-architecture:sub-task-14-random-instruction-regression-with-csr-interrupt-depends-12-13	docs/manual/ds/parts/01-architecture.tex	3651	Sub-task 14: Random Instruction Regression with CSR + Interrupt {[}depends: 12, 13{]}
+ds:ch:phase2-architecture:sub-task-15-debug-interface-verification-updated-depends-11	docs/manual/ds/parts/01-architecture.tex	3661	Sub-task 15: Debug Interface Verification (Updated) {[}depends: 11{]}
+ds:ch:phase2-architecture:sub-task-16-physical-design-synthesis-and-pr-at-200-mhz-depends-all-rtl-sub-tasks	docs/manual/ds/parts/01-architecture.tex	3670	Sub-task 16: Physical Design --- Synthesis and P\&R at 200 MHz {[}depends: all RTL sub-tasks{]}
+ds:ch:phase2-architecture:sub-task-2-write-phase2-architecture-specmd-depends-human-approval	docs/manual/ds/parts/01-architecture.tex	3510	\texorpdfstring{Sub-task 2: Write PHASE2\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md {[}depends: human approval{]}}{Sub-task 2: Write \cref{ds:ch:phase2-architecture} {[}depends: human approval{]}}
+ds:ch:phase2-architecture:sub-task-3-update-rv32i-decodesv-for-csr-instructions-depends-2	docs/manual/ds/parts/01-architecture.tex	3518	\texorpdfstring{Sub-task 3: Update rv32i\_\allowbreak{}decode.sv for CSR Instructions {[}depends: 2{]}}{Sub-task 3: Update rv32i\_decode.sv for CSR Instructions {[}depends: 2{]}}
+ds:ch:phase2-architecture:sub-task-4-implement-rv32i-csr-filesv-depends-3	docs/manual/ds/parts/01-architecture.tex	3531	\texorpdfstring{Sub-task 4: Implement rv32i\_\allowbreak{}csr\_\allowbreak{}file.sv {[}depends: 3{]}}{Sub-task 4: Implement rv32i\_csr\_file.sv {[}depends: 3{]}}
+ds:ch:phase2-architecture:sub-task-5-implement-rv32i-interrupt-ctrlsv-depends-4	docs/manual/ds/parts/01-architecture.tex	3542	\texorpdfstring{Sub-task 5: Implement rv32i\_\allowbreak{}interrupt\_\allowbreak{}ctrl.sv {[}depends: 4{]}}{Sub-task 5: Implement rv32i\_interrupt\_ctrl.sv {[}depends: 4{]}}
+ds:ch:phase2-architecture:sub-task-6-implement-rv32i-hazard-unitsv-depends-2	docs/manual/ds/parts/01-architecture.tex	3554	\texorpdfstring{Sub-task 6: Implement rv32i\_\allowbreak{}hazard\_\allowbreak{}unit.sv {[}depends: 2{]}}{Sub-task 6: Implement rv32i\_hazard\_unit.sv {[}depends: 2{]}}
+ds:ch:phase2-architecture:sub-task-7-implement-rv32i-forwarding-unitsv-depends-2	docs/manual/ds/parts/01-architecture.tex	3565	\texorpdfstring{Sub-task 7: Implement rv32i\_\allowbreak{}forwarding\_\allowbreak{}unit.sv {[}depends: 2{]}}{Sub-task 7: Implement rv32i\_forwarding\_unit.sv {[}depends: 2{]}}
+ds:ch:phase2-architecture:sub-task-8-implement-rv32i-axi-arbitersv-depends-2	docs/manual/ds/parts/01-architecture.tex	3575	\texorpdfstring{Sub-task 8: Implement rv32i\_\allowbreak{}axi\_\allowbreak{}arbiter.sv {[}depends: 2{]}}{Sub-task 8: Implement rv32i\_axi\_arbiter.sv {[}depends: 2{]}}
+ds:ch:phase2-architecture:sub-task-9-implement-pipeline-stage-modules-depends-6-7-8	docs/manual/ds/parts/01-architecture.tex	3584	Sub-task 9: Implement Pipeline Stage Modules {[}depends: 6, 7, 8{]}
+ds:ch:phase2-architecture:unchanged-from-phase-1	docs/manual/ds/parts/01-architecture.tex	2562	Module Reuse vs New Development
+ds:ch:phase3-architecture	docs/manual/ds/parts/01-architecture.tex	3837	Phase 3 Architecture Specification
+ds:ch:phase3-architecture:1-overview	docs/manual/ds/parts/01-architecture.tex	3852	Overview
+ds:ch:phase3-architecture:10-physical-design-targets	docs/manual/ds/parts/01-architecture.tex	5003	Physical Design Targets
+ds:ch:phase3-architecture:101-frequency-and-timing	docs/manual/ds/parts/01-architecture.tex	5005	Frequency and Timing
+ds:ch:phase3-architecture:102-area-target	docs/manual/ds/parts/01-architecture.tex	5046	Area Target
+ds:ch:phase3-architecture:103-power-budget	docs/manual/ds/parts/01-architecture.tex	5079	Power Budget
+ds:ch:phase3-architecture:104-critical-paths	docs/manual/ds/parts/01-architecture.tex	5110	Critical Paths
+ds:ch:phase3-architecture:105-sdc-changes-from-phase-2	docs/manual/ds/parts/01-architecture.tex	5140	SDC Changes from Phase 2
+ds:ch:phase3-architecture:11-implementation-roadmap	docs/manual/ds/parts/01-architecture.tex	5172	Implementation Roadmap
+ds:ch:phase3-architecture:11-what-changes-from-phase-2	docs/manual/ds/parts/01-architecture.tex	3876	What Changes from Phase 2
+ds:ch:phase3-architecture:12-open-questions-human-approval-required	docs/manual/ds/parts/01-architecture.tex	5329	Open Questions --- Human Approval Required
+ds:ch:phase3-architecture:12-what-does-not-change-from-phase-2	docs/manual/ds/parts/01-architecture.tex	3918	What Does NOT Change from Phase 2
+ds:ch:phase3-architecture:13-appendix-fencei-instruction-encoding	docs/manual/ds/parts/01-architecture.tex	5395	Appendix: FENCE.I Instruction Encoding
+ds:ch:phase3-architecture:14-references	docs/manual/ds/parts/01-architecture.tex	5429	References
+ds:ch:phase3-architecture:2-cache-architecture	docs/manual/ds/parts/01-architecture.tex	3948	Cache Architecture
+ds:ch:phase3-architecture:21-cache-parameters	docs/manual/ds/parts/01-architecture.tex	3950	Cache Parameters
+ds:ch:phase3-architecture:22-address-breakdown	docs/manual/ds/parts/01-architecture.tex	3992	Address Breakdown
+ds:ch:phase3-architecture:23-cache-line-structure	docs/manual/ds/parts/01-architecture.tex	4034	Cache Line Structure
+ds:ch:phase3-architecture:24-hitmiss-detection-combinational	docs/manual/ds/parts/01-architecture.tex	4046	Hit/Miss Detection (Combinational)
+ds:ch:phase3-architecture:25-d-cache-write-back-write-allocate-policy	docs/manual/ds/parts/01-architecture.tex	4056	D-Cache Write-Back + Write-Allocate Policy
+ds:ch:phase3-architecture:26-i-cache-write-policy-and-fencei	docs/manual/ds/parts/01-architecture.tex	4090	I-Cache Write Policy and FENCE.I
+ds:ch:phase3-architecture:3-cache-fsm-specifications	docs/manual/ds/parts/01-architecture.tex	4121	Cache FSM Specifications
+ds:ch:phase3-architecture:31-i-cache-fsm	docs/manual/ds/parts/01-architecture.tex	4123	I-Cache FSM
+ds:ch:phase3-architecture:32-d-cache-fsm	docs/manual/ds/parts/01-architecture.tex	4166	D-Cache FSM
+ds:ch:phase3-architecture:33-stall-propagation	docs/manual/ds/parts/01-architecture.tex	4219	Stall Propagation
+ds:ch:phase3-architecture:4-external-memory-interface	docs/manual/ds/parts/01-architecture.tex	4252	External Memory Interface
+ds:ch:phase3-architecture:41-axi4-lite-transactions-per-cache-line	docs/manual/ds/parts/01-architecture.tex	4254	AXI4-Lite Transactions Per Cache Line
+ds:ch:phase3-architecture:42-cache-arbiter	docs/manual/ds/parts/01-architecture.tex	4295	Cache Arbiter
+ds:ch:phase3-architecture:5-rtl-module-hierarchy	docs/manual/ds/parts/01-architecture.tex	4326	RTL Module Hierarchy
+ds:ch:phase3-architecture:51-module-hierarchy-diagram	docs/manual/ds/parts/01-architecture.tex	4328	Module Hierarchy Diagram
+ds:ch:phase3-architecture:52-new-modules	docs/manual/ds/parts/01-architecture.tex	4347	New Modules
+ds:ch:phase3-architecture:53-modified-modules	docs/manual/ds/parts/01-architecture.tex	4382	Modified Modules
+ds:ch:phase3-architecture:54-unchanged-modules	docs/manual/ds/parts/01-architecture.tex	4430	Unchanged Modules
+ds:ch:phase3-architecture:55-new-file-organization	docs/manual/ds/parts/01-architecture.tex	4479	New File Organization
+ds:ch:phase3-architecture:6-interface-definitions	docs/manual/ds/parts/01-architecture.tex	4512	Interface Definitions
+ds:ch:phase3-architecture:61-i-cache-cpu-side-interface	docs/manual/ds/parts/01-architecture.tex	4514	I-Cache CPU-Side Interface
+ds:ch:phase3-architecture:62-d-cache-cpu-side-interface	docs/manual/ds/parts/01-architecture.tex	4547	D-Cache CPU-Side Interface
+ds:ch:phase3-architecture:63-updated-hazard-unit-interface	docs/manual/ds/parts/01-architecture.tex	4579	Updated Hazard Unit Interface
+ds:ch:phase3-architecture:64-fencei-decoder-output-and-pipeline-propagation	docs/manual/ds/parts/01-architecture.tex	4589	FENCE.I Decoder Output and Pipeline Propagation
+ds:ch:phase3-architecture:65-cache-arbiter-interface	docs/manual/ds/parts/01-architecture.tex	4609	Cache Arbiter Interface
+ds:ch:phase3-architecture:7-pipeline-integration-changes	docs/manual/ds/parts/01-architecture.tex	4669	Pipeline Integration Changes
+ds:ch:phase3-architecture:71-if-stage-changes	docs/manual/ds/parts/01-architecture.tex	4671	IF Stage Changes
+ds:ch:phase3-architecture:72-mem-stage-changes	docs/manual/ds/parts/01-architecture.tex	4691	MEM Stage Changes
+ds:ch:phase3-architecture:73-pipeline-package-update	docs/manual/ds/parts/01-architecture.tex	4721	Pipeline Package Update
+ds:ch:phase3-architecture:8-fencei-execution-semantics	docs/manual/ds/parts/01-architecture.tex	4736	FENCE.I Execution Semantics
+ds:ch:phase3-architecture:9-verification-strategy	docs/manual/ds/parts/01-architecture.tex	4779	Verification Strategy
+ds:ch:phase3-architecture:91-reference-model	docs/manual/ds/parts/01-architecture.tex	4781	Reference Model
+ds:ch:phase3-architecture:92-test-plan	docs/manual/ds/parts/01-architecture.tex	4803	Test Plan
+ds:ch:phase3-architecture:93-coverage-goals	docs/manual/ds/parts/01-architecture.tex	4946	Coverage Goals
+ds:ch:phase3-architecture:94-deadlock-and-livelock-checks	docs/manual/ds/parts/01-architecture.tex	4979	Deadlock and Livelock Checks
+ds:ch:phase3-architecture:group-1-i-cache-unit-tests-test-icachepy	docs/manual/ds/parts/01-architecture.tex	4806	Test Plan
+ds:ch:phase3-architecture:group-2-d-cache-unit-tests-test-dcachepy	docs/manual/ds/parts/01-architecture.tex	4841	Test Plan
+ds:ch:phase3-architecture:group-3-cache-integration-tests-test-cache-integrationpy	docs/manual/ds/parts/01-architecture.tex	4879	Test Plan
+ds:ch:phase3-architecture:group-4-regression-phase-2-tests	docs/manual/ds/parts/01-architecture.tex	4919	Test Plan
+ds:ch:phase3-architecture:oq-1-cache-associativity	docs/manual/ds/parts/01-architecture.tex	5334	OQ-1: Cache Associativity
+ds:ch:phase3-architecture:oq-2-cache-line-size	docs/manual/ds/parts/01-architecture.tex	5343	OQ-2: Cache Line Size
+ds:ch:phase3-architecture:oq-3-write-policy	docs/manual/ds/parts/01-architecture.tex	5352	OQ-3: Write Policy
+ds:ch:phase3-architecture:oq-4-axi-burst-support	docs/manual/ds/parts/01-architecture.tex	5362	OQ-4: AXI Burst Support
+ds:ch:phase3-architecture:oq-5-target-frequency	docs/manual/ds/parts/01-architecture.tex	5373	OQ-5: Target Frequency
+ds:ch:phase3-architecture:oq-6-blocking-vs-non-blocking-cache	docs/manual/ds/parts/01-architecture.tex	5382	OQ-6: Blocking vs Non-Blocking Cache
+ds:ch:phase3-architecture:sub-task-1-write-rv32i-cache-pkgsv	docs/manual/ds/parts/01-architecture.tex	5175	\texorpdfstring{Sub-task 1: Write rv32i\_\allowbreak{}cache\_\allowbreak{}pkg.sv}{Sub-task 1: Write rv32i\_cache\_pkg.sv}
+ds:ch:phase3-architecture:sub-task-10-update-rv32i-hazard-unitsv-depends-none	docs/manual/ds/parts/01-architecture.tex	5269	\texorpdfstring{Sub-task 10: Update rv32i\_\allowbreak{}hazard\_\allowbreak{}unit.sv {[}depends: none{]}}{Sub-task 10: Update rv32i\_hazard\_unit.sv {[}depends: none{]}}
+ds:ch:phase3-architecture:sub-task-11-update-rv32i-coresv-depends-3-4-5-8-9-10	docs/manual/ds/parts/01-architecture.tex	5279	\texorpdfstring{Sub-task 11: Update rv32i\_\allowbreak{}core.sv {[}depends: 3, 4, 5, 8, 9, 10{]}}{Sub-task 11: Update rv32i\_core.sv {[}depends: 3, 4, 5, 8, 9, 10{]}}
+ds:ch:phase3-architecture:sub-task-12-i-cache-unit-tests-depends-3-2	docs/manual/ds/parts/01-architecture.tex	5286	Sub-task 12: I-Cache Unit Tests {[}depends: 3, 2{]}
+ds:ch:phase3-architecture:sub-task-13-d-cache-unit-tests-depends-4-2	docs/manual/ds/parts/01-architecture.tex	5293	Sub-task 13: D-Cache Unit Tests {[}depends: 4, 2{]}
+ds:ch:phase3-architecture:sub-task-14-cache-integration-tests-depends-11-12-13	docs/manual/ds/parts/01-architecture.tex	5301	Sub-task 14: Cache Integration Tests {[}depends: 11, 12, 13{]}
+ds:ch:phase3-architecture:sub-task-15-random-instruction-regression-depends-14	docs/manual/ds/parts/01-architecture.tex	5309	Sub-task 15: Random Instruction Regression {[}depends: 14{]}
+ds:ch:phase3-architecture:sub-task-16-physical-design-phase-3-backend-depends-all-rtl-sub-tasks	docs/manual/ds/parts/01-architecture.tex	5318	Sub-task 16: Physical Design --- Phase 3 Backend {[}depends: all RTL sub-tasks{]}
+ds:ch:phase3-architecture:sub-task-2-write-python-cache-reference-model-depends-none	docs/manual/ds/parts/01-architecture.tex	5186	Sub-task 2: Write Python Cache Reference Model {[}depends: none{]}
+ds:ch:phase3-architecture:sub-task-3-implement-rv32i-icachesv-depends-1	docs/manual/ds/parts/01-architecture.tex	5196	\texorpdfstring{Sub-task 3: Implement rv32i\_\allowbreak{}icache.sv {[}depends: 1{]}}{Sub-task 3: Implement rv32i\_icache.sv {[}depends: 1{]}}
+ds:ch:phase3-architecture:sub-task-4-implement-rv32i-dcachesv-depends-1	docs/manual/ds/parts/01-architecture.tex	5208	\texorpdfstring{Sub-task 4: Implement rv32i\_\allowbreak{}dcache.sv {[}depends: 1{]}}{Sub-task 4: Implement rv32i\_dcache.sv {[}depends: 1{]}}
+ds:ch:phase3-architecture:sub-task-5-implement-rv32i-cache-arbitersv-depends-1	docs/manual/ds/parts/01-architecture.tex	5220	\texorpdfstring{Sub-task 5: Implement rv32i\_\allowbreak{}cache\_\allowbreak{}arbiter.sv {[}depends: 1{]}}{Sub-task 5: Implement rv32i\_cache\_arbiter.sv {[}depends: 1{]}}
+ds:ch:phase3-architecture:sub-task-6-update-rv32i-decodesv-fencei-depends-none	docs/manual/ds/parts/01-architecture.tex	5231	\texorpdfstring{Sub-task 6: Update rv32i\_\allowbreak{}decode.sv (FENCE.I) {[}depends: none{]}}{Sub-task 6: Update rv32i\_decode.sv (FENCE.I) {[}depends: none{]}}
+ds:ch:phase3-architecture:sub-task-7-update-rv32i-pipeline-pkgsv-depends-6	docs/manual/ds/parts/01-architecture.tex	5241	\texorpdfstring{Sub-task 7: Update rv32i\_\allowbreak{}pipeline\_\allowbreak{}pkg.sv {[}depends: 6{]}}{Sub-task 7: Update rv32i\_pipeline\_pkg.sv {[}depends: 6{]}}
+ds:ch:phase3-architecture:sub-task-8-update-rv32i-pipeline-ifsv-depends-3	docs/manual/ds/parts/01-architecture.tex	5249	\texorpdfstring{Sub-task 8: Update rv32i\_\allowbreak{}pipeline\_\allowbreak{}if.sv {[}depends: 3{]}}{Sub-task 8: Update rv32i\_pipeline\_if.sv {[}depends: 3{]}}
+ds:ch:phase3-architecture:sub-task-9-update-rv32i-pipeline-memsv-depends-4-6-7	docs/manual/ds/parts/01-architecture.tex	5259	\texorpdfstring{Sub-task 9: Update rv32i\_\allowbreak{}pipeline\_\allowbreak{}mem.sv {[}depends: 4, 6, 7{]}}{Sub-task 9: Update rv32i\_pipeline\_mem.sv {[}depends: 4, 6, 7{]}}
+ds:ch:phase3-closure-phase4-plan	docs/manual/ds/parts/01-architecture.tex	6551	Phase 3 Closure + Phase 4 (GPU-Lite SIMT) Implementation Plan
+ds:ch:phase3-closure-phase4-plan:1-context	docs/manual/ds/parts/01-architecture.tex	6564	Context
+ds:ch:phase3-closure-phase4-plan:10-risks-and-mitigations	docs/manual/ds/parts/01-architecture.tex	7426	Risks and mitigations
+ds:ch:phase3-closure-phase4-plan:11-out-of-scope-explicitly-deferred-to-phase-5	docs/manual/ds/parts/01-architecture.tex	7477	Out of scope (explicitly deferred to Phase 5)
+ds:ch:phase3-closure-phase4-plan:12-how-future-sessions-should-use-this-plan	docs/manual/ds/parts/01-architecture.tex	7500	How future sessions should use this plan
+ds:ch:phase3-closure-phase4-plan:2-current-state-verified-during-planning-2026-05-20	docs/manual/ds/parts/01-architecture.tex	6641	Current State (verified during planning, 2026-05-20)
+ds:ch:phase3-closure-phase4-plan:3-plan-step-0-persist-this-plan-as-the-golden-spec	docs/manual/ds/parts/01-architecture.tex	6745	Plan --- Step 0: Persist this plan as the golden spec
+ds:ch:phase3-closure-phase4-plan:4-plan-phase-3-closure-must-complete-before-any-phase-4-rtl	docs/manual/ds/parts/01-architecture.tex	6779	Plan --- Phase 3 Closure (must complete before any Phase 4 RTL)
+ds:ch:phase3-closure-phase4-plan:41-re-run-phase-2-regression-with-caches-enabled	docs/manual/ds/parts/01-architecture.tex	6781	Re-run Phase 2 regression with caches enabled
+ds:ch:phase3-closure-phase4-plan:42-50000-instruction-random-regression-with-caches	docs/manual/ds/parts/01-architecture.tex	6804	50,000-instruction random regression with caches
+ds:ch:phase3-closure-phase4-plan:43-phase-3-sign-off-documentation	docs/manual/ds/parts/01-architecture.tex	6825	Phase 3 sign-off documentation
+ds:ch:phase3-closure-phase4-plan:44-phase-3-exit-gate	docs/manual/ds/parts/01-architecture.tex	6848	Phase 3 exit gate
+ds:ch:phase3-closure-phase4-plan:5-plan-phase-4-rtl-implementation	docs/manual/ds/parts/01-architecture.tex	6856	Plan --- Phase 4 RTL Implementation
+ds:ch:phase3-closure-phase4-plan:51-branch-scaffolding	docs/manual/ds/parts/01-architecture.tex	6858	Branch + scaffolding
+ds:ch:phase3-closure-phase4-plan:52-rtl-module-list-full-claudemd-scope-9-modules	docs/manual/ds/parts/01-architecture.tex	6874	RTL module list (full CLAUDE.md scope, 9 modules)
+ds:ch:phase3-closure-phase4-plan:53-isa-implementation-order	docs/manual/ds/parts/01-architecture.tex	6928	ISA implementation order
+ds:ch:phase3-closure-phase4-plan:54-control-interface-axi4-lite-slave-register-map	docs/manual/ds/parts/01-architecture.tex	6957	Control interface (AXI4-Lite slave) --- register map
+ds:ch:phase3-closure-phase4-plan:55-memory-interface-axi4-master	docs/manual/ds/parts/01-architecture.tex	7012	Memory interface (AXI4 master)
+ds:ch:phase3-closure-phase4-plan:56-coalescing-heuristic-phase-4-simple-form	docs/manual/ds/parts/01-architecture.tex	7027	Coalescing heuristic (Phase 4 simple form)
+ds:ch:phase3-closure-phase4-plan:57-shared-memory	docs/manual/ds/parts/01-architecture.tex	7043	Shared memory
+ds:ch:phase3-closure-phase4-plan:58-divergence-stack	docs/manual/ds/parts/01-architecture.tex	7059	Divergence stack
+ds:ch:phase3-closure-phase4-plan:59-coding-standards	docs/manual/ds/parts/01-architecture.tex	7070	Coding standards
+ds:ch:phase3-closure-phase4-plan:6-plan-phase-4-verification	docs/manual/ds/parts/01-architecture.tex	7088	Plan --- Phase 4 Verification
+ds:ch:phase3-closure-phase4-plan:61-reference-model-already-done	docs/manual/ds/parts/01-architecture.tex	7090	Reference model --- already done
+ds:ch:phase3-closure-phase4-plan:62-cocotb-unit-tests-tbcocotbgpu	docs/manual/ds/parts/01-architecture.tex	7098	\texorpdfstring{Cocotb unit tests (\src{tb/cocotb/gpu/})}{Cocotb unit tests ()}
+ds:ch:phase3-closure-phase4-plan:63-kernel-level-tests-tbcocotbgpukernels	docs/manual/ds/parts/01-architecture.tex	7129	\texorpdfstring{Kernel-level tests (\src{tb/cocotb/gpu/kernels/})}{Kernel-level tests ()}
+ds:ch:phase3-closure-phase4-plan:64-soc-precursor-integration-test	docs/manual/ds/parts/01-architecture.tex	7156	SoC-precursor integration test
+ds:ch:phase3-closure-phase4-plan:65-random-kernel-regression	docs/manual/ds/parts/01-architecture.tex	7165	Random kernel regression
+ds:ch:phase3-closure-phase4-plan:66-phase-3-regression-must-still-pass	docs/manual/ds/parts/01-architecture.tex	7179	Phase 3 regression must still pass
+ds:ch:phase3-closure-phase4-plan:7-plan-phase-4-asap7-gpu-block-pd-sign-off	docs/manual/ds/parts/01-architecture.tex	7187	Plan --- Phase 4 ASAP7 GPU-block PD Sign-off
+ds:ch:phase3-closure-phase4-plan:71-clone-phase-23-pd-config	docs/manual/ds/parts/01-architecture.tex	7189	Clone Phase 2+3 PD config
+ds:ch:phase3-closure-phase4-plan:72-sdc-starting-point	docs/manual/ds/parts/01-architecture.tex	7202	SDC starting point
+ds:ch:phase3-closure-phase4-plan:73-target-frequency	docs/manual/ds/parts/01-architecture.tex	7219	Target frequency
+ds:ch:phase3-closure-phase4-plan:74-sign-off-gates	docs/manual/ds/parts/01-architecture.tex	7227	Sign-off gates
+ds:ch:phase3-closure-phase4-plan:75-memory-bookkeeping	docs/manual/ds/parts/01-architecture.tex	7245	Memory bookkeeping
+ds:ch:phase3-closure-phase4-plan:8-critical-files	docs/manual/ds/parts/01-architecture.tex	7260	Critical Files
+ds:ch:phase3-closure-phase4-plan:9-verification-end-to-end	docs/manual/ds/parts/01-architecture.tex	7388	Verification end-to-end
+ds:ch:phase3-closure-phase4-plan:phase-3-rtl-all-present	docs/manual/ds/parts/01-architecture.tex	6643	Phase 3 RTL --- all present
+ds:ch:phase3-closure-phase4-plan:phase-3-verification-artefacts-present-but-not-formally-re-gated	docs/manual/ds/parts/01-architecture.tex	6666	Phase 3 verification artefacts --- present but not formally re-gated
+ds:ch:phase3-closure-phase4-plan:phase-3-verification-gates-open	docs/manual/ds/parts/01-architecture.tex	6681	Phase 3 verification gates --- open
+ds:ch:phase3-closure-phase4-plan:phase-4-spec-frozen-reference-model-done-rtl-absent	docs/manual/ds/parts/01-architecture.tex	6700	Phase 4 --- spec frozen, reference model done, RTL absent
+ds:ch:phase3-closure-phase4-plan:to-create	docs/manual/ds/parts/01-architecture.tex	7262	To create
+ds:ch:phase3-closure-phase4-plan:to-modify	docs/manual/ds/parts/01-architecture.tex	7314	To modify
+ds:ch:phase3-closure-phase4-plan:to-reuse-do-not-modify	docs/manual/ds/parts/01-architecture.tex	7354	To reuse (do not modify)
+ds:ch:phase3-closure-phase4-plan:tooling-patterns-to-reuse	docs/manual/ds/parts/01-architecture.tex	6719	Tooling patterns to reuse
+ds:ch:phase4-5-architecture	docs/manual/ds/parts/01-architecture.tex	15052	Phase 4: GPU-Lite SIMT Engine (frozen)
+ds:ch:phase4-5-architecture:phase-5-soc-integration-white-check-mark-complete-2026-06-24	docs/manual/ds/parts/01-architecture.tex	15081	\texorpdfstring{Phase 5: SoC Integration (\ok{} COMPLETE 2026-06-24)}{Phase 5: SoC Integration ( COMPLETE 2026-06-24)}
+ds:ch:phase4-gpu-architecture	docs/manual/ds/parts/01-architecture.tex	5478	Phase 4 GPU Architecture Specification
+ds:ch:phase4-gpu-architecture:address-generation	docs/manual/ds/parts/01-architecture.tex	5924	Address generation
+ds:ch:phase4-gpu-architecture:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	6140	AI MAY assist with
+ds:ch:phase4-gpu-architecture:ai-must-not-decide	docs/manual/ds/parts/01-architecture.tex	6158	AI MUST NOT decide
+ds:ch:phase4-gpu-architecture:aihuman-responsibility-boundaries	docs/manual/ds/parts/01-architecture.tex	6138	AI/Human Responsibility Boundaries
+ds:ch:phase4-gpu-architecture:arithmetic-and-logic-instructions	docs/manual/ds/parts/01-architecture.tex	5709	Arithmetic and Logic Instructions
+ds:ch:phase4-gpu-architecture:coalescing	docs/manual/ds/parts/01-architecture.tex	5932	Coalescing
+ds:ch:phase4-gpu-architecture:control-flow-instructions	docs/manual/ds/parts/01-architecture.tex	5770	Control Flow Instructions
+ds:ch:phase4-gpu-architecture:control-interface-apb3	docs/manual/ds/parts/01-architecture.tex	6090	Control Interface (APB3)
+ds:ch:phase4-gpu-architecture:divergence-handling	docs/manual/ds/parts/01-architecture.tex	5861	Divergence Handling
+ds:ch:phase4-gpu-architecture:divergence-model	docs/manual/ds/parts/01-architecture.tex	5863	Divergence model
+ds:ch:phase4-gpu-architecture:divergence-stack-simplified	docs/manual/ds/parts/01-architecture.tex	5890	Divergence stack (simplified)
+ds:ch:phase4-gpu-architecture:example-kernel-vector-addition	docs/manual/ds/parts/01-architecture.tex	6316	Example Kernel (Vector Addition)
+ds:ch:phase4-gpu-architecture:execution-model	docs/manual/ds/parts/01-architecture.tex	5556	Execution Model
+ds:ch:phase4-gpu-architecture:exit-criteria	docs/manual/ds/parts/01-architecture.tex	6251	Exit criteria
+ds:ch:phase4-gpu-architecture:explicit-non-goals-phase-4-exclusions	docs/manual/ds/parts/01-architecture.tex	5524	Explicit non-goals (Phase 4 exclusions)
+ds:ch:phase4-gpu-architecture:file-organization	docs/manual/ds/parts/01-architecture.tex	6289	File Organization
+ds:ch:phase4-gpu-architecture:gpu-instruction-set-architecture-isa	docs/manual/ds/parts/01-architecture.tex	5682	GPU Instruction Set Architecture (ISA)
+ds:ch:phase4-gpu-architecture:human-must-review	docs/manual/ds/parts/01-architecture.tex	6174	Human MUST review
+ds:ch:phase4-gpu-architecture:instruction-format	docs/manual/ds/parts/01-architecture.tex	5684	Instruction format
+ds:ch:phase4-gpu-architecture:integration-with-cpu-phase-4	docs/manual/ds/parts/01-architecture.tex	6339	Integration with CPU (Phase 4)
+ds:ch:phase4-gpu-architecture:kernel-launch-mechanism	docs/manual/ds/parts/01-architecture.tex	5977	Kernel Launch Mechanism
+ds:ch:phase4-gpu-architecture:kernel-termination	docs/manual/ds/parts/01-architecture.tex	6063	Kernel termination
+ds:ch:phase4-gpu-architecture:known-limitations-phase-4	docs/manual/ds/parts/01-architecture.tex	6267	Known Limitations (Phase 4)
+ds:ch:phase4-gpu-architecture:launch-sequence-from-cpu	docs/manual/ds/parts/01-architecture.tex	5979	Launch sequence (from CPU)
+ds:ch:phase4-gpu-architecture:launch-validation-and-partial-last-warp-bead-6hy6-decided-2026-10-11	docs/manual/ds/parts/01-architecture.tex	6034	\texorpdfstring{Launch validation and partial last warp (bead \code{6hy6}, decided 2026-10-11)}{Launch validation and partial last warp (bead , decided 2026-10-11)}
+ds:ch:phase4-gpu-architecture:memory-access-model	docs/manual/ds/parts/01-architecture.tex	5922	Memory Access Model
+ds:ch:phase4-gpu-architecture:memory-instructions	docs/manual/ds/parts/01-architecture.tex	5740	Memory Instructions
+ds:ch:phase4-gpu-architecture:memory-interface-axi4-lite	docs/manual/ds/parts/01-architecture.tex	6112	Memory Interface (AXI4-Lite)
+ds:ch:phase4-gpu-architecture:memory-ordering	docs/manual/ds/parts/01-architecture.tex	5960	Memory ordering
+ds:ch:phase4-gpu-architecture:overview	docs/manual/ds/parts/01-architecture.tex	5489	Overview
+ds:ch:phase4-gpu-architecture:per-lane-registers	docs/manual/ds/parts/01-architecture.tex	5823	Per-lane registers
+ds:ch:phase4-gpu-architecture:pipeline-organization	docs/manual/ds/parts/01-architecture.tex	5625	Pipeline organization
+ds:ch:phase4-gpu-architecture:predicate-mask	docs/manual/ds/parts/01-architecture.tex	5877	Predicate mask
+ds:ch:phase4-gpu-architecture:references	docs/manual/ds/parts/01-architecture.tex	6375	References
+ds:ch:phase4-gpu-architecture:register-file-organization	docs/manual/ds/parts/01-architecture.tex	5821	Register File Organization
+ds:ch:phase4-gpu-architecture:required-tests	docs/manual/ds/parts/01-architecture.tex	6204	Required tests
+ds:ch:phase4-gpu-architecture:rtl-module-hierarchy	docs/manual/ds/parts/01-architecture.tex	6073	RTL Module Hierarchy
+ds:ch:phase4-gpu-architecture:scope	docs/manual/ds/parts/01-architecture.tex	5500	Scope
+ds:ch:phase4-gpu-architecture:scope-and-non-goals	docs/manual/ds/parts/01-architecture.tex	5498	Scope and non-goals
+ds:ch:phase4-gpu-architecture:simt-execution	docs/manual/ds/parts/01-architecture.tex	5598	SIMT execution
+ds:ch:phase4-gpu-architecture:special-instructions	docs/manual/ds/parts/01-architecture.tex	5791	Special Instructions
+ds:ch:phase4-gpu-architecture:special-registers-read-only-computed-per-lane	docs/manual/ds/parts/01-architecture.tex	5838	Special registers (read-only, computed per lane)
+ds:ch:phase4-gpu-architecture:testbench-architecture	docs/manual/ds/parts/01-architecture.tex	6192	Testbench architecture
+ds:ch:phase4-gpu-architecture:thread-hierarchy	docs/manual/ds/parts/01-architecture.tex	5558	Thread hierarchy
+ds:ch:phase4-gpu-architecture:verification-requirements-phase-4	docs/manual/ds/parts/01-architecture.tex	6190	Verification Requirements (Phase 4)
+ds:ch:phase5-soc-integration-plan	docs/manual/ds/parts/01-architecture.tex	7528	Phase 5 SoC Integration --- Roadmap \& Implementation Plan
+ds:ch:phase5-soc-integration-plan:1-scope-locked-decisions	docs/manual/ds/parts/01-architecture.tex	7571	Scope \& locked decisions
+ds:ch:phase5-soc-integration-plan:2-current-state-verified-2026-05-30	docs/manual/ds/parts/01-architecture.tex	7618	Current state (verified 2026-05-30)
+ds:ch:phase5-soc-integration-plan:3-milestones	docs/manual/ds/parts/01-architecture.tex	7704	Milestones
+ds:ch:phase5-soc-integration-plan:4-dependency-graph	docs/manual/ds/parts/01-architecture.tex	8108	Dependency graph
+ds:ch:phase5-soc-integration-plan:5-risk-matrix	docs/manual/ds/parts/01-architecture.tex	8120	Risk matrix
+ds:ch:phase5-soc-integration-plan:6-beads-issues-create-at-implementation-start	docs/manual/ds/parts/01-architecture.tex	8160	Beads issues (create at implementation start)
+ds:ch:phase5-soc-integration-plan:7-phase-5-exit-criteria-verification-planmd-doc-crstatusroadmap	docs/manual/ds/parts/01-architecture.tex	8191	\texorpdfstring{Phase 5 exit criteria (VERIFICATION\_\allowbreak{}PLAN.md + Doc: cr:status:roadmap)}{Phase 5 exit criteria (\cref{ds:ch:verification-plan} + Doc: cr:status:roadmap)}
+ds:ch:phase5-soc-integration-plan:8-out-of-scope-phase-6	docs/manual/ds/parts/01-architecture.tex	8211	Out of scope (Phase 6+)
+ds:ch:phase5-soc-integration-plan:exists-white-check-mark	docs/manual/ds/parts/01-architecture.tex	7620	\texorpdfstring{Exists \ok{}}{Exists }
+ds:ch:phase5-soc-integration-plan:how-to-use-this-document	docs/manual/ds/parts/01-architecture.tex	7549	How to use this document
+ds:ch:phase5-soc-integration-plan:m1-foundations-axi-package-memory-map-freeze-no-deps	docs/manual/ds/parts/01-architecture.tex	7710	\texorpdfstring{M1 --- Foundations: AXI package + memory-map freeze \emph{(no deps)}}{M1 --- Foundations: AXI package + memory-map freeze (no deps)}
+ds:ch:phase5-soc-integration-plan:m10-l2-cache-decision-gate-deps-m9-benchmarks	docs/manual/ds/parts/01-architecture.tex	8030	\texorpdfstring{M10 --- L2 cache decision gate \emph{(deps: M9 benchmarks)}}{M10 --- L2 cache decision gate (deps: M9 benchmarks)}
+ds:ch:phase5-soc-integration-plan:m11-physical-design-asap7-hierarchical-deps-m8m9-white-check-mark-complete-2026-06-24	docs/manual/ds/parts/01-architecture.tex	8041	\texorpdfstring{M11 --- Physical design (ASAP7, hierarchical) \emph{(deps: M8/M9)} \ok{} COMPLETE (2026-06-24)}{M11 --- Physical design (ASAP7, hierarchical) (deps: M8/M9) COMPLETE (2026-06-24)}
+ds:ch:phase5-soc-integration-plan:m12-sign-off-docs-deps-m11-white-check-mark-complete-2026-06-24	docs/manual/ds/parts/01-architecture.tex	8089	\texorpdfstring{M12 --- Sign-off + docs \emph{(deps: M11)} \ok{} COMPLETE (2026-06-24)}{M12 --- Sign-off + docs (deps: M11) COMPLETE (2026-06-24)}
+ds:ch:phase5-soc-integration-plan:m2-axi4-burst-upgrade-of-cache-refill-fsms-deps-m1-white-check-mark-complete	docs/manual/ds/parts/01-architecture.tex	7743	\texorpdfstring{M2 --- AXI4 burst upgrade of cache refill FSMs \emph{(deps: M1)} \ok{} COMPLETE}{M2 --- AXI4 burst upgrade of cache refill FSMs (deps: M1) COMPLETE}
+ds:ch:phase5-soc-integration-plan:m3-axi4-crossbar-axi-lite-control-interconnect-deps-m1	docs/manual/ds/parts/01-architecture.tex	7770	\texorpdfstring{M3 --- AXI4 crossbar + AXI-Lite control interconnect \emph{(deps: M1)}}{M3 --- AXI4 crossbar + AXI-Lite control interconnect (deps: M1)}
+ds:ch:phase5-soc-integration-plan:m4-peripherals-deps-m3-sub-items-parallelizable-white-check-mark-complete-2026-06-01	docs/manual/ds/parts/01-architecture.tex	7831	\texorpdfstring{M4 --- Peripherals \emph{(deps: M3; sub-items parallelizable)} \ok{} COMPLETE (2026-06-01)}{M4 --- Peripherals (deps: M3; sub-items parallelizable) COMPLETE (2026-06-01)}
+ds:ch:phase5-soc-integration-plan:m5-dma-engine-deps-m3-white-check-mark-complete	docs/manual/ds/parts/01-architecture.tex	7871	\texorpdfstring{M5 --- DMA engine \emph{(deps: M3)} \ok{} COMPLETE}{M5 --- DMA engine (deps: M3) COMPLETE}
+ds:ch:phase5-soc-integration-plan:m6-behavioral-sram-controller-deps-m1-white-check-mark-complete	docs/manual/ds/parts/01-architecture.tex	7887	\texorpdfstring{M6 --- Behavioral SRAM controller \emph{(deps: M1)} \ok{} COMPLETE}{M6 --- Behavioral SRAM controller (deps: M1) COMPLETE}
+ds:ch:phase5-soc-integration-plan:m7-performance-counters-deps-cpugpu-integrated-in-m8-but-spec-early-white-check-mark-complete	docs/manual/ds/parts/01-architecture.tex	7902	\texorpdfstring{M7 --- Performance counters \emph{(deps: CPU+GPU integrated in M8, but spec early)} \ok{} COMPLETE}{M7 --- Performance counters (deps: CPU+GPU integrated in M8, but spec early) COMPLETE}
+ds:ch:phase5-soc-integration-plan:m8-soc-top-integration-deps-m2m7-white-check-mark-complete	docs/manual/ds/parts/01-architecture.tex	7918	\texorpdfstring{M8 --- SoC top integration \emph{(deps: M2--M7)} \ok{} COMPLETE}{M8 --- SoC top integration (deps: M2--M7) COMPLETE}
+ds:ch:phase5-soc-integration-plan:m9-soc-verification-deps-m8-white-check-mark-complete-2026-06-19-foundation-slice-white-check-mark-done-2026-06-03	docs/manual/ds/parts/01-architecture.tex	7937	\texorpdfstring{M9 --- SoC verification \emph{(deps: M8)} \ok{} COMPLETE (2026-06-19) --- foundation slice \ok{} DONE (2026-06-03)}{M9 --- SoC verification (deps: M8) COMPLETE (2026-06-19) --- foundation slice DONE (2026-06-03)}
+ds:ch:phase5-soc-integration-plan:missing-x-phase-5-must-create	docs/manual/ds/parts/01-architecture.tex	7659	\texorpdfstring{Missing \bad{} (Phase 5 must create)}{Missing (Phase 5 must create)}
+ds:ch:phase5-soc-integration-plan:reusable-infrastructure	docs/manual/ds/parts/01-architecture.tex	7683	Reusable infrastructure
+ds:ch:phase6-ip-expansion-plan	docs/manual/ds/parts/01-architecture.tex	9162	Phase 6 --- IP Expansion Plan (golden spec)
+ds:ch:phase6-ip-expansion-plan:0x2000-5000-is-not-reusable	docs/manual/ds/parts/01-architecture.tex	9412	\texorpdfstring{\code{0x2000_5000} is not reusable}{ is not reusable}
+ds:ch:phase6-ip-expansion-plan:1-numbering-reconciled	docs/manual/ds/parts/01-architecture.tex	9182	Numbering --- reconciled
+ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral	docs/manual/ds/parts/01-architecture.tex	11172	Mechanical checklist --- adding an APB4 peripheral
+ds:ch:phase6-ip-expansion-plan:11-non-goals-for-phase-6	docs/manual/ds/parts/01-architecture.tex	11284	Non-goals for Phase 6
+ds:ch:phase6-ip-expansion-plan:12-related-documents	docs/manual/ds/parts/01-architecture.tex	11337	Related documents
+ds:ch:phase6-ip-expansion-plan:2-bus-decision-apb4-for-everything-including-crypto-and-the-npu	docs/manual/ds/parts/01-architecture.tex	9224	Bus decision --- APB4 for everything, including crypto and the NPU
+ds:ch:phase6-ip-expansion-plan:3-the-apb4-register-bank-static-wmask-pattern-read-before-designing-any-register-map	docs/manual/ds/parts/01-architecture.tex	9268	\texorpdfstring{The \code{apb4_register_bank} static-WMASK pattern (read before designing any register map)}{The static-WMASK pattern (read before designing any register map)}
+ds:ch:phase6-ip-expansion-plan:4-address-map-pre-allocated-in-full	docs/manual/ds/parts/01-architecture.tex	9315	Address map --- pre-allocated in full
+ds:ch:phase6-ip-expansion-plan:5-interrupt-allocation-pre-allocated-in-full	docs/manual/ds/parts/01-architecture.tex	9421	Interrupt allocation --- pre-allocated in full
+ds:ch:phase6-ip-expansion-plan:6-implementation-order	docs/manual/ds/parts/01-architecture.tex	9481	Implementation order
+ds:ch:phase6-ip-expansion-plan:6a-2-pwm-rtlperiphpwm-controllersv	docs/manual/ds/parts/01-architecture.tex	9553	\texorpdfstring{6a-2 --- PWM (\src{rtl/periph/pwm_controller.sv})}{6a-2 --- PWM ()}
+ds:ch:phase6-ip-expansion-plan:6a-3-wdt-rtlperiphwatchdog-timersv	docs/manual/ds/parts/01-architecture.tex	9621	\texorpdfstring{6a-3 --- WDT (\src{rtl/periph/watchdog_timer.sv})}{6a-3 --- WDT ()}
+ds:ch:phase6-ip-expansion-plan:6a-4-trng-rtlperiphtrngsv	docs/manual/ds/parts/01-architecture.tex	9723	\texorpdfstring{6a-4 --- TRNG (\src{rtl/periph/trng.sv})}{6a-4 --- TRNG ()}
+ds:ch:phase6-ip-expansion-plan:6a-5-i2c-rtlperiphi2c-controllersv	docs/manual/ds/parts/01-architecture.tex	9809	\texorpdfstring{6a-5 --- I2C (\src{rtl/periph/i2c_controller.sv})}{6a-5 --- I2C ()}
+ds:ch:phase6-ip-expansion-plan:6b-crypto-rtlperiphcrypto-accelsv-aes128-coresv-sha256-coresv	docs/manual/ds/parts/01-architecture.tex	9926	\texorpdfstring{6b --- CRYPTO (\src{rtl/periph/crypto_accel.sv} + \code{aes128_core.sv} + \code{sha256_core.sv})}{6b --- CRYPTO ( + + )}
+ds:ch:phase6-ip-expansion-plan:6c-npu-rtlnpunpu-topsv-npu-mac-arraysv-npu-weight-memsv	docs/manual/ds/parts/01-architecture.tex	10138	\texorpdfstring{6c --- NPU (\src{rtl/npu/npu_top.sv}, \code{npu_mac_array.sv}, \code{npu_weight_mem.sv})}{6c --- NPU (, , )}
+ds:ch:phase6-ip-expansion-plan:7-per-item-specification	docs/manual/ds/parts/01-architecture.tex	9542	Per-item specification
+ds:ch:phase6-ip-expansion-plan:8-physical-design-two-gates-not-one	docs/manual/ds/parts/01-architecture.tex	10528	Physical design --- two gates, not one
+ds:ch:phase6-ip-expansion-plan:9-per-item-workflow-and-acceptance-criteria	docs/manual/ds/parts/01-architecture.tex	11063	Per-item workflow and acceptance criteria
+ds:ch:phase6-ip-expansion-plan:acceptance-criteria-6c-npu	docs/manual/ds/parts/01-architecture.tex	10466	\texorpdfstring{6c --- NPU (\src{rtl/npu/npu_top.sv}, \code{npu_mac_array.sv}, \code{npu_weight_mem.sv})}{6c --- NPU (, , )}
+ds:ch:phase6-ip-expansion-plan:asap7-is-out-of-scope-for-all-of-phase-6	docs/manual/ds/parts/01-architecture.tex	11043	ASAP7 is out of scope for all of Phase 6
+ds:ch:phase6-ip-expansion-plan:bark-and-bite	docs/manual/ds/parts/01-architecture.tex	9635	\texorpdfstring{6a-3 --- WDT (\src{rtl/periph/watchdog_timer.sv})}{6a-3 --- WDT ()}
+ds:ch:phase6-ip-expansion-plan:behaviours-fixed-during-implementation-step-3	docs/manual/ds/parts/01-architecture.tex	10432	\texorpdfstring{6c --- NPU (\src{rtl/npu/npu_top.sv}, \code{npu_mac_array.sv}, \code{npu_weight_mem.sv})}{6c --- NPU (, , )}
+ds:ch:phase6-ip-expansion-plan:bulk-data-paths-are-an-explicit-non-goal	docs/manual/ds/parts/01-architecture.tex	9239	Bulk-data paths are an explicit non-goal
+ds:ch:phase6-ip-expansion-plan:expected-test-counts-and-pass-floor-trajectory	docs/manual/ds/parts/01-architecture.tex	11140	\texorpdfstring{Expected test counts and \code{PASS_FLOOR} trajectory}{Expected test counts and trajectory}
+ds:ch:phase6-ip-expansion-plan:gate-a-per-item-synthesis-probe-not-physical-design	docs/manual/ds/parts/01-architecture.tex	10537	Gate A --- per-item synthesis probe (not physical design)
+ds:ch:phase6-ip-expansion-plan:gate-a-results-crypto-2026-10-03-bead-f7vs10	docs/manual/ds/parts/01-architecture.tex	10551	Gate A --- per-item synthesis probe (not physical design)
+ds:ch:phase6-ip-expansion-plan:gate-a-results-npu-2026-10-04-bead-f7vs11-discharges-f7vs13s-npu-obligation	docs/manual/ds/parts/01-architecture.tex	10683	Gate A --- per-item synthesis probe (not physical design)
+ds:ch:phase6-ip-expansion-plan:gate-b-one-batched-sky130-harden-after-all-six-land	docs/manual/ds/parts/01-architecture.tex	10782	Gate B --- one batched Sky130 harden after all six land
+ds:ch:phase6-ip-expansion-plan:gate-b-results-first-run-2026-10-04-bead-f7vs15-warning-not-a-sign-off	docs/manual/ds/parts/01-architecture.tex	10807	Gate B --- one batched Sky130 harden after all six land
+ds:ch:phase6-ip-expansion-plan:gate-b-results-run-2-2026-10-05-bead-f7vs15-white-check-mark-timing-closed-at-all-9-corners	docs/manual/ds/parts/01-architecture.tex	10936	Gate B --- one batched Sky130 harden after all six land
+ds:ch:phase6-ip-expansion-plan:l2-testability	docs/manual/ds/parts/01-architecture.tex	9860	\texorpdfstring{6a-5 --- I2C (\src{rtl/periph/i2c_controller.sv})}{6a-5 --- I2C ()}
+ds:ch:phase6-ip-expansion-plan:open-drain-with-no-tristate-in-the-tree	docs/manual/ds/parts/01-architecture.tex	9830	\texorpdfstring{6a-5 --- I2C (\src{rtl/periph/i2c_controller.sv})}{6a-5 --- I2C ()}
+ds:ch:phase6-ip-expansion-plan:operational-hazards	docs/manual/ds/parts/01-architecture.tex	11263	Operational hazards
+ds:ch:phase6-ip-expansion-plan:register-map-npu-base-0x2001-0000-n-regs-16-addr-w-12	docs/manual/ds/parts/01-architecture.tex	10197	\texorpdfstring{6c --- NPU (\src{rtl/npu/npu_top.sv}, \code{npu_mac_array.sv}, \code{npu_weight_mem.sv})}{6c --- NPU (, , )}
+ds:ch:phase6-ip-expansion-plan:the-window-crosses-out-of-0x2000-xxxx-verified-inert	docs/manual/ds/parts/01-architecture.tex	9401	\texorpdfstring{The window crosses out of \code{0x2000_xxxx} --- verified inert}{The window crosses out of --- verified inert}
+ds:ch:phase6-ip-expansion-plan:warning-correction-the-crypto-denominator-above-was-stdcell-plus-macro-area-found-2026-10-04-bead-f7vs11	docs/manual/ds/parts/01-architecture.tex	10627	Gate A --- per-item synthesis probe (not physical design)
+ds:ch:phase6-ip-expansion-plan:weight-sram-instantiation-3-way-all-macro	docs/manual/ds/parts/01-architecture.tex	10343	\texorpdfstring{6c --- NPU (\src{rtl/npu/npu_top.sv}, \code{npu_mac_array.sv}, \code{npu_weight_mem.sv})}{6c --- NPU (, , )}
+ds:ch:phase7-pll-plan	docs/manual/ds/parts/01-architecture.tex	11382	Phase 7 Mixed-Signal PLL Clock Generator --- Roadmap \& Implementation Plan
+ds:ch:phase7-pll-plan:1-scope-locked-decisions	docs/manual/ds/parts/01-architecture.tex	11429	Scope \& locked decisions
+ds:ch:phase7-pll-plan:10-out-of-scope-future	docs/manual/ds/parts/01-architecture.tex	11925	Out of scope / future
+ds:ch:phase7-pll-plan:2-dual-pdk-rationale-predictive-asap7-vs-real-sky130	docs/manual/ds/parts/01-architecture.tex	11482	Dual-PDK rationale (predictive ASAP7 vs real Sky130)
+ds:ch:phase7-pll-plan:3-pll-specification-asap7-variant-indicative	docs/manual/ds/parts/01-architecture.tex	11516	PLL specification --- ASAP7 variant (indicative)
+ds:ch:phase7-pll-plan:4-pll-specification-sky130-variant-real-sign-off	docs/manual/ds/parts/01-architecture.tex	11554	PLL specification --- Sky130 variant (real sign-off)
+ds:ch:phase7-pll-plan:5-analog-flow-stages-agents-per-stage-sign-off	docs/manual/ds/parts/01-architecture.tex	11598	Analog flow --- stages, agents, per-stage sign-off
+ds:ch:phase7-pll-plan:6-soc-integration-m-c	docs/manual/ds/parts/01-architecture.tex	11669	SoC integration (M-c)
+ds:ch:phase7-pll-plan:61-rtl-rtlsocpll	docs/manual/ds/parts/01-architecture.tex	11672	\texorpdfstring{RTL (\src{rtl/soc/pll/})}{RTL ()}
+ds:ch:phase7-pll-plan:62-clock-seam-soc-topsv	docs/manual/ds/parts/01-architecture.tex	11702	\texorpdfstring{Clock seam (\code{soc_top.sv})}{Clock seam ()}
+ds:ch:phase7-pll-plan:63-axi-lite-control-ring-map	docs/manual/ds/parts/01-architecture.tex	11718	AXI-Lite control-ring map
+ds:ch:phase7-pll-plan:64-rtl-bugs-found-fixed-by-the-verificationrtl-agents	docs/manual/ds/parts/01-architecture.tex	11733	\texorpdfstring{RTL bugs found + fixed (by the verification/\allowbreak{}RTL agents)}{RTL bugs found + fixed (by the verification/RTL agents)}
+ds:ch:phase7-pll-plan:65-cosim-results	docs/manual/ds/parts/01-architecture.tex	11754	Cosim results
+ds:ch:phase7-pll-plan:7-milestones	docs/manual/ds/parts/01-architecture.tex	11785	Milestones
+ds:ch:phase7-pll-plan:8-analog-agent-validation-this-phase-doubled-as-a-suite-test	docs/manual/ds/parts/01-architecture.tex	11834	Analog-agent validation (this phase doubled as a suite test)
+ds:ch:phase7-pll-plan:9-honest-sign-off-ledger-real-vs-indicative-vs-remaining	docs/manual/ds/parts/01-architecture.tex	11879	Honest sign-off ledger (real vs indicative vs remaining)
+ds:ch:phase7-pll-plan:how-to-use-this-document	docs/manual/ds/parts/01-architecture.tex	11403	How to use this document
+ds:ch:power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	806	Power intent
+ds:ch:reference-model	docs/manual/ds/parts/01-architecture.tex	14270	Reference Model Specification
+ds:ch:reference-model:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	14834	AI MAY assist with
+ds:ch:reference-model:aihuman-responsibility	docs/manual/ds/parts/01-architecture.tex	14832	AI/Human Responsibility
+ds:ch:reference-model:class-gpukernelmodel	docs/manual/ds/parts/01-architecture.tex	14555	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:class-memorymodel	docs/manual/ds/parts/01-architecture.tex	14729	\texorpdfstring{Class: \code{MemoryModel}}{Class: }
+ds:ch:reference-model:class-rv32imodel	docs/manual/ds/parts/01-architecture.tex	14325	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:constructor	docs/manual/ds/parts/01-architecture.tex	14329	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:constructor-1	docs/manual/ds/parts/01-architecture.tex	14559	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:core-api	docs/manual/ds/parts/01-architecture.tex	14368	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:core-api-1	docs/manual/ds/parts/01-architecture.tex	14602	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:cpu-reference-model	docs/manual/ds/parts/01-architecture.tex	14320	CPU Reference Model
+ds:ch:reference-model:dependencies	docs/manual/ds/parts/01-architecture.tex	14866	Dependencies
+ds:ch:reference-model:design-principles	docs/manual/ds/parts/01-architecture.tex	14301	Design Principles
+ds:ch:reference-model:documentation-requirements	docs/manual/ds/parts/01-architecture.tex	14913	Documentation Requirements
+ds:ch:reference-model:example-unit-test	docs/manual/ds/parts/01-architecture.tex	14786	Example unit test
+ds:ch:reference-model:file-organization	docs/manual/ds/parts/01-architecture.tex	14816	File Organization
+ds:ch:reference-model:gpu-reference-model	docs/manual/ds/parts/01-architecture.tex	14550	GPU Reference Model
+ds:ch:reference-model:human-must	docs/manual/ds/parts/01-architecture.tex	14850	Human MUST
+ds:ch:reference-model:instruction-implementation	docs/manual/ds/parts/01-architecture.tex	14457	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:integration-with-cocotb-testbench	docs/manual/ds/parts/01-architecture.tex	14511	Integration with cocotb Testbench
+ds:ch:reference-model:integration-with-verification-plan	docs/manual/ds/parts/01-architecture.tex	14881	Integration with Verification Plan
+ds:ch:reference-model:memory-model	docs/manual/ds/parts/01-architecture.tex	14724	Memory Model
+ds:ch:reference-model:module-tbmodelsgpu-kernel-modelpy	docs/manual/ds/parts/01-architecture.tex	14553	\texorpdfstring{Module: \src{tb/models/gpu_kernel_model.py}}{Module: }
+ds:ch:reference-model:module-tbmodelsmemory-modelpy	docs/manual/ds/parts/01-architecture.tex	14727	\texorpdfstring{Module: \src{tb/models/memory_model.py}}{Module: }
+ds:ch:reference-model:module-tbmodelsrv32i-modelpy	docs/manual/ds/parts/01-architecture.tex	14323	\texorpdfstring{Module: \src{tb/models/rv32i_model.py}}{Module: }
+ds:ch:reference-model:overview	docs/manual/ds/parts/01-architecture.tex	14276	Overview
+ds:ch:reference-model:performance-considerations	docs/manual/ds/parts/01-architecture.tex	14899	Performance Considerations
+ds:ch:reference-model:references	docs/manual/ds/parts/01-architecture.tex	14943	References
+ds:ch:reference-model:state-representation	docs/manual/ds/parts/01-architecture.tex	14353	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:state-representation-1	docs/manual/ds/parts/01-architecture.tex	14580	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:test-strategy	docs/manual/ds/parts/01-architecture.tex	14770	Test strategy
+ds:ch:reference-model:testing-the-reference-models	docs/manual/ds/parts/01-architecture.tex	14765	Testing the Reference Models
+ds:ch:reference-model:usage-example	docs/manual/ds/parts/01-architecture.tex	14484	Usage Example
+ds:ch:reference-model:usage-example-1	docs/manual/ds/parts/01-architecture.tex	14688	Usage Example
+ds:ch:reference-model:version-control	docs/manual/ds/parts/01-architecture.tex	14929	Version Control
+ds:ch:reference-model:warp-execution	docs/manual/ds/parts/01-architecture.tex	14656	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-models	docs/manual/ds/parts/01-architecture.tex	14264	Reference models
+ds:ch:rtl-definition	docs/manual/ds/parts/01-architecture.tex	13697	RTL Interface Definitions
+ds:ch:rtl-definition:apb3-compliance-checklist	docs/manual/ds/parts/01-architecture.tex	14212	APB3 compliance checklist
+ds:ch:rtl-definition:apb3-slave-controlconfig-interface	docs/manual/ds/parts/01-architecture.tex	13980	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:apb3-slave-debug-interface	docs/manual/ds/parts/01-architecture.tex	13837	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:axi4-lite-compliance-checklist	docs/manual/ds/parts/01-architecture.tex	14194	AXI4-Lite compliance checklist
+ds:ch:rtl-definition:axi4-lite-master-memory-interface	docs/manual/ds/parts/01-architecture.tex	13743	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:axi4-lite-master-memory-interface-1	docs/manual/ds/parts/01-architecture.tex	13947	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:boot-configuration	docs/manual/ds/parts/01-architecture.tex	14147	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:clock-and-reset	docs/manual/ds/parts/01-architecture.tex	13723	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:clock-and-reset-1	docs/manual/ds/parts/01-architecture.tex	13940	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:commit-interface-verification-observability	docs/manual/ds/parts/01-architecture.tex	13890	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:cpu-ip-interface	docs/manual/ds/parts/01-architecture.tex	13717	CPU IP Interface
+ds:ch:rtl-definition:dft-test-access-sky130-scan-bead-j41m2-gh-244	docs/manual/ds/parts/01-architecture.tex	14113	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:external-apb-interface-apb3-master	docs/manual/ds/parts/01-architecture.tex	14082	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:external-interrupts	docs/manual/ds/parts/01-architecture.tex	14100	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:external-memory-interface-axi4-lite-master	docs/manual/ds/parts/01-architecture.tex	14062	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:gpu-ip-interface	docs/manual/ds/parts/01-architecture.tex	13934	GPU IP Interface
+ds:ch:rtl-definition:interface-protocol-compliance	docs/manual/ds/parts/01-architecture.tex	14192	Interface Protocol Compliance
+ds:ch:rtl-definition:interrupt-output	docs/manual/ds/parts/01-architecture.tex	14017	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:jtag-tap-sky130-dft-stage-1b-bead-j41m3-gh-244	docs/manual/ds/parts/01-architecture.tex	14131	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:peripheral-ip-interfaces	docs/manual/ds/parts/01-architecture.tex	14174	Peripheral IP Interfaces
+ds:ch:rtl-definition:phase-1-single-cycle-cpu	docs/manual/ds/parts/01-architecture.tex	13719	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:phase-2-extensions	docs/manual/ds/parts/01-architecture.tex	13916	Phase 2+ Extensions
+ds:ch:rtl-definition:phase-4-extensions	docs/manual/ds/parts/01-architecture.tex	14040	Phase 4+ Extensions
+ds:ch:rtl-definition:phase-4-gpu-lite-compute-engine	docs/manual/ds/parts/01-architecture.tex	13936	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:phase-5-extensions	docs/manual/ds/parts/01-architecture.tex	14158	Phase 5+ Extensions
+ds:ch:rtl-definition:phase-5-soc-top-level	docs/manual/ds/parts/01-architecture.tex	14058	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:protocol-standards	docs/manual/ds/parts/01-architecture.tex	13704	Protocol Standards
+ds:ch:rtl-definition:references	docs/manual/ds/parts/01-architecture.tex	14245	References
+ds:ch:rtl-definition:soc-integration-interface	docs/manual/ds/parts/01-architecture.tex	14056	SoC Integration Interface
+ds:ch:rtl-definition:spi-master-phase-5	docs/manual/ds/parts/01-architecture.tex	14181	SPI Master (Phase 5)
+ds:ch:rtl-definition:testing-requirements	docs/manual/ds/parts/01-architecture.tex	14228	Testing Requirements
+ds:ch:rtl-definition:timer-phase-5	docs/manual/ds/parts/01-architecture.tex	14187	Timer (Phase 5)
+ds:ch:rtl-definition:uart-phase-5	docs/manual/ds/parts/01-architecture.tex	14176	UART (Phase 5)
+ds:ch:sdc-timing-spec	docs/manual/ds/parts/02-constraints-and-power-intent.tex	9	SDC Timing Constraints Specification
+ds:ch:sdc-timing-spec:ai-may-assist-with	docs/manual/ds/parts/02-constraints-and-power-intent.tex	744	AI MAY assist with
+ds:ch:sdc-timing-spec:ai-must-not-decide	docs/manual/ds/parts/02-constraints-and-power-intent.tex	758	AI MUST NOT decide
+ds:ch:sdc-timing-spec:aihuman-responsibilities	docs/manual/ds/parts/02-constraints-and-power-intent.tex	742	AI/Human Responsibilities
+ds:ch:sdc-timing-spec:clock-definition	docs/manual/ds/parts/02-constraints-and-power-intent.tex	57	Clock Definition
+ds:ch:sdc-timing-spec:clock-groups	docs/manual/ds/parts/02-constraints-and-power-intent.tex	168	Clock Groups
+ds:ch:sdc-timing-spec:clock-latency	docs/manual/ds/parts/02-constraints-and-power-intent.tex	97	Clock Latency
+ds:ch:sdc-timing-spec:clock-uncertainty	docs/manual/ds/parts/02-constraints-and-power-intent.tex	78	Clock Uncertainty
+ds:ch:sdc-timing-spec:corner-definitions	docs/manual/ds/parts/02-constraints-and-power-intent.tex	612	Corner Definitions
+ds:ch:sdc-timing-spec:false-paths	docs/manual/ds/parts/02-constraints-and-power-intent.tex	127	False Paths
+ds:ch:sdc-timing-spec:human-must-review	docs/manual/ds/parts/02-constraints-and-power-intent.tex	774	Human MUST review
+ds:ch:sdc-timing-spec:inputoutput-delays	docs/manual/ds/parts/02-constraints-and-power-intent.tex	111	\texorpdfstring{Input/\allowbreak{}Output Delays}{Input/Output Delays}
+ds:ch:sdc-timing-spec:key-reports	docs/manual/ds/parts/02-constraints-and-power-intent.tex	667	Key Reports
+ds:ch:sdc-timing-spec:multi-corner-analysis	docs/manual/ds/parts/02-constraints-and-power-intent.tex	607	Multi-Corner Analysis
+ds:ch:sdc-timing-spec:multi-corner-sdc	docs/manual/ds/parts/02-constraints-and-power-intent.tex	645	Multi-Corner SDC
+ds:ch:sdc-timing-spec:multi-cycle-paths	docs/manual/ds/parts/02-constraints-and-power-intent.tex	152	Multi-Cycle Paths
+ds:ch:sdc-timing-spec:overview	docs/manual/ds/parts/02-constraints-and-power-intent.tex	15	Overview
+ds:ch:sdc-timing-spec:phase-1-single-cycle-cpu	docs/manual/ds/parts/02-constraints-and-power-intent.tex	180	Phase 1: Single-Cycle CPU
+ds:ch:sdc-timing-spec:phase-2-pipelined-cpu	docs/manual/ds/parts/02-constraints-and-power-intent.tex	348	Phase 2: Pipelined CPU
+ds:ch:sdc-timing-spec:phase-3-cache-system	docs/manual/ds/parts/02-constraints-and-power-intent.tex	400	Phase 3: Cache System
+ds:ch:sdc-timing-spec:phase-4-gpu-with-multiple-clocks	docs/manual/ds/parts/02-constraints-and-power-intent.tex	445	Phase 4: GPU with Multiple Clocks
+ds:ch:sdc-timing-spec:phase-5-full-soc-with-multiple-clocks	docs/manual/ds/parts/02-constraints-and-power-intent.tex	499	Phase 5: Full SoC with Multiple Clocks
+ds:ch:sdc-timing-spec:post-cts-sdc-updates-phase-1	docs/manual/ds/parts/02-constraints-and-power-intent.tex	335	Post-CTS SDC Updates (Phase 1)
+ds:ch:sdc-timing-spec:references	docs/manual/ds/parts/02-constraints-and-power-intent.tex	790	References
+ds:ch:sdc-timing-spec:sdc-additions-phase-2	docs/manual/ds/parts/02-constraints-and-power-intent.tex	367	SDC Additions (Phase 2)
+ds:ch:sdc-timing-spec:sdc-additions-phase-3	docs/manual/ds/parts/02-constraints-and-power-intent.tex	418	SDC Additions (Phase 3)
+ds:ch:sdc-timing-spec:sdc-additions-phase-4	docs/manual/ds/parts/02-constraints-and-power-intent.tex	463	SDC Additions (Phase 4)
+ds:ch:sdc-timing-spec:sdc-best-practices	docs/manual/ds/parts/02-constraints-and-power-intent.tex	715	SDC Best Practices
+ds:ch:sdc-timing-spec:sdc-concepts	docs/manual/ds/parts/02-constraints-and-power-intent.tex	55	SDC Concepts
+ds:ch:sdc-timing-spec:sdc-file-phase1-cpusdc	docs/manual/ds/parts/02-constraints-and-power-intent.tex	200	\texorpdfstring{SDC File: phase1\_\allowbreak{}cpu.sdc}{SDC File: phase1\_cpu.sdc}
+ds:ch:sdc-timing-spec:sdc-file-phase5-socsdc	docs/manual/ds/parts/02-constraints-and-power-intent.tex	519	\texorpdfstring{SDC File: phase5\_\allowbreak{}soc.sdc}{SDC File: phase5\_soc.sdc}
+ds:ch:sdc-timing-spec:sta-checks-and-reports	docs/manual/ds/parts/02-constraints-and-power-intent.tex	665	STA Checks and Reports
+ds:ch:sdc-timing-spec:timing-closure-checklist	docs/manual/ds/parts/02-constraints-and-power-intent.tex	693	Timing Closure Checklist
+ds:ch:sdc-timing-spec:timing-closure-strategy	docs/manual/ds/parts/02-constraints-and-power-intent.tex	38	Timing Closure Strategy
+ds:ch:sdc-timing-spec:timing-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	182	Timing Requirements
+ds:ch:sdc-timing-spec:timing-requirements-1	docs/manual/ds/parts/02-constraints-and-power-intent.tex	350	Timing Requirements
+ds:ch:sdc-timing-spec:timing-requirements-2	docs/manual/ds/parts/02-constraints-and-power-intent.tex	402	Timing Requirements
+ds:ch:sdc-timing-spec:timing-requirements-3	docs/manual/ds/parts/02-constraints-and-power-intent.tex	447	Timing Requirements
+ds:ch:sdc-timing-spec:timing-requirements-4	docs/manual/ds/parts/02-constraints-and-power-intent.tex	501	Timing Requirements
+ds:ch:sdc-timing-spec:timing-verification-goals	docs/manual/ds/parts/02-constraints-and-power-intent.tex	22	Timing Verification Goals
+ds:ch:soc-integration	docs/manual/ds/parts/01-architecture.tex	7522	SoC integration
 ds:ch:system-overview	docs/manual/ds/parts/01-architecture.tex	3	System overview
 ds:ch:timing-constraints	docs/manual/ds/parts/02-constraints-and-power-intent.tex	3	Timing constraints
+ds:ch:upf-power-spec	docs/manual/ds/parts/02-constraints-and-power-intent.tex	812	UPF Power Intent Specification
+ds:ch:upf-power-spec:ai-may-assist-with	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1772	AI MAY assist with
+ds:ch:upf-power-spec:ai-must-not-decide	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1786	AI MUST NOT decide
+ds:ch:upf-power-spec:aihuman-responsibilities	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1770	AI/Human Responsibilities
+ds:ch:upf-power-spec:checking	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1639	Checking
+ds:ch:upf-power-spec:human-must-review	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1802	Human MUST review
+ds:ch:upf-power-spec:incremental-power-strategy	docs/manual/ds/parts/02-constraints-and-power-intent.tex	840	Incremental Power Strategy
+ds:ch:upf-power-spec:isolation-cells	docs/manual/ds/parts/02-constraints-and-power-intent.tex	877	Isolation Cells
+ds:ch:upf-power-spec:known-gaps-and-follow-ups	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1599	Known gaps and follow-ups
+ds:ch:upf-power-spec:level-shifters	docs/manual/ds/parts/02-constraints-and-power-intent.tex	886	Level Shifters
+ds:ch:upf-power-spec:overview	docs/manual/ds/parts/02-constraints-and-power-intent.tex	818	Overview
+ds:ch:upf-power-spec:phase-1-single-domain-cpu	docs/manual/ds/parts/02-constraints-and-power-intent.tex	923	Phase 1: Single-Domain CPU
+ds:ch:upf-power-spec:phase-2-pipelined-cpu-with-power-domains	docs/manual/ds/parts/02-constraints-and-power-intent.tex	999	Phase 2: Pipelined CPU with Power Domains
+ds:ch:upf-power-spec:phase-3-cache-system-with-power-domains	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1247	Phase 3: Cache System with Power Domains
+ds:ch:upf-power-spec:phase-4-gpu-with-dvfs	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1333	Phase 4: GPU with DVFS
+ds:ch:upf-power-spec:phase-5-full-soc-integration	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1417	Phase 5: Full SoC Integration
+ds:ch:upf-power-spec:power-architecture	docs/manual/ds/parts/02-constraints-and-power-intent.tex	925	Power Architecture
+ds:ch:upf-power-spec:power-architecture-1	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1001	Power Architecture
+ds:ch:upf-power-spec:power-architecture-2	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1249	Power Architecture
+ds:ch:upf-power-spec:power-architecture-3	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1335	Power Architecture
+ds:ch:upf-power-spec:power-architecture-4	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1428	Power Architecture
+ds:ch:upf-power-spec:power-aware-verification	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1669	Power-Aware Verification
+ds:ch:upf-power-spec:power-domains	docs/manual/ds/parts/02-constraints-and-power-intent.tex	862	Power Domains
+ds:ch:upf-power-spec:power-management-goals	docs/manual/ds/parts/02-constraints-and-power-intent.tex	824	Power Management Goals
+ds:ch:upf-power-spec:power-mode-transitions-phase-2	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1194	Power Mode Transitions (Phase 2)
+ds:ch:upf-power-spec:power-state-tables-pst	docs/manual/ds/parts/02-constraints-and-power-intent.tex	906	Power State Tables (PST)
+ds:ch:upf-power-spec:power-states	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1530	Power states
+ds:ch:upf-power-spec:references	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1818	References
+ds:ch:upf-power-spec:retention-registers	docs/manual/ds/parts/02-constraints-and-power-intent.tex	895	Retention Registers
+ds:ch:upf-power-spec:supply-networks	docs/manual/ds/parts/02-constraints-and-power-intent.tex	869	Supply Networks
+ds:ch:upf-power-spec:tool-compatibility	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1656	Tool compatibility
+ds:ch:upf-power-spec:upf-additions-phase-3	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1286	UPF Additions (Phase 3)
+ds:ch:upf-power-spec:upf-additions-phase-4	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1363	UPF Additions (Phase 4)
+ds:ch:upf-power-spec:upf-best-practices	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1748	UPF Best Practices
+ds:ch:upf-power-spec:upf-concepts	docs/manual/ds/parts/02-constraints-and-power-intent.tex	860	UPF Concepts
+ds:ch:upf-power-spec:upf-file-phase1-cpuupf	docs/manual/ds/parts/02-constraints-and-power-intent.tex	951	\texorpdfstring{UPF File: phase1\_\allowbreak{}cpu.upf}{UPF File: phase1\_cpu.upf}
+ds:ch:upf-power-spec:upf-file-phase2-pipelined-cpuupf	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1039	\texorpdfstring{UPF File: phase2\_\allowbreak{}pipelined\_\allowbreak{}cpu.upf}{UPF File: phase2\_pipelined\_cpu.upf}
+ds:ch:upf-power-spec:upf-simulation-flow	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1671	UPF Simulation Flow
+ds:ch:upf-power-spec:upf-testbench-structure	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1708	UPF Testbench Structure
+ds:ch:upf-power-spec:what-is-modelled-and-what-is-deliberately-not	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1476	What is modelled, and what is deliberately not
+ds:ch:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	9	Verification Plan
+ds:ch:verification-plan:1-smoke-tests-directed	docs/manual/ds/parts/04-verification-plan.tex	254	Test Categories
+ds:ch:verification-plan:2-isa-compliance-tests-directed	docs/manual/ds/parts/04-verification-plan.tex	295	Test Categories
+ds:ch:verification-plan:3-random-instruction-tests-constrained-random	docs/manual/ds/parts/04-verification-plan.tex	319	Test Categories
+ds:ch:verification-plan:4-axi4-lite-protocol-tests	docs/manual/ds/parts/04-verification-plan.tex	351	Test Categories
+ds:ch:verification-plan:5-debug-interface-tests	docs/manual/ds/parts/04-verification-plan.tex	379	Test Categories
+ds:ch:verification-plan:6-synthesis-and-place-route-verification	docs/manual/ds/parts/04-verification-plan.tex	639	Physical Design Verification (NEW in Phase 1)
+ds:ch:verification-plan:7-gate-level-simulation	docs/manual/ds/parts/04-verification-plan.tex	737	Physical Design Verification (NEW in Phase 1)
+ds:ch:verification-plan:8-power-aware-simulation-upf	docs/manual/ds/parts/04-verification-plan.tex	789	Physical Design Verification (NEW in Phase 1)
+ds:ch:verification-plan:ai-may-assist-with	docs/manual/ds/parts/04-verification-plan.tex	460	AI/Human Responsibilities (Phase 1)
+ds:ch:verification-plan:ai-responsibilities-across-all-phases	docs/manual/ds/parts/04-verification-plan.tex	1392	AI Responsibilities (Across All Phases)
+ds:ch:verification-plan:ai-responsibilities-phase-0	docs/manual/ds/parts/04-verification-plan.tex	122	AI Responsibilities (Phase 0)
+ds:ch:verification-plan:aihuman-responsibilities-phase-1	docs/manual/ds/parts/04-verification-plan.tex	458	AI/Human Responsibilities (Phase 1)
+ds:ch:verification-plan:assertions-phase-2	docs/manual/ds/parts/04-verification-plan.tex	971	Assertions (Phase 2)
+ds:ch:verification-plan:assertions-systemverilog	docs/manual/ds/parts/04-verification-plan.tex	496	Assertions (SystemVerilog)
+ds:ch:verification-plan:cdc-verification-gh-epic-90-2-domain-multi-clock-soc	docs/manual/ds/parts/04-verification-plan.tex	1216	CDC Verification (GH epic \#90, 2-domain multi-clock SoC)
+ds:ch:verification-plan:cocotb-setup	docs/manual/ds/parts/04-verification-plan.tex	1357	cocotb Setup
+ds:ch:verification-plan:continuous-integration	docs/manual/ds/parts/04-verification-plan.tex	1305	Continuous Integration
+ds:ch:verification-plan:core-principles	docs/manual/ds/parts/04-verification-plan.tex	21	Core Principles
+ds:ch:verification-plan:coverage	docs/manual/ds/parts/04-verification-plan.tex	523	Coverage
+ds:ch:verification-plan:coverage-collection	docs/manual/ds/parts/04-verification-plan.tex	1378	Coverage Collection
+ds:ch:verification-plan:debugging-strategy	docs/manual/ds/parts/04-verification-plan.tex	609	Debugging Strategy
+ds:ch:verification-plan:deliverables	docs/manual/ds/parts/04-verification-plan.tex	90	Deliverables
+ds:ch:verification-plan:documentation	docs/manual/ds/parts/04-verification-plan.tex	1569	Documentation
+ds:ch:verification-plan:exit-criteria-phase-0	docs/manual/ds/parts/04-verification-plan.tex	173	Exit Criteria (Phase 0)
+ds:ch:verification-plan:exit-criteria-phase-1	docs/manual/ds/parts/04-verification-plan.tex	569	Exit Criteria (Phase 1)
+ds:ch:verification-plan:exit-criteria-phase-2	docs/manual/ds/parts/04-verification-plan.tex	987	Exit Criteria (Phase 2)
+ds:ch:verification-plan:exit-criteria-phase-3	docs/manual/ds/parts/04-verification-plan.tex	1059	Exit Criteria (Phase 3)
+ds:ch:verification-plan:exit-criteria-phase-4	docs/manual/ds/parts/04-verification-plan.tex	1137	Exit Criteria (Phase 4)
+ds:ch:verification-plan:exit-criteria-phase-5	docs/manual/ds/parts/04-verification-plan.tex	1201	Exit Criteria (Phase 5)
+ds:ch:verification-plan:gpu-specific-verification	docs/manual/ds/parts/04-verification-plan.tex	1080	GPU-Specific Verification
+ds:ch:verification-plan:human-must	docs/manual/ds/parts/04-verification-plan.tex	478	AI/Human Responsibilities (Phase 1)
+ds:ch:verification-plan:human-responsibilities-across-all-phases	docs/manual/ds/parts/04-verification-plan.tex	1414	Human Responsibilities (Across All Phases)
+ds:ch:verification-plan:human-responsibilities-phase-0	docs/manual/ds/parts/04-verification-plan.tex	152	Human Responsibilities (Phase 0)
+ds:ch:verification-plan:key-improvements	docs/manual/ds/parts/04-verification-plan.tex	1547	Key Improvements
+ds:ch:verification-plan:legacy-tests-archived	docs/manual/ds/parts/04-verification-plan.tex	1528	Legacy Tests Archived
+ds:ch:verification-plan:migration-summary	docs/manual/ds/parts/04-verification-plan.tex	1448	Migration Summary
+ds:ch:verification-plan:new-verification-challenges	docs/manual/ds/parts/04-verification-plan.tex	928	New Verification Challenges
+ds:ch:verification-plan:new-verification-challenges-1	docs/manual/ds/parts/04-verification-plan.tex	1009	New Verification Challenges
+ds:ch:verification-plan:next-steps	docs/manual/ds/parts/04-verification-plan.tex	1589	Next Steps
+ds:ch:verification-plan:objectives	docs/manual/ds/parts/04-verification-plan.tex	75	Objectives
+ds:ch:verification-plan:objectives-1	docs/manual/ds/parts/04-verification-plan.tex	214	Objectives
+ds:ch:verification-plan:overview	docs/manual/ds/parts/04-verification-plan.tex	15	Overview
+ds:ch:verification-plan:phase-0-verification	docs/manual/ds/parts/04-verification-plan.tex	71	Phase 0 Verification
+ds:ch:verification-plan:phase-1-verification	docs/manual/ds/parts/04-verification-plan.tex	210	Phase 1 Verification
+ds:ch:verification-plan:phase-2-verification	docs/manual/ds/parts/04-verification-plan.tex	924	Phase 2 Verification
+ds:ch:verification-plan:phase-3-verification	docs/manual/ds/parts/04-verification-plan.tex	1003	Phase 3 Verification
+ds:ch:verification-plan:phase-4-verification	docs/manual/ds/parts/04-verification-plan.tex	1076	Phase 4 Verification
+ds:ch:verification-plan:phase-5-verification	docs/manual/ds/parts/04-verification-plan.tex	1153	Phase 5 Verification
+ds:ch:verification-plan:physical-design-exit-criteria-phase-1	docs/manual/ds/parts/04-verification-plan.tex	878	Physical Design Exit Criteria (Phase 1)
+ds:ch:verification-plan:physical-design-verification-new-in-phase-1	docs/manual/ds/parts/04-verification-plan.tex	632	Physical Design Verification (NEW in Phase 1)
+ds:ch:verification-plan:pyuvm-migration-status	docs/manual/ds/parts/04-verification-plan.tex	1444	pyuvm Migration Status
+ds:ch:verification-plan:reference-model-enhancement	docs/manual/ds/parts/04-verification-plan.tex	1023	Reference Model Enhancement
+ds:ch:verification-plan:references	docs/manual/ds/parts/04-verification-plan.tex	1604	References
+ds:ch:verification-plan:regression-testing	docs/manual/ds/parts/04-verification-plan.tex	1303	Regression Testing
+ds:ch:verification-plan:scoreboard	docs/manual/ds/parts/04-verification-plan.tex	1115	Scoreboard
+ds:ch:verification-plan:scoreboard-implementation	docs/manual/ds/parts/04-verification-plan.tex	416	Scoreboard Implementation
+ds:ch:verification-plan:seed-management	docs/manual/ds/parts/04-verification-plan.tex	1341	Seed Management
+ds:ch:verification-plan:summary-ai-vs-human-responsibilities	docs/manual/ds/parts/04-verification-plan.tex	1390	Summary: AI vs Human Responsibilities
+ds:ch:verification-plan:system-level-verification	docs/manual/ds/parts/04-verification-plan.tex	1158	System-Level Verification
+ds:ch:verification-plan:test-additions	docs/manual/ds/parts/04-verification-plan.tex	942	Test Additions
+ds:ch:verification-plan:test-additions-1	docs/manual/ds/parts/04-verification-plan.tex	1040	Test Additions
+ds:ch:verification-plan:test-additions-2	docs/manual/ds/parts/04-verification-plan.tex	1172	Test Additions
+ds:ch:verification-plan:test-architecture	docs/manual/ds/parts/04-verification-plan.tex	231	Test Architecture
+ds:ch:verification-plan:test-categories	docs/manual/ds/parts/04-verification-plan.tex	252	Test Categories
+ds:ch:verification-plan:test-categories-1	docs/manual/ds/parts/04-verification-plan.tex	1085	Test Categories
+ds:ch:verification-plan:test-metrics-phase-0	docs/manual/ds/parts/04-verification-plan.tex	192	Test Metrics (Phase 0)
+ds:ch:verification-plan:test-results	docs/manual/ds/parts/04-verification-plan.tex	1506	Test Results
+ds:ch:verification-plan:tools-and-infrastructure	docs/manual/ds/parts/04-verification-plan.tex	1355	Tools and Infrastructure
+ds:ch:verification-plan:verification-stack	docs/manual/ds/parts/04-verification-plan.tex	43	Verification Stack
+ds:ch:verification-plan:waveform-viewing	docs/manual/ds/parts/04-verification-plan.tex	1368	Waveform Viewing
+ds:ch:verification-plan:what-was-migrated	docs/manual/ds/parts/04-verification-plan.tex	1458	What Was Migrated
 ds:ch:verification-strategy	docs/manual/ds/parts/04-verification-plan.tex	3	Verification strategy
-ds:dec:key-design-decisions	docs/manual/ds/parts/01-architecture.tex	44	Key Design Decisions (From Specifications)
-ds:dec:locked-phase5	docs/manual/ds/parts/01-architecture.tex	87	Phase 5 SoC locked architecture decisions
-ds:inv:strict-elaboration	docs/manual/ds/parts/01-architecture.tex	217	Strict elaboration rule
-ds:inv:struct-member-select	docs/manual/ds/parts/01-architecture.tex	201	Struct-member select rule
+ds:dec:key-design-decisions	docs/manual/ds/parts/01-architecture.tex	14966	Key Design Decisions (From Specifications)
+ds:dec:locked-phase5	docs/manual/ds/parts/01-architecture.tex	15009	Phase 5 SoC locked architecture decisions
+ds:dec:phase5-mmio-uncached	docs/manual/ds/parts/01-architecture.tex	8220	\texorpdfstring{PHASE5\_\allowbreak{}MMIO\_\allowbreak{}UNCACHED\_\allowbreak{}DECISION.md}{\cref{ds:dec:phase5-mmio-uncached}}
+ds:dec:phase5-mmio-uncached:1-problem-statement	docs/manual/ds/parts/01-architecture.tex	8231	Problem Statement
+ds:dec:phase5-mmio-uncached:2-memory-map-ground-truth	docs/manual/ds/parts/01-architecture.tex	8260	Memory Map Ground Truth
+ds:dec:phase5-mmio-uncached:3-decisions	docs/manual/ds/parts/01-architecture.tex	8293	Decisions
+ds:dec:phase5-mmio-uncached:4-summary-of-decisions	docs/manual/ds/parts/01-architecture.tex	8571	Summary of Decisions
+ds:dec:phase5-mmio-uncached:architecture-decision-cpu-d-cache-mmio-bypass-uncached-window	docs/manual/ds/parts/01-architecture.tex	8223	Architecture Decision: CPU D-Cache MMIO Bypass (Uncached Window)
+ds:dec:phase5-mmio-uncached:d-cache-maintenance-flush-invalidate-mechanism	docs/manual/ds/parts/01-architecture.tex	8608	D-Cache Maintenance (flush / invalidate) mechanism
+ds:dec:phase5-mmio-uncached:d1-problem-statement	docs/manual/ds/parts/01-architecture.tex	8617	D1. Problem Statement
+ds:dec:phase5-mmio-uncached:d2-decision-1-interface-csr-mapped-cache-control-flush-all-invalidate-all	docs/manual/ds/parts/01-architecture.tex	8651	D2. Decision 1 --- Interface: CSR-Mapped Cache Control (flush-all / invalidate-all)
+ds:dec:phase5-mmio-uncached:d3-decision-2-d-cache-fsm-additions	docs/manual/ds/parts/01-architecture.tex	8718	D3. Decision 2 --- D-Cache FSM Additions
+ds:dec:phase5-mmio-uncached:d4-decision-3-ordering-and-completion	docs/manual/ds/parts/01-architecture.tex	8839	D4. Decision 3 --- Ordering and Completion
+ds:dec:phase5-mmio-uncached:d5-decision-4-minimal-op-set-for-m9-and-cpu-gpu-launch	docs/manual/ds/parts/01-architecture.tex	8883	D5. Decision 4 --- Minimal Op Set for M9 and CPU-GPU Launch
+ds:dec:phase5-mmio-uncached:d6-decision-5-blast-radius-and-ppa	docs/manual/ds/parts/01-architecture.tex	8914	D6. Decision 5 --- Blast Radius and PPA
+ds:dec:phase5-mmio-uncached:d7-decision-6-firmware-and-verification-impact	docs/manual/ds/parts/01-architecture.tex	9025	D7. Decision 6 --- Firmware and Verification Impact
+ds:dec:phase5-mmio-uncached:d8-summary-of-d-cache-maintenance-decisions	docs/manual/ds/parts/01-architecture.tex	9112	D8. Summary of D-Cache Maintenance Decisions
+ds:dec:phase5-mmio-uncached:decision-1-uncached-window-bounds	docs/manual/ds/parts/01-architecture.tex	8295	Decision 1 --- Uncached Window Bounds
+ds:dec:phase5-mmio-uncached:decision-2-decode-and-bypass-location	docs/manual/ds/parts/01-architecture.tex	8327	Decision 2 --- Decode and Bypass Location
+ds:dec:phase5-mmio-uncached:decision-3-ordering-and-hazards	docs/manual/ds/parts/01-architecture.tex	8380	Decision 3 --- Ordering and Hazards
+ds:dec:phase5-mmio-uncached:decision-4-single-beat-axi-bursts-to-the-peripheral-bridge	docs/manual/ds/parts/01-architecture.tex	8416	Decision 4 --- Single-Beat AXI Bursts to the Peripheral Bridge
+ds:dec:phase5-mmio-uncached:decision-5-blast-radius	docs/manual/ds/parts/01-architecture.tex	8436	Decision 5 --- Blast Radius
+ds:dec:phase5-mmio-uncached:decision-6-verification-hook	docs/manual/ds/parts/01-architecture.tex	8524	Decision 6 --- Verification Hook
+ds:inv:strict-elaboration	docs/manual/ds/parts/01-architecture.tex	15139	Strict elaboration rule
+ds:inv:struct-member-select	docs/manual/ds/parts/01-architecture.tex	15123	Struct-member select rule
+ds:mm:memory-map	docs/manual/ds/parts/01-architecture.tex	11948	Memory Map Specification
+ds:mm:memory-map:address-alignment-requirements	docs/manual/ds/parts/01-architecture.tex	13492	Address Alignment Requirements
+ds:mm:memory-map:address-decode-testing	docs/manual/ds/parts/01-architecture.tex	13636	Address Decode Testing
+ds:mm:memory-map:address-space-32-bit	docs/manual/ds/parts/01-architecture.tex	11959	Address Space (32-bit)
+ds:mm:memory-map:alignment-testing	docs/manual/ds/parts/01-architecture.tex	13649	Alignment Testing
+ds:mm:memory-map:breakpoint-registers	docs/manual/ds/parts/01-architecture.tex	12284	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:control-and-status-registers	docs/manual/ds/parts/01-architecture.tex	12152	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:cpu-debug-registers-apb3-slave	docs/manual/ds/parts/01-architecture.tex	12144	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:crypto-registers-phase-6b	docs/manual/ds/parts/01-architecture.tex	13126	Peripheral Registers (Phase 5)
+ds:mm:memory-map:debug-register-testing	docs/manual/ds/parts/01-architecture.tex	13659	Debug Register Testing
+ds:mm:memory-map:detailed-register-maps	docs/manual/ds/parts/01-architecture.tex	12142	Detailed Register Maps
+ds:mm:memory-map:general-purpose-registers	docs/manual/ds/parts/01-architecture.tex	12231	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:global-memory-map-phase-5-soc	docs/manual/ds/parts/01-architecture.tex	11969	Global Memory Map (Phase 5 SoC)
+ds:mm:memory-map:gpio-registers-phase-6a	docs/manual/ds/parts/01-architecture.tex	12695	Peripheral Registers (Phase 5)
+ds:mm:memory-map:gpu-control-registers-apb3-slave	docs/manual/ds/parts/01-architecture.tex	12348	GPU Control Registers (APB3 Slave)
+ds:mm:memory-map:gpu-core-registers	docs/manual/ds/parts/01-architecture.tex	12355	GPU Control Registers (APB3 Slave)
+ds:mm:memory-map:i2c-registers-phase-6a-5	docs/manual/ds/parts/01-architecture.tex	12976	Peripheral Registers (Phase 5)
+ds:mm:memory-map:interrupt-hierarchy-phase-5	docs/manual/ds/parts/01-architecture.tex	13579	Interrupt Hierarchy (Phase 5)
+ds:mm:memory-map:memory-access-permissions-future	docs/manual/ds/parts/01-architecture.tex	13513	Memory Access Permissions (Future)
+ds:mm:memory-map:minimum-address-region	docs/manual/ds/parts/01-architecture.tex	11964	Minimum Address Region
+ds:mm:memory-map:npu-registers-phase-6c	docs/manual/ds/parts/01-architecture.tex	13330	Peripheral Registers (Phase 5)
+ds:mm:memory-map:overview	docs/manual/ds/parts/01-architecture.tex	11954	Overview
+ds:mm:memory-map:peripheral-registers-phase-5	docs/manual/ds/parts/01-architecture.tex	12631	Peripheral Registers (Phase 5)
+ds:mm:memory-map:phase-0-1-single-cpu-no-soc-integration	docs/manual/ds/parts/01-architecture.tex	12073	Phase 0-1: Single CPU (No SoC Integration)
+ds:mm:memory-map:phase-2-3-pipelined-cpu-with-caches	docs/manual/ds/parts/01-architecture.tex	12101	Phase 2-3: Pipelined CPU with Caches
+ds:mm:memory-map:phase-4-cpu-gpu-pre-soc-integration	docs/manual/ds/parts/01-architecture.tex	12117	Phase 4: CPU + GPU (Pre-SoC Integration)
+ds:mm:memory-map:phase-5-full-soc	docs/manual/ds/parts/01-architecture.tex	12138	Phase 5: Full SoC
+ds:mm:memory-map:phase-specific-maps	docs/manual/ds/parts/01-architecture.tex	12071	Phase-Specific Maps
+ds:mm:memory-map:pwm-registers-phase-6a-2	docs/manual/ds/parts/01-architecture.tex	12761	Peripheral Registers (Phase 5)
+ds:mm:memory-map:references	docs/manual/ds/parts/01-architecture.tex	13673	References
+ds:mm:memory-map:reserved-space	docs/manual/ds/parts/01-architecture.tex	12334	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:reset-and-trap-vectors	docs/manual/ds/parts/01-architecture.tex	13460	Reset and Trap Vectors
+ds:mm:memory-map:reset-vector	docs/manual/ds/parts/01-architecture.tex	13462	Reset Vector
+ds:mm:memory-map:soc-interconnect-phase-5	docs/manual/ds/parts/01-architecture.tex	13527	SoC Interconnect (Phase 5)
+ds:mm:memory-map:spi-registers	docs/manual/ds/parts/01-architecture.tex	12653	Peripheral Registers (Phase 5)
+ds:mm:memory-map:testing-recommendations	docs/manual/ds/parts/01-architecture.tex	13634	Testing Recommendations
+ds:mm:memory-map:timer-registers	docs/manual/ds/parts/01-architecture.tex	12675	Peripheral Registers (Phase 5)
+ds:mm:memory-map:trap-vector	docs/manual/ds/parts/01-architecture.tex	13475	Trap Vector
+ds:mm:memory-map:trng-registers-phase-6a-4	docs/manual/ds/parts/01-architecture.tex	12903	Peripheral Registers (Phase 5)
+ds:mm:memory-map:uart-registers	docs/manual/ds/parts/01-architecture.tex	12633	Peripheral Registers (Phase 5)
+ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.tex	12821	Peripheral Registers (Phase 5)
 ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts

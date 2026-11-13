@@ -2,7 +2,7 @@
 // RV32I Register File
 // 32x32-bit general purpose registers with combinational reads
 //
-// Specification: PHASE0_ARCHITECTURE_SPEC.md, PHASE1_ARCHITECTURE_SPEC.md
+// Specification: Doc: ds:ch:phase0-architecture, Doc: ds:ch:phase1-architecture
 // - x0 hardwired to zero (per RV32I specification)
 // - x1-x31 initialized to zero on reset
 // - 2 read ports (combinational for zero-latency access)

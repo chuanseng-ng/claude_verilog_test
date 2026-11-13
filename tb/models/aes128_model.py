@@ -1,6 +1,6 @@
 """aes128_model.py -- pure-Python golden model of the CRYPTO peripheral's AES-128 datapath
 (rtl/periph/aes128_core.sv + the CTR wrapper logic in rtl/periph/crypto_accel.sv; bead
-claude_verilog_test-f7vs.10, Phase 6b, docs/PHASE6_IP_EXPANSION_PLAN.md Sec.6b "CRYPTO").
+claude_verilog_test-f7vs.10, Phase 6b, Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "CRYPTO").
 
 STANDARD LIBRARY ONLY. requirements.txt is deliberately untouched: the SHA-256 half of the
 peripheral is checked against `hashlib.sha256`, and this module is the AES half's counterpart. It

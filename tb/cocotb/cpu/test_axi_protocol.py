@@ -456,7 +456,7 @@ async def test_axi_random_backpressure(dut):
     #   * Coverage: Track 10,000+ instructions with random back-pressure
     #
     # REFERENCE:
-    # - See docs/verification/VERIFICATION_PLAN.md Section 3.3 "Reference Model Validation"
+    # - See Doc: ds:ch:verification-plan Section 3.3 "Reference Model Validation"
     # - See TODO_PHASE1_VERIFICATION.md Criterion #7 (Reference model comparison)
     # - Related test: test_random_instructions.py already implements this pattern for
     #   functional validation (100 seeds × 100 instructions = 10k+ coverage)

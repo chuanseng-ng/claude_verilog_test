@@ -1,6 +1,6 @@
 """
 test_soc_npu.py — Phase 6c-5 SoC-level NPU FABRIC test (bead claude_verilog_test-f7vs.11,
-docs/PHASE6_IP_EXPANSION_PLAN.md §7 "6c -- NPU", L2 testability).
+Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification "6c -- NPU", L2 testability).
 
 `test_npu` (tb_npu.sv / Makefile `npu` target) owns every behaviour of npu_top — arithmetic,
 requantiser corners, FIFO depths, weight-write rejection, sticky-IRQ and hang-free paths — driving

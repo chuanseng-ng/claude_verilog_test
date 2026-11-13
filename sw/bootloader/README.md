@@ -147,7 +147,7 @@ debug bridge. Timeouts count the `mcycle` CSR, so `BL_CPU_HZ` must be the CPU cl
 
 ## Cache hand-off (Phase 3 / MMIO-decision coherency rules)
 
-Software-managed coherency, no hardware snooping (`docs/design/PHASE5_MMIO_UNCACHED_DECISION.md`):
+Software-managed coherency, no hardware snooping (`Doc: ds:dec:phase5-mmio-uncached`):
 SRAM is cacheable and the D$ is write-back, so freshly loaded code is dirty in the D$ and invisible
 to the I$ path. `JUMP` therefore:
 

@@ -1,9 +1,9 @@
 // i2c_controller.sv
 // Phase 6a-5 -- I2C master controller, APB4 slave (bead claude_verilog_test-f7vs.9,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-5 -- I2C"). Master-only, 7-bit addressing, repeated
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-5 -- I2C"). Master-only, 7-bit addressing, repeated
 // START, mandatory clock stretching, arbitration-loss DETECTION, 8-byte TX/RX FIFOs.
 //
-// !!! PAD-RING CONTRACT -- READ BEFORE INTEGRATING (also in docs/design/MEMORY_MAP.md) !!!
+// !!! PAD-RING CONTRACT -- READ BEFORE INTEGRATING (also in Doc: ds:mm:memory-map) !!!
 //   * Open-drain, NO TRISTATE. Each line is the unidirectional triplet used by GPIO:
 //       i2c_scl_o / i2c_scl_oe_o / i2c_scl_i      i2c_sda_o / i2c_sda_oe_o / i2c_sda_i
 //   * `*_oe_o` is the real control. oe = 1 DRIVES THE LINE LOW; oe = 0 RELEASES it.

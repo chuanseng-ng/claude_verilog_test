@@ -4,6 +4,7 @@
 Usage:
     python tools/docs/md2tex.py INPUT.md --book {ds,tm,um,cr} --kind KIND --slug SLUG \
         -o OUT.tex [--level chapter|section] [--path-map FILE] [--record]
+        [--relocated OLDPATH] [--strip-heading-numbers]
 
 Runs pandoc with tools/docs/pandoc/cvt.lua, then post-processes the text
 (label placement, bead / GH / PR / run-id macros, whitespace). Side files:
@@ -215,16 +216,86 @@ def tidy(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", out) + "\n"
 
 
-def postprocess(tex: str, src_rel: str) -> str:
+_HEAD_CMD = re.compile(r"\\(chapter|section|subsection|subsubsection|paragraph|subparagraph)\{")
+_HEAD_NUM = re.compile(r"^(\d+(?:\.\d+)*)\.?\s+(?=\S)")
+_PDFSTR = "\\texorpdfstring{"
+
+
+def _strip_num(title: str) -> tuple[str, str | None]:
+    m = _HEAD_NUM.match(title)
+    if not m:
+        return title, None
+    return title[m.end() :], m.group(1)
+
+
+def strip_heading_numbers(text: str) -> str:
+    """Remove a leading number from heading titles and keep it as \\origsec{N}.
+
+    The macro follows the heading, and the label when one follows at once, so the
+    original section number stays in the text and prose_preserve.py counts it.
+    """
+    out: list[str] = []
+    pos = 0
+    for m in _HEAD_CMD.finditer(text):
+        if m.start() < pos:
+            continue
+        end = _match_brace(text, m.end() - 1)
+        if end < 0:
+            continue
+        title = text[m.end() : end - 1]
+        num: str | None
+        if title.startswith(_PDFSTR):
+            first_end = _match_brace(title, len(_PDFSTR) - 1)
+            if first_end < 0:
+                continue
+            first = title[len(_PDFSTR) : first_end - 1]
+            rest = title[first_end:]
+            new_first, num = _strip_num(first)
+            if num is None:
+                continue
+            new_rest = rest
+            if rest.startswith("{"):
+                pdf_end = _match_brace(rest, 0)
+                if pdf_end > 0:
+                    new_pdf, _ = _strip_num(rest[1 : pdf_end - 1])
+                    new_rest = "{" + new_pdf + "}" + rest[pdf_end:]
+            new_title = _PDFSTR + new_first + "}" + new_rest
+        else:
+            new_title, num = _strip_num(title)
+            if num is None:
+                continue
+        out.append(text[pos : m.end()])
+        out.append(new_title + "}")
+        pos = end
+        lab = re.match(r"\\label\{[^}\n]*\}", text[pos:])
+        if lab:
+            out.append(lab.group(0))
+            pos += lab.end()
+        out.append("\\origsec{" + num + "}")
+    out.append(text[pos:])
+    return "".join(out)
+
+
+def postprocess(
+    tex: str,
+    src_rel: str,
+    relocated: str | None = None,
+    strip_numbers: bool = False,
+) -> str:
     tex = strip_hypertargets(tex)
     tex = join_labels(tex)
     tex = drop_captype(tex)
     tex = plain_dimexpr(tex)
     tex = wrap_references(tex)
+    if strip_numbers:
+        tex = strip_heading_numbers(tex)
     header = (
         f"% Converted from {src_rel} by tools/docs/md2tex.py; edit this file, not the original."
     )
-    return tidy(header + "\n" + tex)
+    tex = tidy(header + "\n" + tex)
+    if relocated:
+        tex = "\\begin{relocated}{" + relocated + "}\n" + tex + "\\end{relocated}\n"
+    return tex
 
 
 def read_tsv_lines(path: Path) -> list[list[str]]:
@@ -290,6 +361,8 @@ def convert(
     level: str = "chapter",
     path_map: Path | None = None,
     record: bool = False,
+    relocated: str | None = None,
+    strip_numbers: bool = False,
     root: Path | None = None,
 ) -> tuple[int, list[tuple[str, str]]]:
     """Convert one file. Returns (exit code, warnings). Writes out and side files."""
@@ -363,7 +436,7 @@ def convert(
         if proc.returncode != 0:
             print(f"md2tex: pandoc failed for {md}:\n{proc.stderr}", file=sys.stderr)
             return 2, []
-        tex = postprocess(proc.stdout, src_rel)
+        tex = postprocess(proc.stdout, src_rel, relocated, strip_numbers)
         out.write_text(tex, encoding="utf-8", newline="\n")
         sec_rows = read_tsv_lines(lua_sec) or [["number", "label", "title"]]
         sec_out.write_text(
@@ -384,6 +457,14 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--level", choices=("chapter", "section"), default="chapter")
     ap.add_argument("--path-map", type=Path)
     ap.add_argument("--record", action="store_true")
+    ap.add_argument(
+        "--relocated", metavar="OLDPATH", help="wrap the output in a relocated environment"
+    )
+    ap.add_argument(
+        "--strip-heading-numbers",
+        action="store_true",
+        help="drop a leading number from heading titles, keep it as origsec",
+    )
     ap.add_argument("--root", type=Path, help="repository root (default: from git)")
     return ap
 
@@ -409,6 +490,8 @@ def main(argv: list[str] | None = None) -> int:
         level=args.level,
         path_map=args.path_map,
         record=args.record,
+        relocated=args.relocated,
+        strip_numbers=args.strip_heading_numbers,
         root=args.root,
     )
     if code:

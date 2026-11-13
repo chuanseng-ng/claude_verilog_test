@@ -1,6 +1,6 @@
 """
 test_soc_crypto.py — Phase 6b-6 SoC-level CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10,
-docs/PHASE6_IP_EXPANSION_PLAN.md §9 step 6, L2 testability).
+Doc: ds:ch:phase6-ip-expansion-plan:9-per-item-workflow-and-acceptance-criteria step 6, L2 testability).
 
 `test_crypto` (tb_crypto.sv / Makefile `crypto` target) owns every behaviour of crypto_accel —
 FIPS-197 / FIPS-180-4 vectors, CTR, multi-block SHA, the sticky-IRQ and hang-free paths and the

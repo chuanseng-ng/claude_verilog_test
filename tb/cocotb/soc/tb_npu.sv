@@ -4,7 +4,7 @@
 //
 // STRICT TDD: the DUT does not exist when this wrapper is written (test_npu.py is the RED half of
 // the cycle). Every port and parameter name below is taken from the frozen interface contract in
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6c -- NPU", not invented.
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU", not invented.
 //
 // TWO DUTs, ONE WRAPPER. npu_top has a compile-time parameter, EN_NPU, whose behaviour a single
 // simulation build cannot show: EN_NPU = 0 must constant-fold the block away yet still terminate

@@ -30,7 +30,7 @@ array sizes), so Verilator must re-elaborate the design for each value -- a sing
 process cannot change it at runtime. The `apb_interconnect` Makefile target therefore builds and
 runs THIS SAME module once per N_SLAVES in {1, 2, 7, 8, 9, 13, 14, 15, 16, 17} (each into its own
 SIM_BUILD directory, to avoid exactly the stale-Verilator-cache hazard documented in
-docs/PHASE6_IP_EXPANSION_PLAN.md Sec.10 "Operational hazards"), plus one more elaboration at
+Doc: ds:ch:phase6-ip-expansion-plan Sec.10 "Operational hazards"), plus one more elaboration at
 N_SLAVES=2/OVERLAP_TEST=1 for test_first_match_wins. test_basic_decode / test_response_mux /
 test_idle / test_unmapped_slverr therefore implicitly run at -- and must pass at -- every sweep
 point; that repetition IS the sweep coverage for item 6 of the suite spec (SEL_W/IDXW differ

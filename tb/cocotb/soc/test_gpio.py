@@ -765,7 +765,7 @@ async def test_register_walk(dut):
 
 @cocotb.test()
 async def test_register_w1c_semantics(dut):
-    """GPIO_IRQ_CLR is W1C for EDGE pins only (MEMORY_MAP.md): per bit, one at a time, a 1 clears
+    """GPIO_IRQ_CLR is W1C for EDGE pins only (Doc: ds:mm:memory-map): per bit, one at a time, a 1 clears
     exactly the matching latched edge, a 0 / a low byte strobe / a non-pending bit clears nothing;
     in LEVEL mode the same writes must leave STAT following the live pins."""
     await _start_clock_and_reset(dut)

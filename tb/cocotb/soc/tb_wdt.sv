@@ -1,7 +1,7 @@
 // tb_wdt.sv
 // Phase 6a-3 -- standalone cocotb test wrapper for watchdog_timer (rtl/periph/watchdog_timer.sv,
 // bead claude_verilog_test-f7vs.7). watchdog_timer DOES NOT EXIST YET as of this wrapper's
-// authorship -- this is step 2 of the mandated TDD order (docs/PHASE6_IP_EXPANSION_PLAN.md
+// authorship -- this is step 2 of the mandated TDD order (Doc: ds:ch:phase6-ip-expansion-plan
 // Sec.9: "the verification orchestrator runs before the RTL orchestrator"). This file, and the
 // `wdt`/`wdt_lint` Makefile targets built on it, are EXPECTED TO FAIL TO ELABORATE until
 // rtl/periph/watchdog_timer.sv is written to match the contract documented here and in
@@ -10,7 +10,7 @@
 // Directly instantiates watchdog_timer with true top-level input ports for clk/rst_n and the
 // whole APB4 slave face, and re-exports irq_o and wdt_rst_req_o as top-level outputs so tests can
 // sample them every cycle. Same standalone pattern as tb_pwm.sv / tb_gpio.sv. The WDT has NO
-// async input pins at all and therefore no CDC of its own (docs/PHASE6_IP_EXPANSION_PLAN.md
+// async input pins at all and therefore no CDC of its own (Doc: ds:ch:phase6-ip-expansion-plan
 // Sec.7 "6a-3 -- WDT"): the only clock domain is core_clk (== clk here).
 //
 // Register map under test (watchdog_timer.sv, ADDR_W=12, N_REGS=8) -- see test_wdt.py's module

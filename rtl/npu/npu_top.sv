@@ -1,6 +1,6 @@
 // npu_top.sv
 // Phase 6c -- INT8 NPU, APB4 slave (bead claude_verilog_test-f7vs.11,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6c -- NPU"; arithmetic spec tb/models/npu_model.py).
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU"; arithmetic spec tb/models/npu_model.py).
 // Weight-stationary 4 x 4 INT8 grid (npu_mac_array) + 4 KB all-macro weight SRAM (npu_weight_mem)
 // + a shared requantiser, behind ONE APB4 slot and ONE interrupt. EN_NPU = 0 is the SoC tie-off.
 //

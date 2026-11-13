@@ -1,6 +1,6 @@
 """
 test_soc_wdt.py — Phase 6a-3 SoC-level watchdog test (bead claude_verilog_test-f7vs.7
-steps 4-5, docs/PHASE6_IP_EXPANSION_PLAN.md §10).
+steps 4-5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
 
 `test_wdt` (tb_wdt.sv / Makefile `wdt` target) drives watchdog_timer's APB4 face directly and has
 never exercised it through the real fabric path:

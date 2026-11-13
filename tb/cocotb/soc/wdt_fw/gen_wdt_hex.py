@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_wdt_hex.py — generate wdt_fw.hex and wdt_rst_fw.hex for the Phase 6a-3 SoC-level
-watchdog test (bead claude_verilog_test-f7vs.7 steps 4-5, docs/PHASE6_IP_EXPANSION_PLAN.md §10).
+watchdog test (bead claude_verilog_test-f7vs.7 steps 4-5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
 
 Modelled directly on pwm_fw/gen_pwm_hex.py (itself a copy of gpio_fw/gen_gpio_hex.py) — same
 Assembler/lui_addi/CSRRW/MRET machinery, same commit_pc_o marker-PC synchronisation idiom. A

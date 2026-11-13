@@ -5,7 +5,7 @@
 // Arbitration reuses the proven priority-grant pattern from
 // rtl/mem/rv32i_cache_arbiter.sv, generalised to a per-slave grant engine.
 //
-// Design points (see docs/PHASE5_SOC_INTEGRATION_PLAN.md M3):
+// Design points (see Doc: ds:ch:phase5-soc-integration-plan M3):
 //   * Per-slave write engine + read engine, each depth-1 outstanding.  A slave
 //     channel is locked to one master for the life of a transaction, so bursts
 //     never interleave and the fabric cannot deadlock.

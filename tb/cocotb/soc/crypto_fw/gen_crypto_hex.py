@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_crypto_hex.py — generate crypto_fw.hex and crypto_fw_addrs.py for the Phase 6b SoC-level
-CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10, docs/PHASE6_IP_EXPANSION_PLAN.md §9 step 6,
+CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10, Doc: ds:ch:phase6-ip-expansion-plan:9-per-item-workflow-and-acceptance-criteria step 6,
 L2 testability).
 
 Scope, deliberately small. The L1 suite (test_crypto.py, `make crypto`) owns every behaviour of the

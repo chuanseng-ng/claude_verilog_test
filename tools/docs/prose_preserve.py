@@ -344,6 +344,10 @@ _VERB_ENV = re.compile(
 _VERB_INLINE = re.compile(
     r"\\(?:verb\*?|lstinline(?:\[[^\]]*\])?)(?P<d>[^A-Za-z\s{\[*])(?P<b>.*?)(?P=d)"
 )
+_ORIGSEC = re.compile(
+    r"(\\(?:chapter|section|subsection|subsubsection|paragraph|subparagraph)\*?"
+    r"\{(?:[^\n]|\n(?!\n))*?\}(\\label\{[^}\n]*\})?)\\origsec\{([^}\n]*)\}"
+)
 WS = " \t\n"
 _CMD = re.compile(r"\\([A-Za-z]+)(\*?)")
 _DROP1 = {
@@ -549,6 +553,9 @@ def norm_latex(text: str) -> str:
         return f"{pad}\x00{len(stash) - 1}\x00{pad}"
 
     text = text.replace("\r\n", "\n")
+    # A heading that lost its own number keeps it as \origsec{N}; count it before
+    # the title, where the Markdown source has it.
+    text = _ORIGSEC.sub(lambda m: f"{m.group(3)} {m.group(1)}", text)
     for lit, tok in _MARK_LITERALS.items():
         text = text.replace(lit, tok)
     text = _VERB_ENV.sub(keep, text)

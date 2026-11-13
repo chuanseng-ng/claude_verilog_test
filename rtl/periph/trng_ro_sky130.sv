@@ -1,6 +1,6 @@
 // trng_ro_sky130.sv
 // Phase 6a-4 -- Sky130 ring-oscillator entropy arm of the TRNG (bead claude_verilog_test-f7vs.8,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG"). Selected by `ifdef TRNG_RO_SKY130 inside
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG"). Selected by `ifdef TRNG_RO_SKY130 inside
 // trng.sv; the default build uses trng_lfsr_entropy.sv instead.
 //
 // BLACKBOX STUB -- NOT SYNTHESISABLE, NOT SIMULATABLE. This file exists only to pin the port

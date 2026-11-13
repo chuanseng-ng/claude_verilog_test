@@ -254,3 +254,13 @@ def test_real_repository_is_clean(capsys) -> None:  # type: ignore[no-untyped-de
     rc = cdl.main([])
     out = capsys.readouterr().out
     assert rc == 0, out
+
+
+def test_src_to_moved_document_is_allowed(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A \\src path that is an old path in path_map.tsv names a moved document."""
+    rows = MAP_HEADER + "docs/a.md\tdocs/manual/ds/ds.tex\tds:ch:first\n"
+    text = GOOD_DS + "\\src{docs/a.md} \\src{docs/other.md}\n"
+    files = {"docs/manual/common/path_map.tsv": rows, "docs/manual/ds/ds.tex": text}
+    rc, out = run(tree(good(tmp_path), files), capsys)
+    assert rc == 1 and len(out) == 1
+    assert "docs/other.md" in out[0]

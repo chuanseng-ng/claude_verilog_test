@@ -361,7 +361,7 @@ The cocotb testbenches integrate with Python reference models:
                  Report
 ```
 
-## Verification Strategy (Per VERIFICATION_PLAN.md)
+## Verification Strategy (Per Doc: ds:ch:verification-plan)
 
 ### Phase 0 (Current)
 
@@ -434,6 +434,6 @@ export PYTHONPATH=$PYTHONPATH:/path/to/claude_verilog_test
 ## References
 
 - cocotb documentation: https://docs.cocotb.org/
-- VERIFICATION_PLAN.md: Complete verification strategy
-- REFERENCE_MODEL_SPEC.md: Python model API
-- PHASE1_ARCHITECTURE_SPEC.md: CPU RTL requirements
+- Doc: ds:ch:verification-plan: Complete verification strategy
+- Doc: ds:ch:reference-model: Python model API
+- Doc: ds:ch:phase1-architecture: CPU RTL requirements

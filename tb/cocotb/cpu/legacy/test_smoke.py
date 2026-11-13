@@ -43,7 +43,7 @@ async def reset_dut(dut):
 class APBDebugInterface:
     """APB3 debug interface helper for CPU register access."""
 
-    # Debug register offsets (from MEMORY_MAP.md)
+    # Debug register offsets (from Doc: ds:mm:memory-map)
     DBG_CTRL = 0x000
     DBG_STATUS = 0x004
     DBG_PC = 0x008

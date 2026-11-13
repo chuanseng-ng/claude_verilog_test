@@ -1,6 +1,6 @@
 """
 test_soc_pwm.py — Phase 6a-2 SoC-level PWM test (bead claude_verilog_test-f7vs.6
-item 5, docs/PHASE6_IP_EXPANSION_PLAN.md §10).
+item 5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
 
 `test_pwm` (tb_pwm.sv / Makefile `pwm` target) drives pwm_controller's APB4 face
 directly and has never exercised it through the real fabric path:

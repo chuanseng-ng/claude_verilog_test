@@ -233,7 +233,7 @@ module rv32i_cpu_top #(
   logic [4:0]  dbg_reg_rd_addr;
   logic [31:0] dbg_reg_rd_data;
 
-  // Debug register map (see MEMORY_MAP.md)
+  // Debug register map (see Doc: ds:mm:memory-map)
   logic [31:0] dbg_ctrl_reg;      // 0x000: Control register
   logic [31:0] dbg_status_reg;    // 0x004: Status register
 
@@ -271,7 +271,7 @@ module rv32i_cpu_top #(
   // Fix: capture the cause in a register when the event fires, and hold it
   // until the CPU resumes (exits HALTED).
   //
-  // Encoding matches MEMORY_MAP.md / DBG_STATUS bits [7:4]:
+  // Encoding matches Doc: ds:mm:memory-map / DBG_STATUS bits [7:4]:
   //   0x1 = debug halt request
   //   0x2 = BP0 hit
   //   0x3 = BP1 hit
@@ -738,7 +738,7 @@ module rv32i_cpu_top #(
   // bp0_hit / bp1_hit are valid.  We also cover the EBREAK case (already
   // handled by ebreak_halt) and the FETCH-time halt_req case.
   //
-  // Encoding (MEMORY_MAP.md DBG_STATUS bits [7:4]):
+  // Encoding (Doc: ds:mm:memory-map DBG_STATUS bits [7:4]):
   //   0x1 = debug halt request (plain halt, no other cause)
   //   0x2 = BP0 hit
   //   0x3 = BP1 hit

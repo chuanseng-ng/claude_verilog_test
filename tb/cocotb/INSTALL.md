@@ -199,7 +199,7 @@ python -c "import sys; print(sys.path)"
 
 4. **Read documentation**:
    - `tb/cocotb/README.md` - Complete cocotb infrastructure guide
-   - `docs/verification/VERIFICATION_PLAN.md` - Verification strategy
+   - `Doc: ds:ch:verification-plan` - Verification strategy
 
 ## Recommended Setup for This Project
 

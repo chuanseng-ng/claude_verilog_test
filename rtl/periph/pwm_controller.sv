@@ -1,6 +1,6 @@
 // pwm_controller.sv
 // Phase 6a-2 -- Pulse-width modulation controller, APB4 slave (bead claude_verilog_test-f7vs.6,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-2 -- PWM"). Written to the pre-committed contract in
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-2 -- PWM"). Written to the pre-committed contract in
 // tb/cocotb/soc/test_pwm.py (that suite's module docstring is the authoritative spec; this header
 // summarises it).
 //
@@ -10,7 +10,7 @@
 //   1  PWM_PERIOD     RW   [15:0] shared period, in prescaled ticks (ALL channels share it --
 //                           a per-channel period would be 4x the registers for no real benefit,
 //                           and a shared period is what makes multi-channel phase relationships
-//                           meaningful; see docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7)
+//                           meaningful; see Doc: ds:ch:phase6-ip-expansion-plan Sec.7)
 //   2  PWM_PRESCALE   RW   [15:0] core_clk divider; one tick = (PRESCALE+1) core_clk cycles
 //   3  PWM_DUTY01     RW   [15:0] ch0 duty, [31:16] ch1 duty (prescaled ticks)
 //   4  PWM_DUTY23     RW   [15:0] ch2 duty, [31:16] ch3 duty (prescaled ticks)

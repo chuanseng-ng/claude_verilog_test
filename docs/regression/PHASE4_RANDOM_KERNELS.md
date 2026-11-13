@@ -1,6 +1,6 @@
 # Phase 4 Random-Kernel Regression
 
-Sign-off step 5 of `docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md` §9.
+Sign-off step 5 of Doc: ds:ch:phase3-closure-phase4-plan:9-verification-end-to-end.
 
 ## Results
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_trng_hex.py — generate trng_fw.hex and trng_fw_addrs.py for the Phase 6a-4 SoC-level TRNG
-test (bead claude_verilog_test-f7vs.8 steps 4-5, docs/PHASE6_IP_EXPANSION_PLAN.md §10).
+test (bead claude_verilog_test-f7vs.8 steps 4-5, Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
 
 Modelled directly on wdt_fw/gen_wdt_hex.py — same Assembler/lui_addi/CSRRW/MRET machinery, same
 commit_pc_o marker-PC synchronisation idiom. A committed pure-Python hand-assembler, so the suite

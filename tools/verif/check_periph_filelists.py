@@ -68,7 +68,7 @@ SCAN_DIRS = ["rtl/periph", "rtl/npu"]
 EXEMPT: dict[str, str] = {
     # Sky130-only entropy source for the TRNG, selected by `ifdef TRNG_RO_SKY130`
     # and never compiled in the portable default build, so it is deliberately
-    # absent from every list. See docs/PHASE6_IP_EXPANSION_PLAN.md section 7.
+    # absent from every list. See Doc: ds:ch:phase6-ip-expansion-plan:7-per-item-specification.
     "trng_ro_sky130.sv": "ifdef-gated Sky130-only entropy source; not in the default build",
 }
 

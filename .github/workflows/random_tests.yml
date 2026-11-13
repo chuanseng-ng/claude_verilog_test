@@ -644,7 +644,7 @@ jobs:
   # ============================================================================
   # JOB 3b: RTL code coverage (nightly) — runs the directed suite with
   # Verilator --coverage and publishes the merged/annotated report.
-  # VERIFICATION_PLAN.md sets >95% line coverage as an exit criterion; this job
+  # Doc: ds:ch:verification-plan sets >95% line coverage as an exit criterion; this job
   # is what actually measures it (informational — does not gate).
   # ============================================================================
   rtl-coverage:

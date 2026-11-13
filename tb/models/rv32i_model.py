@@ -1,7 +1,7 @@
 """
 RV32I CPU Reference Model
 
-Instruction-accurate model of RV32I CPU core per PHASE0_ARCHITECTURE_SPEC.md.
+Instruction-accurate model of RV32I CPU core per Doc: ds:ch:phase0-architecture.
 Implements all 37 base integer instructions.
 """
 
@@ -27,7 +27,7 @@ class RV32IModel:
     RV32I CPU reference model.
 
     Implements the exact instruction set and behavior defined in
-    PHASE0_ARCHITECTURE_SPEC.md.
+    Doc: ds:ch:phase0-architecture.
     """
 
     # Trap causes
@@ -59,7 +59,7 @@ class RV32IModel:
         self.reset()
 
     def reset(self):
-        """Reset CPU to initial state per PHASE0_ARCHITECTURE_SPEC.md."""
+        """Reset CPU to initial state per Doc: ds:ch:phase0-architecture."""
         self.pc = self.reset_pc
         self.regs = [0] * 32  # x0-x31, all initialized to 0
         self.trap_pending = False

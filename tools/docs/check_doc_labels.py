@@ -215,6 +215,7 @@ class Checker:
     def check_src(self) -> None:
         """Check the paths in \\src macros."""
         files = self.repo_files()
+        moved = self.moved_paths()
         for rel, line, raw in self.srcs:
             path = raw.replace("\\_", "_").replace("\\", "")
             # Historical text may cite "file:line" or "file:first-last"; the file must exist.
@@ -225,8 +226,18 @@ class Checker:
                 ok = any(f.startswith(path) for f in files)
             else:
                 ok = path in files or any(f.startswith(path + "/") for f in files)
+            if not ok and path in moved:
+                ok = True  # a moved document: path_map.tsv names its new label
             if not ok:
                 self.err(rel, line, f"\\src path '{path}' is not a repository file or directory")
+
+    def moved_paths(self) -> set[str]:
+        """Old paths of the documents that moved into the books (first column of path_map.tsv)."""
+        path = self.manual / "common" / "path_map.tsv"
+        if not path.exists():
+            return set()
+        rows = path.read_text(encoding="utf-8").split("\n")[1:]
+        return {r.split("\t")[0] for r in rows if r.strip() and not r.startswith("#")}
 
     def check_citations(self) -> None:
         """Check the Doc comment lines of the source files."""

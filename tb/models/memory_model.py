@@ -2,7 +2,7 @@
 Memory Model for RV32I CPU and GPU Reference Models
 
 Provides a simple sparse memory implementation with alignment checking.
-Conforms to REFERENCE_MODEL_SPEC.md.
+Conforms to Doc: ds:ch:reference-model.
 """
 
 
@@ -18,7 +18,7 @@ class MemoryModel:
 
     Implements a simple byte-addressable memory using a dictionary
     for sparse storage. Enforces natural alignment requirements per
-    PHASE0_ARCHITECTURE_SPEC.md.
+    Doc: ds:ch:phase0-architecture.
     """
 
     def __init__(self):

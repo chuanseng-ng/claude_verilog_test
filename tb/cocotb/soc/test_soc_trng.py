@@ -1,6 +1,6 @@
 """
 test_soc_trng.py — Phase 6a-4 SoC-level TRNG test (bead claude_verilog_test-f7vs.8 steps 4-5,
-docs/PHASE6_IP_EXPANSION_PLAN.md §10).
+Doc: ds:ch:phase6-ip-expansion-plan:10-mechanical-checklist-adding-an-apb4-peripheral).
 
 `test_trng` (tb_trng.sv / Makefile `trng` target) drives trng's APB4 face directly and has never
 exercised it through the real fabric path:

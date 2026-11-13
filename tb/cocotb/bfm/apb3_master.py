@@ -2,7 +2,7 @@
 APB3 Master BFM (Bus Functional Model)
 
 Provides an APB3 master interface for testbenches.
-Used for CPU debug interface access per MEMORY_MAP.md.
+Used for CPU debug interface access per Doc: ds:mm:memory-map.
 """
 
 from cocotb.triggers import RisingEdge
@@ -14,7 +14,7 @@ class APB3Master:
 
     Implements an APB3 master for accessing debug registers and peripherals.
 
-    Per MEMORY_MAP.md:
+    Per Doc: ds:mm:memory-map:
     - Address width: 12 bits (4 KB space)
     - Data width: 32 bits
     - Simple two-cycle protocol (SETUP, ACCESS)
@@ -158,10 +158,10 @@ class APB3DebugInterface:
     High-level debug interface using APB3 Master.
 
     Provides convenient methods for accessing CPU debug registers
-    per MEMORY_MAP.md register map.
+    per Doc: ds:mm:memory-map register map.
     """
 
-    # Debug register offsets (from MEMORY_MAP.md)
+    # Debug register offsets (from Doc: ds:mm:memory-map)
     DBG_CTRL = 0x000
     DBG_STATUS = 0x004
     DBG_PC = 0x008

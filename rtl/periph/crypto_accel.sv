@@ -1,6 +1,6 @@
 // crypto_accel.sv
 // Phase 6b -- AES-128 / SHA-256 crypto accelerator, APB4 slave (bead claude_verilog_test-f7vs.10,
-// docs/PHASE6_IP_EXPANSION_PLAN.md Sec.6b "6b -- CRYPTO"). Wrapper over aes128_core.sv and
+// Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "6b -- CRYPTO"). Wrapper over aes128_core.sv and
 // sha256_core.sv: ONE APB slot, ONE interrupt. EN_AES / EN_SHA drop a core from the build.
 //
 // NON-GOALS -- READ BEFORE USING. This is NOT production cryptography.
