@@ -1,5 +1,5 @@
 # ruff: noqa: E501
-"""Tests for tools/dft/atpg/derive_hold_mask.py (bead j41m.15, DFT Stage 3 ATPG spike).
+"""Tests for tools/dft/atpg/derive_hold_mask.py (DFT Stage 3 ATPG spike).
 
 The mask lists the scanned capture flops whose D pin is NOT observed in the ATPG cut because the scan-view
 hold check fails on them (34 gray-pointer stage-0 D pins + 60 MBIST tck->destination rows, DFT_ARCHITECTURE
@@ -7,8 +7,10 @@ hold check fails on them (34 gray-pointer stage-0 D pins + 60 MBIST tck->destina
 
 Two kinds of test:
 * synthetic miniature netlists (always run);
-* the real-data check against the run-10-26 exempt list (skipped when /nobackup is not mounted):
+* the real-data check against the exempt list of the reference harden run (skipped when /nobackup is not mounted):
   94/94 and a negative control.
+
+Doc: cr:suite:test-dft-atpg-hold-mask
 """
 
 import sys

@@ -1,5 +1,5 @@
 # OpenRAM config -- Sky130 4 KB (32,768 bit) SRAM hard macro, 1RW + 1R ports.
-# GH #104 Sky130 SoC Stage-2: replaces the behavioral MEM_WORDS=1024 x 32b
+# Replaces the behavioral MEM_WORDS=1024 x 32b
 # main-memory array in rtl/soc/sram_controller.sv with a real OpenRAM macro.
 #
 # Naming matches the installed sky130_sram_macros convention (singular

@@ -1,4 +1,4 @@
-"""Unit tests for tools/verif/coverage_report.py (GH #216, bead nkj7).
+"""Unit tests for tools/verif/coverage_report.py.
 
 The report turns a merged Verilator ``coverage.dat`` from the SoC cocotb regression into a
 per-module line + toggle table.  These tests pin the contract the ``soc_coverage`` Makefile
@@ -17,7 +17,9 @@ The properties that matter, each with a test below:
   * only the triaged (``rtl/soc|periph|npu``) and informational (``rtl/cpu|mem|gpu``) trees are
     reported -- testbench files and behavioural SRAM models never are;
   * a waiver needs a justification and removes a point from the denominator, not the report;
-  * empty or malformed input is an error, never a vacuous clean report (cf. bead dwp).
+  * empty or malformed input is an error, never a vacuous clean report.
+
+Doc: cr:suite:test-coverage-report
 """
 
 from __future__ import annotations
@@ -376,7 +378,7 @@ def test_uncovered_lists_are_precise(tmp_path: Path) -> None:
 
 
 def generate_loop_records(hier: str = "tb.u_dut") -> list[str]:
-    """Points inside a generate loop, as Verilator 5.048 writes them (pmu.sv, GH #222 T1).
+    """Points inside a generate loop, as Verilator 5.048 writes them (pmu.sv).
 
     Every point in the loop body carries ``S=<loop header line>,<own line>`` while its ``l`` key is
     its OWN line, so the first number of ``S`` is the ``for`` header, not where the point is.
@@ -417,7 +419,7 @@ def generate_loop_records(hier: str = "tb.u_dut") -> list[str]:
 
 
 def test_line_label_uses_the_points_own_line_not_the_span_start(tmp_path: Path) -> None:
-    """GH #222 T1: a generate-loop point is labelled L294, not the loop header L277."""
+    """A generate-loop point is labelled L294, not the loop header L277."""
     dat = write_dat(tmp_path, *generate_loop_records())
     (row,) = cr.build_report(cr.parse_dat(dat), Path(ROOT), []).modules
     assert sorted(g.label for g in row.uncovered_lines) == ["L294", "L365"]
@@ -552,7 +554,7 @@ def test_cli_fails_on_bad_waiver_file(tmp_path: Path) -> None:
     assert "justification" in proc.stderr
 
 
-# ------------------------------------------------------------- multi-input merge (bead 1eyv)
+# ------------------------------------------------------------- multi-input merge
 #
 # The combined report merges the SoC regression's ``merged.dat`` with the CPU/cache/GPU suites'
 # ``.dat`` files.  They come from different checkouts (absolute paths differ: a developer
@@ -741,7 +743,7 @@ def test_cli_fails_when_any_input_is_missing(tmp_path: Path) -> None:
     assert "gone.dat" in proc.stderr
 
 
-# -------------------------------------------------------------------- the gate (bead s1cg)
+# -------------------------------------------------------------------- the gate
 #
 # ``--gate`` turns the report into a pass/fail check on the TRIAGED trees only (rtl/soc,
 # rtl/periph, rtl/npu): a per-module line floor and a toggle floor on CONTROL signals.  A control
@@ -1135,14 +1137,14 @@ def test_tracked_waiver_and_ratchet_files_parse() -> None:
     tools = REPO_ROOT / "tools" / "verif"
     assert cr.load_waivers(tools / "coverage_waivers.txt")
     ratchet = cr.load_ratchet(tools / "coverage_toggle_ratchet.txt")
-    # Empty is valid: beads 0ntg / 4pl8 closed the last two known gaps (soc_bus, soc_top).
+    # Empty is valid: the last two known gaps (soc_bus, soc_top) are closed.
     assert isinstance(ratchet, dict)
     assert all(0.0 <= e.floor < 100.0 for e in ratchet.values())
 
 
-# ------------------------------------------------- line gate on rtl/cpu|mem|gpu (bead a5ze)
+# ------------------------------------------------- line gate on rtl/cpu|mem|gpu
 #
-# After the a5ze triage the CPU / cache / GPU trees join the gate for LINE coverage only: the
+# After triage the CPU / cache / GPU trees join the gate for LINE coverage only: the
 # 100 % control-toggle gate stays off them (their wide CSR / address / data buses dominate toggle
 # exactly as in the triaged trees, and the toggle ratchet was never calibrated for them).  They are
 # evaluated on the same combined data, so a gate run that did not measure them is an ERROR, not a

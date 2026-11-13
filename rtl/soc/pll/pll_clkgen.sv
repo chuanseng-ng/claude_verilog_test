@@ -10,6 +10,7 @@
 //   - The wrapper has no logic. The unused branch elaborates and is pruned.
 //   - Lint with the STUB branch only. pll_rnm.sv is not in the lint source list.
 // Doc: ds:mod:pll-clkgen
+// Doc: cr:mod:pll-clkgen
 
 module pll_clkgen #(
     // Implementation selector — "STUB" (default, synth-safe) or "RNM" (cosim)
@@ -33,7 +34,7 @@ module pll_clkgen #(
     parameter real VTUNE_RESET_V         = 0.0
     /* verilator lint_on  UNUSEDPARAM */
 ) (
-    input  logic       ref_clk_i,    // 100 MHz reference (crystal / XO)
+    input  logic       ref_clk_i,    // reference clock, F_REF_HZ (crystal / XO)
     input  logic       rst_n_i,      // active-low async reset
     input  logic [3:0] feedback_div, // N divider (4'h0 → N=N_DIV_DEFAULT=13)
     input  logic [1:0] post_div_sel, // post-divider: 00→/1 01→/2 10→/4

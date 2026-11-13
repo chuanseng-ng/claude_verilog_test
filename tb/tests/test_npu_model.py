@@ -1,9 +1,11 @@
-"""Unit tests for tb/models/npu_model.py (bead claude_verilog_test-f7vs.11).
+"""Unit tests for tb/models/npu_model.py.
 
 The model is the golden reference the NPU's cocotb suite (tb/cocotb/soc/test_npu.py) chases, so
 these tests pin it independently of that suite. Every vector below is HAND-COMPUTED and written as
 a literal -- none is produced by calling the model on itself -- so a silent edit of the model's
 arithmetic cannot move the target.
+
+Doc: cr:suite:test-npu-model
 """
 
 import ast

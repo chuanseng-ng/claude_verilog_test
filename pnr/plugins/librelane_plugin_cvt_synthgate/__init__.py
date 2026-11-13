@@ -1,4 +1,4 @@
-"""Project-local LibreLane plugin: synthesis undef-elaboration gate (bead gc0y).
+"""Project-local LibreLane plugin: synthesis undef-elaboration gate.
 
 LibreLane imports every module named ``librelane_plugin_*`` found on ``sys.path`` at start-up, so
 putting ``pnr/plugins`` on ``PYTHONPATH`` (``SYNTH_GATE_ENV`` in pnr/Makefile) activates this for
@@ -13,11 +13,13 @@ What it does
    after a multi-hour P&R run.  A report is written to ``<step_dir>/synth_undef_gate.rpt``.
 2. Gives every Pyosys step a private cwd (its own step dir).  Surelog writes ``slpp_all/`` to the
    cwd; the Makefile runs LibreLane from the shared LibreLane checkout, so that cache used to be
-   shared by every project and worktree (a stale-source hazard measured in bead dud4).
+   shared by every project and worktree (a stale-source hazard).
 
 Environment: ``CVT_SYNTH_GATE=warn`` reports but does not abort, ``=off`` disables the check
 (never use either for sign-off runs).  If the hooks cannot be installed the import raises, so a
 missing gate is loud rather than silent.
+
+Doc: cr:pd:plugins-librelane-plugin-cvt-synthgate-init-py
 """
 
 import json

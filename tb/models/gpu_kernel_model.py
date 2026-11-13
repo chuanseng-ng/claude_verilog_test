@@ -4,17 +4,19 @@ GPU SIMT Kernel Execution Model
 Instruction-accurate model of GPU SIMT execution per Doc: ds:ch:phase4-gpu-architecture.
 Implements 8-lane warp execution with basic divergence handling.
 
-Launch contract (bead 6hy6, user decision 2026-10-11): a block holds at most
+Launch contract: a block holds at most
 ``MAX_BLOCK_THREADS`` = 64 threads (8 warps x 8 lanes, the frozen Phase 4 limit).  A launch
 with BLOCK_X == 0 or BLOCK_X > 64 is a launch ERROR: ``configure`` raises ``GPULaunchError``
 (the RTL reports GPU_STATUS.ERROR) and no warp is created.  The last warp of a block whose
 thread count is not a multiple of the warp size starts with ONLY its valid lanes active.
 
-BLOCK_Y, BLOCK_Z and the GRID_* registers are RESERVED in Phase 4 (decided 2026-10-11): stored
+BLOCK_Y, BLOCK_Z and the GRID_* registers are RESERVED in Phase 4: stored
 and readable, no effect on the thread count.  The thread count of a block is BLOCK_X alone
 (1..64), matching the RTL and tb/cocotb/gpu/gpu_ref_model.py, so thread ids run along X only
 (tid.y = tid.z = 0).  The model still replicates the warps over ``grid_dim`` blocks as a
 spec-level convenience; the RTL launches a single block.
+
+Doc: cr:suite:gpu-kernel-model
 """
 
 from .memory_model import MemoryModel

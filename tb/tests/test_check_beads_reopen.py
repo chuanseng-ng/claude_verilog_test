@@ -1,10 +1,12 @@
-"""Unit tests for tools/setup/check_beads_reopen.py (bead 78ld).
+"""Unit tests for tools/setup/check_beads_reopen.py.
 
 The property under test: a PR must never carry a ``.beads/issues.jsonl`` row
 that would move a bead closed on main back to a non-closed status, unless the
 reopen is explicitly marked. The checker must also *not* fire on rows the PR
 never touched -- a branch cut before a closure carries the stale row, but a
 3-way merge keeps main's closed row, so flagging it would be a false positive.
+
+Doc: cr:suite:test-check-beads-reopen
 """
 
 from __future__ import annotations
@@ -87,11 +89,11 @@ def test_marker_line_in_a_comment_is_counted() -> None:
 
 
 def test_marker_mentioned_in_prose_is_not_counted() -> None:
-    """Regression 2026-10-06: 78ld's own notes DESCRIBED the escape hatch.
+    """Regression: a note that DESCRIBED the escape hatch must not count as a marker.
 
-    "escape hatch 'beads-reopen-ok' in notes/comments" sat mid-line in the
-    bead's notes, matched the old substring test, and exempted the bead from
-    the guard -- so a checkout silently reopened it.
+    "escape hatch 'beads-reopen-ok' in notes/comments" sat mid-line in a bead's
+    notes, matched the old substring test, and exempted the bead from the guard,
+    so a checkout silently reopened it.
     """
     row = _row("a", "open", notes="CI gate; escape hatch 'beads-reopen-ok' in notes/comments.")
     assert cbr.count_reopen_markers(row) == 0

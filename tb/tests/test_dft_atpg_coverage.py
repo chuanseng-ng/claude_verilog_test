@@ -1,11 +1,13 @@
 # ruff: noqa: E501
-"""Tests for tools/dft/atpg/atpg_coverage_report.py (bead j41m.15).
+"""Tests for tools/dft/atpg/atpg_coverage_report.py.
 
-Facts about Quaigh 0.0.6 these tests rely on (read from its source, DFT_ARCHITECTURE 18.1):
+Facts about Quaigh 0.0.6 these tests rely on (read from its source; Doc: tm:ch:dft-architecture):
 * `unobservable=N` in the progress line counts faults whose SAT miter is UNSAT (proven untestable in the cut);
 * the fault universe is the collapsed ("unique") list unless --with-redundant-faults;
 * detected + unobservable may be smaller than the universe: the remainder is "unresolved" and stays undetected.
 The fixture is the real Stage 0 `timer` run (known answer 4336/4692 = 92.41 %, unobservable=351).
+
+Doc: cr:suite:test-dft-atpg-coverage
 """
 
 import json
@@ -93,7 +95,7 @@ def test_report_carries_exclusion_manifest_and_statement():
     assert rep["status"] == "OK"
     assert rep["exclusions"] == excl
     s = rep["exclusion_statement"]
-    # the user decision of 2026-10-26: this statement travels with every coverage number
+    # a user decision: this statement travels with every coverage number
     assert "664" in s and "256" in s and "94" in s and "JTAG" in s
     md = cr.render_markdown(rep)
     assert "92.41" in md and "99.88" in md and "664" in md

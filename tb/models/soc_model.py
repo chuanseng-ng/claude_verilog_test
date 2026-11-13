@@ -1,32 +1,26 @@
 """
-soc_model.py — Phase 5 (M9) SoC reference model.
+soc_model.py -- Phase 5 SoC reference model.
 
-Composes existing RV32IModel (CPU golden) and MemoryModel (sparse byte
-memory) into a SoC-level golden model for the boot test scoreboard.
+Composes RV32IModel (CPU golden) and MemoryModel (sparse byte memory) into a SoC-level golden
+model for the boot test scoreboard.
 
-Architecture:
-  ROM  : 0x0000_1000 – 0x0000_1FFF  (4 KB, read-only, loaded from hex file)
-  SRAM : 0x0000_2000 – 0x0FFF_FFFF  (sparse write-back, initially empty)
-  Other: DECERR (not modelled; CPU should not reach these in the boot test)
-
-Reset PC override:
-  The real CPU resets at 0x0000_0000, but after the RESET_PC RTL fix it
-  resets at 0x0000_1000 (ROM_BASE).  This model always starts at ROM_BASE
-  so the golden trace is correct for the fixed RTL.
+Memory map:
+  ROM  : 0x0000_1000 - 0x0000_1FFF  (4 KB, read-only, loaded from hex file)
+  SRAM : 0x0000_2000 - 0x0FFF_FFFF  (sparse write-back, initially empty)
+  Other: DECERR (not modelled; the CPU must not reach these in the boot test)
+The model starts at ROM_BASE. soc_top sets the CPU RESET_PC to this address (the default of
+rv32i_cpu_top is 0x0000_0000).
 
 Usage::
 
     model = SoCModel("path/to/boot.hex")
     model.boot()
-    pcs  = model.committed_pcs    # list[int] — PCs in commit order
+    pcs = model.committed_pcs     # list[int], PCs in commit order
     state = model.final_state()   # dict with registers + SRAM snapshot
 
-Public API:
-    SoCModel(hex_path, rom_base, sram_base, sram_size)
-    .boot(max_insns)     — run until EBREAK or max_insns
-    .committed_pcs       — list of committed PCs (in order)
-    .final_state()       — dict: regs, sram
-    .sram_word(addr)     — read a 32-bit word from SRAM model
+Public API: SoCModel(hex_path, rom_base, sram_base, sram_size); .boot(max_insns) runs until EBREAK
+or max_insns; .committed_pcs; .final_state() (dict: regs, sram); .sram_word(addr).
+Doc: tm:suite:soc-model
 """
 
 import sys

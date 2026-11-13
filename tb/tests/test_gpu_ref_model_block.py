@@ -1,9 +1,11 @@
 """
 Unit tests for the block-level launch helpers of the RTL-encoding reference model
-(tb/cocotb/gpu/gpu_ref_model.py, bead 6hy6).
+(tb/cocotb/gpu/gpu_ref_model.py).
 
-Contract (user decision 2026-10-11): BLOCK_X in 1..64 runs ceil(BLOCK_X/8) warps, the last of
+Contract (user decision): BLOCK_X in 1..64 runs ceil(BLOCK_X/8) warps, the last of
 which starts with only its valid lanes active; BLOCK_X == 0 or > 64 is a launch ERROR.
+
+Doc: cr:suite:test-gpu-ref-model-block
 """
 
 from __future__ import annotations

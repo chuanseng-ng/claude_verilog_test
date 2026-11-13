@@ -1,4 +1,7 @@
-"""Tests for tools/verif/check_cpu_netlist_census.py (bead gc0y deliverable 4)."""
+"""Tests for tools/verif/check_cpu_netlist_census.py.
+
+Doc: cr:suite:test-check-cpu-netlist-census
+"""
 
 # pylint: disable=missing-function-docstring
 from __future__ import annotations

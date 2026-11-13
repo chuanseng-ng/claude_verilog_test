@@ -1,4 +1,4 @@
-"""Negative controls for tools/dft/check_scan_clk_rst.py (bead claude_verilog_test-j41m.2).
+"""Negative controls for tools/dft/check_scan_clk_rst.py.
 
 The checker proves, on a flattened netlist, that in scan mode every async reset is
 tester-controlled and every flop is test-clocked. A checker that cannot fail proves nothing, so
@@ -10,6 +10,8 @@ each test here builds a tiny design, runs the real tool through yosys and assert
 * a netlist that instantiates an undefined cell fails instead of passing vacuously.
 
 Needs yosys (``$YOSYS`` or on ``PATH``); skipped otherwise, so the plain pytest job is unaffected.
+
+Doc: cr:suite:test-dft-scan-check
 """
 
 import os
@@ -106,7 +108,7 @@ def test_undefined_cell_fails_instead_of_passing_vacuously(tmp_path: Path) -> No
 
 
 # --------------------------------------------------------------------------------------------
-# TAP-domain rules (bead claude_verilog_test-j41m.3, DFT Stage 1b)
+# TAP-domain rules (DFT Stage 1b)
 # --------------------------------------------------------------------------------------------
 # A miniature of dft_ctrl: u_tap (TCK domain, unscanned by decision N4) owns a trst_ni reset
 # synchroniser and a flop `tap_q` that drives scan mode OR-ed with the scan_mode_i pin; a functional
@@ -228,7 +230,7 @@ def test_tap_alt_clock_is_allowed_only_when_declared(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------------------------
-# --expect-reset-sync (bead claude_verilog_test-j41m.11)
+# --expect-reset-sync
 # --------------------------------------------------------------------------------------------
 # A miniature of the two trst_ni reset synchronisers of dft_ctrl. `u_tap.u_trst_sync` resets the
 # TAP flop, `u_sw_rst` resets the consumer `u_clk_sw`; both are instances of the same 2-flop
@@ -406,7 +408,7 @@ def test_reset_sync_trst_reaching_an_undeclared_cell_fails(tmp_path: Path) -> No
 
 
 # --------------------------------------------------------------------------------------------
-# Mixed-domain block: the MBIST control-word crossing (beads j41m.14 / j41m.10)
+# Mixed-domain block: the MBIST control-word crossing
 # --------------------------------------------------------------------------------------------
 # A miniature of u_mbist: `mixed` holds a TCK-clocked flop (the FIFO write side), a 2-FF
 # synchroniser and a holding register in the functional domain that may read it, and
@@ -520,7 +522,7 @@ def test_tck_block_expect_flops_guard_and_missing_sink_prefix(tmp_path: Path) ->
 
 
 # --------------------------------------------------------------------------------------------
-# BLOCK MODE (bead claude_verilog_test-j41m.4): the CPU hard macro
+# BLOCK MODE: the CPU hard macro
 # --------------------------------------------------------------------------------------------
 # A miniature of rv32i_cpu_top: its flops are clocked straight from the clk_i pin (the parent muxes
 # the test clock onto it), reset is synchronous, and in the ASAP7 arm a clock-gate latch whose
@@ -629,7 +631,7 @@ def test_block_mode_seq_min_guard(tmp_path: Path) -> None:
 
 
 # --------------------------------------------------------------------------------------------
-# Clock-gate TE must be FORCED ACTIVE by scan mode (bead claude_verilog_test-j41m.16)
+# Clock-gate TE must be FORCED ACTIVE by scan mode
 # --------------------------------------------------------------------------------------------
 # The earlier rule only asked that scan_mode appear somewhere in the gate latch's D cone.
 # That accepts a TE that is scan_mode AND something functional, or ~scan_mode, or a GATE that

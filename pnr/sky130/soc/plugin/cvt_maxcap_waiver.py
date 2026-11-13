@@ -1,11 +1,11 @@
-"""Named max-capacitance waiver check for the Sky130 SoC flow (bead claude_verilog_test-e45j).
+"""Named max-capacitance waiver check for the Sky130 SoC flow.
 
 Why this exists
 ---------------
 LibreLane's stock ``Checker.MaxCapViolations`` counts violations per corner and has no notion of *which*
 net violates, so the only waiver it offers is "ignore the checker".  On the RC-calibrated Sky130 SoC flow
 exactly one net violates max-cap, at six tt/ss corners: a driver whose only functional load is the CPU
-macro input ``axi_rdata_i[12]``, whose Liberty pin capacitance (0.2464 pF) alone is 46 % of the 0.5301 pF
+macro input ``axi_rdata_i[12]``, whose Liberty pin capacitance alone is a large share of the
 driver limit.  This module gates the flow on max-cap with that one exception named explicitly, and fails on
 anything else.
 
@@ -39,6 +39,8 @@ CLI::
     python3 cvt_maxcap_waiver.py <run_dir> [--waivers max_cap_waivers.json] [--netlist X.nl.v] [--strict-stale]
 
 Exit codes: 0 pass, 1 unwaived violation (or strict stale waiver), 2 input / format error.
+
+Doc: cr:pd:sky130-soc-plugin-cvt-maxcap-waiver-py
 """
 
 from __future__ import annotations

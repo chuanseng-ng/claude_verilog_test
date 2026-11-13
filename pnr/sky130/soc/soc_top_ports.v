@@ -21,10 +21,10 @@ module soc_top #(
     input  wire        clk_i,
     input  wire        rst_n_i,
 
-    // CPU-domain reference clock root (GH #92/#93).  Independent of clk_i:
-    // u_cpu_pll_sub derives cpu_core_clk from it, and since GH #93 the CPU
+    // CPU-domain reference clock root.  Independent of clk_i:
+    // u_cpu_pll_sub derives cpu_core_clk from it, and the CPU
     // clock gate is sourced from cpu_core_clk, making this a genuine second
-    // clock root.  PD MUST create_clock on it separately (GH #94) — tying it
+    // clock root.  PD MUST create_clock on it separately — tying it
     // to clk_i here would silently collapse the CPU<->fabric CDC boundary.
     input  wire        cpu_clk_i,
     input  wire        cpu_rst_n_i,

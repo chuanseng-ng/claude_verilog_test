@@ -1,4 +1,4 @@
-"""Tests for the CVT.ScanInsert LibreLane step (bead j41m.8).
+"""Tests for the CVT.ScanInsert LibreLane step.
 
 Catch plugin Python bugs in pytest, not in a 3 h harden.
 
@@ -9,6 +9,8 @@ Three launches of the CPU macro scan run were lost to bugs that no unit test cov
 Fast tests below pin each of those without LibreLane. The end-to-end test runs the real step in
 isolation (about 30 s) and is skipped when LibreLane, OpenROAD 26Q2 or a baseline synthesis
 state are not present.
+
+Doc: cr:suite:test-cvt-scan-step
 """
 
 import ast
@@ -202,7 +204,7 @@ def test_checker_accepts_gated_scan_outs_through_buffers_either_pin_order(tmp_pa
 
 
 def test_checker_mutation_buffer_instead_of_and_fails(tmp_path):
-    """Mutation: the AND replaced by a buffer (the pre-j41m.17 netlist) must be an error."""
+    """Mutation: the AND replaced by a buffer (the netlist without the gate) must be an error."""
     bad = GATED.replace(
         "sky130_fd_sc_hd__and2_2 g0 (.A(q1), .B(crypto_wipe_done), .X(scan_out_o[0]));",
         "sky130_fd_sc_hd__buf_2 g0 (.A(q1), .X(scan_out_o[0]));",

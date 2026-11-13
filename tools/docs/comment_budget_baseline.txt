@@ -4,54 +4,10 @@
 # Rules: hdr blk doc mk wf (size budgets); bead ghpr run date meas fline (banned content).
 # Update after a cleanup: python tools/docs/check_comment_budget.py --update-baseline
 # Growth is refused; the check fails if an entry is higher or lower than the measured value.
-.github/workflows/cocotb.yml | bead | 46 |
-.github/workflows/cocotb.yml | date | 47 |
-.github/workflows/cocotb.yml | ghpr | 11 |
-.github/workflows/cocotb.yml | wf | 9 | 98
-.github/workflows/qa-checks.yml | bead | 6 |
-.github/workflows/qa-checks.yml | wf | 3 | 8
-.github/workflows/random_tests.yml | bead | 1 |
-.github/workflows/random_tests.yml | wf | 1 | 6
-.github/workflows/rtl-checks.yml | bead | 9 |
-.github/workflows/rtl-checks.yml | date | 1 |
-.github/workflows/rtl-checks.yml | ghpr | 2 |
-.github/workflows/rtl-checks.yml | wf | 7 | 20
-.github/workflows/soc_coverage.yml | bead | 41 |
-.github/workflows/soc_coverage.yml | date | 38 |
-.github/workflows/soc_coverage.yml | ghpr | 9 |
-.github/workflows/soc_coverage.yml | wf | 6 | 95
-.github/workflows/synth-undef-gate.yml | bead | 1 |
-pnr/asap7/soc/rv32i_cpu_top_stub.sv | bead | 2 |
-pnr/asap7/soc/soc_top_ports.v | ghpr | 3 |
-pnr/freepdk45/gen_via_stubs.py | meas | 7 |
-pnr/librelane/Makefile | meas | 1 |
-pnr/plugins/librelane_plugin_cvt_synthgate/__init__.py | bead | 2 |
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | bead | 1 |
-pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc | date | 1 |
-pnr/sky130/soc/openram_sram4k/config_sky130_sram_4kbyte_1rw1r_32x1024_8.py | ghpr | 1 |
-pnr/sky130/soc/plugin/cvt_maxcap_waiver.py | bead | 1 |
-pnr/sky130/soc/plugin/cvt_maxcap_waiver.py | meas | 1 |
-pnr/sky130/soc/plugin/cvt_scan_step.py | bead | 3 |
-pnr/sky130/soc/rv32i_cpu_top_stub.sv | bead | 2 |
-pnr/sky130/soc/sky130_clkcells_stub.v | bead | 1 |
-pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | date | 2 |
-pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | ghpr | 1 |
-pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv | run | 1 |
-pnr/sky130/soc/soc_top_ports.v | ghpr | 3 |
 rtl/cpu/core/rv32i_core.sv | bead | 3 |
 rtl/cpu/core/rv32i_core.sv | blk | 4 | 18
 rtl/cpu/core/rv32i_core.sv | meas | 1 |
-rtl/soc/pll/pll_apb_regs.sv | ghpr | 1 |
-rtl/soc/pll/pll_clkgen.sv | meas | 1 |
-rtl/soc/soc_periph_map_pkg.sv | bead | 7 |
-rtl/soc/soc_periph_map_pkg.sv | ghpr | 2 |
-sim/Makefile | bead | 12 |
-sim/Makefile | date | 1 |
-sim/Makefile | ghpr | 13 |
-sim/Makefile | mk | 10 | 19
-sim/cxx_shim.sh | bead | 1 |
-sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv | date | 1 |
-sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv | ghpr | 1 |
+sim/Makefile | ghpr | 2 |
 tb/cocotb/bfm/apb4_master.py | bead | 1 |
 tb/cocotb/bfm/i2c_slave.py | bead | 1 |
 tb/cocotb/bfm/i2c_slave.py | doc | 1 | 82
@@ -387,60 +343,3 @@ tb/cocotb/soc/trng_fw/gen_trng_hex.py | ghpr | 1 |
 tb/cocotb/soc/wdt_fw/gen_wdt_hex.py | bead | 1 |
 tb/cocotb/soc/wdt_fw/gen_wdt_hex.py | doc | 1 | 70
 tb/cocotb/soc/wdt_fw/gen_wdt_hex.py | ghpr | 1 |
-tb/cpu_uvm/tests/test_isa_uvm.py | date | 1 |
-tb/models/aes128_model.py | bead | 1 |
-tb/models/aes128_model.py | doc | 1 | 68
-tb/models/csr_model.py | bead | 3 |
-tb/models/gpu_kernel_model.py | bead | 1 |
-tb/models/gpu_kernel_model.py | date | 2 |
-tb/models/npu_model.py | bead | 1 |
-tb/models/npu_model.py | doc | 1 | 96
-tb/models/soc_model.py | doc | 1 | 30
-tb/models/trng_lfsr_model.py | bead | 1 |
-tb/models/trng_lfsr_model.py | doc | 1 | 56
-tb/tests/test_aes128_model.py | bead | 1 |
-tb/tests/test_asap7_macro_power_inject.py | bead | 2 |
-tb/tests/test_beads_checkout_guard.py | bead | 1 |
-tb/tests/test_beads_checkout_guard.py | date | 1 |
-tb/tests/test_cache_stall_encoding.py | bead | 1 |
-tb/tests/test_cdc_gate.py | bead | 1 |
-tb/tests/test_check_beads_reopen.py | bead | 1 |
-tb/tests/test_check_beads_reopen.py | date | 1 |
-tb/tests/test_check_cocotb_results.py | bead | 2 |
-tb/tests/test_check_cpu_netlist_census.py | bead | 1 |
-tb/tests/test_check_scan_chains.py | bead | 1 |
-tb/tests/test_check_synth_undef.py | bead | 2 |
-tb/tests/test_check_synth_undef_functemp.py | bead | 3 |
-tb/tests/test_check_upf.py | bead | 1 |
-tb/tests/test_coverage_report.py | bead | 6 |
-tb/tests/test_coverage_report.py | ghpr | 3 |
-tb/tests/test_coverage_waiver_anchors.py | bead | 1 |
-tb/tests/test_coverage_waiver_anchors.py | ghpr | 3 |
-tb/tests/test_csr_model.py | bead | 2 |
-tb/tests/test_csr_model.py | ghpr | 1 |
-tb/tests/test_cvt_maxcap_waiver.py | bead | 1 |
-tb/tests/test_cvt_maxcap_waiver.py | date | 1 |
-tb/tests/test_cvt_maxcap_waiver.py | run | 1 |
-tb/tests/test_cvt_scan_step.py | bead | 1 |
-tb/tests/test_dft_atpg_coverage.py | bead | 1 |
-tb/tests/test_dft_atpg_coverage.py | date | 1 |
-tb/tests/test_dft_atpg_hold_mask.py | bead | 1 |
-tb/tests/test_dft_atpg_prep.py | bead | 1 |
-tb/tests/test_dft_atpg_regrade.py | bead | 1 |
-tb/tests/test_dft_atpg_regrade_vl.py | bead | 1 |
-tb/tests/test_dft_scan_check.py | bead | 6 |
-tb/tests/test_eda_summarize.py | bead | 4 |
-tb/tests/test_eda_summarize.py | date | 2 |
-tb/tests/test_eda_summarize.py | ghpr | 4 |
-tb/tests/test_functional_coverage_report.py | bead | 1 |
-tb/tests/test_gen_filelist.py | bead | 1 |
-tb/tests/test_gpu_model.py | bead | 2 |
-tb/tests/test_gpu_ref_model_block.py | bead | 1 |
-tb/tests/test_gpu_ref_model_block.py | date | 1 |
-tb/tests/test_npu_model.py | bead | 1 |
-tb/tests/test_pin_lock.py | bead | 1 |
-tb/tests/test_pin_lock.py | meas | 1 |
-tb/tests/test_sim_build_key.py | bead | 1 |
-tb/tests/test_sim_build_key.py | ghpr | 3 |
-tb/tests/test_soc_shards.py | bead | 2 |
-tb/tests/test_sync_rtk_config.py | bead | 1 |

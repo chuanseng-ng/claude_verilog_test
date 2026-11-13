@@ -57,15 +57,15 @@ package soc_periph_map_pkg;
     localparam int unsigned APB_TIMER = 2;
     localparam int unsigned APB_IRQ   = 3;
     localparam int unsigned APB_PLL   = 4;
-    localparam int unsigned APB_PMU   = 5;  // Pre-Phase-6 #5 / GH #100
-    localparam int unsigned APB_PLL2  = 6;  // GH #92 — CPU-domain PLL config
-    localparam int unsigned APB_GPIO  = 7;  // Phase 6a — bead claude_verilog_test-ckc
-    localparam int unsigned APB_PWM   = 8;  // Phase 6a-2 — bead claude_verilog_test-f7vs.6
-    localparam int unsigned APB_WDT   = 9;  // Phase 6a-3 — bead claude_verilog_test-f7vs.7
-    localparam int unsigned APB_TRNG  = 10; // Phase 6a-4 — bead claude_verilog_test-f7vs.8
-    localparam int unsigned APB_I2C   = 11; // Phase 6a-5 — bead claude_verilog_test-f7vs.9
-    localparam int unsigned APB_CRYPTO = 12; // Phase 6b — bead claude_verilog_test-f7vs.10
-    localparam int unsigned APB_NPU    = 13; // Phase 6c — bead claude_verilog_test-f7vs.11
+    localparam int unsigned APB_PMU   = 5;  // Added before Phase 6
+    localparam int unsigned APB_PLL2  = 6;  // CPU-domain PLL config
+    localparam int unsigned APB_GPIO  = 7;  // Phase 6a
+    localparam int unsigned APB_PWM   = 8;  // Phase 6a-2
+    localparam int unsigned APB_WDT   = 9;  // Phase 6a-3
+    localparam int unsigned APB_TRNG  = 10; // Phase 6a-4
+    localparam int unsigned APB_I2C   = 11; // Phase 6a-5
+    localparam int unsigned APB_CRYPTO = 12; // Phase 6b
+    localparam int unsigned APB_NPU    = 13; // Phase 6c
     /* verilator lint_on  UNUSEDPARAM */
     localparam int unsigned APB_N_SLAVES = 14;
 

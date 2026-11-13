@@ -1,9 +1,11 @@
-"""Tests for tools/verif/check_upf.py (bead h3lm): the UPF-vs-RTL structural gate.
+"""Tests for tools/verif/check_upf.py: the UPF-vs-RTL structural gate.
 
 The clean case runs the checker on the committed UPF + facts + pmu.sv.  Every other test is a
 NEGATIVE CONTROL: a deliberately broken UPF (or facts file) must produce a finding with the
 expected id, proving the check can fail.  The drift test regenerates the facts from the RTL with
 pyslang and is skipped (not passed) when pyslang is not installed.
+
+Doc: cr:suite:test-check-upf
 """
 
 # pylint: disable=missing-function-docstring

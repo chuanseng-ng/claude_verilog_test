@@ -1,9 +1,10 @@
 name: Synthesis undef gate
 
-# Bead gc0y. Frontend elaboration gate + generic-gate differential for the Sky130 CPU.
+# Frontend elaboration gate + generic-gate differential for the Sky130 CPU.
 # Covers the sv2v/yosys frontend only: the Synlig plugin is not installable on a stock runner
 # (oss-cad-suite ships yosys + slang, not Synlig), so the Synlig arm is protected only at PD-run
 # time by pnr/plugins/librelane_plugin_cvt_synthgate. See Doc: tm:flow:synth-undef-gate.
+# Doc: cr:flow:ci-synth-undef-gate
 
 on:
   push:

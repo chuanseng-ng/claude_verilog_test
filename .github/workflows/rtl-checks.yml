@@ -1,13 +1,13 @@
 name: RTL Checks
 
-# Independent RTL gates:
-#   1. Verible style lint (complements Verilator's semantic lint). Hard gate.
-#      There is deliberately NO format check: see the note in the verible job.
-#   2. Static CDC check (GH #95) — cdc_snitch + cdc_gate. Hard gate.
-#   3. DFT scan-readiness check (bead j41m.12) — tools/dft/check_scan_clk_rst.py on
-#      the Sky130 and ASAP7 flattened SoC netlists, plus its own negative-control
-#      pytest suite. Hard gate, run inside the `cdc` job (it already carries the pinned
-#      yosys + sv2v, so no second 700 MB download).
+# Independent RTL gates, all hard gates:
+#   1. Verible style lint. There is deliberately NO format check: see the note in the verible job.
+#   2. Static CDC check, cdc_snitch + cdc_gate.
+#   3. DFT scan-readiness check (tools/dft/check_scan_clk_rst.py on the flattened Sky130 and ASAP7 SoC netlists,
+#      plus its own negative-control pytest suite). It runs inside the `cdc` job, which has the pinned yosys and sv2v.
+
+# Doc: um:flow:ci-rtl-checks, cr:flow:ci-rtl-checks
+
 on:
   push:
     branches: [ "main" ]
@@ -17,12 +17,12 @@ on:
       - 'flake.nix'
       - 'sim/Makefile'
       - 'tools/cdc/**'
-      # DFT scan-readiness check (bead j41m.12): the checker, its tests, the Makefile
-      # targets that drive it, and the PnR-side stubs/wrappers sv2v folds into the
-      # netlists it reads. Without these, an edit that breaks the check would not run it.
+      # DFT scan-readiness check: the checker, its tests, the Makefile targets that drive it, and the
+      # PnR-side stubs and wrappers that sv2v folds into the netlists it reads. Without these, an edit that
+      # breaks the check would not run it.
       - 'tools/dft/**'
       - 'tb/tests/test_dft_scan_check.py'
-      # PMU registered-outputs structural gate (bead ktwt).
+      # PMU registered-outputs structural gate.
       - 'tools/verif/check_registered_outputs.py'
       - 'tb/tests/test_pmu_registered_outputs.py'
       - 'pnr/Makefile'
@@ -37,12 +37,12 @@ on:
       - 'flake.nix'
       - 'sim/Makefile'
       - 'tools/cdc/**'
-      # DFT scan-readiness check (bead j41m.12): the checker, its tests, the Makefile
-      # targets that drive it, and the PnR-side stubs/wrappers sv2v folds into the
-      # netlists it reads. Without these, an edit that breaks the check would not run it.
+      # DFT scan-readiness check: the checker, its tests, the Makefile targets that drive it, and the
+      # PnR-side stubs and wrappers that sv2v folds into the netlists it reads. Without these, an edit that
+      # breaks the check would not run it.
       - 'tools/dft/**'
       - 'tb/tests/test_dft_scan_check.py'
-      # PMU registered-outputs structural gate (bead ktwt).
+      # PMU registered-outputs structural gate.
       - 'tools/verif/check_registered_outputs.py'
       - 'tb/tests/test_pmu_registered_outputs.py'
       - 'pnr/Makefile'
@@ -57,9 +57,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Pinned for reproducibility — bump deliberately, and bump flake.nix's
-      # `veribleFor` (version + sha256) in the SAME commit so `nix develop` and this
-      # job keep running the identical binary (bead hn9l).
+      # Pinned for reproducibility. Bump deliberately, and bump `veribleFor` (version + sha256) in flake.nix
+      # in the SAME commit so that `nix develop` and this job keep running the identical binary.
       VERIBLE_VERSION: v0.0-4063-gf831ec18
       VERIBLE_SHA256: 7b8110e0a5bfffae674f976490b5e6411471e410d474ff7fdbe4ae1e4e3381b6
 
@@ -82,38 +81,26 @@ jobs:
       - name: Verible version
         run: verible-verilog-lint --version
 
-      # HARD GATE (bead hn9l). The whole tree is lint-clean, so any new finding
-      # fails the job. Do NOT re-add `continue-on-error` here; fix the finding, or
-      # (for a justified false positive) tune .rules.verible_lint with a reason.
-      # Style lint runs against the whole tree (curated, low-noise ruleset).
+      # HARD GATE. The whole tree is lint-clean, so any new finding fails the job. Do NOT re-add
+      # `continue-on-error` here; fix the finding, or (for a justified false positive) tune .rules.verible_lint
+      # with a reason. Style lint runs against the whole tree (curated, low-noise ruleset).
       - name: Verible style lint
         run: |
           echo "::group::verible-verilog-lint"
           make -C sim lint-verible
           echo "::endgroup::"
 
-      # NO FORMAT CHECK (removed 2026-10-10, user decision after bead hn9l).
-      # verible-verilog-format cannot express the hand-aligned house style:
-      # measured on v0.0-4063, 81 of 83 rtl/**/*.sv fail `--verify`, no flag set
-      # gets below 72 of 83, and the house-style exemplars rtl/periph/timer.sv and
-      # gpio_controller.sv fail every variant. An advisory step that always reports
-      # differences is noise, and CLAUDE.md forbids style-only mass edits, so the
-      # step was dropped instead of gated. Formatting is enforced by review against
-      # Doc: um:guide:coding-guidelines. Re-add a format gate only together
-      # with a deliberate, verified, one-off whole-tree reformat.
+      # NO FORMAT CHECK. verible-verilog-format cannot express the hand-aligned house style: most of rtl/**/*.sv
+      # fail `--verify`, and the house-style exemplars rtl/periph/timer.sv and gpio_controller.sv fail every variant.
+      # An advisory step that always reports differences is noise, and the coding rules forbid style-only mass
+      # edits of verified RTL (Doc: um:guide:commit-and-coding-rules), so the step was dropped instead of gated.
+      # Re-add a format gate only together with a deliberate, verified, one-off whole-tree reformat.
 
-  # ==========================================================================
-  # GH #95 — static clock-domain-crossing gate.
-  #
-  # This one IS a hard gate (no continue-on-error). It is meaningful only
-  # because cdc_gate.py post-processes cdc_snitch's raw output: the raw BAD
-  # count is ~98% modelling artifacts (every top-level port modelled as its own
-  # clock domain, clock-gate outputs treated as separate from their source
-  # clock, one "domain" per bus bit). cdc_gate canonicalizes those away using
-  # the same design facts phase5_soc_multiclock.sdc encodes for STA, then
-  # applies explicit justified waivers and fails on anything left over — or on
-  # any waiver that has gone stale. See tools/cdc/README.md.
-  # ==========================================================================
+  # Static clock-domain-crossing gate. A hard gate (no continue-on-error). It is meaningful only because
+  # cdc_gate.py post-processes the raw output of cdc_snitch, which is mostly modelling artifacts (every top-level
+  # port as its own clock domain, clock-gate outputs separate from their source clock, one "domain" per bus bit).
+  # cdc_gate removes those with the design facts that phase5_soc_multiclock.sdc encodes for STA, applies justified
+  # waivers, and fails on anything left over or on a stale waiver. See tools/cdc/README.md.
   cdc:
     name: CDC check (cdc_snitch + gate)
     runs-on: ubuntu-latest
@@ -130,17 +117,11 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install --user pyyaml
 
-      # All three tools (yosys, sv2v, cdc_snitch.py) come from the pinned
-      # revisions in tools/cdc/versions.env. Cached so a run does not depend on
-      # upstream availability, keyed on versions.env so a deliberate bump
-      # invalidates it.
-      #
-      # Cache the TOOL paths only, never the whole of sim/build/cdc: that
-      # directory also holds this run's generated outputs (soc_top_cdc.txt,
-      # soc_top_cdc_gate.json, soc_top.flist). Caching those means a run that
-      # fails before regenerating them restores a prior run's report, which the
-      # `if: always()` upload below would then publish as if it were current —
-      # a stale-artifact trap of exactly the kind this gate exists to prevent.
+      # All three tools (yosys, sv2v, cdc_snitch.py) come from the pinned revisions in tools/cdc/versions.env.
+      # The cache keeps a run independent of upstream availability. Its key is versions.env, so a bump invalidates it.
+      # Cache the TOOL paths only, never the whole of sim/build/cdc: that directory also holds the generated outputs
+      # of the run (soc_top_cdc.txt, soc_top_cdc_gate.json, soc_top.flist). A run that fails before it regenerates
+      # them would restore a prior report, and the `if: always()` upload below would publish it as current.
       - name: Cache pinned CDC tools
         uses: actions/cache@v4
         with:
@@ -151,17 +132,11 @@ jobs:
             sim/build/cdc/cdc_snitch_proc.ys
           key: cdc-tools-${{ hashFiles('tools/cdc/versions.env') }}
 
-      # THE YOSYS VERSION IS PART OF THE GATE'S CONTRACT — do not swap this for
-      # a distro package. An earlier revision of this workflow used Ubuntu's
-      # yosys (0.33) to skip the ~700 MB oss-cad-suite download, and the gate
-      # failed with thousands of bogus findings: 0.33's flatten pass leaves
-      # clock domains as instance-local net names (`u_gpu.clk`,
-      # `u_apb_dbg_cdc.m_clk_i`) where the pinned 0.62 resolves them to the
-      # top-level ports (`clk_i`, `cpu_clk_i`) that cdc_config.yml's
-      # domain_aliases are written against. Different yosys, different verdict —
-      # so the pin is what makes this a gate rather than a coin flip.
-      # The download is a one-time cost per versions.env bump thanks to the
-      # cache above; the tarball is pruned to keep the cache small.
+      # THE YOSYS VERSION IS PART OF THE CONTRACT OF THE GATE. Do not swap it for a distro package. The flatten pass
+      # of an older yosys leaves clock domains as instance-local net names (`u_gpu.clk`, `u_apb_dbg_cdc.m_clk_i`).
+      # The pinned yosys resolves them to the top-level ports (`clk_i`, `cpu_clk_i`) that the domain_aliases of
+      # cdc_config.yml use. Different yosys, different verdict: the pin makes this a gate. The download happens once
+      # per versions.env bump because of the cache above. The tarball is pruned to keep the cache small.
       - name: Fetch pinned CDC tools (yosys + sv2v + cdc_snitch)
         run: |
           echo "::group::fetch_cdc_tools.sh --with-yosys"
@@ -176,26 +151,18 @@ jobs:
           make -C sim cdc CDC_STRICT=1
           echo "::endgroup::"
 
-      # ------------------------------------------------------------------
-      # DFT scan-readiness gate (bead j41m.12). HARD GATE — no continue-on-error.
-      #
-      # (Bead j41m.4: also run in BLOCK MODE on the flattened CPU-macro netlists of both PDKs.)
-      # Proves, on the flattened Sky130 and ASAP7 SoC netlists, that in scan mode
-      # every async reset is tester-controlled, every flop is test-clocked, and the
-      # two trst_ni reset synchronisers (u_trst_sync in jtag_tap, u_sw_rst in
-      # dft_ctrl) are present and each feeds only its own consumer
-      # (--expect-reset-sync, bead j41m.11). The CDC gate above cannot see this:
-      # cdc_snitch's opt_merge folds the two identical chains into one.
-      #
-      # Tools: the job's own pinned yosys and sv2v are handed to the Makefile through
-      # its existing YOSYS (`:=`, overridable only on the command line) and SV2V
-      # (`?=`) variables; the Makefile defaults (a bare `yosys` on PATH, a /nix/store
-      # sv2v) are left alone because they are what a developer host uses. Note the
-      # pinned sv2v here is v0.0.13, the Makefile's host default is 0.0.13.1.
-      #
-      # `!cancelled()` so a failing CDC gate does not hide this gate's verdict (and
-      # vice versa); a failed tool fetch still fails these steps loudly.
-      # ------------------------------------------------------------------
+      # DFT scan-readiness gate. HARD GATE, no continue-on-error. It runs on the flattened Sky130 and ASAP7 SoC netlists
+      # and in block mode on the flattened CPU-macro netlists of both PDKs. It proves that in scan mode every async
+      # reset is tester-controlled, every flop is test-clocked, and the two trst_ni reset synchronisers (u_trst_sync in
+      # jtag_tap, u_sw_rst in dft_ctrl) are present and each feeds only its own consumer (--expect-reset-sync).
+      # The CDC gate above cannot see this: the opt_merge pass of cdc_snitch folds the two identical chains into one.
+
+      # Tools: the pinned yosys and sv2v of this job go to the Makefile through its YOSYS (`:=`, overridable only on the
+      # command line) and SV2V (`?=`) variables. The Makefile defaults (a bare `yosys` on PATH, a /nix/store sv2v) stay,
+      # because a developer host uses them. The pinned sv2v here is v0.0.13; the Makefile default is 0.0.13.1.
+
+      # `!cancelled()` so that a failing CDC gate does not hide the verdict of this gate (and the reverse).
+      # A failed tool fetch still fails these steps loudly.
       - name: DFT scan-check (Sky130 + ASAP7 SoC netlists)
         if: ${{ !cancelled() }}
         env:
@@ -208,12 +175,10 @@ jobs:
             echo "::endgroup::"
           done
 
-      # tb/tests/test_dft_scan_check.py skips ITSELF when it cannot find yosys
-      # (`pytestmark = skipif(YOSYS is None)`), and a plain pytest run reports that as
-      # green. Run with the pinned yosys and fail the step if ANY test skipped or fewer
-      # than the expected number ran; a green-by-skipping gate is the failure this
-      # step exists to prevent. EXPECT_TESTS is a floor, not an exact count: raise it
-      # in the same commit that adds tests to the file.
+      # tb/tests/test_dft_scan_check.py skips itself when it cannot find yosys (`pytestmark = skipif(YOSYS is None)`),
+      # and a plain pytest run reports that as green. Run with the pinned yosys and fail the step if any test skipped
+      # or fewer than the expected number ran: a gate that is green by skipping is the failure this step prevents.
+      # EXPECT_TESTS is a floor, not an exact count: raise it in the same commit that adds tests to the file.
       - name: DFT scan-check tests (pinned yosys, must not skip)
         if: ${{ !cancelled() }}
         env:
@@ -234,7 +199,7 @@ jobs:
             exit 1
           fi
 
-      # PMU registered outputs (bead ktwt). The PMU's clk_en/iso_en/rst_n/ret outputs drive
+      # PMU registered outputs. The PMU's clk_en/iso_en/rst_n/ret outputs drive
       # cdc_sync D pins, the async clear of u_cpu_pmu_rst_sync and the GPU async reset, so
       # each must be a flop Q (a binary-state decode can glitch, and no zero-delay simulation
       # can show that). The test proves it on the sv2v->yosys netlist and carries one mutation

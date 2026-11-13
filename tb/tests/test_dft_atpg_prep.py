@@ -1,5 +1,8 @@
 # ruff: noqa: E501
-"""Tests for tools/dft/atpg/netlist_prep.py and the cut wrapper helpers in mk_cut.py (bead j41m.15)."""
+"""Tests for tools/dft/atpg/netlist_prep.py and the cut wrapper helpers in mk_cut.py.
+
+Doc: cr:suite:test-dft-atpg-prep
+"""
 
 import json
 import re

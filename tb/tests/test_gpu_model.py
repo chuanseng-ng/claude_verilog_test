@@ -2,6 +2,8 @@
 Unit tests for GPUKernelModel.
 
 Tests the GPU SIMT execution model with warp scheduling and divergence.
+
+Doc: cr:suite:test-gpu-model
 """
 
 import sys
@@ -77,7 +79,7 @@ class TestGPUKernelModel:
         assert tid == (7, 0, 0)
 
     def test_block_y_z_are_reserved_for_thread_ids(self):
-        """BLOCK_Y/BLOCK_Z are reserved (bead 6hy6): thread ids run along X only."""
+        """BLOCK_Y/BLOCK_Z are reserved: thread ids run along X only."""
         gpu = GPUKernelModel()
         gpu.configure(
             grid_dim=(1, 1, 1),
@@ -367,7 +369,7 @@ class TestGPUKernelModel:
 
 
 class TestBlockLaunchContract:
-    """Bead 6hy6: BLOCK_X limit (64 threads) and partial-last-warp lane masking."""
+    """BLOCK_X limit (64 threads) and partial-last-warp lane masking."""
 
     @pytest.mark.parametrize("block_x", [0, 65, 72, 128, 1023])
     def test_illegal_block_x_is_a_launch_error(self, block_x):

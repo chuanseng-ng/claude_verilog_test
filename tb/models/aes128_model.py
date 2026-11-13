@@ -1,70 +1,26 @@
-"""aes128_model.py -- pure-Python golden model of the CRYPTO peripheral's AES-128 datapath
-(rtl/periph/aes128_core.sv + the CTR wrapper logic in rtl/periph/crypto_accel.sv; bead
-claude_verilog_test-f7vs.10, Phase 6b, Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "CRYPTO").
+"""aes128_model.py -- pure-Python golden model of the AES-128 datapath of the CRYPTO peripheral.
 
-STANDARD LIBRARY ONLY. requirements.txt is deliberately untouched: the SHA-256 half of the
-peripheral is checked against `hashlib.sha256`, and this module is the AES half's counterpart. It
-is a clear, table-free-where-possible FIPS-197 implementation, NOT a fast or constant-time one --
-it is a test oracle, never production crypto, and it has no side-channel resistance whatsoever.
+Subject: rtl/periph/aes128_core.sv and the CTR wrapper logic in rtl/periph/crypto_accel.sv.
+The module uses the standard library only (requirements.txt stays untouched). It is a test oracle,
+not a fast or constant-time implementation, and never production crypto. It models the arithmetic
+only: no cycle timing, no register bank, no handshake (tb/cocotb/soc/test_crypto.py checks those).
+The RTL implements what this file computes.
 
-This module is the authoritative specification of what the RTL must compute; the RTL implements
-what this file computes. It does NOT model the peripheral's cycle timing, its register bank or its
-handshake -- only the arithmetic (tb/cocotb/soc/test_crypto.py pins the rest).
+Rules:
+  * Byte order is big-endian (FIPS-197, FIPS-180-4). Register word 0 holds B0 in bits [31:24].
+    Only block_to_words and words_to_block convert between a block and register words.
+  * The AES state is column-major: state byte 4*c + r is row r of column c.
+  * CTR mode (NIST SP 800-38A Appendix B.1, INC32) increments only the rightmost word (IV3) modulo
+    2**32 and discards the carry. Software must not run one counter past a 2**32-block wrap.
+    CTR decrypt equals CTR encrypt: there is no decrypt mode and no inverse S-box.
+  * next_round_key is the on-the-fly step that the RTL uses. expand_key is the FIPS-197 expansion.
+    selftest() proves that the two agree. mix_column uses the identity of the RTL;
+    selftest() compares it with the textbook form.
+  * Each known-answer vector is asserted in selftest() and hardcoded again in
+    tb/cocotb/soc/test_crypto.py. Keep both copies equal.
 
-BYTE ORDER (the contract the whole peripheral and its suite hang on)
---------------------------------------------------------------------
-FIPS-197 / FIPS-180-4 big-endian, consistently. A 128-bit block is the 16-byte string B[0..15] as
-it appears in the standard's hex notation; the 32-bit register words carry it with word 0 holding
-B0 in bits [31:24]:
-
-    word 0 = B0<<24 | B1<<16 | B2<<8 | B3      (DIN0 / KEY0 / IV0 / DOUT0)
-    word 3 = B12<<24 | B13<<16 | B14<<8 | B15  (DIN3 / KEY3 / IV3 / DOUT3)
-
-so the FIPS-197 hex strings, `bytes.fromhex`, `hashlib.sha256().digest()` and the register words
-line up with NO byte swap anywhere. `block_to_words` / `words_to_block` are the only place the
-conversion lives. The AES state is column-major: state byte index 4*c + r is row r of column c,
-so bytes 0..3 are column 0 and ShiftRows is a fixed re-wiring of the 16-byte vector.
-
-CTR MODE (NIST SP 800-38A Sec.6.5, Appendix B.1 "INC32")
---------------------------------------------------------
-The peripheral exposes ECB and CTR over one ENCRYPT-ONLY datapath; CTR is what makes it a complete
-cipher in both directions.
-
-    keystream[i] = AES-128-Encrypt(K, counter[i])         counter[0] = the IV register block
-    output[i]    = input[i] XOR keystream[i]              (the XOR happens at the writeback)
-    counter[i+1] = INC32(counter[i])
-
-INC32 increments ONLY the rightmost 32-bit word (IV3), modulo 2**32. The carry out of that word is
-DISCARDED: IV0..IV2 never change, so a counter that crosses 2**32 blocks wraps to the same
-counter-block prefix. Software must not run one counter past a 2**32-block wrap. CTR decryption
-is bit-identical to CTR encryption (S ^ (S ^ P) = P) -- there is no decrypt mode and no inverse
-S-box anywhere.
-
-KEY SCHEDULE
-------------
-`expand_key` is the FIPS-197 Sec.5.2 expansion. The RTL instead computes it ON THE FLY with one
-128-bit round-key register, advancing once per round; `next_round_key` is that exact step
-(w0' = w0 ^ SubWord(RotWord(w3)) ^ {rcon,24'h0}, w1' = w0'^w1, w2' = w1'^w2, w3' = w2'^w3, with
-rcon advanced by `xtime` per round, starting at 0x01). selftest() proves the two formulations
-agree, so a divergence between the RTL's on-the-fly schedule and the standard is attributable.
-
-MIXCOLUMNS FORMULATION
-----------------------
-`mix_column` uses the same identity the RTL does,
-    b_i = a_i ^ t ^ xtime(a_i ^ a_(i+1 mod 4)),   t = a0^a1^a2^a3
-which equals the textbook 2*a_i ^ 3*a_(i+1) ^ a_(i+2) ^ a_(i+3) (selftest() checks the two against
-each other and against FIPS-197-style column vectors).
-
-VECTORS PINNED HERE AND AGAIN IN THE SUITE
-------------------------------------------
-Each constant below is asserted by selftest() AND re-asserted, hardcoded independently, by
-tb/cocotb/soc/test_crypto.py (the double-pin tb/models/trng_lfsr_model.py / test_trng.py
-established), so a silent edit of this model cannot move the target the suite chases:
-  * FIPS-197 Appendix B   -- the worked example (key 2b7e1516..., plaintext 3243f6a8...).
-  * FIPS-197 Appendix C.1 -- the AES-128 known-answer vector (key 000102...0f).
-  * NIST SP 800-38A F.5.1 -- CTR-AES128 over four blocks (counter f0f1...feff).
-
-Run `python3 tb/models/aes128_model.py` to execute the self-check.
+Run: python3 tb/models/aes128_model.py
+Doc: ds:ch:phase6-ip-expansion-plan, tm:suite:aes128-model, cr:suite:aes128-model
 """
 
 from __future__ import annotations

@@ -1,7 +1,9 @@
-"""Unit tests for tools/verif/gen_filelist.py (bead 1as3).
+"""Unit tests for tools/verif/gen_filelist.py.
 
 Synthetic mini-repos exercise the generator's rules; the ``real_repo`` tests pin the committed
 ``rtl/filelist/*.f`` to the authoritative Makefile lists so the drift gate cannot rot.
+
+Doc: cr:suite:test-gen-filelist
 """
 
 from __future__ import annotations

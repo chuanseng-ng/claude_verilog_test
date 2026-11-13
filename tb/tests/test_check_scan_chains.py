@@ -1,6 +1,8 @@
-"""Unit tests for tools/dft/check_scan_chains.py (bead j41m.8).
+"""Unit tests for tools/dft/check_scan_chains.py.
 
 A good 2-chain netlist passes, and each defect fails.
+
+Doc: cr:suite:test-check-scan-chains
 """
 
 import subprocess

@@ -1,7 +1,7 @@
 // sky130_sram_4kbyte_1rw1r_32x1024_8.sv
 // Behavioral simulation model for the Sky130 4 KB OpenRAM SRAM macro
 // (sky130_sram_4kbyte_1rw1r_32x1024_8, 1024 words x 32 bits, 4x 8-bit write
-// mask granularity) — GH #104 Sky130 SoC Stage-2.
+// mask granularity).
 //
 // This is the 4 KB sibling of sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv (used
 // by the CPU I$/D$ tag+data arrays): same OpenRAM 1RW1R port convention, and
@@ -37,9 +37,8 @@
 // views are committed at
 // pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.{lef,lib,gds,sp},
 // and the synthesis face is the (* blackbox *) stub beside them. (The
-// OpenRAM compile directory /nobackup/openram_sky130_4kb/ that this comment
-// used to point at was wiped in the 2026-09-15 drive reorganisation; the
-// views themselves are in-repo and unaffected.)
+// OpenRAM compile directory that generated the views no longer exists. The views are in the repository
+// and are not affected.)
 
 /* verilator lint_off UNUSEDSIGNAL */
 module sky130_sram_4kbyte_1rw1r_32x1024_8 (

@@ -1,9 +1,11 @@
-"""Unit tests for tb/models/aes128_model.py (bead claude_verilog_test-f7vs.10).
+"""Unit tests for tb/models/aes128_model.py.
 
 The model is the golden reference the CRYPTO peripheral's cocotb suite
 (tb/cocotb/soc/test_crypto.py) chases, so these tests pin it independently of that suite: the
 FIPS-197 / SP 800-38A vectors are hardcoded HERE as literals (not imported from the model) so
 that a silent edit of the model's own constants cannot move the target.
+
+Doc: cr:suite:test-aes128-model
 """
 
 import ast

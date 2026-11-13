@@ -1,4 +1,4 @@
-"""Unit tests for tools/verif/soc_shards.py and the SOC_CI_SUITES refactor (bead 9ayu.1).
+"""Unit tests for tools/verif/soc_shards.py and the SOC_CI_SUITES refactor.
 
 The sharded coverage workflow splits `soc_all_ci` over several runners.  What must never happen is
 a suite silently dropped (or run twice) by that split, so the properties pinned here are:
@@ -11,6 +11,8 @@ a suite silently dropped (or run twice) by that split, so the properties pinned 
     empty manifest -- each a failure, never a pass;
   * (needs make + verilator) `soc_all_ci` still expands to the same sub-make invocations in the
     same order as the list, and `print-soc-ci-suites` agrees with the script's parse.
+
+Doc: cr:suite:test-soc-shards
 """
 
 # pylint: disable=missing-function-docstring,redefined-outer-name  # pytest fixtures + descriptive test names
@@ -388,7 +390,7 @@ def test_split_units_are_sharded_and_unioned(suites: list[str], weights: dict) -
     assert any("soc_uart_boot: run by s0 but not in SOC_CI_SUITES" in p for p in problems)
 
 
-# --------------------------------------- plain (uninstrumented) weights + cocotb.yml (bead 9ayu.2)
+# --------------------------------------- plain (uninstrumented) weights + cocotb.yml
 
 PLAIN_WEIGHTS = REPO_ROOT / "tools" / "verif" / "soc_shard_weights_plain.json"
 COCOTB_YML = REPO_ROOT / ".github" / "workflows" / "cocotb.yml"

@@ -41,7 +41,7 @@ for arg in "$@"; do
         *) ARGS+=("$arg") ;;
     esac
 done
-# Bead b079 -- opt-in compiler cache.  Wrapping HERE, around the real g++ and AFTER the clang-only
+# Opt-in compiler cache.  Wrapping HERE, around the real g++ and AFTER the clang-only
 # flags above have been stripped, means ccache hashes exactly the command line g++ will run
 # (so a change to this shim's stripping rules is a different cache key), and sees g++ itself --
 # not this script -- as the compiler, so its compiler_check identifies the real toolchain instead

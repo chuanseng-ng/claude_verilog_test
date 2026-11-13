@@ -1,10 +1,12 @@
-"""Unit tests for tools/verif/check_cocotb_results.py (bead p6t8).
+"""Unit tests for tools/verif/check_cocotb_results.py.
 
 cocotb 1.9.2's makefile cannot set an exit code from a test failure, so the SoC
 Makefile redefines ``check_for_results_file`` to run this checker on every
 build point's results.xml.  The checker reuses the tested ``summarize.parse_cocotb``
 verdict; these tests pin the contract the Makefile depends on: exit 0 only for a
 clean, non-empty run, exit 1 for everything else.
+
+Doc: cr:suite:test-check-cocotb-results
 """
 
 from __future__ import annotations
@@ -104,7 +106,7 @@ def test_error_testcase_exits_nonzero(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("text", [_XML_NO_PASS, _XML_EMPTY], ids=["only-skipped", "no-testcases"])
 def test_no_passing_test_exits_nonzero(tmp_path: Path, text: str) -> None:
-    """A clean exit with nothing run is not a pass (bead dwp)."""
+    """A clean exit with nothing run is not a pass."""
     proc = _run(_write(tmp_path, text))
     assert proc.returncode == 1
     assert "no passing test" in proc.stderr
