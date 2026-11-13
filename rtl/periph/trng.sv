@@ -1,61 +1,32 @@
-// trng.sv
-// Phase 6a-4 -- True-random-number-generator peripheral, APB4 slave (bead
-// claude_verilog_test-f7vs.8, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6a-4 -- TRNG"). Written to
-// the contract in tb/cocotb/soc/test_trng.py (its module docstring is authoritative; this header
-// summarises it) and tb/models/trng_lfsr_model.py (bit-exact entropy datapath).
+// trng - true-random-number-generator peripheral, APB4 slave.
 //
-// Register map (word indices into the apb4_register_bank, N_REGS=8; 0x014-0x01C reserved, read 0):
-//   0  TRNG_CTRL     RW  [0] enable, [1] IRQ enable, [5:2] FIFO threshold; [31:6] reserved
-//   1  TRNG_STATUS   RO  [0] data ready (level>=1), [1] FIFO full (level==4),
-//                        [2] health_fail (sticky), [3] INSECURE (constant 1, LFSR build)
-//   2  TRNG_DATA     RO  head of the 4-deep FIFO; an APB READ pops it (read-snoop, SPI_RX idiom)
-//   3  TRNG_SEED     RW  LFSR seed, reset 0xACE1_2345; sampled at the CTRL.EN 0->1 edge
-//   4  TRNG_IRQ_CLR  WO  W1C against STATUS[2] (health_fail); reads 0
-//
-// Entropy source is an `ifdef sub-module, not a port: TRNG_RO_SKY130 selects
-// trng_ro_sky130.sv (Sky130 ring oscillator), otherwise trng_lfsr_entropy.sv. Both share one
-// port contract, so this file has zero top-level pins beyond the bus and irq_o, sits in every
-// file list and PD flow, and needs no conditional instantiation in soc_top. Only the entropy-
-// QUALITY claim is Sky130-exclusive, not the RTL.
-//
-// INSECURE: the default arm is a deterministic LFSR/von-Neumann generator, NOT cryptographic.
-// STATUS[3] reads 1 in that build and cannot be cleared or masked; it is the one thing that
-// distinguishes it from real entropy behind a register named TRNG. Under TRNG_RO_SKY130 it
-// reads 0.
-//
-// FIFO / pop-on-read: 4 words deep. A read ACCESS phase (psel & penable & !pwrite) at TRNG_DATA
-// pops one word. Reading an EMPTY FIFO returns 0 with pslverr 0, sets no status and does not
-// underflow; STATUS.data_ready is the only validity indicator. Backpressure is a stall, not a
-// drop: while the FIFO is full the entropy arm is not clocked, so the popped sequence is a
-// function of the seed alone. Disabling retains the FIFO; the next CTRL.EN 0->1 edge starts a
-// fresh session (LFSRs loaded from TRNG_SEED, FIFO/assembler/health run-length cleared).
-//
-// Health test: NIST SP 800-90B repetition-count test on the RAW (pre-debias) samples, cutoff
-// C = 21 (H = 1 bit/sample, alpha = 2^-20); a run of 21 identical consecutive samples, counting
-// the first, trips. A trip sets sticky STATUS[2], flushes the FIFO and HALTS production; a W1C
-// of IRQ_CLR bit 2 clears it and resumes from the current LFSR state with the run length
-// restarted. Adaptive-proportion is a documented non-goal. Seed 0 is not rescued: it trips.
-//
-// IRQ: irq_o = CTRL[1] & ((fifo_level >= max(CTRL[5:2],1)) | health_fail). LEVEL-HELD, never a
-// pulse -- every IRQ source crosses core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in
-// soc_top.sv, which can miss a pulse. Threshold 0 behaves as 1; 5..15 never fire on the level.
-//   health_fail next = (health_fail & ~clr) | trip   -- SET WINS over a same-cycle clear.
-//
-// RO-register hazard (historical, bead 6o8w): apb4_register_bank used to let a SW write win over a
-// same-cycle HW write even when WMASK == 0 (it wrote the old value back), so a stray APB store to
-// STATUS or DATA could swallow a FIFO update or a health set. The bank is now race-free (SW wins
-// inside WMASK, HW wins outside it). Stores to those two words are still presented to the bank as
-// reads (bank_pwrite_w), retained as belt-and-braces with the same observable behaviour, as in
-// watchdog_timer.sv. New peripherals do not need this pattern.
-//
-// Reset: synchronous, active-low throughout (no `negedge rst_n`), matching the other periph/.
-// No CDC: single clock domain (core_clk), no asynchronous inputs.
-//
-// APB4 interface (ARM IHI0024C): clk/rst_n map to pclk/presetn. ADDR_W = 12 (byte address, [1:0]
-// unused). Zero wait states (pready is the bank's constant 1). Writes commit on the ACCESS phase
-// (psel & penable); the DATA pop and IRQ_CLR snoops decode that same phase.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: An entropy arm feeds a 4-word FIFO. A read of TRNG_DATA pops one word.
+//   An ifdef picks the arm, not a port. TRNG_RO_SKY130 selects trng_ro_sky130.sv (ring oscillator).
+//   Otherwise the module uses trng_lfsr_entropy.sv. Both arms share one port contract.
+//   A repetition-count health test (NIST SP 800-90B, cutoff C = 21) runs on the raw samples before debias.
+//   The cutoff assumes H = 1 bit per sample (alpha = 2^-20). Only the entropy-quality claim is Sky130-specific, not the RTL.
+//   A run of 21 identical samples sets the sticky health_fail, flushes the FIFO and halts production.
+//   health_fail clears only on a W1C of IRQ_CLR bit 2 or on reset.
+// Registers (word index, N_REGS = 8; words 5 to 7 are reserved and read 0):
+//   0 TRNG_CTRL (RW: [0] enable, [1] IRQ enable, [5:2] FIFO threshold),
+//   1 TRNG_STATUS (RO: [0] data ready, [1] FIFO full, [2] health_fail sticky, [3] INSECURE),
+//   2 TRNG_DATA (RO, a read pops), 3 TRNG_SEED (RW, reset 0xACE1_2345, sampled at the CTRL.EN 0 to 1 edge),
+//   4 TRNG_IRQ_CLR (WO, W1C on STATUS[2], reads 0).
+//   Reading an empty FIFO returns 0 with pslverr 0 and sets no status. STATUS.data_ready is the only validity flag.
+//   A full FIFO stalls the entropy arm, so the popped sequence depends on the seed alone.
+//   Disabling keeps the FIFO. The next CTRL.EN 0 to 1 edge reloads the LFSRs from TRNG_SEED and clears the FIFO,
+//   the assembler and the run length. After the W1C, production resumes from the current LFSR state with the run length
+//   restarted. Seed 0 is not rescued: it trips the health test.
+// Parameters: ADDR_W (APB address width, default 12; the legal range is 5 to 32).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. The module has no CDC.
+// Caller rules:
+//   - The default arm is a deterministic LFSR and is NOT cryptographic. STATUS[3] reads 1 in that build.
+//     Software cannot clear or mask it. Under TRNG_RO_SKY130 it reads 0.
+//   - irq_o = CTRL[1] & ((fifo_level >= max(CTRL[5:2],1)) | health_fail). It is level-held, never a pulse.
+//   - Threshold 0 behaves as 1. Thresholds 5 to 15 never fire on the level.
+//   - A new health trip beats a same-cycle clear (set wins).
+//   - Adaptive-proportion testing is a documented non-goal.
+// Doc: ds:mod:trng, tm:mod:trng, cr:mod:trng
 
 module trng
 #(
@@ -143,9 +114,7 @@ module trng
     logic        hw_wen_i  [N_REGS];
     logic [31:0] hw_wdata_i[N_REGS];
 
-    // -------------------------------------------------------------------------
-    // APB address decode (zero-extended to 32 b before comparing -- GH #87-safe idiom).
-    // -------------------------------------------------------------------------
+    // APB address decode. The compares zero-extend addr_word to 32 bits.
     logic [WORDW-1:0] addr_word_w;
     assign addr_word_w = paddr[ADDR_W-1:2];
 
@@ -157,7 +126,7 @@ module trng
     assign is_data_addr_w    = ({{(32-WORDW){1'b0}}, addr_word_w} == 32'(REG_TRNG_DATA));
     assign is_irq_clr_addr_w = ({{(32-WORDW){1'b0}}, addr_word_w} == 32'(REG_TRNG_IRQ_CLR));
 
-    // Stores to the two HW-owned words are shown to the bank as reads (bead 6o8w, see header).
+    // Stores to STATUS and DATA are shown to the bank as reads. See cr:mod:trng.
     logic bank_pwrite_w;
     assign bank_pwrite_w = pwrite & ~(is_status_addr_w | is_data_addr_w);
 
@@ -355,7 +324,7 @@ module trng
     end
 
     // =========================================================================
-    // Interrupt -- level-held (see header). Threshold 0 behaves as 1.
+    // Interrupt -- level-held (see ds:mod:trng). Threshold 0 behaves as 1.
     // =========================================================================
     logic [3:0] eff_thr_w;
     assign eff_thr_w = (thr_w == 4'd0) ? 4'd1 : thr_w;

@@ -1,207 +1,41 @@
-// crypto_accel.sv
-// Phase 6b -- AES-128 / SHA-256 crypto accelerator, APB4 slave (bead claude_verilog_test-f7vs.10,
-// Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "6b -- CRYPTO"). Wrapper over aes128_core.sv and
-// sha256_core.sv: ONE APB slot, ONE interrupt. EN_AES / EN_SHA drop a core from the build.
+// crypto_accel - AES-128 and SHA-256 accelerator with one APB4 slot and one interrupt.
 //
-// NON-GOALS -- READ BEFORE USING. This is NOT production cryptography.
-//   * NO side-channel or DPA resistance: the S-box is a data-dependent logic network, nothing is
-//     masked, balanced or randomised. Operation DURATION is fixed by construction -- fixed
-//     iteration counts, no early exit, no data-dependent control, so 11/41/66/2 clk depends only
-//     on mode and SBOX_PARALLEL, never on key or data -- but that is a statement about cycle
-//     count only. NO claim is made about power, EM or glitch behaviour.
-//   * NO fault-injection hardening: no redundancy, no duplicated datapath, no integrity check on
-//     the round count, state or key.
-//   * NOT certified and NOT validated against any scheme (no FIPS 140, Common Criteria, CAVP/ACVP).
-//     Correctness is established by known-answer vectors in simulation only.
-//   * ANY BUS MASTER CAN WRITE, REPLACE AND USE THE KEY, AND READ THE RESULTS. The key itself is
-//     NOT readable over the bus (KEY0-3 read 0 forever, and key_q reaches no output), but that
-//     buys very little: there is no privilege or secure/non-secure split -- crossbar masters M0
-//     (CPU), M1/M2 (GPU) and M3 (DMA) all decode to the APB ring, and axil_to_apb ignores AxPROT
-//     -- so any master can substitute its OWN key between a victim's key load and its start, then
-//     read DOUT. In CTR mode that yields DOUT = E_attacker(IV) ^ msg_q, from which the attacker
-//     recovers the victim's plaintext even though DIN also reads 0; in SHA mode it yields
-//     H(victim_msg). Treat this block as an unprotected shared oracle, not as key storage.
-//   * NO SOFTWARE KEY LIFECYCLE: no zeroisation command, no lock bit, and key_valid never drops
-//     by software action. The clears are core_rst_n (rst_n_i & pll_locked), i.e. a whole-SoC
-//     reset -- which also fires on a PLL unlock -- and the DFT scan-entry/exit wipe (below), which
-//     is the one non-reset path that drops key_valid.
-//   * RESIDUAL STATE SURVIVES A CONTEXT SWITCH. key_q, msg_q, DOUT, DIGEST and IV all persist (the
-//     AES core's rk_q holds the round-10 key, which inverts to the master key, for one cycle after
-//     an operation and then re-tracks key_q while idle). A second user that writes fewer
-//     than four KEY words, or uses partial strobes, silently runs on the first user's key or a
-//     mixed key with key_valid still 1; and DOUT/DIGEST remain readable, which in CTR decrypt is
-//     the previous user's PLAINTEXT. Software must rewrite all four KEY words with pstrb=0xF on
-//     every switch. Note also that after an illegal start `done` asserts while DOUT still holds
-//     the PREVIOUS result -- stale data that looks valid.
-//   * NONCE AND IV MANAGEMENT ARE ENTIRELY SOFTWARE'S JOB. IV resets to 0, nothing enforces
-//     uniqueness, and IV is the one register with no busy-time protection (it lives in the bank,
-//     so unlike KEY and DIN there is no shadow-side check to add): a mid-operation write to IV3
-//     re-bases the next counter block, so software can cause counter reuse.
-//   * NO INTEGRITY AND NO DECRYPT DATAPATH. ECB leaks plaintext patterns block-for-block; CTR is
-//     unauthenticated and trivially malleable (flipping a ciphertext bit flips the plaintext bit).
-//     There is no MAC, no AEAD mode and no AES decrypt -- CTR covers decryption instead.
-//   * SCAN (Doc: tm:ch:dft-architecture sec.7, bead j41m.2). key_q and the AES core's rk_q (256
-//     flops) are EXCLUDED from scan chains (project decision 3), and their READ side is forced to 0
-//     while scan_mode_i = 1 (key_eff_w here, rk_eff_w in aes128_core): without that mask the
-//     exclusion alone still leaks the key, because shifting in a chosen state, pulsing one capture
-//     and shifting out f(state, key) reveals it. What the mask does NOT cover: every OTHER flop here
-//     (the AES state s_q, msg_q, the SHA registers, the bank words holding DOUT/DIGEST/IV) is
-//     scanned, and s_q holds block ^ key (the whitening value, reloaded every idle cycle) and later
-//     round states from a PRIOR functional operation.
-//   * SCAN WIPE (bead j41m.6, Doc: tm:ch:dft-architecture sec.14.3). Hardware zeroizes the block on every
-//     scan_mode_i EDGE, rising (entry) AND falling (exit): wipe_w, one cycle, clears key_q,
-//     key_seen_q (so key_valid drops), msg_q, ctr_op_q, the AES core (s_q, rk_q, rcon_q, round_q,
-//     state_q), the SHA core (w_q, a_q..h_q, hin_q, t_q, state_q) and, through the register bank's
-//     hardware-write port, DOUT0-3, DIGEST0-7 and IV0-3. It is a ONE-TIME clear, not a reset held
-//     during scan, so the block stays scan-testable. NOT cleared: CTRL (mode / IRQ enable /
-//     SHA_CONT -- not secret), the sticky done flag, key_write_rejected, and the three edge-detect
-//     flops. Exit also wipes so that nothing scan-loaded can become a live key or live data.
-//     TIMING. scan_mode_i is quasi-static and asynchronous to this clock (it is a TAP or pin
-//     level), so it passes a 2-FF synchroniser (scan_s1_q, scan_s2_q) and a third flop
-//     (scan_prev_q) makes the edge: wipe_w = scan_s2_q ^ scan_prev_q, which is high in the THIRD
-//     clk cycle after scan_mode_i changes (edges 1, 2 sample it, edge 3 clears). On entry clk IS
-//     the scan clock (dft_clk_mux selects it with scan_mode_i). The synchroniser flops carry NO
-//     reset on purpose: they must track the input through reset, so a reset (including the tester's
-//     scan reset) neither fabricates nor hides an edge; a reset shorter than 3 cycles can at worst
-//     produce a spurious wipe, which is the safe direction. The wipe asserts for any scan_mode_i
-//     change, including a glitch longer than a clock period.
-//     SCAN WIPE HANDSHAKE (bead j41m.17). The clear is functional D logic and scan insertion puts
-//     its scan mux AFTER that logic, so a shift edge (scan_en = 1) would override it. The block
-//     therefore reports scan_wipe_done_o (0 from the instant scan_mode_i changes until the
-//     clearing edge has happened) and soc_top gates the scan enable with it: scan_en cannot reach
-//     any scan flop before the wipe is applied, whatever the tester does. The tester still has to
-//     supply the 3 clock edges the wipe needs (with scan_en held off by the gate they are capture
-//     edges) -- Doc: tm:ch:dft-architecture sec.14.14. Residual limit: scan_out shows the Q of each
-//     chain's last flop before any edge (a bit of residue if that flop is a crypto flop).
-//     While wipe_w is high a start is turned into the hang-free illegal path, an in-flight
-//     operation is aborted to done (no data), and KEY / DIN writes are dropped (a KEY write latches
-//     key_write_rejected). Any other debug path that can observe flop state is still key access.
-//
-// BYTE ORDER. FIPS-197 / FIPS 180-4 big-endian, consistently. For any 128-bit block B[0..15],
-// word 0 carries B0 in bits [31:24]: DIN0[31:24] = B0 ... DIN3[7:0] = B15, and the same for KEY,
-// IV and DOUT. DIGEST0[31:24] is the most significant byte of H0. FIPS-197 App. B/C vectors and
-// hashlib.sha256 therefore line up with no byte swap.
-//
-// NO NEW RUNTIME-INDEXED MUX (bead ma7 acceptance criterion). The S-box and the SHA K table are
-// constant-label case functions, Rcon is an xtime() chain, the message schedule a shift register;
-// see the sub-core headers. In this file every KEY / DIN / DOUT / DIGEST word is addressed by a
-// constant index inside a constant-bound unrolled loop.
-//
-// Register map (word indices into the apb4_register_bank, N_REGS=32; 0x070-0x07C reserved, read 0):
-//   0    0x000 CRYPTO_CTRL     RW  [1:0] mode (0 ECB, 1 CTR, 2 SHA, 3 reserved), [2] start (W1P,
-//                                  reads 0), [3] IRQ enable, [4] SHA_CONT; [31:5] reserved
-//   1    0x004 CRYPTO_STATUS   RO  [0] busy, [1] done, [2] key_valid, [3] key_write_rejected
-//   2-5  0x008 CRYPTO_KEY0-3   WO  AES-128 key; ALWAYS READS 0 (no readback path exists)
-//   6-9  0x018 CRYPTO_IV0-3    RW  CTR counter block (IV3 is the INC32 word)
-//   10-13 0x028 CRYPTO_DIN0-3  WO  4-word APERTURE onto one 512-bit shift register; reads 0
-//   14-17 0x038 CRYPTO_DOUT0-3 RO  AES output block
-//   18-25 0x048 CRYPTO_DIGEST0-7 RO SHA-256 digest; ALSO the SHA chaining value
-//   26   0x068 CRYPTO_IRQ_STAT RO  [0] sticky done (the same flop as STATUS[1])
-//   27   0x06C CRYPTO_IRQ_CLR  WO  W1C by write-snoop: [0] clears done, [1] clears key_write_rejected
-//   28-31      reserved        read 0
-//
-// REGISTER-BANK PATTERN. hw_wen = 1 every cycle <=> the word is a LIVE MIRROR of internal state
-// (STATUS, IRQ_STAT). hw_wen = a pulse <=> the bank word IS the storage element and must hold
-// between events (DOUT, DIGEST, IV3). The second form is why this design has no result registers
-// at all. STATUS and IRQ_STAT are written every cycle with the value the state flops (state_q,
-// done_q, key_rej_q, key_seen_q) are ABOUT TO TAKE, so after every clock edge each field of those
-// words equals the corresponding state flop's new value, with no lag: a transfer that completes at
-// edge N is already reflected in a read whose ACCESS phase follows it. That is the whole guarantee
-// -- STATUS == f(state flops) after every edge -- and it implies nothing about any other register.
-//
-// START. CTRL[2] is NOT STORED: WMASK[CTRL] has bit 2 clear, so it reads 0 forever and clears
-// itself by construction. start is a write-snoop pulse (psel & penable & pwrite at CTRL, pwdata[2]
-// and pstrb[0]). A stored start bit cleared by a same-cycle hw_wen writeback would be the
-// "one-cycle window in which the value is wrong" failure of plan Sec.3 consequence 1, and the bank's
-// collision rule (software wins inside WMASK) would let a software 1 beat the hardware clear anyway.
-// Only one APB transfer completes per cycle, so NO TWO SNOOPS CAN FIRE TOGETHER: in particular a
-// KEY write can never coincide with a start write. START WHILE BUSY IS SILENTLY IGNORED (no status
-// bit, no pslverr). SOFTWARE CONTRACT -- MODE THEN START, IN SEPARATE TRANSFERS: mode, SHA_CONT
-// and the legality check all read the bank's CTRL register, which still holds its PRE-write value
-// during the ACCESS cycle of the write that carries START. A single write that both changes the
-// mode (or SHA_CONT) and sets START therefore runs the OLD mode; write the mode first, then START
-// in a later transfer. This single-write case is deliberately not pinned by the test suite.
-// Observed latency from the ACCESS phase of the start write to done: 11 clk
-// (ECB/CTR, SBOX_PARALLEL=16), 41 clk (SBOX_PARALLEL=4), 66 clk (SHA), 2 clk (illegal op).
-//
-// ILLEGAL / DISABLED MODE is hang-free at both levels. op_legal = (mode 0|1 & EN_AES & key_valid)
-// | (mode 2 & EN_SHA); mode 3 is always illegal. An illegal start takes C_IDLE -> C_DONE -> C_IDLE:
-// 2 cycles, busy pulses, done / IRQ_STAT set (the IRQ fires if enabled), NO DOUT / DIGEST / IV
-// writeback. Neither the FSM nor a polling driver can hang. DONE DOES NOT IMPLY VALID DATA:
-// software must check key_valid and that the mode it asked for is built. (Dropping the start
-// silently was rejected: it satisfies "must not hang the FSM" but hangs a `while (!done)` driver.)
-//
-// KEY. Written by write-snoop into the shadow key_q (address-decoded per word, so KEY0-3 may be
-// written in any order; partial byte strobes merge exactly as the bank's own masked write does).
-// Key writes are REJECTED while STATUS.busy: this is a spec/determinism requirement (the cores
-// sample the key on the start edge only and do not need it held), so it must not be removed as
-// redundant. A rejected write latches STATUS[3]; it clears on reset, on IRQ_CLR[1] and on an
-// accepted key write. key_valid is set by writing all four words and cleared ONLY BY RESET; a
-// partial rewrite leaves key_valid = 1 over a mixed key (software's problem; clearing on any
-// single write would break the common "rewrite one word" pattern). THERE IS NO KEY READBACK.
-// A key write with pstrb == 4'h0 selects no byte lane: it is NOT a key write at all -- it changes
-// no key bit, does not count toward key_valid, and, even while busy, latches no key_write_rejected
-// (nothing was attempted). A non-zero strobe, however partial, merges its lanes and counts.
-// key_valid is meaningful only when EN_AES = 1: with EN_AES = 0 the shadow still tracks writes (so
-// STATUS[2] reads 1 once four words are written) but no AES core exists, op_legal rejects modes
-// 0/1 regardless of it, and the bit carries no information.
-//
-// DIN. The DIN window is a 4-WORD APERTURE onto one 512-bit shift register: only the fact that a
-// write hit DIN0..3 matters, not which, and WRITE ORDER IS THE CONTRACT (most significant word
-// first: 16 words for SHA, M0 first; 4 words for AES, B0..B3 first). A PARTIAL-STROBE write is
-// DROPPED (byte-granular pushes into a shift register have no meaning). Pushes are REJECTED WHILE
-// BUSY, with no status bit -- a deliberate, documented asymmetry with key_write_rejected: CTR
-// consumes the plaintext at the COMPLETION edge, so it must be stable for the whole operation.
-//
-// AES MODES. ECB: DOUT = AES(key, DIN). CTR: the core encrypts the counter block IV and the XOR
-// with DIN happens at the WRITEBACK, not in the core (the core stays a pure block-encrypt
-// primitive, which keeps ECB, CTR-encrypt and CTR-decrypt one datapath). CTR DECRYPT IS
-// BIT-IDENTICAL TO CTR ENCRYPT: there is no decrypt mode and no inverse S-box. After each CTR block
-// IV3 is incremented (NIST SP 800-38A B.1 INC32: rightmost 32 bits only, carry DISCARDED, IV0-2
-// never hardware-written); software must not run one counter past a 2^32-block wrap. IV lives IN
-// the bank, so the bank cannot protect it while busy: a software write to IV during a CTR
-// operation corrupts the counter, and a same-cycle software write to IV3 beats the hardware
-// increment (bank collision rule) -- correct for a re-seed, and otherwise software's responsibility.
-//
-// SHA CHAINING. DIGEST0-7 are WMASK=0 and written ONLY by the SHA completion pulse, so they ARE the
-// chaining register -- no extra 256-bit register. CTRL[4] SHA_CONT: 0 starts from the FIPS 180-4
-// H0 constants, 1 continues from the current DIGEST. Multi-block: write 16 words, start with
-// SHA_CONT=0, poll done, write the next 16, start with SHA_CONT=1, ..., read DIGEST. PADDING AND
-// LENGTH ENCODING ARE SOFTWARE'S JOB. The mode and SHA_CONT are sampled at the start edge; the CTR
-// choice is latched at start for the writeback.
-//
-// CTRL WRITTEN WHILE BUSY is not a supported use, but is safe in these respects. GUARANTEED: the
-// operation in flight completes with the mode it STARTED with (the core that was started is the
-// one that completes; the CTR/ECB writeback XOR and the IV3 increment use the start-time latch;
-// SHA_CONT and the chaining value were sampled at the start edge), so DOUT / DIGEST / IV3 for that
-// operation are not corrupted; IRQ enable (CTRL[3]) takes effect immediately on irq_o. NOT
-// GUARANTEED: that the new CTRL value does anything for the operation in flight; and a START bit
-// in such a write is ignored (busy). The new mode / SHA_CONT apply to the NEXT start. IV is not
-// protected while busy at all (see AES MODES).
-//
-// DOUT / DIGEST VALIDITY. A bank word is written on the completion edge of each operation, so it is
-// valid from one completion edge to the next: DOUT / DIGEST ARE NEVER GARBAGE, THEY ARE EITHER
-// CURRENT OR ONE OPERATION STALE (a read during a new operation returns the previous result, never
-// a partial round state). Software should still gate reads on done.
-//
-// IRQ: irq_o = done_q & CTRL[3]. LEVEL-HELD, never a pulse -- every IRQ source crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
-//   done next = (done_q & ~IRQ_CLR[0]) | done_set   -- SET WINS over a same-cycle W1C, so a
-//   completion is never lost to a racing clear. STATUS[1] and IRQ_STAT[0] are THE SAME FLOP mirrored
-//   into two words (i2c_controller.sv precedent), not two pieces of state.
-//
-// CDC: NONE. Single clock domain (core_clk) and no asynchronous inputs anywhere in this peripheral,
-// so the cdc_sync input-synchroniser pattern and the SDC set_false_path of the pad-input
-// peripherals (GPIO, I2C) do NOT apply. This is stated rather than omitted on purpose.
-//
-// Reset: synchronous, active-low throughout (no `negedge rst_n`), matching the other periph/. The
-// key shadow is zeroised by reset (and by nothing else).
-//
-// APB4 interface (ARM IHI0024C): clk/rst_n map to pclk/presetn. ADDR_W = 12 (byte address, [1:0]
-// unused). Zero wait states (pready is the bank's constant 1). Writes commit on the ACCESS phase
-// (psel & penable); the CTRL start, KEY, DIN and IRQ_CLR snoops decode that same phase.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The module wraps aes128_core and sha256_core. EN_AES and EN_SHA drop a core from the build.
+//   AES offers ECB and CTR, with no decrypt mode (CTR decrypt equals CTR encrypt). SHA-256 hashes one 512-bit block per start.
+// Registers (word index; the full map is in ds:mod): CTRL 0, STATUS 1, KEY0-3 2-5, IV0-3 6-9, DIN0-3 10-13,
+//   DOUT0-3 14-17, DIGEST0-7 18-25, IRQ_STAT 26, IRQ_CLR 27.
+//   CTRL: [1:0] mode (0 ECB, 1 CTR, 2 SHA, 3 reserved), [2] start (W1P, reads 0), [3] IRQ enable, [4] SHA_CONT.
+//   STATUS: [0] busy, [1] done, [2] key_valid, [3] key_write_rejected. KEY0-3 and DIN0-3 always read 0.
+//   IRQ_STAT[0] is the done flag. IRQ_CLR is W1C: [0] clears done, [1] clears key_write_rejected.
+//   done sets on completion or an illegal start and clears on IRQ_CLR[0] or reset. A new set beats a same-cycle clear.
+//   STATUS[3] clears on reset, on IRQ_CLR[1] and on an accepted KEY write. A KEY write with pstrb = 0 never sets it.
+// Parameters: ADDR_W (APB address width, default 12), EN_AES, EN_SHA (0 drops the core),
+//   SBOX_PARALLEL (16 or 4, used when EN_AES = 1).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. Reset clears the key shadow.
+//   scan_mode_i is quasi-static. scan_wipe_done_o is 0 from a scan_mode_i change until the wipe is applied.
+// Caller rules:
+//   - Write the mode and SHA_CONT first, and START in a later transfer. A write that carries START runs the old mode and SHA_CONT.
+//   - SHA_CONT = 0 starts from the FIPS 180-4 H0. SHA_CONT = 1 continues from DIGEST. Software does padding and the block loop.
+//   - DIN0-3 are one aperture onto a shift register. Write order matters, the address does not: 16 words for SHA (M0 first),
+//     4 words for AES (B0 first). A partial-strobe DIN write is dropped. Byte order is big-endian.
+//   - Write all four KEY words with pstrb=0xF on every switch between users.
+//   - key_valid drops only on reset (core_rst_n, which includes a PLL unlock) or the scan wipe. There is no zeroisation command or lock bit.
+//   - A START while busy is ignored. KEY and DIN writes while busy are rejected. A rejected KEY write sets STATUS[3].
+//   - Check key_valid and the built modes. After an illegal start, done is 1 and DOUT holds the previous result.
+//   - Do not write IV during a CTR operation. Do not run one counter past a 2^32-block wrap. IV resets to 0; software owns nonce uniqueness.
+//   - DOUT and DIGEST are current or one operation stale, never partial. Gate reads on done.
+//   - ECB leaks plaintext patterns. CTR is unauthenticated and malleable. There is no MAC and no AEAD mode.
+//   - irq_o = done_q & CTRL[3]. It is level-held.
+//   - This block is NOT production cryptography. It has no side-channel or fault-injection hardening and no certification.
+//   - Any bus master can write and use the key and read the results. Treat the block as an unprotected shared oracle.
+//   - Residual state (key, message, DOUT, DIGEST, IV) persists between users.
+//   - The scan wipe takes 3 clk edges after a scan_mode_i change. soc_top gates scan_en with scan_wipe_done_o.
+//     Before the first edge, scan_out shows the Q of each chain's last flop.
+//   - The wipe does not clear CTRL, done or key_write_rejected. During it a START takes the illegal path, an operation
+//     in flight ends with done and no data, and KEY and DIN writes are dropped.
+//   - Treat any debug or scan path that observes flop state as key access.
+// Full contract: ds:mod:crypto-accel
+// Doc: ds:mod:crypto-accel, tm:mod:crypto-accel
 
 module crypto_accel
 #(
@@ -215,18 +49,13 @@ module crypto_accel
     input  logic clk,
     input  logic rst_n,
 
-    // DFT scan mode (bead j41m.2): 1 forces the key_q / rk_q read nets to 0 (see the SCAN note in
-    // the header). Quasi-static. Tie 1'b0 where there is no scan-aware parent: then both masks are
-    // a pass-through and the block is bit-identical to the pre-DFT design.
+    // scan_mode_i = 1 forces the key_q and rk_q read nets to 0. Quasi-static.
+    // Tie it to 1'b0 where there is no scan-aware parent. See ds:mod:crypto-accel.
     input  logic scan_mode_i,
 
-    // DFT scan-entry wipe handshake (bead j41m.17). 1 = no scan_mode_i change is pending in the
-    // wipe pipeline, i.e. the entry (or exit) wipe has been APPLIED; 0 from the moment scan_mode_i
-    // differs from its settled value until the clearing edge has happened (see the SCAN WIPE
-    // HANDSHAKE note in the header). soc_top ANDs the scan enable with it. Combinational in the
-    // quasi-static scan_mode_i plus the three unreset edge-detect flops. Tie-off / leave open
-    // where there is no scan-aware parent; with scan_mode_i constant it settles to 1 within 3 clk
-    // edges and stays there.
+    // scan_wipe_done_o is 0 from a scan_mode_i change until the wipe is applied. Leave it open
+    // where there is no scan-aware parent. soc_top ANDs the scan enable with it.
+    // See ds:mod:crypto-accel.
     output logic scan_wipe_done_o,
 
     // =========================================================================
@@ -386,12 +215,8 @@ module crypto_accel
         .hw_wdata_i (hw_wdata_i)
     );
 
-    // =========================================================================
-    // Snoop front end (one copy, shared by every snoop). Only one APB transfer completes per
-    // cycle, so no two snoops can ever fire together.
-    // Address compares zero-extend addr_word_w to 32 b before comparing (GH #87 idiom, mirrored
-    // from apb4_register_bank.sv) so N_REGS == 2**WORDW can never wrap a valid index to a match.
-    // =========================================================================
+    // Snoop front end, one copy for every snoop. One APB transfer completes per cycle.
+    // The address compares zero-extend addr_word_w to 32 bits, so N_REGS == 2**WORDW cannot wrap an index.
     logic [WORDW-1:0] addr_word_w;
     assign addr_word_w = paddr[ADDR_W-1:2];
 
@@ -437,7 +262,7 @@ module crypto_accel
     /* verilator lint_on  UNUSEDSIGNAL */
     assign clr_w = (wr_acc_w && is_irq_clr_addr_w) ? wdata_m_w : 32'h0;
 
-    // CTRL start: W1P write-snoop. NOT stored (see header).
+    // CTRL start: W1P write-snoop. NOT stored See ds:mod:crypto-accel.
     logic start_pulse_w;
     assign start_pulse_w = wr_acc_w & is_ctrl_addr_w & pwdata[2] & strb_mask_w[2];
 
@@ -500,11 +325,8 @@ module crypto_accel
 
     assign key_valid_w = &key_seen_q;
 
-    // -------------------------------------------------------------------------
-    // Scan-mode edge detect -> wipe_w (bead j41m.6). See the SCAN WIPE note in the header.
-    // 2-FF synchroniser + one history flop, deliberately UNRESET (they track scan_mode_i through
-    // reset so that a reset can neither create nor hide an edge).
-    // -------------------------------------------------------------------------
+    // Scan-mode edge detect for wipe_w: a 2-FF synchroniser and one history flop, deliberately unreset.
+    // They track scan_mode_i through reset, so a reset neither creates nor hides an edge.
     logic scan_s1_q, scan_s2_q, scan_prev_q;
     always_ff @(posedge clk) begin
         scan_s1_q   <= scan_mode_i;
@@ -515,12 +337,8 @@ module crypto_accel
     logic wipe_w;   // one cycle per scan_mode_i edge (entry and exit); clears all key/data state
     assign wipe_w = scan_s2_q ^ scan_prev_q;
 
-    // Wipe-done (bead j41m.17): every stage of the edge-detect pipeline, and the raw level, agree
-    // with the history flop. It falls combinationally when scan_mode_i changes (before any clk
-    // edge), stays 0 while the change walks s1 -> s2 -> prev, and rises just after the edge that
-    // loads scan_prev_q -- the SAME edge at which the wipe_w-qualified clears take effect. A change
-    // of scan_mode_i back before the wipe completes keeps it low until the pipeline has flushed.
-    // In functional mode (scan_mode_i = 0 for >= 3 clk edges) it is a constant 1.
+    // scan_wipe_done_o is 0 from a scan_mode_i change until the edge that loads scan_prev_q.
+    // That edge also applies the wipe_w clears. It is a constant 1 after 3 clk edges of a steady scan_mode_i.
     assign scan_wipe_done_o = ~((scan_mode_i ^ scan_prev_q) | (scan_s1_q ^ scan_prev_q) | wipe_w);
 
     logic op_legal_w;
@@ -613,7 +431,7 @@ module crypto_accel
     end
 
     // =========================================================================
-    // Message shadow -- DIN is a 4-word aperture onto one shift register (see header)
+    // Message shadow -- DIN is a 4-word aperture onto one shift register (see ds:mod:crypto-accel)
     // =========================================================================
     logic [MSG_W-1:0] msg_q;
     logic             din_push_w;
@@ -726,10 +544,8 @@ module crypto_accel
             hw_wdata_i[REG_DIGEST0 + i] = sha_h_o_w[32*(7-i) +: 32];
         end
 
-        // SCAN WIPE (bead j41m.6): the bank words that hold key- or message-derived results are
-        // cleared through the hardware-write port; this block comes last so it overrides every
-        // completion / increment write above in the same cycle. IV is not secret but is counter
-        // state that scan must not leave live either.
+        // Scan wipe: clear the bank words that hold key- or message-derived results, and IV, through the hardware-write port.
+        // This block comes last, so it overrides every completion write and the IV3 increment in the same cycle.
         if (wipe_w) begin
             for (int unsigned i = 0; i < 4; i++) begin
                 hw_wen_i  [REG_DOUT0 + i] = 1'b1;

@@ -1,38 +1,25 @@
-// npu_mac_array.sv
-// Phase 6c -- NPU weight-stationary 4 x 4 INT8 MAC grid (bead claude_verilog_test-f7vs.11,
-// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU"; arithmetic spec: tb/models/npu_model.py).
+// npu_mac_array - weight-stationary 4 x 4 INT8 MAC grid for the NPU.
 //
-// STRUCTURE. Row i (0..3) of the grid holds the four INT8 weights W[i][0..3] of one tile row;
-// column j (0..3) is one output lane. Per chunk, npu_top loads the four tile rows one at a time
-// (w_row_we_i[i] pulses with w_word_i = one SRAM word, byte j -> PE[i][j]), then presents the four
-// activations a[0..3] (byte i of a_i) and pulses acc_en_i once:
-//
-//     prod[i][j] = W[i][j] * a[i]                        INT8 x INT8 -> INT16, one per PE
-//     sum[j]     = (prod[0][j] + prod[1][j]) + (prod[2][j] + prod[3][j])   per-column adder tree
-//     acc[j]    += sum[j]                                 INT32 accumulator per column
-//
-// i.e. y[j] = SUM_i W[i][j] * a[i], summed over every chunk of the inference -- the model's
-// mac_chunk(). acc_clr_i zeroes the four accumulators (npu_top fires it at START; clear wins over
-// enable, though they never coincide).
-//
-// BYTE LANES: little-endian, lane / element 0 is bits [7:0] of the 32-bit word, each byte a
-// two's-complement INT8 (one rule for weights, activations and results; see the model).
-//
-// ACCUMULATOR WIDTH AND SATURATION. The accumulator is INT32. The model defines it as saturating,
-// but the worst reachable magnitude is 63 chunks x 4 products x 16384 = 4,128,768 < 2**22 (and
-// 2**22 even at the model's 64), so overflow is UNREACHABLE and a plain 32-bit add is observably
-// identical to saturation. No saturation logic is built; do not read its absence as a bug.
-//
-// FULLY STRUCTURAL: every PE and every column is a genvar-indexed instance of the same code, every
-// array index is a genvar or a literal. There is no runtime-indexed mux anywhere in this file
-// (bead ma7). The PE weight flops carry no reset: they are always loaded (w_row_we_i) before the
-// first accumulate of a chunk, so reset state is never observed. Control and accumulators are
-// reset synchronously, active low, like the rest of periph/.
-//
-// GRID is fixed at 4 (the adder tree is written for four rows and the APB word packs four lanes);
-// anything else is an elaboration error. Single clock domain, no CDC.
-//
-// Lint target: verilator --lint-only -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: Row i (0..3) holds the four INT8 weights W[i][0..3] of one tile row. Column j is one output lane.
+//   Per chunk, npu_top loads the four tile rows one at a time. w_row_we_i[i] pulses with w_word_i,
+//   one SRAM word, and byte j goes to PE[i][j]. Then npu_top presents a[0..3] (byte i of a_i) and pulses acc_en_i once.
+//     prod[i][j] = W[i][j] * a[i]   (INT8 x INT8 to INT16, one per PE)
+//     sum[j] = (prod[0][j] + prod[1][j]) + (prod[2][j] + prod[3][j])   (per-column adder tree)
+//     acc[j] += sum[j]   (INT32 accumulator per column)
+//   So y[j] is the sum over rows i of W[i][j] * a[i], summed over every chunk of the inference.
+//   Every PE and every column is a genvar-indexed instance. The file has no runtime-indexed mux.
+// Parameters: GRID (must be 4; any other value is an elaboration error).
+// Ports: w_row_we_i, w_word_i (byte j to column j), a_i (byte i to row i), acc_clr_i, acc_en_i,
+//   acc_o (four INT32 lanes, lane j in [32*j +: 32]).
+//   acc_clr_i zeroes the four accumulators. Clear wins over enable. npu_top fires it at START.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. The module has no CDC.
+//   Only the accumulators reset. The PE weight flops have no reset.
+// Caller rules:
+//   - Load every tile row with w_row_we_i before the first accumulate of a chunk. Reset state is never observed.
+//   - Lanes are little-endian: element 0 is bits [7:0]. Each byte is a two's-complement INT8.
+//   - The accumulator is a plain 32-bit add with no saturation. The worst reachable magnitude is below 2**22,
+//     so overflow is unreachable. Do not read the missing saturation logic as a bug.
+// Doc: ds:mod:npu-mac-array, tm:mod:npu-mac-array
 
 module npu_mac_array #(
     parameter int unsigned GRID = 4

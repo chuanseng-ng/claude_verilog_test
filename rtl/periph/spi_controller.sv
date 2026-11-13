@@ -1,47 +1,26 @@
-// spi_controller.sv
-// Phase 5 (M4) — SPI master peripheral, MSB-first, 8-bit, APB4 slave.
-// APB migration PR-3: converted from AXI4-Lite slave to APB4 slave.
+// spi_controller - SPI master peripheral, MSB-first, 8-bit transfers, APB4 slave.
 //
-// Register map (word indices into apb4_register_bank):
-//   0  SPI_TX      WO [7:0]  write pushes byte to TX FIFO (via APB access snoop)
-//   1  SPI_RX      RO [7:0]  RX FIFO head; read pops via snoop
-//   2  SPI_STATUS  RO        [0]=busy [1]=tx_full [2]=tx_empty
-//                            [3]=rx_empty [4]=rx_valid(!rx_empty) [5]=rx_full
-//   3  SPI_CTRL    RW [4:0]  [0]=enable [1]=CPOL [2]=CPHA
-//                            [3]=irq_done_en [4]=loopback
-//   4  SPI_CLK_DIV RW [15:0] sclk half-period = (DIV+1) clocks
-//   5  SPI_CS_CTRL RW [0]    manual cs_n level (0=assert/active-low)
-//
-// Shift engine: MSB-first, 8 bits per transfer.
-//   CPOL: idle SCLK level (0=low, 1=high)
-//   CPHA=0: sample leading edge, shift trailing edge
-//   CPHA=1: shift leading edge, sample trailing edge
-//
-// Loopback: spi_miso sample comes from spi_mosi_o instead of spi_miso_i.
-//
-// LIMITATION (external slaves): in CPHA=0 the internal MISO sample on the
-// leading edge precedes the spi_sclk_o pin transition by 1 system clock
-// (sclk_q toggles via NBA; the pin shows the old level that cycle).  This is
-// harmless in loopback (MISO sourced from internal regs).  For a real external
-// slave use SPI_CLK_DIV >= 7 so the 1-clock offset is a negligible fraction of
-// the SCLK half-period and setup margin is preserved.
-//
-// spi_miso_i is routed through a cdc_sync (bead claude_verilog_test-a2g)
-// before reaching the shift engine, adding 2 fabric clocks of latency on top
-// of the above. SPI_CLK_DIV >= 7 keeps this well inside the settled window;
-// SPI_CLK_DIV == 0 or 1 is NOT safe for a real external slave (loopback is
-// unaffected -- see the miso_in mux below).
-//
-// APB snoop (replaces AXI snoop):
-//   TX push: psel & penable & pwrite  & pready at SPI_TX word address with |pstrb.
-//   RX pop:  psel & penable & !pwrite & pready at SPI_RX word address.
-//   APB transfers are single-beat and the access phase completes in one cycle
-//   when pready=1, so the pulse is exactly one cycle — cleaner than the
-//   two-channel AXI-Lite snoop.  No capture registers needed.
-//
-// IRQ: irq_o = irq_done_en & rx_valid
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The shift engine sends 8 bits per transfer, MSB first. CPOL sets the idle SCLK level.
+//   CPHA=0 samples on the leading edge and shifts on the trailing edge.
+//   CPHA=1 shifts on the leading edge and samples on the trailing edge.
+//   spi_miso_i is asynchronous. A cdc_sync adds SYNC_STAGES fabric-clock cycles of latency before the shift engine.
+//   Loopback takes the MISO sample from spi_mosi_o instead of spi_miso_i.
+// Registers (word index into apb4_register_bank):
+//   0 SPI_TX (WO, a write pushes a byte into the TX FIFO), 1 SPI_RX (RO, RX FIFO head, a read pops),
+//   2 SPI_STATUS (RO: [0] busy, [1] tx_full, [2] tx_empty, [3] rx_empty, [4] rx_valid, [5] rx_full),
+//   3 SPI_CTRL (RW: [0] enable, [1] CPOL, [2] CPHA, [3] irq_done_en, [4] loopback),
+//   4 SPI_CLK_DIV (RW [15:0], the SCLK half-period is DIV+1 clocks),
+//   5 SPI_CS_CTRL (RW [0], manual cs_n level, 0 = assert).
+// Parameters: ADDR_W (APB address width, default 12), SYNC_STAGES (spi_miso_i synchroniser depth, at least 2, default 2).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous (pclk = clk, presetn = rst_n).
+// Caller rules:
+//   - For a real external slave use SPI_CLK_DIV >= 7. In CPHA=0 the internal MISO sample precedes the spi_sclk_o
+//     pin transition by 1 system clock. This is harmless in loopback.
+//   - SPI_CLK_DIV 0 and 1 are NOT safe for a real external slave. The synchroniser latency meets or exceeds the half-period.
+//   - The SPI_CLK_DIV >= 7 guidance assumes SYNC_STAGES = 2. Keep the half-period comfortably above SYNC_STAGES.
+//   - A TX push needs at least one strobe (|pstrb).
+//   - irq_o = irq_done_en & rx_valid.
+// Doc: ds:mod:spi-controller, tm:mod:spi-controller, cr:mod:spi-controller
 
 module spi_controller #(
     parameter int unsigned ADDR_W      = 12,  // APB4 local address width
@@ -286,24 +265,9 @@ module spi_controller #(
         end
     end
 
-    // =========================================================================
-    // SPI shift engine FSM
-    //
-    // Mode table (CPOL, CPHA):
-    //   CPOL=0, CPHA=0: idle SCLK=0; sample rising, shift falling  (Mode 0)
-    //   CPOL=0, CPHA=1: idle SCLK=0; shift rising,  sample falling (Mode 1)
-    //   CPOL=1, CPHA=0: idle SCLK=1; sample falling, shift rising  (Mode 2)
-    //   CPOL=1, CPHA=1: idle SCLK=1; shift falling,  sample rising (Mode 3)
-    //
-    // In all modes: the "leading edge" is the first toggle of SCLK.
-    //   CPHA=0: sample on leading edge (active-to-idle direction for CPOL=1,
-    //           idle-to-active for CPOL=0), shift on trailing edge.
-    //   CPHA=1: shift on leading edge, sample on trailing edge.
-    //
-    // We track edge count (0..15 for 8 full cycles = 16 edges).
-    // sclk_q toggles on each sclk_edge; we derive sample/shift events from
-    // whether it's an odd or even edge count, combined with CPHA.
-    // =========================================================================
+    // SPI shift engine FSM. Modes (CPOL, CPHA): 0,0 samples rising and shifts falling; 0,1 shifts rising and samples falling;
+    // 1,0 samples falling and shifts rising; 1,1 shifts falling and samples rising. The leading edge is the first toggle of SCLK.
+    // edge_cnt_q counts 0..15. sclk_q toggles on each sclk_edge. The sample and shift events come from the edge parity and CPHA.
     typedef enum logic [0:0] {
         SPI_IDLE   = 1'b0,
         SPI_ACTIVE = 1'b1
@@ -351,30 +315,9 @@ module spi_controller #(
     //           mosi_hold_q which was captured just before the shift.
     wire miso_loopback = cpha ? mosi_hold_q : tx_shift_q[7];
 
-    // spi_miso_i CDC synchroniser (bead claude_verilog_test-a2g, GH #95
-    // cdc_snitch finding spi-miso-unsynchronised-sample). spi_miso_i is a
-    // board-level asynchronous pin; sampling it directly into rx_shift_q /
-    // rx_push_data was benign only by construction (SPI master mode drives
-    // SCLK itself), not clean by inspection. Route it through the standard
-    // 2-FF synchroniser instead of hand-rolling flops.
-    //
-    // Timing impact: cdc_sync adds SYNC_STAGES (default 2) fabric-clock cycles of latency
-    // between a spi_miso_i transition and its visibility to the shift
-    // engine. This is transparent as long as the external slave's MISO has
-    // already been stable for >= SYNC_STAGES cycles by the sample edge -- true for any
-    // half-period (SPI_CLK_DIV+1) comfortably larger than 2, which is what
-    // this module's own external-slave guidance already requires (see the
-    // SPI_CLK_DIV >= 7 recommendation above). Loopback mode is unaffected:
-    // miso_loopback never routes through spi_miso_i/spi_miso_sync_q.
-    // KNOWN GAP: SPI_CLK_DIV == 0 (half-period = 1 clock) and SPI_CLK_DIV == 1
-    // (half-period = 2 clocks) are NOT safe for a real external slave with
-    // this synchroniser in place -- the 2-cycle sync latency meets or exceeds
-    // the half-period, so the sampled bit can be stale by a full bit
-    // position. Flagged, not silently retimed; see bead
-    // claude_verilog_test-a2g close-out notes. Raising SYNC_STAGES raises the
-    // minimum safe half-period by the same amount: the SPI_CLK_DIV >= 7
-    // guidance assumes SYNC_STAGES = 2, so keep the half-period
-    // (SPI_CLK_DIV + 1 clocks) comfortably above SYNC_STAGES.
+    // spi_miso_i CDC synchroniser. cdc_sync adds SYNC_STAGES (default 2) fabric-clock cycles between a spi_miso_i transition and the shift engine.
+    // SPI_CLK_DIV 0 and 1 are not safe for a real external slave. Raising SYNC_STAGES raises the minimum safe half-period.
+    // Loopback is unaffected: miso_loopback never routes through spi_miso_sync_q.
     logic spi_miso_sync_q;
 
     cdc_sync #(
@@ -499,4 +442,3 @@ module spi_controller #(
     assign irq_o = irq_done_en & rx_valid;
 
 endmodule : spi_controller
-

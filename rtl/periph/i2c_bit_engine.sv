@@ -1,128 +1,33 @@
-// i2c_bit_engine.sv
-// Phase 6a-5 -- I2C master bit/byte/command engine, split out of i2c_controller.sv (bead
-// claude_verilog_test-f7vs.9; refactor of fix_request fr_609b42790e0f_20261003_015343_00's
-// four-phase fix, behaviour-preserving). i2c_controller.sv keeps everything that is bus-facing
-// software: the APB register bank, the TX/RX FIFOs, the pad synchronisers, the loopback slave, the
-// sticky event flags and the interrupt. THIS module is the protocol core: the command FSM, the SCL
-// tick/phase generator, arbitration detection and the stuck-wait timeout. It contains no APB, no
-// FIFO storage and no clock-domain crossing.
+// i2c_bit_engine - I2C master bit, byte and command engine used by i2c_controller.
 //
-// Bit timing. Let N = CLKDIV_eff + 1 (clk per tick) and K = floor(N / 8). One SCL bit is FOUR timed
-// phases plus the SCL-release wait, and the bus period is 4*N clk, so f_scl = f_clk / (4*N):
-//     S_BIT_L1    SCL low,  SDA held after the falling edge          N       clk
-//     S_BIT_L2    SCL low,  SDA at the new value (setup)             N + K   clk
-//     S_BIT_WAIT  SCL released, wait for the SYNCHRONISED SCL high   3       clk  (SYNC_STAGES + 1)
-//     S_BIT_HI1   SCL high, first half                               N - 3 - K  clk
-//     S_BIT_HI    SCL high, second half; SDA sampled / arbitration   N       clk
-//   SCL low  = L1 + L2          = 2N + K  clk      SCL high = WAIT + HI1 + HI = 2N - K  clk
-//   * The release wait is not extra time on top of four ticks: the 3 clk it takes the released SCL
-//     to come back through the 2-FF synchroniser (2 flops + the state register) are COUNTED INSIDE
-//     the high phase, by shortening HI1 by that latency (an uncompensated fourth tick would give a
-//     4N + 3 period -- 3 clk slow). HI1 >= 1 clk needs CLKDIV_eff >= SYNC_STAGES + 1, which is
-//     exactly the CLKDIV_MIN elaboration guard in i2c_controller.sv.
-//   * The K skew moves floor(N/8) clk from the high phase into the SCL-low phase WITHOUT changing the
-//     period. A symmetric 2N / 2N split cannot meet the Fast-mode tLOW (1.3 us) at 400 kHz: two ticks
-//     of 0.625 us give 1.25 us. Each phase length is checked EXHAUSTIVELY for every CLKDIV_eff
-//     3..65535 at the exact maximum-rate clock of each mode (f_clk = 4*N*f_max; a slower bus at the
-//     same f_clk only lengthens both phases). Standard mode (tLOW 4.7 / tHIGH 4.0 us at <= 100 kHz)
-//     is met for every N. Fast mode (1.3 / 0.6 us at <= 400 kHz) is met for every N EXCEPT
-//     N = 4..7 (K = 0) and N = 13..15 (K = 1): there floor(N/8) is too small and tLOW lands at
-//     1.25..1.30 us -- i.e. only when f_clk is 6.4..11.2 MHz or 20.8..24 MHz AND the bus is run at
-//     exactly 400 kHz. None of this SoC's clocks (40 MHz Sky130, 571 MHz ASAP7, 100 MHz test) hits
-//     it; at those N run the bus a little slower. For N >= 16 the low time is >= 0.52 * T and the
-//     high time >= 0.46 * T. (ceil(N/8) would shrink the failing set to N = 4 alone; it changes the
-//     CLKDIV 4 low time and so needs test_i2c_clkdiv_clamp_to_min's "+2" assertion updated.)
-//   KNOWN LIMITATION (bead claude_verilog_test-cd15, deferred by the user as a latent IP limit):
-//     with K = floor(N / 8) the Fast-mode tLOW minimum (1.3 us) at EXACTLY 400 kHz is missed for
-//     N = CLKDIV + 1 in 4..7 and 13..15, i.e. f_clk 6.4..11.2 MHz or 20.8..24 MHz. No clock in this
-//     SoC is in either range (40 MHz Sky130, 571 MHz ASAP7, 1282 MHz CPU domain), so it is
-//     unreachable here; it only matters if this IP is reused in a design clocked in those ranges
-//     (run the bus slower there). The fix, K = ceil(N / 8), is recorded in the bead.
-//   RESIDUAL ERROR (the period is exactly 4*N clk except where noted; all are clk-granular):
-//   * Pad rise time. The 3 clk allowance assumes SCL, once oe_o is released, reaches the pad's logic
-//     threshold less than ~1 clk later (the first synchroniser flop then catches it on the very next
-//     edge). A slower rise -- a weak pull-up on a heavy bus -- is waited out, one clk at a time, and
-//     LENGTHENS the period by that excess. That is clock stretching by the bus capacitance and is
-//     deliberately not compensated: the master must not start its high interval before SCL IS high.
-//   * Slave clock stretching adds the stretch, by definition (bounded by I2C_TIMEOUT).
-//   * Loopback (CTRL.LOOPBACK) has no synchroniser (the mux sits after it, in the parent): the wait
-//     is 1 clk, not 3, so the loopback period is 4*N - 2 clk. Loopback is a fabric-test aid, not a
-//     rate reference.
-//   * The skew uses an integer floor(N / 8): the duty cycle is a step function of N, not exact.
-//   * START/STOP CONDITION times (bead claude_verilog_test-gecv). Every condition phase used to last
-//     ONE tick, about half the I2C minimum at the Standard divisor, so each is now a whole number of
-//     ticks, fixed by the ratio below. Because a tick is exactly 1/(4*f_scl) (N clk, f_scl =
-//     f_clk/(4N)), a phase of k ticks lasts k/(4*f_scl) at ANY CLKDIV: the spec minima are met
-//     whenever f_scl is at or below the rate at which k ticks equals the minimum, in the last column.
-//       phase / state                    ticks  length   spec min Std | Fast     met up to f_scl (Std | Fast)
-//       tHD;STA   START hold  S_ST_LO      2     2N        4.0 us    | 0.6 us    125 kHz  | 833 kHz
-//       tSU;STA   rep. START  S_RS_HI      2     2N (+3)   4.7 us    | 0.6 us    106 kHz  | 833 kHz
-//                 set-up (SCL rise -> SDA fall)
-//       tSU;STO   STOP set-up S_STP_HI     2     2N (+3)   4.0 us    | 0.6 us    125 kHz  | 833 kHz
-//                 (SCL rise -> SDA rise)
-//       tBUF      STOP -> START S_STP_FREE 3     3N        4.7 us    | 1.3 us    159 kHz  | 576 kHz
-//     Derivation: at 100 kHz a tick is 2.5 us, so 2 ticks = 5.0 us clears the tightest Standard
-//     minimum (4.7 us) and 1 tick (2.5 us) did not. At 400 kHz a tick is 0.625 us, so 2 ticks =
-//     1.25 us clears the 0.6 us minima, but NOT tBUF's 1.3 us (2 ticks would miss it by 0.05 us), so
-//     tBUF is 3 ticks = 1.875 us (Standard 7.5 us, which is more than the 4.7 us needed: one count
-//     serves both modes). "+3" is the pad-to-engine synchroniser latency of the SCL release: the
-//     phase is entered only after the SYNCHRONISED SCL reads high, so the real time from the pad
-//     edge is at least that much longer; it is NOT credited towards the figures above.
-//     RANGE OF THE GUARANTEE: the ratio is fixed in ticks and holds for every CLKDIV >= CLKDIV_MIN,
-//     so the Standard-mode minima are met for any bus at or below 100 kHz and the Fast-mode minima
-//     for any bus at or below 400 kHz (both inside the last column; slower buses only lengthen
-//     every phase). It does NOT cover a bus run above 400 kHz (the minima are not Fast-mode-Plus
-//     checked), and it does not cover a bus between ~106 kHz and 400 kHz judged against the Standard
-//     4.7 us figures -- that is Fast mode by definition, judged against the Fast column. tBUF is
-//     enforced only after THIS master's own STOP: S_BUSWAIT merely waits for both lines high, so the
-//     free time after another master's STOP is whatever that master left. Pad rise time and slave
-//     stretching only lengthen a phase. Loopback has a 1 clk (not 3 clk) synchroniser, which does
-//     not change the 2N / 3N figures.
-//   * BUSY SEMANTICS (gecv): the bus-free interval S_STP_FREE lies INSIDE STATUS.busy, and the DONE
-//     event of a STOP-terminated command is raised at its END. A command is accepted only when the
-//     engine is idle, so a command written on the very first APB access after busy drops already
-//     meets tBUF, and a command written during the interval is ignored like any busy-time command
-//     (no queueing, no second START). Consequence: DONE/busy fall 3 ticks (was 1) after the STOP
-//     edge on the bus. No other timing changes: the data-bit period (4N, tLOW/tHIGH above) is
-//     untouched.
-//   * Only the BIT clock and the START/STOP condition times above are spec-checked quantities (bit
-//     clock: test_i2c_clkdiv_100k_400k; conditions and tBUF:
-//     test_i2c_start_stop_condition_times_meet_spec / test_i2c_stop_to_start_bus_free_time_meets_spec).
-//
-// Port contract with i2c_controller.sv (the parent). Every port is single-clock (clk), synchronous
-// to the parent; there is NO clock-domain crossing in this module -- scl_s_i / sda_s_i must already
-// be SYNCHRONISED (or the loopback wired-AND), which is the parent's job.
-//   en_i          1 = engine enabled. 0 aborts at once: lines released, txn cleared, no event pulse.
-//   div_eff_i     prescaler, ALREADY CLAMPED to CLKDIV_MIN by the parent. PRECONDITION:
-//                 div_eff_i >= SYNC_STAGES + 1 (the parent's g_clkdiv_min_check + clamp guarantee
-//                 it); below that the S_BIT_HI1 reload would go negative.
-//   timeout_i     stuck-wait limit in ticks; 0 disables.
-//   cmd_wr_i      a write ACCESS to I2C_CMD this cycle. c_*_i are the decoded CMD fields and are
-//                 only meaningful while cmd_wr_i = 1. The ENGINE decides acceptance (en_i, idle,
-//                 legal START / txn_active rule) and latches the command context; an illegal or
-//                 busy-time command is ignored here, silently, exactly as documented in the parent.
-//   addr_i        {ADDR[6:0], R/W} register value; sampled when a START command is accepted.
-//   scl_s_i /     synchronised sensed line levels (1 = high).
-//   sda_s_i
-//   tx_empty_i /  FIFO status, in-domain flop outputs. tx_head_i is the TX FIFO head (valid when
-//   rx_full_i /   !tx_empty_i). The engine only reads these in S_DATA_WAIT, where it holds SCL low.
-//   tx_head_i
-//   tx_pop_o      one-cycle COMBINATIONAL strobe: pop the TX FIFO this clock (byte taken into the
-//                 shift register). rx_push_o: push rx_byte_o into the RX FIFO this clock. Both are
-//                 forced low by an abort/timeout/arbitration-loss/EN=0 in the same cycle.
-//   scl_oe_o /    REGISTERED open-drain controls, 1 = drive the line low, 0 = release. The parent
-//   sda_oe_o      gates them with its loopback select before they reach the pad.
-//   done_set_o /  one-cycle COMBINATIONAL event pulses (after the abort / EN=0 overrides). The
-//   nack_set_o /  parent owns the sticky flops and the W1C: nothing here is sticky.
-//   arb_set_o /
-//   tout_set_o
-//   busy_d_o /    NEXT-state mirrors for the parent's read-only STATUS writeback (so a read one
-//   txn_d_o       transfer after an event cannot see stale data): busy_d_o = next state != S_IDLE,
-//                 txn_d_o = next "this master holds the bus".
-//
-// Reset: synchronous, active-low, matching the other periph/. Single clock domain.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The engine is the protocol core: the command FSM, the SCL tick and phase generator, arbitration detection
+//   and the stuck-wait timeout. It has no APB, no FIFO storage and no clock-domain crossing.
+//   The parent i2c_controller owns the register bank, the FIFOs, the pad synchronisers, the sticky flags and the interrupt.
+//   Let N = CLKDIV_eff + 1 and K = floor(N / 8). The bus period is 4*N clk, so f_scl = f_clk / (4*N).
+//   SCL low lasts 2N + K clk. SCL high lasts 2N - K clk. The SCL-release wait counts inside the high phase.
+//   A START or STOP condition phase lasts 2 ticks (2N clk). S_RS_HI and S_STP_HI add the 3 clk SCL-release latency.
+//   The bus-free time tBUF lasts 3 ticks (3N clk). It applies only after this master's own STOP.
+//   The bus-free interval S_STP_FREE is inside STATUS.busy. DONE of a STOP command is raised at its end.
+// Parameters: SYNC_STAGES (pad-synchroniser depth that the parent uses, default 2).
+// Ports (all synchronous to clk):
+//   en_i = 0 aborts at once: lines released, transaction cleared, no event pulse.
+//   div_eff_i is the prescaler, already clamped to CLKDIV_MIN by the parent. It must be at least SYNC_STAGES + 1.
+//   timeout_i is the stuck-wait limit in ticks. 0 disables it.
+//   cmd_wr_i marks a write to I2C_CMD. The c_*_i fields are valid only while cmd_wr_i = 1. The engine decides acceptance.
+//   scl_s_i and sda_s_i are the synchronised sensed line levels. addr_i is sampled when a START command is accepted.
+//   tx_empty_i, rx_full_i and tx_head_i are FIFO status. The engine reads them only in S_DATA_WAIT, where it holds SCL low.
+//   tx_pop_o and rx_push_o are one-cycle combinational strobes. Both are low on abort, timeout, arbitration loss or en_i = 0.
+//   scl_oe_o and sda_oe_o are registered open-drain controls: 1 drives the line low, 0 releases it.
+//   done_set_o, nack_set_o, arb_set_o and tout_set_o are one-cycle combinational pulses. Nothing here is sticky.
+//   busy_d_o and txn_d_o are next-state mirrors for the parent's STATUS writeback.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous.
+// Caller rules:
+//   - Synchronise scl_s_i and sda_s_i in the parent, or drive the loopback wired-AND. The engine has no synchroniser.
+//   - Clamp div_eff_i in the parent. A value below SYNC_STAGES + 1 makes the S_BIT_HI1 reload negative.
+//   - The parent owns the sticky flops and the W1C. The engine ignores an illegal or busy-time command silently.
+//   - Fast-mode tLOW at exactly 400 kHz is missed for N in 4..7 and 13..15. Run the bus slower there.
+//   - A slow pad rise or a slave clock stretch lengthens the period. Loopback has a 1 clk wait: its period is 4*N - 2 clk.
+// Doc: ds:mod:i2c-bit-engine, tm:mod:i2c-bit-engine, cr:mod:i2c-bit-engine
 
 module i2c_bit_engine
 #(
@@ -540,17 +445,9 @@ module i2c_bit_engine
         end
     end
 
-    // Tick counter: reloaded on every state change and on every tick, so each interval state lasts
-    // reload+1 clk from entry. In the wait states it free-runs at one tick per CLKDIV_eff+1 clk,
-    // clocking the timeout (the wait states always reload the plain CLKDIV_eff, so I2C_TIMEOUT stays
-    // in whole ticks). The reload value is chosen by the state being ENTERED:
-    //   S_BIT_L2  : CLKDIV_eff + K              (SCL-low phase carries the duty-cycle skew)
-    //   S_BIT_HI1 : CLKDIV_eff - (SYNC_STAGES+1) - K   (the sync wait + skew come out of the high phase)
-    //   S_ST_LO / S_RS_HI / S_STP_HI : 2*N - 1 = 2*CLKDIV_eff + 1   (TICKS_COND = 2 ticks)
-    //   S_STP_FREE: 3*N - 1 = 3*CLKDIV_eff + 2                      (TICKS_FREE = 3 ticks)
-    //   otherwise : CLKDIV_eff
-    // K = floor(N / 8), N = CLKDIV_eff + 1. The first two are >= 0 for CLKDIV_eff >= SYNC_STAGES + 1
-    // (the CLKDIV_MIN guard); 18 b arithmetic cannot overflow (max 3*0xFFFF + 2 = 0x2FFFF).
+    // Tick counter: reloaded on every state change and on every tick. The reload value depends on the state being ENTERED.
+    // S_BIT_L2: CLKDIV_eff + K. S_BIT_HI1: CLKDIV_eff - (SYNC_STAGES+1) - K. S_ST_LO, S_RS_HI, S_STP_HI: 2*N - 1.
+    // S_STP_FREE: 3*N - 1. Otherwise CLKDIV_eff. K = floor(N / 8) and N = CLKDIV_eff + 1.
     localparam int unsigned SYNC_LAT   = SYNC_STAGES + 1;   // clk from SCL release to engine sees it high
     localparam int unsigned TICKS_COND = 2;   // tHD;STA, tSU;STA, tSU;STO -- see the header table
     localparam int unsigned TICKS_FREE = 3;   // tBUF

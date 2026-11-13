@@ -1,80 +1,37 @@
-// npu_top.sv
-// Phase 6c -- INT8 NPU, APB4 slave (bead claude_verilog_test-f7vs.11,
-// Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU"; arithmetic spec tb/models/npu_model.py).
-// Weight-stationary 4 x 4 INT8 grid (npu_mac_array) + 4 KB all-macro weight SRAM (npu_weight_mem)
-// + a shared requantiser, behind ONE APB4 slot and ONE interrupt. EN_NPU = 0 is the SoC tie-off.
+// npu_top - INT8 NPU, APB4 slave: 4 x 4 weight-stationary MAC grid, 4 KB weight SRAM, shared requantiser.
 //
-// REGISTER MAP (word index into the apb4_register_bank, N_REGS = 16; 0x2C-0x3C reserved, read 0):
-//   0  0x00 CTRL      RW  [0] RELU_EN, [3] IRQ_EN; [2] START is W1P (a write-snoop pulse, reads 0)
-//   1  0x04 STATUS    RO  live mirror: [0] busy [1] done [2] ain_full [3] ain_empty [4] aout_valid
-//                         [5] aout_full [6] cfg_rejected (sticky). Reset value 0x08.
-//   2  0x08 WADDR     RW  [9:0] weight-SRAM word address; auto-increments on every accepted WDATA
-//   3  0x0C WDATA     WO  4 packed INT8 weights -> SRAM[WADDR] (snoop); reads 0 forever
-//   4  0x10 TILEBASE  RW  [9:0] SRAM word address of the first weight word of the next inference
-//   5  0x14 KLEN      RW  [5:0] chunk count, 1..63 (6-bit plain count: 64 stores 0 = illegal)
-//   6  0x18 SCALE     RW  [15:0] unsigned multiplier, [20:16] arithmetic right shift
-//   7  0x1C AIN       WO  4 packed INT8 activations -> AIN FIFO (snoop); reads 0 forever
-//   8  0x20 AOUT      RO  live mirror of the AOUT FIFO head (4 packed INT8); A READ POPS IT
-//   9  0x24 IRQ_STAT  RO  [0] sticky done (the SAME flop as STATUS[1])
-//   10 0x28 IRQ_CLR   WO  W1C by write-snoop: [0] clears done, [1] clears cfg_rejected
-//
-// DATAFLOW. y[j] = requant( SUM_chunks SUM_i W[chunk][i][j] * a[chunk][i] ). One chunk is one AIN
-// word plus the four SRAM words SRAM[TILEBASE + 4c + i] (row i, lane j in byte j). Per chunk the
-// engine requests the four rows (one read per cycle), loads them into the grid, waits for an AIN
-// word if it is starved, accumulates, and repeats KLEN times; the accumulators are zeroed at START.
-// The shared requantiser then drains the four lanes one per cycle through a two-stage pipeline
-// (stage 1 registers the FULL-WIDTH 49-bit product acc x SCALE_MULT -- never truncated to 32 bits;
-// stage 2 does the arithmetic floor shift, INT8 saturation, then ReLU if RELU_EN) and packs the
-// four bytes into one AOUT word, pushed on the same edge that sets done. SCALE and RELU_EN are
-// sampled LIVE during the drain: software must not change them while STATUS.busy.
-// Little-endian lanes throughout: lane / element 0 is bits [7:0].
-//
-// FIFOS. AIN and AOUT are depth-4 POSITIONAL SHIFT REGISTERS with a thermometer valid vector: the
-// head is always entry 0, a pop shifts the entries down, a push writes the first free slot (a
-// constant compare per slot). No pointer, no array[runtime_ptr] -- that is the ma7 Synlig
-// OPT_MUXTREE idiom this block must not contain. An AIN write into a full FIFO is dropped silently;
-// an empty AOUT reads 0 and a read of it pops nothing; a result that finishes into a FULL AOUT FIFO
-// is dropped (the older, unpopped results are preserved) -- software must pop before the fifth run.
-//
-// NO NEW RUNTIME-INDEXED MUX. The grid is genvar-structural, the weight address goes to a macro,
-// the requantiser's lane select is a one-hot AND-OR, and the engine state is one-hot shift
-// registers. The only read multiplexer is apb4_register_bank's, already in every netlist.
-//
-// BANK PATTERN. hw_wen = 1 every cycle <=> a LIVE MIRROR written with the NEXT-STATE value
-// (STATUS, AOUT, IRQ_STAT), so after every edge each field equals the state it mirrors, with no
-// lag. WADDR is the one pulse-written word (the bank word IS the address counter). The bank cannot
-// protect a register dynamically, so "a WADDR write while busy is rejected" is done by gating
-// penable into the bank for exactly that transfer; the plan's WMASK for WADDR is unchanged.
-//
-// START. CTRL[2] is not stored (WMASK 0x09): a snoop pulse, so it reads 0 forever. Legality
-// (KLEN == 0, or TILEBASE + 4*KLEN > 1024, is illegal) reads the bank's pre-write values.
-// SOFTWARE CONTRACT: write RELU_EN / IRQ_EN first, START in a later transfer. START while busy is
-// ignored. An ILLEGAL START takes a 2-cycle zero-length path (busy for one edge, done on the
-// second, STATUS[6] latched, no AOUT push, never a stall) -- but DONE DOES NOT IMPLY VALID DATA.
-// A START with fewer than KLEN AIN words queued is STARVED, not illegal: the engine stays busy
-// until the KLEN-th word arrives. Weight writes (WADDR/WDATA) while busy are rejected and latch
-// STATUS[6]; it clears on reset, on IRQ_CLR[1], and on an accepted WDATA write. Partial-strobe
-// WDATA and AIN writes are dropped. The weight SRAM has no readback: weights are observable only
-// through inference results.
-//
-// IRQ: irq_o = done_q & CTRL[3], LEVEL-HELD, never a pulse -- every IRQ crosses core_clk ->
-// cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
-//   done next = (done_q & ~IRQ_CLR[0]) | done_set   -- SET WINS over a same-cycle W1C.
-//
-// CDC: NONE. Single clock domain and no asynchronous input anywhere in this block, so no
-// cdc_sync and no SDC exception applies. Stated on purpose rather than omitted.
-//
-// Reset: synchronous, active-low, throughout (no `negedge rst_n`). The weight SRAM and the
-// datapath flops (FIFO entries, grid weights, product / result registers) are not reset: they are
-// qualified by reset-cleared valid / state bits and always written before use.
-//
-// APB4 (ARM IHI0024C): clk/rst_n map to pclk/presetn, ADDR_W = 12 (byte address, [1:0] unused),
-// zero wait states (pready is the bank's constant 1). Writes commit in the ACCESS phase
-// (psel & penable); every snoop decodes that same phase. Words >= 16 read 0 and drop writes,
-// pslverr stays 0 (the bank's out-of-range policy). Latency from the START write's ACCESS edge
-// to done is deterministic for a pre-filled AIN FIFO (no data-dependent control).
-//
-// Lint target: verilator --lint-only -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The block is npu_mac_array, npu_weight_mem and a requantiser behind one APB4 slot and one interrupt.
+//   y[j] = requant( SUM over chunks and rows i of W[chunk][i][j] * a[chunk][i] ). One chunk is one AIN word
+//   and the four weight words SRAM[TILEBASE + 4c + i]. The engine repeats the chunk KLEN times.
+//   The accumulators are zeroed at START. The requantiser then drains the four lanes, one per cycle.
+//   It multiplies by SCALE[15:0] (unsigned, 49-bit product), shifts right arithmetically by SCALE[20:16] (floor),
+//   saturates to INT8, then applies ReLU if RELU_EN. It packs four bytes into one AOUT word, pushed as done is set.
+//   Lanes are little-endian: element 0 is bits [7:0]. AIN and AOUT are depth-4 positional shift registers.
+// Registers (word index, N_REGS = 16; words 11 to 15 read 0; the full map is in ds:mod):
+//   0 CTRL (RW: [0] RELU_EN, [3] IRQ_EN; [2] START is W1P and reads 0), 1 STATUS (RO, reset 0x08),
+//   2 WADDR (RW, [9:0], auto-increments on every accepted WDATA), 3 WDATA (WO, 4 packed INT8 weights, reads 0),
+//   4 TILEBASE (RW), 5 KLEN (RW [5:0], 1 to 63), 6 SCALE (RW), 7 AIN (WO, reads 0), 8 AOUT (RO, a read pops it),
+//   9 IRQ_STAT (RO, [0] sticky done, the same flop as STATUS[1]), 10 IRQ_CLR (WO, W1C: [0] done, [1] cfg_rejected).
+//   STATUS: [0] busy, [1] done, [2] ain_full, [3] ain_empty, [4] aout_valid, [5] aout_full, [6] cfg_rejected (sticky).
+// Parameters: ADDR_W (APB address width, default 12), WEIGHT_WORDS (must be 1024), GRID (must be 4),
+//   EN_NPU (0 is the SoC tie-off: the APB terminates and irq_o = 0).
+// Ports: mb_en_i, mb_ce_i, mb_we_i, mb_wmask_i, mb_addr_i, mb_din_i and mb_dout0_o are the weight-memory MBIST collar bus.
+//   The block ignores them when EN_NPU = 0.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. The block has no CDC.
+//   The weight SRAM and the datapath flops have no reset. Reset-cleared valid and state bits qualify them.
+// Caller rules:
+//   - Write RELU_EN and IRQ_EN first. Write START in a later transfer. START while busy is ignored.
+//   - Do not change SCALE or RELU_EN while STATUS.busy. The drain samples them live.
+//   - KLEN = 0 or TILEBASE + 4*KLEN > 1024 is illegal. An illegal START takes a 2-cycle path and sets STATUS[6].
+//     done does not imply valid data.
+//   - A START with fewer than KLEN AIN words queued is starved, not illegal. The engine stays busy.
+//   - WADDR and WDATA writes while busy are rejected and latch STATUS[6]. Partial-strobe WDATA and AIN writes are dropped.
+//   - STATUS[6] clears on reset, on IRQ_CLR[1] and on an accepted WDATA write.
+//   - An AIN write into a full FIFO is dropped. An empty AOUT reads 0 and a read pops nothing.
+//   - A result that finishes into a full AOUT FIFO is dropped and the older results stay. Pop AOUT before the fifth run.
+//   - The weight SRAM has no readback.
+//   - irq_o = done_q & CTRL[3]. It is level-held. done clears on IRQ_CLR[0] or reset. A new done beats a same-cycle clear.
+// Doc: ds:mod:npu-top, tm:mod:npu-top
 
 module npu_top #(
     parameter int unsigned ADDR_W       = 12,   // APB4 local address width

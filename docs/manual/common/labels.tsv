@@ -122,16 +122,16 @@ cr:app:archive-session-summary:verification-status	docs/manual/cr/parts/04-fix-l
 cr:app:archive-session-summary:whats-working-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	9757	\texorpdfstring{What\textquotesingle s Working \ok{}}{What\textquotesingle s Working }
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
-cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	3610	Build files
+cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	3720	Build files
 cr:ch:fix-log	docs/manual/cr/parts/04-fix-log-and-archive.tex	3	Fix log
 cr:ch:investigations	docs/manual/cr/parts/03-investigations.tex	3	Investigations
 cr:ch:phase-5-soc-runs	docs/manual/cr/parts/02-run-histories.tex	3	Phase 5 SoC runs
 cr:ch:phase-history	docs/manual/cr/parts/01-phase-and-status-history.tex	3	Phase history
-cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	923	Physical design files
+cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	1033	Physical design files
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
 cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
-cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	3606	Test benches
+cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	3716	Test benches
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
 cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
 cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	306	Controls (MEASURED unless marked)
@@ -534,39 +534,45 @@ cr:mod:boot-rom	docs/manual/cr/parts/05-source-file-history.tex	140	\texttt{soc/
 cr:mod:cdc-reset-sync	docs/manual/cr/parts/05-source-file-history.tex	161	\texttt{soc/cdc/cdc\_reset\_sync.sv}
 cr:mod:cdc-sync	docs/manual/cr/parts/05-source-file-history.tex	178	\texttt{soc/cdc/cdc\_sync.sv}
 cr:mod:dft-clk-mux	docs/manual/cr/parts/05-source-file-history.tex	216	\texttt{soc/dft/dft\_clk\_mux.sv}
+cr:mod:i2c-bit-engine	docs/manual/cr/parts/05-source-file-history.tex	917	\texttt{periph/i2c\_bit\_engine.sv}
+cr:mod:interrupt-controller	docs/manual/cr/parts/05-source-file-history.tex	933	\texttt{periph/interrupt\_controller.sv}
 cr:mod:pll-apb-regs	docs/manual/cr/parts/05-source-file-history.tex	232	\texttt{soc/pll/pll\_apb\_regs.sv}
 cr:mod:pll-rnm	docs/manual/cr/parts/05-source-file-history.tex	257	\texttt{soc/pll/pll\_rnm.sv}
 cr:mod:pll-subsystem	docs/manual/cr/parts/05-source-file-history.tex	271	\texttt{soc/pll/pll\_subsystem.sv}
 cr:mod:soc-addr-map-pkg	docs/manual/cr/parts/05-source-file-history.tex	286	\texttt{soc/soc\_addr\_map\_pkg.sv}
 cr:mod:soc-periph-map-pkg	docs/manual/cr/parts/05-source-file-history.tex	304	\texttt{soc/soc\_periph\_map\_pkg.sv}
 cr:mod:soc-top	docs/manual/cr/parts/05-source-file-history.tex	389	\texttt{soc/soc\_top.sv}
+cr:mod:spi-controller	docs/manual/cr/parts/05-source-file-history.tex	947	\texttt{periph/spi\_controller.sv}
 cr:mod:sram-controller	docs/manual/cr/parts/05-source-file-history.tex	788	\texttt{soc/sram\_controller.sv}
+cr:mod:trng	docs/manual/cr/parts/05-source-file-history.tex	961	\texttt{periph/trng.sv}
+cr:mod:uart-controller	docs/manual/cr/parts/05-source-file-history.tex	986	\texttt{periph/uart\_controller.sv}
+cr:mod:watchdog-timer	docs/manual/cr/parts/05-source-file-history.tex	1000	\texttt{periph/watchdog\_timer.sv}
 cr:part:fix-log-and-archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	1	Fix log and archive
 cr:part:investigations	docs/manual/cr/parts/03-investigations.tex	1	Investigations
 cr:part:phase-and-status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	1	Phase and status history
 cr:part:run-histories	docs/manual/cr/parts/02-run-histories.tex	1	Run histories
 cr:part:source-file-history	docs/manual/cr/parts/05-source-file-history.tex	1	Source-file history
-cr:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	1336	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
-cr:pd:asap7-gpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	1444	\texttt{asap7/gpu/macro\_placement\_3014.cfg}
-cr:pd:asap7-gpu-sdc	docs/manual/cr/parts/05-source-file-history.tex	1428	\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}
-cr:pd:asap7-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	1464	\texttt{asap7/pdn\_asap7\_orfs.tcl}
-cr:pd:asap7-soc-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	1810	\texttt{asap7/soc/pdn\_orfs.tcl}
-cr:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	1552	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
-cr:pd:asap7-soc-phase5-sdc	docs/manual/cr/parts/05-source-file-history.tex	1510	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
-cr:pd:makefile	docs/manual/cr/parts/05-source-file-history.tex	928	\texttt{Makefile}
-cr:pd:phase1-cpu-enhanced-sdc	docs/manual/cr/parts/05-source-file-history.tex	1827	\texttt{constraints/phase1\_cpu\_enhanced.sdc}
-cr:pd:phase1-cpu-post-cts-sdc	docs/manual/cr/parts/05-source-file-history.tex	1845	\texttt{constraints/phase1\_cpu\_post\_cts.sdc}
-cr:pd:phase5-soc-multiclock-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	2134	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
-cr:pd:phase5-soc-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	1883	\texttt{constraints/phase5\_soc\_multiclock.sdc}
-cr:pd:phase5-soc-upf	docs/manual/cr/parts/05-source-file-history.tex	1864	\texttt{constraints/phase5\_soc.upf}
-cr:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/cr/parts/05-source-file-history.tex	2812	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
-cr:pd:scripts-check-cdc-timing-tcl	docs/manual/cr/parts/05-source-file-history.tex	2566	\texttt{scripts/check\_cdc\_timing.tcl}
-cr:pd:scripts-check-multiclock-sdc-tcl	docs/manual/cr/parts/05-source-file-history.tex	2828	\texttt{scripts/check\_multiclock\_sdc.tcl}
-cr:pd:sky130-soc-cdc-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	3209	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
-cr:pd:sky130-soc-macro-placement-cfg	docs/manual/cr/parts/05-source-file-history.tex	3248	\texttt{sky130/soc/macro\_placement.cfg}
-cr:pd:sky130-soc-pdn-tcl	docs/manual/cr/parts/05-source-file-history.tex	3359	\texttt{sky130/soc/pdn.tcl}
-cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration	docs/manual/cr/parts/05-source-file-history.tex	3575	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/rc\_calibration.tcl}
-cr:pd:sky130-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	2864	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
+cr:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	1446	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
+cr:pd:asap7-gpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	1554	\texttt{asap7/gpu/macro\_placement\_3014.cfg}
+cr:pd:asap7-gpu-sdc	docs/manual/cr/parts/05-source-file-history.tex	1538	\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}
+cr:pd:asap7-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	1574	\texttt{asap7/pdn\_asap7\_orfs.tcl}
+cr:pd:asap7-soc-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	1920	\texttt{asap7/soc/pdn\_orfs.tcl}
+cr:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	1662	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
+cr:pd:asap7-soc-phase5-sdc	docs/manual/cr/parts/05-source-file-history.tex	1620	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
+cr:pd:makefile	docs/manual/cr/parts/05-source-file-history.tex	1038	\texttt{Makefile}
+cr:pd:phase1-cpu-enhanced-sdc	docs/manual/cr/parts/05-source-file-history.tex	1937	\texttt{constraints/phase1\_cpu\_enhanced.sdc}
+cr:pd:phase1-cpu-post-cts-sdc	docs/manual/cr/parts/05-source-file-history.tex	1955	\texttt{constraints/phase1\_cpu\_post\_cts.sdc}
+cr:pd:phase5-soc-multiclock-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	2244	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
+cr:pd:phase5-soc-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	1993	\texttt{constraints/phase5\_soc\_multiclock.sdc}
+cr:pd:phase5-soc-upf	docs/manual/cr/parts/05-source-file-history.tex	1974	\texttt{constraints/phase5\_soc.upf}
+cr:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/cr/parts/05-source-file-history.tex	2922	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
+cr:pd:scripts-check-cdc-timing-tcl	docs/manual/cr/parts/05-source-file-history.tex	2676	\texttt{scripts/check\_cdc\_timing.tcl}
+cr:pd:scripts-check-multiclock-sdc-tcl	docs/manual/cr/parts/05-source-file-history.tex	2938	\texttt{scripts/check\_multiclock\_sdc.tcl}
+cr:pd:sky130-soc-cdc-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	3319	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
+cr:pd:sky130-soc-macro-placement-cfg	docs/manual/cr/parts/05-source-file-history.tex	3358	\texttt{sky130/soc/macro\_placement.cfg}
+cr:pd:sky130-soc-pdn-tcl	docs/manual/cr/parts/05-source-file-history.tex	3469	\texttt{sky130/soc/pdn.tcl}
+cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration	docs/manual/cr/parts/05-source-file-history.tex	3685	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/rc\_calibration.tcl}
+cr:pd:sky130-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	2974	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
 cr:run:asap7	docs/manual/cr/parts/02-run-histories.tex	2452	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu	docs/manual/cr/parts/02-run-histories.tex	4728	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu:era-1-sdc-units-bug-runs-731	docs/manual/cr/parts/02-run-histories.tex	4842	Era 1: SDC Units Bug (Runs 7--31)
@@ -954,12 +960,12 @@ ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	11942	Memory map
 ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	11375	Mixed-signal PLL
 ds:ch:mod-cdc-primitives	docs/manual/ds/parts/03-module-contracts.tex	1863	CDC primitives
 ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
-ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	2916	Crypto accelerator
+ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3937	Crypto accelerator
 ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	2087	DFT blocks
-ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	2924	FPGA wrappers
+ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	4550	FPGA wrappers
 ds:ch:mod-gpu	docs/manual/ds/parts/03-module-contracts.tex	11	GPU
 ds:ch:mod-memory-and-caches	docs/manual/ds/parts/03-module-contracts.tex	7	Memory and caches
-ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	2920	NPU
+ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	4348	NPU
 ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	2912	Peripherals
 ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2680	PLL subsystem
 ds:ch:mod-soc-fabric	docs/manual/ds/parts/03-module-contracts.tex	15	SoC fabric
@@ -1675,6 +1681,7 @@ ds:mm:memory-map:trap-vector	docs/manual/ds/parts/01-architecture.tex	13475	Trap
 ds:mm:memory-map:trng-registers-phase-6a-4	docs/manual/ds/parts/01-architecture.tex	12903	Peripheral Registers (Phase 5)
 ds:mm:memory-map:uart-registers	docs/manual/ds/parts/01-architecture.tex	12633	Peripheral Registers (Phase 5)
 ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.tex	12821	Peripheral Registers (Phase 5)
+ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	3942	\texttt{periph/aes128\_core.sv}
 ds:mod:apb-cdc-bridge	docs/manual/ds/parts/03-module-contracts.tex	57	\texttt{soc/apb\_cdc\_bridge.sv}
 ds:mod:apb4-register-bank	docs/manual/ds/parts/03-module-contracts.tex	20	\texttt{soc/apb4\_register\_bank.sv}
 ds:mod:async-axi-fifo	docs/manual/ds/parts/03-module-contracts.tex	437	\texttt{soc/async\_axi\_fifo.sv}
@@ -1683,28 +1690,45 @@ ds:mod:axi-lite-register-bank	docs/manual/ds/parts/03-module-contracts.tex	558	\
 ds:mod:cdc-gray-fifo	docs/manual/ds/parts/03-module-contracts.tex	1868	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
 ds:mod:cdc-reset-sync	docs/manual/ds/parts/03-module-contracts.tex	1937	\texttt{soc/cdc/cdc\_reset\_sync.sv}
 ds:mod:cdc-sync	docs/manual/ds/parts/03-module-contracts.tex	2005	\texttt{soc/cdc/cdc\_sync.sv}
+ds:mod:crypto-accel	docs/manual/ds/parts/03-module-contracts.tex	4029	\texttt{periph/crypto\_accel.sv}
 ds:mod:dft-clk-mux	docs/manual/ds/parts/03-module-contracts.tex	2092	\texttt{soc/dft/dft\_clk\_mux.sv}
 ds:mod:dft-clk-switch	docs/manual/ds/parts/03-module-contracts.tex	2143	\texttt{soc/dft/dft\_clk\_switch.sv}
 ds:mod:dft-ctrl	docs/manual/ds/parts/03-module-contracts.tex	2254	\texttt{soc/dft/dft\_ctrl.sv}
 ds:mod:dft-ctrl-ports	docs/manual/ds/parts/03-module-contracts.tex	2316	\texttt{soc/dft/dft\_ctrl\_ports.sv}
 ds:mod:dft-rst-mux	docs/manual/ds/parts/03-module-contracts.tex	2352	\texttt{soc/dft/dft\_rst\_mux.sv}
+ds:mod:dma-engine	docs/manual/ds/parts/03-module-contracts.tex	2917	\texttt{periph/dma\_engine.sv}
+ds:mod:gpio-controller	docs/manual/ds/parts/03-module-contracts.tex	2977	\texttt{periph/gpio\_controller.sv}
+ds:mod:i2c-bit-engine	docs/manual/ds/parts/03-module-contracts.tex	3086	\texttt{periph/i2c\_bit\_engine.sv}
+ds:mod:i2c-controller	docs/manual/ds/parts/03-module-contracts.tex	3211	\texttt{periph/i2c\_controller.sv}
+ds:mod:interrupt-controller	docs/manual/ds/parts/03-module-contracts.tex	3362	\texttt{periph/interrupt\_controller.sv}
 ds:mod:jtag-tap	docs/manual/ds/parts/03-module-contracts.tex	2385	\texttt{soc/dft/jtag\_tap.sv}
 ds:mod:mbist-ctl-hold	docs/manual/ds/parts/03-module-contracts.tex	2461	\texttt{soc/dft/mbist\_ctl\_hold.sv}
 ds:mod:mbist-ctrl	docs/manual/ds/parts/03-module-contracts.tex	2482	\texttt{soc/dft/mbist\_ctrl.sv}
 ds:mod:mbist-status-sync	docs/manual/ds/parts/03-module-contracts.tex	2534	\texttt{soc/dft/mbist\_status\_sync.sv}
 ds:mod:mbist-xing	docs/manual/ds/parts/03-module-contracts.tex	2563	\texttt{soc/dft/mbist\_xing.sv}
 ds:mod:mem-collar	docs/manual/ds/parts/03-module-contracts.tex	2599	\texttt{soc/dft/mem\_collar.sv}
+ds:mod:npu-mac-array	docs/manual/ds/parts/03-module-contracts.tex	4353	\texttt{npu/npu\_mac\_array.sv}
+ds:mod:npu-top	docs/manual/ds/parts/03-module-contracts.tex	4399	\texttt{npu/npu\_top.sv}
+ds:mod:npu-weight-mem	docs/manual/ds/parts/03-module-contracts.tex	4481	\texttt{npu/npu\_weight\_mem.sv}
 ds:mod:pll-apb-regs	docs/manual/ds/parts/03-module-contracts.tex	2685	\texttt{soc/pll/pll\_apb\_regs.sv}
 ds:mod:pll-clkgen	docs/manual/ds/parts/03-module-contracts.tex	2739	\texttt{soc/pll/pll\_clkgen.sv}
 ds:mod:pll-rnm	docs/manual/ds/parts/03-module-contracts.tex	2782	\texttt{soc/pll/pll\_rnm.sv}
 ds:mod:pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2825	\texttt{soc/pll/pll\_subsystem.sv}
 ds:mod:pmu	docs/manual/ds/parts/03-module-contracts.tex	595	\texttt{soc/pmu.sv}
+ds:mod:pwm-controller	docs/manual/ds/parts/03-module-contracts.tex	3406	\texttt{periph/pwm\_controller.sv}
+ds:mod:sha256-core	docs/manual/ds/parts/03-module-contracts.tex	4274	\texttt{periph/sha256\_core.sv}
 ds:mod:soc-addr-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	805	\texttt{soc/soc\_addr\_map\_pkg.sv}
 ds:mod:soc-bus	docs/manual/ds/parts/03-module-contracts.tex	844	\texttt{soc/soc\_bus.sv}
 ds:mod:soc-mbist	docs/manual/ds/parts/03-module-contracts.tex	2644	\texttt{soc/dft/soc\_mbist.sv}
 ds:mod:soc-periph-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	882	\texttt{soc/soc\_periph\_map\_pkg.sv}
 ds:mod:soc-top	docs/manual/ds/parts/03-module-contracts.tex	937	\texttt{soc/soc\_top.sv}
+ds:mod:spi-controller	docs/manual/ds/parts/03-module-contracts.tex	3555	\texttt{periph/spi\_controller.sv}
 ds:mod:sram-controller	docs/manual/ds/parts/03-module-contracts.tex	1647	\texttt{soc/sram\_controller.sv}
+ds:mod:trng	docs/manual/ds/parts/03-module-contracts.tex	3613	\texttt{periph/trng.sv}
+ds:mod:trng-lfsr-entropy	docs/manual/ds/parts/03-module-contracts.tex	3689	\texttt{periph/trng\_lfsr\_entropy.sv}
+ds:mod:trng-ro-sky130	docs/manual/ds/parts/03-module-contracts.tex	3739	\texttt{periph/trng\_ro\_sky130.sv}
+ds:mod:uart-controller	docs/manual/ds/parts/03-module-contracts.tex	3777	\texttt{periph/uart\_controller.sv}
+ds:mod:watchdog-timer	docs/manual/ds/parts/03-module-contracts.tex	3835	\texttt{periph/watchdog\_timer.sv}
 ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
@@ -1821,12 +1845,12 @@ tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	5017	FreePDK45 
 tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10042	High-level synthesis
 tm:ch:mod-cdc-primitives	docs/manual/tm/parts/01-module-reference.tex	672	CDC primitives
 tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
-tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	984	Crypto accelerator
+tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	1595	Crypto accelerator
 tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	874	DFT blocks
-tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	992	FPGA wrappers
+tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	1897	FPGA wrappers
 tm:ch:mod-gpu	docs/manual/tm/parts/01-module-reference.tex	11	GPU
 tm:ch:mod-memory-and-caches	docs/manual/tm/parts/01-module-reference.tex	7	Memory and caches
-tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	988	NPU
+tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1809	NPU
 tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	980	Peripherals
 tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	950	PLL subsystem
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	15	SoC fabric
@@ -2117,6 +2141,7 @@ tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/par
 tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6927	Testability findings (proposals; no RTL changed)
 tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6987	Notes on tooling (for the next person)
 tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7035	Gap list toward real Stage 2
+tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1600	\texttt{periph/aes128\_core.sv}
 tm:mod:apb-cdc-bridge	docs/manual/tm/parts/01-module-reference.tex	20	\texttt{soc/apb\_cdc\_bridge.sv}
 tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	182	\texttt{soc/apb\_interconnect.sv}
 tm:mod:async-axi-fifo	docs/manual/tm/parts/01-module-reference.tex	208	\texttt{soc/async\_axi\_fifo.sv}
@@ -2124,12 +2149,28 @@ tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	234	\texttt{so
 tm:mod:cdc-gray-fifo	docs/manual/tm/parts/01-module-reference.tex	677	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
 tm:mod:cdc-reset-sync	docs/manual/tm/parts/01-module-reference.tex	757	\texttt{soc/cdc/cdc\_reset\_sync.sv}
 tm:mod:cdc-sync	docs/manual/tm/parts/01-module-reference.tex	805	\texttt{soc/cdc/cdc\_sync.sv}
+tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	1674	\texttt{periph/crypto\_accel.sv}
 tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	879	\texttt{soc/dft/dft\_clk\_switch.sv}
+tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	985	\texttt{periph/dma\_engine.sv}
+tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1058	\texttt{periph/gpio\_controller.sv}
+tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1133	\texttt{periph/i2c\_bit\_engine.sv}
+tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1185	\texttt{periph/i2c\_controller.sv}
+tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1244	\texttt{periph/interrupt\_controller.sv}
 tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	928	\texttt{soc/dft/mbist\_ctrl.sv}
+tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	1814	\texttt{npu/npu\_mac\_array.sv}
+tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	1828	\texttt{npu/npu\_top.sv}
+tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	1856	\texttt{npu/npu\_weight\_mem.sv}
 tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	955	\texttt{soc/pll/pll\_subsystem.sv}
 tm:mod:pmu	docs/manual/tm/parts/01-module-reference.tex	256	\texttt{soc/pmu.sv}
+tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1280	\texttt{periph/pwm\_controller.sv}
+tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	1751	\texttt{periph/sha256\_core.sv}
 tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	338	\texttt{soc/soc\_top.sv}
+tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1339	\texttt{periph/spi\_controller.sv}
 tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	570	\texttt{soc/sram\_controller.sv}
+tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1405	\texttt{periph/trng.sv}
+tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1427	\texttt{periph/trng\_lfsr\_entropy.sv}
+tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1441	\texttt{periph/uart\_controller.sv}
+tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	1564	\texttt{periph/watchdog\_timer.sv}
 tm:part:decisions	docs/manual/tm/parts/05-decisions.tex	1	Decisions
 tm:part:dft-fpga-hls-and-analog	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1	DFT, FPGA, HLS and analog
 tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module reference

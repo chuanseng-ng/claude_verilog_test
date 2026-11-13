@@ -1,56 +1,28 @@
-// npu_weight_mem.sv
-// Phase 6c -- NPU weight memory: one 4 KB (1024 x 32) store, ALL HARD MACRO, 3-way ifdef
-// (bead claude_verilog_test-f7vs.11, Doc: ds:ch:phase6-ip-expansion-plan Sec.7 "6c -- NPU",
-// "Weight-SRAM instantiation").
+// npu_weight_mem - NPU weight memory: one 4 KB (1024 x 32) store, four ifdef arms.
 //
-//   `ifdef SRAM_SKY130   1 x sky130_sram_4kbyte_1rw1r_32x1024_8   (port 0 only, port 1 tied off)
-//   `elsif SRAM_ASAP7    4 x sram_1rw_256x32_asap7, each clocked through rv32i_clock_gate
-//   `else                4 x sram_1rw_256x32_freepdk45            (the cocotb / Verilator default)
-//
-// THERE IS NO BEHAVIOURAL ARRAY IN THIS FILE, so no define can ever infer flops. The
-// sram_controller.sv two-way shape (macro / flat `logic [31:0] mem [..]`) is deliberately NOT
-// copied: its flat arm is the 32,768-flop structure bead rvb proved non-terminating in the ASAP7
-// post-CTS resizer, and the NPU would have been a second one.
-//
-// THE MACRO INSTANCE IS NAMED u_sram_macro IN EVERY ARM (banked arms: gen_bank[b].u_sram_macro).
-// pnr/sky130/soc/config.json PDN_MACRO_CONNECTIONS matches the leaf instance name with the regex
-// ".*u_sram_macro.*"; any other name silently leaves vccd1/vssd1 unconnected (the PSM-0069 class).
-// Do not rename. USE_POWER_PINS is deliberately never defined: PG comes from the LEF plus
-// PDN_MACRO_CONNECTIONS, so no power ports exist at RTL level.
-//
-// DECLARED READ LATENCY: 2 CYCLES, IDENTICAL ON EVERY ARM.
-//   The three macro models disagree. sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv registers its inputs
-//   at posedge and launches dout at the following NEGEDGE; sim/sram_1rw_256x32_verilator.v (the
-//   FreePDK45 model every default build uses) launches dout at the posedge itself. Their dout is
-//   therefore valid at different instants inside the cycle after the request, but in BOTH it is
-//   stable well before the next posedge. This wrapper captures the (muxed) macro output into
-//   rd_data_o with one more flop, so the contract presented to npu_top is arm-independent:
-//
-//       rd_en_i / rd_addr_i sampled by the macro at edge E0   (request cycle = the cycle before E0)
-//       rd_data_o valid during the cycle that ENDS at edge E0+2, i.e. captured by a consumer at E0+2.
-//
-//   npu_top depends only on this ("request in cycle c -> data in cycle c+2"), never on a macro.
-//   The extra flop also keeps the 4:1 bank mux and the Sky130 macro's clk-to-dout delay off the
-//   consumer's path. Write data reaches the array no later than the negedge after the request edge
-//   on every arm, which is before any read could be requested (npu_top rejects weight writes while
-//   busy and only reads while busy, so a read request is never issued the cycle after a write).
-//
-// NO RUNTIME-INDEXED MUX (bead ma7). The weight address goes to a macro, not to a mux. The only
-// selector is the 4:1 bank read mux of the two banked arms, written as a tree of 2:1 ternaries on
-// the REGISTERED bank select with constant bank indices -- never bank_dout[sel_q]. Bank decode for
-// csb0 is a constant compare per generate instance.
-//
-// wr_en_i and rd_en_i MUST NOT be asserted together (npu_top guarantees it: a weight write is
-// accepted only while idle, a read is issued only while busy). If both were, the write wins.
-// Single clock domain, no reset: the array is not resettable and rd_data_o / the bank select are
-// pure datapath, qualified by the consumer.
-//
-// Elaboration guard: a bare $fatal in a generate scope (fires under verilator --lint-only, unlike
-// `initial $error`) unless WEIGHT_WORDS == 1024, so a parameter sweep cannot silently truncate onto
-// the macro geometry.
-//
-// Lint target: verilator --lint-only -Wall -Wno-IMPORTSTAR 0 errors 0 warnings (default,
-// +define+SRAM_SKY130 and +define+SRAM_ASAP7 builds).
+// Function: Four arms. The file has no behavioural array.
+//   `ifdef SRAM_SKY130: 1 x sky130_sram_4kbyte_1rw1r_32x1024_8, port 0 only, port 1 tied off.
+//   Otherwise four banks (bank = addr[9:8]) of one of: `ifdef SRAM_ASAP7: 4 x sram_1rw_256x32_asap7, each clocked
+//   through rv32i_clock_gate. `elsif FPGA: 4 x fpga_sram_1rw (block-RAM inferable, not a hard macro).
+//   `else: 4 x sram_1rw_256x32_freepdk45, the cocotb and Verilator default. SRAM_SKY130 wins if it is defined with FPGA.
+//   The banked arms read through a 4:1 mux built as a tree of 2:1 ternaries on the registered bank select.
+//   The file has no runtime-indexed mux.
+//   The read latency is 2 cycles on every arm. A request in cycle c gives rd_data_o in cycle c+2.
+//   One capture flop on rd_data_o makes this independent of the macro model.
+// Parameters: WEIGHT_WORDS (must be 1024; any other value is an elaboration $fatal).
+// Ports: write port wr_en_i, wr_addr_i, wr_data_i (full 32-bit word). Read port rd_en_i, rd_addr_i, rd_data_o.
+//   mb_* is the MBIST collar bus. It is active only in the SRAM_SKY130 arm. mb_dout0_o is 0 in the other arms.
+// Clocks and resets: clk is the only clock. There is no reset. The array is not resettable.
+//   rd_data_o and the bank select are datapath, qualified by the consumer.
+// Caller rules:
+//   - Do not assert wr_en_i and rd_en_i together. If both are asserted, the write wins. npu_top never does this.
+//   - Name the macro instance u_sram_macro in every arm. The banked arms use gen_bank[b].u_sram_macro.
+//     The Sky130 PDN_MACRO_CONNECTIONS regex ".*u_sram_macro.*" matches that name.
+//     Any other name leaves vccd1 and vssd1 unconnected.
+//   - Never define USE_POWER_PINS. Power comes from the LEF and PDN_MACRO_CONNECTIONS, so the RTL has no power ports.
+//   - Do not copy the two-way shape of sram_controller.sv (macro or flat array). Its flat arm is a 32,768-flop
+//     structure that made the ASAP7 post-CTS resizer non-terminating.
+// Doc: ds:mod:npu-weight-mem, tm:mod:npu-weight-mem
 
 module npu_weight_mem #(
     parameter int unsigned WEIGHT_WORDS = 1024

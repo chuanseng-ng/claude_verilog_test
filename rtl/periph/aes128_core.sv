@@ -1,78 +1,26 @@
-// aes128_core.sv
-// Phase 6b -- AES-128 encrypt-only block core, iterative 128-bit datapath (bead
-// claude_verilog_test-f7vs.10, Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "6b -- CRYPTO"). Sub-core of
-// crypto_accel.sv: it has no APB, no register storage visible to software and no clock-domain
-// crossing. The parent owns the key shadow, the message shadow, the sticky done flag and the
-// result register (the register bank word IS the result register).
+// aes128_core - AES-128 encrypt-only block core with an iterative 128-bit datapath.
 //
-// INSECURE-BY-SCOPE: no side-channel or DPA resistance (the S-box is a data-dependent case
-// network), no fault-injection hardening, not certified, not validated against any scheme. The
-// full non-goals paragraph is in crypto_accel.sv; it applies to this file unchanged.
-//
-// BYTE ORDER. FIPS-197 big-endian throughout: for a 128-bit block B[0..15], byte B0 is bits
-// [127:120] and B15 is bits [7:0]. The state is column-major, so s[127:96] is column 0 (bytes 0..3).
-// Encrypt-only: CTR mode makes this a complete cipher in both directions (S ^ (S ^ P) = P), so no
-// inverse S-box and no inverse key schedule exist anywhere.
-//
-// NO RUNTIME-INDEXED MUX (bead ma7 acceptance criterion; the proven Synlig OPT_MUXTREE miscompile).
-//   * The S-box is `function sbox` = `unique case (b)` over 256 CONSTANT labels returning
-//     literals -- NOT an indexed read of a 256-entry localparam array.
-//   * The round constant is `rcon_q <= xtime(rcon_q)`, reset 8'h01, advanced once per round: no
-//     table and no select.
-//   * ShiftRows is fixed wiring; MixColumns and SubBytes use constant slices only; the one
-//     select left in the datapath is the 1-bit mix_en 2:1 (round 10 skips MixColumns).
-//
-// KEY SCHEDULE: ON-THE-FLY. rk_q is ONE 128-bit register holding the current round key, advanced
-// once per round: w0' = w0 ^ SubWord(RotWord(w3)) ^ {rcon,24'h0}, w1' = w0'^w1, w2' = w1'^w2,
-// w3' = w2'^w3. Precomputed-and-stored (11 round keys = 1408 flops) is FORBIDDEN here twice over:
-// the flop count, and because fetching round key r is exactly the forbidden runtime-indexed read.
-//
-// MIXCOLUMNS per column a0..a3, t = a0^a1^a2^a3: b_i = a_i ^ t ^ xtime(a_i ^ a_(i+1 mod 4)).
-// Identity: a0 ^ t ^ xtime(a0^a1) = 2a0 ^ 3a1 ^ a2 ^ a3. 4 xtimes per column (16 total) against 8 for
-// the naive 2a_i ^ 3a_(i+1) ^ a_(i+2) ^ a_(i+3) expansion.
-//
-// SBOX_PARALLEL (16 or 4; any other value is a g_sbox_parallel_check elaboration $fatal).
-//   Physical S-box count = CALL-SITE count of the pure function sbox().
-//   16: 16 datapath + 4 key-schedule SubWord = 20 S-boxes; 1 whitening cycle + 10 round cycles =
-//       11 CYCLES/BLOCK (start edge to completion edge). The key schedule's 4 cannot be folded into
-//       the datapath's 16: both are consumed the same cycle from different operands, so sharing
-//       would need a select -- the forbidden construct.
-//    4: 4 datapath + 4 key-schedule = 8 S-boxes; 1 + 10*4 = 41 CYCLES/BLOCK. The datapath folds by
-//       a byte-lane CAROUSEL, not a case(phase): phases 0..2 rotate s_q right by 32 through the
-//       fixed window s_q[31:0] -> sbox4 -> top word; phase 3 does the same rotate and applies the
-//       round tail (ShiftRows, MixColumns when mix_en, AddRoundKey). Trace with s = {w3,w2,w1,w0}:
-//       {S(w0),w3,w2,w1} -> {S(w1),S(w0),w3,w2} -> {S(w2),S(w1),S(w0),w3} -> {S(w3),...,S(w0)}.
-//       The only select in the fold is the phase_q==3 2:1 on whether to apply the round tail.
-//       The key schedule's 4 S-boxes are live in 1 phase of 4 (rk_q only commits on phase 3);
-//       they are deliberately NOT time-shared with the datapath's 4 -- that needs a 2:1 operand
-//       mux and a fifth phase (51 cycles/block). A parameter change, not a redesign.
-//
-// Port contract with crypto_accel.sv (the parent). Single clock (clk); no CDC in this module.
-//   start_i       1-cycle strobe. Ignored (silently) unless the core is idle; the parent never
-//                 asserts it while busy_o.
-//   key_i         128-bit AES key; the value present on the accepted start edge is the one used
-//                 (the datapath pre-loads from it every idle cycle, see the A_IDLE branch, but only
-//                 the start-edge sample is ever consumed). The on-the-fly
-//                 schedule does NOT need key_i held during the operation. The parent's busy-time
-//                 key-write rejection is a spec/determinism requirement, not a datapath one: do
-//                 not "optimise" it away as redundant, and do not add a key hold register here.
-//   block_i       128-bit plaintext (ECB) or counter block (CTR); the value present on the
-//                 accepted start edge is the one used (pre-loaded every idle cycle, as key_i).
-//   busy_o        state != A_IDLE (flop output).
-//   done_set_o    one-cycle COMBINATIONAL pulse asserted in the final round cycle (round 10, and
-//                 phase 3 at SBOX_PARALLEL=4). The parent owns the sticky flop and the W1C.
-//   dout_o        COMBINATIONAL next-state ciphertext; valid ONLY in the done_set_o cycle. It
-//                 exists so the parent can hw_wen the register bank on the same edge the last
-//                 round lands -- zero extra 128-bit result register.
-//
-// Fmax note: SBOX_PARALLEL=16 critical path is S-box -> ShiftRows wiring -> 2 XOR levels of
-// MixColumns -> AddRoundKey in one cycle; comfortable at 40 MHz Sky130. AREA (20 x 256x8) is the
-// Gate A question, not the period.
-//
-// Reset: synchronous, active-low (always_ff @(posedge clk) + if (!rst_n)), matching rtl/periph/.
-// wipe_i (bead j41m.6) is an additional synchronous clear of the same flops: scan-mode entry/exit.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The core encrypts one 128-bit block per start. It has no APB, no software-visible register and no CDC.
+//   The parent crypto_accel owns the key shadow, the message shadow, the sticky done flag and the result register.
+//   The round key is computed on the fly in one 128-bit register, rk_q. There is no inverse S-box.
+//   The S-box is a case function over 256 constant labels. The core has no runtime-indexed mux.
+// Parameters: SBOX_PARALLEL (16 or 4; any other value is an elaboration $fatal).
+//   16: 20 S-boxes, 11 cycles per block. 4: 8 S-boxes, 41 cycles per block, with the same result.
+// Ports:
+//   start_i is a 1-cycle strobe. It is ignored unless the core is idle. The parent never asserts it while busy_o is 1.
+//   The values of key_i and block_i on the accepted start edge are the ones used. The key need not stay held.
+//   done_set_o is a one-cycle combinational pulse in the final round cycle.
+//   dout_o is the combinational next-state ciphertext. It is valid only in the done_set_o cycle.
+//   scan_mode_i = 1 forces the rk_q read net to 0. wipe_i clears the key- and plaintext-derived flops.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous.
+//   wipe_i is an additional one-cycle synchronous clear of s_q, rk_q, rcon_q, round_q and state_q.
+//   With SBOX_PARALLEL = 4, phase_q is not in that list. It clears one cycle later, when state_q is A_IDLE.
+// Caller rules:
+//   - Byte order is big-endian. Byte B0 is bits [127:120]. Byte B15 is bits [7:0].
+//   - The parent's key-write rejection while busy is a spec requirement. Do not remove it as redundant.
+//   - Do not add a key hold register here.
+//   - The core has no side-channel or fault-injection hardening and is not certified. See crypto_accel.
+// Doc: ds:mod:aes128-core, tm:mod:aes128-core
 
 module aes128_core
 #(
@@ -81,12 +29,10 @@ module aes128_core
     input  logic         clk,
     input  logic         rst_n,
 
-    // DFT scan mode (bead j41m.2): 1 forces the rk_q READ net to 0 (rk_q is excluded from scan and
-    // inverts to the master key, so it must not reach any scanned flop through capture).
+    // rk_q inverts to the master key. It is excluded from scan, and this mask must stay so rk_q reaches no scanned flop.
     input  logic         scan_mode_i,
 
-    // DFT scan-entry/exit zeroize (bead j41m.6): 1-cycle synchronous clear of every key- or
-    // plaintext-derived flop (s_q, rk_q, rcon_q, round_q, state_q), same effect as !rst_n.
+    // wipe_i: 1-cycle synchronous clear of s_q, rk_q, rcon_q, round_q and state_q. It has the same effect as !rst_n.
     input  logic         wipe_i,
 
     input  logic         start_i,
@@ -106,11 +52,9 @@ module aes128_core
 
     localparam int unsigned LAST_ROUND = 10;
 
-    // =========================================================================
-    // Pure functions (declaration before use: yosys-slang strict mode, bead q7n)
-    // =========================================================================
+    // Pure functions. Declare each function before use (yosys-slang strict mode).
 
-    // AES S-box: 256 CONSTANT case labels, never an indexed array read (bead ma7).
+    // AES S-box: 256 constant case labels, never an indexed array read.
     function automatic logic [7:0] sbox(input logic [7:0] b);
         unique case (b)
             8'h00: sbox = 8'h63;
@@ -498,18 +442,9 @@ module aes128_core
             s_q     <= 128'h0;
             rk_q    <= 128'h0;
         end else if (state_q == A_IDLE) begin
-            // PRE-LOAD WHILE IDLE (bead f7vs.15, Gate B). The whitening value and the round-1
-            // key/counters are loaded on EVERY idle cycle; start_i only advances state_q. The
-            // values captured on the start edge are exactly the ones the old `if (start_i)` load
-            // captured (same block_i ^ key_i, key_i, 8'h01, 4'd1 sampled at that same edge), so the
-            // cycle count and every result are unchanged: 11 / 41 clk from the start edge. What
-            // changes is the cone: start_i is the APB decode (paddr -> start_pulse_w) and used to
-            // gate the D-input of all 128 + 128 + 8 + 4 datapath flops, and yosys' sbox ROM
-            // inference (proc_rom + memory_dff) merged the S-box address flops, so that decode
-            // also sat in front of an 8-bit S-box network. Now it fans out to state_q only.
-            // None of s_q/rk_q/rcon_q/round_q is observable while idle (busy_o, done_set_o need
-            // state_q == A_ROUND; dout_o is consumed only with done_set_o), and they hold no secret
-            // that block_i/key_i do not already hold in the parent's msg_q/key_q.
+            // Pre-load while idle: the whitening value, key_i, 8'h01 and 4'd1 are loaded on every idle cycle.
+            // start_i only advances state_q. The start edge captures the same values as an `if (start_i)` load.
+            // The cycle counts do not change: 11 and 41 clk from the start edge.
             s_q     <= block_i ^ key_i;    // initial AddRoundKey (whitening)
             rk_q    <= key_i;
             rcon_q  <= 8'h01;

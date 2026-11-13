@@ -1,33 +1,22 @@
-// interrupt_controller.sv
-// Phase 5 (M4) — Level-sensitive interrupt controller.
-// APB migration PR-5: converted from AXI4-Lite slave to APB4 slave.
+// interrupt_controller - level-sensitive interrupt controller, APB4 slave.
 //
-// Register map (word indices into the apb4_register_bank):
-//   0  IRQ_STATUS        RO  [N_SOURCES-1:0] = synchronised raw source levels
-//   1  IRQ_MASK          RW  [N_SOURCES-1:0] = per-source enable (1 = enabled)
-//   2  IRQ_PENDING_MASKED RO  [N_SOURCES-1:0] = IRQ_STATUS & IRQ_MASK
-//
-// irq_src_i bit assignments (module default N_SOURCES=5; soc_top.sv instantiates
-// with N_SOURCES=12 as of Phase 6, bead claude_verilog_test-f7vs.2 — bit 6 (PWM) is
-// live as of Phase 6a-2 (bead claude_verilog_test-f7vs.6), bit 7 (WDT) as of Phase 6a-3
-// (bead claude_verilog_test-f7vs.7), bit 8 (TRNG) as of Phase 6a-4
-// (bead claude_verilog_test-f7vs.8), bit 9 (I2C) as of Phase 6a-5 (bead
-// claude_verilog_test-f7vs.9), bit 10 (CRYPTO) as of Phase 6b (bead
-// claude_verilog_test-f7vs.10), bit 11 (NPU) as of Phase 6c (bead
-// claude_verilog_test-f7vs.11)):
-//   [0] UART  [1] SPI  [2] TIMER  [3] DMA  [4] GPU  [5] GPIO  [6] PWM  [7] WDT
-//   [8] TRNG  [9] I2C  [10] CRYPTO  [11] NPU  (soc_top.sv only)
-//
-// irq_o → CPU ext_irq_i (MEIP in RISC-V M-mode).
-// Sources are level-sensitive; no W1C.  SW clears by masking at IRQ_MASK
-// or by having the peripheral clear its own IRQ output.
-//
-// APB4 interface (ARM IHI0024C):
-//   pclk = clk, presetn = rst_n (active-low synchronous reset)
-//   ADDR_W = 12 (byte address; [1:0] unused, word-aligned)
-//   Zero wait states: pready driven 1 every ACCESS phase.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The module synchronises the N_SOURCES raw source levels and ORs the masked sources into irq_o.
+//   irq_o drives the CPU ext_irq_i input (MEIP in RISC-V M-mode) through a synchroniser in soc_top. ext_irq_i is a CPU port.
+// Registers (word index):
+//   0 IRQ_STATUS (RO): [N_SOURCES-1:0] synchronised raw source levels.
+//   1 IRQ_MASK (RW): per-source enable, 1 = enabled. Every source is disabled at reset.
+//   2 IRQ_PENDING_MASKED (RO): IRQ_STATUS & IRQ_MASK.
+// Source bits in soc_top (N_SOURCES = 12): [0] UART, [1] SPI, [2] TIMER, [3] DMA, [4] GPU, [5] GPIO, [6] PWM,
+//   [7] WDT, [8] TRNG, [9] I2C, [10] CRYPTO, [11] NPU. The module default is N_SOURCES = 5.
+// Parameters: ADDR_W (APB address width, default 12), N_SOURCES (default 5),
+//   SYNC_STAGES (irq_src_i synchroniser depth, at least 2, default 2).
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous (pclk = clk, presetn = rst_n).
+//   Each source goes through its own single-bit cdc_sync with reset value 0. The primitive asserts that reset asynchronously.
+// Caller rules:
+//   - Sources are level-sensitive. There is no W1C.
+//   - Software clears an interrupt by masking it in IRQ_MASK, or by clearing the peripheral's own IRQ output.
+//   - APB access has zero wait states. pready is 1 in every ACCESS phase.
+// Doc: ds:mod:interrupt-controller, tm:mod:interrupt-controller, cr:mod:interrupt-controller
 
 module interrupt_controller
 #(
@@ -113,23 +102,9 @@ module interrupt_controller
         .hw_wdata_i (hw_wdata_i)
     );
 
-    // =========================================================================
-    // 2-FF synchroniser for irq_src_i (CDC hardening)
-    // irq_src_i originates from peripheral IRQ lines. In soc_top every source
-    // is currently synchronous to this clock (core_clk, or the gated copy of it
-    // that clocks the GPU), so for today's SoC the chain is a two-cycle
-    // retiming stage; it is kept as a real synchroniser so a source that moves
-    // to another clock domain stays safe.
-    //
-    // N_SOURCES independent single-bit cdc_sync instances (STAGES=2, reset
-    // 0), not one WIDTH(N_SOURCES) instance: the sources are independent
-    // level-held lines with no cross-bit coherency requirement, and
-    // cdc_sync.sv's scope warning forbids a multi-bit binary bus. Same
-    // pattern as gpio_controller.sv (g_in_sync). Behaviour vs the previous
-    // hand-written chain: same 2-cycle latency and same reset value (0); the
-    // reset is now asserted asynchronously by the primitive (see the
-    // cdc_sync header) where it was synchronous here.
-    // =========================================================================
+    // Synchroniser for irq_src_i: N_SOURCES single-bit cdc_sync instances (reset 0), one per source.
+    // The sources are independent level-held lines. cdc_sync forbids a multi-bit binary bus. Same pattern as gpio_controller.
+    // The latency is 2 cycles with the default SYNC_STAGES. The primitive asserts the reset asynchronously.
     logic [N_SOURCES-1:0] irq_src_sync_q;   // synchronised source
 
     genvar s;

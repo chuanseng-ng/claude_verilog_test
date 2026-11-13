@@ -1,69 +1,29 @@
-// sha256_core.sv
-// Phase 6b -- SHA-256 single-block compression core, one round per cycle (bead
-// claude_verilog_test-f7vs.10, Doc: ds:ch:phase6-ip-expansion-plan Sec.6b "6b -- CRYPTO"). Sub-core of
-// crypto_accel.sv: no APB, no sticky flags, no clock-domain crossing. The parent owns the message
-// shadow, the chaining register (the DIGEST bank words) and the sticky done flag.
+// sha256_core - SHA-256 single-block compression core, one round per cycle.
 //
-// INSECURE-BY-SCOPE: no side-channel or DPA resistance, no fault-injection hardening, not
-// certified, not validated against any scheme. SHA-256 here is unkeyed, but the full non-goals
-// paragraph in crypto_accel.sv applies to this file unchanged.
-//
-// SCOPE. ONE 512-bit block compress: h_o = H(block_i, h_i). PADDING, LENGTH ENCODING AND
-// MULTI-BLOCK ITERATION ARE SOFTWARE'S JOB (FIPS 180-4); the core has no notion of message
-// length. h_i / h_o make it a pure function of (block, H), which is what makes chaining
-// software's job.
-//
-// BYTE ORDER. FIPS 180-4 big-endian. block_i word j (W[j], j = 0..15) is bits [511-32j -: 32], so
-// M0 is bits [511:480]; h_i / h_o carry {H0..H7} with H0 at [255:224].
-//
-// NO RUNTIME-INDEXED MUX (bead ma7 acceptance criterion; the proven Synlig OPT_MUXTREE miscompile).
-//   * The K constants are `function sha_k` = `unique case (t)` over 64 CONSTANT labels returning
-//     literals -- NOT `K_TABLE[t]`. A case over constants collapses to a 6-input constant
-//     function per output bit; an indexed array read is the $pmux form that miscompiled in ma7.
-//   * The message schedule is a 16 x 32 SHIFT REGISTER with constant taps only (below).
-//   * Sigma/sigma are constant rotations and shifts, i.e. wiring.
-//
-// W ROLLING SCHEDULE. Window convention: at the start of round t, w_q[j] = W[t+j]; the round
-// consumes w_q[0]. Every round cycle
-//     w_q[j]  <= w_q[j+1]                                       j = 0..14
-//     w_q[15] <= sigma1(w_q[14]) + w_q[9] + sigma0(w_q[1]) + w_q[0]
-// which is exactly W[t+16] = s1(W[t+14]) + W[t+9] + s0(W[t+1]) + W[t]. W[16] is therefore produced
-// during round 0. Rounds 48..63 compute words that are never consumed; they are left to run
-// (gating them saves nothing and adds a condition).
-//
-// FSM / CYCLE COUNT. S_IDLE, S_ROUND, S_FINAL; t_q counts 0..63.
-//   accepted start_i edge : w_q <= block_i, {a..h}_q <= h_i, hin_q <= h_i, t_q <= 0   (1 cycle)
-//   S_ROUND               : 64 cycles, one round each
-//   S_FINAL               : 1 cycle; h_o = hin_q + {a..h}_q (eight 32-bit adds), done_set_o = 1
-//   TOTAL = 66 CYCLES/BLOCK (1 load + 64 rounds + 1 final add).
-//   The 65-cycle variant -- folding the eight final adds onto the round-63 next-state -- is
-//   REJECTED: the round path already carries Sigma0, Sigma1, Ch, Maj and two 32-bit adder chains,
-//   and stacking another 32-bit add there is the one place in this peripheral that could move
-//   Fmax. Do not "optimise" it in later.
-//
-// Port contract with crypto_accel.sv (the parent). Single clock (clk); no CDC in this module.
-//   start_i       1-cycle strobe. Ignored (silently) unless idle; the parent never asserts it
-//                 while busy_o.
-//   block_i       512-bit message block; sampled ONLY on the accepted start edge.
-//   h_i           256-bit chaining value in; sampled ONLY on the accepted start edge (the core
-//                 keeps its own copy in hin_q for the final feed-forward add).
-//   busy_o        state != S_IDLE (flop output).
-//   done_set_o    one-cycle COMBINATIONAL pulse asserted in S_FINAL. The parent owns the sticky
-//                 flop and the W1C.
-//   h_o           COMBINATIONAL next chaining value; valid ONLY in the done_set_o cycle, so the
-//                 parent can hw_wen the DIGEST bank words on the same edge with no result register.
-//
-// Reset: synchronous, active-low (always_ff @(posedge clk) + if (!rst_n)), matching rtl/periph/.
-// wipe_i (bead j41m.6) is an additional synchronous clear of the same flops: scan-mode entry/exit.
-//
-// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+// Function: The core computes h_o = H(block_i, h_i) for one 512-bit block. It takes 66 cycles per block.
+//   The 66 cycles are 1 load, 64 rounds and 1 final add. The FSM states are S_IDLE, S_ROUND and S_FINAL.
+//   The core has no APB, no sticky flag, no CDC and no notion of message length.
+//   The K constants are a case function over 64 constant labels. The message schedule is a 16 x 32 shift register.
+//   The core has no runtime-indexed mux.
+// Ports:
+//   start_i is a 1-cycle strobe. It is ignored unless the core is idle. The parent never asserts it while busy_o is 1.
+//   block_i (512 bits) and h_i (256 bits) are sampled only on the accepted start edge. The core keeps h_i in hin_q.
+//   busy_o is 1 when the state is not S_IDLE. done_set_o is a one-cycle combinational pulse in S_FINAL.
+//   h_o is the combinational next chaining value. It is valid only in the done_set_o cycle.
+//   wipe_i clears w_q, a_q..h_q, hin_q, t_q and state_q in one synchronous cycle.
+// Clocks and resets: clk is the only clock. rst_n is active low and synchronous. wipe_i has the same effect as !rst_n.
+// Caller rules:
+//   - Software does the padding, the length encoding and the multi-block loop (FIPS 180-4).
+//   - Byte order is big-endian. W[j] is block_i bits [511-32j -: 32]. M0 is bits [511:480]. H0 is h_i bits [255:224].
+//   - Do not fold the final adds onto the round-63 next state. The round path already carries two 32-bit adder chains.
+//   - The core has no side-channel or fault-injection hardening and is not certified. See crypto_accel.
+// Doc: ds:mod:sha256-core, tm:mod:sha256-core
 
 module sha256_core (
     input  logic         clk,
     input  logic         rst_n,
 
-    // DFT scan-entry/exit zeroize (bead j41m.6): 1-cycle synchronous clear of the whole working
-    // state (w_q, a_q..h_q, hin_q, t_q, state_q), same effect as !rst_n.
+    // wipe_i: 1-cycle synchronous clear of w_q, a_q..h_q, hin_q, t_q and state_q. It has the same effect as !rst_n.
     input  logic         wipe_i,
 
     input  logic         start_i,
@@ -75,9 +35,7 @@ module sha256_core (
     output logic [255:0] h_o
 );
 
-    // =========================================================================
-    // Pure functions (declaration before use: yosys-slang strict mode, bead q7n)
-    // =========================================================================
+    // Pure functions. Declare each function before use (yosys-slang strict mode).
 
     // FIPS 180-4 Sec.4.2.2 round constants: 64 CONSTANT case labels, never an indexed array read.
     function automatic logic [31:0] sha_k(input logic [5:0] t);
