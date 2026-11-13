@@ -721,17 +721,31 @@ def load_source(spec: str) -> tuple[str, list[tuple[str, int]]]:
         if len(parts) != 3 or not parts[1] or not parts[2]:
             raise ValueError(f"bad diff source (want diff:BASE:PATH): {spec}")
         _, base, path = parts
-        old = _tokens_of(extract_comments(path, git_show(base, path)))
+        old_text = git_show(base, path)
         try:
             new_text = read_text(path)
         except FileNotFoundError:
             new_text = ""
-        new = [t for t, _ in _tokens_of(extract_comments(path, new_text))]
-        sm = difflib.SequenceMatcher(None, [t for t, _ in old], new, autojunk=False)
-        gone: list[tuple[str, int]] = []
+        # Source = the comment text of every REMOVED line, counted in full. Words that new
+        # comments reuse are not netted out. A removed line that still exists unchanged
+        # elsewhere in the file (moved within the file) is exempt.
+        old_lines = [x.rstrip() for x in old_text.split("\n")]
+        new_lines = [x.rstrip() for x in new_text.split("\n")]
+        sm = difflib.SequenceMatcher(None, old_lines, new_lines, autojunk=False)
+        still = Counter(x.strip() for x in new_lines if x.strip())
+        removed: set[int] = set()
         for tag, i1, i2, _j1, _j2 in sm.get_opcodes():
             if tag in ("delete", "replace"):
-                gone.extend(old[i1:i2])
+                for k in range(i1, i2):
+                    key = old_lines[k].strip()
+                    if key and still[key] > 0:
+                        still[key] -= 1
+                    else:
+                        removed.add(k + 1)
+        gone: list[tuple[str, int]] = []
+        for piece in extract_comments(path, old_text):
+            if piece[1] in removed:
+                gone.extend(tokenize_text(piece[0], piece[1]))
         return f"{path} (vs {base})", gone
     return spec, normalise_file(spec, read_text(spec))
 
