@@ -1,0 +1,658 @@
+% Authored chapter: clock-domain crossing. Replaces the moved source text of five modules.
+% The moved text is in the Changes record, part Source archive.
+\chapter{Clock-domain crossing}\label{tm:ch:mod-cdc-primitives}
+
+This chapter describes the five blocks that move signals between clock domains. The rules that the blocks follow are in \cref{ds:ch:mod-cdc-primitives}. The tasks of an integrator are in \cref{um:ch:cdc-integration}.
+
+The three primitives are \code{cdc_sync}, \code{cdc_reset_sync} and \code{cdc_gray_fifo}. The bridge \code{apb_cdc_bridge} and the bridge \code{async_axi_fifo} use them. \Cref{fig:tm:ch:mod-cdc-primitives:soc} shows where the bridges and the synchronisers sit in \code{soc_top}.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[node distance=6mm, every node/.style={font=\scriptsize}]
+    \node[cvtblock, minimum width=34mm] (xbar) at (0,3.0) {crossbar master 0};
+    \node[cvtblock, minimum width=34mm] (pmu) at (0,1.8) {PMU, IRQ, timer, WDT};
+    \node[cvtblock, minimum width=34mm] (apb) at (0,0.6) {APB debug port};
+    \node[cvtblock, minimum width=34mm] (cpu) at (10.2,3.0) {\texttt{u\_cpu} AXI master};
+    \node[cvtblock, minimum width=34mm] (cpuc) at (10.2,1.8) {\texttt{u\_cpu} clock, reset, IRQ};
+    \node[cvtblock, minimum width=34mm] (dbg) at (10.2,0.6) {\texttt{u\_cpu} debug slave};
+    \node[cvtblock, minimum width=36mm] (axi) at (5.1,3.0) {\texttt{u\_cpu\_axi\_cdc}};
+    \node[cvtblock, minimum width=36mm] (syn) at (5.1,1.8) {\texttt{cdc\_sync}, \texttt{cdc\_reset\_sync}};
+    \node[cvtblock, minimum width=36mm] (brg) at (5.1,0.6) {\texttt{u\_apb\_dbg\_cdc}};
+    \draw[cvtsig] (axi.west) -- (xbar.east);
+    \draw[cvtsig] (cpu.west) -- (axi.east);
+    \draw[cvtsig] ([yshift=2mm]pmu.east) -- ([yshift=2mm]syn.west);
+    \draw[cvtsig] ([yshift=2mm]syn.east) -- ([yshift=2mm]cpuc.west);
+    \draw[cvtsig] ([yshift=-2mm]cpuc.west) -- ([yshift=-2mm]syn.east);
+    \draw[cvtsig] ([yshift=-2mm]syn.west) -- node[below, font=\tiny, yshift=-1mm]{iso ack} ([yshift=-2mm]pmu.east);
+    \draw[cvtsig] (apb.east) -- (brg.west);
+    \draw[cvtsig] (brg.east) -- (dbg.west);
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(xbar)(pmu)(apb), label={[font=\scriptsize]north:\texttt{core\_clk} domain}] {};
+      \node[cvtdomain, fit=(cpu)(cpuc)(dbg), label={[font=\scriptsize]north:CPU domain}] {};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{The crossings of \texttt{soc\_top} between the \texttt{core\_clk} domain and the CPU domain. The two PLL bridges \texttt{u\_apb\_pll\_cdc} and \texttt{u\_apb\_pll2\_cdc} end on the reference clocks of the two PLL subsystems and are not drawn. The arrow back to the PMU, marked iso ack, is the isolation acknowledge.}\label{fig:tm:ch:mod-cdc-primitives:soc}
+\end{figure}
+
+\section{Instances in the design}\label{tm:ch:mod-cdc-primitives:instances}
+\Cref{tab:tm:ch:mod-cdc-primitives:instances} lists the instances of the five blocks. A line with a name pattern stands for one instance of each source or pin.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{39mm}>{\raggedright\arraybackslash}p{31mm}>{\raggedright\arraybackslash}p{36mm}>{\raggedright\arraybackslash}p{40mm}@{}}
+\caption{Instances of the clock-domain crossing blocks}\label{tab:tm:ch:mod-cdc-primitives:instances}\\
+\toprule
+Instance & Module & Parent file & What crosses\\
+\midrule
+\endfirsthead
+\toprule
+Instance & Module & Parent file & What crosses\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\code{u_cpu_axi_cdc} & \code{async_axi_fifo} & \code{soc_top} & CPU AXI4 bus, \code{cpu_gated_clk} to \code{core_clk}.\\
+\code{u_apb_dbg_cdc} & \code{apb_cdc_bridge} & \code{soc_top} & Debug port APB, \code{core_clk} to \code{cpu_gated_clk}.\\
+\code{u_apb_pll_cdc} & \code{apb_cdc_bridge} & \code{soc_top} & APB window of the first PLL, \code{core_clk} to the raw reference clock of \code{u_pll_sub}.\\
+\code{u_apb_pll2_cdc} & \code{apb_cdc_bridge} & \code{soc_top} & APB window of the second PLL, \code{core_clk} to the raw reference clock \code{cpu_clk_i} of \code{u_cpu_pll_sub}.\\
+\code{u_cpu_clk_dis_sync}, \code{u_cpu_iso_en_sync} & \code{cdc_sync} & \code{soc_top} & PMU clock disable and isolation enable, into \code{cpu_core_clk}.\\
+\code{u_cpu_iso_ack_sync} & \code{cdc_sync} & \code{soc_top} & Isolation level, \code{cpu_core_clk} to \code{core_clk}.\\
+\code{u_ext_irq_sync}, \code{u_timer_irq_sync} & \code{cdc_sync} & \code{soc_top} & Interrupt levels into \code{cpu_core_clk}.\\
+\code{u_cpu_pmu_rst_sync}, \code{u_cpu_wdt_rst_sync} & \code{cdc_reset_sync} & \code{soc_top} & PMU reset and watchdog reset into \code{cpu_core_clk}.\\
+\code{u_irq_sync} & \code{cdc_sync} & \code{interrupt_controller} & One for each interrupt source.\\
+\code{u_gpio_in_sync} & \code{cdc_sync} & \code{gpio_controller} & One for each input pin.\\
+\code{u_scl_sync}, \code{u_sda_sync} & \code{cdc_sync} & \code{i2c_controller} & The two pad inputs.\\
+\code{u_spi_miso_sync} & \code{cdc_sync} & \code{spi_controller} & The \code{spi_miso_i} pin.\\
+\code{u_uart_rx_sync} & \code{cdc_sync} & \code{uart_controller} & The \code{uart_rx_i} pin.\\
+\code{u_sync} & \code{cdc_sync} & \code{mbist_status_sync} & One for each status bit, into the TCK domain.\\
+\code{u_fifo}, \code{u_rd_rst} & \code{cdc_gray_fifo}, \code{cdc_reset_sync} & \code{mbist_xing} & MBIST control word, TCK domain to a functional domain. The FIFO has a depth of 2.\\
+\code{u_sync_a}, \code{u_sync_b} & \code{cdc_sync} & \code{dft_clk_switch} & The two handshake levels of the test clock switch.\\
+\code{u_sw_rst} & \code{cdc_reset_sync} & \code{dft_ctrl} & Reset of the TCK domain.\\
+\code{u_trst_sync} & \code{cdc_reset_sync} & \code{jtag_tap} & Release of the TAP reset in the TCK domain.\\
+\end{longtable}
+
+\section{Timing constraints and CDC checks}\label{tm:ch:mod-cdc-primitives:constraints}
+Two checks look at the crossings. The CDC check tool reads the netlist. The timing check reads a routed netlist and a constraint file.
+
+\subsection*{CDC check tool}
+The flow in \src{tools/cdc/} converts the RTL, flattens it and classifies each register. A flop array with the attribute \code{magic_cdc} that has one foreign source clock is a crossing that the design marks as intentional. The attribute is on \code{sync_q} in \code{cdc_sync} and in \code{cdc_reset_sync}. The gate script \src{tools/cdc/cdc_gate.py} reads the configuration \src{tools/cdc/cdc_config.yml}. The configuration lists the real clocks, the clock aliases, the ports that are resets, the synchronisers that are required, and the waivers. The gate fails on a register that combines two clock domains and has no waiver. It also fails on a waiver that matches nothing, and on a required synchroniser that is absent. The tool does not model metastability and does not check the number of ranks against an MTBF target. The gate does not fail on a crossing from one foreign domain that has no synchroniser (class OKX). Only the list of required synchronisers catches a deleted synchroniser, and the list names a few instances. A review has to find the rest. The target \code{cdc} of the \code{sim} Makefile runs the flow. The variable \code{CDC_STRICT} has the default 0, and then the run is informational: the gate can fail and the target still returns 0. Run the target with \code{CDC_STRICT=1} to make a failed gate fail the target. The unit tests of the gate in \src{tb/tests/test_cdc_gate.py} feed synthetic reports to the script. They test the gate logic and not the design. \Cref{tm:ch:cdc-and-lint-checks} and \cref{tm:flow:cdc-snitch-poc} describe the flow.
+
+\subsection*{Timing constraints}
+The paths that cross a domain without a synchroniser need a bounded delay (\reqref{DS-CDC-006}). The sign-off constraint file \src{pnr/constraints/phase5_soc_multiclock.sdc} declares the two clocks \code{sys_clk} and \code{cpu_clk} as an asynchronous clock group. OpenSTA has no \code{set_max_delay -datapath_only} flag, and it drops a maximum-delay constraint that crosses an asynchronous clock group. For this reason the sign-off file has no crossing budget. The budgets are in a second file, \src{pnr/constraints/phase5_soc_multiclock_check.sdc}. This file declares the same two clocks and does not relate them. A tool that has the flag \code{-datapath_only} can use it on the same paths. The comments in the RTL headers of the blocks name this flag.
+
+The check file has these parts.
+\begin{itemize}
+  \item A fallback that bounds every path from one clock to the other at 0.9 of the period of the receiving clock.
+  \item A false path on the asynchronous set and reset pins of the reset synchronisers.
+  \item Budgets for the five FIFOs of \code{u_cpu_axi_cdc}. The registered gray pointers have a bound of 0.5 of the receiving period.
+  \item Budgets for the levels \code{req_q} and \code{ack_q} of \code{u_apb_pll2_cdc} and \code{u_apb_dbg_cdc}. The bound is one receiving period. The names \code{req_q} and \code{ack_q} are matched in the file (\reqref{DS-CDC-110}). The Sky130 check file matches the instances \code{u_req_sync} and \code{u_ack_sync} instead.
+  \item Budgets for the PMU and interrupt sources of the synchronisers in \code{soc_top}.
+  \item A coverage gate. It stops the read with an error when a name pattern matches nothing, because a pattern that matches nothing leaves the crossing without a constraint.
+\end{itemize}
+The storage read of each FIFO and the payload buses of the bridges have no budget of their own in the file. The fallback covers them.
+
+The bridge \code{u_apb_pll_cdc} crosses between \code{core_clk} and the raw reference clock of \code{u_pll_sub}. The constraint files and the CDC configuration put both clocks in the domain of \code{clk_i}, because they declare no generated clock for the PLL output. So no budget and no CDC check covers this bridge, and no tool checks it. The four-phase handshake of the bridge is the protection of this crossing.
+
+The names that the files match differ for each file. The ASAP7 check file matches \code{u_wr_ptr_to_rd}, \code{rd_gray_q}, \code{req_q}, \code{ack_q}, the nets \code{pmu_cpu_iso_en}, \code{ext_irq}, \code{timer_irq}, \code{pmu_cpu_iso_en_sync} and \code{pmu_cpu_rst_n}, the instance \code{u_cpu_clk_dis_sync}, and registers whose names contain \code{rst_sync}. The Sky130 check file matches the instance names \code{u_wr_ptr_to_rd}, \code{u_rd_ptr_to_wr}, \code{u_req_sync}, \code{u_ack_sync}, \code{u_m_rst_status_sync} and the synchroniser instances of \code{soc_top}, and the array name \code{sync_q}. The CDC configuration matches the array name \code{sync_q} and the instance names of the required synchronisers and of the waivers, for example \code{u_[sm]_rst_sync}.
+
+The script \src{pnr/scripts/check_cdc_timing.tcl} reads the check file and a routed ASAP7 netlist. It runs targeted queries only. A full sweep of the check file shows false violations on other pairs of flops. The script exits with 0 when every exception matched an object and every budget is met, with 1 for a finding, and with 2 for a setup error. The make target is \code{check-cdc-timing-asap7-soc}. The recipe of the target exits 1 on any marker of a finding or of a setup error, and the exit code of the script otherwise, so a finding and a setup error are not told apart by the exit code of make. The marker lines are \code{marker:} lines of the output, and each contains the text \code{CDC-EXCEPTION-MISS}, \code{budget VIOLATED}, \code{CDC-CHECK-RESULT} or \code{CDC-CHECK-SETUP-ERROR}. The Sky130 flow has the same structure with \src{pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc}, the script \src{pnr/scripts/check_cdc_timing_sky130.tcl} and the target \code{check-cdc-timing-sky130-soc}. \Cref{tm:pd:phase5-soc-multiclock-check-sdc}, \cref{tm:pd:scripts-check-cdc-timing-tcl} and \cref{tm:pd:sky130-soc-cdc-check-sdc} describe the files.
+
+\paragraph{Verification gaps.} Four rules have no test or Makefile target and are checked in review. A target like \code{cdc_sync_stages1_neg} for \code{cdc_reset_sync} would test \reqref{DS-CDC-045}. One more assertion on \code{s_prdata_o} in \code{test_availability_never_forwarded} would test \reqref{DS-CDC-116}. No test shows that the attribute \code{magic_cdc} stays on both synchroniser arrays (\reqref{DS-CDC-003}). No test or target covers the minimum of \code{SYNC_STAGES} of \code{cdc_gray_fifo} (\reqref{DS-CDC-069}).
+
+\section{\texttt{cdc\_sync}}\label{tm:mod:cdc-sync}
+
+\subsection{Introduction}
+The module \code{cdc_sync} passes a single bit, or a gray-coded bus, through a chain of \code{STAGES} flops on the receiving clock. It is the base of every other crossing block. It implements \reqref{DS-CDC-020}, \reqref{DS-CDC-021}, \reqref{DS-CDC-023} and \reqref{DS-CDC-024}. \Cref{tab:tm:ch:mod-cdc-primitives:instances} lists the instances.
+
+\subsection{Functional description}
+\Cref{fig:tm:mod:cdc-sync:chain} shows the chain. The array \code{sync_q} holds the ranks. The first rank samples \code{d_i}. Each later rank samples the rank before it. The output \code{q_o} is the last rank.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[node distance=10mm]
+    \node[cvtblock] (src) {source\\domain};
+    \node[cvtflop, minimum width=17mm, right=14mm of src] (r0) {\texttt{sync\_q[0]}};
+    \node[right=6mm of r0] (dots) {\scriptsize ...};
+    \node[cvtflop, minimum width=25mm, right=6mm of dots] (rn) {\texttt{sync\_q[STAGES-1]}};
+    \node[cvtblock, right=14mm of rn] (dst) {logic};
+    \draw[cvtsig] (src) -- node[above, font=\scriptsize\ttfamily]{d\_i} (r0);
+    \draw[cvtsig] (r0) -- (dots);
+    \draw[cvtsig] (dots) -- (rn);
+    \draw[cvtsig] (rn) -- node[above, font=\scriptsize\ttfamily]{q\_o} (dst);
+    \draw[cvtsig] ([yshift=-8mm]r0.south) -- node[pos=0, below, font=\scriptsize\ttfamily]{clk\_i} (r0.south);
+    \draw[cvtsig] ([yshift=-8mm]rn.south) -- node[pos=0, below, font=\scriptsize\ttfamily]{clk\_i} (rn.south);
+    \draw[cvtsig] ([yshift=8mm]r0.north) -- node[pos=0, above, font=\scriptsize\ttfamily]{rst\_n\_i} (r0.north);
+    \draw[cvtsig] ([yshift=8mm]rn.north) -- node[pos=0, above, font=\scriptsize\ttfamily]{rst\_n\_i} (rn.north);
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(r0)(dots)(rn)(dst)] {};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{The synchroniser chain of \texttt{cdc\_sync}. The dashed box is the domain of \texttt{clk\_i}. Both ranks that are drawn clear to \texttt{RESET\_VAL} when \texttt{rst\_n\_i} is low. With the default \texttt{STAGES} of 2 the chain has the two ranks \texttt{sync\_q[0]} and \texttt{sync\_q[1]}.}\label{fig:tm:mod:cdc-sync:chain}
+\end{figure}
+
+On each rising edge of \code{clk_i}, \code{sync_q[0]} takes \code{d_i} and \code{sync_q[i]} takes \code{sync_q[i-1]} for each later rank. A change of \code{d_i} reaches \code{q_o} after \code{STAGES} edges of \code{clk_i} that follow the change. \Cref{fig:tm:mod:cdc-sync:timing} shows this for \code{STAGES} equal to 2. The input changes between two edges. The first edge after the change loads \code{sync_q[0]}. The second edge loads \code{sync_q[1]}, which is \code{q_o}.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=5.2]
+    \texttt{clk\_i} & 16{c} \\
+    \texttt{rst\_n\_i} & 8H \\
+    \texttt{d\_i} & 2L 3H 3L \\
+    \texttt{sync\_q[0]} & 2.5L 3H 2.5L \\
+    \texttt{q\_o (sync\_q[1])} & 3.5L 3H 1.5L \\
+  \end{tikztimingtable}
+  \caption{Timing of \texttt{cdc\_sync} with \texttt{STAGES} equal to 2 after the reset releases. Each unit is one period of \texttt{clk\_i}. The rising edge is in the middle of the unit. \texttt{d\_i} rises between two edges, \texttt{sync\_q[0]} rises at the next edge, and \texttt{q\_o} rises at the edge after that. The fall of \texttt{d\_i} goes through the chain in the same way.}\label{fig:tm:mod:cdc-sync:timing}
+\end{figure}
+
+\paragraph{Reset and clocking.} The reset is an asynchronous clear of every rank to \code{RESET_VAL}. It needs no clock edge. The module does not synchronise the reset. The caller supplies a reset that is already synchronised to \code{clk_i}; \code{cdc_reset_sync} makes such a reset.
+
+\paragraph{Corner cases.} The module does not stretch a pulse. A pulse on \code{d_i} that is shorter than one period of \code{clk_i} can be missed. Use the module for levels that stay stable for more than one period. For a bus with \code{WIDTH} above 1, the module has no way to keep the bits together. Only a bus that changes one bit on each source edge is safe (\reqref{DS-CDC-002}).
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:cdc-sync:params} lists the parameters. Elaboration stops with an error when \code{STAGES} is below 2. More ranks give a longer MTBF and a longer latency. The three parameters \code{RAND_CDC_DELAY_EN}, \code{RAND_CDC_DELAY_PCT} and \code{RAND_CDC_DELAY_SEED} control the simulation model that this section describes in \cref{tm:mod:cdc-sync:debug}.
+
+\input{generated/facts/cdc-sync-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:cdc-sync:signals} lists the ports.
+
+\input{generated/facts/cdc-sync-signals}
+
+\subsection{Integration and timing constraints}
+The caller supplies a reset that is synchronised to \code{clk_i}, and chooses \code{RESET_VAL} so that the logic after \code{q_o} is safe during reset (\reqref{DS-CDC-022}). For an idle-high line, such as a serial receive input, use a reset value of 1. The path from the source flop to the first rank needs a bounded delay when the check file has no better budget (\reqref{DS-CDC-006}). The CDC configuration matches the array name \code{sync_q} and the names of the instances. Keep the name \code{sync_q}.
+
+\subsection{Debug, test and DFT}\label{tm:mod:cdc-sync:debug}
+The flop array has the attribute \code{magic_cdc}. The module has no scan port. A scan flow treats the flops as ordinary flops.
+
+The module has a simulation model that delays rank 0. The code exists only when the macro \code{SIMULATION} is defined, and runs only when an instance sets \code{RAND_CDC_DELAY_EN} to 1 (\reqref{DS-CDC-023}). The register \code{d_prev_q} follows \code{d_i} at every edge. When \code{d_i} differs from \code{d_prev_q}, a random draw decides if rank 0 keeps its value for this edge. The draw is true with a chance of \code{RAND_CDC_DELAY_PCT} percent. Because \code{d_prev_q} catches up at the next edge, the model adds at most one cycle. The seed \code{RAND_CDC_DELAY_SEED} sets the random stream one time, at time 0. The cocotb Makefile defines \code{SIMULATION}. No instance in the RTL, the testbenches or the tools sets \code{RAND_CDC_DELAY_EN}, so no regression uses the model.
+
+\subsection{Verification}
+The suite \code{test_cdc_sync} runs through the target \code{cdc_sync} (\cref{tm:suite:soc-test-cdc-sync}). The testbench has six instances of width 1. They have a \code{STAGES} of 2, 3 and 4 and a \code{RESET_VAL} of 0 and 1. It has one more instance of width 4 with \code{STAGES} of 3 and \code{RESET_VAL} of \code{4'b1010}. The data inputs are the opposite of the reset values. A leak of the reset value or a latency that is one edge off shows in the result. The four tests check the reset value with and without clock edges, the latency after the release, and the latency again after a second reset. The target \code{cdc_sync_stages1_neg} is a negative control. It elaborates the module with \code{STAGES} equal to 1 and passes only when the elaboration fails with the message of the guard. The target \code{periph_sync_stages} runs the UART, the interrupt controller, the SPI controller and the GPIO controller with 3 ranks. It does not run the I2C controller.
+
+The suite does not prove behaviour with a metastable flop, because the simulator has two states. It does not run the settling-delay model. It tests the latency after a reset release, with the input already stable. It does not test a source that changes at an arbitrary time. The tests for the number of ranks above 4 do not exist.
+
+\subsection{Known limits}
+The module gives no protection for a multi-bit bus with more than one changing bit. The model of metastability is not in the simulation. The mean time between failures depends on \code{STAGES} and on the process, and the project does not measure it.
+
+\section{\texttt{cdc\_reset\_sync}}\label{tm:mod:cdc-reset-sync}
+
+\subsection{Introduction}
+The module \code{cdc_reset_sync} makes a reset for one clock domain from an asynchronous reset. The reset asserts at once and deasserts in step with the clock. A scan bypass replaces the reset by a test reset in scan mode. The module implements \reqref{DS-CDC-040} to \reqref{DS-CDC-042} and \reqref{DS-CDC-044} to \reqref{DS-CDC-046}.
+
+\subsection{Functional description}
+\Cref{fig:tm:mod:cdc-reset-sync:block} shows the structure. The input multiplexer chooses the asynchronous clear of the chain: \code{scan_rst_ni} when \code{scanmode_i} is high, and \code{rst_n_i} when it is low. The chain has \code{STAGES} flops. Each flop is an asynchronous-clear flop. Rank 0 loads a 1 at each edge, and each later rank loads the rank before it. The output multiplexer gives the last rank when \code{scanmode_i} is low and \code{scan_rst_ni} when it is high.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[node distance=9mm]
+    \node[cvtblock, minimum width=16mm] (imux) {input\\mux};
+    \node[cvtflop, minimum width=14mm, right=18mm of imux] (r0) {\texttt{[0]}};
+    \node[cvtflop, minimum width=14mm, right=6mm of r0] (r1) {\texttt{[1]}};
+    \node[right=5mm of r1] (dots) {\scriptsize ...};
+    \node[cvtflop, minimum width=22mm, right=5mm of dots] (rn) {\texttt{[STAGES-1]}};
+    \node[cvtblock, minimum width=16mm, right=16mm of rn] (omux) {output\\mux};
+    \draw[cvtsig] (imux) -- node[above, font=\scriptsize\ttfamily]{rst\_n\_async} (r0);
+    \draw[cvtsig] (r0) -- (r1);
+    \draw[cvtsig] (r1) -- (dots);
+    \draw[cvtsig] (dots) -- (rn);
+    \draw[cvtsig] (rn) -- (omux);
+    \draw[cvtsig] (omux.east) -- ++(10mm,0) node[right, font=\scriptsize\ttfamily]{rst\_n\_o};
+    \draw[cvtsig] ([xshift=-12mm,yshift=5mm]imux.west) -- node[pos=0, left, font=\scriptsize\ttfamily]{rst\_n\_i} ([yshift=5mm]imux.west);
+    \draw[cvtsig] ([xshift=-12mm,yshift=-5mm]imux.west) -- node[pos=0, left, font=\scriptsize\ttfamily]{scan\_rst\_ni} ([yshift=-5mm]imux.west);
+    \draw[cvtsig] (imux.north) ++(0,8mm) node[above, font=\scriptsize\ttfamily]{scanmode\_i} -- (imux.north);
+    \draw[cvtsig] ([yshift=8mm]omux.north) node[above, font=\scriptsize\ttfamily]{scanmode\_i} -- (omux.north);
+    \draw[cvtsig, rounded corners=1pt] ([yshift=-9mm]omux.south) node[below, font=\scriptsize\ttfamily]{scan\_rst\_ni} -- (omux.south);
+    \draw[cvtsig] ([yshift=-8mm]r0.south) node[below, font=\scriptsize\ttfamily]{clk\_i} -- (r0.south);
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(r0)(r1)(rn)(dots)] {};
+    \end{scope}
+  \end{tikzpicture}}
+  \caption{Structure of \texttt{cdc\_reset\_sync}. The input mux and the output mux both follow \texttt{scanmode\_i}. Every flop of the chain clears when \texttt{rst\_n\_async} is low, and every flop has the clock \texttt{clk\_i}. The first flop loads a 1.}\label{fig:tm:mod:cdc-reset-sync:block}
+\end{figure}
+
+\Cref{fig:tm:mod:cdc-reset-sync:timing} shows the reset behaviour for \code{STAGES} equal to 2 with \code{scanmode_i} low. \code{rst_n_o} falls at once with \code{rst_n_i}. After \code{rst_n_i} rises, the first edge loads a 1 into rank 0 and the second edge loads it into rank 1. The output rises at the second edge. The lower part of the figure shows scan mode: \code{rst_n_o} follows \code{scan_rst_ni} and \code{rst_n_i} has no effect.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=4.2]
+    \texttt{clk\_i} & 20{c} \\
+    \texttt{scanmode\_i} & 10L \\
+    \texttt{rst\_n\_i} & 1.2H 2.8L 6H \\
+    \texttt{sync\_q[0]} & 1.2H 3.3L 5.5H \\
+    \texttt{rst\_n\_o} & 1.2H 4.3L 4.5H \\
+  \end{tikztimingtable}
+
+  \medskip
+  \begin{tikztimingtable}[timing/wscale=4.2]
+    \texttt{clk\_i} & 20{c} \\
+    \texttt{scanmode\_i} & 10H \\
+    \texttt{rst\_n\_i} & 1H 2L 3H 1L 3H \\
+    \texttt{scan\_rst\_ni} & 4H 2L 4H \\
+    \texttt{rst\_n\_o} & 4H 2L 4H \\
+  \end{tikztimingtable}
+  \caption{Timing of \texttt{cdc\_reset\_sync} with \texttt{STAGES} equal to 2. Upper part: functional mode. Lower part: scan mode. One unit is one period of \texttt{clk\_i}, and the rising edge is in the middle of the unit.}\label{fig:tm:mod:cdc-reset-sync:timing}
+\end{figure}
+
+\paragraph{Reset and clocking.} The chain has one \code{always_ff} block for each rank, made by a generate loop. One block with a loop over the ranks gives a false SYNCASYNCNET warning in Verilator. The flop array carries the attribute \code{magic_cdc}.
+
+\paragraph{Corner cases.} The clear of the chain needs no clock edge. The module needs no minimum width of the reset pulse beyond the minimum pulse width of its flops. The header of the module asks for \code{STAGES}+1 periods of \code{clk_i}, and the RTL does not need this width. The module does not retime \code{scan_rst_ni}. In scan mode the tester sets the timing of its release. The input multiplexer and the output multiplexer are combinational. A change of \code{scanmode_i} while \code{clk_i} runs can make a pulse on \code{rst_n_o}, so the signal is quasi-static by rule (\reqref{DS-CDC-044}).
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:cdc-reset-sync:params} lists the only parameter. Elaboration stops with an error when \code{STAGES} is below 2.
+
+\input{generated/facts/cdc-reset-sync-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:cdc-reset-sync:signals} lists the ports.
+
+\input{generated/facts/cdc-reset-sync-signals}
+
+\subsection{Integration and timing constraints}
+Connect \code{scanmode_i} and \code{scan_rst_ni} at every instance. A port of the module has no default, so a missing connection is an error. The check file sets a false path on the asynchronous set and reset pins of every register whose name contains \code{rst_sync}. The CDC check configuration lists \code{scan_rst_ni} and \code{scan_mode_i} as resets and not as clock domains.
+
+\subsection{Debug, test and DFT}
+The two multiplexers are the scan bypass. In scan mode the chain flops can run, because they are scan flops, and \code{rst_n_o} still does not move. This is why the output has its own multiplexer.
+
+\subsection{Verification}
+The suite \code{test_cdc_reset_sync_scan} runs through the target \code{cdc_reset_sync_scan} (\cref{tm:suite:soc-test-cdc-reset-sync-scan}). The testbench has one instance with \code{STAGES} equal to 2. The seven tests cover these cases.
+\begin{itemize}
+  \item Functional mode: asynchronous assertion and the deassertion after two edges.
+  \item Scan mode: the scan reset controls the output, the functional reset has no effect, and the chain flops do not make a pulse.
+  \item The return from scan mode to functional mode.
+\end{itemize}
+
+The suite does not test a \code{STAGES} other than 2. It does not test the guard for \code{STAGES} below 2. It does not test a change of \code{scanmode_i} while the clock runs. That case is a rule for the caller.
+
+\subsection{Known limits}
+The scan reset has no synchroniser of its own.
+
+\section{\texttt{cdc\_gray\_fifo}}\label{tm:mod:cdc-gray-fifo}
+
+\subsection{Introduction}
+The module \code{cdc_gray_fifo} is a FIFO with a write clock and a read clock. Each side keeps a binary pointer in its own domain. Only the registered gray code of the pointer crosses. The module implements \reqref{DS-CDC-060} to \reqref{DS-CDC-069}. The module \code{async_axi_fifo} uses it for its five channels, and \code{mbist_xing} uses it with a depth of 2. The module \code{apb_cdc_bridge} does not use it.
+
+\subsection{Functional description}
+\Cref{fig:tm:mod:cdc-gray-fifo:block} shows the structure. The pointer has \code{PTR_W} bits: \code{$clog2(DEPTH)} address bits and one wrap bit. A depth of 2 gives a 2-bit pointer, a depth of 4 gives 3 bits, and a depth of 8 gives 4 bits. The address bits select the entry of the array \code{mem_q}.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[node distance=9mm]
+    \tikzset{gb/.style={cvtblock, minimum width=26mm}}
+    \node[gb] (wbin) at (1.0,4.0) {\texttt{wr\_bin\_q}\\\texttt{wr\_gray\_q}};
+    \node[gb] (full) at (1.0,1.4) {\texttt{full\_q}};
+    \node[gb] (s2) at (5.8,1.4) {\texttt{u\_rd\_ptr\_to\_wr}};
+    \node[gb] (mem) at (1.0,6.0) {\texttt{mem\_q}};
+    \node[gb] (s1) at (9.8,4.0) {\texttt{u\_wr\_ptr\_to\_rd}};
+    \node[gb] (empty) at (14.6,4.0) {\texttt{empty\_q}};
+    \node[gb] (rbin) at (14.6,1.4) {\texttt{rd\_bin\_q}\\\texttt{rd\_gray\_q}};
+    \node[gb] (rdd) at (14.6,6.0) {\texttt{rd\_data\_o}};
+    \draw[cvtsig] (wbin) -- node[above, font=\scriptsize\ttfamily]{wr\_gray\_q} (s1);
+    \draw[cvtsig] (s1) -- node[below, font=\tiny\ttfamily]{wr\_gray\_sync\_r} (empty);
+    \draw[cvtsig] (rbin) -- node[above, font=\scriptsize\ttfamily]{rd\_gray\_q} (s2);
+    \draw[cvtsig] (s2) -- node[below, font=\tiny\ttfamily]{rd\_gray\_sync\_w} (full);
+    \draw[cvtsig] (wbin) -- node[right, font=\scriptsize\ttfamily]{wr\_gray\_d} (full);
+    \draw[cvtsig] (rbin) -- node[right, font=\scriptsize\ttfamily]{rd\_gray\_d} (empty);
+    \draw[cvtsig] (wbin) -- node[right, font=\scriptsize\ttfamily]{write address} (mem);
+    \draw[cvtsig, dashed] (mem) -- node[above, font=\scriptsize\ttfamily]{read path} (rdd);
+    \draw[cvtsig] (full.west) -- ++(-8mm,0) node[left, font=\scriptsize\ttfamily]{wr\_ready\_o};
+    \draw[cvtsig] (empty.east) -- ++(8mm,0) node[right, font=\scriptsize\ttfamily]{rd\_valid\_o};
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(wbin)(full)(s2)(mem), label={[font=\scriptsize]north west:\texttt{wr\_clk\_i}}] {};
+      \node[cvtdomain, fit=(s1)(empty)(rbin)(rdd), label={[font=\scriptsize]north east:\texttt{rd\_clk\_i}}] {};
+    \end{scope}
+  \end{tikzpicture}}
+  \caption{Structure of \texttt{cdc\_gray\_fifo}. Solid arrows between the domains are the two registered gray pointers. The dashed arrow is the combinational read of the storage array. The read address \texttt{rd\_bin\_q} selects the entry. Each side compares the next value of its own pointer with the synchronised pointer of the other side, and registers the result in a flag.}\label{fig:tm:mod:cdc-gray-fifo:block}
+\end{figure}
+
+\paragraph{Write.} A write happens on a cycle of \code{wr_clk_i} in which \code{wr_valid_i} and \code{wr_ready_o} are both high. The data goes into \code{mem_q} at the address of \code{wr_bin_q}, and \code{wr_bin_q} and \code{wr_gray_q} advance. The gray value is the binary value xor the binary value shifted right by 1. It changes in one bit for each step.
+
+\paragraph{Read.} A read happens on a cycle of \code{rd_clk_i} in which \code{rd_valid_o} and \code{rd_ready_i} are both high. The pointers \code{rd_bin_q} and \code{rd_gray_q} advance. The output \code{rd_data_o} is the entry at \code{rd_bin_q}, read from the array without a register. The array has no reset.
+
+\paragraph{Flags.} Both flags compare the next value of the local pointer with the synchronised pointer of the other side, and register the result. The flag \code{empty_q} compares \code{rd_gray_d} with \code{wr_gray_sync_r} and resets to 1. The flag \code{full_q} compares \code{wr_gray_d} with a value that the module derives from \code{rd_gray_sync_w}, and resets to 0. The output \code{rd_valid_o} is \code{!empty_q}. The output \code{wr_ready_o} is \code{wr_rst_n_i} and \code{!full_q}.
+
+A push or a pop on one side changes the flag of that same side at the same edge, because the flag compares the next pointer value. Only the effect of the other side comes late. The pointer of the other side first crosses a synchroniser. So a flag can show full or empty too long. It never shows it too short.
+
+\paragraph{The full compare.} The FIFO is full when the write pointer is \code{DEPTH} ahead of the read pointer. In binary, the address bits are equal and the wrap bits differ. In gray code, the top two bits of the two pointers are both inverted and the lower bits are equal. For a depth of 4 or more the module compares \code{wr_gray_d} with \code{rd_gray_sync_w} with its top two bits inverted. For a depth of 2 the pointer has only two bits, and the lower part is empty, so the module compares with the whole of \code{rd_gray_sync_w} inverted. \Cref{tab:tm:mod:cdc-gray-fifo:d2full} checks the four cases. Inverting only the top bit gives a full flag that rises after three entries in a two-entry array.
+
+\begin{table}[ht]
+  \centering
+  \caption{Full compare of \texttt{cdc\_gray\_fifo} with a depth of 2}\label{tab:tm:mod:cdc-gray-fifo:d2full}
+  \begin{tabular}{@{}cccc@{}}
+    \toprule
+    Read pointer (binary) & Read pointer (gray) & Inverted gray & Full at write pointer (binary)\\
+    \midrule
+    00 & 00 & 11 & 10\\
+    01 & 01 & 10 & 11\\
+    10 & 11 & 00 & 00\\
+    11 & 10 & 01 & 01\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\Cref{fig:tm:mod:cdc-gray-fifo:ring} shows the four gray values of a 2-bit pointer. Each step changes one bit.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize\ttfamily}]
+    \node[cvtblock, minimum width=18mm] (g0) at (0,0) {00};
+    \node[cvtblock, minimum width=18mm] (g1) at (4.8,0) {01};
+    \node[cvtblock, minimum width=18mm] (g2) at (4.8,-2.4) {11};
+    \node[cvtblock, minimum width=18mm] (g3) at (0,-2.4) {10};
+    \draw[cvtsig] (g0) -- node[above]{bin 0 to 1} (g1);
+    \draw[cvtsig] (g1) -- node[right]{bin 1 to 2} (g2);
+    \draw[cvtsig] (g2) -- node[below]{bin 2 to 3} (g3);
+    \draw[cvtsig] (g3) -- node[left]{bin 3 to 0} (g0);
+  \end{tikzpicture}
+  \caption{The gray values of a 2-bit pointer, which is the pointer of a FIFO with a depth of 2. The binary count steps are on the arrows. One bit changes at each step, also at the step from 3 to 0.}\label{fig:tm:mod:cdc-gray-fifo:ring}
+\end{figure}
+
+\paragraph{Latency.} A beat that the write side hands over at a write edge is visible on the read side after \code{SYNC_STAGES}+1 rising edges of \code{rd_clk_i}. \code{SYNC_STAGES} edges move \code{wr_gray_q} through the synchroniser. One more edge loads \code{empty_q}. \Cref{fig:tm:mod:cdc-gray-fifo:timing} shows this for \code{SYNC_STAGES} equal to 2. The same argument gives \code{SYNC_STAGES}+1 rising edges of \code{wr_clk_i} from a read edge until \code{wr_ready_o} can rise again after a full state. The suite measures the first count. It does not measure the second.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=3.6]
+    \texttt{wr\_clk\_i} & 1L 2H 2L 2H 2L 2H 1L \\
+    \texttt{wr\_valid\_i} & 0.5L 2H 9.5L \\
+    \texttt{wr\_gray\_q} & 1D{00} 11D{01} \\
+    \texttt{rd\_clk\_i} & 24{c} \\
+    \texttt{sync\_q[0]} & 1.5D{00} 10.5D{01} \\
+    \texttt{wr\_gray\_sync\_r} & 2.5D{00} 9.5D{01} \\
+    \texttt{rd\_valid\_o} & 3.5L 8.5H \\
+  \end{tikztimingtable}
+  \caption{One beat crosses from the write side to the read side with \texttt{SYNC\_STAGES} equal to 2 and \texttt{DEPTH} equal to 2, so the pointer has 2 bits. One unit is one period of \texttt{rd\_clk\_i}, and the period of \texttt{wr\_clk\_i} is four units. The write edge loads \texttt{wr\_gray\_q}. The next three edges of \texttt{rd\_clk\_i} load \texttt{sync\_q[0]}, \texttt{wr\_gray\_sync\_r} and \texttt{empty\_q}. \texttt{rd\_valid\_o} rises after the third edge. \texttt{sync\_q[0]} is the first rank of \texttt{u\_wr\_ptr\_to\_rd}.}\label{fig:tm:mod:cdc-gray-fifo:timing}
+\end{figure}
+
+\paragraph{Reset and clocking.} Each side resets with its own reset. The write side clears \code{wr_bin_q}, \code{wr_gray_q} and \code{full_q}. The read side clears \code{rd_bin_q}, \code{rd_gray_q} and sets \code{empty_q}. The output \code{wr_ready_o} also has the term \code{wr_rst_n_i}, because \code{full_q} resets to 0 and would otherwise show ``not full'' while the domain is in reset. This term is a path inside one domain. The synchroniser \code{u_wr_ptr_to_rd} resets with \code{rd_rst_n_i}, and \code{u_rd_ptr_to_wr} resets with \code{wr_rst_n_i}. After a reset of one domain only, the pointers of the two sides disagree.
+
+\paragraph{Corner cases.} When the read side is slow, the FIFO fills to \code{DEPTH} and \code{wr_ready_o} stays low until a read crosses back. When both resets assert while the FIFO is full, the reset clears all pointers, and the old entries are not visible after the release in any order.
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:cdc-gray-fifo:params} lists the parameters. The local values \code{PTR_W} and \code{ADDR_W} follow from \code{DEPTH}. Elaboration stops with an error when \code{DEPTH} is not a power of two or is below 2.
+
+\input{generated/facts/cdc-gray-fifo-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:cdc-gray-fifo:signals} lists the ports.
+
+\input{generated/facts/cdc-gray-fifo-signals}
+
+\subsection{Integration and timing constraints}
+Each reset is supplied already synchronised to its own clock. The storage read is a path from \code{wr_clk_i} flops to the read domain, and each registered gray pointer is a path into a synchroniser. Each of these needs a bounded delay of at most one receiving period (\reqref{DS-CDC-006}). The check file bounds the pointers at 0.5 of the receiving period for the five FIFOs of \code{u_cpu_axi_cdc}, and the fallback covers the storage read. The two synchronisers have the fixed names \code{u_wr_ptr_to_rd} and \code{u_rd_ptr_to_wr}, and the check file finds the pointers through the name of the FIFO instance. A new FIFO instance keeps these names and needs a budget of its own.
+
+\subsection{Debug, test and DFT}
+The module has no scan port. The testbench \code{tb_cdc_gray_fifo} has a monitor for each pointer crossing. The monitor reads the input of the synchroniser through a hierarchical name. It keeps a sticky flag when the value changes by more than one bit between two edges of the source clock. The monitor skips the edges in a reset of the source domain and the edge after it. A reset of the monitor, and not a reset of the FIFO, clears the flag.
+
+\subsection{Verification}
+The suite \code{test_cdc_gray_fifo} runs through the target \code{cdc_gray_fifo}. The target also lints the module at the depths 2, 4, 8 and 16. It runs the negative control of the depth guard for the depths 0, 1, 3, 6 and 12. The testbench has two FIFOs with 16 bits and \code{SYNC_STAGES} equal to 2: a depth of 2 and a depth of 4. Each test runs on both. The tests drive and sample in the middle of a clock cycle, so the handshake bookkeeping has no race.
+
+The streaming tests send 80 to 200 words through the FIFO. The pairs of write and read clock periods are 7 and 3 ns, 3 and 7 ns, 10 and 10 ns (also with a 3 ns offset), 5 and 97 ns, and 97 and 5 ns. A scoreboard checks each word against the log of accepted words, in order. A replay of the occupancy checks that it stays between 0 and \code{DEPTH}. Every stream test also checks that the gray monitors stay clear. The test of the full boundary turns both pointers through every phase. The test of the empty boundary uses clock periods with no common edge, and checks the exact visibility count. The reset tests cover the ready output in reset, a reset while full with both release orders, and a reset of one side only.
+
+The mutation script \src{tools/verif/mutate_cdc_gray_fifo.py} changes the RTL text in 15 ways and runs the suite on each copy. The mutants cover the full compare (six), the reset gating of the ready output (one) and the crossing of a binary pointer (three). Five more mutants change the reset values, the write guard, the read guard and the empty compare. A mutant is killed when the build or any test fails. The script exits with a non-zero code when a mutant survives. The result of a campaign is a record in the Changes record and not part of this manual. The script \src{tools/verif/equiv_cdc_gray_fifo_depth.sh} compares the working-tree module with the version at the git reference \code{OLD_REF} by formal equivalence, for the depths 4, 8 and 16. The default of \code{OLD_REF} is \code{origin/main}, so the script proves nothing about a change that is already on that branch. It proves that a change did not alter the behaviour at these depths. On a new host, set the variables \code{YOSYS} and \code{SLANG_PLUGIN}. The script exits with 3 when a tool is missing. It does not prove the rules of the Design Specification.
+
+The suite does not model metastability or skew between the bits of a pointer. The monitor checks the property that makes skew harmless, and does not show that skew is harmless. The suite runs \code{SYNC_STAGES} equal to 2 only. This suite runs the depths 2 and 4. The suite of \code{async_axi_fifo} runs the depths 4 and 8. No simulation runs the depth 16. The lint step and the equivalence script cover it.
+
+\subsection{Known limits}
+While the FIFO is empty, \code{rd_data_o} shows the slot at the read pointer, and the value of this slot can change on an edge of \code{wr_clk_i}. The output is valid only while \code{rd_valid_o} is high. After a reset of one domain only, the FIFO has no data contract. A common reset restores it. The depth of the array is a power of two. The array is a flop array, which fits depths of a few entries.
+
+\section{\texttt{apb\_cdc\_bridge}}\label{tm:mod:apb-cdc-bridge}
+
+\subsection{Introduction}
+The module \code{apb_cdc_bridge} lets an APB4 master in the domain of \code{s_clk_i} reach an APB4 slave in the domain of \code{m_clk_i}. One transfer is outstanding at a time. Only two levels and one reset status cross through synchronisers. The module implements \reqref{DS-CDC-100} to \reqref{DS-CDC-116}. \Cref{tab:tm:ch:mod-cdc-primitives:instances} lists the three instances in \code{soc_top}. The three instances have an \code{ADDR_W} of 12.
+
+\subsection{Functional description}
+\Cref{fig:tm:mod:apb-cdc-bridge:block} shows the structure. The source side captures the command in the SETUP cycle and raises the level \code{req_q}. The level crosses through \code{u_req_sync} and reaches the destination side as \code{req_m}. The destination side reads the command, runs one APB transfer on the \code{m_*} face, captures the response and raises \code{ack_q}. The level crosses back through \code{u_ack_sync} as \code{ack_s}. The command and the response do not cross through a synchroniser. They stay stable, and the receiving side reads them only after the level that goes with them has arrived.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[node distance=9mm, every node/.style={font=\scriptsize}]
+    \tikzset{sdom/.style={cvtblock, minimum width=40mm, fill=blue!6}, mdom/.style={cvtblock, minimum width=40mm, fill=orange!10}}
+    \node[sdom] (src) at (0,3.2) {source registers\\\texttt{cmd\_*\_q}, \texttt{req\_q}};
+    \node[mdom] (rsync) at (6.4,3.2) {\texttt{u\_req\_sync}};
+    \node[mdom] (dst) at (12.8,3.2) {destination FSM\\\texttt{cmd\_*\_cap\_q}};
+    \node[sdom] (sfsm) at (0,0.8) {source FSM\\\texttt{resp\_*\_q}};
+    \node[sdom] (async) at (6.4,0.8) {\texttt{u\_ack\_sync}};
+    \node[mdom] (dresp) at (12.8,0.8) {\texttt{resp\_*\_dq}, \texttt{ack\_q}};
+    \node[sdom] (stat) at (0,-1.4) {\texttt{u\_m\_rst\_status\_sync}};
+    \draw[cvtsig] (src) -- node[above, font=\scriptsize\ttfamily]{req\_q} (rsync);
+    \draw[cvtsig] (rsync) -- node[above, font=\scriptsize\ttfamily]{req\_m} (dst);
+    \draw[cvtsig] (dresp) -- node[above, font=\scriptsize\ttfamily]{ack\_q} (async);
+    \draw[cvtsig] (async) -- node[above, font=\scriptsize\ttfamily]{ack\_s} (sfsm);
+    \draw[cvtsig] (dst) -- (dresp);
+    \draw[cvtsig, dashed] (src.north) -- ++(0,0.6) -| node[above, pos=0.25, font=\scriptsize\ttfamily]{command, stable} (dst.north);
+    \draw[cvtsig, dashed] (dresp.south) -- ++(0,-0.7) -| node[below, pos=0.25, font=\scriptsize\ttfamily]{response, stable} ([xshift=6mm]sfsm.south);
+    \draw[cvtsig] (6.4,-1.4) node[right, font=\scriptsize\ttfamily]{m\_rst\_n\_i} -- (stat.east);
+    \draw[cvtsig] (stat.north) -- node[left, font=\scriptsize\ttfamily]{m\_rst\_n\_s} ([xshift=-6mm]sfsm.south);
+  \end{tikzpicture}}
+  \caption{Structure of \texttt{apb\_cdc\_bridge}. Solid arrows between the domains are single-bit levels. Dashed arrows are the command and the response. The status of \texttt{m\_rst\_n\_i} enters \texttt{u\_m\_rst\_status\_sync}, and the arrow from that block is the status \texttt{m\_rst\_n\_s}.}\label{fig:tm:mod:apb-cdc-bridge:block}
+\end{figure}
+
+\paragraph{Source state machine.} \Cref{fig:tm:mod:apb-cdc-bridge:sfsm} shows the states. In \code{S_IDLE} the bridge waits for a SETUP phase: \code{s_psel_i} high and \code{s_penable_i} low. In that cycle it captures the command, latches \code{req_fwd_q} with the value of \code{m_rst_n_s}, and raises \code{req_q} when the destination is seen alive. In \code{S_REQ} it waits for the answer. The state ends on \code{ack_s}, on \code{req_fwd_q} low, or on \code{m_rst_n_s} low. \code{ack_s} has priority. The response register takes the real response when \code{ack_s} is high, and a forced response when the state ends for the other two reasons. The forced response has \code{s_prdata_o} equal to 0 and \code{s_pslverr_o} high. In \code{S_DROP} the bridge has lowered \code{req_q} and waits for \code{ack_s} to fall. In \code{S_DONE} it gives \code{s_pready_o} high for one cycle, and then returns to \code{S_IDLE}. The level \code{req_q} is held at 0 for as long as \code{m_rst_n_s} is low.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[->, >=Stealth, node distance=34mm, every node/.style={font=\scriptsize}, every edge/.style={draw, thin}]
+    \node[cvtstate] (idle) {\texttt{S\_IDLE}};
+    \node[cvtstate, right of=idle] (req) {\texttt{S\_REQ}};
+    \node[cvtstate, right of=req] (drop) {\texttt{S\_DROP}};
+    \node[cvtstate, right of=drop] (done) {\texttt{S\_DONE}};
+    \path (idle) edge node[above, align=center]{\texttt{s\_psel\_i} and\\not \texttt{s\_penable\_i}} (req);
+    \path (req) edge node[above, align=center]{\texttt{ack\_s} or\\not \texttt{req\_fwd\_q} or\\not \texttt{m\_rst\_n\_s}} (drop);
+    \path (drop) edge node[above, align=center]{not\\\texttt{ack\_s}} (done);
+    \path (done) edge[bend left=40] node[above]{always} (idle);
+  \end{tikzpicture}
+  \caption{Source state machine of \texttt{apb\_cdc\_bridge}. A state stays until the condition of its exit arrow is true. \texttt{s\_pready\_o} is high in \texttt{S\_DONE} only.}\label{fig:tm:mod:apb-cdc-bridge:sfsm}
+\end{figure}
+
+\paragraph{Destination state machine.} \Cref{fig:tm:mod:apb-cdc-bridge:dfsm} shows the states. In \code{D_IDLE} the bridge waits for \code{req_m}. When it sees \code{req_m}, it reads the command from the source registers into its own capture registers. In \code{D_SETUP} \code{m_psel_o} is high. In \code{D_ACCESS} \code{m_psel_o} and \code{m_penable_o} are high, and the bridge waits for \code{m_pready_i}. In that cycle it captures \code{m_prdata_i} and \code{m_pslverr_i} and raises \code{ack_q}. In \code{D_ACK} it holds \code{ack_q} until \code{req_m} falls, then lowers \code{ack_q} and returns to \code{D_IDLE}. The outputs \code{m_pwrite_o}, \code{m_paddr_o}, \code{m_pwdata_o} and \code{m_pstrb_o} hold the last captured command when the bridge is idle.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[->, >=Stealth, node distance=34mm, every node/.style={font=\scriptsize}, every edge/.style={draw, thin}]
+    \node[cvtstate] (idle) {\texttt{D\_IDLE}};
+    \node[cvtstate, right of=idle] (setup) {\texttt{D\_SETUP}};
+    \node[cvtstate, right of=setup] (access) {\texttt{D\_ACCESS}};
+    \node[cvtstate, right of=access] (ack) {\texttt{D\_ACK}};
+    \path (idle) edge node[above]{\texttt{req\_m}} (setup);
+    \path (setup) edge node[above]{always} (access);
+    \path (access) edge node[above]{\texttt{m\_pready\_i}} (ack);
+    \path (ack) edge[bend left=40] node[above]{not \texttt{req\_m}} (idle);
+  \end{tikzpicture}
+  \caption{Destination state machine of \texttt{apb\_cdc\_bridge}. \texttt{m\_psel\_o} is high in \texttt{D\_SETUP} and \texttt{D\_ACCESS}. \texttt{m\_penable\_o} is high in \texttt{D\_ACCESS}.}\label{fig:tm:mod:apb-cdc-bridge:dfsm}
+\end{figure}
+
+\paragraph{One transfer.} \Cref{fig:tm:mod:apb-cdc-bridge:timing} shows one write with \code{SYNC_STAGES_TO_S} and \code{SYNC_STAGES_TO_M} equal to 2 and a destination with no wait state. The period of \code{m_clk_i} is two periods of \code{s_clk_i}. The four phases are visible. First \code{req_q} rises. Then \code{ack_q} rises, and \code{ack_s} follows. Then \code{req_q} falls, and \code{req_m} follows. Last \code{ack_q} falls, and \code{ack_s} follows. Only then does \code{s_pready_o} pulse. Each of the four level changes costs \code{SYNC_STAGES} edges of the receiving clock plus the edge at which the state machine of the receiving side acts. The transfer takes about twice the time of one round trip.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=2.05]
+    \texttt{s\_clk\_i} & 44{c} \\
+    \texttt{s\_psel\_i} & 0.5L 21H 0.5L \\
+    \texttt{s\_penable\_i} & 1.5L 20H 0.5L \\
+    \texttt{req\_q} & 1.5L 11H 9.5L \\
+    \texttt{m\_clk\_i} & 2L 10{1H 1L} \\
+    \texttt{req\_m} & 4L 12H 6L \\
+    \texttt{m\_psel\_o} & 6L 4H 12L \\
+    \texttt{m\_penable\_o} & 8L 2H 12L \\
+    \texttt{m\_pready\_i} & 8L 2H 12L \\
+    \texttt{ack\_q} & 10L 8H 4L \\
+    \texttt{ack\_s} & 11.5L 8H 2.5L \\
+    \texttt{s\_pready\_o} & 20.5L 1H 0.5L \\
+  \end{tikztimingtable}
+  \caption{One transfer through \texttt{apb\_cdc\_bridge}. One unit is one period of \texttt{s\_clk\_i}. The period of \texttt{m\_clk\_i} is two units. Both synchroniser lengths are 2. The SETUP phase is the first full cycle in which \texttt{s\_psel\_i} is high and \texttt{s\_penable\_i} is low. \texttt{req\_q} rises at the SETUP edge and falls when \texttt{ack\_s} is seen. \texttt{ack\_q} rises in the ACCESS cycle of the destination and falls when \texttt{req\_m} has fallen. \texttt{s\_pready\_o} pulses after \texttt{ack\_s} has fallen.}\label{fig:tm:mod:apb-cdc-bridge:timing}
+\end{figure}
+
+\paragraph{Reset and clocking.} \Cref{fig:tm:mod:apb-cdc-bridge:reset} compares the reset trees of the two bridges. The source side of the APB bridge resets from \code{s_rst_n_i} alone, through \code{u_s_rst_sync}. The destination side resets from \code{s_rst_n_i} and \code{m_rst_n_i} together, through \code{u_m_rst_sync}. The status of \code{m_rst_n_i} also crosses into the \code{s_clk_i} domain through \code{u_m_rst_status_sync}. The status is the inverse of the reset, so that the reset value of \code{cdc_sync} means ``not in reset''. The signal \code{m_rst_n_s} is the inverse of the synchronised status.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[node distance=8mm, every node/.style={font=\scriptsize}]
+    \node[font=\small\bfseries] at (2.6,3.7) {\texttt{async\_axi\_fifo}};
+    \node[cvtblock, minimum width=14mm] (a_and) at (1.2,2.0) {AND};
+    \node[cvtblock, minimum width=34mm] (a_s) at (5.2,2.8) {\texttt{u\_s\_rst\_sync}};
+    \node[cvtblock, minimum width=34mm] (a_m) at (5.2,1.2) {\texttt{u\_m\_rst\_sync}};
+    \draw[cvtsig] (-1.4,2.2) node[left]{\texttt{s\_rst\_n\_i}} -- ([yshift=2mm]a_and.west);
+    \draw[cvtsig] (-1.4,1.8) node[left]{\texttt{m\_rst\_n\_i}} -- ([yshift=-2mm]a_and.west);
+    \draw[cvtsig] (a_and.east) -- (2.6,2.0) |- (a_s.west);
+    \draw[cvtsig] (2.6,2.0) |- (a_m.west);
+    \begin{scope}[xshift=1.8cm]
+    \node[font=\small\bfseries] at (13.0,3.7) {\texttt{apb\_cdc\_bridge}};
+    \node[cvtblock, minimum width=14mm] (b_and) at (10.4,1.2) {AND};
+    \node[cvtblock, minimum width=34mm] (b_s) at (14.2,2.8) {\texttt{u\_s\_rst\_sync}};
+    \node[cvtblock, minimum width=34mm] (b_m) at (14.2,1.2) {\texttt{u\_m\_rst\_sync}};
+    \node[cvtblock, minimum width=34mm] (b_st) at (14.2,-0.4) {\texttt{u\_m\_rst\_status\_sync}};
+    \draw[cvtsig] (8.0,2.8) node[left]{\texttt{s\_rst\_n\_i}} -- (b_s.west);
+    \draw[cvtsig] (8.5,2.8) -- (8.5,1.4) -- ([yshift=2mm]b_and.west);
+    \draw[cvtsig] (8.0,1.0) node[left]{\texttt{m\_rst\_n\_i}} -- ([yshift=-2mm]b_and.west);
+    \draw[cvtsig] (b_and.east) -- (b_m.west);
+    \draw[cvtsig] (8.5,1.0) -- (8.5,-0.4) -- (b_st.west);
+    \node[font=\scriptsize, align=left] at (12.4,-1.5) {status of \texttt{m\_rst\_n\_i} into the \texttt{s\_clk\_i} domain};
+    \end{scope}
+  \end{tikzpicture}}
+  \caption{Reset trees. In \texttt{async\_axi\_fifo} both reset inputs feed both synchroniser chains. In \texttt{apb\_cdc\_bridge} the source chain takes \texttt{s\_rst\_n\_i} alone, the destination chain takes both resets, and the status of \texttt{m\_rst\_n\_i} crosses into the source domain.}\label{fig:tm:mod:apb-cdc-bridge:reset}
+\end{figure}
+
+The two resets give these results.
+\begin{itemize}
+  \item \code{m_rst_n_i} asserts alone. The destination resets. The source is not held. A request that comes while the source sees the reset ends with \code{s_pready_o} high and \code{s_pslverr_o} high after the second rising edge of \code{s_clk_i} that follows the SETUP edge. A request that is in flight ends in the same way after the status of the reset has crossed. The count of edges from the fall of \code{m_rst_n_i} is \code{SYNC_STAGES_TO_S}+2 for the status and the two state steps. These counts come from the RTL, and no test measures them.
+  \item \code{s_rst_n_i} asserts alone. Both sides reset. A transfer on the \code{m_*} face is abandoned, and the source gives no response and no error. The upstream master issues the transfer again after the reset.
+\end{itemize}
+
+\paragraph{Corner cases.} The status \code{m_rst_n_s} reads ``not in reset'' for up to \code{SYNC_STAGES_TO_S} cycles of \code{s_clk_i} after the source reset of the bridge releases, also when \code{m_rst_n_i} is low. A request in this window can be forwarded. It is still safe, because \code{m_rst_sync_n} is low for as long as \code{m_rst_n_i} is low and holds the destination in reset. The level \code{req_q} is clamped to 0 when the status catches up, and the request ends with an error. A level that returns to zero cannot be mistaken for a new request. The state \code{D_ACK} leaves only when \code{req_m} is 0, so \code{D_IDLE} always sees \code{req_m} at 0 first. The state \code{S_DROP} leaves only when \code{ack_s} is 0, so \code{S_IDLE} always starts with \code{ack_s} at 0. The bridge needs no register that counts transfers.
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:apb-cdc-bridge:params} lists the parameters.
+
+\input{generated/facts/apb-cdc-bridge-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:apb-cdc-bridge:signals} lists the ports. The \code{s_*} face is an APB4 slave port. The \code{m_*} face is an APB4 master port.
+
+\input{generated/facts/apb-cdc-bridge-signals}
+
+The outputs \code{s_prdata_o} and \code{s_pslverr_o} hold the last response and do not clear after the pulse of \code{s_pready_o}. A master reads them in the cycle in which it sees \code{s_pready_o} high.
+
+\subsection{Integration and timing constraints}
+Hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i} (\reqref{DS-CDC-109}). The first rank of the status synchroniser has to sample the reset. A shorter pulse can stay hidden from the \code{s_clk_i} domain. The status then never changes, and \code{req_q} stays high. The destination resets and clears its state. After the release, \code{u_req_sync} shows \code{req_q} again, and the destination runs the transfer again. A write can then happen two times. The header of the module asks for \code{SYNC_STAGES}+1 periods of both clocks. The destination reset clears without a clock edge, so the RTL needs only the width for the status. Connect \code{scanmode_i} and \code{scan_rst_ni} at every instance. In \code{u_apb_dbg_cdc} the input \code{s_pstrb_i} is tied to all ones, because the CPU debug slave is an APB3 slave, and the output \code{m_pstrb_o} goes to an unused net. Use the bridge for configuration and debug only (\reqref{DS-CDC-111}).
+
+The check file has budgets for \code{req_q} and \code{ack_q} of \code{u_apb_pll2_cdc} and \code{u_apb_dbg_cdc}. The file finds the nets through their names. Do not rename \code{req_q} and \code{ack_q} (\reqref{DS-CDC-110}). The four payload buses and the path from \code{m_rst_n_i} to the status synchroniser need a bounded delay too (\reqref{DS-CDC-006}). The fallback of the check file covers the payload.
+
+\subsection{Debug, test and DFT}
+The scan pins go to the two reset synchronisers, so the bridge resets from the test reset in scan mode. The internal registers have the names that the testbench reads by hierarchy: \code{s_state_q}, \code{req_q}, \code{ack_q}, \code{req_fwd_q}, \code{m_rst_n_s}, \code{ack_s} and \code{m_in_rst_s}.
+
+\subsection{Verification}
+The suite \code{test_apb_cdc_bridge} runs through the target \code{apb_cdc_bridge} (\cref{tm:suite:soc-test-apb-cdc-bridge}). The testbench has an APB4 master on the source face and a local slave on the destination face with wait states and an error injection. The clock pairs are 4 and 9 ns, 18 and 4 ns, 10 and 10 ns, 7 and 11 ns, and 7 and 13 ns. The 23 tests cover these cases.
+\begin{itemize}
+  \item Single transfers, back-to-back transfers, wait states and error injection.
+  \item The four clock ratios.
+  \item The reset cases of both sides, two pulses of the destination reset, and the order of the release of the two resets.
+  \item A stream of 150 transfers with a count of the transfers on the destination face.
+  \item A structural proof of the four-phase order.
+  \item A race between the answer and the reset status.
+\end{itemize}
+
+The structural test reads \code{s_state_q}, \code{req_q} and \code{ack_s} and checks the order of the four phases and a visit to \code{S_DROP}. It fails on a two-phase toggle handshake, which cannot show this order. The race test finds by a sweep the edge on which the answer and the reset status change together. The latency test checks an upper bound that it derives from the parameters, and it checks no exact value.
+
+The suite does not model metastability. It does not run the settling-delay model of \code{cdc_sync}. It runs the default \code{SYNC_STAGES_TO_S} and \code{SYNC_STAGES_TO_M} of 2. A test of the value zero for \code{s_prdata_o} in a forced completion does not exist; \reqref{DS-CDC-116} is checked in review. The tests for a reset pulse that is shorter than the width in \reqref{DS-CDC-109} do not exist. The local slave of the testbench does not complete an access while its reset is low, so the count of completed transfers in \code{test_reset_mid_transaction_m_side} depends on the slave model. The bounds of \reqref{DS-CDC-102} and \reqref{DS-CDC-103} are not measured. The test of the first checks a loose bound in time.
+
+\subsection{Known limits}
+The bridge has one outstanding transfer, and a transfer needs two round trips through the synchronisers. The bridge is not a data path. A reset of \code{s_rst_n_i} abandons a transfer without a response. An error from the bridge during a reset of the destination does not show that the destination made no transfer. When the destination finishes the access and then resets before the acknowledge reaches the source, the source can return an error after a write has taken place. The bridge has no timeout. When \code{m_clk_i} stops and \code{m_rst_n_i} stays high, a transfer waits until the clock runs again, and the master upstream waits with it. In \code{soc_top} the clock of the \code{m_*} face of \code{u_apb_dbg_cdc} is \code{cpu_gated_clk}, which the PMU can stop through the clock gate \code{u_cpu_cg}. The same \code{soc_top} comments name a gap for \code{u_cpu_axi_cdc}: a CPU transaction in the middle of a burst at clock gating can wedge a crossbar slave engine, because no drain step exists. A pulse on \code{m_rst_n_i} that is too short can make the destination run a transfer again. The status \code{m_rst_n_s} has the false window that the corner cases describe. The command and response registers are not cleared when the bridge is idle, so \code{m_paddr_o} and the other outputs of the \code{m_*} face show the last command.
+
+\section{\texttt{async\_axi\_fifo}}\label{tm:mod:async-axi-fifo}
+
+\subsection{Introduction}
+The module \code{async_axi_fifo} carries the five channels of an AXI4 bus between two clock domains. It has five instances of \code{cdc_gray_fifo} and two instances of \code{cdc_reset_sync}, and no other sequential logic. Neither face has a transaction identifier. In \code{soc_top} the instance \code{u_cpu_axi_cdc} connects the CPU to master 0 of the crossbar. The module implements \reqref{DS-CDC-150} to \reqref{DS-CDC-159}.
+
+\subsection{Functional description}
+\Cref{fig:tm:mod:async-axi-fifo:channels} shows the five channels. Three channels go from the \code{s_*} face to the \code{m_*} face: the write address (AW), the write data (W) and the read address (AR). Two channels go back: the write response (B) and the read data (R). Each channel is one FIFO. The valid and ready signals of a channel connect to the write side and the read side of its FIFO.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[node distance=8mm, every node/.style={font=\scriptsize}]
+    \node[cvtblock, minimum width=26mm] (aw) at (6.0,4.4) {\texttt{u\_aw\_fifo}};
+    \node[cvtblock, minimum width=26mm] (w) at (6.0,3.2) {\texttt{u\_w\_fifo}};
+    \node[cvtblock, minimum width=26mm] (ar) at (6.0,2.0) {\texttt{u\_ar\_fifo}};
+    \node[cvtblock, minimum width=26mm] (b) at (6.0,0.8) {\texttt{u\_b\_fifo}};
+    \node[cvtblock, minimum width=26mm] (r) at (6.0,-0.4) {\texttt{u\_r\_fifo}};
+    \node[cvtblock, minimum width=30mm] (srst) at (1.3,-2.0) {\texttt{u\_s\_rst\_sync}};
+    \node[cvtblock, minimum width=30mm] (mrst) at (10.7,-2.0) {\texttt{u\_m\_rst\_sync}};
+    \node[cvtblock, minimum width=30mm] (rb) at (6.0,-2.0) {\texttt{rst\_both\_n}};
+    \node[font=\scriptsize\ttfamily] at (6.0,-2.9) {s\_rst\_n\_i AND m\_rst\_n\_i};
+    \foreach \n/\y/\t in {aw/4.4/AW, w/3.2/W, ar/2.0/AR} {
+      \draw[cvtsig] (0.0,\y) node[left]{\t} -- (\n.west);
+      \draw[cvtsig] (\n.east) -- (12.0,\y);
+    }
+    \foreach \n/\y/\t in {b/0.8/B, r/-0.4/R} {
+      \draw[cvtsig] (12.0,\y) node[right]{\t} -- (\n.east);
+      \draw[cvtsig] (\n.west) -- (0.0,\y);
+    }
+    \node[font=\scriptsize\ttfamily] at (0.2,5.2) {s face};
+    \node[font=\scriptsize\ttfamily] at (11.8,5.2) {m face};
+    \draw[cvtsig] (rb.west) -- (srst.east);
+    \draw[cvtsig] (rb.east) -- (mrst.west);
+  \end{tikzpicture}
+  \caption{The five channels of \texttt{async\_axi\_fifo}. The arrows show the direction of the payload. AW, W and AR go from the \texttt{s\_*} face to the \texttt{m\_*} face. B and R go back. The two reset synchronisers take the same input, \texttt{rst\_both\_n}.}\label{fig:tm:mod:async-axi-fifo:channels}
+\end{figure}
+
+\Cref{tab:tm:mod:async-axi-fifo:channels} gives the payload of each channel at the default parameters.
+
+\begin{table}[ht]
+  \centering
+  \caption{Channels of \texttt{async\_axi\_fifo} at the default parameters}\label{tab:tm:mod:async-axi-fifo:channels}
+  \begin{tabular}{@{}llllrr@{}}
+    \toprule
+    Channel & Direction & Payload (high bits first) & Synchroniser parameter & Width & Depth\\
+    \midrule
+    AW & s to m & \code{{addr, len, size, burst}} & \code{SYNC_STAGES_TO_M} & 45 & 4\\
+    W & s to m & \code{{data, strb, last}} & \code{SYNC_STAGES_TO_M} & 37 & 8\\
+    B & m to s & \code{{resp}} & \code{SYNC_STAGES_TO_S} & 2 & 4\\
+    AR & s to m & \code{{addr, len, size, burst}} & \code{SYNC_STAGES_TO_M} & 45 & 4\\
+    R & m to s & \code{{data, resp, last}} & \code{SYNC_STAGES_TO_S} & 35 & 8\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Stage counts.} Each FIFO takes one stage count for both of its pointer synchronisers. The write address, write data and read address FIFOs use \code{SYNC_STAGES_TO_M} for both. The write response and read data FIFOs use \code{SYNC_STAGES_TO_S} for both. So in the AW, W and AR FIFOs, the synchroniser that brings the read pointer back into the \code{s_clk_i} domain has \code{SYNC_STAGES_TO_M} ranks and not \code{SYNC_STAGES_TO_S}. The same holds in mirror form for B and R. With the default of 2 for both parameters the difference does not show.
+
+\paragraph{Latency.} A beat is visible on the other face \code{SYNC_STAGES}+1 rising edges of the receiving clock after the edge that accepts it, as \cref{tm:mod:cdc-gray-fifo} derives. The count is exact in a simulation with ideal flops. A write takes the channels AW, W and B in sequence, and a read takes AR and R.
+
+\paragraph{Reset and clocking.} Both reset inputs feed both synchroniser chains through \code{rst_both_n}. So a reset of either face resets both faces. The reset is a hard flush. Buffered beats are lost, the module makes no \code{wlast} for a cut burst, and it makes no error response. While a domain is in reset, its ready and valid outputs are low. \Cref{fig:tm:mod:apb-cdc-bridge:reset} compares this tree with the tree of \code{apb_cdc_bridge}.
+
+\paragraph{Corner cases.} A full channel does not block another channel, because the channels share no signal. A master that holds a valid signal does not see it withdrawn, except when \code{s_rst_n_i} or \code{m_rst_n_i} asserts. A reset of the other face also withdraws a valid output. While a response channel is empty, its payload outputs on the \code{s_*} face can change on an edge of \code{m_clk_i}, because the output of the FIFO reads the slot that the next write fills. The outputs are valid only while the valid output is high. When both clocks have the same frequency the module uses the same path as for any other ratio.
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:async-axi-fifo:params} lists the parameters. The bus widths default from the AXI package. The depth of a FIFO can be 2 at the level of \code{cdc_gray_fifo}, and the module accepts it, but the suite runs the depths of 4 and more. The stage counts follow the rule above.
+
+\input{generated/facts/async-axi-fifo-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:async-axi-fifo:signals} lists the ports. The ready outputs and valid outputs of both faces are low while either reset input is low.
+
+\input{generated/facts/async-axi-fifo-signals}
+
+\subsection{Integration and timing constraints}
+The two resets need a common root that also resets the attached master and the fabric (\reqref{DS-CDC-153}). In \code{soc_top} the two resets of \code{u_cpu_axi_cdc} come from two top-level ports, \code{cpu_rst_n_i} for \code{cpu_core_rst_n} and \code{rst_n_i} for \code{core_rst_n}. The common root is an obligation of the board or the reset controller outside the SoC. A reset of \code{rst_n_i} alone flushes the bridge while \code{u_cpu} keeps running. Both reset chains clear without a clock edge, so the module needs no minimum width of the reset pulse beyond the minimum pulse width of its flops. The header of the module asks for \code{SYNC_STAGES}+1 periods of the other clock, and the RTL does not need this width. In \code{soc_top}, \code{s_rst_n_i} of \code{u_cpu_axi_cdc} is \code{cpu_core_rst_n} and not \code{cpu_domain_rst_n}. The domain reset also drops for a PMU reset. A PMU power cycle keeps the state of the bridge, as it keeps the state of the CPU, and a flush would lose a response for which the CPU still waits. The clock of the \code{s_*} face runs while \code{cpu_core_rst_n} is low. The isolation clamp of the PMU acts on the \code{s_*} face, with the level \code{pmu_cpu_iso_en_sync}.
+
+The check file has budgets for the gray pointers of the five FIFOs (\cref{tm:ch:mod-cdc-primitives:constraints}). The storage reads are covered by the fallback. A new instance needs a budget too, and its name has to match the pattern of the file.
+
+\subsection{Debug, test and DFT}
+The scan pins reach both reset synchronisers. The testbench \code{tb_async_axi_fifo} adds identifier nets that exist only in the wrapper. The module has no identifier. A white-box test reads the gray pointer of the write data FIFO.
+
+\subsection{Verification}
+The suite \code{test_async_axi_fifo} runs through the target \code{async_axi_fifo} (\cref{tm:suite:soc-test-async-axi-fifo}). The testbench uses a master model on the \code{s_*} face and a slave model on the \code{m_*} face. The pairs of \code{s_clk_i} and \code{m_clk_i} periods are 4 and 9 ns, 9 and 4 ns, 4 and 20 ns, 20 and 4 ns, 10 and 10 ns, and 10 and 11 ns. Five monitors check that a valid output of the module is not withdrawn except by a reset. The 28 tests cover these cases.
+\begin{itemize}
+  \item Single and burst transfers, back-pressure on both sides, and concurrent reads and writes.
+  \item The exact depth of the AW and W FIFOs, pointer wrap, and saturation of all five FIFOs.
+  \item The reset cases of both faces.
+  \item The clock ratios.
+  \item The absence of a combinational path from the \code{m_*} face to the \code{s_*} face.
+  \item Error responses, a latency bound and the single-bit change of a gray pointer.
+\end{itemize}
+
+The reset tests keep both clocks running, hold one reset input low and offer traffic on all five channels. They check that no ready output and no valid output of either face rises. Then they release the reset and check one clean transfer. The SoC suites \code{soc_multiclock} and \code{soc_multiclock_reset} run the same property at the level of the full SoC (\cref{tm:suite:soc-test-soc-multiclock} and \cref{tm:suite:soc-test-soc-multiclock-reset}).
+
+The suite does not model metastability. It runs the default stage counts of 2 only. It does not run depths of 2 for the FIFOs of this module, and it does not run an unequal pair of stage counts. The latency test checks a loose upper bound and not the exact count. The test of the combinational path freezes \code{s_clk_i} with a valid entry in the B and R FIFOs. It does not cover an empty FIFO or a reset.
+
+\subsection{Known limits}
+The reset is a hard flush. A reset of the other face withdraws a valid output. While a response channel is empty, its payload outputs on the \code{s_*} face can change without an edge of \code{s_clk_i}. A CPU transaction in the middle of a burst at clock gating can wedge a crossbar slave engine, because no drain step exists. The stage count that a FIFO uses for the pointer that comes back is the count of the other direction. The module has no bypass. The depth is not validated at this level, because the check is in \code{cdc_gray_fifo}.
