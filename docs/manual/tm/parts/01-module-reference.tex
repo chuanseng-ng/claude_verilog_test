@@ -497,6 +497,10 @@ Slave-side output intermediates (N_SLAVES slices)
 
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
 
+\begin{information}
+Parts of the text below describe the earlier order of the PMU and the clamp control \code{pmu_cpu_iso_en_sync}. One part calls the order of the PMU states the sequence that the power intent mandates. The power intent orders only the save, the isolation, the reset and the supply removal. The place of the clock stop is a choice of the PMU design. The PMU now stops the clock before the isolation, the clamp control is \code{cpu_iso_clamp}, and the reset term of the clock gate enable is a backstop. \Cref{tm:ch:mod-power-management} describes the present design.
+\end{information}
+
 \begin{relocated}{rtl/soc/soc_top.sv}
 
 \subsection*{Before: logic pmu\_cpu\_clk\_dis\_sync;}
