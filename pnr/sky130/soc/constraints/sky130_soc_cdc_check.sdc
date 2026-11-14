@@ -228,13 +228,9 @@ foreach {_br _grp} {u_apb_pll2_cdc apb_pll2 u_apb_dbg_cdc apb_dbg} {
         "sec.12 ${_br} ack_q level crossing (cpu_clk -> core_clk)"
 }
 
-# u_apb_dbg_cdc also carries a third crossing, u_m_rst_status_sync (m-side reset status ->
-# s side, cpu_clk -> core_clk), found by enumerating every stage-0 synchroniser flop whose D
-# fan-in reaches the other domain on the baseline netlist (18 crossings: 10 FIFO pointer
-# groups, 4 bridge req/ack, this one, 4 PMU/IRQ -- all budgeted). The u_apb_pll2_cdc copy is
-# optimised away, so it is deliberately NOT listed (an entry for it would be a permanent miss).
-cdc_apply_sync_budget apb_dbg_rst_status "u_apb_dbg_cdc*u_m_rst_status_sync" $clock_period cpu_clk core_clk \
-    "sec.12a u_apb_dbg_cdc u_m_rst_status_sync single-bit crossing (cpu_clk -> core_clk)"
+# The destination reset status of apb_cdc_bridge (u_m_alive_sync) has no data crossing. It is a
+# cdc_reset_sync whose async clear is the destination reset, so its cross-domain recovery and
+# removal are waived by section 10a. The budget of the old status synchroniser is gone with that instance.
 
 ###############################################################################
 # 13. PMU / IRQ single-bit crossings into the cpu_clk domain (cdc_sync instances in soc_top):
