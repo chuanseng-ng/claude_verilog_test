@@ -2056,7 +2056,7 @@ ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	341	DS-CDC-156 No deadlock 
 ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	346	DS-CDC-157 No combinational path between the faces
 ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	354	DS-CDC-158 Exact depth
 ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	359	DS-CDC-159 Valid is not withdrawn
-ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6667	DS-EXAMPLE-001 Example of a requirement
+ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6661	DS-EXAMPLE-001 Example of a requirement
 ds:req:pmu-001	docs/manual/ds/parts/chapters/power.tex	33	DS-PMU-001 CTRL mode field
 ds:req:pmu-002	docs/manual/ds/parts/chapters/power.tex	38	DS-PMU-002 STATUS fields
 ds:req:pmu-003	docs/manual/ds/parts/chapters/power.tex	43	DS-PMU-003 DOMAIN\_EN fields
@@ -2153,8 +2153,8 @@ fig:tm:mod:pmu:power-up	docs/manual/tm/parts/chapters/power.tex	157	Functional d
 fig:tm:mod:rv32i-clock-gate:block	docs/manual/tm/parts/chapters/power.tex	362	Functional description
 fig:tm:mod:rv32i-clock-gate:timing	docs/manual/tm/parts/chapters/power.tex	375	Functional description
 fig:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	520	Introduction
-fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6751	Figures
-fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6769	Figures
+fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6745	Figures
+fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6763	Figures
 tab:ds:mm:address-map:all	docs/manual/common/generated/map/memory-map.tex	4	Memory map of the SoC in address order
 tab:ds:mm:address-map:apb	docs/manual/common/generated/map/memory-map-apb.tex	4	APB interconnect slot windows
 tab:ds:mm:address-map:axilite	docs/manual/common/generated/map/memory-map-axilite.tex	4	AXI-Lite interconnect slot windows
@@ -2203,7 +2203,7 @@ tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	669	Power 
 tab:tm:pd:phase5-soc-upf:states	docs/manual/tm/parts/chapters/power.tex	651	Power states
 tab:tm:pd:phase5-soc-upf:supply	docs/manual/tm/parts/chapters/power.tex	549	Domains, supplies and the roster
 tab:um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	12	Choose the block
-tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6507	Labels
+tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6501	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
 tm:caveat:asap7-drc-antenna-withdrawn	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	150	Withdrawn ASAP7 claims of 0 DRC and 0 antenna
 tm:caveat:asap7-empty-power-grid	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	174	Empty ASAP7 power grid
@@ -3090,20 +3090,20 @@ tm:suite:soc-trng-fw-gen-trng-hex	docs/manual/tm/parts/03-verification-infrastru
 tm:suite:soc-wdt-fw-gen-wdt-hex	docs/manual/tm/parts/03-verification-infrastructure.tex	7497	\texttt{tb/cocotb/soc/wdt\_fw/gen\_wdt\_hex.py}
 tm:suite:trng-lfsr-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1209	\texttt{tb/models/trng\_lfsr\_model.py}
 um:ch:about	docs/manual/um/parts/00-about.tex	5	About this book
-um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	106	Build and run commands
+um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	103	Build and run commands
 um:ch:cdc-integration	docs/manual/um/parts/02-integration.tex	3	Clock-domain crossing integration
 um:ch:cdc-integration:checklist	docs/manual/um/parts/02-integration.tex	179	Checklist
 um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	7	Choose the block
 um:ch:cdc-integration:constrain	docs/manual/um/parts/02-integration.tex	137	Constrain the crossings
 um:ch:cdc-integration:instantiate	docs/manual/um/parts/02-integration.tex	30	Instantiate a block
 um:ch:cdc-integration:verify	docs/manual/um/parts/02-integration.tex	150	Verify the crossings
-um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	478	Coding guidelines
-um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2697	Continuous integration
-um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	429	Debug interface
-um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6463	Documentation system
+um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	475	Coding guidelines
+um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2691	Continuous integration
+um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	428	Debug interface
+um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6457	Documentation system
 um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
-um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6459	Issue tracking
-um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2242	Local quality checks
+um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6453	Issue tracking
+um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2239	Local quality checks
 um:ch:power-integration	docs/manual/um/parts/02-integration.tex	197	Power management integration
 um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	346	Checklist
 um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	227	Clocks and resets
@@ -3113,174 +3113,174 @@ um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	204	Power th
 um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	201	Register map
 um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	255	Keep the power intent in step
 um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	326	Verify
-um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6786	Project status
-um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	40	Project structure
-um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	364	Supported instructions
-um:ch:tool-flows	docs/manual/um/parts/01-chapters.tex	5572	Simulator and lint tool flows
-um:flow:badges	docs/manual/um/parts/01-chapters.tex	5051	GitHub Actions Badges
-um:flow:badges:badge-markdown	docs/manual/um/parts/01-chapters.tex	5056	Badge Markdown
-um:flow:badges:code-coverage-badge-if-using-codecov	docs/manual/um/parts/01-chapters.tex	5070	Code Coverage Badge (if using Codecov)
-um:flow:badges:example-combined-badges	docs/manual/um/parts/01-chapters.tex	5076	Example Combined Badges
-um:flow:badges:qa-checks-badge	docs/manual/um/parts/01-chapters.tex	5058	QA Checks Badge
-um:flow:badges:qa-checksyml	docs/manual/um/parts/01-chapters.tex	5086	\texorpdfstring{\code{qa-checks.yml}}{}
-um:flow:badges:tests-badge	docs/manual/um/parts/01-chapters.tex	5064	Tests Badge
-um:flow:badges:testsyml	docs/manual/um/parts/01-chapters.tex	5112	\texorpdfstring{\code{tests.yml}}{}
-um:flow:badges:workflow-details	docs/manual/um/parts/01-chapters.tex	5084	Workflow Details
-um:flow:ci-cd-workflow	docs/manual/um/parts/01-chapters.tex	2703	CI/CD Workflow Documentation
-um:flow:ci-cd-workflow:adding-new-test-jobs	docs/manual/um/parts/01-chapters.tex	3576	Adding New Test Jobs
-um:flow:ci-cd-workflow:artifact-retention-policy	docs/manual/um/parts/01-chapters.tex	3100	Artifact Retention Policy
-um:flow:ci-cd-workflow:changing-test-parameters	docs/manual/um/parts/01-chapters.tex	3564	Changing Test Parameters
-um:flow:ci-cd-workflow:combined-coverage	docs/manual/um/parts/01-chapters.tex	3337	Combined Coverage
-um:flow:ci-cd-workflow:common-issues	docs/manual/um/parts/01-chapters.tex	3659	Common Issues
-um:flow:ci-cd-workflow:contact-and-support	docs/manual/um/parts/01-chapters.tex	3754	Contact and Support
-um:flow:ci-cd-workflow:coverage-goals-phase-1	docs/manual/um/parts/01-chapters.tex	3306	Coverage Goals (Phase 1)
-um:flow:ci-cd-workflow:coverage-metrics	docs/manual/um/parts/01-chapters.tex	3397	Coverage Metrics
-um:flow:ci-cd-workflow:customizing-the-workflow	docs/manual/um/parts/01-chapters.tex	3562	Customizing the Workflow
-um:flow:ci-cd-workflow:debugging-failures	docs/manual/um/parts/01-chapters.tex	3445	Debugging Failures
-um:flow:ci-cd-workflow:directory-structure	docs/manual/um/parts/01-chapters.tex	3208	Directory Structure
-um:flow:ci-cd-workflow:downloading-artifacts	docs/manual/um/parts/01-chapters.tex	3294	Downloading Artifacts
-um:flow:ci-cd-workflow:environment-setup	docs/manual/um/parts/01-chapters.tex	3164	Environment Setup
-um:flow:ci-cd-workflow:future-enhancements	docs/manual/um/parts/01-chapters.tex	3677	Future Enhancements
-um:flow:ci-cd-workflow:integration-with-project-workflow	docs/manual/um/parts/01-chapters.tex	3510	Integration with Project Workflow
-um:flow:ci-cd-workflow:job-1-smoke-test	docs/manual/um/parts/01-chapters.tex	2907	\texorpdfstring{Job 1: \code{smoke-test}}{Job 1: }
-um:flow:ci-cd-workflow:job-2-full-random-test	docs/manual/um/parts/01-chapters.tex	2955	\texorpdfstring{Job 2: \code{full-random-test}}{Job 2: }
-um:flow:ci-cd-workflow:job-3-extended-test	docs/manual/um/parts/01-chapters.tex	2999	\texorpdfstring{Job 3: \code{extended-test}}{Job 3: }
-um:flow:ci-cd-workflow:job-4-summary-report	docs/manual/um/parts/01-chapters.tex	3075	\texorpdfstring{Job 4: \code{summary-report}}{Job 4: }
-um:flow:ci-cd-workflow:job-structure	docs/manual/um/parts/01-chapters.tex	2905	Job Structure
-um:flow:ci-cd-workflow:main-branch-random-test-failure	docs/manual/um/parts/01-chapters.tex	3467	Main Branch Random Test Failure
-um:flow:ci-cd-workflow:maintenance-tasks	docs/manual/um/parts/01-chapters.tex	3617	Maintenance Tasks
-um:flow:ci-cd-workflow:manual-workflow-dispatch	docs/manual/um/parts/01-chapters.tex	3222	Manual Workflow Dispatch
-um:flow:ci-cd-workflow:modifying-artifact-retention	docs/manual/um/parts/01-chapters.tex	3592	Modifying Artifact Retention
-um:flow:ci-cd-workflow:monitoring-and-maintenance	docs/manual/um/parts/01-chapters.tex	3603	Monitoring and Maintenance
-um:flow:ci-cd-workflow:nightly-extended-test-failure	docs/manual/um/parts/01-chapters.tex	3491	Nightly Extended Test Failure
-um:flow:ci-cd-workflow:overview	docs/manual/um/parts/01-chapters.tex	2707	Overview
-um:flow:ci-cd-workflow:performance-metrics	docs/manual/um/parts/01-chapters.tex	3349	Performance Metrics
-um:flow:ci-cd-workflow:pr-comment-bot	docs/manual/um/parts/01-chapters.tex	3118	PR Comment Bot
-um:flow:ci-cd-workflow:pr-smoke-test-failure	docs/manual/um/parts/01-chapters.tex	3447	PR Smoke Test Failure
-um:flow:ci-cd-workflow:random-tests	docs/manual/um/parts/01-chapters.tex	3308	Random Tests
-um:flow:ci-cd-workflow:references	docs/manual/um/parts/01-chapters.tex	3735	References
-um:flow:ci-cd-workflow:regular-monitoring	docs/manual/um/parts/01-chapters.tex	3605	Regular Monitoring
-um:flow:ci-cd-workflow:stress-tests	docs/manual/um/parts/01-chapters.tex	3323	Stress Tests
-um:flow:ci-cd-workflow:tier-1-smoke-tests-pr-validation	docs/manual/um/parts/01-chapters.tex	2768	Tier 1: Smoke Tests (PR Validation)
-um:flow:ci-cd-workflow:tier-2-full-random-tests-main-branch	docs/manual/um/parts/01-chapters.tex	2814	Tier 2: Full Random Tests (Main Branch)
-um:flow:ci-cd-workflow:tier-3-extended-tests-nightly	docs/manual/um/parts/01-chapters.tex	2859	Tier 3: Extended Tests (Nightly)
-um:flow:ci-cd-workflow:tiered-testing-strategy	docs/manual/um/parts/01-chapters.tex	2766	Tiered Testing Strategy
-um:flow:ci-cd-workflow:troubleshooting	docs/manual/um/parts/01-chapters.tex	3657	Troubleshooting
-um:flow:ci-cd-workflow:usage-examples	docs/manual/um/parts/01-chapters.tex	3220	Usage Examples
-um:flow:ci-cd-workflow:viewing-results	docs/manual/um/parts/01-chapters.tex	3251	Viewing Results
-um:flow:ci-cd-workflow:workflow-triggers	docs/manual/um/parts/01-chapters.tex	2721	Workflow Triggers
-um:flow:ci-cocotb	docs/manual/um/parts/01-chapters.tex	5126	\texttt{.github/workflows/cocotb.yml}
-um:flow:ci-qa-checks	docs/manual/um/parts/01-chapters.tex	5281	\texttt{.github/workflows/qa-checks.yml}
-um:flow:ci-random-tests	docs/manual/um/parts/01-chapters.tex	5346	\texttt{.github/workflows/random\_tests.yml}
-um:flow:ci-rtl-checks	docs/manual/um/parts/01-chapters.tex	5365	\texttt{.github/workflows/rtl-checks.yml}
-um:flow:ci-setup	docs/manual/um/parts/01-chapters.tex	3774	CI/CD Setup Guide
-um:flow:ci-setup:auto-fix-issues	docs/manual/um/parts/01-chapters.tex	3911	Auto-fix Issues
-um:flow:ci-setup:ci-badge-status	docs/manual/um/parts/01-chapters.tex	3940	CI Badge Status
-um:flow:ci-setup:configuration-files	docs/manual/um/parts/01-chapters.tex	4000	Configuration Files
-um:flow:ci-setup:coverage-upload-fails	docs/manual/um/parts/01-chapters.tex	3968	Coverage Upload Fails
-um:flow:ci-setup:dependencies	docs/manual/um/parts/01-chapters.tex	3921	Dependencies
-um:flow:ci-setup:future-enhancements	docs/manual/um/parts/01-chapters.tex	4016	Future Enhancements
-um:flow:ci-setup:install-dependencies	docs/manual/um/parts/01-chapters.tex	3886	Install Dependencies
-um:flow:ci-setup:local-development	docs/manual/um/parts/01-chapters.tex	3884	Local Development
-um:flow:ci-setup:overview	docs/manual/um/parts/01-chapters.tex	3778	Overview
-um:flow:ci-setup:python-version-not-available	docs/manual/um/parts/01-chapters.tex	3986	Python Version Not Available
-um:flow:ci-setup:qa-checks-workflow	docs/manual/um/parts/01-chapters.tex	3792	QA Checks Workflow
-um:flow:ci-setup:run-qa-checks-locally	docs/manual/um/parts/01-chapters.tex	3892	Run QA Checks Locally
-um:flow:ci-setup:tests-workflow	docs/manual/um/parts/01-chapters.tex	3854	Tests Workflow
-um:flow:ci-setup:troubleshooting	docs/manual/um/parts/01-chapters.tex	3951	Troubleshooting
-um:flow:ci-setup:workflow-fails-on-first-run	docs/manual/um/parts/01-chapters.tex	3953	Workflow Fails on First Run
-um:flow:ci-soc-coverage	docs/manual/um/parts/01-chapters.tex	5474	\texttt{.github/workflows/soc\_coverage.yml}
-um:flow:dqc	docs/manual/um/parts/01-chapters.tex	6007	\texorpdfstring{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on \code{soc_top}}{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on }
-um:flow:dqc:constraints-dqcsgdcsoc-topsgdc-and-why	docs/manual/um/parts/01-chapters.tex	6119	\texorpdfstring{Constraints (\src{dqc/sgdc/soc_top.sgdc}) and why}{Constraints () and why}
-um:flow:dqc:findings	docs/manual/um/parts/01-chapters.tex	6360	Findings
-um:flow:dqc:how-to-run	docs/manual/um/parts/01-chapters.tex	6019	How to run
-um:flow:dqc:negative-control-make-c-dqc-selftest	docs/manual/um/parts/01-chapters.tex	6298	\texorpdfstring{Negative control (\texttt{make\ -\allowbreak{}C\ dqc\ selftest})}{Negative control ()}
-um:flow:dqc:open-work-exact-resume-point	docs/manual/um/parts/01-chapters.tex	6433	Open work / exact resume point
-um:flow:dqc:results-arm-default	docs/manual/um/parts/01-chapters.tex	6230	\texorpdfstring{Results (arm \code{default})}{Results (arm )}
-um:flow:dqc:tool-and-licence-matrix-measured-2026-10-24	docs/manual/um/parts/01-chapters.tex	6175	Tool and licence matrix (measured 2026-10-24)
-um:flow:dqc:waivers-dqcwaivers	docs/manual/um/parts/01-chapters.tex	6313	\texorpdfstring{Waivers (\src{dqc/waivers/})}{Waivers ()}
-um:flow:dqc:what-is-analysed	docs/manual/um/parts/01-chapters.tex	6074	What is analysed
-um:flow:pre-commit-setup	docs/manual/um/parts/01-chapters.tex	4039	Pre-commit Hooks Setup Guide
-um:flow:pre-commit-setup:add-custom-hooks	docs/manual/um/parts/01-chapters.tex	4427	Add custom hooks
-um:flow:pre-commit-setup:advanced-configuration	docs/manual/um/parts/01-chapters.tex	4408	Advanced Configuration
-um:flow:pre-commit-setup:auto-fixes	docs/manual/um/parts/01-chapters.tex	4241	Auto-fixes
-um:flow:pre-commit-setup:change-hook-stages	docs/manual/um/parts/01-chapters.tex	4420	Change hook stages
-um:flow:pre-commit-setup:comparison-pre-commit-vs-ci	docs/manual/um/parts/01-chapters.tex	4380	Comparison: Pre-commit vs CI
-um:flow:pre-commit-setup:configuration-files	docs/manual/um/parts/01-chapters.tex	4368	Configuration Files
-um:flow:pre-commit-setup:hooks-are-slow	docs/manual/um/parts/01-chapters.tex	4348	Hooks are slow
-um:flow:pre-commit-setup:installation	docs/manual/um/parts/01-chapters.tex	4061	Installation
-um:flow:pre-commit-setup:mypy-fails-with-import-errors	docs/manual/um/parts/01-chapters.tex	4360	MyPy fails with import errors
-um:flow:pre-commit-setup:normal-workflow	docs/manual/um/parts/01-chapters.tex	4196	Normal Workflow
-um:flow:pre-commit-setup:on-every-commit	docs/manual/um/parts/01-chapters.tex	4096	On Every Commit
-um:flow:pre-commit-setup:on-git-push-only	docs/manual/um/parts/01-chapters.tex	4174	On Git Push Only
-um:flow:pre-commit-setup:pre-commit-command-not-found	docs/manual/um/parts/01-chapters.tex	4327	"pre-commit: command not found"
-um:flow:pre-commit-setup:pylint-command-not-found-or-pytest-command-not-found	docs/manual/um/parts/01-chapters.tex	4340	"pylint: command not found" or "pytest: command not found"
-um:flow:pre-commit-setup:run-all-hooks-on-all-files	docs/manual/um/parts/01-chapters.tex	4277	Run all hooks on all files
-um:flow:pre-commit-setup:run-hooks-on-specific-file-patterns	docs/manual/um/parts/01-chapters.tex	4410	Run hooks on specific file patterns
-um:flow:pre-commit-setup:run-hooks-on-specific-files	docs/manual/um/parts/01-chapters.tex	4296	Run hooks on specific files
-um:flow:pre-commit-setup:run-specific-hook	docs/manual/um/parts/01-chapters.tex	4283	Run specific hook
-um:flow:pre-commit-setup:running-hooks-manually	docs/manual/um/parts/01-chapters.tex	4275	Running Hooks Manually
-um:flow:pre-commit-setup:see-also	docs/manual/um/parts/01-chapters.tex	4465	See Also
-um:flow:pre-commit-setup:skipping-hooks-not-recommended	docs/manual/um/parts/01-chapters.tex	4261	Skipping Hooks (Not Recommended)
-um:flow:pre-commit-setup:step-1-install-pre-commit	docs/manual/um/parts/01-chapters.tex	4063	Step 1: Install pre-commit
-um:flow:pre-commit-setup:step-2-install-the-hooks	docs/manual/um/parts/01-chapters.tex	4069	Step 2: Install the hooks
-um:flow:pre-commit-setup:step-3-verify-installation	docs/manual/um/parts/01-chapters.tex	4086	Step 3: Verify installation
-um:flow:pre-commit-setup:summary	docs/manual/um/parts/01-chapters.tex	4439	Summary
-um:flow:pre-commit-setup:troubleshooting	docs/manual/um/parts/01-chapters.tex	4325	Troubleshooting
-um:flow:pre-commit-setup:uninstalling	docs/manual/um/parts/01-chapters.tex	4313	Uninstalling
-um:flow:pre-commit-setup:updating-hooks	docs/manual/um/parts/01-chapters.tex	4302	Updating Hooks
-um:flow:pre-commit-setup:usage	docs/manual/um/parts/01-chapters.tex	4194	Usage
-um:flow:pre-commit-setup:what-are-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	4044	What Are Pre-commit Hooks?
-um:flow:pre-commit-setup:what-hooks-are-configured	docs/manual/um/parts/01-chapters.tex	4092	What Hooks Are Configured?
-um:flow:pre-commit-setup:when-hooks-fail	docs/manual/um/parts/01-chapters.tex	4217	When Hooks Fail
-um:flow:proprietary-sim	docs/manual/um/parts/01-chapters.tex	5578	Proprietary simulator flow: Synopsys VCS and Cadence Xcelium
-um:flow:proprietary-sim:1-prerequisites	docs/manual/um/parts/01-chapters.tex	5619	1. Prerequisites
-um:flow:proprietary-sim:2-one-time-setup	docs/manual/um/parts/01-chapters.tex	5668	2. One-time setup
-um:flow:proprietary-sim:3-every-shell	docs/manual/um/parts/01-chapters.tex	5684	3. Every shell
-um:flow:proprietary-sim:4-running	docs/manual/um/parts/01-chapters.tex	5709	4. Running
-um:flow:proprietary-sim:5-how-it-works-tbcocotbcommonsim-portabilitymk	docs/manual/um/parts/01-chapters.tex	5791	\texorpdfstring{5. How it works (\src{tb/cocotb/common/sim_portability.mk})}{5. How it works ()}
-um:flow:proprietary-sim:6-writing-portable-tests	docs/manual/um/parts/01-chapters.tex	5863	6. Writing portable tests
-um:flow:proprietary-sim:7-known-noise-not-failures	docs/manual/um/parts/01-chapters.tex	5903	7. Known noise (not failures)
-um:flow:proprietary-sim:8-troubleshooting	docs/manual/um/parts/01-chapters.tex	5945	8. Troubleshooting
-um:flow:proprietary-sim:9-coverage	docs/manual/um/parts/01-chapters.tex	5989	9. Coverage
-um:flow:proprietary-sim:a-single-suite-through-the-makefiles	docs/manual/um/parts/01-chapters.tex	5711	A single suite, through the Makefiles
-um:flow:proprietary-sim:pass-criteria-and-floors	docs/manual/um/parts/01-chapters.tex	5757	Pass criteria and floors
-um:flow:proprietary-sim:the-full-regression-through-the-driver	docs/manual/um/parts/01-chapters.tex	5730	The full regression, through the driver
-um:flow:qa-workflow-diagram	docs/manual/um/parts/01-chapters.tex	4482	QA Workflow Diagram
-um:flow:qa-workflow-diagram:before-creating-pr	docs/manual/um/parts/01-chapters.tex	4734	Before Creating PR
-um:flow:qa-workflow-diagram:complete-qa-flow	docs/manual/um/parts/01-chapters.tex	4487	Complete QA Flow
-um:flow:qa-workflow-diagram:emergency-hotfix	docs/manual/um/parts/01-chapters.tex	4747	Emergency Hotfix
-um:flow:qa-workflow-diagram:fast-iteration-during-development	docs/manual/um/parts/01-chapters.tex	4717	Fast Iteration During Development
-um:flow:qa-workflow-diagram:layer-1-pre-commit-hooks-local-optional	docs/manual/um/parts/01-chapters.tex	4629	Layer 1: Pre-commit Hooks (Local, Optional)
-um:flow:qa-workflow-diagram:layer-2-pre-push-hook-local-optional	docs/manual/um/parts/01-chapters.tex	4646	Layer 2: Pre-push Hook (Local, Optional)
-um:flow:qa-workflow-diagram:layer-3-github-actions-ci-remote-mandatory	docs/manual/um/parts/01-chapters.tex	4663	Layer 3: GitHub Actions CI (Remote, Mandatory)
-um:flow:qa-workflow-diagram:recommended-setup	docs/manual/um/parts/01-chapters.tex	4679	Recommended Setup
-um:flow:qa-workflow-diagram:see-also	docs/manual/um/parts/01-chapters.tex	4762	See Also
-um:flow:qa-workflow-diagram:three-layers-of-protection	docs/manual/um/parts/01-chapters.tex	4627	Three Layers of Protection
-um:flow:qa-workflow-diagram:time-investment-vs-savings	docs/manual/um/parts/01-chapters.tex	4693	Time Investment vs. Savings
-um:flow:qa-workflow-diagram:workflow-optimization-tips	docs/manual/um/parts/01-chapters.tex	4715	Workflow Optimization Tips
-um:flow:workflow-triggers	docs/manual/um/parts/01-chapters.tex	4780	Workflow Trigger Summary
-um:flow:workflow-triggers:common-scenarios	docs/manual/um/parts/01-chapters.tex	4862	Common Scenarios
-um:flow:workflow-triggers:development-workflow-recommendation	docs/manual/um/parts/01-chapters.tex	4955	Development Workflow Recommendation
-um:flow:workflow-triggers:modifying-trigger-behavior	docs/manual/um/parts/01-chapters.tex	5004	Modifying Trigger Behavior
-um:flow:workflow-triggers:option-a-always-use-prs-recommended	docs/manual/um/parts/01-chapters.tex	4957	Option A: Always Use PRs (Recommended)
-um:flow:workflow-triggers:option-b-local-qa-before-pr	docs/manual/um/parts/01-chapters.tex	4975	Option B: Local QA Before PR
-um:flow:workflow-triggers:option-c-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	4989	Option C: Pre-commit Hooks
-um:flow:workflow-triggers:path-filtering-tests-workflow-only	docs/manual/um/parts/01-chapters.tex	4927	Path Filtering (Tests Workflow Only)
-um:flow:workflow-triggers:qa-checks-workflow-qa-checksyml	docs/manual/um/parts/01-chapters.tex	4789	\texorpdfstring{QA Checks Workflow (\code{qa-checks.yml})}{QA Checks Workflow ()}
-um:flow:workflow-triggers:scenario-1-working-on-a-feature-branch	docs/manual/um/parts/01-chapters.tex	4864	Scenario 1: Working on a Feature Branch
-um:flow:workflow-triggers:scenario-2-creating-a-pull-request-to-main	docs/manual/um/parts/01-chapters.tex	4876	Scenario 2: Creating a Pull Request to Main
-um:flow:workflow-triggers:scenario-3-merging-to-main	docs/manual/um/parts/01-chapters.tex	4886	Scenario 3: Merging to Main
-um:flow:workflow-triggers:scenario-4-manual-trigger	docs/manual/um/parts/01-chapters.tex	4895	Scenario 4: Manual Trigger
-um:flow:workflow-triggers:see-also	docs/manual/um/parts/01-chapters.tex	5036	See Also
-um:flow:workflow-triggers:tests-workflow-testsyml	docs/manual/um/parts/01-chapters.tex	4817	\texorpdfstring{Tests Workflow (\code{tests.yml})}{Tests Workflow ()}
-um:flow:workflow-triggers:to-run-ci-on-all-branches	docs/manual/um/parts/01-chapters.tex	5006	To run CI on all branches
-um:flow:workflow-triggers:to-run-ci-on-all-prs-but-push-to-main-only	docs/manual/um/parts/01-chapters.tex	5026	To run CI on all PRs but push to main only
-um:flow:workflow-triggers:to-run-ci-only-on-specific-branches	docs/manual/um/parts/01-chapters.tex	5016	To run CI only on specific branches
-um:flow:workflow-triggers:trigger-configuration	docs/manual/um/parts/01-chapters.tex	4784	Trigger Configuration
-um:flow:workflow-triggers:why-this-configuration	docs/manual/um/parts/01-chapters.tex	4904	Why This Configuration?
-um:flow:workflow-triggers:workflow-diagram	docs/manual/um/parts/01-chapters.tex	4845	Workflow Diagram
-um:guide:authored-chapters	docs/manual/um/parts/01-chapters.tex	6570	Authored chapters
+um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6780	Project status
+um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	39	Project structure
+um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	365	Supported instructions
+um:ch:tool-flows	docs/manual/um/parts/01-chapters.tex	5566	Simulator and lint tool flows
+um:flow:badges	docs/manual/um/parts/01-chapters.tex	5045	GitHub Actions Badges
+um:flow:badges:badge-markdown	docs/manual/um/parts/01-chapters.tex	5050	Badge Markdown
+um:flow:badges:code-coverage-badge-if-using-codecov	docs/manual/um/parts/01-chapters.tex	5064	Code Coverage Badge (if using Codecov)
+um:flow:badges:example-combined-badges	docs/manual/um/parts/01-chapters.tex	5070	Example Combined Badges
+um:flow:badges:qa-checks-badge	docs/manual/um/parts/01-chapters.tex	5052	QA Checks Badge
+um:flow:badges:qa-checksyml	docs/manual/um/parts/01-chapters.tex	5080	\texorpdfstring{\code{qa-checks.yml}}{}
+um:flow:badges:tests-badge	docs/manual/um/parts/01-chapters.tex	5058	Tests Badge
+um:flow:badges:testsyml	docs/manual/um/parts/01-chapters.tex	5106	\texorpdfstring{\code{tests.yml}}{}
+um:flow:badges:workflow-details	docs/manual/um/parts/01-chapters.tex	5078	Workflow Details
+um:flow:ci-cd-workflow	docs/manual/um/parts/01-chapters.tex	2697	CI/CD Workflow Documentation
+um:flow:ci-cd-workflow:adding-new-test-jobs	docs/manual/um/parts/01-chapters.tex	3570	Adding New Test Jobs
+um:flow:ci-cd-workflow:artifact-retention-policy	docs/manual/um/parts/01-chapters.tex	3094	Artifact Retention Policy
+um:flow:ci-cd-workflow:changing-test-parameters	docs/manual/um/parts/01-chapters.tex	3558	Changing Test Parameters
+um:flow:ci-cd-workflow:combined-coverage	docs/manual/um/parts/01-chapters.tex	3331	Combined Coverage
+um:flow:ci-cd-workflow:common-issues	docs/manual/um/parts/01-chapters.tex	3653	Common Issues
+um:flow:ci-cd-workflow:contact-and-support	docs/manual/um/parts/01-chapters.tex	3748	Contact and Support
+um:flow:ci-cd-workflow:coverage-goals-phase-1	docs/manual/um/parts/01-chapters.tex	3300	Coverage Goals (Phase 1)
+um:flow:ci-cd-workflow:coverage-metrics	docs/manual/um/parts/01-chapters.tex	3391	Coverage Metrics
+um:flow:ci-cd-workflow:customizing-the-workflow	docs/manual/um/parts/01-chapters.tex	3556	Customizing the Workflow
+um:flow:ci-cd-workflow:debugging-failures	docs/manual/um/parts/01-chapters.tex	3439	Debugging Failures
+um:flow:ci-cd-workflow:directory-structure	docs/manual/um/parts/01-chapters.tex	3202	Directory Structure
+um:flow:ci-cd-workflow:downloading-artifacts	docs/manual/um/parts/01-chapters.tex	3288	Downloading Artifacts
+um:flow:ci-cd-workflow:environment-setup	docs/manual/um/parts/01-chapters.tex	3158	Environment Setup
+um:flow:ci-cd-workflow:future-enhancements	docs/manual/um/parts/01-chapters.tex	3671	Future Enhancements
+um:flow:ci-cd-workflow:integration-with-project-workflow	docs/manual/um/parts/01-chapters.tex	3504	Integration with Project Workflow
+um:flow:ci-cd-workflow:job-1-smoke-test	docs/manual/um/parts/01-chapters.tex	2901	\texorpdfstring{Job 1: \code{smoke-test}}{Job 1: }
+um:flow:ci-cd-workflow:job-2-full-random-test	docs/manual/um/parts/01-chapters.tex	2949	\texorpdfstring{Job 2: \code{full-random-test}}{Job 2: }
+um:flow:ci-cd-workflow:job-3-extended-test	docs/manual/um/parts/01-chapters.tex	2993	\texorpdfstring{Job 3: \code{extended-test}}{Job 3: }
+um:flow:ci-cd-workflow:job-4-summary-report	docs/manual/um/parts/01-chapters.tex	3069	\texorpdfstring{Job 4: \code{summary-report}}{Job 4: }
+um:flow:ci-cd-workflow:job-structure	docs/manual/um/parts/01-chapters.tex	2899	Job Structure
+um:flow:ci-cd-workflow:main-branch-random-test-failure	docs/manual/um/parts/01-chapters.tex	3461	Main Branch Random Test Failure
+um:flow:ci-cd-workflow:maintenance-tasks	docs/manual/um/parts/01-chapters.tex	3611	Maintenance Tasks
+um:flow:ci-cd-workflow:manual-workflow-dispatch	docs/manual/um/parts/01-chapters.tex	3216	Manual Workflow Dispatch
+um:flow:ci-cd-workflow:modifying-artifact-retention	docs/manual/um/parts/01-chapters.tex	3586	Modifying Artifact Retention
+um:flow:ci-cd-workflow:monitoring-and-maintenance	docs/manual/um/parts/01-chapters.tex	3597	Monitoring and Maintenance
+um:flow:ci-cd-workflow:nightly-extended-test-failure	docs/manual/um/parts/01-chapters.tex	3485	Nightly Extended Test Failure
+um:flow:ci-cd-workflow:overview	docs/manual/um/parts/01-chapters.tex	2701	Overview
+um:flow:ci-cd-workflow:performance-metrics	docs/manual/um/parts/01-chapters.tex	3343	Performance Metrics
+um:flow:ci-cd-workflow:pr-comment-bot	docs/manual/um/parts/01-chapters.tex	3112	PR Comment Bot
+um:flow:ci-cd-workflow:pr-smoke-test-failure	docs/manual/um/parts/01-chapters.tex	3441	PR Smoke Test Failure
+um:flow:ci-cd-workflow:random-tests	docs/manual/um/parts/01-chapters.tex	3302	Random Tests
+um:flow:ci-cd-workflow:references	docs/manual/um/parts/01-chapters.tex	3729	References
+um:flow:ci-cd-workflow:regular-monitoring	docs/manual/um/parts/01-chapters.tex	3599	Regular Monitoring
+um:flow:ci-cd-workflow:stress-tests	docs/manual/um/parts/01-chapters.tex	3317	Stress Tests
+um:flow:ci-cd-workflow:tier-1-smoke-tests-pr-validation	docs/manual/um/parts/01-chapters.tex	2762	Tier 1: Smoke Tests (PR Validation)
+um:flow:ci-cd-workflow:tier-2-full-random-tests-main-branch	docs/manual/um/parts/01-chapters.tex	2808	Tier 2: Full Random Tests (Main Branch)
+um:flow:ci-cd-workflow:tier-3-extended-tests-nightly	docs/manual/um/parts/01-chapters.tex	2853	Tier 3: Extended Tests (Nightly)
+um:flow:ci-cd-workflow:tiered-testing-strategy	docs/manual/um/parts/01-chapters.tex	2760	Tiered Testing Strategy
+um:flow:ci-cd-workflow:troubleshooting	docs/manual/um/parts/01-chapters.tex	3651	Troubleshooting
+um:flow:ci-cd-workflow:usage-examples	docs/manual/um/parts/01-chapters.tex	3214	Usage Examples
+um:flow:ci-cd-workflow:viewing-results	docs/manual/um/parts/01-chapters.tex	3245	Viewing Results
+um:flow:ci-cd-workflow:workflow-triggers	docs/manual/um/parts/01-chapters.tex	2715	Workflow Triggers
+um:flow:ci-cocotb	docs/manual/um/parts/01-chapters.tex	5120	\texttt{.github/workflows/cocotb.yml}
+um:flow:ci-qa-checks	docs/manual/um/parts/01-chapters.tex	5275	\texttt{.github/workflows/qa-checks.yml}
+um:flow:ci-random-tests	docs/manual/um/parts/01-chapters.tex	5340	\texttt{.github/workflows/random\_tests.yml}
+um:flow:ci-rtl-checks	docs/manual/um/parts/01-chapters.tex	5359	\texttt{.github/workflows/rtl-checks.yml}
+um:flow:ci-setup	docs/manual/um/parts/01-chapters.tex	3768	CI/CD Setup Guide
+um:flow:ci-setup:auto-fix-issues	docs/manual/um/parts/01-chapters.tex	3905	Auto-fix Issues
+um:flow:ci-setup:ci-badge-status	docs/manual/um/parts/01-chapters.tex	3934	CI Badge Status
+um:flow:ci-setup:configuration-files	docs/manual/um/parts/01-chapters.tex	3994	Configuration Files
+um:flow:ci-setup:coverage-upload-fails	docs/manual/um/parts/01-chapters.tex	3962	Coverage Upload Fails
+um:flow:ci-setup:dependencies	docs/manual/um/parts/01-chapters.tex	3915	Dependencies
+um:flow:ci-setup:future-enhancements	docs/manual/um/parts/01-chapters.tex	4010	Future Enhancements
+um:flow:ci-setup:install-dependencies	docs/manual/um/parts/01-chapters.tex	3880	Install Dependencies
+um:flow:ci-setup:local-development	docs/manual/um/parts/01-chapters.tex	3878	Local Development
+um:flow:ci-setup:overview	docs/manual/um/parts/01-chapters.tex	3772	Overview
+um:flow:ci-setup:python-version-not-available	docs/manual/um/parts/01-chapters.tex	3980	Python Version Not Available
+um:flow:ci-setup:qa-checks-workflow	docs/manual/um/parts/01-chapters.tex	3786	QA Checks Workflow
+um:flow:ci-setup:run-qa-checks-locally	docs/manual/um/parts/01-chapters.tex	3886	Run QA Checks Locally
+um:flow:ci-setup:tests-workflow	docs/manual/um/parts/01-chapters.tex	3848	Tests Workflow
+um:flow:ci-setup:troubleshooting	docs/manual/um/parts/01-chapters.tex	3945	Troubleshooting
+um:flow:ci-setup:workflow-fails-on-first-run	docs/manual/um/parts/01-chapters.tex	3947	Workflow Fails on First Run
+um:flow:ci-soc-coverage	docs/manual/um/parts/01-chapters.tex	5468	\texttt{.github/workflows/soc\_coverage.yml}
+um:flow:dqc	docs/manual/um/parts/01-chapters.tex	6001	\texorpdfstring{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on \code{soc_top}}{DQC flow: SpyGlass lint / CDC / RDC and Cadence HAL on }
+um:flow:dqc:constraints-dqcsgdcsoc-topsgdc-and-why	docs/manual/um/parts/01-chapters.tex	6113	\texorpdfstring{Constraints (\src{dqc/sgdc/soc_top.sgdc}) and why}{Constraints () and why}
+um:flow:dqc:findings	docs/manual/um/parts/01-chapters.tex	6354	Findings
+um:flow:dqc:how-to-run	docs/manual/um/parts/01-chapters.tex	6013	How to run
+um:flow:dqc:negative-control-make-c-dqc-selftest	docs/manual/um/parts/01-chapters.tex	6292	\texorpdfstring{Negative control (\texttt{make\ -\allowbreak{}C\ dqc\ selftest})}{Negative control ()}
+um:flow:dqc:open-work-exact-resume-point	docs/manual/um/parts/01-chapters.tex	6427	Open work / exact resume point
+um:flow:dqc:results-arm-default	docs/manual/um/parts/01-chapters.tex	6224	\texorpdfstring{Results (arm \code{default})}{Results (arm )}
+um:flow:dqc:tool-and-licence-matrix-measured-2026-10-24	docs/manual/um/parts/01-chapters.tex	6169	Tool and licence matrix (measured 2026-10-24)
+um:flow:dqc:waivers-dqcwaivers	docs/manual/um/parts/01-chapters.tex	6307	\texorpdfstring{Waivers (\src{dqc/waivers/})}{Waivers ()}
+um:flow:dqc:what-is-analysed	docs/manual/um/parts/01-chapters.tex	6068	What is analysed
+um:flow:pre-commit-setup	docs/manual/um/parts/01-chapters.tex	4033	Pre-commit Hooks Setup Guide
+um:flow:pre-commit-setup:add-custom-hooks	docs/manual/um/parts/01-chapters.tex	4421	Add custom hooks
+um:flow:pre-commit-setup:advanced-configuration	docs/manual/um/parts/01-chapters.tex	4402	Advanced Configuration
+um:flow:pre-commit-setup:auto-fixes	docs/manual/um/parts/01-chapters.tex	4235	Auto-fixes
+um:flow:pre-commit-setup:change-hook-stages	docs/manual/um/parts/01-chapters.tex	4414	Change hook stages
+um:flow:pre-commit-setup:comparison-pre-commit-vs-ci	docs/manual/um/parts/01-chapters.tex	4374	Comparison: Pre-commit vs CI
+um:flow:pre-commit-setup:configuration-files	docs/manual/um/parts/01-chapters.tex	4362	Configuration Files
+um:flow:pre-commit-setup:hooks-are-slow	docs/manual/um/parts/01-chapters.tex	4342	Hooks are slow
+um:flow:pre-commit-setup:installation	docs/manual/um/parts/01-chapters.tex	4055	Installation
+um:flow:pre-commit-setup:mypy-fails-with-import-errors	docs/manual/um/parts/01-chapters.tex	4354	MyPy fails with import errors
+um:flow:pre-commit-setup:normal-workflow	docs/manual/um/parts/01-chapters.tex	4190	Normal Workflow
+um:flow:pre-commit-setup:on-every-commit	docs/manual/um/parts/01-chapters.tex	4090	On Every Commit
+um:flow:pre-commit-setup:on-git-push-only	docs/manual/um/parts/01-chapters.tex	4168	On Git Push Only
+um:flow:pre-commit-setup:pre-commit-command-not-found	docs/manual/um/parts/01-chapters.tex	4321	"pre-commit: command not found"
+um:flow:pre-commit-setup:pylint-command-not-found-or-pytest-command-not-found	docs/manual/um/parts/01-chapters.tex	4334	"pylint: command not found" or "pytest: command not found"
+um:flow:pre-commit-setup:run-all-hooks-on-all-files	docs/manual/um/parts/01-chapters.tex	4271	Run all hooks on all files
+um:flow:pre-commit-setup:run-hooks-on-specific-file-patterns	docs/manual/um/parts/01-chapters.tex	4404	Run hooks on specific file patterns
+um:flow:pre-commit-setup:run-hooks-on-specific-files	docs/manual/um/parts/01-chapters.tex	4290	Run hooks on specific files
+um:flow:pre-commit-setup:run-specific-hook	docs/manual/um/parts/01-chapters.tex	4277	Run specific hook
+um:flow:pre-commit-setup:running-hooks-manually	docs/manual/um/parts/01-chapters.tex	4269	Running Hooks Manually
+um:flow:pre-commit-setup:see-also	docs/manual/um/parts/01-chapters.tex	4459	See Also
+um:flow:pre-commit-setup:skipping-hooks-not-recommended	docs/manual/um/parts/01-chapters.tex	4255	Skipping Hooks (Not Recommended)
+um:flow:pre-commit-setup:step-1-install-pre-commit	docs/manual/um/parts/01-chapters.tex	4057	Step 1: Install pre-commit
+um:flow:pre-commit-setup:step-2-install-the-hooks	docs/manual/um/parts/01-chapters.tex	4063	Step 2: Install the hooks
+um:flow:pre-commit-setup:step-3-verify-installation	docs/manual/um/parts/01-chapters.tex	4080	Step 3: Verify installation
+um:flow:pre-commit-setup:summary	docs/manual/um/parts/01-chapters.tex	4433	Summary
+um:flow:pre-commit-setup:troubleshooting	docs/manual/um/parts/01-chapters.tex	4319	Troubleshooting
+um:flow:pre-commit-setup:uninstalling	docs/manual/um/parts/01-chapters.tex	4307	Uninstalling
+um:flow:pre-commit-setup:updating-hooks	docs/manual/um/parts/01-chapters.tex	4296	Updating Hooks
+um:flow:pre-commit-setup:usage	docs/manual/um/parts/01-chapters.tex	4188	Usage
+um:flow:pre-commit-setup:what-are-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	4038	What Are Pre-commit Hooks?
+um:flow:pre-commit-setup:what-hooks-are-configured	docs/manual/um/parts/01-chapters.tex	4086	What Hooks Are Configured?
+um:flow:pre-commit-setup:when-hooks-fail	docs/manual/um/parts/01-chapters.tex	4211	When Hooks Fail
+um:flow:proprietary-sim	docs/manual/um/parts/01-chapters.tex	5572	Proprietary simulator flow: Synopsys VCS and Cadence Xcelium
+um:flow:proprietary-sim:1-prerequisites	docs/manual/um/parts/01-chapters.tex	5613	1. Prerequisites
+um:flow:proprietary-sim:2-one-time-setup	docs/manual/um/parts/01-chapters.tex	5662	2. One-time setup
+um:flow:proprietary-sim:3-every-shell	docs/manual/um/parts/01-chapters.tex	5678	3. Every shell
+um:flow:proprietary-sim:4-running	docs/manual/um/parts/01-chapters.tex	5703	4. Running
+um:flow:proprietary-sim:5-how-it-works-tbcocotbcommonsim-portabilitymk	docs/manual/um/parts/01-chapters.tex	5785	\texorpdfstring{5. How it works (\src{tb/cocotb/common/sim_portability.mk})}{5. How it works ()}
+um:flow:proprietary-sim:6-writing-portable-tests	docs/manual/um/parts/01-chapters.tex	5857	6. Writing portable tests
+um:flow:proprietary-sim:7-known-noise-not-failures	docs/manual/um/parts/01-chapters.tex	5897	7. Known noise (not failures)
+um:flow:proprietary-sim:8-troubleshooting	docs/manual/um/parts/01-chapters.tex	5939	8. Troubleshooting
+um:flow:proprietary-sim:9-coverage	docs/manual/um/parts/01-chapters.tex	5983	9. Coverage
+um:flow:proprietary-sim:a-single-suite-through-the-makefiles	docs/manual/um/parts/01-chapters.tex	5705	A single suite, through the Makefiles
+um:flow:proprietary-sim:pass-criteria-and-floors	docs/manual/um/parts/01-chapters.tex	5751	Pass criteria and floors
+um:flow:proprietary-sim:the-full-regression-through-the-driver	docs/manual/um/parts/01-chapters.tex	5724	The full regression, through the driver
+um:flow:qa-workflow-diagram	docs/manual/um/parts/01-chapters.tex	4476	QA Workflow Diagram
+um:flow:qa-workflow-diagram:before-creating-pr	docs/manual/um/parts/01-chapters.tex	4728	Before Creating PR
+um:flow:qa-workflow-diagram:complete-qa-flow	docs/manual/um/parts/01-chapters.tex	4481	Complete QA Flow
+um:flow:qa-workflow-diagram:emergency-hotfix	docs/manual/um/parts/01-chapters.tex	4741	Emergency Hotfix
+um:flow:qa-workflow-diagram:fast-iteration-during-development	docs/manual/um/parts/01-chapters.tex	4711	Fast Iteration During Development
+um:flow:qa-workflow-diagram:layer-1-pre-commit-hooks-local-optional	docs/manual/um/parts/01-chapters.tex	4623	Layer 1: Pre-commit Hooks (Local, Optional)
+um:flow:qa-workflow-diagram:layer-2-pre-push-hook-local-optional	docs/manual/um/parts/01-chapters.tex	4640	Layer 2: Pre-push Hook (Local, Optional)
+um:flow:qa-workflow-diagram:layer-3-github-actions-ci-remote-mandatory	docs/manual/um/parts/01-chapters.tex	4657	Layer 3: GitHub Actions CI (Remote, Mandatory)
+um:flow:qa-workflow-diagram:recommended-setup	docs/manual/um/parts/01-chapters.tex	4673	Recommended Setup
+um:flow:qa-workflow-diagram:see-also	docs/manual/um/parts/01-chapters.tex	4756	See Also
+um:flow:qa-workflow-diagram:three-layers-of-protection	docs/manual/um/parts/01-chapters.tex	4621	Three Layers of Protection
+um:flow:qa-workflow-diagram:time-investment-vs-savings	docs/manual/um/parts/01-chapters.tex	4687	Time Investment vs. Savings
+um:flow:qa-workflow-diagram:workflow-optimization-tips	docs/manual/um/parts/01-chapters.tex	4709	Workflow Optimization Tips
+um:flow:workflow-triggers	docs/manual/um/parts/01-chapters.tex	4774	Workflow Trigger Summary
+um:flow:workflow-triggers:common-scenarios	docs/manual/um/parts/01-chapters.tex	4856	Common Scenarios
+um:flow:workflow-triggers:development-workflow-recommendation	docs/manual/um/parts/01-chapters.tex	4949	Development Workflow Recommendation
+um:flow:workflow-triggers:modifying-trigger-behavior	docs/manual/um/parts/01-chapters.tex	4998	Modifying Trigger Behavior
+um:flow:workflow-triggers:option-a-always-use-prs-recommended	docs/manual/um/parts/01-chapters.tex	4951	Option A: Always Use PRs (Recommended)
+um:flow:workflow-triggers:option-b-local-qa-before-pr	docs/manual/um/parts/01-chapters.tex	4969	Option B: Local QA Before PR
+um:flow:workflow-triggers:option-c-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	4983	Option C: Pre-commit Hooks
+um:flow:workflow-triggers:path-filtering-tests-workflow-only	docs/manual/um/parts/01-chapters.tex	4921	Path Filtering (Tests Workflow Only)
+um:flow:workflow-triggers:qa-checks-workflow-qa-checksyml	docs/manual/um/parts/01-chapters.tex	4783	\texorpdfstring{QA Checks Workflow (\code{qa-checks.yml})}{QA Checks Workflow ()}
+um:flow:workflow-triggers:scenario-1-working-on-a-feature-branch	docs/manual/um/parts/01-chapters.tex	4858	Scenario 1: Working on a Feature Branch
+um:flow:workflow-triggers:scenario-2-creating-a-pull-request-to-main	docs/manual/um/parts/01-chapters.tex	4870	Scenario 2: Creating a Pull Request to Main
+um:flow:workflow-triggers:scenario-3-merging-to-main	docs/manual/um/parts/01-chapters.tex	4880	Scenario 3: Merging to Main
+um:flow:workflow-triggers:scenario-4-manual-trigger	docs/manual/um/parts/01-chapters.tex	4889	Scenario 4: Manual Trigger
+um:flow:workflow-triggers:see-also	docs/manual/um/parts/01-chapters.tex	5030	See Also
+um:flow:workflow-triggers:tests-workflow-testsyml	docs/manual/um/parts/01-chapters.tex	4811	\texorpdfstring{Tests Workflow (\code{tests.yml})}{Tests Workflow ()}
+um:flow:workflow-triggers:to-run-ci-on-all-branches	docs/manual/um/parts/01-chapters.tex	5000	To run CI on all branches
+um:flow:workflow-triggers:to-run-ci-on-all-prs-but-push-to-main-only	docs/manual/um/parts/01-chapters.tex	5020	To run CI on all PRs but push to main only
+um:flow:workflow-triggers:to-run-ci-only-on-specific-branches	docs/manual/um/parts/01-chapters.tex	5010	To run CI only on specific branches
+um:flow:workflow-triggers:trigger-configuration	docs/manual/um/parts/01-chapters.tex	4778	Trigger Configuration
+um:flow:workflow-triggers:why-this-configuration	docs/manual/um/parts/01-chapters.tex	4898	Why This Configuration?
+um:flow:workflow-triggers:workflow-diagram	docs/manual/um/parts/01-chapters.tex	4839	Workflow Diagram
+um:guide:authored-chapters	docs/manual/um/parts/01-chapters.tex	6564	Authored chapters
 um:guide:cleanup-recommendations	docs/manual/um/parts/99-appendix.tex	3	Cleanup recommendations
 um:guide:cleanup-recommendations:commercial-reports	docs/manual/um/parts/99-appendix.tex	60	Move the commercial-flow reports out of git
 um:guide:cleanup-recommendations:copilot-instructions	docs/manual/um/parts/99-appendix.tex	30	Replace the Copilot instructions and decide on the instruction files
@@ -3294,114 +3294,114 @@ um:guide:cleanup-recommendations:mcp-json	docs/manual/um/parts/99-appendix.tex	1
 um:guide:cleanup-recommendations:micro-p	docs/manual/um/parts/99-appendix.tex	50	Delete or keep the archived Phase 1 tree
 um:guide:cleanup-recommendations:soc-all-duplicate	docs/manual/um/parts/99-appendix.tex	90	Merge the duplicate soc\_all targets
 um:guide:cleanup-recommendations:stray-beads	docs/manual/um/parts/99-appendix.tex	9	Remove the stray second beads instance
-um:guide:coding-compliance-audit	docs/manual/um/parts/01-chapters.tex	1199	Coding Guidelines Compliance Audit
-um:guide:coding-compliance-audit:1-what-already-complies-codified-as-is	docs/manual/um/parts/01-chapters.tex	1216	1. What already complies (codified as-is)
-um:guide:coding-compliance-audit:2-violations-and-remediation-plan	docs/manual/um/parts/01-chapters.tex	1268	2. Violations and remediation plan
-um:guide:coding-compliance-audit:3-per-subsystem-consistency-matrix-reference	docs/manual/um/parts/01-chapters.tex	1558	3. Per-subsystem consistency matrix (reference)
-um:guide:coding-compliance-audit:4-suggested-sequencing	docs/manual/um/parts/01-chapters.tex	1606	4. Suggested sequencing
-um:guide:coding-compliance-audit:configtooling-contradictions-fixed-in-this-change	docs/manual/um/parts/01-chapters.tex	1513	\texorpdfstring{Config/\allowbreak{}tooling contradictions --- \textbf{fixed in this change}}{Config/tooling contradictions --- fixed in this change}
-um:guide:coding-compliance-audit:p1-low-risk-high-value	docs/manual/um/parts/01-chapters.tex	1276	P1 --- low-risk, high-value
-um:guide:coding-compliance-audit:p2-mechanical-cleanup	docs/manual/um/parts/01-chapters.tex	1355	P2 --- mechanical cleanup
-um:guide:coding-compliance-audit:p3-refactors-requiring-re-verification-proposal-only	docs/manual/um/parts/01-chapters.tex	1430	P3 --- refactors requiring re-verification (proposal only)
-um:guide:coding-guidelines	docs/manual/um/parts/01-chapters.tex	484	Coding Practices \& Style Guidelines
-um:guide:coding-guidelines:1-systemverilog-rtl	docs/manual/um/parts/01-chapters.tex	529	1. SystemVerilog RTL
-um:guide:coding-guidelines:11-file-organization	docs/manual/um/parts/01-chapters.tex	534	1.1 File organization
-um:guide:coding-guidelines:12-naming	docs/manual/um/parts/01-chapters.tex	573	1.2 Naming
-um:guide:coding-guidelines:13-language-constructs	docs/manual/um/parts/01-chapters.tex	620	1.3 Language constructs
-um:guide:coding-guidelines:14-reset-style	docs/manual/um/parts/01-chapters.tex	701	1.4 Reset style
-um:guide:coding-guidelines:15-ports-and-module-headers	docs/manual/um/parts/01-chapters.tex	722	1.5 Ports and module headers
-um:guide:coding-guidelines:16-formatting	docs/manual/um/parts/01-chapters.tex	739	1.6 Formatting
-um:guide:coding-guidelines:17-lint-gates	docs/manual/um/parts/01-chapters.tex	759	1.7 Lint gates
-um:guide:coding-guidelines:171-synthesis-undef-elaboration-gate-bead-gc0y	docs/manual/um/parts/01-chapters.tex	802	\texorpdfstring{1.7.1 Synthesis undef-elaboration gate (bead \code{gc0y})}{1.7.1 Synthesis undef-elaboration gate (bead )}
-um:guide:coding-guidelines:18-spyglass-lint-discipline	docs/manual/um/parts/01-chapters.tex	836	1.8 Spyglass lint discipline
-um:guide:coding-guidelines:2-python	docs/manual/um/parts/01-chapters.tex	906	2. Python
-um:guide:coding-guidelines:21-test-conventions	docs/manual/um/parts/01-chapters.tex	967	2.1 Test conventions
-um:guide:coding-guidelines:3-shell-and-build-scripts	docs/manual/um/parts/01-chapters.tex	988	3. Shell and build scripts
-um:guide:coding-guidelines:4-commit-messages	docs/manual/um/parts/01-chapters.tex	1010	4. Commit messages
-um:guide:coding-guidelines:5-repository-hygiene	docs/manual/um/parts/01-chapters.tex	1022	5. Repository hygiene
-um:guide:coding-guidelines:6-enforcement-summary	docs/manual/um/parts/01-chapters.tex	1047	6. Enforcement summary
-um:guide:coding-guidelines:7-source-comments	docs/manual/um/parts/01-chapters.tex	1100	7. Source comments
-um:guide:coding-guidelines:71-budgets	docs/manual/um/parts/01-chapters.tex	1106	7.1 Budgets
-um:guide:coding-guidelines:72-banned-content	docs/manual/um/parts/01-chapters.tex	1140	7.2 Banned content
-um:guide:coding-guidelines:73-citation-line	docs/manual/um/parts/01-chapters.tex	1161	7.3 Citation line
-um:guide:coding-guidelines:74-moving-comment-text	docs/manual/um/parts/01-chapters.tex	1174	7.4 Moving comment text
-um:guide:coding-guidelines:scope-and-enforcement-policy	docs/manual/um/parts/01-chapters.tex	501	Scope and enforcement policy
-um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	7022	Commit Message Convention
-um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	7032	Coding Guidelines
-um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	7040	Questions?
-um:guide:debug-interface	docs/manual/um/parts/01-chapters.tex	435	Debug Interface (Phase 1+)
-um:guide:fact-tables	docs/manual/um/parts/01-chapters.tex	6677	Fact tables
-um:guide:figures	docs/manual/um/parts/01-chapters.tex	6707	Figures
-um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	6939	Frequently Used Commands
-um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	6974	Project Structure
-um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	6791	Key Documentation
-um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	6797	Architecture \& Design
-um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	6854	Physical Design
-um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	6928	README detail set
-um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	6888	Verification \& Fixes
-um:guide:local-qa	docs/manual/um/parts/01-chapters.tex	2248	Local QA Setup Guide
-um:guide:local-qa:all-checks	docs/manual/um/parts/01-chapters.tex	2378	All Checks
-um:guide:local-qa:automatically-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	2268	Automatically (Pre-commit Hooks)
-um:guide:local-qa:check-coverage-percentage	docs/manual/um/parts/01-chapters.tex	2618	Check Coverage Percentage
-um:guide:local-qa:configuration-files	docs/manual/um/parts/01-chapters.tex	2474	Configuration Files
-um:guide:local-qa:coverage-on-specific-module	docs/manual/um/parts/01-chapters.tex	2625	Coverage on Specific Module
-um:guide:local-qa:coverage-reports	docs/manual/um/parts/01-chapters.tex	2609	Coverage Reports
-um:guide:local-qa:development-workflow	docs/manual/um/parts/01-chapters.tex	2430	Development Workflow
-um:guide:local-qa:fast-iteration-workflow	docs/manual/um/parts/01-chapters.tex	2458	Fast Iteration Workflow
-um:guide:local-qa:generate-html-coverage-report	docs/manual/um/parts/01-chapters.tex	2611	Generate HTML Coverage Report
-um:guide:local-qa:getting-help	docs/manual/um/parts/01-chapters.tex	2675	Getting Help
-um:guide:local-qa:ide-integration	docs/manual/um/parts/01-chapters.tex	2490	IDE Integration
-um:guide:local-qa:import-errors-in-mypy	docs/manual/um/parts/01-chapters.tex	2553	Import errors in MyPy
-um:guide:local-qa:individual-checks	docs/manual/um/parts/01-chapters.tex	2385	Individual Checks
-um:guide:local-qa:manually-ci-on-github	docs/manual/um/parts/01-chapters.tex	2362	Manually (CI on GitHub)
-um:guide:local-qa:performance-tips	docs/manual/um/parts/01-chapters.tex	2631	Performance Tips
-um:guide:local-qa:pre-commit-is-slow	docs/manual/um/parts/01-chapters.tex	2543	Pre-commit is slow
-um:guide:local-qa:pycharm	docs/manual/um/parts/01-chapters.tex	2526	PyCharm
-um:guide:local-qa:pylint-score-too-low	docs/manual/um/parts/01-chapters.tex	2566	Pylint score too low
-um:guide:local-qa:quick-start	docs/manual/um/parts/01-chapters.tex	2253	Quick Start
-um:guide:local-qa:quick-test-during-development	docs/manual/um/parts/01-chapters.tex	2414	Quick Test During Development
-um:guide:local-qa:recommended-workflow	docs/manual/um/parts/01-chapters.tex	2432	Recommended Workflow
-um:guide:local-qa:running-checks-manually	docs/manual/um/parts/01-chapters.tex	2376	Running Checks Manually
-um:guide:local-qa:see-also	docs/manual/um/parts/01-chapters.tex	2658	See Also
-um:guide:local-qa:speed-up-pre-commit	docs/manual/um/parts/01-chapters.tex	2647	Speed Up Pre-commit
-um:guide:local-qa:speed-up-tests	docs/manual/um/parts/01-chapters.tex	2633	Speed Up Tests
-um:guide:local-qa:tests-failing-locally-but-pass-in-ci	docs/manual/um/parts/01-chapters.tex	2594	Tests failing locally but pass in CI
-um:guide:local-qa:troubleshooting	docs/manual/um/parts/01-chapters.tex	2541	Troubleshooting
-um:guide:local-qa:vscode	docs/manual/um/parts/01-chapters.tex	2492	VSCode
-um:guide:local-qa:what-gets-checked	docs/manual/um/parts/01-chapters.tex	2266	What Gets Checked
-um:guide:project-structure	docs/manual/um/parts/01-chapters.tex	50	Project Structure
-um:guide:quick-start	docs/manual/um/parts/01-chapters.tex	112	Quick Start
-um:guide:quick-start:design-quality-checks-spyglass-hal-local-eda-host-only	docs/manual/um/parts/01-chapters.tex	346	Design quality checks (SpyGlass / HAL, local EDA host only)
-um:guide:quick-start:dft-cdc-and-fpga-targets-added-2026-10-15	docs/manual/um/parts/01-chapters.tex	315	DFT, CDC and FPGA Targets (added 2026-10-15)
-um:guide:quick-start:nix-dev-shell-simulation-lint	docs/manual/um/parts/01-chapters.tex	117	Nix dev shell (simulation + lint)
-um:guide:quick-start:phase-0-reference-model-testing-complete-white-check-mark	docs/manual/um/parts/01-chapters.tex	139	\texorpdfstring{Phase 0: Reference Model Testing (Complete \ok{})}{Phase 0: Reference Model Testing (Complete )}
-um:guide:quick-start:phase-1-rtl-simulation-white-check-mark-complete-archived-to-micro-p	docs/manual/um/parts/01-chapters.tex	159	\texorpdfstring{Phase 1: RTL Simulation \ok{} Complete (Archived to \src{micro_p/})}{Phase 1: RTL Simulation Complete (Archived to )}
-um:guide:quick-start:phase-2-rtl-simulation-white-check-mark-complete	docs/manual/um/parts/01-chapters.tex	165	\texorpdfstring{Phase 2: RTL Simulation \ok{} Complete}{Phase 2: RTL Simulation Complete}
-um:guide:quick-start:phase-3-cache-simulation-white-check-mark-complete	docs/manual/um/parts/01-chapters.tex	195	\texorpdfstring{Phase 3: Cache Simulation \ok{} Complete}{Phase 3: Cache Simulation Complete}
-um:guide:quick-start:proprietary-simulators-vcs-xcelium	docs/manual/um/parts/01-chapters.tex	244	Proprietary simulators (VCS / Xcelium)
-um:guide:quick-start:rtl-linting-formatting	docs/manual/um/parts/01-chapters.tex	261	RTL Linting \& Formatting
-um:guide:quick-start:soc-cocotb-regression-tbcocotbsoc	docs/manual/um/parts/01-chapters.tex	214	\texorpdfstring{SoC cocotb regression (\src{tb/cocotb/soc})}{SoC cocotb regression ()}
-um:guide:quick-start:tool-input-rtl-filelists-rtlfilelist	docs/manual/um/parts/01-chapters.tex	297	\texorpdfstring{Tool-input RTL filelists (\src{rtl/filelist/})}{Tool-input RTL filelists ()}
-um:guide:readme-index	docs/manual/um/parts/01-chapters.tex	7	README Detail Set
-um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	6987	Reference Model (Python)
-um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	7003	Verification Strategy
-um:guide:requirements	docs/manual/um/parts/01-chapters.tex	6617	Requirements
-um:guide:source-archive	docs/manual/um/parts/01-chapters.tex	6773	Source archive
-um:guide:spyglass-lint-remediation	docs/manual/um/parts/01-chapters.tex	1630	Spyglass Lint Remediation Plan (Handoff)
-um:guide:spyglass-lint-remediation:0-ground-rules-context	docs/manual/um/parts/01-chapters.tex	1642	0. Ground rules \& context
-um:guide:spyglass-lint-remediation:1-violation-catalog-disposition-summary	docs/manual/um/parts/01-chapters.tex	1682	1. Violation catalog \& disposition summary
-um:guide:spyglass-lint-remediation:2-fix-items-detailed-instructions	docs/manual/um/parts/01-chapters.tex	1746	2. FIX items --- detailed instructions
-um:guide:spyglass-lint-remediation:3-waive-document-items	docs/manual/um/parts/01-chapters.tex	2059	3. WAIVE + DOCUMENT items
-um:guide:spyglass-lint-remediation:4-coding-guideline-updates-docsdevelopmentcoding-guidelinesmd	docs/manual/um/parts/01-chapters.tex	2120	\texorpdfstring{4. Coding-guideline updates (\cref{um:guide:coding-guidelines})}{4. Coding-guideline updates ()}
-um:guide:spyglass-lint-remediation:5-execution-order-verification-for-the-implementing-session	docs/manual/um/parts/01-chapters.tex	2178	5. Execution order \& verification (for the implementing session)
-um:guide:spyglass-lint-remediation:6-open-confirmations-for-the-next-session	docs/manual/um/parts/01-chapters.tex	2224	6. Open confirmations for the next session
-um:guide:spyglass-lint-remediation:a-remove-default-nettype-none-rule-ind-all-files	docs/manual/um/parts/01-chapters.tex	1750	\texorpdfstring{A. Remove \texttt{`default\_\allowbreak{}nettype\ none} (rule IND) --- ALL FILES}{A. Remove (rule IND) --- ALL FILES}
-um:guide:spyglass-lint-remediation:b-blockingnon-blocking-in-always-ff-reset-loops-rules-sm-bnp-w336-nonblockassign	docs/manual/um/parts/01-chapters.tex	1811	\texorpdfstring{B. Blocking→non-blocking in \code{always_ff} reset loops (rules SM\_BNP / W336 / NonBlockAssign)}{B. Blocking→non-blocking in reset loops (rules SM\_BNP / W336 / NonBlockAssign)}
-um:guide:spyglass-lint-remediation:c-guard-non-synthesizable-initial-fatal-readmemh-rules-sm-ign-initial-w430-w213-lint-sv-string	docs/manual/um/parts/01-chapters.tex	1863	\texorpdfstring{C. Guard non-synthesizable \code{initial} / \texttt{\$fatal} / \texttt{\$readmemh} (rules SM\_\allowbreak{}IGN\_\allowbreak{}INITIAL / W430 / W213 / LINT\_\allowbreak{}SV\_\allowbreak{}STRING)}{C. Guard non-synthesizable / / (rules SM\_IGN\_INITIAL / W430 / W213 / LINT\_SV\_STRING)}
-um:guide:spyglass-lint-remediation:d-undriven-boot-rom-memory-read-rule-undriveninterm-ml-rtlsocboot-romsv224	docs/manual/um/parts/01-chapters.tex	1925	\texorpdfstring{D. Undriven boot\_rom memory read (rule UndrivenInTerm-ML) --- \src{rtl/soc/boot_rom.sv:224}}{D. Undriven boot\_rom memory read (rule UndrivenInTerm-ML) --- }
-um:guide:spyglass-lint-remediation:e-empty-blocks-rule-w192	docs/manual/um/parts/01-chapters.tex	1938	E. Empty blocks (rule W192)
-um:guide:spyglass-lint-remediation:f-oversized-index-variable-rule-lint-improper-range-index-rtlgpuwarp-schedulersv111-116	docs/manual/um/parts/01-chapters.tex	1984	\texorpdfstring{F. Oversized index variable (rule LINT\_\allowbreak{}IMPROPER\_\allowbreak{}RANGE\_\allowbreak{}INDEX) --- \src{rtl/gpu/warp_scheduler.sv:111-116}}{F. Oversized index variable (rule LINT\_IMPROPER\_RANGE\_INDEX) --- }
-um:guide:spyglass-lint-remediation:g-signedunsigned-mix-rule-signedunsignedexpr-ml-34-subset-shown	docs/manual/um/parts/01-chapters.tex	2012	\texorpdfstring{G. Signed/\allowbreak{}unsigned mix (rule SignedUnsignedExpr-ML, ×34 subset shown)}{G. Signed/unsigned mix (rule SignedUnsignedExpr-ML, ×34 subset shown)}
+um:guide:coding-compliance-audit	docs/manual/um/parts/01-chapters.tex	1196	Coding Guidelines Compliance Audit
+um:guide:coding-compliance-audit:1-what-already-complies-codified-as-is	docs/manual/um/parts/01-chapters.tex	1213	1. What already complies (codified as-is)
+um:guide:coding-compliance-audit:2-violations-and-remediation-plan	docs/manual/um/parts/01-chapters.tex	1265	2. Violations and remediation plan
+um:guide:coding-compliance-audit:3-per-subsystem-consistency-matrix-reference	docs/manual/um/parts/01-chapters.tex	1555	3. Per-subsystem consistency matrix (reference)
+um:guide:coding-compliance-audit:4-suggested-sequencing	docs/manual/um/parts/01-chapters.tex	1603	4. Suggested sequencing
+um:guide:coding-compliance-audit:configtooling-contradictions-fixed-in-this-change	docs/manual/um/parts/01-chapters.tex	1510	\texorpdfstring{Config/\allowbreak{}tooling contradictions --- \textbf{fixed in this change}}{Config/tooling contradictions --- fixed in this change}
+um:guide:coding-compliance-audit:p1-low-risk-high-value	docs/manual/um/parts/01-chapters.tex	1273	P1 --- low-risk, high-value
+um:guide:coding-compliance-audit:p2-mechanical-cleanup	docs/manual/um/parts/01-chapters.tex	1352	P2 --- mechanical cleanup
+um:guide:coding-compliance-audit:p3-refactors-requiring-re-verification-proposal-only	docs/manual/um/parts/01-chapters.tex	1427	P3 --- refactors requiring re-verification (proposal only)
+um:guide:coding-guidelines	docs/manual/um/parts/01-chapters.tex	481	Coding Practices \& Style Guidelines
+um:guide:coding-guidelines:1-systemverilog-rtl	docs/manual/um/parts/01-chapters.tex	526	1. SystemVerilog RTL
+um:guide:coding-guidelines:11-file-organization	docs/manual/um/parts/01-chapters.tex	531	1.1 File organization
+um:guide:coding-guidelines:12-naming	docs/manual/um/parts/01-chapters.tex	570	1.2 Naming
+um:guide:coding-guidelines:13-language-constructs	docs/manual/um/parts/01-chapters.tex	617	1.3 Language constructs
+um:guide:coding-guidelines:14-reset-style	docs/manual/um/parts/01-chapters.tex	698	1.4 Reset style
+um:guide:coding-guidelines:15-ports-and-module-headers	docs/manual/um/parts/01-chapters.tex	719	1.5 Ports and module headers
+um:guide:coding-guidelines:16-formatting	docs/manual/um/parts/01-chapters.tex	736	1.6 Formatting
+um:guide:coding-guidelines:17-lint-gates	docs/manual/um/parts/01-chapters.tex	756	1.7 Lint gates
+um:guide:coding-guidelines:171-synthesis-undef-elaboration-gate-bead-gc0y	docs/manual/um/parts/01-chapters.tex	799	\texorpdfstring{1.7.1 Synthesis undef-elaboration gate (bead \code{gc0y})}{1.7.1 Synthesis undef-elaboration gate (bead )}
+um:guide:coding-guidelines:18-spyglass-lint-discipline	docs/manual/um/parts/01-chapters.tex	833	1.8 Spyglass lint discipline
+um:guide:coding-guidelines:2-python	docs/manual/um/parts/01-chapters.tex	903	2. Python
+um:guide:coding-guidelines:21-test-conventions	docs/manual/um/parts/01-chapters.tex	964	2.1 Test conventions
+um:guide:coding-guidelines:3-shell-and-build-scripts	docs/manual/um/parts/01-chapters.tex	985	3. Shell and build scripts
+um:guide:coding-guidelines:4-commit-messages	docs/manual/um/parts/01-chapters.tex	1007	4. Commit messages
+um:guide:coding-guidelines:5-repository-hygiene	docs/manual/um/parts/01-chapters.tex	1019	5. Repository hygiene
+um:guide:coding-guidelines:6-enforcement-summary	docs/manual/um/parts/01-chapters.tex	1044	6. Enforcement summary
+um:guide:coding-guidelines:7-source-comments	docs/manual/um/parts/01-chapters.tex	1097	7. Source comments
+um:guide:coding-guidelines:71-budgets	docs/manual/um/parts/01-chapters.tex	1103	7.1 Budgets
+um:guide:coding-guidelines:72-banned-content	docs/manual/um/parts/01-chapters.tex	1137	7.2 Banned content
+um:guide:coding-guidelines:73-citation-line	docs/manual/um/parts/01-chapters.tex	1158	7.3 Citation line
+um:guide:coding-guidelines:74-moving-comment-text	docs/manual/um/parts/01-chapters.tex	1171	7.4 Moving comment text
+um:guide:coding-guidelines:scope-and-enforcement-policy	docs/manual/um/parts/01-chapters.tex	498	Scope and enforcement policy
+um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	7012	Commit Message Convention
+um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	7022	Coding Guidelines
+um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	7028	Questions?
+um:guide:debug-interface	docs/manual/um/parts/01-chapters.tex	433	Debug Interface (Phase 1+)
+um:guide:fact-tables	docs/manual/um/parts/01-chapters.tex	6671	Fact tables
+um:guide:figures	docs/manual/um/parts/01-chapters.tex	6701	Figures
+um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	6931	Frequently Used Commands
+um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	6968	Project Structure
+um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	6784	Key Documentation
+um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	6790	Architecture \& Design
+um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	6847	Physical Design
+um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	6921	README detail set
+um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	6881	Verification \& Fixes
+um:guide:local-qa	docs/manual/um/parts/01-chapters.tex	2244	Local QA Setup Guide
+um:guide:local-qa:all-checks	docs/manual/um/parts/01-chapters.tex	2373	All Checks
+um:guide:local-qa:automatically-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	2263	Automatically (Pre-commit Hooks)
+um:guide:local-qa:check-coverage-percentage	docs/manual/um/parts/01-chapters.tex	2613	Check Coverage Percentage
+um:guide:local-qa:configuration-files	docs/manual/um/parts/01-chapters.tex	2469	Configuration Files
+um:guide:local-qa:coverage-on-specific-module	docs/manual/um/parts/01-chapters.tex	2620	Coverage on Specific Module
+um:guide:local-qa:coverage-reports	docs/manual/um/parts/01-chapters.tex	2604	Coverage Reports
+um:guide:local-qa:development-workflow	docs/manual/um/parts/01-chapters.tex	2425	Development Workflow
+um:guide:local-qa:fast-iteration-workflow	docs/manual/um/parts/01-chapters.tex	2453	Fast Iteration Workflow
+um:guide:local-qa:generate-html-coverage-report	docs/manual/um/parts/01-chapters.tex	2606	Generate HTML Coverage Report
+um:guide:local-qa:getting-help	docs/manual/um/parts/01-chapters.tex	2670	Getting Help
+um:guide:local-qa:ide-integration	docs/manual/um/parts/01-chapters.tex	2485	IDE Integration
+um:guide:local-qa:import-errors-in-mypy	docs/manual/um/parts/01-chapters.tex	2549	Import errors in MyPy
+um:guide:local-qa:individual-checks	docs/manual/um/parts/01-chapters.tex	2380	Individual Checks
+um:guide:local-qa:manually-ci-on-github	docs/manual/um/parts/01-chapters.tex	2357	Manually (CI on GitHub)
+um:guide:local-qa:performance-tips	docs/manual/um/parts/01-chapters.tex	2626	Performance Tips
+um:guide:local-qa:pre-commit-is-slow	docs/manual/um/parts/01-chapters.tex	2538	Pre-commit is slow
+um:guide:local-qa:pycharm	docs/manual/um/parts/01-chapters.tex	2521	PyCharm
+um:guide:local-qa:pylint-score-too-low	docs/manual/um/parts/01-chapters.tex	2561	Pylint score too low
+um:guide:local-qa:quick-start	docs/manual/um/parts/01-chapters.tex	2248	Quick Start
+um:guide:local-qa:quick-test-during-development	docs/manual/um/parts/01-chapters.tex	2409	Quick Test During Development
+um:guide:local-qa:recommended-workflow	docs/manual/um/parts/01-chapters.tex	2427	Recommended Workflow
+um:guide:local-qa:running-checks-manually	docs/manual/um/parts/01-chapters.tex	2371	Running Checks Manually
+um:guide:local-qa:see-also	docs/manual/um/parts/01-chapters.tex	2653	See Also
+um:guide:local-qa:speed-up-pre-commit	docs/manual/um/parts/01-chapters.tex	2642	Speed Up Pre-commit
+um:guide:local-qa:speed-up-tests	docs/manual/um/parts/01-chapters.tex	2628	Speed Up Tests
+um:guide:local-qa:tests-failing-locally-but-pass-in-ci	docs/manual/um/parts/01-chapters.tex	2589	Tests failing locally but pass in CI
+um:guide:local-qa:troubleshooting	docs/manual/um/parts/01-chapters.tex	2536	Troubleshooting
+um:guide:local-qa:vscode	docs/manual/um/parts/01-chapters.tex	2487	VSCode
+um:guide:local-qa:what-gets-checked	docs/manual/um/parts/01-chapters.tex	2261	What Gets Checked
+um:guide:project-structure	docs/manual/um/parts/01-chapters.tex	48	Project Structure
+um:guide:quick-start	docs/manual/um/parts/01-chapters.tex	108	Quick Start
+um:guide:quick-start:design-quality-checks-spyglass-hal-local-eda-host-only	docs/manual/um/parts/01-chapters.tex	345	Design quality checks (SpyGlass / HAL, local EDA host only)
+um:guide:quick-start:dft-cdc-and-fpga-targets-added-2026-10-15	docs/manual/um/parts/01-chapters.tex	314	DFT, CDC and FPGA Targets (added 2026-10-15)
+um:guide:quick-start:nix-dev-shell-simulation-lint	docs/manual/um/parts/01-chapters.tex	113	Nix dev shell (simulation + lint)
+um:guide:quick-start:phase-0-reference-model-testing-complete-white-check-mark	docs/manual/um/parts/01-chapters.tex	135	\texorpdfstring{Phase 0: Reference Model Testing (Complete \ok{})}{Phase 0: Reference Model Testing (Complete )}
+um:guide:quick-start:phase-1-rtl-simulation-white-check-mark-complete-archived-to-micro-p	docs/manual/um/parts/01-chapters.tex	155	\texorpdfstring{Phase 1: RTL Simulation \ok{} Complete (Archived to \src{micro_p/})}{Phase 1: RTL Simulation Complete (Archived to )}
+um:guide:quick-start:phase-2-rtl-simulation-white-check-mark-complete	docs/manual/um/parts/01-chapters.tex	161	\texorpdfstring{Phase 2: RTL Simulation \ok{} Complete}{Phase 2: RTL Simulation Complete}
+um:guide:quick-start:phase-3-cache-simulation-white-check-mark-complete	docs/manual/um/parts/01-chapters.tex	191	\texorpdfstring{Phase 3: Cache Simulation \ok{} Complete}{Phase 3: Cache Simulation Complete}
+um:guide:quick-start:proprietary-simulators-vcs-xcelium	docs/manual/um/parts/01-chapters.tex	239	Proprietary simulators (VCS / Xcelium)
+um:guide:quick-start:rtl-linting-formatting	docs/manual/um/parts/01-chapters.tex	256	RTL Linting \& Formatting
+um:guide:quick-start:soc-cocotb-regression-tbcocotbsoc	docs/manual/um/parts/01-chapters.tex	210	\texorpdfstring{SoC cocotb regression (\src{tb/cocotb/soc})}{SoC cocotb regression ()}
+um:guide:quick-start:tool-input-rtl-filelists-rtlfilelist	docs/manual/um/parts/01-chapters.tex	294	\texorpdfstring{Tool-input RTL filelists (\src{rtl/filelist/})}{Tool-input RTL filelists ()}
+um:guide:readme-index	docs/manual/um/parts/01-chapters.tex	6	README Detail Set
+um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	6979	Reference Model (Python)
+um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	6995	Verification Strategy
+um:guide:requirements	docs/manual/um/parts/01-chapters.tex	6611	Requirements
+um:guide:source-archive	docs/manual/um/parts/01-chapters.tex	6767	Source archive
+um:guide:spyglass-lint-remediation	docs/manual/um/parts/01-chapters.tex	1627	Spyglass Lint Remediation Plan (Handoff)
+um:guide:spyglass-lint-remediation:0-ground-rules-context	docs/manual/um/parts/01-chapters.tex	1639	0. Ground rules \& context
+um:guide:spyglass-lint-remediation:1-violation-catalog-disposition-summary	docs/manual/um/parts/01-chapters.tex	1679	1. Violation catalog \& disposition summary
+um:guide:spyglass-lint-remediation:2-fix-items-detailed-instructions	docs/manual/um/parts/01-chapters.tex	1743	2. FIX items --- detailed instructions
+um:guide:spyglass-lint-remediation:3-waive-document-items	docs/manual/um/parts/01-chapters.tex	2056	3. WAIVE + DOCUMENT items
+um:guide:spyglass-lint-remediation:4-coding-guideline-updates-docsdevelopmentcoding-guidelinesmd	docs/manual/um/parts/01-chapters.tex	2117	\texorpdfstring{4. Coding-guideline updates (\cref{um:guide:coding-guidelines})}{4. Coding-guideline updates ()}
+um:guide:spyglass-lint-remediation:5-execution-order-verification-for-the-implementing-session	docs/manual/um/parts/01-chapters.tex	2175	5. Execution order \& verification (for the implementing session)
+um:guide:spyglass-lint-remediation:6-open-confirmations-for-the-next-session	docs/manual/um/parts/01-chapters.tex	2221	6. Open confirmations for the next session
+um:guide:spyglass-lint-remediation:a-remove-default-nettype-none-rule-ind-all-files	docs/manual/um/parts/01-chapters.tex	1747	\texorpdfstring{A. Remove \texttt{`default\_\allowbreak{}nettype\ none} (rule IND) --- ALL FILES}{A. Remove (rule IND) --- ALL FILES}
+um:guide:spyglass-lint-remediation:b-blockingnon-blocking-in-always-ff-reset-loops-rules-sm-bnp-w336-nonblockassign	docs/manual/um/parts/01-chapters.tex	1808	\texorpdfstring{B. Blocking→non-blocking in \code{always_ff} reset loops (rules SM\_BNP / W336 / NonBlockAssign)}{B. Blocking→non-blocking in reset loops (rules SM\_BNP / W336 / NonBlockAssign)}
+um:guide:spyglass-lint-remediation:c-guard-non-synthesizable-initial-fatal-readmemh-rules-sm-ign-initial-w430-w213-lint-sv-string	docs/manual/um/parts/01-chapters.tex	1860	\texorpdfstring{C. Guard non-synthesizable \code{initial} / \texttt{\$fatal} / \texttt{\$readmemh} (rules SM\_\allowbreak{}IGN\_\allowbreak{}INITIAL / W430 / W213 / LINT\_\allowbreak{}SV\_\allowbreak{}STRING)}{C. Guard non-synthesizable / / (rules SM\_IGN\_INITIAL / W430 / W213 / LINT\_SV\_STRING)}
+um:guide:spyglass-lint-remediation:d-undriven-boot-rom-memory-read-rule-undriveninterm-ml-rtlsocboot-romsv224	docs/manual/um/parts/01-chapters.tex	1922	\texorpdfstring{D. Undriven boot\_rom memory read (rule UndrivenInTerm-ML) --- \src{rtl/soc/boot_rom.sv:224}}{D. Undriven boot\_rom memory read (rule UndrivenInTerm-ML) --- }
+um:guide:spyglass-lint-remediation:e-empty-blocks-rule-w192	docs/manual/um/parts/01-chapters.tex	1935	E. Empty blocks (rule W192)
+um:guide:spyglass-lint-remediation:f-oversized-index-variable-rule-lint-improper-range-index-rtlgpuwarp-schedulersv111-116	docs/manual/um/parts/01-chapters.tex	1981	\texorpdfstring{F. Oversized index variable (rule LINT\_\allowbreak{}IMPROPER\_\allowbreak{}RANGE\_\allowbreak{}INDEX) --- \src{rtl/gpu/warp_scheduler.sv:111-116}}{F. Oversized index variable (rule LINT\_IMPROPER\_RANGE\_INDEX) --- }
+um:guide:spyglass-lint-remediation:g-signedunsigned-mix-rule-signedunsignedexpr-ml-34-subset-shown	docs/manual/um/parts/01-chapters.tex	2009	\texorpdfstring{G. Signed/\allowbreak{}unsigned mix (rule SignedUnsignedExpr-ML, ×34 subset shown)}{G. Signed/unsigned mix (rule SignedUnsignedExpr-ML, ×34 subset shown)}
 um:guide:supported-instructions	docs/manual/um/parts/01-chapters.tex	370	Supported Instructions
 um:guide:supported-instructions:phase-1-white-check-mark-complete-rv32i-base	docs/manual/um/parts/01-chapters.tex	373	\texorpdfstring{Phase 1 \ok{} (Complete --- RV32I Base)}{Phase 1 (Complete --- RV32I Base)}
 um:guide:supported-instructions:phase-2-white-check-mark-verification-complete-rv32i-zicsr	docs/manual/um/parts/01-chapters.tex	398	\texorpdfstring{Phase 2 \ok{} (Verification Complete --- RV32I + Zicsr)}{Phase 2 (Verification Complete --- RV32I + Zicsr)}

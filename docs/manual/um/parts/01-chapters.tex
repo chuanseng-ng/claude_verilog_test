@@ -2,12 +2,12 @@
 
 This chapter shows how to set up the project and run the first test.
 
-\begin{relocated}{docs/readme/README.md}
-% Converted from docs/readme/README.md by tools/docs/md2tex.py; edit this file, not the original.
+% Rewritten in STE style from docs/readme/README.md; the verbatim original is in git history (at commit 23e35004).
 \section{README Detail Set}\label{um:guide:readme-index}
 
-Detail pages split out of the root \src{README.md} to keep it scannable.
-Each page holds the deep content the README links to.
+The detail pages are split out of the root \src{README.md}.
+This keeps the README easy to scan.
+Each page holds the deep content that the README links to.
 
 {
 \begin{longtable}[]{@{}
@@ -35,7 +35,6 @@ PROJECT\_\allowbreak{}STRUCTURE.md (\cref{um:guide:project-structure}) &
 Full repository directory tree \\
 \end{longtable}
 }
-\end{relocated}
 
 \chapter{Project structure}\label{um:ch:project-structure}
 
@@ -45,8 +44,7 @@ This chapter describes the directory tree of the repository.
 A comment in the tree below says that the GPU has an ASAP7 sign-off. This claim does not stand. Read \cref{tm:ch:standing-caveats} before you quote an ASAP7 figure.
 \end{information}
 
-\begin{relocated}{docs/readme/PROJECT_STRUCTURE.md}
-% Converted from docs/readme/PROJECT_STRUCTURE.md by tools/docs/md2tex.py; edit this file, not the original.
+% Rewritten in STE style from docs/readme/PROJECT_STRUCTURE.md; the verbatim original is in git history (at commit 23e35004).
 \section{Project Structure}\label{um:guide:project-structure}
 
 \begin{logblock}
@@ -101,25 +99,23 @@ A comment in the tree below says that the GPU has an ASAP7 sign-off. This claim 
 ├── sim/                          # Simulation scripts (Phase 1+)
 └── CLAUDE.md                     # Claude Code instructions
 \end{logblock}
-\end{relocated}
 
 \chapter{Build and run commands}\label{um:ch:build-and-run-commands}
 
 This chapter lists the commands to build and run each phase.
 
-\begin{relocated}{docs/readme/QUICK_START.md}
-% Converted from docs/readme/QUICK_START.md by tools/docs/md2tex.py; edit this file, not the original.
+% Rewritten in STE style from docs/readme/QUICK_START.md; the verbatim original is in git history (at commit 23e35004).
 \section{Quick Start}\label{um:guide:quick-start}
 
-Build and run commands per phase. For environment requirements see the
-root \src{README.md}.
+This section gives the build and run commands for each phase.
+For the environment requirements, see the root \src{README.md}.
 
 \subsection{Nix dev shell (simulation + lint)}\label{um:guide:quick-start:nix-dev-shell-simulation-lint}
 
-A pinned nix flake at the repo root provides the deterministic EDA
-toolchain for simulation and lint --- \textbf{Verilator 5.048},
-iverilog, gcc, make --- so local and CI toolchains match. Enter it
-before running any \src{sim/} make target:
+A pinned nix flake at the root of the repository gives the deterministic EDA toolchain for simulation and lint.
+The toolchain has \textbf{Verilator 5.048}, iverilog, gcc and make.
+Because the flake gives this toolchain, the local toolchain and the CI toolchain match.
+Enter the shell before you run any \src{sim/} make target:
 
 \begin{lstlisting}[language=bash]
 nix develop          # primary entry point (flakes)
@@ -129,11 +125,11 @@ nix-shell            # same shell via shell.nix flake-compat wrapper
 cd sim && make test  # Verilator + cocotb now use the pinned toolchain
 \end{lstlisting}
 
-The Python/\allowbreak{}cocotb stack (cocotb, pyuvm, cocotbext-axi,
-cocotb-bus) stays on the system Python + pip --- install once with
+The Python/\allowbreak{}cocotb stack (cocotb, pyuvm, cocotbext-axi, cocotb-bus) stays on the system Python and pip.
+Install it one time with
 \texttt{pip\ install\ -\allowbreak{}r\ requirements.\allowbreak{}txt\ cocotb-\allowbreak{}bus\ cocotbext-\allowbreak{}axi}.
-Synthesis / PnR is \textbf{not} covered by this shell; it uses the
-external librelane nix env via \src{pnr/Makefile}.
+This shell does \textbf{not} cover Synthesis / PnR.
+Synthesis / PnR uses the nix environment of the external librelane, through \src{pnr/Makefile}.
 
 \subsection{\texorpdfstring{Phase 0: Reference Model Testing (Complete
 \ok{})}{Phase 0: Reference Model Testing (Complete )}}\label{um:guide:quick-start:phase-0-reference-model-testing-complete-white-check-mark}
@@ -158,8 +154,8 @@ pytest --cov=tb.models --cov-report=html
 (Archived to
 \src{micro_p/})}{Phase 1: RTL Simulation  Complete (Archived to )}}\label{um:guide:quick-start:phase-1-rtl-simulation-white-check-mark-complete-archived-to-micro-p}
 
-Phase 1 single-cycle CPU has been completed and archived. All
-verification passed.
+The Phase 1 single-cycle CPU is complete and archived.
+All verification passed.
 
 \subsection{\texorpdfstring{Phase 2: RTL Simulation \ok{}
 Complete}{Phase 2: RTL Simulation  Complete}}\label{um:guide:quick-start:phase-2-rtl-simulation-white-check-mark-complete}
@@ -222,29 +218,28 @@ nix develop --command make -C tb/cocotb/soc print-sim-build MODULE=m TOPLEVEL=tb
 
 Each Verilator build lives in
 \texttt{\$(SIM\_\allowbreak{}BUILD\_\allowbreak{}ROOT)/\allowbreak{}sim\_\allowbreak{}build\_\allowbreak{}<TOPLEVEL>\_\allowbreak{}<key>[\_\allowbreak{}cov]},
-where \code{<key>} is a sha256 of everything that determines the
-compiled model (top level, ordered source list, \code{COMPILE_ARGS},
-\code{EXTRA_ARGS} incl. every \code{-G}/\code{-D}/\code{-I},
-\code{BUILD_ARGS}, build-time env, and the verilator / g++ / cocotb
-versions plus the \code{cxx_shim.sh} content). Suites with an identical
-model share one directory: the 15 full-SoC \code{tb_soc_top} suites
-compile once, not 15 times. MODULE, TESTCASE and plusargs are
-runtime-only and are not in the key. Source \emph{content} is not
-hashed; staleness is still decided by cocotb\textquotesingle s mtime
-rule on \code{VERILOG_SOURCES}. If two suites you expect to share do
-not, \code{print-sim-build} with \code{SIM_KEY_VERBOSE=1} shows the
-exact material. Checks:
+where \code{<key>} is a sha256 of everything that has an effect on the compiled model.
+The key covers these items: the top level, the ordered source list, \code{COMPILE_ARGS}, and
+\code{EXTRA_ARGS} with every \code{-G}/\code{-D}/\code{-I} in it.
+The key also covers \code{BUILD_ARGS}, the build-time env, the verilator / g++ / cocotb versions, and the content of \code{cxx_shim.sh}.
+Suites with an identical model share one directory: the 15 full-SoC \code{tb_soc_top} suites compile one time, not 15 times.
+MODULE, TESTCASE and plusargs are runtime-only and are not in the key.
+
+The \emph{content} of the source files is not hashed.
+The mtime rule of cocotb on \code{VERILOG_SOURCES} still decides staleness.
+If two suites that you expect to share a directory do not share one, \code{print-sim-build} with \code{SIM_KEY_VERBOSE=1} shows the exact material.
+The checks are
 \texttt{pytest\ tb/\allowbreak{}tests/\allowbreak{}test\_\allowbreak{}sim\_\allowbreak{}build\_\allowbreak{}key.\allowbreak{}py}
 and
-\texttt{make\ -\allowbreak{}C\ tb/\allowbreak{}cocotb/\allowbreak{}soc\ check-\allowbreak{}shared-\allowbreak{}build-\allowbreak{}failure}
-(both also run in CI, job "cocotb build-directory key self-tests").
+\texttt{make\ -\allowbreak{}C\ tb/\allowbreak{}cocotb/\allowbreak{}soc\ check-\allowbreak{}shared-\allowbreak{}build-\allowbreak{}failure}.
+Both also run in CI, in the job "cocotb build-directory key self-tests".
 \texttt{make\ clean-\allowbreak{}sim-\allowbreak{}builds} sweeps every
 directory.
 
 \subsection{Proprietary simulators (VCS / Xcelium)}\label{um:guide:quick-start:proprietary-simulators-vcs-xcelium}
 
-On a host with Synopsys VCS or Cadence Xcelium (no nix or Verilator
-needed):
+On a host with Synopsys VCS or Cadence Xcelium, nix and Verilator are not needed.
+The commands are:
 
 \begin{lstlisting}[language=bash]
 make eda-venv && source tools/eda/sim_env.sh                 # csh: source tools/eda/sim_env.csh
@@ -252,15 +247,16 @@ make -C tb/cocotb/soc SIM=vcs gpio                           # or SIM=xcelium; s
 python3 tools/eda/run_cocotb_targets.py --sim vcs --jobs 3 $(python3 tools/eda/regress_specs.py soc)
 \end{lstlisting}
 
-cocotb 1.x \code{make} exits 0 even when tests fail: judge from
-\code{results.xml} (the driver does). Full setup, pass floors,
-portability rules and troubleshooting:
+With cocotb 1.x, \code{make} exits 0 even when tests fail.
+Judge the result from \code{results.xml}; the driver does this.
+The full setup, the pass floors, the portability rules and the troubleshooting are in
 docs/\allowbreak{}verification/\allowbreak{}PROPRIETARY\_\allowbreak{}SIM\_\allowbreak{}FLOW.md (\cref{um:flow:proprietary-sim}).
-VCS coverage: \src{docs/verification/COMMERCIAL_SIM_COVERAGE.md} (\cref{tm:flow:commercial-sim-coverage}).
+For VCS coverage, see \src{docs/verification/COMMERCIAL_SIM_COVERAGE.md} (\cref{tm:flow:commercial-sim-coverage}).
 
 \subsection{RTL Linting \& Formatting}\label{um:guide:quick-start:rtl-linting-formatting}
 
-Two complementary tools, both run from \src{sim/}:
+Two complementary tools lint the RTL.
+Both run from \src{sim/}:
 
 \begin{itemize}
 \tightlist
@@ -270,8 +266,9 @@ Two complementary tools, both run from \src{sim/}:
   signals).
 \item
   \textbf{Verible} (\texttt{make\ lint-\allowbreak{}verible}) ---
-  SystemVerilog \emph{style} lint. \texttt{nix\ develop} provides the
-  binary; otherwise install a prebuilt one from
+  SystemVerilog \emph{style} lint.
+  \texttt{nix\ develop} gives the binary.
+  Otherwise, install a prebuilt binary from
   \href{https://github.com/chipsalliance/verible/releases}{Verible
   releases} (no build needed).
 \end{itemize}
@@ -285,36 +282,38 @@ make lint-verible          # Verible style lint (curated ruleset, whole tree)
 make verible               # alias for lint-verible
 \end{lstlisting}
 
-Style rules live in \src{.rules.verible_lint}. CI runs Verible via the
-\src{.github/workflows/rtl-checks.yml} workflow --- the \textbf{lint
-step is a hard gate} (whole tree clean). There is no format check: the
-formatter cannot reproduce the hand-aligned house style (bead
-\bead{hn9l}), so formatting is enforced by review. \texttt{nix\ develop}
-provides the same Verible binary CI installs, so no manual download is
-needed there.
+The style rules are in \src{.rules.verible_lint}.
+CI runs Verible through the \src{.github/workflows/rtl-checks.yml} workflow.
+In this workflow, the \textbf{lint step is a hard gate} (whole tree clean).
+There is no format check, because the formatter cannot reproduce the hand-aligned house style (bead
+\bead{hn9l}).
+So review enforces the formatting.
+\texttt{nix\ develop} gives the same Verible binary that CI installs, so no manual download is needed there.
 
 \subsection{\texorpdfstring{Tool-input RTL filelists
 (\src{rtl/filelist/})}{Tool-input RTL filelists ()}}\label{um:guide:quick-start:tool-input-rtl-filelists-rtlfilelist}
 
-Committed, tool-agnostic \code{.f} filelists for external tools
-(simulators, linters, sv2v wrappers): \code{soc_top.f},
-\code{cpu_top.f}, \code{gpu_top.f}, each with a \code{*_sim_models.f}
-companion for the simulation SRAM models. Paths are repo-root-relative:
-run from the repo root with \code{-f} (not \code{-F}), e.g.
+The repository holds committed, tool-agnostic \code{.f} filelists for external tools
+(simulators, linters, sv2v wrappers).
+The filelists are \code{soc_top.f}, \code{cpu_top.f} and \code{gpu_top.f}.
+Each has a \code{*_sim_models.f} companion for the simulation SRAM models.
+Paths are relative to the root of the repository.
+Run from the root of the repository with \code{-f} (not \code{-F}), for example:
 
 \begin{lstlisting}[language=bash]
 verilator --lint-only -Wall -Wno-fatal --top-module soc_top \
     -f rtl/filelist/soc_top.f -f rtl/filelist/soc_top_sim_models.f
 \end{lstlisting}
 
-The lists are generated from the Makefile source lists
-(\texttt{python3\ tools/\allowbreak{}verif/\allowbreak{}gen\_\allowbreak{}filelist.\allowbreak{}py})
-and CI fails on drift (\code{--check}). Details, define handling and the
-completeness proof: \src{rtl/filelist/README.md}.
+The command
+\texttt{python3\ tools/\allowbreak{}verif/\allowbreak{}gen\_\allowbreak{}filelist.\allowbreak{}py}
+generates the lists from the Makefile source lists.
+CI fails on drift (\code{--check}).
+The details, the way that defines are handled and the completeness proof are in \src{rtl/filelist/README.md}.
 
 \subsection{DFT, CDC and FPGA Targets (added 2026-10-15)}\label{um:guide:quick-start:dft-cdc-and-fpga-targets-added-2026-10-15}
 
-Targets verified against the Makefiles (\code{.PHONY} lists in
+The targets were verified against the Makefiles (\code{.PHONY} lists in
 \src{tb/cocotb/soc/Makefile} and \src{pnr/Makefile}).
 
 \begin{lstlisting}[language=bash]
@@ -353,26 +352,27 @@ make -C dqc hal         # Cadence HAL
 make -C dqc selftest    # negative control: a known-bad CDC/RDC design must be flagged
 \end{lstlisting}
 
-Needs SpyGlass X-2025.06-SP1 and Cadence Xcelium (HAL) on PATH with
-licences; not run in CI. Exit 0 = PASS, 1 = unwaived
-Fatal/\allowbreak{}Error, 2 = INCOMPLETE (rules did not run). As of
-2026-10-24 the CDC/RDC crossing rules do not run on this
-host\textquotesingle s licence set, so \code{cdc}/\code{rdc} report
-INCOMPLETE. See \cref{um:flow:dqc}.
-\end{relocated}
+The flow needs SpyGlass X-2025.06-SP1 and Cadence Xcelium (HAL) on PATH with licences.
+CI does not run it.
+
+Exit 0 means PASS.
+Exit 1 means unwaived Fatal/\allowbreak{}Error.
+Exit 2 means INCOMPLETE (the rules did not run).
+As of 2026-10-24, the CDC/RDC crossing rules do not run on the licence set of this host, so \code{cdc}/\code{rdc} report
+INCOMPLETE.
+See \cref{um:flow:dqc}.
 
 \chapter{Supported instructions}\label{um:ch:supported-instructions}
 
 This chapter lists the instructions that the CPU supports.
 
-\begin{relocated}{docs/readme/SUPPORTED_INSTRUCTIONS.md}
-% Converted from docs/readme/SUPPORTED_INSTRUCTIONS.md by tools/docs/md2tex.py; edit this file, not the original.
+% Rewritten in STE style from docs/readme/SUPPORTED_INSTRUCTIONS.md; the verbatim original is in git history (at commit 23e35004).
 \section{Supported Instructions}\label{um:guide:supported-instructions}
 
 \subsection{\texorpdfstring{Phase 1 \ok{} (Complete --- RV32I
 Base)}{Phase 1  (Complete --- RV32I Base)}}\label{um:guide:supported-instructions:phase-1-white-check-mark-complete-rv32i-base}
 
-All 37 RV32I base integer instructions (verified and passing):
+All 37 RV32I base integer instructions are verified and pass:
 
 \begin{itemize}
 \tightlist
@@ -397,7 +397,7 @@ All 37 RV32I base integer instructions (verified and passing):
 \subsection{\texorpdfstring{Phase 2 \ok{} (Verification Complete ---
 RV32I + Zicsr)}{Phase 2  (Verification Complete --- RV32I + Zicsr)}}\label{um:guide:supported-instructions:phase-2-white-check-mark-verification-complete-rv32i-zicsr}
 
-All Phase 1 instructions PLUS:
+The CPU of this phase supports all Phase 1 instructions and also these items:
 
 \begin{itemize}
 \tightlist
@@ -424,17 +424,15 @@ All Phase 1 instructions PLUS:
 See \src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase0-architecture}) for RV32I semantics
 and \src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase2-architecture}) for CSR and interrupt
 details.
-\end{relocated}
 
 \chapter{Debug interface}\label{um:ch:debug-interface}
 
 This chapter describes the debug interface and its register map.
 
-\begin{relocated}{docs/readme/DEBUG_INTERFACE.md}
-% Converted from docs/readme/DEBUG_INTERFACE.md by tools/docs/md2tex.py; edit this file, not the original.
+% Rewritten in STE style from docs/readme/DEBUG_INTERFACE.md; the verbatim original is in git history (at commit 23e35004).
 \section{Debug Interface (Phase 1+)}\label{um:guide:debug-interface}
 
-The APB3 debug interface provides the following registers:
+The APB3 debug interface has these registers:
 
 {
 \begin{longtable}[]{@{}
@@ -473,7 +471,6 @@ address \\
 }
 
 See \src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) for complete register definitions.
-\end{relocated}
 
 \chapter{Coding guidelines}\label{um:ch:coding-guidelines}
 
@@ -2243,12 +2240,10 @@ session)}\label{um:guide:spyglass-lint-remediation:5-execution-order-verificatio
 
 This chapter lists the checks to run before a commit.
 
-\begin{relocated}{docs/development/LOCAL_QA_SETUP.md}
-% Converted from docs/development/LOCAL_QA_SETUP.md by tools/docs/md2tex.py; edit this file, not the original.
+% Rewritten in STE style from docs/development/LOCAL_QA_SETUP.md; the verbatim original is in git history (at commit 23e35004).
 \section{Local QA Setup Guide}\label{um:guide:local-qa}
 
-Complete guide to setting up quality assurance tools for local
-development.
+This complete guide shows how to set up the quality assurance tools for local development.
 
 \subsection{Quick Start}\label{um:guide:local-qa:quick-start}
 
@@ -2293,11 +2288,11 @@ When you run \texttt{git\ commit}, these checks run automatically:
   \begin{itemize}
   \tightlist
   \item
-    Finds and fixes code quality issues
+    Finds and fixes quality issues in code
   \item
     Removes unused imports
   \item
-    Fixes common Python mistakes
+    Fixes mistakes that are common in Python code
   \end{itemize}
 \item
   \textbf{Ruff Formatter}
@@ -2327,7 +2322,7 @@ When you run \texttt{git\ commit}, these checks run automatically:
   \item
     Enforces coding standards
   \item
-    Requires score ≥9.5/10
+    Needs a score of at least 9.5/10
   \end{itemize}
 \item
   \textbf{Pytest Quick Test}
@@ -2337,7 +2332,7 @@ When you run \texttt{git\ commit}, these checks run automatically:
   \item
     Runs smoke tests
   \item
-    Fast validation
+    Gives a fast validation
   \end{itemize}
 \end{enumerate}
 
@@ -2355,18 +2350,18 @@ When you run \texttt{git\ push}, full tests run:
   \item
     Runs all tests
   \item
-    Ensures nothing is broken
+    Makes sure that nothing is broken
   \end{itemize}
 \end{enumerate}
 
 \subsubsection{Manually (CI on GitHub)}\label{um:guide:local-qa:manually-ci-on-github}
 
-When you create a PR to main, GitHub Actions runs:
+When you create a PR to main, GitHub Actions does these tasks:
 
 \begin{itemize}
 \tightlist
 \item
-  All of the above on Python 3.11 and 3.12
+  Runs all of the above on Python 3.11 and 3.12
 \item
   Generates coverage reports
 \item
@@ -2457,7 +2452,7 @@ gh pr create --base main --title "Add my feature"
 
 \subsubsection{Fast Iteration Workflow}\label{um:guide:local-qa:fast-iteration-workflow}
 
-During rapid development, you might want to skip some checks:
+During rapid development, you can skip some checks:
 
 \begin{lstlisting}[language=bash]
 # Skip quick test during commit
@@ -2491,7 +2486,7 @@ pytest tb/tests/ -v
 
 \subsubsection{VSCode}\label{um:guide:local-qa:vscode}
 
-Install extensions:
+Install these extensions:
 
 \begin{itemize}
 \tightlist
@@ -2505,7 +2500,7 @@ Install extensions:
   Ruff
 \end{itemize}
 
-Settings (\code{.vscode/settings.json}):
+Use these settings (\code{.vscode/settings.json}):
 
 \begin{lstlisting}[language={}]
 {
@@ -2535,16 +2530,17 @@ Settings (\code{.vscode/settings.json}):
 \item
   Enable "Run on save" for ruff format
 \item
-  Configure pytest as test runner
+  Configure pytest as the test runner
 \end{enumerate}
 
 \subsection{Troubleshooting}\label{um:guide:local-qa:troubleshooting}
 
 \subsubsection{Pre-commit is slow}\label{um:guide:local-qa:pre-commit-is-slow}
 
-First run downloads and caches tools. Subsequent runs are fast.
+The first run downloads and caches the tools.
+The runs after the first run are fast.
 
-If still slow, skip heavy checks during commit:
+If pre-commit is still slow, skip the heavy checks when you commit:
 
 \begin{lstlisting}[language=bash]
 SKIP=pytest-quick,pylint git commit -m "Fast commit"
@@ -2552,10 +2548,9 @@ SKIP=pytest-quick,pylint git commit -m "Fast commit"
 
 \subsubsection{Import errors in MyPy}\label{um:guide:local-qa:import-errors-in-mypy}
 
-MyPy is configured with \code{--ignore-missing-imports} for external
-packages.
+The MyPy configuration uses \code{--ignore-missing-imports} for external packages.
 
-For project imports, ensure proper module structure:
+For project imports, make sure that the module structure is correct:
 
 \begin{lstlisting}[language=Python]
 # tb/__init__.py should exist
@@ -2567,19 +2562,19 @@ For project imports, ensure proper module structure:
 
 Check \src{.pylintrc} for disabled checks and thresholds.
 
-Current threshold: 9.5/10
+The current threshold is 9.5/10.
 
-Acceptable reasons for lower score:
+These are acceptable reasons for a lower score:
 
 \begin{itemize}
 \tightlist
 \item
-  Complex instruction execution logic (inherent)
+  Complex logic for the execution of instructions (inherent)
 \item
   Many function parameters (instruction fields)
 \end{itemize}
 
-Fix common issues:
+To fix common issues, do these steps:
 
 \begin{lstlisting}[language=bash]
 # See detailed report
@@ -2593,13 +2588,13 @@ pylint tb/models/my_model.py
 
 \subsubsection{Tests failing locally but pass in CI}\label{um:guide:local-qa:tests-failing-locally-but-pass-in-ci}
 
-Ensure same dependencies:
+Make sure that the dependencies are the same:
 
 \begin{lstlisting}[language=bash]
 pip install -r requirements.txt --upgrade
 \end{lstlisting}
 
-Check Python version:
+Check the Python version:
 
 \begin{lstlisting}[language=bash]
 python --version
@@ -2692,7 +2687,6 @@ pre-commit gc
   Pytest:
   \href{https://docs.pytest.org/}{https:/\allowbreak{}/\allowbreak{}docs.pytest.org/}
 \end{itemize}
-\end{relocated}
 
 \chapter{Continuous integration}\label{um:ch:continuous-integration}
 
@@ -6787,12 +6781,11 @@ The environment \code{record} sections of the Changes record stay as they are.
 
 This chapter gives the current status of each phase.
 
-% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
 \chapter{Key Documentation}\label{um:guide:key-documentation}
-\begin{relocated}{CLAUDE.md}
+% Rewritten in STE style from CLAUDE.md; the verbatim original is in git history (at commit 23e35004).
 
-\textbf{Always refer to these specifications} (do not rely on
-non-existent RTL):
+\textbf{Always refer to the specifications below.}
+Do not rely on RTL that does not exist.
 
 \section{Architecture \& Design}\label{um:guide:key-documentation:architecture-design}
 
@@ -6927,20 +6920,20 @@ bug fixes \\
 
 \section{README detail set}\label{um:guide:key-documentation:readme-detail-set}
 
-\code{docs/readme/} holds the deep content split out of the root README:
+\code{docs/readme/} holds the deep content split out of the root README.
+The deep content is in these sections:
 \cref{cr:status:phase-history}, \cref{um:guide:quick-start} (build/\allowbreak{}run
 commands per phase), \cref{um:guide:supported-instructions},
 \cref{um:guide:debug-interface} (APB3 register map),
 \cref{um:guide:project-structure} (full directory tree).
-\end{relocated}
 
 
-% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
 \chapter{Frequently Used Commands}\label{um:guide:frequently-used-commands}
-\begin{relocated}{CLAUDE.md}
+% Rewritten in STE style from CLAUDE.md; the verbatim original is in git history (at commit 23e35004).
 
-Build/run commands for every phase live in
-\cref{um:guide:quick-start}. Quick entry points:
+The build/run commands for every phase are in
+\cref{um:guide:quick-start}.
+The quick entry points are:
 
 \begin{textblock}
 # Phase 0 reference-model tests
@@ -6954,44 +6947,43 @@ cd pnr && make all          # synth → floorplan → place → cts → route �
 cd pnr && make report_summary
 \end{textblock}
 
-Commit with the \code{[Category]} convention (see below). Use
-\code{rtk}-prefixed commands for token-efficient output (see RTK
-section).
+Commit with the \code{[Category]} convention (see below).
+Use \code{rtk}-prefixed commands for token-efficient output (see RTK section).
 
-\textbf{Analog/\allowbreak{}mixed-signal flow (Phase 7+)}: the
-\code{analog} nix devshell provides the open analog toolchain (ngspice /
-xschem / magic / klayout / netgen) --- enter it with
+\textbf{Analog/\allowbreak{}mixed-signal flow (Phase 7+)}:
+The \code{analog} nix devshell gives the open analog toolchain (ngspice /
+xschem / magic / klayout / netgen).
+Enter it with
 \texttt{nix\ develop\ \textasciitilde{}/\allowbreak{}Downloads/\allowbreak{}Github/\allowbreak{}librelane\#analog}
-(OpenVAF is not in nixpkgs → ngspice-behavioral fallback). The analog
-flow state lives in
-\texttt{analog/\allowbreak{}pll\_\allowbreak{}clkgen/\allowbreak{}\{,\allowbreak{}sky130\}/\allowbreak{}design\_\allowbreak{}state.\allowbreak{}json}
---- \textbf{separate from the digital \src{design_state.json}} at repo
-root. Full-SoC AMS cosim (RNM PLL through \code{Vtop}) needs
-\code{MAKEFLAGS=-j2} (OOM on a 15 GiB host otherwise) with
-\code{SIM_BUILD} routed to \code{/nobackup}. See
-\src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (\cref{ds:ch:phase7-pll-plan}).
+(OpenVAF is not in nixpkgs → ngspice-behavioral fallback).
+
+The state of the analog flow is in
+\texttt{analog/\allowbreak{}pll\_\allowbreak{}clkgen/\allowbreak{}\{,\allowbreak{}sky130\}/\allowbreak{}design\_\allowbreak{}state.\allowbreak{}json}.
+These files are \textbf{separate from the digital \src{design_state.json}} at the root of the repository.
+Full-SoC AMS cosim (RNM PLL through \code{Vtop}) needs
+\code{MAKEFLAGS=-j2} (OOM on a 15 GiB host otherwise).
+It also needs \code{SIM_BUILD} routed to \code{/nobackup}.
+See \src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (\cref{ds:ch:phase7-pll-plan}).
 
 \section{Project Structure}\label{um:guide:frequently-used-commands:project-structure}
 
-Top level: \src{rtl/} (\code{cpu/}, \code{gpu/}, \code{mem/} caches,
+The top level has \src{rtl/} (\code{cpu/}, \code{gpu/}, \code{mem/} caches,
 \code{periph/}, \code{soc/}), \src{tb/} (\code{models/} Python +
 \code{cocotb/}), \src{docs/} (specs + \code{readme/} detail set),
 \src{pnr/} (physical design), \src{sim/}, \src{micro_p/} (archived Phase
 1).
 
-Full annotated directory tree → \cref{um:guide:project-structure}.
-\end{relocated}
+The full annotated directory tree is in \cref{um:guide:project-structure}.
 
 
-% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
 \chapter{Reference Model (Python)}\label{um:guide:reference-model-and-verification}
-\begin{relocated}{CLAUDE.md}
+% Rewritten in STE style from CLAUDE.md; the verbatim original is in git history (at commit 23e35004).
 
-Python reference models for CPU and GPU live in \src{tb/models/}:
+The Python reference models for the CPU and the GPU are in \src{tb/models/}:
 \code{rv32i_model.py} (CPU instruction-accurate),
 \code{gpu_kernel_model.py} (GPU SIMT), \code{memory_model.py},
-\code{cache_model.py} (DirectMappedCache). See
-\src{docs/design/REFERENCE_MODEL_SPEC.md} (\cref{ds:ch:reference-model}) for the complete API.
+\code{cache_model.py} (DirectMappedCache).
+See \src{docs/design/REFERENCE_MODEL_SPEC.md} (\cref{ds:ch:reference-model}) for the complete API.
 
 \begin{lstlisting}[language=Python]
 from tb.models.rv32i_model import RV32IModel
@@ -7006,21 +6998,19 @@ assert result['rd'] == 1
 \tightlist
 \item
   \textbf{Phase 0}: Python reference models, pytest unit tests,
-  cross-validate vs RISC-V spike, cocotb infra.
+  cross-validation against RISC-V spike, cocotb infra.
 \item
   \textbf{Phase 1+}: cocotb interface drivers, pyuvm
   sequences/\allowbreak{}scoreboards, RTL-vs-model comparison, 10k+
   random instructions.
 \end{itemize}
 
-See \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) for the phase-by-phase
-plan. Per-phase completion history → \cref{cr:status:phase-history}.
-\end{relocated}
+See \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) for the phase-by-phase plan.
+The per-phase completion history is in \cref{cr:status:phase-history}.
 
 
-% Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
 \chapter{Commit Message Convention}\label{um:guide:commit-and-coding-rules}
-\begin{relocated}{CLAUDE.md}
+% Rewritten in STE style from CLAUDE.md; the verbatim original is in git history (at commit 23e35004).
 
 Use the format: \texttt{[Category]\ Brief\ description}
 
@@ -7031,13 +7021,10 @@ Categories: \code{[Fix]}, \code{[Feature]}, \code{[Code]} (refactoring),
 
 \section{Coding Guidelines}\label{um:guide:commit-and-coding-rules:coding-guidelines}
 
-All new/\allowbreak{}modified code follows
-\cref{um:guide:coding-guidelines} (SystemVerilog per
-lowRISC-adapted house style, Python per ruff/PEP 8). Compliance backlog:
-\cref{um:guide:coding-compliance-audit}. Existing verified RTL
-is grandfathered --- no style-only mass edits.
+All new and changed code follows \cref{um:guide:coding-guidelines} (SystemVerilog per the lowRISC-adapted house style, Python per ruff/PEP 8).
+The compliance backlog is in \cref{um:guide:coding-compliance-audit}.
+Existing verified RTL is grandfathered --- no style-only mass edits.
 
 \section{Questions?}\label{um:guide:commit-and-coding-rules:questions}
 
 Refer to specifications in \src{docs/} --- they are the source of truth.
-\end{relocated}

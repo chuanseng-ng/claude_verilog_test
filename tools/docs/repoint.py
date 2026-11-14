@@ -69,7 +69,7 @@ SEC_BARE = re.compile(
 )
 TEX_OPEN = re.compile(r"\\(?:src|code|path|texttt|url|runid)\{[^{}]*$")
 TEX_PROVENANCE = re.compile(r"\\begin\{(?:relocated|record)\}\{[^{}]*\}")
-TEX_PROVENANCE_COMMENT = re.compile(r"^\s*%\s*(?:Converted|Moved)\b.*\bfrom\b")
+TEX_PROVENANCE_COMMENT = re.compile(r"^\s*%\s*(?:Converted|Moved|Rewritten)\b.*\bfrom\b")
 LINE_SUFFIX = re.compile(r":(\d+)(?:-(\d+))?(?![\w])")
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 FENCE = re.compile(r"^\s*(```|~~~)")
