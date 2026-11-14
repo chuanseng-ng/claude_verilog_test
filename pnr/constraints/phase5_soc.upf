@@ -20,8 +20,8 @@
 #   CPU-domain synchronisers (cpu_core_clk, ungated PLL output, so they keep
 #   running while u_cpu's clock is gated; u_cpu_iso_ack_sync runs on core_clk):
 # upf-check aon u_cpu_clk_dis_sync  -- ~pmu_cpu_clk_en into the CPU clock domain (drives u_cpu_cg)
-# upf-check aon u_cpu_iso_en_sync   -- pmu_cpu_iso_en into the CPU clock domain: THE ISO_CPU control net
-# upf-check aon u_cpu_iso_ack_sync  -- pmu_cpu_iso_en_sync back into core_clk: the PMU's iso-ack (bead 3ogd)
+# upf-check aon u_cpu_iso_en_sync   -- pmu_cpu_iso_en into the CPU clock domain: the request that cpu_iso_clamp qualifies
+# upf-check aon u_cpu_iso_ack_sync  -- registered cpu_iso_clamp back into core_clk: the PMU's iso-ack
 # upf-check aon u_cpu_pmu_rst_sync  -- pmu_cpu_rst_n into cpu_domain_rst_n
 # upf-check aon u_cpu_wdt_rst_sync  -- watchdog bite into cpu_domain_rst_n
 # upf-check aon u_ext_irq_sync      -- ext_irq into the CPU clock domain
@@ -153,7 +153,7 @@ set_isolation ISO_CPU \
     -domain PD_CPU \
     -isolation_supply_set SS_AON \
     -clamp_value 0 \
-    -isolation_signal pmu_cpu_iso_en_sync \
+    -isolation_signal cpu_iso_clamp \
     -isolation_sense high \
     -elements { \
         u_cpu/axi_awvalid_o \

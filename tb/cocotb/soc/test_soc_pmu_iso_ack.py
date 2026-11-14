@@ -2,14 +2,13 @@
 test_soc_pmu_iso_ack.py -- PMU / soc_top isolation-before-reset ordering. DUT: tb_soc_top
 (as soc_pmu_multiclock).
 THE PROPERTY (UPF order, pmu.sv header): on a CPU power-down the isolation clamp must be ACTIVE IN
-THE CPU DOMAIN before that domain's reset asserts and before its clock gate closes. This held only
-by accident of ratio: pmu_cpu_iso_en reaches the clamp through a 2-flop cdc_sync on cpu_core_clk,
-while pmu_cpu_rst_n reaches u_cpu_pmu_rst_sync's ASYNC clear directly. The PMU spaces the two by 2
-core_clk cycles, so with the CPU clock slower than the fabric clock the reset beat the clamp. The
-fix is an iso-ack handshake: the CPU-domain clamp (pmu_cpu_iso_en_sync) is synchronised back to
-core_clk (u_cpu_iso_ack_sync -> pmu_cpu_iso_ack). The PMU sequencer waits in DOM_PD_ISO for it
-before it gates the clock or asserts reset, and waits in DOM_PU_ISO for it to drop (the 4-phase
-return-to-zero half) before a new power-down may start.
+THE CPU DOMAIN before that domain's reset asserts, and the clamp must never be active while the CPU
+clock gate is open. The PMU gates the clock first, then raises the clamp request, and waits for the
+iso-ack: the CPU-domain clamp (cpu_iso_clamp, the synchronised request qualified by the closed
+gate) is registered (cpu_iso_clamp_q) and synchronised back to core_clk (u_cpu_iso_ack_sync ->
+pmu_cpu_iso_ack). The PMU waits in DOM_PD_ISO for a rising ack before it asserts reset, and waits in
+DOM_PU_ISO for a falling ack (the 4-phase return-to-zero half) before it ungates the clock. A wait
+accepts only an ack level that it saw change after the wait began.
 Tests drive the power cycle by a backdoor deposit into the PMU CTRL cell (as
   test_soc_pmu_multiclock's power-up leg).
   test_iso_before_reset_{cpu_3x_slower,cpu_8x_slower,ratio_1_1,cpu_faster}: the invariant monitor
@@ -18,14 +17,15 @@ Tests drive the power cycle by a backdoor deposit into the PMU CTRL cell (as
   test_back_to_back_power_cycle_no_stale_ack: off, on, off with no idle gap; the 2nd power-down must
       not use the old ack.
   test_dead_cpu_clock_does_not_hang_pmu: cpu_rst_n_i held low, so the ack never arrives; the PMU
-      proceeds after ISO_ACK_TIMEOUT cycles, sets STATUS[3], and the GPU domain is unaffected.
+      proceeds after ISO_ACK_TIMEOUT cycles in both waits, sets STATUS[3], and the GPU domain is
+      unaffected. The flag is sticky across the later power cycle.
   test_gpu_isolation_clamps_follow_pmu_iso_en: every ISO_GPU clamp in soc_top equals `raw &
       ~pmu_gpu_iso_en` on every cycle of a GPU power cycle. The GPU needs no ack (same
       clock domain).
 INVARIANT MONITOR (after every clk_i and cpu_clk_i rising edge, ReadOnly; armed once the
 synchroniser chains fill): INV1 pmu_cpu_rst_n_cpu_sync == 0 -> pmu_cpu_iso_en_sync == 1. INV2
-cpu_gated_clk_en == 0 -> pmu_cpu_iso_en_sync == 1. INV3 pmu_cpu_iso_en_sync == 0 ->
-pmu_cpu_rst_n_cpu_sync == 1 (power-UP; NOMINAL-ONLY, silicon can swap the order by one edge, benign
+cpu_iso_clamp == 1 -> cpu_gated_clk_en == 0 (the clamp is active only while the clock gate is
+closed). INV3 pmu_cpu_iso_en_sync == 0 -> pmu_cpu_rst_n_cpu_sync == 1 (power-UP; NOMINAL-ONLY, silicon can swap the order by one edge, benign
 by structure, see pmu.sv). INV4 pmu_cpu_iso_ack changes only on clk_i edges.
 Run: make -C tb/cocotb/soc soc_pmu_iso_ack
 Doc: tm:suite:soc-test-soc-pmu-iso-ack
@@ -44,7 +44,8 @@ _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-# pmu_dom_state_e encoding (pmu.sv `typedef enum`).
+# pmu_dom_state_e encoding (pmu.sv `typedef enum`). The power-down order is SAVE, GATE, ISO and the
+# power-up order is RST, RESTORE, ISO, CLK.
 DOM_ON, DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF = 0, 1, 2, 3, 4
 DOM_PU_RST, DOM_PU_CLK, DOM_PU_RESTORE, DOM_PU_ISO = 5, 6, 7, 8
 DOM_CPU, DOM_GPU = 0, 1
@@ -169,10 +170,9 @@ class IsoMonitor:
                 self.violations.append(
                     (now, "INV1", "PMU reset observed asserted in the CPU domain while the "
                                   "isolation clamp is NOT yet active there"))
-            if gate_en == 0 and iso_s == 0:
+            if int(soc.cpu_iso_clamp.value) == 1 and gate_en == 1:
                 self.violations.append(
-                    (now, "INV2", "CPU clock gate closed while the isolation clamp is NOT yet "
-                                  "active in the CPU domain"))
+                    (now, "INV2", "CPU isolation clamp active while the clock gate is open"))
             ack = int(soc.pmu_cpu_iso_ack.value) if self.has_ack else None
             state = _dom_state(self.dut) if is_core else self._prev["state"]
             p = self._prev
@@ -261,8 +261,8 @@ def _check_cycle(dut, mon: IsoMonitor, label: str) -> None:
     seq = [s for s in mon.sequence() if s in (
         DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF, DOM_PU_RST, DOM_PU_CLK, DOM_PU_RESTORE,
         DOM_PU_ISO, DOM_ON)]
-    expected = [DOM_ON, DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF, DOM_PU_RST, DOM_PU_CLK,
-                DOM_PU_RESTORE, DOM_PU_ISO, DOM_ON]
+    expected = [DOM_ON, DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO, DOM_OFF, DOM_PU_RST, DOM_PU_RESTORE,
+                DOM_PU_ISO, DOM_PU_CLK, DOM_ON]
     # The first ON is the initial value (the monitor records it as the first "change").
     assert seq == expected, f"{label}: UPF-order walk deviated: {seq} != {expected}"
     assert mon.rst_sync_fall_ns, f"{label}: the PMU reset never asserted in the CPU domain"
@@ -270,19 +270,24 @@ def _check_cycle(dut, mon: IsoMonitor, label: str) -> None:
         f"{label}: isolation ordering violated {len(mon.violations)}x: "
         + "; ".join(f"[{n}] t={t:.0f}ns {m}" for t, n, m in mon.violations[:4]))
     if mon.has_ack:
-        # The handshake itself: the ack must rise strictly before the gate/reset steps.
-        t_gate = next(t for t, s in mon.transitions if s == DOM_PD_GATE)
-        assert mon.ack_rise_ns and mon.ack_rise_ns[0] < t_gate, (
-            f"{label}: PD_GATE entered at {t_gate}ns without a prior ack rise "
+        # The handshake itself: the ack must rise strictly before the reset step.
+        t_off = next(t for t, s in mon.transitions if s == DOM_OFF)
+        assert mon.ack_rise_ns and mon.ack_rise_ns[0] < t_off, (
+            f"{label}: DOM_OFF entered at {t_off}ns without a prior ack rise "
             f"({mon.ack_rise_ns})")
-        dut._log.info(
-            f"{label}: PD_ISO dwell {_dwell_cycles(mon, DOM_PD_ISO)} core cycles, "
-            f"PU_ISO dwell {_dwell_cycles(mon, DOM_PU_ISO)} core cycles")
+        pd_dwell = _dwell_cycles(mon, DOM_PD_ISO)
+        pu_dwell = _dwell_cycles(mon, DOM_PU_ISO)
+        dut._log.info(f"{label}: PD_ISO dwell {pd_dwell} core cycles, PU_ISO dwell {pu_dwell} core cycles")
+        # A real ack ends each wait long before the timeout. A tied-off ack only ends it by timing out.
+        assert pd_dwell < ISO_ACK_TIMEOUT // 2 and pu_dwell < ISO_ACK_TIMEOUT // 2, (
+            f"{label}: a wait ran to its timeout (PD_ISO {pd_dwell}, PU_ISO {pu_dwell} cycles)")
+        status = int(_soc(dut).u_pmu.u_regbank.regs[1].value)
+        assert not (status >> STATUS_ISO_ACK_TIMEOUT_BIT) & 1, f"{label}: STATUS[3] set by a healthy cycle: {status:#x}"
 
 
 @cocotb.test()
 async def test_iso_before_reset_cpu_3x_slower(dut):
-    """CPU clock 3x SLOWER than the fabric: fails on origin/main (reset beats the clamp)."""
+    """CPU clock 3x SLOWER than the fabric: the ack gates the reset and the clamp never overlaps an open clock gate."""
     mon = await with_timeout(_cpu_off_on_cycle(dut, 3 * FABRIC_NS), 800, "us")
     _check_cycle(dut, mon, "cpu 3x slower")
 
@@ -316,9 +321,9 @@ async def test_back_to_back_power_cycle_no_stale_ack(dut):
     """off -> on -> off with no idle gap at the 3x-slower ratio.
 
     After the first cycle the CPU-domain clamp has just released, but its release is still
-    travelling through two synchronisers (cpu_core_clk then core_clk), so the PMU's ack input is
-    STALE-HIGH for several core cycles.  The second power-down must not take that as its ack: the
-    PU_ISO wait-for-ack-low (4-phase RZ) is what prevents it.
+    travelling through the registered clamp and two synchronisers, so a stale ack could still be
+    high for several core cycles.  The second power-down must not take that as its ack: the
+    PU_ISO wait-for-ack-low (4-phase RZ) and the ack_low_seen qualifier prevent it.
     """
 
     async def body():
@@ -387,19 +392,32 @@ async def test_dead_cpu_clock_does_not_hang_pmu(dut):
         assert cpu_off_cycle is not None, f"CPU PMU domain hung in the iso wait: {cpu_seq}"
         assert gpu_off_cycle is not None and gpu_off_cycle < 20, (
             f"GPU domain was slowed by the CPU handshake (reached OFF at cycle {gpu_off_cycle})")
-        assert cpu_seq == [DOM_ON, DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF], cpu_seq
+        assert cpu_seq == [DOM_ON, DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO, DOM_OFF], cpu_seq
         # The wait lasted the whole timeout, the flag is set, and is visible in STATUS[3].
         assert cpu_off_cycle - gpu_off_cycle >= ISO_ACK_TIMEOUT - 2, (
             f"CPU gated/reset after only {cpu_off_cycle - gpu_off_cycle} cycles without an ack")
+        await ClockCycles(dut.clk_i, 3)  # the STATUS word lags the flag by a cycle or two
         status = int(soc.u_pmu.u_regbank.regs[1].value)
         assert (status >> STATUS_ISO_ACK_TIMEOUT_BIT) & 1, f"STATUS[3] not set: 0x{status:x}"
 
-        # Power back up: the dead domain's ack is (correctly) low, so the PU_ISO wait is trivial.
+        # Power back up: the dead domain's ack never rises, so the PU_ISO wait cannot see a high ack
+        # and runs the full timeout too.
         await _set_mode(dut, MODE_NORMAL)
-        await _wait_state(dut, {DOM_ON}, 2000, "power-up with a dead CPU domain")
+        pu_iso_cycles = 0
+        for _ in range(2000):
+            await RisingEdge(dut.clk_i)
+            await ReadOnly()
+            if _dom_state(dut) == DOM_PU_ISO:
+                pu_iso_cycles += 1
+            elif _dom_state(dut) == DOM_ON:
+                break
+        else:
+            raise TimeoutError("power-up with a dead CPU domain never reached DOM_ON")
+        assert pu_iso_cycles >= ISO_ACK_TIMEOUT - 2, (
+            f"the power-up wait ended after {pu_iso_cycles} cycles with no ack")
         await ClockCycles(dut.clk_i, 4)
 
-        # Revive the CPU PLL domain and power-cycle again: the flag clears, the ack is real.
+        # Revive the CPU PLL domain and power-cycle again: the ack is real and the flag is sticky.
         dut.cpu_rst_n_i.value = 1
         await ClockCycles(dut.cpu_clk_i, 60)
         await ClockCycles(dut.clk_i, 60)
@@ -407,9 +425,10 @@ async def test_dead_cpu_clock_does_not_hang_pmu(dut):
         mon.start()
         await _set_mode(dut, MODE_CPU_OFF)
         await _wait_state(dut, {DOM_OFF}, 4000, "power-down after revival")
+        await ClockCycles(dut.clk_i, 3)
         status = int(soc.u_pmu.u_regbank.regs[1].value)
-        assert not (status >> STATUS_ISO_ACK_TIMEOUT_BIT) & 1, (
-            f"STATUS[3] not cleared by the next power-down: 0x{status:x}")
+        assert (status >> STATUS_ISO_ACK_TIMEOUT_BIT) & 1, (
+            f"STATUS[3] was cleared by a power-down: 0x{status:x}")
         await ClockCycles(dut.clk_i, 40)
         await _set_mode(dut, MODE_NORMAL)
         await _wait_state(dut, {DOM_ON}, 4000, "power-up after revival")
@@ -504,19 +523,19 @@ async def test_gpu_isolation_clamps_follow_pmu_iso_en(dut):
 # Directed confirmation of one reviewed behaviour (P4, SoC level).
 # Doc: ds:mod:pmu
 #
-# A review read from the RTL that a PMU reset while the CPU domain is in DOM_OFF sets the clock
-# enable, the clamp and the reset of the domain to their DOM_ON values at one edge. The three
-# controls then cross synchronisers of the same depth into the CPU domain and are released at the
-# same edge of cpu_clk_i, so the power-up order of DS-PMU-022 does not apply there. No simulation
-# had shown this. The RTL is not changed. The test that asserts the specified order (the clamp is
-# released after the domain reset and after the clock enable, DS-PMU-100) is marked expect_fail: it
-# must fail while the behaviour exists. If it passes, the review was wrong or the RTL changed. Then
-# replace it by a normal test that proves the rule. A harness fault raises RuntimeError, not
-# AssertionError, so expect_fail cannot hide it. A normal test runs the same monitor over a
-# power-up that the PMU sequences. The order is only asserted strictly at 1:1 and with the CPU
-# faster, where each release falls on its own edge by the spacing of the PMU outputs. At slower CPU
-# clocks the spacing is below one CPU clock, so two releases can share an edge by design. There the
-# order is logged and only the weaker rule (no earlier clamp release) is asserted.
+# A PMU reset while the CPU domain is in DOM_OFF sets the clock enable, the clamp and the reset of
+# the domain to their DOM_ON values at one edge. The three controls then cross synchronisers of the
+# same depth into the CPU domain and are released at the same edge of cpu_clk_i, so the power-up
+# order of DS-PMU-022 (reset, clamp release, clock) does not apply there. The owner accepted this
+# behaviour. The test that asserts the specified order is marked expect_fail: it must fail while
+# the behaviour exists. If it passes, the RTL changed. Then replace it by a normal test that proves
+# the rule. A harness fault raises RuntimeError, not AssertionError, so expect_fail cannot hide it.
+# A normal test runs the same monitor over a power-up that the PMU sequences. The clock enable
+# follows the clamp release at every ratio, because the ack round trip sits between them. The
+# reset release and the clamp release are only strictly ordered at 1:1 and with the CPU faster,
+# where each release falls on its own edge by the spacing of the PMU outputs. At slower CPU clocks
+# the spacing is below one CPU clock, so those two can share an edge by design. There the order is
+# logged and only the weaker rule (no earlier clamp release) is asserted.
 # =============================================================================
 
 P4_RATIOS = (FABRIC_NS, 3, 3 * FABRIC_NS, 8 * FABRIC_NS)
@@ -575,7 +594,7 @@ class _ReleaseMonitor:
 
 
 def _p4_strict(ev: dict) -> bool:
-    return ev["rst"] < ev["iso"] and ev["en"] < ev["iso"]
+    return ev["rst"] < ev["iso"] < ev["en"]
 
 
 async def _p4_experiment(dut, cpu_ns: int, how: str) -> dict:
@@ -638,29 +657,28 @@ async def _p4_sweep(dut) -> dict:
 
 @cocotb.test(expect_fail=True)
 async def test_p4_pmu_reset_from_off_releases_cpu_clamp_last(dut):
-    """Asserts: after a PMU reset while the CPU domain is in OFF, the clamp control in the CPU
-    domain is released after the domain reset and after the clock gate enable (DS-PMU-022,
-    DS-PMU-100). Checked at 1:1 and with the CPU clock faster. The order at the other ratios is in
-    the log.
+    """Asserts: after a PMU reset while the CPU domain is in OFF, the domain reset is released
+    first, then the clamp control in the CPU domain, then the clock gate enable (DS-PMU-022).
+    Checked at 1:1 and with the CPU clock faster. The order at the other ratios is in the log.
 
-    expect_fail: the review reads that the reset branch of the PMU loads the three controls
-    together and that their synchronisers have the same depth, so the three releases fall on one
-    edge. If this test passes, the reading was wrong or the RTL changed."""
+    expect_fail: the reset branch of the PMU loads the three controls together and their
+    synchronisers have the same depth, so the three releases fall on one edge. The owner accepted
+    this. If this test passes, the RTL changed."""
     rows = await with_timeout(_p4_sweep(dut), 3000, "us")
     bad = [_fmt_p4(c, "reset", rows[(c, "reset")]) for c in P4_STRICT_RATIOS
            if not _p4_strict(rows[(c, "reset")])]
-    assert not bad, "the clamp was not released last: " + "; ".join(bad)
+    assert not bad, "the clock was not released last: " + "; ".join(bad)
 
 
 @cocotb.test()
 async def test_p4_control_sequenced_power_up_releases_cpu_clamp_last(dut):
     """Proves the monitor and the check of the P4 test can pass. After a PMU-sequenced power-up
-    from OFF the clamp is released after the domain reset and after the clock enable at 1:1 and with
-    the CPU faster. At every ratio the clamp is not released before either of them."""
+    from OFF the order is reset, clamp release, clock enable at 1:1 and with the CPU faster. At every
+    ratio the clamp is not released before the reset and the clock enable follows the clamp."""
     rows = await with_timeout(_p4_sweep(dut), 3000, "us")
     for cpu_ns in P4_RATIOS:
         ev = rows[(cpu_ns, "sequenced")]
         tag = _fmt_p4(cpu_ns, "sequenced", ev)
-        assert ev["iso"] >= ev["rst"] and ev["iso"] >= ev["en"], f"clamp released early: {tag}"
+        assert ev["iso"] >= ev["rst"] and ev["en"] > ev["iso"], f"release order broken: {tag}"
         if cpu_ns in P4_STRICT_RATIOS:
-            assert _p4_strict(ev), f"sequenced power-up did not release the clamp last: {tag}"
+            assert _p4_strict(ev), f"sequenced power-up did not release the clock last: {tag}"

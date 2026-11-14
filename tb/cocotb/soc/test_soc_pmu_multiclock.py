@@ -13,9 +13,9 @@ does not fix. The power-UP trigger is a backdoor deposit into the PMU CTRL stora
 Ratio: CPU period 3 / fabric period 7, as test_soc_multiclock.py. The PMU runs on core_clk, so
 dom_state_q polling uses RisingEdge(dut.clk_i). cpu_clk_i free-runs; only the DERIVED gated clock in
 u_cpu_cg stops.
-Hazards under test: (1) pmu.sv power-up ordering (reset release before clock ungate), closed in
-soc_top.sv by gating u_cpu_cg with the CPU-native pmu_cpu_rst_n_cpu_sync; the ordering assertion is
-its first live check. (2) u_cpu_axi_cdc's s_rst_n_i is wired to cpu_core_rst_n (the CPU domain's
+Hazards under test: (1) pmu.sv power-up ordering (reset release before clock ungate), held in
+soc_top.sv by gating u_cpu_cg with the CPU-native pmu_cpu_rst_n_cpu_sync as a backstop; the
+ordering assertion is its first live check. (2) u_cpu_axi_cdc's s_rst_n_i is wired to cpu_core_rst_n (the CPU domain's
 true POR / PLL-lock reset) and NOT to cpu_domain_rst_n, which folds in the PMU retention-hold reset.
 The bridge therefore keeps its state across a PMU power-cycle, like u_cpu; this test
 regression-guards that wiring. (3) The PMU power-down has NO drain/quiesce step: a CPU AXI
@@ -190,10 +190,10 @@ async def _pmu_live_cycle_body(dut) -> None:
     powerdown_seq = await _wait_for_dom_state(
         dut, {DOM_OFF}, POWERDOWN_TIMEOUT_CLK_I_CYCLES, "power-down"
     )
-    expected_powerdown = [DOM_ON, DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF]
+    expected_powerdown = [DOM_ON, DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO, DOM_OFF]
     assert powerdown_seq == expected_powerdown, (
-        "CPU-domain power-down sequence deviated from the UPF-mandated order "
-        f"(ret_save -> iso_en -> clk-gate -> reset-assert): got {powerdown_seq}, "
+        "CPU-domain power-down sequence deviated from the specified order "
+        f"(ret_save -> clk-gate -> iso_en -> reset-assert): got {powerdown_seq}, "
         f"expected {expected_powerdown}"
     )
     dut._log.info(
@@ -321,11 +321,11 @@ async def _pmu_live_cycle_body(dut) -> None:
         dut, {DOM_ON}, POWERUP_TIMEOUT_CLK_I_CYCLES, "power-up"
     )
     expected_powerup = [
-        DOM_PU_RST, DOM_PU_CLK, DOM_PU_RESTORE, DOM_PU_ISO, DOM_ON,
+        DOM_PU_RST, DOM_PU_RESTORE, DOM_PU_ISO, DOM_PU_CLK, DOM_ON,
     ]
     assert powerup_seq == expected_powerup, (
-        "CPU-domain power-up sequence deviated from the UPF-mandated order "
-        "(reset-release -> clk-ungate -> ret_restore -> iso de-assert): got "
+        "CPU-domain power-up sequence deviated from the specified order "
+        "(reset-release -> ret_restore -> iso de-assert -> clk-ungate): got "
         f"{powerup_seq}, expected {expected_powerup}"
     )
     dut._log.info(f"CPU domain reached DOM_ON via power-up (sequence: {powerup_seq})")
@@ -484,22 +484,25 @@ async def test_pmu_live_power_cycle(dut):
 # Doc: ds:mod:pmu
 #
 # A review read these behaviours from the RTL and no simulation had shown them:
-#   P2  The CPU clock runs while the CPU clamp is active, at the start of a power-down and at the
-#       end of a power-up. A bus handshake that u_cpu completes in such an edge does not reach
-#       u_cpu_axi_cdc: the clamp holds the valid and ready outputs of u_cpu at 0, not its inputs
-#       (DS-PMU-100, DS-PMU-182, DS-PMU-183).
+#   P2  The CPU clock must not run while the CPU clamp is active. The clamp is the synchronised
+#       request qualified by the closed clock gate, and the PMU gates the clock before it raises
+#       the request, so no gated edge falls in a clamp window at any clock ratio. A bus handshake
+#       that u_cpu completes at such an edge would not reach u_cpu_axi_cdc: the clamp holds the
+#       valid and ready outputs of u_cpu at 0, not its inputs (DS-PMU-100, DS-PMU-182, DS-PMU-183).
 #   P3  A register access to the GPU control slave while the GPU domain is off does not end
 #       (DS-PMU-185). The slave takes the address and never answers.
-# The RTL is not changed. Each test that asserts the specified behaviour is marked expect_fail: it
-# must fail while the behaviour exists. If one of them passes, the review was wrong or the RTL
-# changed. Then replace it by a normal test that proves the rule. A harness fault raises
-# RuntimeError, not AssertionError, so expect_fail cannot hide it. Each expect_fail test has a
-# normal companion test that proves the checker and the stimulus. The firmware images are built in
-# the test process (pmu_cycle_fw/gen_pmu_confirm_fw.py), so no binary is committed.
+# The P2 tests are normal tests. The P3 tests that assert the specified behaviour are marked
+# expect_fail: they must fail while the behaviour exists. If one of them passes, the review was
+# wrong or the RTL changed. Then replace it by a normal test that proves the rule. A harness fault
+# raises RuntimeError, not AssertionError, so expect_fail cannot hide it. Each expect_fail test has
+# a normal companion test that proves the checker and the stimulus. The firmware images are built
+# in the test process (pmu_cycle_fw/gen_pmu_confirm_fw.py), so no binary is committed.
 # =============================================================================
 
 # CPU clock periods: equal to the fabric, faster, three times slower.
 CONFIRM_RATIOS = (FABRIC_PERIOD_NS, CPU_PERIOD_NS, 3 * FABRIC_PERIOD_NS)
+# The P2 sweep adds a CPU clock eight times slower than the fabric.
+P2_RATIOS = CONFIRM_RATIOS + (8 * FABRIC_PERIOD_NS,)
 CONFIRM_ROM_CLEAR_WORDS = 64
 CONFIRM_SETTLE_FABRIC = 40
 CONFIRM_SETTLE_CPU = 8
@@ -575,10 +578,12 @@ class _ClampMonitor:
     record is the state before the edge. At the rising edge it checks that cpu_gated_clk pulsed.
     The monitor reads nets of u_cpu, u_cpu_axi_cdc and the clamp, and no value of a helper of this
     file. Per epoch it counts the gated edges, the gated edges with the clamp active
-    (pmu_cpu_iso_en_sync high before the edge) and the handshakes of u_cpu on each channel. A
-    handshake of u_cpu is raw valid with ready on AW, W and AR, and raw ready with valid on B and R.
-    `lost` counts the handshakes at edges with the clamp active: the bridge sees valid and ready
-    of u_cpu as 0 there, so it does not see the handshake.
+    (cpu_iso_clamp high before the edge), the gated edges with the raw clamp request active
+    (pmu_cpu_iso_en_sync high before the edge), the cpu_clk_i edges with the clamp active (the
+    clamp window) and the handshakes of u_cpu on each channel. A handshake of u_cpu is raw valid
+    with ready on AW, W and AR, and raw ready with valid on B and R. `lost` counts the handshakes
+    at edges with the clamp active: the bridge sees valid and ready of u_cpu as 0 there, so it
+    does not see the handshake.
     """
 
     def __init__(self, dut) -> None:
@@ -586,6 +591,8 @@ class _ClampMonitor:
         self.epoch = "boot"
         self.edges: dict = defaultdict(int)
         self.clamped: dict = defaultdict(int)
+        self.raw_clamped: dict = defaultdict(int)
+        self.window: dict = defaultdict(int)
         self.hs: dict = defaultdict(lambda: dict.fromkeys(CHANNELS, 0))
         self.lost: dict = defaultdict(lambda: dict.fromkeys(CHANNELS, 0))
         self.ar_log: list = []
@@ -606,13 +613,14 @@ class _ClampMonitor:
     def _snap(self) -> tuple:
         s = self.dut.u_soc
         return (
-            int(s.pmu_cpu_iso_en_sync.value),
+            int(s.cpu_iso_clamp.value),
             int(s.cpu_axi_awvalid_raw.value) & int(s.cpu_bridge_s_awready.value),
             int(s.cpu_axi_wvalid_raw.value) & int(s.cpu_bridge_s_wready.value),
             int(s.cpu_axi_arvalid_raw.value) & int(s.cpu_bridge_s_arready.value),
             int(s.cpu_axi_bready_raw.value) & int(s.cpu_bridge_s_bvalid.value),
             int(s.cpu_axi_rready_raw.value) & int(s.cpu_bridge_s_rvalid.value),
             int(s.cpu_bridge_s_araddr.value),
+            int(s.pmu_cpu_iso_en_sync.value),
         )
 
     async def _run(self) -> None:
@@ -624,6 +632,8 @@ class _ClampMonitor:
             pre = self._snap()
             await RisingEdge(clk)
             await ReadOnly()
+            if pre[0]:
+                self.window[self.epoch] += 1
             if not int(s.cpu_gated_clk.value):
                 continue
             self._edge(pre)
@@ -637,6 +647,8 @@ class _ClampMonitor:
         self.edges[ep] += 1
         if iso:
             self.clamped[ep] += 1
+        if pre[7]:
+            self.raw_clamped[ep] += 1
         for name, val in zip(CHANNELS, pre[1:6]):
             if val:
                 self.hs[ep][name] += 1
@@ -711,6 +723,8 @@ async def _p2_experiment(dut, cpu_ns: int, fw: str, off: int) -> dict:
         "fw": fw,
         "off": off,
         "clamped": {ep: mon.clamped[ep] for ep in ("down", "up")},
+        "raw_clamped": {ep: mon.raw_clamped[ep] for ep in ("down", "up")},
+        "window": {ep: mon.window[ep] for ep in ("down", "up")},
         "edges": {ep: mon.edges[ep] for ep in ("down", "up", "post")},
         "lost": {ep: dict(mon.lost[ep]) for ep in ("down", "up")},
         "hs": {ep: dict(mon.hs[ep]) for ep in ("pre", "down", "up", "post")},
@@ -728,7 +742,9 @@ def _fmt_p2(row: dict) -> str:
     lost = {ep: {k: v for k, v in row["lost"][ep].items() if v} for ep in ("down", "up")}
     return (
         f"cpu={row['cpu_ns']}ns off={row['off']} clamped edges down/up="
-        f"{row['clamped']['down']}/{row['clamped']['up']} lost down={lost['down']} "
+        f"{row['clamped']['down']}/{row['clamped']['up']} raw-request edges "
+        f"{row['raw_clamped']['down']}/{row['raw_clamped']['up']} clamp window cycles "
+        f"{row['window']['down']}/{row['window']['up']} lost down={lost['down']} "
         f"up={lost['up']} ar after power-up={row['hs']['post']['ar']}"
     )
 
@@ -737,7 +753,7 @@ async def _p2_sweep(dut) -> dict:
     """Noisy image, trigger offsets over one loop period, at every clock ratio. Cached."""
     if "noisy" not in _P2_CACHE:
         out: dict = {}
-        for cpu_ns in CONFIRM_RATIOS:
+        for cpu_ns in P2_RATIOS:
             period = await _p2_period(dut, cpu_ns)
             step = max(2, -(-period // P2_MAX_POINTS))
             rows = []
@@ -751,17 +767,14 @@ async def _p2_sweep(dut) -> dict:
     return _P2_CACHE["noisy"]
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_p2_no_cpu_handshake_while_clamp_active(dut):
     """Asserts: no handshake of u_cpu completes at a gated edge while the clamp control in the CPU
     domain is active, because the bridge does not see such a handshake (DS-PMU-100, DS-PMU-182).
     Stimulus: the CPU reads PMU STATUS in a loop, so every pass is one AXI read. The power-down and
-    the power-up are requested at offsets over one loop period, at three clock ratios.
-
-    expect_fail: the review reads that the clock runs for some edges with the clamp active and
-    that u_cpu sees ready and valid inputs that the clamp does not hold. The failure message lists
-    the points. If this test passes, the reading was wrong or the RTL changed."""
-    sweep = await with_timeout(_p2_sweep(dut), 6000, "us")
+    the power-up are requested at offsets over one loop period, at four clock ratios. The failure
+    message lists the points."""
+    sweep = await with_timeout(_p2_sweep(dut), 9000, "us")
     bad = [row for entry in sweep.values() for row in entry["rows"] if _lost_total(row)]
     total = sum(len(entry["rows"]) for entry in sweep.values())
     assert not bad, (
@@ -771,23 +784,199 @@ async def test_p2_no_cpu_handshake_while_clamp_active(dut):
 
 
 @cocotb.test()
-async def test_p2_control_clamp_window_reached(dut):
-    """Proves the stimulus of the P2 test reaches the window. At 1:1 and with the CPU faster, some
-    trigger offset has at least one gated edge with the clamp active in the power-down and in the
-    power-up. The counts at every ratio are logged. At 3x slower the count can be 0 by phase, so it
-    is logged and not asserted. The hand derivation at 1:1 gives four and two edges."""
-    sweep = await with_timeout(_p2_sweep(dut), 6000, "us")
+async def test_p2_clamp_never_overlaps_open_gate(dut):
+    """Asserts the rule itself at every point of the sweep: zero gated edges with the clamp active,
+    at 7:7, 7:3, 7:21 and 7:56. The sweep covers many trigger offsets per ratio. The raw request
+    overlap (pmu_cpu_iso_en_sync with a gated edge) is logged: with the clock gated first it is
+    expected to be 0, and the qualifier is the backstop for a skewed request (see the injection
+    tests)."""
+    sweep = await with_timeout(_p2_sweep(dut), 9000, "us")
     for cpu_ns, entry in sweep.items():
-        down = [r["clamped"]["down"] for r in entry["rows"]]
-        up = [r["clamped"]["up"] for r in entry["rows"]]
+        assert len(entry["rows"]) >= 6, f"cpu={cpu_ns}ns: only {len(entry['rows'])} trigger offsets"
+        for row in entry["rows"]:
+            for ep in ("down", "up"):
+                assert row["clamped"][ep] == 0, f"gated edge with the clamp active: {_fmt_p2(row)}"
+        raw = [(r["raw_clamped"]["down"], r["raw_clamped"]["up"]) for r in entry["rows"]]
+        dut._log.info(f"P2 rule cpu={cpu_ns}ns: {len(entry['rows'])} offsets, raw-request overlap "
+                      f"down/up max {max(a for a, _ in raw)}/{max(b for _, b in raw)}")
+
+
+@cocotb.test()
+async def test_p2_control_clamp_window_reached(dut):
+    """Proves the stimulus of the P2 test reaches the window. At every ratio the clamp is active
+    for at least one cpu_clk_i cycle in the power-down and in the power-up, with the clock gated,
+    so the rule is checked against a clamp that does act. The gated clock never ticks in it. The
+    counts at every ratio are logged."""
+    sweep = await with_timeout(_p2_sweep(dut), 9000, "us")
+    for cpu_ns, entry in sweep.items():
+        down = [r["window"]["down"] for r in entry["rows"]]
+        up = [r["window"]["up"] for r in entry["rows"]]
         reads = [r["hs"]["pre"]["ar"] for r in entry["rows"]]
         dut._log.info(
-            f"P2 window cpu={cpu_ns}ns: clamped edges in the power-down {min(down)}..{max(down)}, "
-            f"in the power-up {min(up)}..{max(up)} (hand derivation at 1:1: 4 and 2)")
+            f"P2 window cpu={cpu_ns}ns: clamp window cycles in the power-down {min(down)}..{max(down)}, "
+            f"in the power-up {min(up)}..{max(up)}")
         assert all(n > 0 for n in reads), f"cpu={cpu_ns}ns: no CPU read before a trigger"
-        if cpu_ns <= FABRIC_PERIOD_NS:
-            assert max(down) >= 1, f"cpu={cpu_ns}ns: no clamped gated edge at power-down"
-            assert max(up) >= 1, f"cpu={cpu_ns}ns: no clamped gated edge at power-up"
+        assert min(down) >= 1, f"cpu={cpu_ns}ns: the clamp was never active at a power-down"
+        assert min(up) >= 1, f"cpu={cpu_ns}ns: the clamp was never active at a power-up"
+
+
+async def _force_ack_high(dut) -> None:
+    """Hold the acknowledge input of the PMU at 1. Deposits the synchroniser flops after every
+    falling edge of clk_i, so each rising edge samples a high ack."""
+    sync = dut.u_soc.u_cpu_iso_ack_sync.sync_q
+    while True:
+        await FallingEdge(dut.clk_i)
+        for i in range(len(sync)):
+            sync[i].value = 1
+
+
+@cocotb.test()
+async def test_p2_negative_control_ack_forced_high(dut):
+    """The rule does not depend on the acknowledge. With the ack input of the PMU held at 1 the
+    handshake cannot order anything, yet no gated edge falls in a clamp window, because the clamp is
+    qualified by the closed gate. The forced ack is seen to act: the power-down wait never sees the
+    ack low, so it runs the full timeout. 1:1, 7:3 and 7:21, four trigger offsets each."""
+
+    async def body():
+        rows = []
+        for cpu_ns in (FABRIC_PERIOD_NS, CPU_PERIOD_NS, 3 * FABRIC_PERIOD_NS):
+            period = await _p2_period(dut, cpu_ns)
+            for off in range(0, period, max(1, period // 4))[:4]:
+                words, _labels = cfw.noisy_image()
+                await _confirm_reset_and_rom(dut, cpu_ns, words)
+                mon = _ClampMonitor(dut).start()
+                mon.epoch = "pre"
+                await _confirm_release(dut)
+                await _wait_status_reads(dut, mon, P2_WARMUP_READS)
+                if off:
+                    await ClockCycles(dut.cpu_clk_i, off)
+                force = cocotb.start_soon(_force_ack_high(dut))
+                _active_tasks.append(force)
+                mon.epoch = "down"
+                await _confirm_set_mode(dut, MODE_CPU_OFF)
+                seq = await _wait_for_dom_state(dut, {DOM_OFF}, 4000, "forced-ack power-down")
+                mon.epoch = "up"
+                await _confirm_set_mode(dut, MODE_NORMAL)
+                await _wait_for_dom_state(dut, {DOM_ON}, 4000, "forced-ack power-up")
+                await _confirm_settle(dut)
+                mon.epoch = "post"
+                await ClockCycles(dut.cpu_clk_i, P2_POST_CPU_CYCLES)
+                force.kill()
+                mon.stop()
+                rows.append((cpu_ns, off, dict(mon.clamped), dict(mon.window), seq))
+        return rows
+
+    rows = await with_timeout(body(), 9000, "us")
+    for cpu_ns, off, clamped, window, seq in rows:
+        assert clamped.get("down", 0) == 0 and clamped.get("up", 0) == 0, (
+            f"cpu={cpu_ns}ns off={off}: a gated edge fell in a clamp window with the ack forced high: "
+            f"{clamped}")
+        assert window.get("down", 0) >= 1, f"cpu={cpu_ns}ns off={off}: the clamp never acted"
+    dut._log.info(f"P2 negative control: {len(rows)} runs with the ack forced high, no overlap")
+
+
+@cocotb.test()
+async def test_p2_negative_control_forced_ack_is_seen(dut):
+    """Proves the force of the negative control reaches the PMU: with the ack held high, the CPU
+    power-down wait is not ended by the ack and times out (STATUS[3] set)."""
+    words, _labels = cfw.quiet_image()
+    await _confirm_reset_and_rom(dut, CPU_PERIOD_NS, words)
+    await _confirm_release(dut)
+    force = cocotb.start_soon(_force_ack_high(dut))
+    _active_tasks.append(force)
+    await _confirm_set_mode(dut, MODE_CPU_OFF)
+    cycles = 0
+    for _ in range(4000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        st = int(dut.u_soc.u_pmu.dom_state_q[DOM_CPU].value)
+        if st == DOM_PD_ISO:
+            cycles += 1
+        if st == DOM_OFF:
+            break
+    await ClockCycles(dut.clk_i, 4)
+    force.kill()
+    assert cycles >= 200, f"the power-down wait lasted {cycles} cycles with the ack forced high"
+    status = int(dut.u_soc.u_pmu.u_regbank.regs[1].value)
+    assert (status >> 3) & 1, f"STATUS[3] not set after the timed-out wait: {status:#x}"
+
+
+async def _p2_inject(dut, cpu_ns: int, off: int, rst_term: bool) -> dict:
+    """Skewed clamp request: the PMU output iso_en is forced high for eight fabric cycles while the
+    domain is ON and its clock runs (the pre-fix hazard: a request that overtakes the clock gate).
+    With rst_term the PMU reset output is also pulsed low, so only the reset term holds the gate."""
+    words, _labels = cfw.noisy_image()
+    await _confirm_reset_and_rom(dut, cpu_ns, words)
+    mon = _ClampMonitor(dut).start()
+    mon.epoch = "pre"
+    await _confirm_release(dut)
+    await _wait_status_reads(dut, mon, P2_WARMUP_READS)
+    if off:
+        await ClockCycles(dut.cpu_clk_i, off)
+    s = dut.u_soc
+    bad_eq = 0
+    mon.epoch = "down"
+    pmu = s.u_pmu
+    for _ in range(8 * max(1, cpu_ns // FABRIC_PERIOD_NS)):
+        await FallingEdge(dut.clk_i)
+        pmu.iso_en_q[0].value = 1
+        if rst_term:
+            pmu.rst_n_q[0].value = 0
+        await RisingEdge(dut.cpu_clk_i)
+        await ReadOnly()
+        iso_s = int(s.pmu_cpu_iso_en_sync.value)
+        en = int(s.cpu_gated_clk_en.value)
+        if int(s.cpu_iso_clamp.value) != (iso_s & (1 - en)):
+            bad_eq += 1
+    await ClockCycles(dut.cpu_clk_i, 4 * P2_PERIOD_READS)
+    mon.stop()
+    return {"cpu_ns": cpu_ns, "off": off, "clamped": mon.clamped["down"],
+            "raw": mon.raw_clamped["down"], "window": mon.window["down"], "bad_eq": bad_eq}
+
+
+@cocotb.test()
+async def test_p2_injected_request_skew_is_not_clamped_while_gate_open(dut):
+    """A clamp request that arrives while the clock gate is open must not clamp, because the clamp
+    is the request qualified by the closed gate. The PMU output iso_en is forced high for eight
+    cycles (scaled by the clock ratio) in DOM_ON, so the request reaches the CPU domain with the gate open. The raw request
+    overlaps a gated edge (the injection reaches the hazard), and the qualified clamp does not
+    (no lost handshake). 1:1, 7:3 and 7:21, three offsets each."""
+
+    async def body():
+        rows = []
+        for cpu_ns in (FABRIC_PERIOD_NS, CPU_PERIOD_NS, 3 * FABRIC_PERIOD_NS):
+            for off in (0, 2, 5):
+                rows.append(await _p2_inject(dut, cpu_ns, off, False))
+        return rows
+
+    rows = await with_timeout(body(), 6000, "us")
+    for r in rows:
+        dut._log.info(f"P2 injection (request only): {r}")
+        assert r["clamped"] == 0 and r["bad_eq"] == 0, f"the qualified clamp acted with the gate open: {r}"
+    assert sum(r["raw"] for r in rows) >= 3, (
+        f"the injection never put the raw request on a gated edge: {rows}")
+
+
+@cocotb.test()
+async def test_p2_injected_reset_term_holds_the_clamp(dut):
+    """With the PMU reset output pulsed low together with a clamp request, the gate is closed by the
+    reset term alone. The clamp must then be active: cpu_iso_clamp equals the request AND the closed
+    gate on every sampled edge, and it is high at least once (the reset term is a gate input of the
+    clamp, not only of the clock). 1:1 and 7:3, three offsets each."""
+
+    async def body():
+        rows = []
+        for cpu_ns in (FABRIC_PERIOD_NS, CPU_PERIOD_NS):
+            for off in (0, 2, 5):
+                rows.append(await _p2_inject(dut, cpu_ns, off, True))
+        return rows
+
+    rows = await with_timeout(body(), 6000, "us")
+    for r in rows:
+        dut._log.info(f"P2 injection (request and reset): {r}")
+        assert r["bad_eq"] == 0, f"clamp is not the request AND the closed gate: {r}"
+        assert r["clamped"] == 0, f"a gated edge fell in the clamp window: {r}"
+    assert sum(r["window"] for r in rows) >= 3, f"the clamp never acted: {rows}"
 
 
 @cocotb.test()
@@ -795,7 +984,7 @@ async def test_p2_control_quiet_firmware_loses_no_handshake(dut):
     """Software that follows the stop-traffic rule (DS-PMU-183): the CPU runs register instructions
     only, and the request goes in when no handshake has happened for a long time. Then no handshake
     of u_cpu falls in the power-down or the power-up, at three clock ratios and four alignments.
-    The clamp window exists at these runs (see the control above). The CPU runs its loop before and
+    The clamp is active at these runs (see the control above). The CPU runs its loop before and
     after the power cycle, which shows that it is alive and resumed."""
 
     async def body():
@@ -819,13 +1008,14 @@ async def test_p2_control_quiet_firmware_loses_no_handshake(dut):
             assert not any(row["hs"][ep].values()), (
                 f"{tag}: bus traffic in the {ep} epoch: {row['hs'][ep]}")
         assert row["loop_pc"] in row["pcs"]["post"], f"{tag}: no loop commit after the power-up"
-    seen_down = max(r["clamped"]["down"] for r in rows)
-    seen_up = max(r["clamped"]["up"] for r in rows)
+    seen_down = min(r["window"]["down"] for r in rows)
+    seen_up = min(r["window"]["up"] for r in rows)
     assert seen_down >= 1 and seen_up >= 1, (
-        f"the clamp window held no gated edge (down {seen_down}, up {seen_up}): nothing is proved")
+        f"the clamp was never active (down {seen_down}, up {seen_up} cycles): nothing is proved")
+    assert all(r["clamped"]["down"] == 0 and r["clamped"]["up"] == 0 for r in rows)
     dut._log.info(
         f"P2 quiet: {len(rows)} power cycles, no lost handshake, "
-        f"most clamped edges: down {seen_down}, up {seen_up}")
+        f"least clamp window cycles: down {seen_down}, up {seen_up}")
 
 
 # --- P3. A GPU register access while the GPU domain is off --------------------------------------

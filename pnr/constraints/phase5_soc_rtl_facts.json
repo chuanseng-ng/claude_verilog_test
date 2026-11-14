@@ -6,37 +6,37 @@
     {
      "clamp": 0,
      "element": "u_cpu/axi_arvalid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_awvalid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_bready_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_rready_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_wvalid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/commit_valid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
@@ -141,7 +141,7 @@
     "u_wdt": "watchdog_timer"
    },
    "nets": {
-    "pmu_cpu_iso_en_sync": {
+    "cpu_iso_clamp": {
      "kind": "net",
      "width": 1
     },
@@ -734,37 +734,37 @@
     {
      "clamp": 0,
      "element": "u_cpu/axi_arvalid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_awvalid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_bready_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_rready_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/axi_wvalid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
      "clamp": 0,
      "element": "u_cpu/commit_valid_o",
-     "iso": "pmu_cpu_iso_en_sync",
+     "iso": "cpu_iso_clamp",
      "sense": "high"
     },
     {
@@ -868,7 +868,7 @@
     "u_wdt": "watchdog_timer"
    },
    "nets": {
-    "pmu_cpu_iso_en_sync": {
+    "cpu_iso_clamp": {
      "kind": "net",
      "width": 1
     },
