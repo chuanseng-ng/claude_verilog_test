@@ -93,7 +93,7 @@ cdc_gray_fifo #(
   \item Connect the \code{s_*} face to the APB master and the \code{m_*} face to the APB slave. Set \code{ADDR_W} to the address width of both.
   \item Connect \code{s_pstrb_i}. If the master has no strobes, tie it to \code{4'hF}. Leave \code{m_pstrb_o} open if the slave has no strobes.
   \item Connect the scan pins as for the reset synchroniser.
-  \item Hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i}. A shorter pulse can make the destination run a transfer again.
+  \item Hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i}. A shorter pulse makes the destination run a transfer again. A test measured this at every short-pulse point that it tried. The test is marked \code{expect_fail} until the owner decides the RTL (\cref{ds:mod:apb-cdc-bridge}).
   \item Use the bridge for configuration and debug access only. Do not use it for bulk data.
 \end{procedure}
 \begin{lstlisting}
@@ -123,10 +123,11 @@ apb_cdc_bridge #(
 \begin{warningbox}
 The bridge \code{apb_cdc_bridge} has these limits. Plan for them.
 \begin{itemize}
-  \item An error from the bridge during a reset of the destination does not prove that the destination made no transfer. A write can have taken place. Treat such an error as ``access state unknown''.
-  \item The bridge has no timeout. When \code{m_clk_i} stops and \code{m_rst_n_i} stays high, the transfer waits, and the APB master upstream waits with it. In \code{soc_top} the \code{m_*} face of \code{u_apb_dbg_cdc} runs on \code{cpu_gated_clk}, which the PMU can stop. Do not stop \code{m_clk_i} while a transfer can be in flight, or assert \code{m_rst_n_i} before you stop it.
-  \item A pulse on \code{m_rst_n_i} that is too short can make the destination run a transfer again.
+  \item An error from the bridge during a reset of the destination does not prove that the destination made no transfer. A write can have taken place. Treat such an error as ``access state unknown''. A test measured an error after a completed write at four clock ratios.
+  \item The bridge has no timeout. When \code{m_clk_i} stops and \code{m_rst_n_i} stays high, the transfer waits, and the APB master upstream waits with it. A test measured that \code{s_pready_o} stays low for 300 cycles of \code{s_clk_i}. In \code{soc_top} the \code{m_*} face of \code{u_apb_dbg_cdc} runs on \code{cpu_gated_clk}, which the PMU can stop. Do not stop \code{m_clk_i} while a transfer can be in flight, or assert \code{m_rst_n_i} before you stop it.
+  \item A pulse on \code{m_rst_n_i} that is too short makes the destination run a transfer again.
 \end{itemize}
+The three tests that measured these limits assert the specified behaviour and are marked \code{expect_fail}. They are expected to fail until the owner decides the RTL. \Cref{tm:mod:apb-cdc-bridge} gives the results.
 \end{warningbox}
 \begin{warningbox}
 The bridge \code{async_axi_fifo} has these limits. While a response channel (B or R) is empty, its payload outputs on the \code{s_*} face can change on an edge of \code{m_clk_i}. Use the payload only while the valid output is high. A reset of one face also withdraws the valid outputs of the other face. In \code{soc_top}, a CPU transaction in the middle of a burst at clock gating can wedge a crossbar slave engine, because no drain step exists.
@@ -206,7 +207,7 @@ The firmware of the integration test \src{tb/cocotb/soc/integ_fw/gen_integ_hex.p
 \begin{procedure}
   \item Write 0x2 to \code{CTRL}.
   \item Read \code{STATUS} until bits 2 to 0 equal 0b001. This value shows the CPU domain on, the GPU domain off and \code{busy} low. Bit 3 can be 1 from an earlier CPU power cycle, so mask it. Do not poll for \code{busy} alone. \code{STATUS} follows the sequencer one cycle late, so a read right after the write can still show the old idle state.
-  \item Do not read or write a GPU register while the GPU domain is off. The control port of the GPU is held in reset with its clock stopped. It takes the address of an access but never returns a response, so the access does not complete and the bus master waits. The access is lost, also after the power-up.
+  \item Do not read or write a GPU register while the GPU domain is off. The control port of the GPU is held in reset with its clock stopped. It takes the address of an access but never returns a response, so the access does not complete and the bus master waits. A test measured this for a read and a write at three CPU clock periods: no response came within 4000 cycles of \code{clk_i}. The test is marked \code{expect_fail} until the owner decides the RTL. The access is lost, also after the power-up. This last point is read from the RTL.
   \item To power the GPU up, write 0x0 to \code{CTRL} and read \code{STATUS} until bits 2 to 0 equal 0b011.
   \item Set up the GPU again. The control registers of the GPU do not keep their values, for example \code{GPU_CTRL.irq_enable}. Do not rely on the vector registers or the shared memory either. The domain reset does not clear them, and no test shows their content.
 \end{procedure}
@@ -215,11 +216,11 @@ The firmware of the integration test \src{tb/cocotb/soc/integ_fw/gen_integ_hex.p
 A CPU power-down needs a plan for the wake-up. Nothing inside the CPU domain can request a power-up. Do not rely on the state of the CPU after the power cycle. The simulation keeps it, and this is not a guarantee.
 
 \begin{procedure}
-  \item Stop the AXI traffic of the CPU and flush the data cache. The PMU has no drain step. While the clamp is active and the clock still runs, a bus handshake of the CPU does not reach the fabric.
+  \item Stop the AXI traffic of the CPU and flush the data cache. The PMU has no drain step. While the clamp is active and the clock still runs, a bus handshake of the CPU does not reach the fabric. A test measured this with firmware that reads \code{STATUS} in a loop: a handshake fell in such an edge at some tested point. With firmware that stops its traffic first, no handshake was lost. The test of the first case is marked \code{expect_fail} until the owner decides the RTL.
   \item Make sure that no debug access into the CPU domain is in flight. An access in flight at the power-down ends with an error response, and it can have completed in the CPU domain. While the CPU domain is off, each debug access ends with an error response.
   \item Arrange the wake-up before the power-down. Program another master, for example the DMA engine, to write the mode NORMAL into \code{CTRL} after the power-down. Without a wake-up write, only a reset of \code{rst_n_i} and \code{cpu_rst_n_i} together returns the CPU domain. No test wakes the CPU domain by a bus write.
   \item Request the mode CPU\_OFF. The reference firmware \src{tb/cocotb/soc/pmu_cycle_fw/gen_pmu_cycle_hex.py} does not store to \code{CTRL} itself. It programs the DMA engine to copy the mode CPU\_OFF into \code{CTRL}, so that its own store is not in flight when its clock stops. A store of the CPU to \code{CTRL} is not tested.
-  \item After the wake-up, read \code{STATUS} bit 3. A value of 1 means that a wait for the clamp timed out, and the order of the clamp and the reset is not guaranteed for that power cycle. After a power-up whose wait timed out, the next power-down does not wait for the clamp, and bit 3 does not show it. This is read from the RTL, not simulated.
+  \item After the wake-up, read \code{STATUS} bit 3. A value of 1 means that a wait for the clamp timed out, and the order of the clamp and the reset is not guaranteed for that power cycle. After a power-up whose wait timed out, the next power-down does not wait for the clamp, and bit 3 does not show it. A test of the PMU alone measured this. The test is marked \code{expect_fail} until the owner decides the RTL.
 \end{procedure}
 The reference firmware is a test of the model. It does not stop its traffic: its loop flushes the data cache in each pass. The tests wake the CPU domain by a deposit into the storage flop of \code{CTRL}. Use a write from another master in a real system.
 
@@ -258,7 +259,7 @@ rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_dom_cg (
 \begin{lstlisting}
 python tools/verif/check_upf.py -v
 \end{lstlisting}
-In CI the two steps are \textit{UPF structural gate} and \textit{UPF facts drift gate} of the workflow \code{qa-checks}. The first prints \code{check_upf: FAIL} and one line for each finding. The second prints \code{DRIFT} and the first lines of the difference.
+The option \code{-v} prints one summary line for each group of checks. A line starts with \code{ok} when its group has no finding and with \code{FAIL} when it has one. The finding lines and the last line \code{check_upf: PASS} or \code{check_upf: FAIL} give the result. In CI the two steps are \textit{UPF structural gate} and \textit{UPF facts drift gate} of the workflow \code{qa-checks}. The first prints \code{check_upf: FAIL} and one line for each finding. The second prints \code{DRIFT} and the first lines of the difference.
 
 \paragraph{A top-level instance changes.} You add an instance to \code{soc_top} or you remove one.
 \begin{procedure}
@@ -285,9 +286,9 @@ In CI the two steps are \textit{UPF structural gate} and \textit{UPF facts drift
   \item Regenerate the facts.
 \end{procedure}
 
-\paragraph{A power domain changes.} A new domain, a domain that is removed, or an instance that moves between domains is a change of the power architecture. Stop and ask the owner. The checker compares the rails of the power states only for \code{PD_CPU} and \code{PD_GPU}. A new gated domain also needs a supply set, a supply port with an OFF port state, an isolation strategy and a classification of each of its outputs.
+\paragraph{A power domain changes.} A new domain, a domain that is removed, or an instance that moves between domains is a change of the power architecture. Stop and ask the owner. The checker accepts only the four domains \code{PD_PERIPH}, \code{PD_SRAM}, \code{PD_CPU} and \code{PD_GPU}, with the elements in the table \code{REQUIRED_DOMAINS}. A missing, renamed or added domain, or a domain with other elements, gives finding U03. The checker compares the rails of the power states only for \code{PD_CPU} and \code{PD_GPU}. A new gated domain also needs a supply set, a supply port with an OFF port state and the direction \code{in}, the supply set of the always-on domain in its \code{-available_supplies}, an isolation strategy and a classification of each of its outputs.
 
-\paragraph{Regenerate the facts.} Do this after each change of a top-level instance of \code{soc_top}, of a port of \code{u_cpu}, \code{u_gpu} or \code{u_sram}, of a clamp, or of the test enable of a top-level clock gate. Do it also after an edit of the power intent that names a new net or a new instance path. Run the commands from the root of the repository.
+\paragraph{Regenerate the facts.} Do this after each change of a top-level instance of \code{soc_top}, of a port of \code{u_cpu}, \code{u_gpu} or \code{u_sram}, of a clamp, or of the test enable of a top-level clock gate. Do it also after an edit of the power intent that names a new net or a new instance path. The commands work from any directory.
 \begin{procedure}
   \item Install the pinned \code{pyslang}: \code{pip install pyslang==11.0.0}.
   \item Run \code{python tools/verif/check_upf.py gen-facts}.
@@ -314,7 +315,8 @@ Without \code{pyslang}, the command \code{gen-facts --check} stops with exit cod
 
 Keep these points in mind.
 \begin{itemize}
-  \item Keep the form of each line that starts with the word \code{upf-check}: the kind, the names and the class. The checker and the pinned-text check read them. The checker does not read the text after the two hyphens. The file asks that you do not reword these lines.
+  \item Keep the form of each line that starts with the word \code{upf-check}: the kind, the names and the class. The checker and the pinned-text check read them. The checker does not read the text after the two hyphens. The file asks that you do not reword these lines. Do not start another comment line with a word that starts with \code{upf-}. The checker and the pinned-text check report such a line as a wrong directive (finding U03).
+  \item Keep the four domains, the state \code{SCAN}, the supply set of the always-on domain in the available supplies of each gated domain, one ground net with a 0.0 V port state for all supply sets, and the direction \code{in} of each supply port. The checker reports each of them (findings U03, U04 and U07). It does not compare the names of the supply sets and of the supply nets with the names in \reqref{DS-PWR-005} and \reqref{DS-PWR-006}. A reviewer checks the names.
   \item A new comment line in the header of the file counts against the comment budget of \src{tools/docs/check_comment_budget.py}. The lines that start with the word \code{upf-check} do not count.
   \item Do not add a power switch or a retention command. The PMU has no control output for a switch, and the RTL has no retention cell. \reqref{DS-PWR-061} and \reqref{DS-PWR-060} state the rules. The checker does not stop a switch.
   \item The voltage literals in the file are the ASAP7 nominal values. Replace them for the Sky130 flow.

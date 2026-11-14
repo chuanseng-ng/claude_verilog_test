@@ -208,17 +208,19 @@ Apart from the two reset synchronisers, only the levels \code{req_q} and \code{a
 \end{requirement}
 
 \begin{requirement}{DS-CDC-102}{Request while the destination is in reset}
-[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_never_forwarded; review}]
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_never_forwarded; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b4_ds102_latency_bound}]
 A request that starts while the source side sees the destination in reset must complete with \code{s_pready_o} high and \code{s_pslverr_o} high after the second rising edge of \code{s_clk_i} that follows the SETUP edge. The request must not cause a transfer on the \code{m_*} face.
 \end{requirement}
 
 \begin{requirement}{DS-CDC-103}{Destination reset during a transfer}
-[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side; review}]
-When the destination enters reset before \code{m_pready_i} completes the access, a forwarded request must complete with \code{s_pready_o} and \code{s_pslverr_o} high within \code{SYNC_STAGES_TO_S}+3 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b4_ds103_latency_bound}]
+When the destination enters reset before \code{m_pready_i} completes the access, a forwarded request must complete with \code{s_pready_o} and \code{s_pslverr_o} high within \code{SYNC_STAGES_TO_S}+2 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
 \end{requirement}
 
 \begin{information}
-An error from the bridge during a reset of the destination does not show that the destination made no transfer. The destination can finish the access, and then reset before the acknowledge reaches the source. The source then sees the reset status and returns an error, while a write has taken place. Software has to treat such an error as ``access state unknown''. The bounds of \reqref{DS-CDC-102} and \reqref{DS-CDC-103} follow from the RTL, and no test measures them.
+The test \code{test_b4_ds102_latency_bound} counts the rising edges of \code{s_clk_i} after the SETUP edge, with \code{m_rst_n_i} low and seen by the source. The test \code{test_b4_ds103_latency_bound} counts the rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls on a forwarded request that the destination never answers, with the fall at three offsets inside one period of \code{s_clk_i}. Both tests run the periods of \code{s_clk_i} and \code{m_clk_i} of 4 and 9 ns, 18 and 4 ns, 10 and 10 ns, and 7 and 11 ns, with \code{SYNC_STAGES_TO_S} of 2. The count of \reqref{DS-CDC-102} is 2 at every tested point. The count of \reqref{DS-CDC-103} is \code{SYNC_STAGES_TO_S}+2 at every tested point. The two tests cover the stated clock periods only.
+
+An error from the bridge during a reset of the destination does not show that the destination made no transfer. The destination can finish the access, and then reset before the acknowledge reaches the source. The source then sees the reset status and returns an error, while a write has taken place. Software has to treat such an error as ``access state unknown''. The test \code{test_b1_no_error_completion_after_completed_write} measures this. It resets \code{m_rst_n_i} with the width that \reqref{DS-CDC-109} asks, a short time after \code{ack_q} rises on the destination side and before an edge of \code{s_clk_i} samples it. It asserts that an errored request has not written the destination, so it is marked \code{expect_fail}. At least one tested point returns an error for a write that completed on the \code{m_*} face. The test uses the clock periods 18 and 4 ns, 10 and 10 ns, 7 and 11 ns, and 4 and 9 ns. Its companion tests show that a reset before the destination access gives an error and no write, and that a reset after the source has captured the acknowledge gives an okay response and one write. The owner decides the RTL.
 \end{information}
 
 \begin{requirement}{DS-CDC-104}{Answer wins over reset status}
@@ -235,6 +237,9 @@ A reset of \code{s_rst_n_i} during a transfer must return the bridge to idle wit
 [verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_write; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_read; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_pready_wait_states}]
 Each forwarded request that no reset aborts must make exactly one APB transfer on the \code{m_*} face. The transfer must have a SETUP phase and then an ACCESS phase, and it must last until \code{m_pready_i} is high.
 \end{requirement}
+\begin{information}
+A pulse of \code{m_rst_n_i} that is shorter than \reqref{DS-CDC-109} asks can make the \code{m_*} face repeat a transfer. The measurement is in the information block of \reqref{DS-CDC-109}. The test \code{test_b3_control_compliant_pulse_makes_one_transfer} shows that a pulse that follows \reqref{DS-CDC-109} never repeated a transfer at the tested points. This test is not a reference of this rule, because the request that such a pulse meets can end with an error.
+\end{information}
 
 \begin{requirement}{DS-CDC-107}{Response unchanged}
 [verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_response_data_integrity; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_pslverr_injection}]
@@ -250,6 +255,9 @@ The bridge must work at any ratio of \code{s_clk_i} to \code{m_clk_i}.
 [verify={review}]
 The user must hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i}, so that \code{u_m_rst_status_sync} samples the reset.
 \end{requirement}
+\begin{information}
+The test \code{test_b3_short_reset_pulse_makes_one_transfer} measures a pulse that is shorter than one period of \code{s_clk_i}. The pulse starts after \code{ack_q} rises and ends before the next edge of \code{s_clk_i}, so no edge of \code{s_clk_i} samples it. It asserts that one request makes exactly one transfer on the \code{m_*} face (\reqref{DS-CDC-106}), so it is marked \code{expect_fail}. In the measured run every tested short-pulse point repeated the transfer: the reset clears the destination, the source still holds \code{req_q}, and the destination runs the same request again after the release. The test sweeps the position and the width of the pulse at the clock periods 18 and 4 ns, 10 and 10 ns, 7 and 11 ns, and 4 and 9 ns. The companion test \code{test_b3_control_short_pulse_window_reached} shows that the source never saw these pulses and completed each request once. The companion test \code{test_b3_control_compliant_pulse_makes_one_transfer} shows that a pulse of eight periods of the slower clock never repeated a transfer. This test measures the result of a pulse that follows this rule and does not verify the rule, because a rule for the user cannot be verified by a test. The owner decides the RTL.
+\end{information}
 
 \begin{requirement}{DS-CDC-110}{Names of the handshake registers}
 [verify={check:pnr/constraints/phase5_soc_multiclock_check.sdc}]
@@ -404,5 +412,7 @@ Each subsection gives the decision, the alternatives that the team rejected, and
 
 \section{Requirements and verification}\label{ds:ch:mod-cdc-primitives:map}
 \Cref{tab:ds:req:cdc-map} lists each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review.
+
+Some information blocks name a test that is marked \code{expect_fail}. Such a test asserts the specified behaviour and is expected to fail on the present RTL, until the owner decides the RTL. It is not a verification reference of a rule.
 
 \input{generated/requirements-cdc}

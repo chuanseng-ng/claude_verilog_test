@@ -128,7 +128,7 @@ The PMU must run on \code{core_clk} and \code{core_rst_n}. The outputs of the PM
 A reset of the PMU must return both domains to on, with the values of \reqref{DS-PMU-004}, and must clear the flag \code{cpu_iso_ack_timeout}.
 \end{requirement}
 \begin{information}
-The reset is synchronous, so it takes effect at an edge of \code{clk_i}. The test applies the reset while the CPU domain is in \code{DOM_OFF} and during a wait in \code{DOM_PD_ISO}. It does not apply a reset in each state. The rule holds for the other states by the structure of the reset branch. A reset does not walk the power-up order: all outputs take the values of \code{DOM_ON} at the same edge.
+The reset is synchronous, so it takes effect at an edge of \code{clk_i}. The test applies the reset while the CPU domain is in \code{DOM_OFF} and during a wait in \code{DOM_PD_ISO}. It does not apply a reset in each state. The rule holds for the other states by the structure of the reset branch. A reset does not walk the power-up order: all outputs take the values of \code{DOM_ON} at the same edge. The test \code{test_p4_unit_pmu_reset_from_off_releases_in_power_up_order} measures this for the CPU outputs of the PMU alone. After a reset in \code{DOM_OFF}, the reset release, the clock enable and the clamp release do not come in the order of \reqref{DS-PMU-022}. The test asserts that order, so it is marked \code{expect_fail}. The companion test \code{test_p4_unit_control_sequenced_power_up_order} shows that a sequenced power-up from \code{DOM_OFF} releases them one sample apart or more. The owner decides whether the order is required after a reset of the PMU.
 \end{information}
 
 \subsection{Isolation handshake}\label{ds:mod:pmu:handshake}
@@ -186,7 +186,7 @@ The header of the module estimates the round trip as 3R+3 cycles of \code{clk_i}
 A power-down that starts directly after a power-up must not use the acknowledge of the earlier power-up. When the wait of the power-up ended with the release of the acknowledge, the acknowledge must be low when the sequencer enters the isolation step.
 \end{requirement}
 \begin{information}
-When the wait of a power-up ends by the timeout, the acknowledge can still be high. The next power-down then leaves \code{DOM_PD_ISO} after one cycle without a new handshake. The flag \code{cpu_iso_ack_timeout} clears when that power-down starts and is not set again, so \code{STATUS} bit 3 does not show that the order of \reqref{DS-PMU-100} is not guaranteed. This is derived from the RTL. No test covers it.
+When the wait of a power-up ends by the timeout, the acknowledge can still be high. The next power-down then leaves \code{DOM_PD_ISO} after one cycle without a new handshake. The flag \code{cpu_iso_ack_timeout} clears when that power-down starts and is not set again, so \code{STATUS} bit 3 does not show that the order of \reqref{DS-PMU-100} is not guaranteed. The test \code{test_p1_power_down_after_timed_out_power_up_needs_fresh_ack} measures this for the PMU alone, with a model of the acknowledge. The power-up wait lasts \code{ISO_ACK_TIMEOUT} cycles while the acknowledge stays high, and then \code{CTRL} gets the mode CPU\_OFF with no gap. The power-down spends one cycle in \code{DOM_PD_ISO} on the old acknowledge, and \code{STATUS} bit 3 is low afterwards. The test asserts that the power-down waits for a fresh acknowledge or reports the fault, so it is marked \code{expect_fail}. Its companion tests show that the stimulus reaches this case and that a normal power cycle waits for a fresh acknowledge. No SoC test covers this case. The owner decides the RTL.
 \end{information}
 
 \section{SoC power integration}\label{ds:ch:mod-power-management:soc}
@@ -198,6 +198,8 @@ After the reset of the SoC has ended and the synchronisers of the CPU domain hav
 \end{requirement}
 \begin{information}
 While \code{cpu_core_rst_n} is low, \code{pmu_cpu_iso_en_sync} is held at 0, and the PMU reset can still assert in the CPU domain. The clamp is then off while the domain is in reset. The CPU domain is in reset by \code{cpu_core_rst_n} at the same time. No test runs the monitor in this state. The monitor of the tests starts after the reset of the SoC and the settling of the synchronisers. The tests run a full power cycle at four clock ratios of the CPU clock to \code{core_clk}: 3 times slower, 8 times slower, 1:1 and 7 to 3 faster. The simulation has zero delay and does not model metastability. The rule for other ratios is by construction. The acknowledge can only be late and never early. The monitor of the tests checks the power-down order at every edge. It checks the power-up order only as a nominal order, because the two paths of the power-up are separate synchronisers and the order can change by one edge in silicon. \Cref{tm:mod:pmu} gives the design argument that makes the other order harmless.
+
+The tests of the release order after a power-up use the monitor of \code{test_p4_control_sequenced_power_up_releases_cpu_clamp_last}, with the CPU clock period of 7, 3, 21 and 56 ns and the period of \code{clk_i} of 7 ns. These periods are testbench settings. After a power-up that the PMU sequences, the clamp control in the CPU domain is released on a later edge of \code{cpu_core_clk} than the PMU reset and the clock enable at 7 ns and at 3 ns. This is the case where the CPU clock is at least as fast as the fabric clock. At 21 ns and at 56 ns the spacing of the PMU outputs is less than one CPU clock period, so the releases can share an edge. At these two periods the test asserts only that the clamp is not released before the reset or the clock enable. The same four periods are used after a reset of the PMU in \code{DOM_OFF}. The test \code{test_p4_pmu_reset_from_off_releases_cpu_clamp_last} measures that the three releases fall on one edge of \code{cpu_core_clk} at every period. It asserts the strict order at 7 ns and 3 ns, so it is marked \code{expect_fail}. The owner decides whether a strict order is required after a PMU reset or at a slow CPU clock.
 \end{information}
 
 \begin{requirement}{DS-PMU-101}{Source of the acknowledge}
@@ -319,7 +321,7 @@ In the simulation model the CPU keeps its state. Its flops have a synchronous re
 Before it requests a CPU power-down, software must stop the bus traffic of the CPU and the debug accesses into the CPU domain. The PMU has no drain step.
 \end{requirement}
 \begin{information}
-The clamp is active in the CPU domain for some edges of \code{cpu_gated_clk} before the clock stops, and again after the clock starts in a power-up. A bus handshake of the CPU in these edges does not reach the fabric. This is derived from the RTL.
+The clamp is active in the CPU domain for some edges of \code{cpu_gated_clk} before the clock stops, and again after the clock starts in a power-up. A bus handshake of the CPU in these edges does not reach the fabric. Tests in \code{test_soc_pmu_multiclock} measure this with the period of \code{clk_i} at 7 ns. The log of \code{test_p2_control_clamp_window_reached} gives the number of edges of \code{cpu_gated_clk} with the clamp active. At a CPU clock period of 7 ns it is 4 in the power-down and 2 in the power-up. At 3 ns it is 7 and 4 to 5. At 21 ns it is 1 and 0. The test \code{test_p2_no_cpu_handshake_while_clamp_active} runs firmware that reads \code{STATUS} in a loop, requests the power cycle at offsets over one loop period and asserts that no handshake of \code{u_cpu} falls in a clamped edge. It is marked \code{expect_fail}, so a handshake falls in such an edge at some tested point. The test \code{test_p2_control_quiet_firmware_loses_no_handshake} runs firmware that stops its bus traffic first. No handshake is lost in any power cycle of that test. The owner decides the RTL.
 \end{information}
 
 \begin{requirement}{DS-PMU-183}{Wake-up of the CPU domain}
@@ -343,7 +345,7 @@ After a write to \code{CTRL}, software must poll \code{STATUS} until bits 2 to 0
 Software must not access a register of the GPU while the GPU domain is not on.
 \end{requirement}
 \begin{information}
-The control port of the GPU accepts an address while it is held in reset and never answers it. This is derived from the RTL.
+The control port of the GPU accepts an address while it is held in reset and never answers it. The test \code{test_p3_gpu_access_while_off_completes_within_bound} measures this for a read and a write of \code{GPU_KERNEL_PC} after the CPU has requested GPU\_OFF, at the CPU clock periods 7, 3 and 21 ns. The slot takes the address once, and no response reaches the CPU within 4000 cycles of \code{clk_i}. The write data is never accepted. No upstream timeout answers within this bound. The test asserts that the access ends within the bound, so it is marked \code{expect_fail}. The test \code{test_p3_control_slave_ready_low_while_in_reset} asserts that \code{awready} and \code{arready} of the slave are low while its reset is asserted. It is marked \code{expect_fail}: they are high in reset. The companion test \code{test_p3_control_access_with_gpu_on_completes} shows that the same firmware completes the write and the read with the GPU on. The owner decides the RTL.
 \end{information}
 
 \begin{requirement}{DS-PMU-186}{Fabric reset with CPU reset}
@@ -408,5 +410,7 @@ Each subsection gives the decision, the alternatives that the team rejected, and
 
 \section{Requirements and verification}\label{ds:ch:mod-power-management:map}
 \Cref{tab:ds:req:pmu-map} lists each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review. A reference with the word \textbf{mutation} names a mutant of \code{mutate_pmu_iso_ack.py} that breaks the rule. No result of a campaign is recorded in the repository. That the cited tests kill each mutant is predicted by reading the tests and is not measured.
+
+Some information blocks name a test that is marked \code{expect_fail}. Such a test asserts the specified behaviour and is expected to fail on the present RTL, until the owner decides the RTL. It is not a verification reference of a rule. If such a test passes, the RTL has changed and the test has to be replaced by a normal test.
 
 \input{generated/requirements-pmu}
