@@ -21,7 +21,7 @@ The bridge therefore keeps its state across a PMU power-cycle, like u_cpu; this 
 regression-guards that wiring. (3) The PMU power-down has NO drain/quiesce step: a CPU AXI
 transaction or D-cache writeback in flight when the clock gates is a documented non-blocking gap.
 The firmware is minimal (2-word SRAM working set, no fabric AXI traffic after the DMA trigger) to
-stay clear of it. No settling-delay injector exists.
+stay clear of it. The settling-delay injector in cdc_sync.sv exists; this suite does not enable it.
 Run: make -C tb/cocotb/soc soc_pmu_multiclock
 Doc: tm:suite:soc-test-soc-pmu-multiclock
 """

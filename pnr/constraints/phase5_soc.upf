@@ -11,13 +11,14 @@
 #   Software must re-initialise the CPU and the GPU after power-up.
 #   The voltages are ASAP7 nominal. A Sky130 user must replace the voltage values.
 #   PD_PERIPH membership is the roster of upf-check lines. The checker fails if a top-level instance is added or removed without a roster update.
-#   Each roster instance must stay powered while PD_CPU and PD_GPU are off. The reason is in the group comment above its lines.
+#   This holds only after gen-facts has refreshed the facts file.
+#   Each roster instance must stay powered while PD_CPU and PD_GPU are off. The role or reason is in the group comment above its lines.
 #   Each non-isolated u_cpu or u_gpu output must be in an 'upf-check unclamped' line (payload, slave_response or observability).
 #   Known gap: unclamped slave_response outputs would drive X into the always-on logic with the supply removed.
 #   Do not reword the upf-check lines. tools/verif/check_upf.py reads them.
-# Roster of PD_PERIPH instances. Each group comment gives the reason the instances stay powered:
+# Roster of PD_PERIPH instances. Each group comment gives the role or the reason the instances stay powered:
 #   CPU-domain synchronisers (cpu_core_clk, ungated PLL output, so they keep
-#   running while u_cpu's clock is gated):
+#   running while u_cpu's clock is gated; u_cpu_iso_ack_sync runs on core_clk):
 # upf-check aon u_cpu_clk_dis_sync  -- ~pmu_cpu_clk_en into the CPU clock domain (drives u_cpu_cg)
 # upf-check aon u_cpu_iso_en_sync   -- pmu_cpu_iso_en into the CPU clock domain: THE ISO_CPU control net
 # upf-check aon u_cpu_iso_ack_sync  -- pmu_cpu_iso_en_sync back into core_clk: the PMU's iso-ack (bead 3ogd)
