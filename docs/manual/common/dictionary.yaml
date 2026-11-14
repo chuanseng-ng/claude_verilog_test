@@ -262,6 +262,34 @@
   kind: technical-name
   definition: The property of a cell that keeps its value while its supply is off.
   glossary: true
+- term: supply set
+  kind: technical-name
+  definition: A named group of supply nets that gives a power domain its power and its ground.
+  glossary: true
+- term: power state
+  kind: technical-name
+  definition: A named condition of a supply set or of the whole design, with the state of each rail.
+  glossary: true
+- term: power switch
+  kind: technical-name
+  definition: A cell that connects a supply rail to its source or disconnects it, on a control signal.
+  glossary: true
+- term: isolation strategy
+  kind: technical-name
+  definition: A UPF command that names the outputs of a power domain, the clamp value and the control net of the clamp.
+  glossary: true
+- term: always-on roster
+  kind: technical-name
+  definition: The list in the power intent of the top-level instances of the always-on domain that holds the top scope. A checker compares it with the RTL.
+  glossary: true
+- term: gated domain
+  kind: technical-name
+  definition: A power domain whose supply can be switched off. In the power intent of the SoC these are the CPU domain and the GPU domain.
+  glossary: true
+- term: facts file
+  kind: technical-name
+  definition: The JSON file that the checker of the power intent reads in place of the RTL. A program generates it from the RTL for the names that the power intent uses.
+  glossary: true
 
 # --- tools ---
 - term: Verilator

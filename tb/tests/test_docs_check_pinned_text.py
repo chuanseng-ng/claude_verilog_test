@@ -252,6 +252,8 @@ def test_upf_directive_lines_must_parse(tmp_path: Path) -> None:
     assert not run(cp.check_upf, tmp_path).failures
     write(tmp_path, cp.UPF, "# upf-check bogus u_x\n")
     assert run(cp.check_upf, tmp_path).failures
+    write(tmp_path, cp.UPF, "# upf-chek aon u_x\n# upf-check aon u_y\n")
+    assert run(cp.check_upf, tmp_path).failures
     write(tmp_path, cp.UPF, "# upf-check aon u_x\n")
     write(tmp_path, cp.PMU, "MODE_A: begin\n  // the end of it\nend\n")
     assert any("MODE_A" in f for f in run(cp.check_upf, tmp_path).failures)
