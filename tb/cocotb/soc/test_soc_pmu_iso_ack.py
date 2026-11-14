@@ -275,9 +275,14 @@ def _check_cycle(dut, mon: IsoMonitor, label: str) -> None:
         assert mon.ack_rise_ns and mon.ack_rise_ns[0] < t_off, (
             f"{label}: DOM_OFF entered at {t_off}ns without a prior ack rise "
             f"({mon.ack_rise_ns})")
-        dut._log.info(
-            f"{label}: PD_ISO dwell {_dwell_cycles(mon, DOM_PD_ISO)} core cycles, "
-            f"PU_ISO dwell {_dwell_cycles(mon, DOM_PU_ISO)} core cycles")
+        pd_dwell = _dwell_cycles(mon, DOM_PD_ISO)
+        pu_dwell = _dwell_cycles(mon, DOM_PU_ISO)
+        dut._log.info(f"{label}: PD_ISO dwell {pd_dwell} core cycles, PU_ISO dwell {pu_dwell} core cycles")
+        # A real ack ends each wait long before the timeout. A tied-off ack only ends it by timing out.
+        assert pd_dwell < ISO_ACK_TIMEOUT // 2 and pu_dwell < ISO_ACK_TIMEOUT // 2, (
+            f"{label}: a wait ran to its timeout (PD_ISO {pd_dwell}, PU_ISO {pu_dwell} cycles)")
+        status = int(_soc(dut).u_pmu.u_regbank.regs[1].value)
+        assert not (status >> STATUS_ISO_ACK_TIMEOUT_BIT) & 1, f"{label}: STATUS[3] set by a healthy cycle: {status:#x}"
 
 
 @cocotb.test()
