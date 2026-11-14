@@ -1,5 +1,5 @@
 // Every function assigns its result on every path.  yosys still gives the function's own
-// argument/local/result wires a constant-x "update" (see docs/SYNTH_UNDEF_GATE.md), but nothing reads them.
+// argument/local/result wires a constant-x "update" (see Doc: tm:flow:synth-undef-gate), but nothing reads them.
 module functemp_clean (
     input  [3:0] a,
     input  [3:0] b,

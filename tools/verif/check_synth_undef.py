@@ -7,7 +7,7 @@ Synlig/UHDM elaborated two hazard-unit port connections (a part-select of a pack
 in a port connection) as ``5'x`` and logged only ``Warning: Range select [639:608] out of bounds
 on signal ... Setting all 32 result bits to undef``.  Synthesis then deleted the forwarding-select
 flops; lint, ``Checker.YosysSynthChecks``, LVS and P&R all passed on the smaller, wrong design
-(beads dud4 / ma7; docs/SKY130_CPU_SYNLIG_DUD4.md).
+(beads dud4 / ma7; Doc: cr:defect:sky130-cpu-synlig-dud4).
 
 Two independent detectors, so a wording change in one tool release cannot blind the gate:
 
@@ -25,7 +25,7 @@ that nothing reads - the real value flows through proc temporaries.  Those nets 
 only if the PRE-``proc`` RTLIL of the same elaboration (``--pre-rtlil``) shows NO reader of the
 wire, no other driver and a full-width x update; a name match alone never exempts, and a function
 that leaves its result unassigned on a path (a read of the x wire) stays a FAIL.  Every exempted
-net is counted per function in the report.  See docs/SYNTH_UNDEF_GATE.md.
+net is counted per function in the report.  See Doc: tm:flow:synth-undef-gate.
 
 Exit codes: 0 pass, 1 an un-allowlisted FAIL finding, 2 the input could not be judged (no log,
 empty log, no recognisable synthesis banner).  Never a vacuous pass.
@@ -85,7 +85,7 @@ RULES: dict[str, tuple[str, str, str]] = {
         "WARN",
         r"Post-incrementation operations are handled as pre-incrementation",
         "Synlig treats x++ as ++x; harmless for a for-loop step, a hard error when the value is "
-        "used (probes p13/p19, docs/SYNTH_UNDEF_GATE.md)",
+        "used (probes p13/p19, Doc: tm:flow:synth-undef-gate)",
     ),
     "removed-module": (
         "WARN",

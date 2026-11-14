@@ -2,9 +2,9 @@
 """Strict SystemVerilog elaboration gate using pyslang (bead lvdk) - BLOCKING.
 
 Why: Verilator and sv2v accept use-before-declare, while VCS and Xcelium reject it
-(docs/verification/PROPRIETARY_SIM_FLOW.md rule 6), and neither of those runs in CI.  sv2v also
+(Doc: um:flow:proprietary-sim rule 6), and neither of those runs in CI.  sv2v also
 accepts missing modules and undeclared names.  slang rejects all of these
-(docs/XEZIM_EVALUATION.md section 5), so the defect is caught on the PR.
+(Doc: tm:dec:xezim section 5), so the defect is caught on the PR.
 
 Every run first proves the tool still discriminates: each CONTROL must give its expected verdict
 or the gate exits 2.  A gate that reports clean because it stopped detecting anything is worse
