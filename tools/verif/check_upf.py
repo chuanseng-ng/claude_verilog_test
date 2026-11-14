@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
 # ruff: noqa: E501  (diagnostic messages are kept on one line so they can be grepped from CI logs)
-"""Structural checker for ``pnr/constraints/phase5_soc.upf`` against the elaborated ``soc_top`` (bead h3lm).
+"""Structural checker for ``pnr/constraints/phase5_soc.upf`` against the elaborated ``soc_top``.
 
-Why this exists
----------------
-``phase5_soc.upf`` was written once (Phase 5 M11) and never read by any tool, so it drifted from
-``soc_top`` unnoticed: it named isolation nets and power-switch control ports that do not exist,
-clamped every output while the RTL clamps a handful of handshakes, and used option syntax no UPF
-parser accepts (audit: bead h3lm).  This checker makes the *structural* faithfulness of the UPF to
-the RTL a CI gate.  It does NOT interpret UPF semantics the way a power-aware simulator would
-(there is no UPF-aware tool in this repo's open flow); it proves the *references* are real.
+The checker makes the structural faithfulness of the UPF to the RTL a CI gate.  It does NOT
+interpret UPF semantics the way a power-aware simulator would (the open flow has no UPF-aware
+tool); it proves that the references are real and that the sets match.
 
-What it checks (finding ids are stable; ``-v`` lists them)
------------------------------------------------------------
+What it checks (finding ids are stable)
+---------------------------------------
   U01  every UPF command and option is one this checker knows (a typo or a non-standard option such
-       as ``create_power_switch -on_value`` is an error, not silently ignored)
+       as ``create_power_switch -on_value`` is an error); retention, isolation-cell mapping, level
+       shifter and legacy PST commands are refused; the UPF version and the design top are right
   U02  every ``-elements`` / ``-exclude_elements`` path exists in the elaborated hierarchy (both arms)
-  U03  domain membership: the gated domains name real top-level instances, no instance is in two
-       domains, and the ``# upf-check aon <inst>`` roster equals the remaining top-level instances
-       (so a new always-on instance, e.g. a new synchroniser, forces a UPF review)
-  U04  supply network: every supply net has a source (supply port or switch output), every supply
-       set / domain supply handle resolves, every switched rail has an OFF port state
+  U03  domain membership: the domains are exactly ``REQUIRED_DOMAINS`` with the elements listed
+       there, no instance is in two domains, and the ``# upf-check aon <inst>`` roster equals the
+       remaining top-level instances (so a new always-on instance forces a UPF review).  A comment
+       line whose first word starts with ``upf-`` must be a valid directive (``# upf-check aon
+       <inst>`` or ``# upf-check unclamped <class>: ...``); a misspelling is a finding
+  U04  supply network: every supply net has a source, every supply port is connected and has
+       direction ``in``, every supply set / domain supply handle resolves, every supply set uses
+       the always-on ground net and that net has a 0.0 V port state, every gated domain lists the
+       always-on supply set in ``-available_supplies``, every switched rail has an OFF port state
   U05  isolation: control net resolves in RTL, clamp value and sense equal the RTL clamp, every
        element is an OUTPUT port of the domain, and the UPF clamped-signal set EQUALS the RTL
        clamp set (both directions).  Every other output of a gated domain must be classified by a
        ``# upf-check unclamped <class>`` line, so a new output cannot silently escape review
-  U06  power switches / retention: a switch's control and acknowledge nets must resolve; retention
-       commands are refused (no retention state exists in the RTL)
+  U06  power switches: a switch's domain, supply nets and control port must exist, and its control
+       and acknowledge nets must resolve
   U07  power-state group: state names and ``pmu_mode_req`` encodings equal ``rtl/soc/pmu.sv``, each
-       state's CPU/GPU rail state equals the PMU's ``dom_target_on`` for that mode, and the scan
-       state's claim (clock gates forced open) is true of the RTL
+       state's CPU/GPU rail state equals the PMU's ``dom_target_on`` for that mode, the SCAN state
+       exists, and its claim (clock gates forced open) is true of the RTL
   U08  facts file is complete for the references the UPF makes
 
 Inputs
@@ -43,15 +43,23 @@ Inputs
 Usage
 -----
     python3 tools/verif/check_upf.py                     # check (stdlib only)        exit 0 / 1
-    python3 tools/verif/check_upf.py -v                  # also list what was verified
+    python3 tools/verif/check_upf.py -v                  # also print one summary line per group
     python3 tools/verif/check_upf.py gen-facts           # (re)write the facts file    needs pyslang
     python3 tools/verif/check_upf.py gen-facts --check   # CI drift gate: facts == fresh elaboration
+
+Every command works from any directory: the default paths and the file list of ``gen-facts`` are
+resolved from the repository root.
+
+Output: one line per finding (``U0n [line] message``).  With ``-v`` (or when nothing failed) each
+group of checks prints a summary line that starts with ``ok`` when the group has no finding and with
+``FAIL`` when it has one.  The last line is ``check_upf: PASS`` or ``check_upf: FAIL``.
 
 Exit codes: 0 ok, 1 findings / drift, 2 an input could not be read, 3 pyslang unavailable (gen only).
 
 Scope limits (do not over-read a PASS): this proves references and set equalities.  It does not prove
-the UPF is accepted by any particular tool (see docs/design/UPF_POWER_SPEC.md "Tool compatibility"),
-nor that a clamp is electrically sufficient.
+the UPF is accepted by any particular tool, nor that a clamp is electrically sufficient.
+
+Doc: tm:pd:phase5-soc-upf
 """
 
 from __future__ import annotations
@@ -59,9 +67,10 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
+import os
 import re
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -86,6 +95,14 @@ CLASSES = ("payload", "slave_response", "observability")
 # States the UPF may define beyond the PMU's modes.  SCAN is not a PMU mode: it is the test-mode
 # override (soc_top scan_mode_i).  Anything else must come from pmu.sv.
 EXTRA_STATES = ("SCAN",)
+# The power domains the design requires, with the elements each one holds (``.`` is the top scope).
+# The state check and the isolation check refer to these names, so they are fixed here once.
+REQUIRED_DOMAINS: dict[str, list[str]] = {
+    "PD_PERIPH": ["."],
+    "PD_SRAM": ["u_sram"],
+    "PD_CPU": ["u_cpu"],
+    "PD_GPU": ["u_gpu"],
+}
 
 # --------------------------------------------------------------------------------------------------
 # Tcl-ish UPF reader
@@ -285,6 +302,7 @@ class Upf:
     version: str | None = None
     design_top: str | None = None
     ports: dict[str, int] = field(default_factory=dict)  # supply port -> line
+    port_dir: dict[str, str] = field(default_factory=dict)  # supply port -> in|out|inout
     nets: dict[str, int] = field(default_factory=dict)
     connected: dict[str, list[str]] = field(default_factory=dict)  # net -> supply ports
     port_states: dict[str, dict[str, str]] = field(default_factory=dict)
@@ -305,12 +323,21 @@ class Upf:
 
 
 _DIRECTIVE = re.compile(r"^\s*#\s*upf-check\s+(aon|unclamped)\b(.*)$")
+# A comment line whose first word starts with ``upf-`` is meant as a directive.  It must then match
+# _DIRECTIVE.  Free comment text that only mentions ``upf-check`` later in the line is not affected.
+_DIRECTIVE_ATTEMPT = re.compile(r"^\s*#\s*upf-", re.IGNORECASE)
 
 
 def parse_directives(text: str, up: Upf) -> None:
     for ln, raw in enumerate(text.splitlines(), 1):
         m = _DIRECTIVE.match(raw)
         if not m:
+            if _DIRECTIVE_ATTEMPT.match(raw):
+                up.err(
+                    "U03",
+                    ln,
+                    f"not a valid '# upf-check' directive (use 'aon' or 'unclamped'): {raw.strip()!r}",
+                )
             continue
         kind, rest = m.group(1), m.group(2)
         rest = rest.split("--", 1)[0].strip()
@@ -400,6 +427,7 @@ def _apply(up: Upf, p: Parsed) -> None:
             up.err("U04", ln, f"supply port {a0} created twice")
         else:
             up.ports[a0] = ln
+            up.port_dir[a0] = p.one("-direction") or ""
     elif c == "create_supply_net":
         if a0 is None:
             up.err("U04", ln, "create_supply_net needs a name")
@@ -618,12 +646,84 @@ def check(
     if up.design_top != facts.get("top", TOP):
         up.err("U01", 0, f"set_design_top must name {facts.get('top', TOP)}, got {up.design_top!r}")
 
-    _check_supply(up, log)
-    gated = _check_domains(up, arms, log)
-    _check_isolation(up, arms, gated, log)
-    _check_switch_and_net_refs(up, arms, log)
-    _check_pst(up, arms, pmu, dft_text, log)
+    gated: dict[str, list[str]] = {}
+
+    def run_domains(lg: list[str]) -> None:
+        _check_required_domains(up)
+        gated.update(_check_domains(up, arms, lg))
+        _check_available_supplies(up, gated)
+
+    _group(up, log, "supply", lambda lg: _check_supply(up, lg))
+    _group(up, log, "domains", run_domains)
+    _group(up, log, "isolation", lambda lg: _check_isolation(up, arms, gated, lg))
+    _group(up, log, "switches and nets", lambda lg: _check_switch_and_net_refs(up, arms, lg))
+    _group(up, log, "power states", lambda lg: _check_pst(up, arms, pmu, dft_text, lg))
     return f
+
+
+def _group(up: Upf, log: list[str], name: str, run: Callable[[list[str]], None]) -> None:
+    """Run one group of checks and mark its summary lines ``ok`` or ``FAIL`` by the group's own findings."""
+    before, start = len(up.findings), len(log)
+    run(log)
+    failed = len(up.findings) > before
+    for i in range(start, len(log)):
+        log[i] = f"{'FAIL ' if failed else 'ok  '}{log[i]}"
+    if failed and len(log) == start:
+        log.append(f"FAIL {name}: see the findings")
+
+
+def _check_required_domains(up: Upf) -> None:
+    for name, elems in REQUIRED_DOMAINS.items():
+        d = up.domains.get(name)
+        if d is None:
+            up.err("U03", 0, f"required power domain {name} is missing")
+        elif sorted(d["elements"]) != sorted(elems):
+            up.err(
+                "U03",
+                d["line"],
+                f"{name} -elements {d['elements']} != the design's {elems}",
+            )
+    for name, d in up.domains.items():
+        if name not in REQUIRED_DOMAINS:
+            up.err(
+                "U03",
+                d["line"],
+                f"{name} is not a power domain of the design (required: {', '.join(REQUIRED_DOMAINS)})",
+            )
+
+
+def _check_available_supplies(up: Upf, gated: dict[str, list[str]]) -> None:
+    """A gated domain keeps the always-on supply set available: its isolation cells run from it."""
+    aon = up.domains.get(up.aon_domain or "", {}).get("supply", {}).get("primary")
+    if not aon:
+        return
+    for dname in gated:
+        if aon not in up.domains[dname]["available"]:
+            up.err(
+                "U04",
+                up.domains[dname]["line"],
+                f"domain {dname}: -available_supplies must include the always-on supply set {aon}",
+            )
+
+
+def _check_ground(up: Upf) -> None:
+    """Every supply set shares the ground net of the always-on set, and that net is a 0.0 V port."""
+    aon_dom = next((n for n, d in up.domains.items() if "." in d["elements"]), None)
+    aon_set = _domain_set(up, aon_dom or "")
+    ref = up.sets.get(aon_set or "", {}).get("ground")
+    if ref is None:
+        return
+    if not any(
+        v == "0.0" for pt in up.connected.get(ref, []) for v in up.port_states.get(pt, {}).values()
+    ):
+        up.err("U04", up.set_line[aon_set or ""], f"ground net {ref} has no 0.0 V port state")
+    for name, fns in up.sets.items():
+        if fns.get("ground") != ref:
+            up.err(
+                "U04",
+                up.set_line[name],
+                f"supply set {name}: ground net {fns.get('ground')} != the always-on ground net {ref}",
+            )
 
 
 def _check_supply(up: Upf, log: list[str]) -> None:
@@ -645,6 +745,13 @@ def _check_supply(up: Upf, log: list[str]) -> None:
     for port, ln in up.ports.items():
         if not any(port in ports for ports in up.connected.values()):
             up.err("U04", ln, f"supply port {port} is not connected to any supply net")
+        elif up.port_dir.get(port) != "in":
+            up.err(
+                "U04",
+                ln,
+                f"supply port {port} has direction {up.port_dir.get(port)}; a rail source of this design must be 'in'",
+            )
+    _check_ground(up)
     for name, fns in up.sets.items():
         for fn, net in fns.items():
             if net not in up.nets:
@@ -939,6 +1046,13 @@ def _check_pst(
         want = set(modes)
         for miss in sorted(want - names):
             up.err("U07", 0, f"group {gname}: PMU mode {miss} (pmu.sv) has no power state")
+        for req in EXTRA_STATES:
+            if req not in names:
+                up.err(
+                    "U07",
+                    0,
+                    f"group {gname}: has no {req} power state (the scan override is required)",
+                )
         for extra in sorted(names - want - set(EXTRA_STATES)):
             up.err(
                 "U07",
@@ -1047,11 +1161,18 @@ def _elaborate(arm: str) -> Any:
     args = f"slang --ignore-unknown-modules --top {TOP} -f {FILELIST} " + " ".join(
         f"-D{x}" for x in ARMS[arm]
     )
-    if not (
-        d.parseCommandLine(args, CommandLineOptions())
-        and d.processOptions()
-        and d.parseAllSources()
-    ):
+    # The file list holds paths relative to the repository root, so parse from there.
+    previous = Path.cwd()
+    os.chdir(REPO_ROOT)
+    try:
+        loaded = (
+            d.parseCommandLine(args, CommandLineOptions())
+            and d.processOptions()
+            and d.parseAllSources()
+        )
+    finally:
+        os.chdir(previous)
+    if not loaded:
         raise RuntimeError(f"slang could not load {FILELIST} for arm {arm}")
     comp = d.createCompilation()
     tops = [i for i in comp.getRoot().topInstances if i.name == TOP]
@@ -1238,7 +1359,7 @@ def run_check(upf: Path, facts_path: Path, pmu_path: Path, dft_path: Path, verbo
     findings = check(up, facts, pmu, dft_text, log)
     if verbose or not findings:
         for ln in log:
-            print(f"  ok  {ln}")
+            print(f"  {ln}")
     if findings:
         print(
             f"check_upf: FAIL - {len(findings)} finding(s) in {upf.relative_to(REPO_ROOT) if upf.is_relative_to(REPO_ROOT) else upf}"

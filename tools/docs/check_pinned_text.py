@@ -626,7 +626,9 @@ def check_upf(ctx: Ctx) -> None:
     directive = re.compile(pats["_DIRECTIVE"])
     upf = ctx.read(UPF, rel)
     mention = [
-        ln for ln, raw in enumerate(upf.split("\n"), 1) if re.match(r"^\s*#\s*upf-check\b", raw)
+        ln
+        for ln, raw in enumerate(upf.split("\n"), 1)
+        if re.match(r"^\s*#\s*upf-", raw, re.IGNORECASE)  # same rule as _DIRECTIVE_ATTEMPT
     ]
     good = [ln for ln in mention if directive.match(upf.split("\n")[ln - 1])]
     if not good:

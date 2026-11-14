@@ -41,6 +41,23 @@ def mutate(old: str, new: str, count: int = 1) -> str:
     return str(UPF_TEXT.replace(old, new, count))
 
 
+def mutate_cmd(old: str, new: str) -> str:
+    """Replace the first occurrence of ``old`` that sits on a command line, never one in a comment.
+
+    Some option text (for example ``-location parent``) also appears in comments, so a plain
+    first-match replacement could change the comment and leave the command untouched.
+    """
+    pos = UPF_TEXT.find(old)
+    while pos >= 0:
+        line_start = UPF_TEXT.rfind("\n", 0, pos) + 1
+        if not UPF_TEXT[line_start:pos].lstrip().startswith("#"):
+            bad = str(UPF_TEXT[:pos] + new + UPF_TEXT[pos + len(old) :])
+            assert bad != UPF_TEXT
+            return bad
+        pos = UPF_TEXT.find(old, pos + 1)
+    raise AssertionError(f"mutation anchor is in no command line: {old!r}")
+
+
 def expect(findings: list[str], fid: str, needle: str) -> None:
     assert any(f.startswith(fid) and needle in f for f in findings), (fid, needle, findings)
 
@@ -284,6 +301,136 @@ def test_unbalanced_brace_is_a_finding() -> None:
     assert up.findings and up.findings[0].fid == "U01"
 
 
+# ------------------------------------------- negative controls: required structure of the UPF
+
+
+def test_missing_required_domain_fails() -> None:
+    bad = mutate(
+        "create_power_domain PD_SRAM \\\n    -elements {u_sram} \\\n    -supply {primary SS_AON}\n",
+        "",
+    )
+    expect(run(bad), "U03", "required power domain PD_SRAM")
+
+
+def test_renamed_domain_fails() -> None:
+    findings = run(mutate_cmd("create_power_domain PD_PERIPH", "create_power_domain PD_TOP"))
+    expect(findings, "U03", "required power domain PD_PERIPH")
+    expect(findings, "U03", "PD_TOP is not a power domain of the design")
+
+
+def test_domain_with_wrong_elements_fails() -> None:
+    bad = mutate(
+        "-elements {u_sram} \\\n    -supply {primary SS_AON}",
+        "-elements {u_dma} \\\n    -supply {primary SS_AON}",
+    )
+    expect(run(bad), "U03", "PD_SRAM -elements")
+
+
+def test_gated_domain_must_list_the_always_on_supply() -> None:
+    bad = mutate(
+        "    -supply {primary SS_CPU} \\\n    -available_supplies {SS_AON}\n",
+        "    -supply {primary SS_CPU}\n",
+    )
+    expect(
+        run(bad), "U04", "PD_CPU: -available_supplies must include the always-on supply set SS_AON"
+    )
+
+
+def test_available_supply_set_must_exist() -> None:
+    bad = mutate_cmd("-available_supplies {SS_AON}", "-available_supplies {SS_AON SS_NOPE}")
+    expect(run(bad), "U04", "SS_NOPE")
+
+
+def test_wrong_ground_net_fails() -> None:
+    bad = mutate(
+        "    -function {power  VDD_CPU} \\\n    -function {ground VSS}",
+        "    -function {power  VDD_CPU} \\\n    -function {ground VDD}",
+    )
+    expect(run(bad), "U04", "supply set SS_CPU: ground net VDD")
+
+
+def test_ground_net_needs_a_zero_volt_port_state() -> None:
+    bad = mutate(
+        "add_port_state VSS     -state {GND 0.0}", "add_port_state VSS     -state {GND 0.7}"
+    )
+    expect(run(bad), "U04", "ground net VSS has no 0.0 V port state")
+
+
+def test_scan_state_is_required() -> None:
+    bad = mutate(
+        " \\\n    -state {SCAN -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  "
+        "&& scan_mode_i == 1'b1}}",
+        "",
+    )
+    expect(run(bad), "U07", "has no SCAN power state")
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "# upf-chek aon u_pmu ",
+        "# upf-check aonn u_pmu ",
+        "# upf-check bogus u_pmu ",
+        "# upf-note u_pmu ",
+        "# UPF-check aon u_pmu ",
+    ],
+)
+def test_directive_attempt_with_a_wrong_form_fails(line: str) -> None:
+    expect(
+        run(mutate("# upf-check aon u_pmu ", line)), "U03", "not a valid '# upf-check' directive"
+    )
+
+
+def test_free_comment_text_is_not_a_directive() -> None:
+    assert run(UPF_TEXT + "# The upf-check lines are read by the checker.\n") == []
+
+
+def test_supply_port_direction_is_checked() -> None:
+    bad = mutate_cmd(
+        "create_supply_port VDD_CPU -direction in", "create_supply_port VDD_CPU -direction out"
+    )
+    expect(run(bad), "U04", "supply port VDD_CPU has direction out")
+
+
+# ----------------------------------------------------------------------------- the CLI output
+
+
+def _cli(args: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, list[str]]:
+    code = chk.main(args)
+    return code, capsys.readouterr().out.splitlines()
+
+
+def test_summary_line_says_fail_for_a_group_with_findings(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bad = tmp_path / "bad.upf"
+    bad.write_text(mutate("-clamp_value 0", "-clamp_value 1", 1), encoding="utf-8")
+    code, out = _cli(["--upf", str(bad), "-v"], capsys)
+    assert code == 1
+    assert any(ln.strip().startswith("FAIL isolation[asap7]") for ln in out), out
+    assert not any(ln.strip().startswith("ok") and "isolation[" in ln for ln in out), out
+    assert any(ln.strip().startswith("ok") and "supply:" in ln for ln in out), out
+
+
+def test_summary_lines_say_ok_on_the_clean_file(capsys: pytest.CaptureFixture[str]) -> None:
+    code, out = _cli(["-v"], capsys)
+    assert code == 0
+    summaries = out[:-1]
+    assert summaries
+    assert all(ln.strip().startswith("ok") for ln in summaries), out
+
+
+def test_docstring_describes_the_code() -> None:
+    doc = chk.__doc__ or ""
+    assert "Doc: tm:pd:phase5-soc-upf" in doc
+    assert "UPF_POWER_SPEC" not in doc
+    u01 = doc.split("  U01", 1)[1].split("  U02", 1)[0]
+    u06 = doc.split("  U06", 1)[1].split("  U07", 1)[0]
+    assert "retention" in u01
+    assert "retention" not in u06
+    assert "-v` lists" not in doc and "-v lists the finding" not in doc
+
+
 # --------------------------------------------------------------------------------- drift (pyslang)
 
 
@@ -291,3 +438,11 @@ def test_facts_file_matches_fresh_elaboration() -> None:
     pytest.importorskip("pyslang")
     up = chk.parse_upf(UPF_TEXT)
     assert chk.dump_facts(chk.build_facts(up)) == chk.DEFAULT_FACTS.read_text(encoding="utf-8")
+
+
+def test_gen_facts_check_works_from_any_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pytest.importorskip("pyslang")
+    monkeypatch.chdir(tmp_path)
+    assert chk.run_gen(chk.DEFAULT_UPF, chk.DEFAULT_FACTS, True) == 0
