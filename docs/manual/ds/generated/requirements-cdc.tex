@@ -41,8 +41,8 @@ ID & Requirement & Verified by\\
 \reqref{DS-CDC-069} & Minimum number of synchroniser ranks & \textbf{review}\\
 \reqref{DS-CDC-100} & Four-phase handshake & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_rz_four_phase_structural_proof}\\
 \reqref{DS-CDC-101} & Only levels and status cross through synchronisers & \textbf{review} \newline \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream}\\
-\reqref{DS-CDC-102} & Request while the destination is in reset & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_never_forwarded} \newline \textbf{review}\\
-\reqref{DS-CDC-103} & Destination reset during a transfer & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side} \newline \textbf{review}\\
+\reqref{DS-CDC-102} & Request while the destination is in reset & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_never_forwarded} \newline \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_b4_ds102_latency_bound}\\
+\reqref{DS-CDC-103} & Destination reset during a transfer & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side} \newline \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_b4_ds103_latency_bound}\\
 \reqref{DS-CDC-104} & Answer wins over reset status & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_ack_race_wins}\\
 \reqref{DS-CDC-105} & Source reset during a transfer & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_s_side} \newline \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_asym_s_held_m_free}\\
 \reqref{DS-CDC-106} & One transfer on the destination face & \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_write} \newline \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_read} \newline \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream} \newline \textbf{test} \code{tb/cocotb/soc/test_apb_cdc_bridge.py::test_pready_wait_states}\\

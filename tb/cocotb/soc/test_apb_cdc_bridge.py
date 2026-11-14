@@ -2131,17 +2131,17 @@ async def _measure_ds103(dut, s_ns, m_ns) -> list:
 @cocotb.test()
 async def test_b4_ds103_latency_bound(dut):
     """Measures DS-CDC-103: after m_rst_n_i falls, a forwarded request completes with an error
-    within SYNC_STAGES_TO_S+3 rising edges of s_clk. The log also gives the margin to the count
-    that the TM derives, SYNC_STAGES_TO_S+2, so the owner can tighten or keep the DS bound.
+    within SYNC_STAGES_TO_S+2 rising edges of s_clk. The log gives the measured maximum of each
+    ratio.
     Ratios 4/9, 18/4, 10/10 and 7/11, with the reset at three offsets inside one s period."""
     stages = int(dut.sync_stages_to_s_o.value)
     for s_ns, m_ns in _B4_RATIOS:
         counts = await with_timeout(_measure_ds103(dut, s_ns, m_ns), 400, "us")
         dut._log.info(
             f"B4 DS-CDC-103 s/m={s_ns}/{m_ns}: edges after the reset falls {counts}, "
-            f"max {max(counts)}, DS bound {stages + 3}, TM-derived count {stages + 2}"
+            f"max {max(counts)}, DS bound {stages + 2}"
         )
         assert min(counts) >= 1, f"s/m={s_ns}/{m_ns}: completion before any s_clk edge"
-        assert max(counts) <= stages + 3, (
-            f"s/m={s_ns}/{m_ns}: completion took {max(counts)} edges, DS bound is {stages + 3}"
+        assert max(counts) <= stages + 2, (
+            f"s/m={s_ns}/{m_ns}: completion took {max(counts)} edges, DS bound is {stages + 2}"
         )
