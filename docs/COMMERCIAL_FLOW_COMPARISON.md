@@ -1000,8 +1000,8 @@ Beads are not available on this host, so the follow-ups are tracked here.
    ss I/O setup endpoints of Innovus and OpenROAD that survive. **Step 4b (section 4.2f) measured one of the three options that was listed here
    (relax the input delays), in SoC context**: -max input delays rebuilt from the SoC-side driver cells (DC-mapped CDC faces, zero wire, K = 2.0, an assumed margin, lower bound, no SoC SPEF on this host).
    Result: ICC2 b9 unchanged (0 violators), Innovus b11 96 -> 88 setup violators (all ss; worst path `apb_psel_i` to `apb_prdata_o_reg`), OpenROAD B2 I/O 2,290 -> 1,956; hold identical. The residual
-   is **not closed**: the decision on the surviving Innovus (88) and OpenROAD (1,956 I/O) ss endpoints stays open, and so does the question
-   of multicycle exceptions for the quasi-static APB inputs (none was added). The AXI ss input delay of 2.0 ns is below the lower-bound arrival (4.2 to 5.7 ns), so that constraint may be optimistic;
+   is **not closed**. **User decision 2026-11-14: the surviving Innovus (88) and OpenROAD (1,956 I/O) ss setup endpoints are recorded as real, measured
+   violations** (not waived, no multicycle or false-path exception added, no further budget tuning such as K = 1 for `apb_psel_i`). The AXI ss input delay of 2.0 ns is below the lower-bound arrival (4.2 to 5.7 ns), so that constraint may be optimistic;
    a routed SoC run would settle it (replace `iobud_soc.tsv`, section 4.2f).
 4. **ICC2 ff reg-to-reg hold: closed in b7 (2026-11-09).** b6 ss hold was closed as an artefact earlier; what remained was ICC2's ff reg-to-reg hold (2 violators at nom_ff, 8 at
    max_ff, -0.004 / -0.027 ns). 21 `buf_1` in front of the capture D pins (endpoints with judge hold slack below +12 ps at nom/min/max ff, `impl/icc2/eco_b7/hold_endpoints.txt`) bring
