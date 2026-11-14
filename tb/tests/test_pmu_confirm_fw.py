@@ -17,7 +17,7 @@ for _p in (_ROOT / "tb" / "cocotb" / "soc" / "pmu_cycle_fw", _ROOT):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import gen_pmu_confirm_fw as cfw  # noqa: E402  # pylint: disable=import-error
+import gen_pmu_confirm_fw as cfw  # type: ignore[import-not-found]  # noqa: E402  # pylint: disable=import-error
 
 from tb.models.rv32i_model import RV32IModel  # noqa: E402
 
