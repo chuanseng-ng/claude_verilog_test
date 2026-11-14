@@ -498,3 +498,169 @@ async def test_gpu_isolation_clamps_follow_pmu_iso_en(dut):
         "m_axil_if_rready was never seen clamped (raw=1, out=0, iso=1): the clamp never acted")
     assert released_high["gif_axil_rready"] > 0, (
         "the clamp never released again (out stayed 0 with iso=0)")
+
+
+# =============================================================================
+# Directed confirmation of one reviewed behaviour (P4, SoC level).
+# Doc: ds:mod:pmu
+#
+# A review read from the RTL that a PMU reset while the CPU domain is in DOM_OFF sets the clock
+# enable, the clamp and the reset of the domain to their DOM_ON values at one edge. The three
+# controls then cross synchronisers of the same depth into the CPU domain and are released at the
+# same edge of cpu_clk_i, so the power-up order of DS-PMU-022 does not apply there. No simulation
+# had shown this. The RTL is not changed. The test that asserts the specified order (the clamp is
+# released after the domain reset and after the clock enable, DS-PMU-100) is marked expect_fail: it
+# must fail while the behaviour exists. If it passes, the review was wrong or the RTL changed. Then
+# replace it by a normal test that proves the rule. A harness fault raises RuntimeError, not
+# AssertionError, so expect_fail cannot hide it. A normal test runs the same monitor over a
+# power-up that the PMU sequences. The order is only asserted strictly at 1:1 and with the CPU
+# faster, where each release falls on its own edge by the spacing of the PMU outputs. At slower CPU
+# clocks the spacing is below one CPU clock, so two releases can share an edge by design. There the
+# order is logged and only the weaker rule (no earlier clamp release) is asserted.
+# =============================================================================
+
+P4_RATIOS = (FABRIC_NS, 3, 3 * FABRIC_NS, 8 * FABRIC_NS)
+P4_STRICT_RATIOS = (FABRIC_NS, 3)
+_P4_CACHE: dict = {}
+
+
+class _ReleaseMonitor:
+    """Passive monitor of the three releases in the CPU domain. It never drives a signal.
+
+    It samples after every rising edge of cpu_clk_i, the clock of the three synchronisers, and
+    numbers the edges. Once armed it records the number of the first edge at which each release is
+    seen: the clamp control falls (iso), the PMU reset rises (rst), the clock gate enable rises (en)
+    and cpu_gated_clk pulses (clk). For the first gated edge it keeps the clamp and reset values
+    from before the edge.
+    """
+
+    def __init__(self, dut) -> None:
+        self.dut = dut
+        self.n = 0
+        self.armed = False
+        self.ev: dict = {}
+        self.before: tuple = ()
+        self._prev = None
+        self._task = None
+
+    def start(self) -> None:
+        self._task = cocotb.start_soon(self._run())
+        _active_tasks.append(self._task)
+
+    def stop(self) -> None:
+        if self._task is not None:
+            self._task.kill()
+            self._task = None
+
+    async def _run(self) -> None:
+        soc = _soc(self.dut)
+        while True:
+            await RisingEdge(self.dut.cpu_clk_i)
+            await ReadOnly()
+            self.n += 1
+            cur = (int(soc.pmu_cpu_iso_en_sync.value), int(soc.pmu_cpu_rst_n_cpu_sync.value),
+                   int(soc.cpu_gated_clk_en.value))
+            prev = self._prev
+            if self.armed and prev is not None:
+                if prev[0] == 1 and cur[0] == 0:
+                    self.ev.setdefault("iso", self.n)
+                if prev[1] == 0 and cur[1] == 1:
+                    self.ev.setdefault("rst", self.n)
+                if prev[2] == 0 and cur[2] == 1:
+                    self.ev.setdefault("en", self.n)
+                if int(soc.cpu_gated_clk.value) and "clk" not in self.ev:
+                    self.ev["clk"] = self.n
+                    self.before = prev
+            self._prev = cur
+
+
+def _p4_strict(ev: dict) -> bool:
+    return ev["rst"] < ev["iso"] and ev["en"] < ev["iso"]
+
+
+async def _p4_experiment(dut, cpu_ns: int, how: str) -> dict:
+    """CPU domain to OFF, then a PMU-sequenced power-up (how = "sequenced") or a reset of rst_n_i
+    alone (how = "reset"). Returns the release events of _ReleaseMonitor."""
+    await _setup(dut, cpu_ns)
+    soc = _soc(dut)
+    if _dom_state(dut) != DOM_ON:
+        raise RuntimeError("harness: the CPU PMU domain did not start at DOM_ON")
+    await _set_mode(dut, MODE_CPU_OFF)
+    await _wait_state(dut, {DOM_OFF}, 4000, "power-down")
+    await ClockCycles(dut.clk_i, 40)
+    await ClockCycles(dut.cpu_clk_i, 8)
+    settled = (int(soc.pmu_cpu_iso_en_sync.value), int(soc.pmu_cpu_rst_n_cpu_sync.value),
+               int(soc.cpu_gated_clk_en.value))
+    if settled != (1, 0, 0):
+        raise RuntimeError(
+            f"harness: the CPU domain is not settled in OFF (iso, rst, en): {settled}")
+    mon = _ReleaseMonitor(dut)
+    mon.start()
+    await ClockCycles(dut.cpu_clk_i, 3)
+    mon.armed = True
+    if how == "reset":
+        await RisingEdge(dut.clk_i)
+        dut.rst_n_i.value = 0
+        await ClockCycles(dut.clk_i, 6)
+        dut.rst_n_i.value = 1
+        await ClockCycles(dut.clk_i, 60)
+    else:
+        await _set_mode(dut, MODE_NORMAL)
+        await _wait_state(dut, {DOM_ON}, 4000, "power-up")
+        await ClockCycles(dut.clk_i, 40)
+    await ClockCycles(dut.cpu_clk_i, 8)
+    mon.stop()
+    missing = {"iso", "rst", "en", "clk"} - set(mon.ev)
+    if missing:
+        raise RuntimeError(f"harness: {how} cpu={cpu_ns}ns: release(s) not seen: {sorted(missing)}")
+    return {**mon.ev, "before_iso": mon.before[0], "before_rst": mon.before[1]}
+
+
+def _fmt_p4(cpu_ns: int, how: str, ev: dict) -> str:
+    return (
+        f"cpu={cpu_ns}ns {how}: edge of the clamp release {ev['iso']}, reset release {ev['rst']}, "
+        f"clock enable {ev['en']}, first gated edge {ev['clk']} "
+        f"(clamp before it {ev['before_iso']}, reset before it {ev['before_rst']}); "
+        f"strict order {_p4_strict(ev)}")
+
+
+async def _p4_sweep(dut) -> dict:
+    """Both power-ups at every ratio. Cached for the whole file."""
+    if "rows" not in _P4_CACHE:
+        rows = {}
+        for cpu_ns in P4_RATIOS:
+            for how in ("sequenced", "reset"):
+                rows[(cpu_ns, how)] = await _p4_experiment(dut, cpu_ns, how)
+                dut._log.info("P4 " + _fmt_p4(cpu_ns, how, rows[(cpu_ns, how)]))
+        _P4_CACHE["rows"] = rows
+    return _P4_CACHE["rows"]
+
+
+@cocotb.test(expect_fail=True)
+async def test_p4_pmu_reset_from_off_releases_cpu_clamp_last(dut):
+    """Asserts: after a PMU reset while the CPU domain is in OFF, the clamp control in the CPU
+    domain is released after the domain reset and after the clock gate enable (DS-PMU-022,
+    DS-PMU-100). Checked at 1:1 and with the CPU clock faster. The order at the other ratios is in
+    the log.
+
+    expect_fail: the review reads that the reset branch of the PMU loads the three controls
+    together and that their synchronisers have the same depth, so the three releases fall on one
+    edge. If this test passes, the reading was wrong or the RTL changed."""
+    rows = await with_timeout(_p4_sweep(dut), 3000, "us")
+    bad = [_fmt_p4(c, "reset", rows[(c, "reset")]) for c in P4_STRICT_RATIOS
+           if not _p4_strict(rows[(c, "reset")])]
+    assert not bad, "the clamp was not released last: " + "; ".join(bad)
+
+
+@cocotb.test()
+async def test_p4_control_sequenced_power_up_releases_cpu_clamp_last(dut):
+    """Proves the monitor and the check of the P4 test can pass. After a PMU-sequenced power-up
+    from OFF the clamp is released after the domain reset and after the clock enable at 1:1 and with
+    the CPU faster. At every ratio the clamp is not released before either of them."""
+    rows = await with_timeout(_p4_sweep(dut), 3000, "us")
+    for cpu_ns in P4_RATIOS:
+        ev = rows[(cpu_ns, "sequenced")]
+        tag = _fmt_p4(cpu_ns, "sequenced", ev)
+        assert ev["iso"] >= ev["rst"] and ev["iso"] >= ev["en"], f"clamp released early: {tag}"
+        if cpu_ns in P4_STRICT_RATIOS:
+            assert _p4_strict(ev), f"sequenced power-up did not release the clamp last: {tag}"

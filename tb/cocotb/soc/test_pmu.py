@@ -833,3 +833,212 @@ async def test_pmu_domain_en_mirrors_sequencer(dut):
         ever_low |= ~word & 0x3FF
     assert ever_high == 0x3FF, f"DOMAIN_EN bits never seen high: {0x3FF & ~ever_high:#05x}"
     assert ever_low == 0x3FF, f"DOMAIN_EN bits never seen low: {0x3FF & ~ever_low:#05x}"
+
+
+# =============================================================================
+# Directed confirmation of two reviewed behaviours (P1 and P4, unit level).
+# Doc: ds:mod:pmu
+#
+# A review read these behaviours from the RTL and no simulation had shown them:
+#   P1  After a power-up whose acknowledge wait timed out, the acknowledge input can still be
+#       high. The next power-down then leaves DOM_PD_ISO at once and STATUS[3] stays low
+#       (DS-PMU-067, DS-PMU-060).
+#   P4  A PMU reset in DOM_OFF sets the clock enable, the clamp and the reset of the domain to
+#       their DOM_ON values at one edge, so the power-up order of DS-PMU-022 does not apply.
+# The RTL is not changed. Each test that asserts the specified behaviour is marked expect_fail:
+# it must fail while the behaviour exists. If one of them passes, the review was wrong or the RTL
+# changed. Then replace it by a normal test that proves the rule. A harness fault raises
+# RuntimeError, not AssertionError, so expect_fail cannot hide it. Each expect_fail test has a
+# normal companion test that proves the checker and the stimulus.
+# =============================================================================
+
+# ack_lat_i for the power-up wait of the stale case: longer than ISO_ACK_TIMEOUT, so the wait times
+# out while the acknowledge is still high.
+P1_SLOW_RELEASE_LATENCY = 60
+P1_HEALTHY_LATENCY = 3
+
+
+async def _harness_wait_state(dut, target: int, limit: int = 200) -> None:
+    """_wait_state with a harness fault as RuntimeError, which expect_fail cannot hide."""
+    try:
+        await _wait_state(dut, target, limit=limit)
+    except AssertionError as exc:
+        raise RuntimeError(f"harness: {exc}") from None
+
+
+async def _harness_status(bfm) -> int:
+    try:
+        return await _status(bfm)
+    except AssertionError as exc:
+        raise RuntimeError(f"harness: {exc}") from None
+
+
+async def _p1_experiment(dut, up_lat: int) -> dict:
+    """Healthy power-down, power-up with ack latency up_lat, power-down at once.
+
+    Returns what the harness and the checker need. A step that does not happen raises
+    RuntimeError."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    await _down(dut, bfm, P1_HEALTHY_LATENCY)
+    await _harness_wait_state(dut, DOM_OFF)
+    dut.ack_lat_i.value = up_lat
+    if not await bfm.write(CTRL_OFFSET, MODE_NORMAL):
+        raise RuntimeError("harness: the power-up CTRL write returned an error")
+    await _harness_wait_state(dut, DOM_ON)
+    status_up = await _harness_status(bfm)
+    ack_at_on = int(dut.cpu_iso_ack_o.value)
+    if not await bfm.write(CTRL_OFFSET, MODE_CPU_OFF):
+        raise RuntimeError("harness: the power-down CTRL write returned an error")
+    tr = await _trace(dut, 30 + 2 * max(up_lat, P1_HEALTHY_LATENCY))
+    states = [t[0] for t in tr]
+    if DOM_PD_ISO not in states or DOM_PD_GATE not in states:
+        raise RuntimeError(f"harness: the power-down did not walk through PD_ISO: {_rle(states)}")
+    i_pd = states.index(DOM_PD_ISO)
+    i_gate = states.index(DOM_PD_GATE)
+    window = tr[i_pd:i_gate]
+    await _harness_wait_state(dut, DOM_OFF)
+    status_down = await _harness_status(bfm)
+    return {
+        "up_lat": up_lat,
+        "status_up": status_up,
+        "ack_at_on": ack_at_on,
+        "pd_cycles": i_gate - i_pd,
+        "acks": [t[1] for t in window],
+        "status_down": status_down,
+    }
+
+
+def _p1_verdict(row: dict) -> tuple:
+    """(waited_for_fresh_ack, reported_fault) of one power-down.
+
+    A fresh acknowledge is one that the PMU saw low after the isolation request began and high
+    afterwards, so the isolation step cannot end on the acknowledge of an earlier request."""
+    fresh = any(a == 0 for a in row["acks"])
+    fault = bool((row["status_down"] >> STATUS_TO_BIT) & 1)
+    return fresh, fault
+
+
+@cocotb.test(expect_fail=True)
+async def test_p1_power_down_after_timed_out_power_up_needs_fresh_ack(dut):
+    """Asserts: a power-down that follows a power-up with a timed-out acknowledge wait waits for a
+    fresh acknowledge of its own isolation request, or reports the fault in STATUS[3]
+    (DS-PMU-067, DS-PMU-060). Stimulus: the power-up wait lasts ISO_ACK_TIMEOUT cycles while the
+    acknowledge stays high, then CPU_OFF is written with no gap.
+
+    expect_fail: the review reads that the acknowledge is still high on entry to DOM_PD_ISO, the
+    state ends after one cycle, and STATUS[3] is cleared at the start of the power-down and not set
+    again. If this test passes, the reading was wrong or the RTL changed."""
+    row = await _p1_experiment(dut, P1_SLOW_RELEASE_LATENCY)
+    fresh, fault = _p1_verdict(row)
+    dut._log.info(
+        f"P1 stale ack: STATUS after power-up {row['status_up']:#x}, ack at ON {row['ack_at_on']}, "
+        f"DOM_PD_ISO lasted {row['pd_cycles']} cycle(s), ack per cycle {row['acks']}, "
+        f"STATUS after power-down {row['status_down']:#x}"
+    )
+    assert fresh or fault, (
+        f"the power-down left DOM_PD_ISO after {row['pd_cycles']} cycle(s) on ack {row['acks']} "
+        f"with no fresh acknowledge, and STATUS after it is {row['status_down']:#x} "
+        f"(bit {STATUS_TO_BIT} low): the handshake was skipped and not reported"
+    )
+
+
+@cocotb.test()
+async def test_p1_control_timed_out_power_up_leaves_ack_high(dut):
+    """Proves the stimulus of the P1 test reaches the window. The power-up wait timed out, so
+    STATUS[3] is set at ON, the acknowledge is still high at ON, and it is still high on entry to
+    DOM_PD_ISO of the next power-down. This test asserts the precondition only, not the rule."""
+    row = await _p1_experiment(dut, P1_SLOW_RELEASE_LATENCY)
+    assert (row["status_up"] >> STATUS_TO_BIT) & 1, (
+        f"the power-up wait did not time out: STATUS {row['status_up']:#x}")
+    assert row["ack_at_on"] == 1, "the acknowledge was already low at ON: the case is not stale"
+    assert row["acks"] and row["acks"][0] == 1, (
+        f"the acknowledge was low on entry to DOM_PD_ISO: {row['acks']}")
+    dut._log.info("P1 control: timed-out power-up leaves the acknowledge high at the next request")
+
+
+@cocotb.test()
+async def test_p1_control_normal_power_cycle_full_handshake(dut):
+    """Proves the verdict of the P1 test can pass. After a normal power-up the power-down waits
+    for ack_lat+1 cycles in DOM_PD_ISO, sees the acknowledge low and then high, and the flag
+    stays low."""
+    row = await _p1_experiment(dut, P1_HEALTHY_LATENCY)
+    fresh, fault = _p1_verdict(row)
+    assert row["pd_cycles"] == P1_HEALTHY_LATENCY + 1, (
+        f"DOM_PD_ISO lasted {row['pd_cycles']} cycles, expected {P1_HEALTHY_LATENCY + 1}")
+    assert row["acks"] == [0] * P1_HEALTHY_LATENCY + [1], f"ack per cycle {row['acks']}"
+    assert fresh and not fault, f"fresh={fresh} fault={fault}"
+    assert not (row["status_up"] >> STATUS_TO_BIT) & 1, "a healthy power-up must not flag"
+
+
+# --- P4 (unit). PMU reset from DOM_OFF ---------------------------------------------------------
+
+def _release_events(cpu_tuples: list) -> dict:
+    """Index of the first sample of each release, from samples that start in OFF."""
+    if cpu_tuples[0] != OFF:
+        raise RuntimeError(f"harness: the CPU outputs do not start in OFF: {cpu_tuples[0]}")
+    ev: dict = {}
+    for i, (clk_en, iso_en, rst_n, _save, _restore) in enumerate(cpu_tuples):
+        if rst_n == 1:
+            ev.setdefault("rst", i)
+        if clk_en == 1:
+            ev.setdefault("clk", i)
+        if iso_en == 0:
+            ev.setdefault("iso", i)
+    if set(ev) != {"rst", "clk", "iso"}:
+        raise RuntimeError(f"harness: not every release was seen: {ev}")
+    return ev
+
+
+async def _p4_unit_events(dut, how: str) -> dict:
+    """Release events of the CPU outputs after a PMU reset in OFF, or after a normal power-up."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    await _down(dut, bfm, 0)
+    await _harness_wait_state(dut, DOM_OFF)
+    await ClockCycles(dut.clk, 3)
+    if how == "reset":
+        samples = [_sample_cpu(dut)]
+        dut.rst_n.value = 0
+        for _ in range(3):
+            await RisingEdge(dut.clk)
+            samples.append(_sample_cpu(dut))
+        dut.rst_n.value = 1
+        for _ in range(8):
+            await RisingEdge(dut.clk)
+            samples.append(_sample_cpu(dut))
+    else:
+        samples = [_sample_cpu(dut)]
+        if not await bfm.write(CTRL_OFFSET, MODE_NORMAL):
+            raise RuntimeError("harness: the power-up CTRL write returned an error")
+        for _ in range(14):
+            await RisingEdge(dut.clk)
+            samples.append(_sample_cpu(dut))
+    ev = _release_events(samples)
+    dut._log.info(f"P4 unit ({how}): release sample index {ev}, outputs {samples[:8]}")
+    return ev
+
+
+@cocotb.test(expect_fail=True)
+async def test_p4_unit_pmu_reset_from_off_releases_in_power_up_order(dut):
+    """Asserts: after a PMU reset in DOM_OFF the domain reset is released before the clock enable,
+    and the clock enable before the clamp release (DS-PMU-022, DS-PMU-100: the clamp is released
+    last).
+
+    expect_fail: the review reads that the reset branch loads clk_en, iso_en and rst_n together, so
+    the three releases fall on one sample. If this test passes, the reading was wrong or the RTL
+    changed."""
+    ev = await _p4_unit_events(dut, "reset")
+    assert ev["rst"] < ev["clk"] < ev["iso"], (
+        f"release samples after the PMU reset: reset {ev['rst']}, clock enable {ev['clk']}, "
+        f"clamp {ev['iso']}: not in the order reset, clock, clamp")
+
+
+@cocotb.test()
+async def test_p4_unit_control_sequenced_power_up_order(dut):
+    """Proves the checker of the P4 unit test can pass. A normal sequenced power-up from OFF
+    releases the reset, then the clock enable, then the clamp, one sample apart or more."""
+    ev = await _p4_unit_events(dut, "sequenced")
+    assert ev["rst"] < ev["clk"] < ev["iso"], f"sequenced power-up release samples: {ev}"
