@@ -107,7 +107,7 @@ include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))../common/sim_portability.
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
 # Convenience targets for different test suites
-.PHONY: smoke basic random isa ebreak debug all_tests usage info distclean
+.PHONY: smoke basic random ebreak debug all_tests usage info distclean
 .PHONY: smoke_uvm random_uvm random_uvm_smoke random_uvm_waves isa_uvm all_uvm
 .PHONY: stress_uvm stress_uvm_smoke stress_alu stress_jump stress_shift stress_immediate
 .PHONY: directed_random_uvm directed_alu directed_immediate directed_rtype
@@ -124,10 +124,6 @@ basic:
 random:
 	@echo "Running random instruction tests (10,000 instructions)..."
 	$(MAKE) MODULE=test_random_instructions
-
-isa:
-	@echo "Running ISA compliance tests (37 RV32I instructions)..."
-	$(MAKE) MODULE=test_isa_compliance
 
 ebreak:
 	@echo "Running EBREAK halt test..."
@@ -337,7 +333,7 @@ all_tests:
 	@echo "========================================="
 	@failed=0; \
 	echo ""; \
-	echo "[1/3] Running smoke tests..."; \
+	echo "[1/2] Running smoke tests..."; \
 	if $(MAKE) smoke; then \
 		echo "✓ Smoke tests PASSED"; \
 	else \
@@ -345,15 +341,7 @@ all_tests:
 		failed=$$((failed + 1)); \
 	fi; \
 	echo ""; \
-	echo "[2/3] Running ISA compliance tests..."; \
-	if $(MAKE) isa; then \
-		echo "✓ ISA tests PASSED"; \
-	else \
-		echo "✗ ISA tests FAILED"; \
-		failed=$$((failed + 1)); \
-	fi; \
-	echo ""; \
-	echo "[3/3] Running random instruction tests..."; \
+	echo "[2/2] Running random instruction tests..."; \
 	if $(MAKE) random; then \
 		echo "✓ Random tests PASSED"; \
 	else \
@@ -418,7 +406,7 @@ usage info:
 	@echo "  make smoke        - Run legacy smoke tests"
 	@echo "  make basic        - Run legacy basic CPU tests"
 	@echo "  make random       - Run legacy random tests (10,000 instructions)"
-	@echo "  make isa          - Run legacy ISA compliance tests (37 instructions)"
+	@echo "  (the legacy isa target is removed: legacy/test_isa_compliance.py drives Phase 1 port names; use make isa_uvm)"
 	@echo "  make ebreak       - Run EBREAK halt test"
 	@echo "  make all_tests    - Run all legacy test suites"
 	@echo ""
@@ -470,7 +458,7 @@ usage info:
 	@echo ""
 	@echo "  Legacy cocotb tests (DEPRECATED - in legacy/ directory):"
 	@echo "    legacy/test_smoke                - Basic functionality tests (6 tests)"
-	@echo "    legacy/test_isa_compliance       - ISA compliance tests (37 instructions)"
+	@echo "    legacy/test_isa_compliance       - ISA compliance tests (not runnable: Phase 1 port names; use test_isa_uvm)"
 	@echo "    legacy/test_random_instructions  - Random instruction tests (10,000 instr)"
 	@echo ""
 	@echo "Prerequisites:"
