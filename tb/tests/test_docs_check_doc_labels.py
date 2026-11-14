@@ -264,3 +264,65 @@ def test_src_to_moved_document_is_allowed(tmp_path, capsys) -> None:  # type: ig
     rc, out = run(tree(good(tmp_path), files), capsys)
     assert rc == 1 and len(out) == 1
     assert "docs/other.md" in out[0]
+
+
+def test_req_and_arc_kinds_pass(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The kinds req and arc are part of the scheme."""
+    text = GOOD_DS + "\\label{ds:req:cdc-020}\n\\label{cr:arc:ds-cdc-sync}\n"
+    rc, out = run(tree(good(tmp_path), {"docs/manual/ds/ds.tex": text}), capsys)
+    assert rc == 0, out
+
+
+def test_requirement_defines_derived_label(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A requirement environment defines the label that its ID derives."""
+    text = (
+        GOOD_DS
+        + "\\begin{requirement}{DS-ABC-001}{Short title}[verify={review}]\nBody.\n"
+        + "\\end{requirement}\n\\reqref{DS-ABC-001} and \\ref{ds:req:abc-001}\n"
+    )
+    rc, out = run(tree(good(tmp_path), {"docs/manual/ds/ds.tex": text}), capsys)
+    assert rc == 0, out
+    labels = (tmp_path / "docs/manual/common/labels.tsv").read_text(encoding="utf-8")
+    assert "ds:req:abc-001\tdocs/manual/ds/ds.tex\t" in labels
+    assert "\tDS-ABC-001 Short title\n" in labels
+
+
+def test_reqref_without_definition_is_a_finding(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A reqref to an ID that no requirement defines is a finding."""
+    text = GOOD_DS + "\\reqref{DS-ABC-002}\n"
+    rc, out = run(tree(good(tmp_path), {"docs/manual/ds/ds.tex": text}), capsys)
+    assert rc == 1
+    assert any("undefined label 'ds:req:abc-002'" in ln for ln in out)
+
+
+def test_requirement_label_is_unique(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """Two requirements with one ID define one label twice."""
+    one = "\\begin{requirement}{DS-ABC-001}{T}[verify={review}]\nB.\n\\end{requirement}\n"
+    text = GOOD_DS + one + one
+    rc, out = run(tree(good(tmp_path), {"docs/manual/ds/ds.tex": text}), capsys)
+    assert rc == 1
+    assert any("duplicate label 'ds:req:abc-001'" in ln for ln in out)
+
+
+def test_requirement_start_accepts_spaces_between_arguments(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """LaTeX allows spaces between the arguments, so the label is defined all the same."""
+    one = "\\begin{requirement} {DS-ABC-001} {T} [verify={review}]\nB.\n\\end{requirement}\n"
+    text = GOOD_DS + one + "\\reqref{DS-ABC-001}\n"
+    rc, out = run(tree(good(tmp_path), {"docs/manual/ds/ds.tex": text}), capsys)
+    assert rc == 0, out
+
+
+def test_cref_on_a_requirement_is_a_finding(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The rule is reqref only. cref, Cref and autoref on a requirement label are findings."""
+    one = "\\begin{requirement}{DS-ABC-001}{T}[verify={review}]\nB.\n\\end{requirement}\n"
+    refs = "\\cref{ds:req:abc-001} \\Cref{ds:req:abc-001} \\autoref{ds:req:abc-001}\n"
+    rc, out = run(tree(good(tmp_path), {"docs/manual/ds/ds.tex": GOOD_DS + one + refs}), capsys)
+    assert rc == 1
+    assert sum("use reqref, not" in ln for ln in out) == 3
+
+
+def test_cref_on_a_requirement_table_is_allowed(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A table label of a requirement map is an ordinary label."""
+    text = GOOD_DS + "\\label{tab:ds:req:abc-map}\n\\cref{tab:ds:req:abc-map}\n"
+    rc, out = run(tree(good(tmp_path), {"docs/manual/ds/ds.tex": text}), capsys)
+    assert rc == 0, out

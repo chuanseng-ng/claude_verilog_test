@@ -5,6 +5,8 @@ Needs no TeX. It reads docs/manual/**/*.tex and checks these rules:
   - every label is <book>:<kind>:<slug> (book ds, tm, um, cr);
   - no label is defined twice;
   - every cross-reference points to a defined label;
+  - a requirement defines the label derived from its ID (DS-CDC-020 gives
+    ds:req:cdc-020) and a \\reqref points to such a label;
   - every source-file comment that cites labels (the word Doc, a colon and
     labels) names defined labels;
   - every row of common/path_map.tsv has a defined label and an existing file;
@@ -28,7 +30,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 BOOKS = ("ds", "tm", "um", "cr")
-KINDS = "part ch mod pd suite dec defect run fix status guide flow mm inv app".split()
+KINDS = "part ch mod pd suite dec defect run fix status guide flow mm inv app req arc".split()
 SLUG = r"[a-z0-9][a-z0-9-]*"
 LABEL_RE = re.compile(
     rf"^(?:(?:fig|tab|lst|eq):)?(?:{'|'.join(BOOKS)}):(?:{'|'.join(KINDS)}):{SLUG}(?::{SLUG})*$"
@@ -43,7 +45,14 @@ MAP_HEADER = "old_path\tnew_file\tlabel"
 LABELS_HEADER = "label\tfile\tline\ttitle"
 
 _LABEL = re.compile(r"\\label\{([^{}]*)\}")
-_REF = re.compile(r"\\(?:cref|Cref|ref|autoref|pageref|nameref|vref)\*?\{([^{}]*)\}")
+_REF = re.compile(r"\\(cref|Cref|ref|autoref|pageref|nameref|vref)\*?\{([^{}]*)\}")
+_REQ_LABEL = re.compile(r"^[a-z]+:req:")
+_REQ_CMDS = ("cref", "Cref", "autoref", "vref")
+_REQREF = re.compile(r"\\reqref\{([^{}]*)\}")
+# The start of a requirement as LaTeX reads it: spaces may separate the arguments.
+# The group is the ID. The match ends after the opening brace of the title.
+REQ_BEGIN = re.compile(r"\\begin\{requirement\}\s*\{([^{}]*)\}\s*\{")
+REQ_ID_RE = re.compile(r"^[A-Z]+-[A-Z0-9]+-\d{3}$")
 _SRC = re.compile(r"\\src\{([^{}]*)\}")
 _SECT = re.compile(r"\\(?:part|chapter|section|subsection|subsubsection)\*?(?:\[[^\]]*\])?\{")
 _VERB_ENV = re.compile(
@@ -93,6 +102,12 @@ def brace_arg(text: str, start: int) -> str:
             depth -= 1
         i += 1
     return text[start : i - 1] if depth == 0 else text[start:i]
+
+
+def req_label(req_id: str) -> str:
+    """Return the label derived from a requirement ID: DS-CDC-020 gives ds:req:cdc-020."""
+    book, _, slug = req_id.lower().partition("-")
+    return f"{book}:req:{slug}"
 
 
 def line_of(text: str, pos: int) -> int:
@@ -189,13 +204,37 @@ class Checker:
                         title = name
                     else:
                         break
+                if not title:
+                    # A file with no heading (a generated table): use the caption on the same line.
+                    start = text.rfind("\n", 0, m.start()) + 1
+                    cap = re.search(r"\\caption\{", text[start : m.start()])
+                    if cap:
+                        title = " ".join(brace_arg(text, start + cap.end()).split())
                 self.labels.setdefault(m.group(1), []).append(
                     (rel, line_of(text, m.start()), title)
                 )
+            for m in REQ_BEGIN.finditer(text):
+                rid = m.group(1).strip()
+                if not REQ_ID_RE.match(rid):
+                    continue  # check_requirements.py reports a bad ID
+                title = " ".join(brace_arg(text, m.end()).split())
+                self.labels.setdefault(req_label(rid), []).append(
+                    (rel, line_of(text, m.start()), f"{rid} {title}".strip())
+                )
             for m in _REF.finditer(text):
-                for name in m.group(1).split(","):
-                    if name.strip():
-                        self.refs.append((rel, line_of(text, m.start()), name.strip()))
+                for name in m.group(2).split(","):
+                    name = name.strip()
+                    if not name:
+                        continue
+                    line = line_of(text, m.start())
+                    self.refs.append((rel, line, name))
+                    if m.group(1) in _REQ_CMDS and _REQ_LABEL.match(name):
+                        self.err(
+                            rel, line, f"use reqref, not {m.group(1)}, for requirement '{name}'"
+                        )
+            for m in _REQREF.finditer(text):
+                name = m.group(1).strip()
+                self.refs.append((rel, line_of(text, m.start()), req_label(name)))
             for m in _SRC.finditer(text):
                 self.srcs.append((rel, line_of(text, m.start()), m.group(1).strip()))
 

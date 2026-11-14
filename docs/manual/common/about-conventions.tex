@@ -1,0 +1,56 @@
+% Shared conventions of the front matter of the four books. Input from parts/00-about.tex.
+% This file defines no label, because all four books input it.
+\section*{Conventions}
+
+\subsection*{Typographic conventions}
+\begin{center}
+  \begin{tabular}{@{}p{38mm}p{105mm}@{}}
+    \toprule
+    Convention & Use\\
+    \midrule
+    \code{Monospace} & A signal, a parameter, a module, a file, a path or a command.\\
+    \textbf{Bold} & The name of a box, a column heading, or the method of a verification reference.\\
+    \code{_i}, \code{_o} & A suffix of an input port and of an output port.\\
+    \code{_q}, \code{_d} & A suffix of a registered signal and of its next-state signal.\\
+    \code{_n} & A suffix for an active-low signal, for example \code{rst_n_i}.\\
+    \code{4'b0101}, \code{'0} & A SystemVerilog literal: size, base and value. The form \code{'0} fills a signal with zeros.\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+The naming rules for the RTL are in \cref{um:guide:coding-guidelines}.
+
+\subsection*{Boxes}
+A box has a coloured rule on its left side. The first word of the box names its type.
+\begin{center}
+  \begin{tabular}{@{}p{38mm}p{105mm}@{}}
+    \toprule
+    Box & Use\\
+    \midrule
+    \textbf{Requirement} & A rule with an identifier. The word ``must'' appears only in a requirement. Only the Design Specification has requirements.\\
+    \textbf{Information} & A statement that is not a rule. It has no identifier.\\
+    \textbf{Rationale} & The reason for a rule. It has no identifier.\\
+    \textbf{Note} & A remark for the reader.\\
+    \textbf{Warning} & A fact that can cause a wrong result if the reader misses it.\\
+    \textbf{Caution} & A fact that can cause damage or loss of work if the reader misses it.\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+
+\subsection*{Timing diagrams}
+A timing diagram shows signals against time. Each row is one signal. Time runs from left to right. A high level is the upper line and a low level is the lower line.
+\begin{center}
+  \begin{tikztimingtable}[timing/wscale=1.6]
+    \code{clk} & 8{c} \\
+    \code{d}   & 2L 3H 3L \\
+    \code{q}   & 4L 3H L \\
+  \end{tikztimingtable}
+\end{center}
+Do not assume a timing relation that the diagram does not show.
+
+\section*{How to read the tables}
+The tables of ports and parameters are generated from the RTL. A person does not type them. The generator is \src{tools/docs/gen_fact_tables.py}. The generated files are in \src{docs/manual/common/generated/facts/}.
+\begin{description}
+  \item[Signal tables] The columns are Signal, Dir, Width, Clock domain and Description. Dir is \code{in} or \code{out}. Width shows the declared range in short form. For example, \code{WIDTH} stands for \code{[WIDTH-1:0]}. The width at the default parameters follows in brackets. The clock domain is the name of a clock port, or the word \code{clock}, \code{async} or \code{quasi-static}.
+  \item[Parameter tables] The columns are Parameter, Type, Default, Legal values and Description. The default is the text of the RTL. When that text is not a literal, the resolved value follows in brackets.
+  \item[Requirement tables] The columns are ID, Requirement and Verified by. They are generated from the requirement boxes of the Design Specification. A verification reference names a test, a mutant, a check file, a formal file, or the word \textbf{review}.
+\end{description}

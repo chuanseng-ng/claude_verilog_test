@@ -6463,7 +6463,7 @@ This chapter explains the documentation system of the project. Read it before yo
 \section{The four books}
 All project documentation is in four books. Each book is a LaTeX document that builds to a PDF.
 \begin{description}
-  \item[Design Specification (\code{ds})] States what the design must do.
+  \item[Design Specification (\code{ds})] States the rules of the design.
   \item[Technical Manual (\code{tm})] Describes how the design and the flows work.
   \item[User Manual (\code{um})] Shows how to use the project.
   \item[Changes record (\code{cr})] Keeps the history. It does not describe the current state.
@@ -6495,6 +6495,8 @@ The kind is one of the words in \cref{tab:um:guide:label-kinds}.
     \code{mm} & A memory map item\\
     \code{inv} & An invariant\\
     \code{app} & An appendix\\
+    \code{req} & A requirement (derived from its ID)\\
+    \code{arc} & Archived source text in the Changes record\\
     \bottomrule
   \end{tabular}
   \caption{Label kinds}\label{tab:um:guide:label-kinds}
@@ -6517,7 +6519,7 @@ grep apb-cdc docs/manual/common/labels.tsv
 Each line of \src{docs/manual/common/labels.tsv} gives the label, the file, the line and the section title. Regenerate the file with the command \code{python tools/docs/check_doc_labels.py --write-labels}.
 
 \section{Build the PDFs}
-The build needs LuaLaTeX, Python 3 and the font package \code{dejavu}. Run the same command on Linux and on Windows from the root of the repository.
+The build needs LuaLaTeX, Python 3, the font package \code{dejavu}, and the packages \code{pgf} and \code{tikz-timing} for the figures. Run the same command on Linux and on Windows from the root of the repository.
 \begin{procedure}
   \item Run \code{python tools/docs/build_books.py} to build all books.
   \item Run \code{python tools/docs/build_books.py um} to build one book.
@@ -6559,6 +6561,222 @@ A code block with a box-drawing character or an arrow uses the environment \code
 
 \section{Glossary}
 The file \src{docs/manual/common/dictionary.yaml} is the only source of project terms. Each entry has a term, a kind, an expansion for acronyms and a definition. Run \code{python tools/docs/gen_glossary.py} after you edit the file. The program writes \src{docs/manual/common/glossary.tex}. Commit both files. Use \texttt{\textbackslash gls\{CDC\}} in the text to write an acronym with its first-use expansion.
+
+\section{Authored chapters}\label{um:guide:authored-chapters}
+An authored chapter is text that a person wrote for a book. It is not text that moved from a source comment. The four books hold different kinds of text.
+\begin{description}
+  \item[Design Specification] Rules for the design, as requirements. A rule tells what the design does and how a test can fail it.
+  \item[Technical Manual] How a block works. It has the block diagram, the timing diagrams, the generated tables of ports and parameters, and the integration rules.
+  \item[User Manual] Tasks for a user: choose, instantiate, constrain, verify.
+  \item[Changes record] History, the records, and the archive of text that left another book.
+\end{description}
+Copy the template below when you author a chapter.
+
+\subsection{Design Specification chapter}
+One chapter for each function area. The chapter has these parts in this order.
+\begin{description}
+  \item[Scope] What the area covers, which modules it has and which it does not have.
+  \item[Definitions] Terms that have a fixed meaning. Link to the glossary.
+  \item[Topics] One section for each topic. For a block family, write a section for the family first, then one section for each module. Each section has one to three sentences of introduction, then the requirement boxes, then information and rationale boxes.
+  \item[Architecture decisions] One subsection for each decision. It gives the decision, the alternatives that the team rejected and why, and the effect on the user.
+  \item[Requirements and verification] Input the generated table with \texttt{\textbackslash input\{generated/requirements-<area>\}}.
+\end{description}
+The chapter does not hold these items: how the RTL does it, run results, dates, tracker identifiers, tool versions, history and port tables. The Technical Manual describes how the RTL does it. Each statement is a rule or an information note.
+
+\subsection{Technical Manual chapter}
+One chapter for each block or block family. The chapter starts with the purpose of the family and a figure of where its instances are in the design. Each block has one section with these subsections.
+\begin{description}
+  \item[Introduction] What the block does, where it is used, and which requirements it implements.
+  \item[Functional description] Block diagram, operation step by step, state machine, timing diagram, reset and clocking, and corner cases.
+  \item[Configuration parameters] The generated parameter table and text on the effect of each parameter.
+  \item[Signal descriptions] The generated signal table and text for the signals that need more than one line.
+  \item[Programmer's model] Only for a block that has registers. A register summary table has the columns Offset, Name, Type, Reset and Description. Each register has a bit-field table with the columns Bits, Name, Type and Description.
+  \item[Integration and timing constraints] The rules for the caller, the constraint exceptions that the block needs and where they are, and the names that the user keeps.
+  \item[Debug, test and DFT] Scan behaviour, scan ports, attributes that tools read, and models that exist only in simulation.
+  \item[Verification] For each suite, what it proves and what it does not prove. Negative controls, mutation campaigns and formal checks.
+  \item[Known limits] The limits of the design, in the present tense.
+\end{description}
+The chapter does not hold the word ``must'' for the design, history, dated results, run names, or rejected alternatives. Nobody types a signal table or a parameter table by hand.
+
+\subsection{User Manual chapter}
+One chapter for each topic of integration, with these sections.
+\begin{description}
+  \item[Choose] A table that says what crosses and which block to use, with the reason.
+  \item[Instantiate] One task for each block: numbered steps, an example of the instance in a listing, and the tie-offs.
+  \item[Constrain] A task that says which constraint file holds which exception, and how to add a new one.
+  \item[Verify] A task that says which command runs which suite, and how to read the result.
+  \item[Checklist] A list that the integrator ticks before the review.
+\end{description}
+The chapter does not hold theory of operation, requirements, history or results. Link to the Technical Manual and to the Design Specification instead.
+
+\section{Requirements}\label{um:guide:requirements}
+A requirement is a rule of the design. Only the Design Specification has requirements. The environment \code{requirement} writes one.
+\begin{lstlisting}[language={[LaTeX]TeX}]
+\begin{requirement}{DS-CDC-020}{Latency of the synchroniser}
+    [verify={test:tb/cocotb/soc/test_cdc_sync.py::test_latency_after_release; review}]
+A change on d_i must appear on q_o at the STAGES-th rising edge of clk_i.
+\end{requirement}
+\end{lstlisting}
+The environment has three arguments. The first is the identifier. The second is the short title. The third is an optional argument with the name \code{verify}. It is the last argument.
+
+The tool \src{tools/docs/check_requirements.py} reads the \code{verify} argument. The book does not print it. A reference in it does not hold the characters \texttt{\#}, \texttt{\%}, \texttt{\{} and \texttt{\}}. Do not start a requirement body with a bracket. \LaTeX{} reads it as the option.
+
+\subsection{Identifiers}
+An identifier has the form \code{DS-AREA-NNN}. AREA has two to eight capital letters or digits and starts with a letter. NNN has three digits.
+
+Give the numbers of an area in blocks for each topic, with gaps between the blocks. Never renumber a requirement. Never use a number for a second requirement. When the design no longer needs a requirement, mark it retired in the ledger.
+
+The identifier defines the label of the requirement. The label of \code{DS-CDC-020} is \code{ds:req:cdc-020}. Cite a requirement with \texttt{\textbackslash reqref\{DS-CDC-020\}}. It prints the identifier as a link and works across the books. Do not use \texttt{\textbackslash cref} for a requirement. The label checker reports it.
+
+When the Design Specification has its first requirement, add \texttt{\textbackslash listofrequirements} after the table of contents. It prints the list of all requirements with their page numbers.
+
+\subsection{The ledger}
+The file \src{docs/manual/common/requirement_ids.tsv} has one row for each identifier that was ever used. The columns are the identifier, the status (\code{active} or \code{retired}) and the first file. The command \code{python tools/docs/check_requirements.py --write} appends new identifiers as active. It never deletes a row. The command \code{python tools/docs/check_requirements.py} fails in three cases. A requirement has no row. An active row has no requirement. A retired identifier is used again. In the second case, mark the row retired by hand. A duplicate row is an error.
+
+The option \code{--base-ref <ref>} compares the ledger with its version at a git ref. It fails when a row of the base is missing or a retired row is active again. If git cannot read the ledger at that ref, the tool exits with code 2. The documentation workflow uses the option on pull requests.
+
+\subsection{Verification references}
+The \code{verify} argument is a list of references with a semicolon between them. Each reference has one of these forms.
+\begin{center}
+  \begin{tabular}{@{}p{55mm}p{88mm}@{}}
+    \toprule
+    Form & What the checker proves\\
+    \midrule
+    \code{test:<path>::<function>} & The file is under \code{tb/} and has a top-level \code{def} or \code{async def} with that name.\\
+    \code{mutation:<path>::<mutant>} & The file is a Python file and holds the mutant name as a string literal in code. A comment does not count.\\
+    \code{check:<path>} & The file exists. It can be a constraint file, a script, a Makefile or a configuration file.\\
+    \code{formal:<path>} & The file exists.\\
+    \code{review} & Nothing. A person checks the rule in a review.\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+A path in a reference is relative, has \code{/} separators and has no \code{..}. A requirement with no \code{verify} argument is a finding. The checker proves that a test function exists. It cannot prove that the test checks what the rule says. The reviewer reads the test.
+
+\subsection{Writing rules}
+The words ``must'', ``must not'' and ``is required to'' appear only inside a requirement body. All other text uses statements in the present tense.
+
+Write one testable rule in each requirement. Name the signal that a test can see and the condition. Take a number from a parameter and not from a run. Put the reason of a rule in a \code{rationale} box, and a statement that is not a rule in an \code{information} box. These boxes have no identifier.
+
+\subsection{Example}
+The box below is an example. It is not a rule of the design. The area \code{EXAMPLE} is only for the User Manual. It is not in the ledger and not in a table.
+\begin{requirement}{DS-EXAMPLE-001}{Example of a requirement}[verify={test:tb/tests/test_docs_check_requirements.py::test_good_tree_after_write_is_clean; review}]
+A requirement must state one rule that a test can fail. This text is an example.
+\end{requirement}
+\begin{information}
+An information box has no identifier. It states a fact. Cite the example above with \reqref{DS-EXAMPLE-001}.
+\end{information}
+\begin{rationale}
+A rationale box tells the reason of a rule. It also has no identifier.
+\end{rationale}
+
+\section{Fact tables}\label{um:guide:fact-tables}
+A signal table and a parameter table come from the RTL. Nobody types them. The tool \src{tools/docs/gen_fact_tables.py} reads the RTL with pyslang and the words from a sidecar file. The sidecar file is \code{docs/manual/common/facts/<family>.yaml}.
+\begin{lstlisting}[language=YAML]
+family: cdc
+modules:
+  cdc_sync:
+    rtl: rtl/soc/cdc/cdc_sync.sv
+    deps: []
+    label: tm:mod:cdc-sync
+    params:
+      WIDTH: {legal: "1 or more", description: "Number of bits that cross."}
+    ports:
+      clk_i: {domain: clock, description: "Destination clock."}
+      d_i:   {domain: async, description: "Input from the source domain."}
+\end{lstlisting}
+The domain is the name of a clock port of the same module, or one of the words \code{clock}, \code{async} and \code{quasi-static}. Every port and every parameter of the RTL needs an entry, and every entry needs a port or a parameter in the RTL. A description is plain text. The tool sets text in backticks as code. It escapes the other special characters. Local parameters are not in the table.
+
+Run the tool after each change of a port, of a parameter or of a description.
+\begin{lstlisting}[language=bash]
+python tools/docs/gen_fact_tables.py            # write the tables
+python tools/docs/gen_fact_tables.py --check    # fail if a table is stale
+\end{lstlisting}
+The tool writes two files for each module in \src{docs/manual/common/generated/facts/}. Input them in the section of the block with \texttt{\textbackslash input\{generated/facts/<module>-signals\}} and \texttt{\textbackslash input\{generated/facts/<module>-params\}}. The labels of the tables are \code{tab:<label>:signals} and \code{tab:<label>:params}.
+
+The tool has four exit codes. Code 0 is success. Code 1 is a stale table, or an entry that is absent or stale. Code 2 is an RTL file or sidecar file that the tool cannot parse, or a port width that the two passes of the tool do not agree on. Code 3 is a host without pyslang. Install pyslang with \code{pip install pyslang==11.0.0}.
+
+The documentation workflow runs the check, so an RTL port change without a new table fails there. The check also fails for a generated file that no sidecar produces. A normal run deletes such a file. The target \code{make -C docs/manual check} prints a warning and skips this check when pyslang is absent. The workflow never skips it.
+
+Never edit a file under \code{docs/manual/*/generated/} or \code{docs/manual/common/generated/}. Change the RTL or the sidecar file and run the tool again.
+
+\section{Figures}\label{um:guide:figures}
+Draw a figure with TikZ in the text of the book. A figure needs no external program. The shared styles are in \src{docs/manual/common/cvtmacros.sty}.
+\begin{center}
+  \begin{tabular}{@{}p{34mm}p{109mm}@{}}
+    \toprule
+    Style & Use\\
+    \midrule
+    \code{cvtblock} & A block with rounded corners and a centred label.\\
+    \code{cvtflop} & A flop.\\
+    \code{cvtsig} & An arrow for a signal.\\
+    \code{cvtdomain} & A dashed box around the blocks of one clock domain.\\
+    \code{cvtstate} & A state of a state machine. Use it with the TikZ library \code{automata}.\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+\Cref{fig:um:guide:figures:block} shows a block figure.
+\begin{lstlisting}[language={[LaTeX]TeX}]
+\begin{tikzpicture}[node distance=9mm]
+  \node[cvtblock] (a) {source};
+  \node[cvtflop, right=of a] (q0) {q0};
+  \node[cvtflop, right=of q0] (q1) {q1};
+  \node[cvtblock, right=of q1] (b) {dest};
+  \draw[cvtsig] (a) -- (q0);
+  \draw[cvtsig] (q0) -- (q1);
+  \draw[cvtsig] (q1) -- (b);
+  \begin{scope}[on background layer]
+    \node[cvtdomain, fit=(q0)(q1)(b)] {};
+  \end{scope}
+\end{tikzpicture}
+\end{lstlisting}
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[node distance=9mm]
+    \node[cvtblock] (a) {source};
+    \node[cvtflop, right=of a] (q0) {q0};
+    \node[cvtflop, right=of q0] (q1) {q1};
+    \node[cvtblock, right=of q1] (b) {dest};
+    \draw[cvtsig] (a) -- (q0);
+    \draw[cvtsig] (q0) -- (q1);
+    \draw[cvtsig] (q1) -- (b);
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(q0)(q1)(b)] {};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{Example of a block figure}\label{fig:um:guide:figures:block}
+\end{figure}
+
+Draw a waveform with the environment \code{tikztimingtable}. \Cref{fig:um:guide:figures:timing} shows one.
+\begin{lstlisting}[language={[LaTeX]TeX}]
+\begin{tikztimingtable}[timing/wscale=1.6]
+  clk & 8{c} \\
+  d   & 2L 3H 3L \\
+  q   & 4L 3H L \\
+\end{tikztimingtable}
+\end{lstlisting}
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=1.6]
+    clk & 8{c} \\
+    d   & 2L 3H 3L \\
+    q   & 4L 3H L \\
+  \end{tikztimingtable}
+  \caption{Example of a timing diagram}\label{fig:um:guide:figures:timing}
+\end{figure}
+Use no external tool, no shell escape and no externalisation. Use only ASCII characters in a figure.
+
+\section{Source archive}\label{um:guide:source-archive}
+Text that moved from a source comment into a book can leave the book when an authored chapter replaces it. The text does not disappear. It goes into the part Source archive of the Changes record, unchanged. The sections of the archive have labels of the form \code{cr:arc:<book>-<slug>}. Each section names the label of the authored section that replaced the text.
+
+Move the text in these steps.
+\begin{procedure}
+  \item Before you edit, save the base version of each book file. Use \code{git show origin/main:<path>}. Write the output to a scratch directory.
+  \item For each section, cut the text from \texttt{\textbackslash begin\{relocated\}} to the end of that environment in the base file. Write each block to its own file in the scratch directory. Print the line ranges. Check them.
+  \item Paste each block unchanged into its section of \src{docs/manual/cr/parts/06-source-archive.tex}. Copy the bytes. Do not type the text again. Do not edit the text inside the block, not even an obvious error.
+  \item Prove the move with a script. Each saved block is an exact substring of the archive file, and it is not in the new book file.
+  \item Run \code{python tools/docs/prose_preserve.py} with the saved blocks as sources and the archive file as the destination. It prints \code{PRESERVED} with 0 missing. Run it again with another file as the destination. That run fails. A check that cannot fail proves nothing.
+\end{procedure}
+The environment \code{record} sections of the Changes record stay as they are.
 
 \chapter{Project status}\label{um:ch:project-status}
 

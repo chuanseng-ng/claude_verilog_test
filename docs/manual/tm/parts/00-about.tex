@@ -1,0 +1,20 @@
+\chapter*{About this book}
+\markboth{About this book}{About this book}
+\phantomsection
+\addcontentsline{toc}{chapter}{About this book}
+\label{tm:ch:about}
+
+\section*{Purpose of this book}
+This book is the Technical Manual. It describes how the design and the flows work. It does not state rules for the design. The rules are in the Design Specification, and this book cites them by identifier.
+\input{about-books}
+
+\section*{Intended audience}
+The book is for the engineers who maintain the RTL, the tests and the physical design flows, and for the integrators who need the exact behaviour of a block. The reader knows RTL design and the tools of the flows.
+
+\section*{Using this book}
+The book has six parts: Module reference, Physical design, Verification infrastructure, DFT, FPGA, HLS and analog, Decisions, and Tool defects and standing caveats. Each block has one section in the part Module reference. An authored section follows a fixed order: introduction, functional description, configuration parameters, signal descriptions, integration and timing constraints, debug test and DFT, verification, and known limits. A block that has registers also has a programmer's model.
+
+\input{about-conventions}
+
+\section*{Feedback}
+Open an issue in the project tracker. Name the label of the section, for example \code{tm:ch:about}.

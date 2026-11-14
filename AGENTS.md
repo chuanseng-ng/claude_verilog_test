@@ -220,6 +220,9 @@ No Markdown file remains in `docs/` except `docs/README.md`. Local `README.md` f
 - Write new text in ASD-STE100 style. Use `python tools/docs/ste_check.py <file>` for hints. It cannot prove compliance.
 - Check your edit: `python tools/docs/check_doc_labels.py`, `python tools/docs/check_comment_budget.py`
   and `python tools/docs/build_books.py`.
+- Authored chapters use `\begin{requirement}{DS-AREA-NNN}` for rules and generated fact tables for ports and parameters.
+  Run `python tools/docs/check_requirements.py` and `python tools/docs/gen_fact_tables.py --check`.
+  Never edit files under `docs/manual/*/generated/` or `common/generated/`.
 - After you edit `docs/manual/common/dictionary.yaml`, run `python tools/docs/gen_glossary.py`.
 - To move text from a comment into a book, copy it verbatim first. Then run `python tools/docs/prose_preserve.py` to find lost text.
   Run `python tools/docs/code_equiv.py` to show that no code changed.
