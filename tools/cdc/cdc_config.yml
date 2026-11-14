@@ -142,8 +142,8 @@ waivers:
     reason: >
       By design, not a defect. Both CDC bridge types drive their internal
       cdc_reset_sync chains from a cross-coupled root -- async_axi_fifo from
-      rst_both_n = s_rst_n_i & m_rst_n_i (async_axi_fifo.sv:174-175), and
-      apb_cdc_bridge likewise for its m-side (apb_cdc_bridge.sv:226-227) -- so
+      rst_both_n = s_rst_n_i & m_rst_n_i (signal rst_both_n in async_axi_fifo), and
+      apb_cdc_bridge likewise for its m-side (rst_both_n feeds u_m_rst_sync) -- so
       each chain's async-clear pin genuinely combines the CPU and fabric reset
       roots. This is deliberate: a one-sided reset would leave the bridge
       half-flushed and inject fabricated beats into the surviving domain. It is
@@ -154,28 +154,31 @@ waivers:
       partial resetting"). cdc_snitch has no concept of a reset pin, so it
       reports the two-domain clear as data BAD. Timing-wise these are
       set_false_path'd (async clear is not a setup-checked datapath).
-    ref: GH#91, GH#95, async_axi_fifo.sv:174-175, apb_cdc_bridge.sv:226-227, phase5_soc_multiclock.sdc sec.4
+    ref: GH#91, GH#95, rst_both_n in async_axi_fifo.sv and apb_cdc_bridge.sv, phase5_soc_multiclock.sdc sec.4
 
   - id: apb-cdc-bridge-resp-payload-read
     kind: tool-limitation
     dest: '^(u_apb_(pll2|dbg)_cdc\.s_|apb_)(prdata_o\[\d+\]|pslverr_o):D$'
     domains: 'clk_i+cpu_clk_i'
     reason: >
-      Qualified 2-phase-handshake payload read. resp_prdata_q and
+      Qualified 4-phase-handshake payload read. resp_prdata_q and
       resp_pslverr_q are s-domain (fabric) flops that combinationally read the
       m-domain (CPU) resp_*_dq payload registers -- both captured in the same
-      block (apb_cdc_bridge.sv:574-587), so both carry the same finding. It is safe because the payload is only sampled after
-      the ack toggle has propagated through u_ack_sync (2-FF, magic_cdc,
+      always_ff block (the one that assigns resp_prdata_q), so both carry the
+      same finding. It is safe because the payload is only sampled after
+      the ack level has propagated through u_ack_sync (2-FF, magic_cdc,
       classified CDC), by which point the payload has been stable for at least
       SYNC_STAGES_TO_S receiving clocks. cdc_snitch sees the combinational read
-      and cannot see the handshake that qualifies it. The path is bounded in
-      STA by set_max_delay -datapath_only. Covers BOTH apb_cdc_bridge
+      and cannot see the handshake that qualifies it. The path is bounded by
+      the set_max_delay between the two clock domains in
+      phase5_soc_multiclock_check.sdc (the separate CDC timing check; OpenSTA
+      has no -datapath_only flag). Covers BOTH apb_cdc_bridge
       instances (u_apb_pll2_cdc, GH#93; u_apb_dbg_cdc, GH#95 fix) — same
       structural finding on the same reusable IP, not a per-instance issue.
       The bare `apb_prdata_o` alternative is the SAME register: on the debug
       bridge, s_prdata_o drives a top-level port directly, so yosys names the
       net after the port rather than the instance pin.
-    ref: GH#93, GH#95, apb_cdc_bridge.sv:558-587, phase5_soc_multiclock.sdc:406
+    ref: GH#93, GH#95, resp_prdata_q in apb_cdc_bridge.sv, phase5_soc_multiclock_check.sdc
 
 # --- 5. Synchronisers that MUST be present ---------------------------------
 # The BAD/waiver machinery only notices an unsynchronised crossing that is also

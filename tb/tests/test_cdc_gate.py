@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -326,6 +327,30 @@ def test_repo_config_loads_and_validates():
     cfg = cdc_gate.load_config(_GATE_PATH.with_name("cdc_config.yml"))
     assert "clk_i" in cfg["clock_domains"]
     assert cfg["waivers"], "expected at least one committed waiver"
+
+
+def test_repo_waivers_cite_symbols_and_the_current_handshake():
+    """A waiver text must not go stale when a line moves or the protocol changes.
+
+    A file-and-line citation is wrong after the next edit of that file. The
+    apb_cdc_bridge handshake is 4-phase, and OpenSTA has no -datapath_only flag.
+    """
+    cfg = cdc_gate.load_config(_GATE_PATH.with_name("cdc_config.yml"))
+    line_cite = re.compile(r"\.(sv|sdc|py|tcl):\d")
+    for w in cfg["waivers"]:
+        text = f"{w['reason']} {w['ref']}"
+        assert not line_cite.search(text), f"waiver '{w['id']}' cites a file and line"
+        assert "2-phase" not in text, f"waiver '{w['id']}' names the old handshake"
+        assert "set_max_delay -datapath_only" not in text, w["id"]
+    # Each symbol that a waiver cites must exist in the RTL file that it names.
+    rtl = _GATE_PATH.parents[2] / "rtl" / "soc"
+    for name, symbol in (
+        ("async_axi_fifo.sv", "rst_both_n"),
+        ("apb_cdc_bridge.sv", "rst_both_n"),
+        ("apb_cdc_bridge.sv", "resp_prdata_q"),
+        ("apb_cdc_bridge.sv", "u_m_rst_sync"),
+    ):
+        assert symbol in (rtl / name).read_text(encoding="utf-8"), f"{symbol} not in {name}"
 
 
 # --------------------------------------------------------------------------
