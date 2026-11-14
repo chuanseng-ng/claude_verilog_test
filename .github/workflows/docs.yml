@@ -75,6 +75,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # 2, not the default 1: the ledger check needs HEAD^1, the tip of the base branch on a pull request.
+          fetch-depth: 2
           persist-credentials: false
 
       - name: Set up Python
@@ -87,10 +89,28 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          pip install "pyyaml>=6.0" "pytest>=8.0.0"
+          pip install "pyyaml>=6.0" "pytest>=8.0.0" "pyslang==11.0.0"
 
       - name: Glossary is in sync with the dictionary
         run: python tools/docs/gen_glossary.py --check
+
+      - name: Fact tables are in sync with the RTL
+        run: python tools/docs/gen_fact_tables.py --check
+
+      - name: Requirements and their test references
+        run: python tools/docs/check_requirements.py -v
+
+      # On a pull request HEAD is the merge commit and HEAD^1 is the tip of the base branch. A base without a
+      # ledger is the pull request that adds it; that case prints a warning and nothing else is skipped.
+      - name: Requirement ledger only grows (pull requests)
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          if git cat-file -e HEAD^1:docs/manual/common/requirement_ids.tsv 2>/dev/null; then
+            python tools/docs/check_requirements.py -v --base-ref HEAD^1
+          else
+            echo "::warning::The base branch has no requirement ledger; the base comparison is skipped."
+          fi
 
       - name: Labels and citations are consistent
         run: python tools/docs/check_doc_labels.py

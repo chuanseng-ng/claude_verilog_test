@@ -120,6 +120,7 @@ cr:app:archive-session-summary:test-infrastructure	docs/manual/cr/parts/04-fix-l
 cr:app:archive-session-summary:test-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	9513	Test Summary
 cr:app:archive-session-summary:verification-status	docs/manual/cr/parts/04-fix-log-and-archive.tex	9754	Verification Status
 cr:app:archive-session-summary:whats-working-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	9757	\texorpdfstring{What\textquotesingle s Working \ok{}}{What\textquotesingle s Working }
+cr:ch:about	docs/manual/cr/parts/00-about.tex	5	About this book
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
 cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	9966	Build files
@@ -130,6 +131,9 @@ cr:ch:phase-history	docs/manual/cr/parts/01-phase-and-status-history.tex	3	Phase
 cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	1583	Physical design files
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
 cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
+cr:ch:source-archive-ds	docs/manual/cr/parts/06-source-archive.tex	5	Archived Design Specification text
+cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	9	Archived Technical Manual text
+cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	13	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
@@ -574,6 +578,7 @@ cr:part:fix-log-and-archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	1	Fi
 cr:part:investigations	docs/manual/cr/parts/03-investigations.tex	1	Investigations
 cr:part:phase-and-status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	1	Phase and status history
 cr:part:run-histories	docs/manual/cr/parts/02-run-histories.tex	1	Run histories
+cr:part:source-archive	docs/manual/cr/parts/06-source-archive.tex	1	Source archive
 cr:part:source-file-history	docs/manual/cr/parts/05-source-file-history.tex	1	Source-file history
 cr:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	1996	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
 cr:pd:asap7-gpu-macro-placement-3014-cfg	docs/manual/cr/parts/05-source-file-history.tex	2104	\texttt{asap7/gpu/macro\_placement\_3014.cfg}
@@ -1132,6 +1137,7 @@ cr:suite:test-sim-build-key	docs/manual/cr/parts/05-source-file-history.tex	5708
 cr:suite:test-soc-shards	docs/manual/cr/parts/05-source-file-history.tex	5740	\texttt{tb/tests/test\_soc\_shards.py}
 cr:suite:test-sync-rtk-config	docs/manual/cr/parts/05-source-file-history.tex	5760	\texttt{tb/tests/test\_sync\_rtk\_config.py}
 cr:suite:trng-lfsr-model	docs/manual/cr/parts/05-source-file-history.tex	4993	\texttt{tb/models/trng\_lfsr\_model.py}
+ds:ch:about	docs/manual/ds/parts/00-about.tex	5	About this book
 ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	133	CPU phases 0 to 3
 ds:ch:design-expectation	docs/manual/ds/parts/01-architecture.tex	9	Design Expectation
 ds:ch:design-expectation:cpu	docs/manual/ds/parts/01-architecture.tex	11	CPU
@@ -1941,8 +1947,14 @@ ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
 ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verification plan
-tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6500	Labels
+ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6662	DS-EXAMPLE-001 Example of a requirement
+fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6746	Figures
+fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6764	Figures
+tab:tm:mod:cdc-sync:params	docs/manual/common/generated/facts/cdc-sync-params.tex	4	Parameters of \code{cdc_sync}
+tab:tm:mod:cdc-sync:signals	docs/manual/common/generated/facts/cdc-sync-signals.tex	4	Signals of \code{cdc_sync}
+tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6502	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
+tm:ch:about	docs/manual/tm/parts/00-about.tex	5	About this book
 tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11896	Analog PLL
 tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	5339	ASAP7 flow
 tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	13269	CDC and lint checks
@@ -2053,14 +2065,14 @@ tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	5343	FreePDK45 
 tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10042	High-level synthesis
 tm:ch:mod-cdc-primitives	docs/manual/tm/parts/01-module-reference.tex	1120	CDC primitives
 tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
-tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	2043	Crypto accelerator
-tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	1322	DFT blocks
-tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	2345	FPGA wrappers
+tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	2047	Crypto accelerator
+tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	1326	DFT blocks
+tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	2349	FPGA wrappers
 tm:ch:mod-gpu	docs/manual/tm/parts/01-module-reference.tex	459	GPU
 tm:ch:mod-memory-and-caches	docs/manual/tm/parts/01-module-reference.tex	290	Memory and caches
-tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	2257	NPU
-tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	1428	Peripherals
-tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1398	PLL subsystem
+tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	2261	NPU
+tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	1432	Peripherals
+tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1402	PLL subsystem
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	463	SoC fabric
 tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6504	Constraint file notes
 tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9232	PDN and flow script notes
@@ -2349,7 +2361,7 @@ tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/par
 tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6927	Testability findings (proposals; no RTL changed)
 tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6987	Notes on tooling (for the next person)
 tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7035	Gap list toward real Stage 2
-tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	2048	\texttt{periph/aes128\_core.sv}
+tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	2052	\texttt{periph/aes128\_core.sv}
 tm:mod:apb-cdc-bridge	docs/manual/tm/parts/01-module-reference.tex	468	\texttt{soc/apb\_cdc\_bridge.sv}
 tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	630	\texttt{soc/apb\_interconnect.sv}
 tm:mod:async-axi-fifo	docs/manual/tm/parts/01-module-reference.tex	656	\texttt{soc/async\_axi\_fifo.sv}
@@ -2357,22 +2369,22 @@ tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	682	\texttt{so
 tm:mod:cdc-gray-fifo	docs/manual/tm/parts/01-module-reference.tex	1125	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
 tm:mod:cdc-reset-sync	docs/manual/tm/parts/01-module-reference.tex	1205	\texttt{soc/cdc/cdc\_reset\_sync.sv}
 tm:mod:cdc-sync	docs/manual/tm/parts/01-module-reference.tex	1253	\texttt{soc/cdc/cdc\_sync.sv}
-tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	2122	\texttt{periph/crypto\_accel.sv}
-tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	1327	\texttt{soc/dft/dft\_clk\_switch.sv}
-tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	1433	\texttt{periph/dma\_engine.sv}
-tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	2350	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
-tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	2365	\texttt{fpga/fpga\_sram\_1rw.sv}
-tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1506	\texttt{periph/gpio\_controller.sv}
-tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1581	\texttt{periph/i2c\_bit\_engine.sv}
-tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1633	\texttt{periph/i2c\_controller.sv}
-tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1692	\texttt{periph/interrupt\_controller.sv}
-tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	1376	\texttt{soc/dft/mbist\_ctrl.sv}
-tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	2262	\texttt{npu/npu\_mac\_array.sv}
-tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	2276	\texttt{npu/npu\_top.sv}
-tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	2304	\texttt{npu/npu\_weight\_mem.sv}
-tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1403	\texttt{soc/pll/pll\_subsystem.sv}
+tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	2126	\texttt{periph/crypto\_accel.sv}
+tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	1331	\texttt{soc/dft/dft\_clk\_switch.sv}
+tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	1437	\texttt{periph/dma\_engine.sv}
+tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	2354	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
+tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	2369	\texttt{fpga/fpga\_sram\_1rw.sv}
+tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1510	\texttt{periph/gpio\_controller.sv}
+tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1585	\texttt{periph/i2c\_bit\_engine.sv}
+tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1637	\texttt{periph/i2c\_controller.sv}
+tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1696	\texttt{periph/interrupt\_controller.sv}
+tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	1380	\texttt{soc/dft/mbist\_ctrl.sv}
+tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	2266	\texttt{npu/npu\_mac\_array.sv}
+tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	2280	\texttt{npu/npu\_top.sv}
+tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	2308	\texttt{npu/npu\_weight\_mem.sv}
+tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1407	\texttt{soc/pll/pll\_subsystem.sv}
 tm:mod:pmu	docs/manual/tm/parts/01-module-reference.tex	704	\texttt{soc/pmu.sv}
-tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1728	\texttt{periph/pwm\_controller.sv}
+tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1732	\texttt{periph/pwm\_controller.sv}
 tm:mod:rv32i-alu	docs/manual/tm/parts/01-module-reference.tex	96	\texttt{cpu/core/rv32i\_alu.sv}
 tm:mod:rv32i-cache-pkg	docs/manual/tm/parts/01-module-reference.tex	295	\texttt{mem/rv32i\_cache\_pkg.sv}
 tm:mod:rv32i-clock-gate	docs/manual/tm/parts/01-module-reference.tex	321	\texttt{mem/rv32i\_clock\_gate.sv}
@@ -2386,14 +2398,14 @@ tm:mod:rv32i-pipeline-ex1b	docs/manual/tm/parts/01-module-reference.tex	8	\textt
 tm:mod:rv32i-pipeline-ex1c	docs/manual/tm/parts/01-module-reference.tex	27	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
 tm:mod:rv32i-pipeline-ex2	docs/manual/tm/parts/01-module-reference.tex	60	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex2.sv}
 tm:mod:rv32i-pipeline-if	docs/manual/tm/parts/01-module-reference.tex	75	\texttt{cpu/core/pipeline/rv32i\_pipeline\_if.sv}
-tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	2199	\texttt{periph/sha256\_core.sv}
+tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	2203	\texttt{periph/sha256\_core.sv}
 tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	786	\texttt{soc/soc\_top.sv}
-tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1787	\texttt{periph/spi\_controller.sv}
+tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1791	\texttt{periph/spi\_controller.sv}
 tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	1018	\texttt{soc/sram\_controller.sv}
-tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1853	\texttt{periph/trng.sv}
-tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1875	\texttt{periph/trng\_lfsr\_entropy.sv}
-tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1889	\texttt{periph/uart\_controller.sv}
-tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	2012	\texttt{periph/watchdog\_timer.sv}
+tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1857	\texttt{periph/trng.sv}
+tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1879	\texttt{periph/trng\_lfsr\_entropy.sv}
+tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1893	\texttt{periph/uart\_controller.sv}
+tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	2016	\texttt{periph/watchdog\_timer.sv}
 tm:part:decisions	docs/manual/tm/parts/05-decisions.tex	1	Decisions
 tm:part:dft-fpga-hls-and-analog	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1	DFT, FPGA, HLS and analog
 tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module reference
@@ -2788,6 +2800,7 @@ tm:suite:soc-test-wdt	docs/manual/tm/parts/03-verification-infrastructure.tex	72
 tm:suite:soc-trng-fw-gen-trng-hex	docs/manual/tm/parts/03-verification-infrastructure.tex	7423	\texttt{tb/cocotb/soc/trng\_fw/gen\_trng\_hex.py}
 tm:suite:soc-wdt-fw-gen-wdt-hex	docs/manual/tm/parts/03-verification-infrastructure.tex	7497	\texttt{tb/cocotb/soc/wdt\_fw/gen\_wdt\_hex.py}
 tm:suite:trng-lfsr-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1209	\texttt{tb/models/trng\_lfsr\_model.py}
+um:ch:about	docs/manual/um/parts/00-about.tex	5	About this book
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	102	Build and run commands
 um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	474	Coding guidelines
 um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2693	Continuous integration
@@ -2796,7 +2809,7 @@ um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6459	Documentati
 um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
 um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6455	Issue tracking
 um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2238	Local quality checks
-um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6563	Project status
+um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6781	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	40	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	360	Supported instructions
 um:ch:tool-flows	docs/manual/um/parts/01-chapters.tex	5568	Simulator and lint tool flows
@@ -2963,6 +2976,7 @@ um:flow:workflow-triggers:to-run-ci-only-on-specific-branches	docs/manual/um/par
 um:flow:workflow-triggers:trigger-configuration	docs/manual/um/parts/01-chapters.tex	4780	Trigger Configuration
 um:flow:workflow-triggers:why-this-configuration	docs/manual/um/parts/01-chapters.tex	4900	Why This Configuration?
 um:flow:workflow-triggers:workflow-diagram	docs/manual/um/parts/01-chapters.tex	4841	Workflow Diagram
+um:guide:authored-chapters	docs/manual/um/parts/01-chapters.tex	6565	Authored chapters
 um:guide:cleanup-recommendations	docs/manual/um/parts/99-appendix.tex	3	Cleanup recommendations
 um:guide:cleanup-recommendations:commercial-reports	docs/manual/um/parts/99-appendix.tex	60	Move the commercial-flow reports out of git
 um:guide:cleanup-recommendations:copilot-instructions	docs/manual/um/parts/99-appendix.tex	30	Replace the Copilot instructions and decide on the instruction files
@@ -3008,17 +3022,19 @@ um:guide:coding-guidelines:72-banned-content	docs/manual/um/parts/01-chapters.te
 um:guide:coding-guidelines:73-citation-line	docs/manual/um/parts/01-chapters.tex	1157	7.3 Citation line
 um:guide:coding-guidelines:74-moving-comment-text	docs/manual/um/parts/01-chapters.tex	1170	7.4 Moving comment text
 um:guide:coding-guidelines:scope-and-enforcement-policy	docs/manual/um/parts/01-chapters.tex	497	Scope and enforcement policy
-um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	6799	Commit Message Convention
-um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	6809	Coding Guidelines
-um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	6817	Questions?
+um:guide:commit-and-coding-rules	docs/manual/um/parts/01-chapters.tex	7017	Commit Message Convention
+um:guide:commit-and-coding-rules:coding-guidelines	docs/manual/um/parts/01-chapters.tex	7027	Coding Guidelines
+um:guide:commit-and-coding-rules:questions	docs/manual/um/parts/01-chapters.tex	7035	Questions?
 um:guide:debug-interface	docs/manual/um/parts/01-chapters.tex	431	Debug Interface (Phase 1+)
-um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	6716	Frequently Used Commands
-um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	6751	Project Structure
-um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	6568	Key Documentation
-um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	6574	Architecture \& Design
-um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	6631	Physical Design
-um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	6705	README detail set
-um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	6665	Verification \& Fixes
+um:guide:fact-tables	docs/manual/um/parts/01-chapters.tex	6672	Fact tables
+um:guide:figures	docs/manual/um/parts/01-chapters.tex	6702	Figures
+um:guide:frequently-used-commands	docs/manual/um/parts/01-chapters.tex	6934	Frequently Used Commands
+um:guide:frequently-used-commands:project-structure	docs/manual/um/parts/01-chapters.tex	6969	Project Structure
+um:guide:key-documentation	docs/manual/um/parts/01-chapters.tex	6786	Key Documentation
+um:guide:key-documentation:architecture-design	docs/manual/um/parts/01-chapters.tex	6792	Architecture \& Design
+um:guide:key-documentation:physical-design	docs/manual/um/parts/01-chapters.tex	6849	Physical Design
+um:guide:key-documentation:readme-detail-set	docs/manual/um/parts/01-chapters.tex	6923	README detail set
+um:guide:key-documentation:verification-fixes	docs/manual/um/parts/01-chapters.tex	6883	Verification \& Fixes
 um:guide:local-qa	docs/manual/um/parts/01-chapters.tex	2244	Local QA Setup Guide
 um:guide:local-qa:all-checks	docs/manual/um/parts/01-chapters.tex	2374	All Checks
 um:guide:local-qa:automatically-pre-commit-hooks	docs/manual/um/parts/01-chapters.tex	2264	Automatically (Pre-commit Hooks)
@@ -3063,8 +3079,10 @@ um:guide:quick-start:rtl-linting-formatting	docs/manual/um/parts/01-chapters.tex
 um:guide:quick-start:soc-cocotb-regression-tbcocotbsoc	docs/manual/um/parts/01-chapters.tex	210	\texorpdfstring{SoC cocotb regression (\src{tb/cocotb/soc})}{SoC cocotb regression ()}
 um:guide:quick-start:tool-input-rtl-filelists-rtlfilelist	docs/manual/um/parts/01-chapters.tex	293	\texorpdfstring{Tool-input RTL filelists (\src{rtl/filelist/})}{Tool-input RTL filelists ()}
 um:guide:readme-index	docs/manual/um/parts/01-chapters.tex	7	README Detail Set
-um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	6764	Reference Model (Python)
-um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	6780	Verification Strategy
+um:guide:reference-model-and-verification	docs/manual/um/parts/01-chapters.tex	6982	Reference Model (Python)
+um:guide:reference-model-and-verification:verification-strategy	docs/manual/um/parts/01-chapters.tex	6998	Verification Strategy
+um:guide:requirements	docs/manual/um/parts/01-chapters.tex	6612	Requirements
+um:guide:source-archive	docs/manual/um/parts/01-chapters.tex	6768	Source archive
 um:guide:spyglass-lint-remediation	docs/manual/um/parts/01-chapters.tex	1626	Spyglass Lint Remediation Plan (Handoff)
 um:guide:spyglass-lint-remediation:0-ground-rules-context	docs/manual/um/parts/01-chapters.tex	1638	0. Ground rules \& context
 um:guide:spyglass-lint-remediation:1-violation-catalog-disposition-summary	docs/manual/um/parts/01-chapters.tex	1678	1. Violation catalog \& disposition summary

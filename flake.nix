@@ -192,7 +192,7 @@
             fvextra fancyvrb listings imakeidx hyperref cleveref
             glossaries glossaries-extra l3packages
             mdframed zref needspace etoolbox kvoptions iftex
-            amsmath amsfonts upquote makeindex dejavu xurl;
+            amsmath amsfonts upquote makeindex dejavu xurl pgf tikz-timing;
         };
     in
     {

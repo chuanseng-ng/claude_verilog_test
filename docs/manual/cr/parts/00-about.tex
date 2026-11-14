@@ -1,0 +1,23 @@
+\chapter*{About this book}
+\markboth{About this book}{About this book}
+\phantomsection
+\addcontentsline{toc}{chapter}{About this book}
+\label{cr:ch:about}
+
+\section*{Purpose of this book}
+This book is the Changes record. It keeps the history of the project: the phases, the runs, the investigations, the fixes and the history of the source files. It does not describe the current state. For the current state, read the Design Specification and the Technical Manual.
+\input{about-books}
+
+\section*{Intended audience}
+The book is for the person who needs to know why the design is as it is, and what an earlier run showed.
+
+\section*{Using this book}
+The book has parts for the phase and status history, the run histories, the investigations, the fix log, the history of the source files and the source archive. The part Source archive holds text that moved from source comments into a book and later left that book when an authored chapter replaced it. The text in the archive is unchanged.
+
+\input{about-conventions}
+
+\section*{Records}
+The environment \code{record} marks historical text. Do not edit the words inside a \code{record} environment. A result in a record belongs to the date and the state of the design of that record.
+
+\section*{Feedback}
+Open an issue in the project tracker. Name the label of the section, for example \code{cr:ch:about}.

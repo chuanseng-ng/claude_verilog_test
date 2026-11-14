@@ -4,6 +4,17 @@
 \RequirePackage{xparse}
 \RequirePackage{mdframed}
 \RequirePackage{amssymb}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,automata,shapes.geometric}
+\RequirePackage{tikz-timing}
+% Shared figure styles. Use them in every book figure.
+\tikzset{
+  cvtblock/.style={draw,rounded corners=1pt,minimum height=7mm,minimum width=14mm,align=center,font=\small\sffamily},
+  cvtflop/.style={draw,minimum width=7mm,minimum height=10mm,font=\scriptsize\ttfamily},
+  cvtsig/.style={-{Stealth[length=2mm]},thin},
+  cvtdomain/.style={draw,dashed,rounded corners,inner sep=3mm,fill=black!3},
+  cvtstate/.style={state,minimum size=11mm,font=\scriptsize\ttfamily},
+}
 
 % ---- Status tags -----------------------------------------------------
 \definecolor{cvtwarn}{HTML}{B45F06}
@@ -136,6 +147,54 @@
   {\begin{cvt@notebox}\textbf{Note.}\ }{\end{cvt@notebox}}
 \newenvironment{procedure}
   {\begin{enumerate}}{\end{enumerate}}
+
+% ---- Requirements -----------------------------------------------------
+% \begin{requirement}{DS-CDC-020}{Short title}[verify={refs}] ... \end{requirement}
+% The last argument is never typeset. tools/docs/check_requirements.py reads it.
+% The ID DS-CDC-020 defines the label ds:req:cdc-020. \reqref{DS-CDC-020} refers to it.
+\definecolor{cvtreq}{HTML}{00695C}
+\newcounter{cvtreq}
+\newmdenv[linewidth=1.6pt,topline=false,bottomline=false,rightline=false,
+  linecolor=cvtreq,backgroundcolor=cvtreq!5,innerleftmargin=8pt,
+  innertopmargin=4pt,innerbottommargin=4pt]{cvt@reqbox}
+\newmdenv[linewidth=1.2pt,topline=false,bottomline=false,rightline=false,
+  linecolor=cvtnote,backgroundcolor=cvtnote!6,innerleftmargin=8pt,
+  innertopmargin=4pt,innerbottommargin=4pt]{cvt@rationalebox}
+\ExplSyntaxOn
+\tl_new:N \l_cvt_req_label_tl
+\seq_new:N \l_cvt_req_seq
+\tl_new:N \l_cvt_req_book_tl
+\cs_new_protected:Npn \cvt_req_set_label:n #1
+  {
+    \tl_set:Nx \l_cvt_req_label_tl { \str_lowercase:n {#1} }
+    \exp_args:NNnV \seq_set_split:Nnn \l_cvt_req_seq { - } \l_cvt_req_label_tl
+    \seq_pop_left:NN \l_cvt_req_seq \l_cvt_req_book_tl
+    \tl_set:Nx \l_cvt_req_label_tl
+      { \l_cvt_req_book_tl : req : \seq_use:Nn \l_cvt_req_seq { - } }
+  }
+\NewDocumentCommand{\cvt@reqlabel}{m}
+  { \cvt_req_set_label:n {#1} \exp_args:NV \label \l_cvt_req_label_tl }
+\NewDocumentCommand{\reqref}{m}
+  { \cvt_req_set_label:n {#1} \exp_args:NV \ref \l_cvt_req_label_tl }
+\ExplSyntaxOff
+\NewDocumentEnvironment{requirement}{m m O{}}
+  {\begin{cvt@reqbox}%
+   \refstepcounter{cvtreq}\phantomsection
+   \def\@currentlabel{\texttt{#1}}%
+   \cvt@reqlabel{#1}%
+   \addcontentsline{req}{cvtreq}{\protect\texttt{#1}\quad #2}%
+   \textbf{\ttfamily #1}\quad\textbf{#2}\par\nobreak\smallskip}
+  {\end{cvt@reqbox}}
+\newcommand*{\l@cvtreq}{\@dottedtocline{1}{0em}{7em}}
+\newcommand{\listofrequirements}{%
+  \chapter*{List of requirements}%
+  \phantomsection
+  \addcontentsline{toc}{chapter}{List of requirements}%
+  \@starttoc{req}}
+\newenvironment{information}
+  {\begin{cvt@notebox}\textbf{Information.}\ }{\end{cvt@notebox}}
+\newenvironment{rationale}
+  {\begin{cvt@rationalebox}\textbf{Rationale.}\ }{\end{cvt@rationalebox}}
 
 % ---- Listings --------------------------------------------------------
 \lstdefinelanguage{SystemVerilog}{%

@@ -1,0 +1,43 @@
+# Words for the generated signal and parameter tables of the CDC blocks.
+# The RTL gives the names, directions, widths and defaults. This file gives the rest.
+# Run: python tools/docs/gen_fact_tables.py
+# A description in backticks is set as code. Every port and parameter needs an entry.
+# domain: the name of a clock port of the same module, or clock, async or quasi-static.
+family: cdc
+modules:
+  cdc_sync:
+    rtl: rtl/soc/cdc/cdc_sync.sv
+    deps: []
+    label: tm:mod:cdc-sync
+    params:
+      WIDTH:
+        legal: "1 or more"
+        description: "Number of bits that cross. Use more than 1 only for a gray-coded bus."
+      STAGES:
+        legal: "2 or more"
+        description: "Number of flop ranks. Elaboration stops with an error when the value is below 2."
+      RESET_VAL:
+        legal: "any WIDTH-bit value"
+        description: "Value of every rank while `rst_n_i` is low. Use 1 for an idle-high line."
+      RAND_CDC_DELAY_EN:
+        legal: "0 or 1"
+        description: "Simulation only. When 1, rank 0 can miss a change of `d_i` for one cycle. Synthesis and lint do not see the model."
+      RAND_CDC_DELAY_PCT:
+        legal: "0 to 100"
+        description: "Simulation only. Percent chance that rank 0 misses an edge on which `d_i` differs from its value at the previous edge. With 100 or more, rank 0 misses each such edge."
+      RAND_CDC_DELAY_SEED:
+        legal: "any 32-bit value"
+        description: "Simulation only. Seed of the random stream of this instance. The stream is seeded once at time 0."
+    ports:
+      clk_i:
+        domain: clock
+        description: "Clock of the destination domain."
+      rst_n_i:
+        domain: clk_i
+        description: "Active-low reset. It asserts asynchronously. The caller supplies it already synchronised to `clk_i`."
+      d_i:
+        domain: async
+        description: "Data from the source domain. It is not synchronous to `clk_i`."
+      q_o:
+        domain: clk_i
+        description: "Output of the last rank. It shows the value of `d_i` after STAGES edges of `clk_i`."

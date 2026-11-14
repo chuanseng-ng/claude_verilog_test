@@ -1,0 +1,25 @@
+\chapter*{About this book}
+\markboth{About this book}{About this book}
+\phantomsection
+\addcontentsline{toc}{chapter}{About this book}
+\label{ds:ch:about}
+
+\section*{Purpose of this book}
+This book is the Design Specification. It states the rules of the design. A rule in this book is stated so that a test can fail it. How the design does it is in the Technical Manual.
+\input{about-books}
+
+\section*{Intended audience}
+The book is for the engineers who design, verify and integrate the blocks, and for the reviewers who approve a specification. The reader knows RTL design and the basic terms of clock-domain crossing and physical design.
+
+\section*{Using this book}
+The book has four parts: Architecture, Constraints and power intent, Module contracts and Verification plan. A chapter of the part Module contracts is the contract of one block or of one family of blocks. A chapter that has been authored with requirements ends with a table that links each requirement to its verification. Once the book has requirements, a list of them follows this chapter.
+
+\input{about-conventions}
+
+\section*{Requirement identifiers}
+A requirement has an identifier of the form \code{DS-AREA-NNN}. AREA names a function area, for example \code{CDC}. NNN is a number with three digits. The numbers of an area are grouped by topic, and the groups have gaps between them. The identifier of a requirement never changes. A number is never used for a second requirement.
+
+The file \src{docs/manual/common/requirement_ids.tsv} is the ledger of all identifiers. A requirement that the design no longer needs is not deleted from the ledger. The ledger marks it as retired, and the book no longer shows it. The tool \src{tools/docs/check_requirements.py} checks the ledger. The writing rules are in \cref{um:guide:requirements}.
+
+\section*{Feedback}
+Open an issue in the project tracker. Name the label of the section, for example \code{ds:ch:about}.
