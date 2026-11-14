@@ -11,16 +11,15 @@ returns, the sequencer still shows its pre-write state and stays there for one m
 (two cycles of no visible change). Then it walks one state per cycle. Every ordering test lists the
 hold in its expected samples (e.g. `[ON, ON, PD_SAVE, PD_GATE, PD_ISO, OFF, OFF]`).
 Tests: reset defaults. Power-down and power-up ordering per domain, per cycle and not only the end
-state (ret_save -> iso_en -> clk-gate -> reset-assert and the reverse, no collapse or reorder). A
+state (ret_save -> clk-gate -> iso_en -> reset-assert and the reverse, no collapse or reorder). A
 CTRL write mid-descent does not reverse the in-flight sequence: it completes to OFF, then powers up.
 Isolation handshake: tb_pmu models the CPU-domain ack round trip with a configurable latency
-(ack_lat_i, 0 = pass-through as in the tests above), a stuck ack (ack_stuck_i) and a forced ack
-(ack_force_i, ack_force_val_i). Power-down: the clock is gated before the clamp rises, DOM_PD_ISO lasts ack_lat+1 cycles, and the reset
-follows the ack by one cycle, never before it. An ack that is already high when the wait begins does not
-end it. Power-up: DOM_PU_ISO lasts ack_lat+1 cycles (4-phase return-to-zero wait) and an ack that is already
-low when the wait begins does not end it. A dead ack does not hang: the sequencer proceeds after
-ISO_ACK_TIMEOUT cycles in either wait and sets sticky STATUS[3]. Only a reset or a write of 1 to
-STATUS_CLR[0] clears it. The GPU walk ignores the CPU ack. A reset restarts the wait counter.
+(ack_lat_i, 0 = pass-through), a stuck ack (ack_stuck_i) and a forced ack (ack_force_i,
+ack_force_val_i). Power-down: DOM_PD_ISO lasts ack_lat+1 cycles and the reset follows the ack by one
+cycle. Power-up: DOM_PU_ISO lasts ack_lat+1 cycles (4-phase return-to-zero wait). A wait accepts
+only an ack level it saw change, so a stale level burns the full ISO_ACK_TIMEOUT. A dead ack does
+not hang: the wait ends after ISO_ACK_TIMEOUT cycles and sets sticky STATUS[3], which only a reset or
+STATUS_CLR[0]=1 clears. The GPU walk ignores the CPU ack. A reset restarts the wait counter.
 Run: make -C tb/cocotb/soc pmu
 Doc: tm:suite:soc-test-pmu
 """
