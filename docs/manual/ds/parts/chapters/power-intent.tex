@@ -32,11 +32,11 @@ The chapter uses these terms with a fixed meaning.
 The file has four power domains. \code{PD_CPU} and \code{PD_GPU} are gated. \code{PD_PERIPH} and \code{PD_SRAM} have the always-on supply.
 
 \begin{requirement}{DS-PWR-001}{Power domains and their members}
-[verify={check:tools/verif/check_upf.py; review}]
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_missing_required_domain_fails; test:tb/tests/test_check_upf.py::test_renamed_domain_fails; test:tb/tests/test_check_upf.py::test_domain_with_wrong_elements_fails}]
 The power intent must define the power domains \code{PD_CPU}, \code{PD_GPU}, \code{PD_SRAM} and \code{PD_PERIPH}. \code{PD_CPU} must hold \code{u_cpu}, \code{PD_GPU} must hold \code{u_gpu}, \code{PD_SRAM} must hold \code{u_sram}, and \code{PD_PERIPH} must hold the top scope and all other instances.
 \end{requirement}
 \begin{information}
-The checker enforces part of the rule. It reports a finding when a named instance does not exist in the elaborated \code{soc_top} (finding U02, see \reqref{DS-PWR-083}). It reports a finding when no domain holds the top scope, or when the excluded instances of this domain differ from the instances of the other domains (finding U03). The isolation check requires that \code{u_cpu} is in the domain of \code{ISO_CPU} and \code{u_gpu} in the domain of \code{ISO_GPU}, and the state check needs the names \code{PD_CPU} and \code{PD_GPU} (\reqref{DS-PWR-041}). The checker does not require the domain \code{PD_SRAM} and does not check the names \code{PD_SRAM} and \code{PD_PERIPH}. A trial that moved \code{u_sram} into the roster of \code{PD_PERIPH} and removed \code{PD_SRAM} passed. A reviewer checks these parts.
+The checker enforces the rule. It reports a finding when a named instance does not exist in the elaborated \code{soc_top} (finding U02, see \reqref{DS-PWR-083}). It reports a finding when no domain holds the top scope, or when the excluded instances of this domain differ from the instances of the other domains (finding U03). The isolation check requires that \code{u_cpu} is in the domain of \code{ISO_CPU} and \code{u_gpu} in the domain of \code{ISO_GPU}, and the state check needs the names \code{PD_CPU} and \code{PD_GPU} (\reqref{DS-PWR-041}). The checker also requires exactly the four domains of the rule, each with the elements of the rule (finding U03). A missing domain, a domain with a different name and a domain with different elements are findings.
 \end{information}
 
 \begin{requirement}{DS-PWR-002}{One domain for each instance}
@@ -61,27 +61,27 @@ The comment above the first two groups of the roster gives the reason that the g
 \end{information}
 
 \begin{requirement}{DS-PWR-005}{Supply set of each domain}
-[verify={check:tools/verif/check_upf.py; review}]
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_gated_domain_must_list_the_always_on_supply; test:tb/tests/test_check_upf.py::test_available_supply_set_must_exist; review}]
 \code{PD_PERIPH} and \code{PD_SRAM} must have the supply set \code{SS_AON} as primary supply. \code{PD_CPU} must have \code{SS_CPU} as primary supply. \code{PD_GPU} must have \code{SS_GPU} as primary supply. \code{PD_CPU} and \code{PD_GPU} must list \code{SS_AON} as an available supply.
 \end{requirement}
 \begin{information}
-The checker requires that each named supply set exists. It finds the gated domains from the power nets of the primary supplies. A wrong supply set fails the check of the power states (\reqref{DS-PWR-041}) or the check of the isolation (\reqref{DS-PWR-026}). The checker does not require the available supply \code{SS_AON} of \code{PD_CPU} and \code{PD_GPU}. A trial that removed it from \code{PD_CPU} passed. A reviewer checks this part.
+The checker requires that each named supply set exists. It finds the gated domains from the power nets of the primary supplies. A wrong supply set fails the check of the power states (\reqref{DS-PWR-041}) or the check of the isolation (\reqref{DS-PWR-026}). The checker requires that each gated domain lists the primary supply set of the always-on domain as an available supply (finding U04). The checker does not compare the names of the primary supply sets with the names of the rule. A reviewer checks the names.
 \end{information}
 
 \begin{requirement}{DS-PWR-006}{Rails of the supply sets}
-[verify={check:tools/verif/check_upf.py; review}]
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_wrong_ground_net_fails; test:tb/tests/test_check_upf.py::test_ground_net_needs_a_zero_volt_port_state; review}]
 \code{SS_AON} must have the power net \code{VDD} and the ground net \code{VSS}. \code{SS_CPU} must have the power net \code{VDD_CPU} and the ground net \code{VSS}. \code{SS_GPU} must have the power net \code{VDD_GPU} and the ground net \code{VSS}.
 \end{requirement}
 \begin{information}
-The checker requires that each net of a supply set exists, and it compares the power nets with the power net of the always-on domain. It does not check the ground nets. A trial that gave \code{SS_CPU} the ground net \code{VDD} passed. A reviewer checks the names of the nets.
+The checker requires that each net of a supply set exists, and it compares the power nets with the power net of the always-on domain. It requires that each supply set has the ground net of the always-on supply set, and that this net has a port state of 0.0~V (finding U04). It does not compare the names of the power nets with the names of the rule. A reviewer checks the names of the power nets.
 \end{information}
 
 \begin{requirement}{DS-PWR-007}{Source of each supply net}
-[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_supply_net_without_source_fails}]
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_supply_net_without_source_fails; test:tb/tests/test_check_upf.py::test_supply_port_direction_is_checked}]
 Each supply net must have a source, which is a supply port or the output of a power switch. Each supply port must connect to a supply net.
 \end{requirement}
 \begin{information}
-The file models \code{VDD_CPU} and \code{VDD_GPU} as supply ports that an outside source drives. Each has the port states ON and OFF. The file has no power switch (\reqref{DS-PWR-061}). The checker takes each connected supply port as a source. It does not check the direction of the port.
+The file models \code{VDD_CPU} and \code{VDD_GPU} as supply ports that an outside source drives. Each has the port states ON and OFF. The file has no power switch (\reqref{DS-PWR-061}). The checker takes each connected supply port as a source. The direction of each supply port must be \code{in} (finding U04).
 \end{information}
 
 \section{Isolation}\label{ds:ch:power-intent:isolation}
@@ -178,11 +178,11 @@ Each state that is a PMU mode must require \code{scan_mode_i == 1'b0}.
 \end{requirement}
 
 \begin{requirement}{DS-PWR-043}{The state SCAN}
-[verify={check:tools/verif/check_upf.py; review}]
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_scan_state_is_required}]
 The state \code{SCAN} must require \code{scan_mode_i == 1'b1}, must have every supply set ON, and must not depend on \code{pmu_mode_req}.
 \end{requirement}
 \begin{information}
-The checker checks the state \code{SCAN} and the clock gates (\reqref{DS-PWR-044}) only when the state exists. A file without the state \code{SCAN} passes. A reviewer checks that the state is present.
+The checker requires the state \code{SCAN} in each group of power states (finding U07). A file without the state is a finding.
 \end{information}
 
 \begin{requirement}{DS-PWR-044}{Clock gates open in scan}
@@ -257,11 +257,11 @@ Each instance path and each design net that the file names must exist in the ela
 \end{requirement}
 
 \begin{requirement}{DS-PWR-084}{Form of the directive lines}
-[verify={check:tools/docs/check_pinned_text.py; test:tb/tests/test_docs_check_pinned_text.py::test_upf_directive_lines_must_parse; review}]
+[verify={check:tools/verif/check_upf.py; check:tools/docs/check_pinned_text.py; test:tb/tests/test_check_upf.py::test_directive_attempt_with_a_wrong_form_fails; test:tb/tests/test_check_upf.py::test_free_comment_text_is_not_a_directive; test:tb/tests/test_docs_check_pinned_text.py::test_upf_directive_lines_must_parse; review}]
 Each comment line of the file that starts with the words \code{upf-check} must have the form that the checker reads.
 \end{requirement}
 \begin{information}
-The checker reads a line whose kind word is wrong as a comment. It then reports a missing roster entry or a missing classification, and not the wrong word. The pinned-text check reports a line that starts with the word \code{upf-check} and does not have the kind \code{aon} or \code{unclamped}. Neither check reports a line in which the word \code{upf-check} itself is misspelled. A reviewer checks this part. A change of the words of a directive line is a change of the power intent.
+Both checks take a comment line whose first word starts with \code{upf-}, in upper or lower case, as a directive line (finding U03 of the checker). Such a line must have the word \code{upf-check} and the kind \code{aon} or \code{unclamped}. A wrong kind word and a misspelled word \code{upf-check} are findings. A comment line whose first word does not start with \code{upf-} is an ordinary comment to both checks, also when the line names \code{upf-check} later. A reviewer checks a directive that is misspelled in its first characters. A change of the words of a directive line is a change of the power intent.
 \end{information}
 
 \section{Architecture decisions}\label{ds:ch:power-intent:decisions}

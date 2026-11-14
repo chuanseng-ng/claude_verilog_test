@@ -208,17 +208,17 @@ Apart from the two reset synchronisers, only the levels \code{req_q} and \code{a
 \end{requirement}
 
 \begin{requirement}{DS-CDC-102}{Request while the destination is in reset}
-[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_never_forwarded; review}]
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_never_forwarded; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b4_ds102_latency_bound; review}]
 A request that starts while the source side sees the destination in reset must complete with \code{s_pready_o} high and \code{s_pslverr_o} high after the second rising edge of \code{s_clk_i} that follows the SETUP edge. The request must not cause a transfer on the \code{m_*} face.
 \end{requirement}
 
 \begin{requirement}{DS-CDC-103}{Destination reset during a transfer}
-[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side; review}]
-When the destination enters reset before \code{m_pready_i} completes the access, a forwarded request must complete with \code{s_pready_o} and \code{s_pslverr_o} high within \code{SYNC_STAGES_TO_S}+3 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b4_ds103_latency_bound; review}]
+When the destination enters reset before \code{m_pready_i} completes the access, a forwarded request must complete with \code{s_pready_o} and \code{s_pslverr_o} high within \code{SYNC_STAGES_TO_S}+2 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
 \end{requirement}
 
 \begin{information}
-An error from the bridge during a reset of the destination does not show that the destination made no transfer. The destination can finish the access, and then reset before the acknowledge reaches the source. The source then sees the reset status and returns an error, while a write has taken place. Software has to treat such an error as ``access state unknown''. The bounds of \reqref{DS-CDC-102} and \reqref{DS-CDC-103} follow from the RTL, and no test measures them.
+An error from the bridge during a reset of the destination does not show that the destination made no transfer. The destination can finish the access, and then reset before the acknowledge reaches the source. The source then sees the reset status and returns an error, while a write has taken place. Software has to treat such an error as ``access state unknown''. The tests \code{test_b4_ds102_latency_bound} and \code{test_b4_ds103_latency_bound} measure the bounds of \reqref{DS-CDC-102} and \reqref{DS-CDC-103} at four clock ratios.
 \end{information}
 
 \begin{requirement}{DS-CDC-104}{Answer wins over reset status}
