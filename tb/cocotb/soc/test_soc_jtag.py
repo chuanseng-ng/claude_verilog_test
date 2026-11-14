@@ -705,3 +705,131 @@ async def test_mbist_over_the_tap_in_soc_top(dut):
     await _wait_commits(dut, mon, 50)
     assert mon.commits > c0, "the CPU keeps committing after the MBIST run"
     mon.stop()
+
+
+# ---------------------------------------------------------------------------
+# A clock-gate force while the PMU holds the CPU domain off (documented limit)
+# ---------------------------------------------------------------------------
+# Doc: tm:ch:mod-power-management:soc
+#
+# The CPU clock gate opens for an MBIST force or for dft_test_en whatever the PMU does. The PMU
+# reset of the CPU domain stays asserted, so the CPU flops see clock edges in reset. The CPU MBIST
+# controller does not start in that state, because rv32i_cpu_top gates mbist_run_i with its reset.
+# The User Manual says: run MBIST and scan only with the PMU in the all-on mode. These tests record
+# the behaviour of the RTL. They are normal tests: they pass while the limit exists. If a test
+# fails, the limit changed, and the manual has to change with it.
+PMU_CTRL_CPU_OFF = 0x1
+PMU_CTRL_NORMAL = 0x0
+DOM_OFF_STATE = 4
+DOM_ON_STATE = 0
+
+
+async def _pmu_set_mode(dut, mode: int) -> None:
+    """Backdoor write of PMU CTRL, the storage cell that a bus write to 0x2000_8000 reaches."""
+    await RisingEdge(dut.clk_i)
+    dut.u_soc.u_pmu.u_regbank.regs[0].value = mode
+
+
+async def _pmu_wait_cpu_state(dut, state: int, limit: int = 4000) -> None:
+    for _ in range(limit):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if int(dut.u_soc.u_pmu.dom_state_q[0].value) == state:
+            await Timer(1, units="step")  # leave the ReadOnly phase before the caller drives pins
+            return
+    raise RuntimeError(f"harness: the CPU PMU domain never reached state {state}")
+
+
+async def _cpu_gate_window(dut, cycles: int) -> dict:
+    """Over `cycles` rising edges of cpu_clk_i count the pulses of cpu_gated_clk and sample the
+    reset and the MBIST nets of the CPU domain after each edge."""
+    soc = dut.u_soc
+    win = {"ticks": 0, "rst_high": 0, "mb_run_w": 0, "mb_en_w": 0, "mb_cpu_run": 0, "busy": 0}
+    for _ in range(cycles):
+        await RisingEdge(dut.cpu_clk_i)
+        await ReadOnly()
+        win["ticks"] += int(soc.cpu_gated_clk.value)
+        win["rst_high"] += int(soc.cpu_domain_rst_n.value)
+        win["mb_run_w"] += int(soc.u_cpu.mb_run_w.value)
+        win["mb_en_w"] += int(soc.u_cpu.mb_en_w.value)
+        win["mb_cpu_run"] += int(soc.mb_cpu_run.value)
+        win["busy"] += int(soc.cpu_mbist_busy.value)
+    await Timer(1, units="step")
+    return win
+
+
+async def _cpu_mbist_status(dut, drv) -> dict:
+    await drv.load_ir(OP_MBIST_STATUS)
+    v = await drv.shift_dr(0, 140)
+    return {"present": (v >> 1) & 1, **decode_status((v >> 71) & ((1 << 69) - 1))}
+
+
+@cocotb.test()
+async def test_mbist_force_while_pmu_holds_cpu_off_cannot_start_cpu_mbist(dut):
+    """Documented limit. A TAP MBIST run of the CPU domain while the PMU holds the CPU domain off:
+    the force opens u_cpu_cg, the CPU domain stays in reset, and the CPU MBIST controller does not
+    start. Control: the same run word finishes after the PMU powers the CPU domain up."""
+    tasks = await _boot_cpu(dut)
+    soc = dut.u_soc
+    mon = _Monitor(dut).start()
+    await _wait_commits(dut, mon, 30)
+    # No spec-model probe: the model of the TAP does not know the live MBIST status word.
+    drv = JtagDriver(dut.tck_i, dut.tms_i, dut.tdi_i, dut.trst_ni, dut.tdo_o,
+                     period_ns=TCK_NS, probe=None, name="soc_tap_off")  # fmt: skip
+    await drv.start()
+
+    await _pmu_set_mode(dut, PMU_CTRL_CPU_OFF)
+    await _pmu_wait_cpu_state(dut, DOM_OFF_STATE)
+    await ClockCycles(dut.cpu_clk_i, 12)
+    base = await _cpu_gate_window(dut, 20)
+    assert int(soc.pmu_cpu_rst_n_cpu_sync.value) == 0 and int(soc.cpu_gated_clk_en.value) == 0
+    assert base["ticks"] == 0 and base["rst_high"] == 0, f"CPU domain not off before the force: {base}"
+    assert int(soc.mbist_force.value) == 0
+
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=1, alg=0, dom_core=0, dom_cpu=1), 29)
+    assert int(soc.mbist_force.value) == 1, "the TAP run of the CPU domain must raise the force"
+    for _ in range(200):
+        await RisingEdge(dut.cpu_clk_i)
+        await ReadOnly()
+        if int(soc.mb_cpu_run.value):
+            break
+    else:
+        raise RuntimeError("harness: the run word never reached the CPU domain")
+    await Timer(1, units="step")
+    c0 = mon.commits
+    win = await _cpu_gate_window(dut, 60)
+    st = [await _cpu_mbist_status(dut, drv) for _ in range(6)]
+    assert win["ticks"] >= 50, f"the force must open the CPU clock gate: {win}"
+    assert win["rst_high"] == 0, f"the PMU reset of the CPU domain must stay asserted: {win}"
+    assert win["mb_cpu_run"] == 60, f"the run word must stay in the CPU domain: {win}"
+    assert win["mb_run_w"] == 0 and win["mb_en_w"] == 0 and win["busy"] == 0, (
+        f"the CPU MBIST controller must not start while the domain is in reset: {win}"
+    )
+    for s in st:
+        assert s["present"] == 1, "the CPU controller must read as present"
+        assert s["done"] == 0 and s["busy"] == 0 and s["fail_any"] == 0, f"status {s}"
+    assert mon.commits == c0, "the CPU committed while it was in reset"
+    dut._log.info(f"force during CPU_OFF: gated clock ticks {win['ticks']}/60, domain reset low, "
+                  "controller idle")
+
+    # Control: the run word is still held. After the power-up the controller starts and finishes.
+    await _pmu_set_mode(dut, PMU_CTRL_NORMAL)
+    await _pmu_wait_cpu_state(dut, DOM_ON_STATE)
+    done = None
+    for _ in range(400):
+        s = await _cpu_mbist_status(dut, drv)
+        if s["done"]:
+            done = s
+            break
+    assert done is not None, "the held run word did not finish after the PMU powered the domain up"
+    assert done["cfg_err"] == 0, f"unexpected configuration error {done}"
+    assert int(soc.u_cpu.mb_en_w.value) == 1, "the controller must be running in the macro"
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0, dom_core=0, dom_cpu=1), 29)
+    await ClockCycles(dut.clk_i, 20)
+    assert int(soc.mbist_force.value) == 0 and int(soc.u_cpu.mb_en_w.value) == 0
+    c1 = mon.commits
+    await _wait_commits(dut, mon, 20)
+    assert mon.commits > c1, "the CPU must commit again after the run"
+    mon.stop()
+    for t in tasks:
+        t.kill()
