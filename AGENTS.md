@@ -24,7 +24,7 @@ The books in `docs/manual/` are the source of truth. Refer to them. Do not rely 
 | Phase 0 to 2 | Done (2026-03-08) | Pipelined CPU reaches 75 MHz on Sky130 with real post-route SPEF. |
 | Phase 3 caches | Done (2026-05-21) | The ASAP7 1418 MHz figure is unvalidated (see caveats). |
 | Phase 4 GPU | Done (2026-05-27) | All GPU tests pass. The ASAP7 GPU figures are unvalidated. |
-| Phase 5 SoC | Done (2026-06-24) | Timing is not closed at 1750 ps on the current RTL (see caveats). |
+| Phase 5 SoC | Done (2026-06-24) | The latest ASAP7 timing point does not close at 1750 ps (see caveats). |
 | Phase 6 IP | Done (2026-10-05) | Sky130 batched harden passed. |
 | Phase 7 PLL | Done | Stages M-a to M-c. |
 | DFT (scan, JTAG, MBIST) | In progress | JTAG TAP and MBIST merged. Scan insertion is open. |
@@ -33,18 +33,27 @@ The books in `docs/manual/` are the source of truth. Refer to them. Do not rely 
 These caveats always apply. Read them before you quote any result.
 
 - Synlig built the ASAP7 CPU and GPU macro views. They are functionally wrong.
-  The committed `pnr/asap7/soc/macro/` views still use them.
-- Every ASAP7 CPU, GPU and SoC timing, power and area figure rests on those views.
+  Simulation of the netlist proved the CPU fault. The GPU fault is shown on one block only.
+  The committed views are in `pnr/asap7/cpu/macro/` and `pnr/asap7/gpu/macro/`.
+  The SoC flow copies them into `pnr/asap7/soc/macro/`.
+- Every ASAP7 CPU and GPU figure rests on the Synlig-built netlists. Every ASAP7 SoC figure reads those views.
 - The old ASAP7 timing figures came from an STA run with zero-wire parasitics. Treat them as unvalidated.
 - The project withdrew the ASAP7 "0 DRC, 0 antenna" claims. Detailed routing committed no wires.
+  This caveat still applies to the latest SoC point.
 - The ASAP7 power grid was empty in every run. Routing numbers are lower bounds.
-- The current ASAP7 SoC point is setup WNS -727.37 ps at 1750 ps. Hold is clean.
+  The SoC configurations still select the old grid script.
+- The latest ASAP7 SoC point is setup WNS -727.37 ps at 1750 ps. Hold is clean.
+  The point predates the Phase 6 and DFT RTL. It is not a measurement of the present RTL.
+- The old ASAP7 SoC power figures count zero power for the two hard macros.
 - Sky130 timing uses one SRAM corner model (nom_tt only). "Clean at 9 corners" means 9 labels on one model.
+- The Sky130 Magic DRC counts carry a waiver for the SRAM footprints. One Sky130 SoC harden did not run KLayout DRC.
 - Commercial flows in `pnr/commercial/` are indicative. No arm meets sign-off.
 - The Sky130 CPU macro was re-hardened with sv2v. The older Synlig-built views were wrong.
-- ASAP7 CPU and GPU re-hardening needs a host with 32 GB RAM or more.
+- ASAP7 CPU and GPU re-hardening waits for a host with 32 GB RAM or more. This is the owner's decision.
+  A re-harden on sv2v ended in a routing regression, and the cause is not proven.
 
-Detail for each caveat: `docs/manual/cr/` (run histories) and `docs/manual/tm/` (tool defects).
+Detail for each caveat: the Technical Manual, part "Tool defects and standing caveats" (labels `tm:caveat:*`),
+and the run histories in `docs/manual/cr/`.
 
 ## 3. Directory map
 
