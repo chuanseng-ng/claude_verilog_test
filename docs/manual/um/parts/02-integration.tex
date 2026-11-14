@@ -1,0 +1,194 @@
+\part{Integration guide}\label{um:part:integration-guide}
+
+\chapter{Clock-domain crossing integration}\label{um:ch:cdc-integration}
+
+This chapter gives the tasks for a signal that goes from one clock domain to another. The rules are in \cref{ds:ch:mod-cdc-primitives}. The description of each block is in \cref{tm:ch:mod-cdc-primitives}.
+
+\section{Choose the block}\label{um:ch:cdc-integration:choose}
+Find what crosses in \cref{tab:um:ch:cdc-integration:choose}. Use the block of the right column.
+
+\begin{table}[ht]
+  \centering
+  \caption{Which block to use}\label{tab:um:ch:cdc-integration:choose}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{50mm}>{\raggedright\arraybackslash}p{36mm}>{\raggedright\arraybackslash}p{50mm}@{}}
+    \toprule
+    What crosses & Block & Reason\\
+    \midrule
+    One bit that stays stable for more than one period of the receiving clock & \code{cdc_sync} & A chain of flops gives the first flop time to settle.\\
+    An idle-high line, such as a serial receive pin & \code{cdc_sync} with \code{RESET_VAL} of 1 & The line shows its idle value during reset.\\
+    A counter or an index that changes one bit on each source edge & \code{cdc_sync} with \code{WIDTH} above 1 & All bits stay coherent, because only one bit changes.\\
+    A multi-bit binary bus & A gray code, or a handshake & A binary bus can show a wrong value when several bits change.\\
+    An asynchronous reset for one domain & \code{cdc_reset_sync} & The reset asserts at once and deasserts in step with the clock.\\
+    A stream of words with ready and valid & \code{cdc_gray_fifo} & The FIFO keeps the order and gives back-pressure.\\
+    The five channels of an AXI4 bus & \code{async_axi_fifo} & It has one FIFO for each channel and a common reset.\\
+    Register access by APB4 & \code{apb_cdc_bridge} & It carries one transfer at a time and ends it with an error when the destination is in reset.\\
+    A pulse shorter than one receiving period & None of the blocks & Stretch the pulse in the source domain first.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Instantiate a block}\label{um:ch:cdc-integration:instantiate}
+In every task, the names in the listing are examples. Use the names of your design. For \code{cdc_sync} and \code{cdc_gray_fifo}, supply each reset already synchronised to the clock of its domain. The two bridges synchronise their resets inside.
+
+\subsection{A synchroniser for one bit}
+\begin{procedure}
+  \item Choose \code{STAGES}. The default is 2. A larger value gives a longer MTBF and a longer latency.
+  \item Choose \code{RESET_VAL}. It is the value that the logic after \code{q_o} sees during reset.
+  \item Connect \code{clk_i} to the clock of the receiving domain, and \code{rst_n_i} to a reset that is synchronised to this clock.
+  \item Add the instance to the file list of every flow that uses it (\cref{um:ch:cdc-integration:verify}).
+\end{procedure}
+\begin{lstlisting}
+cdc_sync #(
+    .WIDTH     (1),
+    .STAGES    (2),
+    .RESET_VAL (1'b1)
+) u_rx_sync (
+    .clk_i   (clk_i),
+    .rst_n_i (rst_n_i),
+    .d_i     (uart_rx_i),
+    .q_o     (rx_sync)
+);
+\end{lstlisting}
+
+\subsection{A reset synchroniser}
+\begin{procedure}
+  \item Connect \code{clk_i} to the clock of the domain that gets the reset, and \code{rst_n_i} to the source reset.
+  \item Connect \code{scanmode_i} and \code{scan_rst_ni} of the scan flow. Without scan, tie \code{scanmode_i} to \code{1'b0} and \code{scan_rst_ni} to \code{1'b1}.
+  \item Hold the source reset low for at least the minimum pulse width of the flops. The chain clears without a clock edge.
+\end{procedure}
+\begin{lstlisting}
+cdc_reset_sync #(
+    .STAGES (2)
+) u_dom_rst_sync (
+    .clk_i       (dom_clk),
+    .rst_n_i     (src_rst_n),
+    .scanmode_i  (1'b0),
+    .scan_rst_ni (1'b1),
+    .rst_n_o     (dom_rst_n)
+);
+\end{lstlisting}
+
+\subsection{A FIFO between two domains}
+\begin{procedure}
+  \item Choose \code{WIDTH}, \code{DEPTH} (a power of two, at least 2) and \code{SYNC_STAGES}.
+  \item Connect the write side to the write clock and a reset that is synchronised to it. Connect the read side in the same way.
+  \item Take an entry when \code{rd_valid_o} and \code{rd_ready_i} are both high. Offer an entry with \code{wr_valid_i} and wait for \code{wr_ready_o}.
+  \item Keep the instance names \code{u_wr_ptr_to_rd} and \code{u_rd_ptr_to_wr} inside the module, and add a delay budget for the new instance (\cref{um:ch:cdc-integration:constrain}).
+\end{procedure}
+\begin{lstlisting}
+cdc_gray_fifo #(
+    .WIDTH       (16),
+    .DEPTH       (4),
+    .SYNC_STAGES (2)
+) u_xing_fifo (
+    .wr_clk_i   (a_clk),   .wr_rst_n_i (a_rst_n),
+    .wr_data_i  (a_data),  .wr_valid_i (a_valid), .wr_ready_o (a_ready),
+    .rd_clk_i   (b_clk),   .rd_rst_n_i (b_rst_n),
+    .rd_data_o  (b_data),  .rd_valid_o (b_valid), .rd_ready_i (b_ready)
+);
+\end{lstlisting}
+
+\subsection{An APB bridge}
+\begin{procedure}
+  \item Connect the \code{s_*} face to the APB master and the \code{m_*} face to the APB slave. Set \code{ADDR_W} to the address width of both.
+  \item Connect \code{s_pstrb_i}. If the master has no strobes, tie it to \code{4'hF}. Leave \code{m_pstrb_o} open if the slave has no strobes.
+  \item Connect the scan pins as for the reset synchroniser.
+  \item Hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i}. A shorter pulse can make the destination run a transfer again.
+  \item Use the bridge for configuration and debug access only. Do not use it for bulk data.
+\end{procedure}
+\begin{lstlisting}
+apb_cdc_bridge #(
+    .ADDR_W (12)
+) u_cfg_cdc (
+    .scanmode_i (1'b0), .scan_rst_ni (1'b1),
+    .s_clk_i (core_clk), .s_rst_n_i (core_rst_n),
+    .s_psel_i (psel), .s_penable_i (penable), .s_pwrite_i (pwrite),
+    .s_paddr_i (paddr), .s_pwdata_i (pwdata), .s_pstrb_i (4'hF),
+    .s_prdata_o (prdata), .s_pready_o (pready), .s_pslverr_o (pslverr),
+    .m_clk_i (dev_clk), .m_rst_n_i (dev_rst_n),
+    .m_psel_o (m_psel), .m_penable_o (m_penable), .m_pwrite_o (m_pwrite),
+    .m_paddr_o (m_paddr), .m_pwdata_o (m_pwdata), .m_pstrb_o (m_pstrb),
+    .m_prdata_i (m_prdata), .m_pready_i (m_pready), .m_pslverr_i (m_pslverr)
+);
+\end{lstlisting}
+
+\subsection{An AXI4 bridge}
+\begin{procedure}
+  \item Connect the \code{s_*} face to the AXI4 master and the \code{m_*} face to the AXI4 slave. The faces have no identifier.
+  \item Take \code{s_rst_n_i} and \code{m_rst_n_i} from a common root that also resets the master and the slave side. A reset of one input flushes both faces. In \code{soc_top} the two resets of \code{u_cpu_axi_cdc} come from two top-level ports, so the common root is a task of the board or of the reset controller.
+  \item In \code{soc_top}, use \code{cpu_core_rst_n} for \code{s_rst_n_i} of \code{u_cpu_axi_cdc}, and not \code{cpu_domain_rst_n}. The domain reset also drops for a PMU reset, and a flush would lose a response that the CPU waits for.
+  \item Check that the clock of each face runs while its reset is low.
+  \item Connect the scan pins as for the reset synchroniser.
+\end{procedure}
+\begin{warningbox}
+The bridge \code{apb_cdc_bridge} has these limits. Plan for them.
+\begin{itemize}
+  \item An error from the bridge during a reset of the destination does not prove that the destination made no transfer. A write can have taken place. Treat such an error as ``access state unknown''.
+  \item The bridge has no timeout. When \code{m_clk_i} stops and \code{m_rst_n_i} stays high, the transfer waits, and the APB master upstream waits with it. In \code{soc_top} the \code{m_*} face of \code{u_apb_dbg_cdc} runs on \code{cpu_gated_clk}, which the PMU can stop. Do not stop \code{m_clk_i} while a transfer can be in flight, or assert \code{m_rst_n_i} before you stop it.
+  \item A pulse on \code{m_rst_n_i} that is too short can make the destination run a transfer again.
+\end{itemize}
+\end{warningbox}
+\begin{warningbox}
+The bridge \code{async_axi_fifo} has these limits. While a response channel (B or R) is empty, its payload outputs on the \code{s_*} face can change on an edge of \code{m_clk_i}. Use the payload only while the valid output is high. A reset of one face also withdraws the valid outputs of the other face. In \code{soc_top}, a CPU transaction in the middle of a burst at clock gating can wedge a crossbar slave engine, because no drain step exists.
+\end{warningbox}
+The port list of \code{async_axi_fifo} is long and follows the AXI4 names. \Cref{tab:tm:mod:async-axi-fifo:signals} lists the ports.
+
+\section{Constrain the crossings}\label{um:ch:cdc-integration:constrain}
+Every path that crosses a clock domain without a synchroniser needs a bounded delay. \Cref{tm:ch:mod-cdc-primitives:constraints} tells why the project uses two constraint files.
+
+\begin{procedure}
+  \item Keep the sign-off constraint file as it is. It declares the clocks asynchronous and has no crossing budget.
+  \item Open the check constraint file of the flow: \src{pnr/constraints/phase5_soc_multiclock_check.sdc} for ASAP7, or \src{pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc} for Sky130.
+  \item Add a budget for each registered pointer or level that leaves the new instance. Copy the form of the existing part for \code{u_cpu_axi_cdc} (FIFOs) or for \code{u_apb_pll2_cdc} (APB bridge). Use a bound of at most one period of the receiving clock.
+  \item Keep the part of the file that comes before the parts for the single instances. The last exception that you declare wins when two exceptions overlap.
+  \item Keep the names that the files match: \code{req_q}, \code{ack_q}, \code{u_wr_ptr_to_rd}, \code{u_rd_ptr_to_wr}, \code{rd_gray_q}, \code{sync_q}, and the text \code{rst_sync} in the name of each reset synchroniser instance. The ASAP7 check file matches \code{req_q}, \code{ack_q}, \code{u_wr_ptr_to_rd}, \code{rd_gray_q} and \code{rst_sync}. The Sky130 check file matches \code{u_wr_ptr_to_rd}, \code{u_rd_ptr_to_wr}, \code{u_req_sync}, \code{u_ack_sync} and \code{sync_q}. The CDC configuration matches \code{sync_q} and the instance names.
+  \item Run the timing check (\cref{um:ch:cdc-integration:verify}). A line that contains \code{CDC-EXCEPTION-MISS} means that a name pattern matched nothing. Fix the pattern. A budget that is not applied leaves the crossing without a constraint.
+\end{procedure}
+The bridge \code{u_apb_pll_cdc} has no budget and no CDC check, because the constraint files and the CDC configuration put both of its clocks in the domain of \code{clk_i}. Do not rely on a tool for this crossing. The check file is not a sign-off file. Use it for targeted queries only. A full sweep of the file shows false violations on other pairs of flops.
+
+\section{Verify the crossings}\label{um:ch:cdc-integration:verify}
+Run the simulation targets through the Nix shell, as for every flow of the project.
+
+\begin{center}
+  \begin{tabular}{@{}p{50mm}p{88mm}@{}}
+    \toprule
+    Block & Command\\
+    \midrule
+    \code{cdc_sync} & \code{nix develop --command make -C tb/cocotb/soc cdc_sync}\\
+    \code{cdc_reset_sync} & \code{nix develop --command make -C tb/cocotb/soc cdc_reset_sync_scan}\\
+    \code{cdc_gray_fifo} & \code{nix develop --command make -C tb/cocotb/soc cdc_gray_fifo}\\
+    \code{apb_cdc_bridge} & \code{nix develop --command make -C tb/cocotb/soc apb_cdc_bridge}\\
+    \code{async_axi_fifo} & \code{nix develop --command make -C tb/cocotb/soc async_axi_fifo}\\
+    CPU and fabric together & \code{nix develop --command make -C tb/cocotb/soc soc_multiclock} and \code{soc_multiclock_reset}\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+Each target prints a line with the number of tests, passes and failures. A failure also prints the name of the test. The suites are described in \cref{tm:suite:soc-test-cdc-sync}, \cref{tm:suite:soc-test-cdc-reset-sync-scan}, \cref{tm:suite:soc-test-apb-cdc-bridge} and \cref{tm:suite:soc-test-async-axi-fifo}.
+
+Do these tasks for a new instance.
+\begin{procedure}
+  \item Add the new module to the source lists of the flows, as the project guide requires for the sv2v file lists. A module that is missing from a list becomes a black box without an error.
+  \item Run the CDC check. Inside the \code{sim} directory, run \code{make cdc}. The run is informational by default, and the target returns 0 even when the gate fails. Add \code{CDC_STRICT=1} to make the run fail on an unwaived crossing. To run only the gate on an existing report, run \code{tools/cdc/cdc_gate.py sim/build/cdc/soc_top_cdc.txt -v}. Use the yosys version that \src{tools/cdc/versions.env} pins.
+  \item For a new synchroniser that guards a pin, add an entry to the list of required synchronisers in \src{tools/cdc/cdc_config.yml}. Without an entry, a deleted synchroniser stays unseen.
+  \item Run the timing check. For ASAP7, run \code{make -C pnr check-cdc-timing-asap7-soc RUN_DIR=<run directory>} on a routed run. For Sky130, run the target \code{check-cdc-timing-sky130-soc}. The make target fails on a finding and on a setup error. Read the lines that start with \code{marker:} to tell them apart. The script itself exits with 0 for a pass, 1 for a finding and 2 for a setup error.
+  \item Run the unit tests of the gate: \code{python -m pytest tb/tests/test_cdc_gate.py}.
+\end{procedure}
+To check a change of \code{cdc_gray_fifo}, run the mutation campaign inside the simulation shell with \code{python3 tools/verif/mutate_cdc_gray_fifo.py}. It prints one line for each mutant. The last line is \code{SURVIVORS: none} when the suite killed every mutant. A survivor means that the suite does not check the changed behaviour. Run \code{tools/verif/equiv_cdc_gray_fifo_depth.sh} to compare the working-tree module with the version at \code{OLD_REF}, which is \code{origin/main} by default, at the depths 4, 8 and 16. On a new host, set \code{YOSYS} and \code{SLANG_PLUGIN}.
+
+\section{Checklist}\label{um:ch:cdc-integration:checklist}
+Tick each line before the review.
+\begin{itemize}
+  \item[$\square$] Each signal that crosses a domain goes through one of the five blocks, or has a waiver in the CDC check configuration.
+  \item[$\square$] Each reset of a \code{cdc_sync} or \code{cdc_gray_fifo} is synchronised to the clock of its domain.
+  \item[$\square$] \code{RESET_VAL} of each \code{cdc_sync} is safe for the logic after it.
+  \item[$\square$] Each multi-bit value that crosses \code{cdc_sync} changes one bit at a time.
+  \item[$\square$] \code{scanmode_i} and \code{scan_rst_ni} are connected at every instance.
+  \item[$\square$] \code{m_rst_n_i} of an APB bridge is held low for more than one period of \code{s_clk_i}.
+  \item[$\square$] The two resets of an AXI4 bridge have a common root with the master and the fabric.
+  \item[$\square$] The module is in the source lists of all flows.
+  \item[$\square$] The names \code{sync_q}, \code{req_q}, \code{ack_q}, \code{u_wr_ptr_to_rd}, \code{u_rd_ptr_to_wr} and \code{rst_sync} are kept where the files match them.
+  \item[$\square$] No clock of an APB bridge stops while a transfer can be in flight.
+  \item[$\square$] The check constraint file has a budget for each new crossing, and the timing check reports no \code{CDC-EXCEPTION-MISS}.
+  \item[$\square$] The CDC check passes, and the new synchronisers are in the list of required synchronisers where they guard a pin.
+  \item[$\square$] The test suite of each block that you changed passes.
+\end{itemize}

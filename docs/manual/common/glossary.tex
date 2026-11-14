@@ -15,6 +15,7 @@
 \newacronym[description={Field-programmable gate array. A chip with logic that a user can program.}]{FPGA}{FPGA}{field-programmable gate array}
 \newglossaryentry{FreePDK45}{name={FreePDK45},description={A predictive 45 nm process design kit.}}
 \newacronym[description={Gate-level simulation. A simulation of the synthesized netlist.}]{GLS}{GLS}{gate-level simulation}
+\newglossaryentry{gray-code}{name={gray code},description={A binary code in which the next value differs from the present value in one bit.}}
 \newacronym[description={Global routing. The step that plans the route of each net before detailed routing.}]{GRT}{GRT}{global routing}
 \newacronym[description={High-level synthesis. A tool flow that turns C or C++ code into RTL.}]{HLS}{HLS}{high-level synthesis}
 \newacronym[description={Integrated clock gating. A cell that stops a clock safely.}]{ICG}{ICG}{integrated clock gating}
@@ -28,7 +29,9 @@
 \newacronym[description={Layout versus schematic. A check that the layout matches the netlist.}]{LVS}{LVS}{layout versus schematic}
 \newglossaryentry{Magic}{name={Magic},description={An open-source layout editor and design rule checker.}}
 \newacronym[description={Memory built-in self-test. Logic on the chip that tests its memories.}]{MBIST}{MBIST}{memory built-in self-test}
+\newglossaryentry{metastability}{name={metastability},description={The state of a flop that samples a signal while the signal changes. Its output takes an unknown time to settle.}}
 \newacronym[description={Memory-mapped input/output. Access to a device through load and store instructions.}]{MMIO}{MMIO}{memory-mapped input/output}
+\newacronym[description={Mean time between failures. For a synchroniser, the mean time between two metastable events that reach the logic after the chain.}]{MTBF}{MTBF}{mean time between failures}
 \newglossaryentry{Netgen}{name={Netgen},description={An open-source tool for layout versus schematic checks.}}
 \newacronym[description={Neural processing unit. A block that runs neural-network operations.}]{NPU}{NPU}{neural processing unit}
 \newglossaryentry{OpenROAD}{name={OpenROAD},description={An open-source tool for place and route.}}
@@ -43,6 +46,7 @@
 \newglossaryentry{pyslang}{name={pyslang},description={The Python interface of the slang SystemVerilog compiler.}}
 \newglossaryentry{pyuvm}{name={pyuvm},description={A Python implementation of the UVM methodology.}}
 \newacronym[description={Resistance-capacitance extraction. The step that reads the parasitic values from the layout.}]{RCX}{RCX}{resistance-capacitance extraction}
+\newglossaryentry{return-to-zero-handshake}{name={return-to-zero handshake},description={A handshake in which the request level and the acknowledge level both return to zero before the next transfer.}}
 \newacronym[description={Real-number modeling. A model that uses real values in place of analog waveforms.}]{RNM}{RNM}{real-number modeling}
 \newacronym[description={Register-transfer level. A design description in terms of registers and logic.}]{RTL}{RTL}{register-transfer level}
 \newacronym[description={Synopsys Design Constraints. A file format that states the timing constraints of a design.}]{SDC}{SDC}{Synopsys Design Constraints}
@@ -53,6 +57,7 @@
 \newacronym[description={Static random-access memory. A memory that keeps its data while power is on.}]{SRAM}{SRAM}{static random-access memory}
 \newacronym[description={Static timing analysis. A check of all timing paths without simulation.}]{STA}{STA}{static timing analysis}
 \newglossaryentry{sv2v}{name={sv2v},description={A tool that converts SystemVerilog to Verilog.}}
+\newglossaryentry{synchroniser}{name={synchroniser},description={A chain of flops on the receiving clock that gives a metastable first flop time to settle.}}
 \newglossaryentry{Synlig}{name={Synlig},description={A Yosys front end for SystemVerilog.}}
 \newacronym[description={Test access port. The port and the state machine that control a JTAG interface.}]{TAP}{TAP}{test access port}
 \newacronym[description={Total negative slack. The sum of the negative slack of all failing paths.}]{TNS}{TNS}{total negative slack}

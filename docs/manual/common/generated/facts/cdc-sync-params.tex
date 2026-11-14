@@ -17,7 +17,7 @@ Parameter & Type & Default & Legal values & Description\\
 \code{STAGES} & \code{int unsigned} & \code{2} & 2 or more & Number of flop ranks. Elaboration stops with an error when the value is below 2.\\
 \code{RESET_VAL} & \code{logic [WIDTH-1:0]} & \code{'0} & any WIDTH-bit value & Value of every rank while \code{rst_n_i} is low. Use 1 for an idle-high line.\\
 \code{RAND_CDC_DELAY_EN} & \code{bit} & \code{1'b0} & 0 or 1 & Simulation only. When 1, rank 0 can miss a change of \code{d_i} for one cycle. Synthesis and lint do not see the model.\\
-\code{RAND_CDC_DELAY_PCT} & \code{int unsigned} & \code{32'd50} & 0 to 100 & Simulation only. Percent chance that rank 0 misses an edge on which \code{d_i} differs from its value at the previous edge. With 100 or more, rank 0 misses each such edge.\\
+\code{RAND_CDC_DELAY_PCT} & \code{int unsigned} & \code{32'd50} & 0 to 100 & Simulation only. Percent chance that rank 0 misses an edge on which \code{d_i} differs from its value at the previous edge. With 100, rank 0 misses each such edge.\\
 \code{RAND_CDC_DELAY_SEED} & \code{int unsigned} & \code{32'hCDC2_5EED} & any 32-bit value & Simulation only. Seed of the random stream of this instance. The stream is seeded once at time 0.\\
 \end{longtable}
 }

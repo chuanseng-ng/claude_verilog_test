@@ -24,7 +24,7 @@ modules:
         description: "Simulation only. When 1, rank 0 can miss a change of `d_i` for one cycle. Synthesis and lint do not see the model."
       RAND_CDC_DELAY_PCT:
         legal: "0 to 100"
-        description: "Simulation only. Percent chance that rank 0 misses an edge on which `d_i` differs from its value at the previous edge. With 100 or more, rank 0 misses each such edge."
+        description: "Simulation only. Percent chance that rank 0 misses an edge on which `d_i` differs from its value at the previous edge. With 100, rank 0 misses each such edge."
       RAND_CDC_DELAY_SEED:
         legal: "any 32-bit value"
         description: "Simulation only. Seed of the random stream of this instance. The stream is seeded once at time 0."
@@ -41,3 +41,369 @@ modules:
       q_o:
         domain: clk_i
         description: "Output of the last rank. It shows the value of `d_i` after STAGES edges of `clk_i`."
+  cdc_reset_sync:
+    rtl: rtl/soc/cdc/cdc_reset_sync.sv
+    deps: []
+    label: tm:mod:cdc-reset-sync
+    params:
+      STAGES:
+        legal: "2 or more"
+        description: "Number of flop ranks in the chain. Elaboration stops with an error when the value is below 2."
+    ports:
+      clk_i:
+        domain: clock
+        description: "Clock of the destination domain."
+      rst_n_i:
+        domain: async
+        description: "Active-low source reset. It is not synchronous to `clk_i`. It is the asynchronous clear of the chain when `scanmode_i` is low."
+      scanmode_i:
+        domain: quasi-static
+        description: "Scan mode. When high, `scan_rst_ni` replaces `rst_n_i` as the clear of the chain and is the output. Tie low without scan. Do not change it while `clk_i` runs."
+      scan_rst_ni:
+        domain: async
+        description: "Active-low scan reset. It is used only when `scanmode_i` is high. Tie high without scan."
+      rst_n_o:
+        domain: clk_i
+        description: "Active-low reset for the destination domain. It asserts at once when the reset asserts. It deasserts after STAGES edges of `clk_i`. When `scanmode_i` is high it equals `scan_rst_ni`."
+  cdc_gray_fifo:
+    rtl: rtl/soc/cdc/cdc_gray_fifo.sv
+    deps: [rtl/soc/cdc/cdc_sync.sv]
+    label: tm:mod:cdc-gray-fifo
+    params:
+      WIDTH:
+        legal: "1 or more"
+        description: "Width of one entry in bits."
+      DEPTH:
+        legal: "power of two, 2 or more"
+        description: "Number of entries. Elaboration stops with an error for any other value."
+      SYNC_STAGES:
+        legal: "2 or more"
+        description: "Number of ranks of each of the two pointer synchronisers."
+    ports:
+      wr_clk_i:
+        domain: clock
+        description: "Clock of the write domain."
+      wr_rst_n_i:
+        domain: wr_clk_i
+        description: "Active-low reset of the write domain. The caller supplies it already synchronised to `wr_clk_i`. While it is low, `wr_ready_o` is low."
+      wr_data_i:
+        domain: wr_clk_i
+        description: "Entry to write. The FIFO stores it on a cycle with `wr_valid_i` and `wr_ready_o` both high."
+      wr_valid_i:
+        domain: wr_clk_i
+        description: "The write side offers an entry."
+      wr_ready_o:
+        domain: wr_clk_i
+        description: "The FIFO accepts an entry. It is low when the FIFO is full and while `wr_rst_n_i` is low."
+      rd_clk_i:
+        domain: clock
+        description: "Clock of the read domain."
+      rd_rst_n_i:
+        domain: rd_clk_i
+        description: "Active-low reset of the read domain. The caller supplies it already synchronised to `rd_clk_i`. While it is low, `rd_valid_o` is low."
+      rd_data_o:
+        domain: rd_clk_i
+        description: "Oldest entry. It is valid only while `rd_valid_o` is high. It comes from the storage array without an output register."
+      rd_valid_o:
+        domain: rd_clk_i
+        description: "The FIFO holds an entry that the read side has not taken. It is low when the FIFO is empty and while `rd_rst_n_i` is low."
+      rd_ready_i:
+        domain: rd_clk_i
+        description: "The read side takes the entry. The FIFO removes it on a cycle with `rd_valid_o` and `rd_ready_i` both high."
+  apb_cdc_bridge:
+    rtl: rtl/soc/apb_cdc_bridge.sv
+    deps: [rtl/soc/cdc/cdc_sync.sv, rtl/soc/cdc/cdc_reset_sync.sv]
+    label: tm:mod:apb-cdc-bridge
+    params:
+      ADDR_W:
+        legal: "1 or more"
+        description: "Width of the byte address of both faces."
+      SYNC_STAGES_TO_S:
+        legal: "2 or more"
+        description: "Ranks of each synchroniser that ends in the `s_clk_i` domain: the acknowledge level, the reset of the source side and the reset status of the destination."
+      SYNC_STAGES_TO_M:
+        legal: "2 or more"
+        description: "Ranks of each synchroniser that ends in the `m_clk_i` domain: the request level and the reset of the destination side."
+    ports:
+      scanmode_i:
+        domain: quasi-static
+        description: "Scan mode. It goes to both internal reset synchronisers. Tie low without scan."
+      scan_rst_ni:
+        domain: async
+        description: "Active-low scan reset. It goes to both internal reset synchronisers. Tie high without scan."
+      s_clk_i:
+        domain: clock
+        description: "Clock of the source face."
+      s_rst_n_i:
+        domain: async
+        description: "Active-low reset of the source face. The bridge synchronises it inside. It also resets the destination side."
+      s_psel_i:
+        domain: s_clk_i
+        description: "APB select from the upstream master."
+      s_penable_i:
+        domain: s_clk_i
+        description: "APB enable from the upstream master."
+      s_pwrite_i:
+        domain: s_clk_i
+        description: "APB write flag. The bridge captures it in the SETUP cycle."
+      s_paddr_i:
+        domain: s_clk_i
+        description: "APB byte address. The bridge captures it in the SETUP cycle."
+      s_pwdata_i:
+        domain: s_clk_i
+        description: "APB write data. The bridge captures it in the SETUP cycle."
+      s_pstrb_i:
+        domain: s_clk_i
+        description: "APB byte strobes. The bridge captures them in the SETUP cycle."
+      s_prdata_o:
+        domain: s_clk_i
+        description: "APB read data. It holds the data of the last completed transfer. It is zero after an error completion that the bridge forces."
+      s_pready_o:
+        domain: s_clk_i
+        description: "APB ready. It is high for one cycle at the end of each transfer."
+      s_pslverr_o:
+        domain: s_clk_i
+        description: "APB error. It holds the error flag of the last completed transfer. It is high after an error completion that the bridge forces."
+      m_clk_i:
+        domain: clock
+        description: "Clock of the destination face."
+      m_rst_n_i:
+        domain: async
+        description: "Active-low reset of the destination face. The bridge synchronises it inside. It also crosses into the `s_clk_i` domain as a status."
+      m_psel_o:
+        domain: m_clk_i
+        description: "APB select to the downstream slave. High in the SETUP and ACCESS phases."
+      m_penable_o:
+        domain: m_clk_i
+        description: "APB enable to the downstream slave. High in the ACCESS phase."
+      m_pwrite_o:
+        domain: m_clk_i
+        description: "APB write flag of the captured transfer. It holds its value when the bridge is idle."
+      m_paddr_o:
+        domain: m_clk_i
+        description: "APB byte address of the captured transfer. It holds its value when the bridge is idle."
+      m_pwdata_o:
+        domain: m_clk_i
+        description: "APB write data of the captured transfer. It holds its value when the bridge is idle."
+      m_pstrb_o:
+        domain: m_clk_i
+        description: "APB byte strobes of the captured transfer. They hold their value when the bridge is idle."
+      m_prdata_i:
+        domain: m_clk_i
+        description: "APB read data from the downstream slave."
+      m_pready_i:
+        domain: m_clk_i
+        description: "APB ready from the downstream slave."
+      m_pslverr_i:
+        domain: m_clk_i
+        description: "APB error from the downstream slave."
+  async_axi_fifo:
+    rtl: rtl/soc/async_axi_fifo.sv
+    deps: [rtl/soc/axi_pkg.sv, rtl/soc/cdc/cdc_sync.sv, rtl/soc/cdc/cdc_reset_sync.sv, rtl/soc/cdc/cdc_gray_fifo.sv]
+    label: tm:mod:async-axi-fifo
+    params:
+      AW:
+        legal: "1 or more"
+        description: "Width of an address. The default is the width of the AXI package."
+      DW:
+        legal: "an AXI data width"
+        description: "Width of the data. The default is the width of the AXI package."
+      SW:
+        legal: "DW / 8 by convention"
+        description: "Width of the write strobe. The default is the width of the AXI package."
+      LENW:
+        legal: "1 or more"
+        description: "Width of the burst length field. The default is the width of the AXI package."
+      SIZEW:
+        legal: "1 or more"
+        description: "Width of the burst size field. The default is the width of the AXI package."
+      AW_DEPTH:
+        legal: "power of two, 2 or more"
+        description: "Number of entries of the write address FIFO. The FIFO module stops elaboration for any other value. The test suite uses depths of 4 and more."
+      W_DEPTH:
+        legal: "power of two, 2 or more"
+        description: "Number of entries of the write data FIFO. The FIFO module stops elaboration for any other value. The test suite uses depths of 4 and more."
+      B_DEPTH:
+        legal: "power of two, 2 or more"
+        description: "Number of entries of the write response FIFO. The FIFO module stops elaboration for any other value. The test suite uses depths of 4 and more."
+      AR_DEPTH:
+        legal: "power of two, 2 or more"
+        description: "Number of entries of the read address FIFO. The FIFO module stops elaboration for any other value. The test suite uses depths of 4 and more."
+      R_DEPTH:
+        legal: "power of two, 2 or more"
+        description: "Number of entries of the read data FIFO. The FIFO module stops elaboration for any other value. The test suite uses depths of 4 and more."
+      SYNC_STAGES_TO_S:
+        legal: "2 or more"
+        description: "Pointer synchroniser ranks of the write response and read data FIFOs, and ranks of the reset synchroniser of the `s_clk_i` domain."
+      SYNC_STAGES_TO_M:
+        legal: "2 or more"
+        description: "Pointer synchroniser ranks of the write address, write data and read address FIFOs, and ranks of the reset synchroniser of the `m_clk_i` domain."
+    ports:
+      scanmode_i:
+        domain: quasi-static
+        description: "Scan mode. It goes to both reset synchronisers. Tie low without scan."
+      scan_rst_ni:
+        domain: async
+        description: "Active-low scan reset. It goes to both reset synchronisers. Tie high without scan."
+      s_clk_i:
+        domain: clock
+        description: "Clock of the slave face (the CPU domain)."
+      s_rst_n_i:
+        domain: async
+        description: "Active-low reset of the slave face. The module synchronises it inside. It resets both faces."
+      s_awaddr_i:
+        domain: s_clk_i
+        description: "Write address."
+      s_awlen_i:
+        domain: s_clk_i
+        description: "Write burst length minus one."
+      s_awsize_i:
+        domain: s_clk_i
+        description: "Write burst size."
+      s_awburst_i:
+        domain: s_clk_i
+        description: "Write burst type."
+      s_awvalid_i:
+        domain: s_clk_i
+        description: "The master offers a write address."
+      s_awready_o:
+        domain: s_clk_i
+        description: "The FIFO accepts a write address. It is low while the write address FIFO is full and while either reset is low."
+      s_wdata_i:
+        domain: s_clk_i
+        description: "Write data."
+      s_wstrb_i:
+        domain: s_clk_i
+        description: "Write byte strobes."
+      s_wlast_i:
+        domain: s_clk_i
+        description: "Last beat of the write burst."
+      s_wvalid_i:
+        domain: s_clk_i
+        description: "The master offers write data."
+      s_wready_o:
+        domain: s_clk_i
+        description: "The FIFO accepts write data. It is low while the write data FIFO is full and while either reset is low."
+      s_bresp_o:
+        domain: s_clk_i
+        description: "Write response code."
+      s_bvalid_o:
+        domain: s_clk_i
+        description: "A write response is ready. It is low while the write response FIFO is empty and while either reset is low."
+      s_bready_i:
+        domain: s_clk_i
+        description: "The master takes the write response."
+      s_araddr_i:
+        domain: s_clk_i
+        description: "Read address."
+      s_arlen_i:
+        domain: s_clk_i
+        description: "Read burst length minus one."
+      s_arsize_i:
+        domain: s_clk_i
+        description: "Read burst size."
+      s_arburst_i:
+        domain: s_clk_i
+        description: "Read burst type."
+      s_arvalid_i:
+        domain: s_clk_i
+        description: "The master offers a read address."
+      s_arready_o:
+        domain: s_clk_i
+        description: "The FIFO accepts a read address. It is low while the read address FIFO is full and while either reset is low."
+      s_rdata_o:
+        domain: s_clk_i
+        description: "Read data."
+      s_rresp_o:
+        domain: s_clk_i
+        description: "Read response code."
+      s_rlast_o:
+        domain: s_clk_i
+        description: "Last beat of the read burst."
+      s_rvalid_o:
+        domain: s_clk_i
+        description: "Read data is ready. It is low while the read data FIFO is empty and while either reset is low."
+      s_rready_i:
+        domain: s_clk_i
+        description: "The master takes the read data."
+      m_clk_i:
+        domain: clock
+        description: "Clock of the master face (the fabric domain)."
+      m_rst_n_i:
+        domain: async
+        description: "Active-low reset of the master face. The module synchronises it inside. It resets both faces."
+      m_awaddr_o:
+        domain: m_clk_i
+        description: "Write address."
+      m_awlen_o:
+        domain: m_clk_i
+        description: "Write burst length minus one."
+      m_awsize_o:
+        domain: m_clk_i
+        description: "Write burst size."
+      m_awburst_o:
+        domain: m_clk_i
+        description: "Write burst type."
+      m_awvalid_o:
+        domain: m_clk_i
+        description: "A write address is ready. It is low while the write address FIFO is empty and while either reset is low."
+      m_awready_i:
+        domain: m_clk_i
+        description: "The fabric takes the write address."
+      m_wdata_o:
+        domain: m_clk_i
+        description: "Write data."
+      m_wstrb_o:
+        domain: m_clk_i
+        description: "Write byte strobes."
+      m_wlast_o:
+        domain: m_clk_i
+        description: "Last beat of the write burst."
+      m_wvalid_o:
+        domain: m_clk_i
+        description: "Write data is ready. It is low while the write data FIFO is empty and while either reset is low."
+      m_wready_i:
+        domain: m_clk_i
+        description: "The fabric takes the write data."
+      m_bresp_i:
+        domain: m_clk_i
+        description: "Write response code from the fabric."
+      m_bvalid_i:
+        domain: m_clk_i
+        description: "The fabric offers a write response."
+      m_bready_o:
+        domain: m_clk_i
+        description: "The FIFO accepts a write response. It is low while the write response FIFO is full and while either reset is low."
+      m_araddr_o:
+        domain: m_clk_i
+        description: "Read address."
+      m_arlen_o:
+        domain: m_clk_i
+        description: "Read burst length minus one."
+      m_arsize_o:
+        domain: m_clk_i
+        description: "Read burst size."
+      m_arburst_o:
+        domain: m_clk_i
+        description: "Read burst type."
+      m_arvalid_o:
+        domain: m_clk_i
+        description: "A read address is ready. It is low while the read address FIFO is empty and while either reset is low."
+      m_arready_i:
+        domain: m_clk_i
+        description: "The fabric takes the read address."
+      m_rdata_i:
+        domain: m_clk_i
+        description: "Read data from the fabric."
+      m_rresp_i:
+        domain: m_clk_i
+        description: "Read response code from the fabric."
+      m_rlast_i:
+        domain: m_clk_i
+        description: "Last beat of the read burst from the fabric."
+      m_rvalid_i:
+        domain: m_clk_i
+        description: "The fabric offers read data."
+      m_rready_o:
+        domain: m_clk_i
+        description: "The FIFO accepts read data. It is low while the read data FIFO is full and while either reset is low."

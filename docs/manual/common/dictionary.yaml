@@ -225,6 +225,28 @@
   definition: Access to a device through load and store instructions.
   glossary: true
 
+- term: MTBF
+  kind: acronym
+  expansion: mean time between failures
+  definition: For a synchroniser, the mean time between two metastable events that reach the logic after the chain.
+  glossary: true
+- term: gray code
+  kind: technical-name
+  definition: A binary code in which the next value differs from the present value in one bit.
+  glossary: true
+- term: synchroniser
+  kind: technical-name
+  definition: A chain of flops on the receiving clock that gives a metastable first flop time to settle.
+  glossary: true
+- term: metastability
+  kind: technical-name
+  definition: The state of a flop that samples a signal while the signal changes. Its output takes an unknown time to settle.
+  glossary: true
+- term: return-to-zero handshake
+  kind: technical-name
+  definition: A handshake in which the request level and the acknowledge level both return to zero before the next transfer.
+  glossary: true
+
 # --- tools ---
 - term: Verilator
   kind: tool

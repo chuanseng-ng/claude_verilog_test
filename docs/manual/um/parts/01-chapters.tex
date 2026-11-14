@@ -6749,7 +6749,7 @@ Draw a figure with TikZ in the text of the book. A figure needs no external prog
 Draw a waveform with the environment \code{tikztimingtable}. \Cref{fig:um:guide:figures:timing} shows one.
 \begin{lstlisting}[language={[LaTeX]TeX}]
 \begin{tikztimingtable}[timing/wscale=1.6]
-  clk & 8{c} \\
+  clk & 16{c} \\
   d   & 2L 3H 3L \\
   q   & 4L 3H L \\
 \end{tikztimingtable}
@@ -6757,13 +6757,13 @@ Draw a waveform with the environment \code{tikztimingtable}. \Cref{fig:um:guide:
 \begin{figure}[ht]
   \centering
   \begin{tikztimingtable}[timing/wscale=1.6]
-    clk & 8{c} \\
+    clk & 16{c} \\
     d   & 2L 3H 3L \\
     q   & 4L 3H L \\
   \end{tikztimingtable}
   \caption{Example of a timing diagram}\label{fig:um:guide:figures:timing}
 \end{figure}
-Use no external tool, no shell escape and no externalisation. Use only ASCII characters in a figure.
+One \code{c} is half a clock period, so the clock row of the example has 16 of them for 8 periods. Use no external tool, no shell escape and no externalisation. Use only ASCII characters in a figure.
 
 \section{Source archive}\label{um:guide:source-archive}
 Text that moved from a source comment into a book can leave the book when an authored chapter replaces it. The text does not disappear. It goes into the part Source archive of the Changes record, unchanged. The sections of the archive have labels of the form \code{cr:arc:<book>-<slug>}. Each section names the label of the authored section that replaced the text.

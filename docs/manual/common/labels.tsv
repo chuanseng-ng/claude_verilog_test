@@ -120,6 +120,16 @@ cr:app:archive-session-summary:test-infrastructure	docs/manual/cr/parts/04-fix-l
 cr:app:archive-session-summary:test-summary	docs/manual/cr/parts/04-fix-log-and-archive.tex	9513	Test Summary
 cr:app:archive-session-summary:verification-status	docs/manual/cr/parts/04-fix-log-and-archive.tex	9754	Verification Status
 cr:app:archive-session-summary:whats-working-white-check-mark	docs/manual/cr/parts/04-fix-log-and-archive.tex	9757	\texorpdfstring{What\textquotesingle s Working \ok{}}{What\textquotesingle s Working }
+cr:arc:ds-apb-cdc-bridge	docs/manual/cr/parts/06-source-archive.tex	220	\texttt{soc/apb\_cdc\_bridge.sv}
+cr:arc:ds-async-axi-fifo	docs/manual/cr/parts/06-source-archive.tex	600	\texttt{soc/async\_axi\_fifo.sv}
+cr:arc:ds-cdc-gray-fifo	docs/manual/cr/parts/06-source-archive.tex	151	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
+cr:arc:ds-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	83	\texttt{soc/cdc/cdc\_reset\_sync.sv}
+cr:arc:ds-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	9	\texttt{soc/cdc/cdc\_sync.sv}
+cr:arc:tm-apb-cdc-bridge	docs/manual/cr/parts/06-source-archive.tex	881	\texttt{soc/apb\_cdc\_bridge.sv}
+cr:arc:tm-async-axi-fifo	docs/manual/cr/parts/06-source-archive.tex	1043	\texttt{soc/async\_axi\_fifo.sv}
+cr:arc:tm-cdc-gray-fifo	docs/manual/cr/parts/06-source-archive.tex	801	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
+cr:arc:tm-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	753	\texttt{soc/cdc/cdc\_reset\_sync.sv}
+cr:arc:tm-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	692	\texttt{soc/cdc/cdc\_sync.sv}
 cr:ch:about	docs/manual/cr/parts/00-about.tex	5	About this book
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
@@ -132,8 +142,8 @@ cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	1583
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
 cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
 cr:ch:source-archive-ds	docs/manual/cr/parts/06-source-archive.tex	5	Archived Design Specification text
-cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	9	Archived Technical Manual text
-cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	13	Archived User Manual text
+cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	688	Archived Technical Manual text
+cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	1069	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
@@ -1158,16 +1168,27 @@ ds:ch:interface-definitions	docs/manual/ds/parts/01-architecture.tex	13691	Inter
 ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	14961	Locked architecture decisions
 ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	11942	Memory map
 ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	11375	Mixed-signal PLL
-ds:ch:mod-cdc-primitives	docs/manual/ds/parts/03-module-contracts.tex	2460	CDC primitives
+ds:ch:mod-cdc-primitives	docs/manual/ds/parts/chapters/cdc.tex	3	Clock-domain crossing
+ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	391	No bypass at a clock ratio of 1:1
+ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	363	FIFO with gray pointers and registered flags
+ds:ch:mod-cdc-primitives:dec-reset	docs/manual/ds/parts/chapters/cdc.tex	377	Reset topology
+ds:ch:mod-cdc-primitives:dec-rz	docs/manual/ds/parts/chapters/cdc.tex	370	Four-phase handshake in the APB bridge
+ds:ch:mod-cdc-primitives:dec-sdc	docs/manual/ds/parts/chapters/cdc.tex	398	A separate constraint file for the crossing budgets
+ds:ch:mod-cdc-primitives:dec-storage	docs/manual/ds/parts/chapters/cdc.tex	384	Flop-array storage with a combinational read
+ds:ch:mod-cdc-primitives:decisions	docs/manual/ds/parts/chapters/cdc.tex	360	Architecture decisions
+ds:ch:mod-cdc-primitives:definitions	docs/manual/ds/parts/chapters/cdc.tex	10	Definitions
+ds:ch:mod-cdc-primitives:family	docs/manual/ds/parts/chapters/cdc.tex	24	Rules for all crossings
+ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	405	Requirements and verification
+ds:ch:mod-cdc-primitives:scope	docs/manual/ds/parts/chapters/cdc.tex	5	Scope
 ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
-ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	4534	Crypto accelerator
-ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	2684	DFT blocks
-ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	5147	FPGA wrappers
+ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3844	Crypto accelerator
+ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	1994	DFT blocks
+ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	4457	FPGA wrappers
 ds:ch:mod-gpu	docs/manual/ds/parts/03-module-contracts.tex	491	GPU
 ds:ch:mod-memory-and-caches	docs/manual/ds/parts/03-module-contracts.tex	336	Memory and caches
-ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	4945	NPU
-ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	3509	Peripherals
-ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	3277	PLL subsystem
+ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	4255	NPU
+ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	2819	Peripherals
+ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2587	PLL subsystem
 ds:ch:mod-soc-fabric	docs/manual/ds/parts/03-module-contracts.tex	612	SoC fabric
 ds:ch:phase-6-ip-expansion	docs/manual/ds/parts/01-architecture.tex	9156	Phase 6 IP expansion
 ds:ch:phase0-architecture	docs/manual/ds/parts/01-architecture.tex	139	Phase 0 Architecture Specification
@@ -1881,44 +1902,44 @@ ds:mm:memory-map:trap-vector	docs/manual/ds/parts/01-architecture.tex	13475	Trap
 ds:mm:memory-map:trng-registers-phase-6a-4	docs/manual/ds/parts/01-architecture.tex	12903	Peripheral Registers (Phase 5)
 ds:mm:memory-map:uart-registers	docs/manual/ds/parts/01-architecture.tex	12633	Peripheral Registers (Phase 5)
 ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.tex	12821	Peripheral Registers (Phase 5)
-ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	4539	\texttt{periph/aes128\_core.sv}
-ds:mod:apb-cdc-bridge	docs/manual/ds/parts/03-module-contracts.tex	654	\texttt{soc/apb\_cdc\_bridge.sv}
+ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	3849	\texttt{periph/aes128\_core.sv}
+ds:mod:apb-cdc-bridge	docs/manual/ds/parts/chapters/cdc.tex	197	\texttt{apb\_cdc\_bridge}
 ds:mod:apb4-register-bank	docs/manual/ds/parts/03-module-contracts.tex	617	\texttt{soc/apb4\_register\_bank.sv}
-ds:mod:async-axi-fifo	docs/manual/ds/parts/03-module-contracts.tex	1034	\texttt{soc/async\_axi\_fifo.sv}
-ds:mod:axi-lite-interconnect	docs/manual/ds/parts/03-module-contracts.tex	1122	\texttt{soc/axi\_lite\_interconnect.sv}
-ds:mod:axi-lite-register-bank	docs/manual/ds/parts/03-module-contracts.tex	1155	\texttt{soc/axi\_lite\_register\_bank.sv}
-ds:mod:cdc-gray-fifo	docs/manual/ds/parts/03-module-contracts.tex	2465	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
-ds:mod:cdc-reset-sync	docs/manual/ds/parts/03-module-contracts.tex	2534	\texttt{soc/cdc/cdc\_reset\_sync.sv}
-ds:mod:cdc-sync	docs/manual/ds/parts/03-module-contracts.tex	2602	\texttt{soc/cdc/cdc\_sync.sv}
-ds:mod:crypto-accel	docs/manual/ds/parts/03-module-contracts.tex	4626	\texttt{periph/crypto\_accel.sv}
-ds:mod:dft-clk-mux	docs/manual/ds/parts/03-module-contracts.tex	2689	\texttt{soc/dft/dft\_clk\_mux.sv}
-ds:mod:dft-clk-switch	docs/manual/ds/parts/03-module-contracts.tex	2740	\texttt{soc/dft/dft\_clk\_switch.sv}
-ds:mod:dft-ctrl	docs/manual/ds/parts/03-module-contracts.tex	2851	\texttt{soc/dft/dft\_ctrl.sv}
-ds:mod:dft-ctrl-ports	docs/manual/ds/parts/03-module-contracts.tex	2913	\texttt{soc/dft/dft\_ctrl\_ports.sv}
-ds:mod:dft-rst-mux	docs/manual/ds/parts/03-module-contracts.tex	2949	\texttt{soc/dft/dft\_rst\_mux.sv}
-ds:mod:dma-engine	docs/manual/ds/parts/03-module-contracts.tex	3514	\texttt{periph/dma\_engine.sv}
-ds:mod:fpga-sdp-ram-be	docs/manual/ds/parts/03-module-contracts.tex	5152	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
-ds:mod:fpga-sram-1rw	docs/manual/ds/parts/03-module-contracts.tex	5173	\texttt{fpga/fpga\_sram\_1rw.sv}
-ds:mod:gpio-controller	docs/manual/ds/parts/03-module-contracts.tex	3574	\texttt{periph/gpio\_controller.sv}
+ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	296	\texttt{async\_axi\_fifo}
+ds:mod:axi-lite-interconnect	docs/manual/ds/parts/03-module-contracts.tex	654	\texttt{soc/axi\_lite\_interconnect.sv}
+ds:mod:axi-lite-register-bank	docs/manual/ds/parts/03-module-contracts.tex	687	\texttt{soc/axi\_lite\_register\_bank.sv}
+ds:mod:cdc-gray-fifo	docs/manual/ds/parts/chapters/cdc.tex	135	\texttt{cdc\_gray\_fifo}
+ds:mod:cdc-reset-sync	docs/manual/ds/parts/chapters/cdc.tex	98	\texttt{cdc\_reset\_sync}
+ds:mod:cdc-sync	docs/manual/ds/parts/chapters/cdc.tex	64	\texttt{cdc\_sync}
+ds:mod:crypto-accel	docs/manual/ds/parts/03-module-contracts.tex	3936	\texttt{periph/crypto\_accel.sv}
+ds:mod:dft-clk-mux	docs/manual/ds/parts/03-module-contracts.tex	1999	\texttt{soc/dft/dft\_clk\_mux.sv}
+ds:mod:dft-clk-switch	docs/manual/ds/parts/03-module-contracts.tex	2050	\texttt{soc/dft/dft\_clk\_switch.sv}
+ds:mod:dft-ctrl	docs/manual/ds/parts/03-module-contracts.tex	2161	\texttt{soc/dft/dft\_ctrl.sv}
+ds:mod:dft-ctrl-ports	docs/manual/ds/parts/03-module-contracts.tex	2223	\texttt{soc/dft/dft\_ctrl\_ports.sv}
+ds:mod:dft-rst-mux	docs/manual/ds/parts/03-module-contracts.tex	2259	\texttt{soc/dft/dft\_rst\_mux.sv}
+ds:mod:dma-engine	docs/manual/ds/parts/03-module-contracts.tex	2824	\texttt{periph/dma\_engine.sv}
+ds:mod:fpga-sdp-ram-be	docs/manual/ds/parts/03-module-contracts.tex	4462	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
+ds:mod:fpga-sram-1rw	docs/manual/ds/parts/03-module-contracts.tex	4483	\texttt{fpga/fpga\_sram\_1rw.sv}
+ds:mod:gpio-controller	docs/manual/ds/parts/03-module-contracts.tex	2884	\texttt{periph/gpio\_controller.sv}
 ds:mod:gpu-top	docs/manual/ds/parts/03-module-contracts.tex	496	\texttt{gpu/gpu\_top.sv}
-ds:mod:i2c-bit-engine	docs/manual/ds/parts/03-module-contracts.tex	3683	\texttt{periph/i2c\_bit\_engine.sv}
-ds:mod:i2c-controller	docs/manual/ds/parts/03-module-contracts.tex	3808	\texttt{periph/i2c\_controller.sv}
-ds:mod:interrupt-controller	docs/manual/ds/parts/03-module-contracts.tex	3959	\texttt{periph/interrupt\_controller.sv}
-ds:mod:jtag-tap	docs/manual/ds/parts/03-module-contracts.tex	2982	\texttt{soc/dft/jtag\_tap.sv}
-ds:mod:mbist-ctl-hold	docs/manual/ds/parts/03-module-contracts.tex	3058	\texttt{soc/dft/mbist\_ctl\_hold.sv}
-ds:mod:mbist-ctrl	docs/manual/ds/parts/03-module-contracts.tex	3079	\texttt{soc/dft/mbist\_ctrl.sv}
-ds:mod:mbist-status-sync	docs/manual/ds/parts/03-module-contracts.tex	3131	\texttt{soc/dft/mbist\_status\_sync.sv}
-ds:mod:mbist-xing	docs/manual/ds/parts/03-module-contracts.tex	3160	\texttt{soc/dft/mbist\_xing.sv}
-ds:mod:mem-collar	docs/manual/ds/parts/03-module-contracts.tex	3196	\texttt{soc/dft/mem\_collar.sv}
-ds:mod:npu-mac-array	docs/manual/ds/parts/03-module-contracts.tex	4950	\texttt{npu/npu\_mac\_array.sv}
-ds:mod:npu-top	docs/manual/ds/parts/03-module-contracts.tex	4996	\texttt{npu/npu\_top.sv}
-ds:mod:npu-weight-mem	docs/manual/ds/parts/03-module-contracts.tex	5078	\texttt{npu/npu\_weight\_mem.sv}
-ds:mod:pll-apb-regs	docs/manual/ds/parts/03-module-contracts.tex	3282	\texttt{soc/pll/pll\_apb\_regs.sv}
-ds:mod:pll-clkgen	docs/manual/ds/parts/03-module-contracts.tex	3336	\texttt{soc/pll/pll\_clkgen.sv}
-ds:mod:pll-rnm	docs/manual/ds/parts/03-module-contracts.tex	3379	\texttt{soc/pll/pll\_rnm.sv}
-ds:mod:pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	3422	\texttt{soc/pll/pll\_subsystem.sv}
-ds:mod:pmu	docs/manual/ds/parts/03-module-contracts.tex	1192	\texttt{soc/pmu.sv}
-ds:mod:pwm-controller	docs/manual/ds/parts/03-module-contracts.tex	4003	\texttt{periph/pwm\_controller.sv}
+ds:mod:i2c-bit-engine	docs/manual/ds/parts/03-module-contracts.tex	2993	\texttt{periph/i2c\_bit\_engine.sv}
+ds:mod:i2c-controller	docs/manual/ds/parts/03-module-contracts.tex	3118	\texttt{periph/i2c\_controller.sv}
+ds:mod:interrupt-controller	docs/manual/ds/parts/03-module-contracts.tex	3269	\texttt{periph/interrupt\_controller.sv}
+ds:mod:jtag-tap	docs/manual/ds/parts/03-module-contracts.tex	2292	\texttt{soc/dft/jtag\_tap.sv}
+ds:mod:mbist-ctl-hold	docs/manual/ds/parts/03-module-contracts.tex	2368	\texttt{soc/dft/mbist\_ctl\_hold.sv}
+ds:mod:mbist-ctrl	docs/manual/ds/parts/03-module-contracts.tex	2389	\texttt{soc/dft/mbist\_ctrl.sv}
+ds:mod:mbist-status-sync	docs/manual/ds/parts/03-module-contracts.tex	2441	\texttt{soc/dft/mbist\_status\_sync.sv}
+ds:mod:mbist-xing	docs/manual/ds/parts/03-module-contracts.tex	2470	\texttt{soc/dft/mbist\_xing.sv}
+ds:mod:mem-collar	docs/manual/ds/parts/03-module-contracts.tex	2506	\texttt{soc/dft/mem\_collar.sv}
+ds:mod:npu-mac-array	docs/manual/ds/parts/03-module-contracts.tex	4260	\texttt{npu/npu\_mac\_array.sv}
+ds:mod:npu-top	docs/manual/ds/parts/03-module-contracts.tex	4306	\texttt{npu/npu\_top.sv}
+ds:mod:npu-weight-mem	docs/manual/ds/parts/03-module-contracts.tex	4388	\texttt{npu/npu\_weight\_mem.sv}
+ds:mod:pll-apb-regs	docs/manual/ds/parts/03-module-contracts.tex	2592	\texttt{soc/pll/pll\_apb\_regs.sv}
+ds:mod:pll-clkgen	docs/manual/ds/parts/03-module-contracts.tex	2646	\texttt{soc/pll/pll\_clkgen.sv}
+ds:mod:pll-rnm	docs/manual/ds/parts/03-module-contracts.tex	2689	\texttt{soc/pll/pll\_rnm.sv}
+ds:mod:pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2732	\texttt{soc/pll/pll\_subsystem.sv}
+ds:mod:pmu	docs/manual/ds/parts/03-module-contracts.tex	724	\texttt{soc/pmu.sv}
+ds:mod:pwm-controller	docs/manual/ds/parts/03-module-contracts.tex	3313	\texttt{periph/pwm\_controller.sv}
 ds:mod:rv32i-alu	docs/manual/ds/parts/03-module-contracts.tex	97	\texttt{cpu/core/rv32i\_alu.sv}
 ds:mod:rv32i-clock-gate	docs/manual/ds/parts/03-module-contracts.tex	341	\texttt{mem/rv32i\_clock\_gate.sv}
 ds:mod:rv32i-cpu-top	docs/manual/ds/parts/03-module-contracts.tex	235	\texttt{cpu/rv32i\_cpu\_top.sv}
@@ -1929,29 +1950,109 @@ ds:mod:rv32i-icache	docs/manual/ds/parts/03-module-contracts.tex	465	\texttt{mem
 ds:mod:rv32i-pipeline-ex1b	docs/manual/ds/parts/03-module-contracts.tex	8	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1b.sv}
 ds:mod:rv32i-pipeline-ex1c	docs/manual/ds/parts/03-module-contracts.tex	35	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
 ds:mod:rv32i-pipeline-ex2	docs/manual/ds/parts/03-module-contracts.tex	78	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex2.sv}
-ds:mod:sha256-core	docs/manual/ds/parts/03-module-contracts.tex	4871	\texttt{periph/sha256\_core.sv}
-ds:mod:soc-addr-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	1402	\texttt{soc/soc\_addr\_map\_pkg.sv}
-ds:mod:soc-bus	docs/manual/ds/parts/03-module-contracts.tex	1441	\texttt{soc/soc\_bus.sv}
-ds:mod:soc-mbist	docs/manual/ds/parts/03-module-contracts.tex	3241	\texttt{soc/dft/soc\_mbist.sv}
-ds:mod:soc-periph-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	1479	\texttt{soc/soc\_periph\_map\_pkg.sv}
-ds:mod:soc-top	docs/manual/ds/parts/03-module-contracts.tex	1534	\texttt{soc/soc\_top.sv}
-ds:mod:spi-controller	docs/manual/ds/parts/03-module-contracts.tex	4152	\texttt{periph/spi\_controller.sv}
-ds:mod:sram-controller	docs/manual/ds/parts/03-module-contracts.tex	2244	\texttt{soc/sram\_controller.sv}
-ds:mod:trng	docs/manual/ds/parts/03-module-contracts.tex	4210	\texttt{periph/trng.sv}
-ds:mod:trng-lfsr-entropy	docs/manual/ds/parts/03-module-contracts.tex	4286	\texttt{periph/trng\_lfsr\_entropy.sv}
-ds:mod:trng-ro-sky130	docs/manual/ds/parts/03-module-contracts.tex	4336	\texttt{periph/trng\_ro\_sky130.sv}
-ds:mod:uart-controller	docs/manual/ds/parts/03-module-contracts.tex	4374	\texttt{periph/uart\_controller.sv}
+ds:mod:sha256-core	docs/manual/ds/parts/03-module-contracts.tex	4181	\texttt{periph/sha256\_core.sv}
+ds:mod:soc-addr-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	934	\texttt{soc/soc\_addr\_map\_pkg.sv}
+ds:mod:soc-bus	docs/manual/ds/parts/03-module-contracts.tex	973	\texttt{soc/soc\_bus.sv}
+ds:mod:soc-mbist	docs/manual/ds/parts/03-module-contracts.tex	2551	\texttt{soc/dft/soc\_mbist.sv}
+ds:mod:soc-periph-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	1011	\texttt{soc/soc\_periph\_map\_pkg.sv}
+ds:mod:soc-top	docs/manual/ds/parts/03-module-contracts.tex	1066	\texttt{soc/soc\_top.sv}
+ds:mod:spi-controller	docs/manual/ds/parts/03-module-contracts.tex	3462	\texttt{periph/spi\_controller.sv}
+ds:mod:sram-controller	docs/manual/ds/parts/03-module-contracts.tex	1776	\texttt{soc/sram\_controller.sv}
+ds:mod:trng	docs/manual/ds/parts/03-module-contracts.tex	3520	\texttt{periph/trng.sv}
+ds:mod:trng-lfsr-entropy	docs/manual/ds/parts/03-module-contracts.tex	3596	\texttt{periph/trng\_lfsr\_entropy.sv}
+ds:mod:trng-ro-sky130	docs/manual/ds/parts/03-module-contracts.tex	3646	\texttt{periph/trng\_ro\_sky130.sv}
+ds:mod:uart-controller	docs/manual/ds/parts/03-module-contracts.tex	3684	\texttt{periph/uart\_controller.sv}
 ds:mod:warp-scheduler	docs/manual/ds/parts/03-module-contracts.tex	579	\texttt{gpu/warp\_scheduler.sv}
-ds:mod:watchdog-timer	docs/manual/ds/parts/03-module-contracts.tex	4432	\texttt{periph/watchdog\_timer.sv}
+ds:mod:watchdog-timer	docs/manual/ds/parts/03-module-contracts.tex	3742	\texttt{periph/watchdog\_timer.sv}
 ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
 ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verification plan
+ds:req:cdc-001	docs/manual/ds/parts/chapters/cdc.tex	27	DS-CDC-001 Crossings use the primitives
+ds:req:cdc-002	docs/manual/ds/parts/chapters/cdc.tex	35	DS-CDC-002 Multi-bit values cross in gray code
+ds:req:cdc-003	docs/manual/ds/parts/chapters/cdc.tex	40	DS-CDC-003 Synchroniser flops carry the attribute
+ds:req:cdc-005	docs/manual/ds/parts/chapters/cdc.tex	48	DS-CDC-005 No availability during reset
+ds:req:cdc-006	docs/manual/ds/parts/chapters/cdc.tex	56	DS-CDC-006 Bounded delay of unsynchronised paths
+ds:req:cdc-020	docs/manual/ds/parts/chapters/cdc.tex	67	DS-CDC-020 Latency of the synchroniser
+ds:req:cdc-021	docs/manual/ds/parts/chapters/cdc.tex	75	DS-CDC-021 Reset value without a clock
+ds:req:cdc-022	docs/manual/ds/parts/chapters/cdc.tex	80	DS-CDC-022 Safe reset value
+ds:req:cdc-023	docs/manual/ds/parts/chapters/cdc.tex	85	DS-CDC-023 Settling-delay model only in simulation
+ds:req:cdc-024	docs/manual/ds/parts/chapters/cdc.tex	90	DS-CDC-024 Minimum number of ranks
+ds:req:cdc-040	docs/manual/ds/parts/chapters/cdc.tex	101	DS-CDC-040 Asynchronous assertion
+ds:req:cdc-041	docs/manual/ds/parts/chapters/cdc.tex	106	DS-CDC-041 Synchronous deassertion
+ds:req:cdc-042	docs/manual/ds/parts/chapters/cdc.tex	111	DS-CDC-042 Scan bypass
+ds:req:cdc-044	docs/manual/ds/parts/chapters/cdc.tex	120	DS-CDC-044 Scan connections
+ds:req:cdc-045	docs/manual/ds/parts/chapters/cdc.tex	125	DS-CDC-045 Minimum number of ranks
+ds:req:cdc-046	docs/manual/ds/parts/chapters/cdc.tex	130	DS-CDC-046 Scan reset ignored in functional mode
+ds:req:cdc-060	docs/manual/ds/parts/chapters/cdc.tex	138	DS-CDC-060 Legal depth
+ds:req:cdc-061	docs/manual/ds/parts/chapters/cdc.tex	146	DS-CDC-061 Entries cross once and in order
+ds:req:cdc-062	docs/manual/ds/parts/chapters/cdc.tex	151	DS-CDC-062 Only the gray pointers cross
+ds:req:cdc-063	docs/manual/ds/parts/chapters/cdc.tex	156	DS-CDC-063 Full
+ds:req:cdc-064	docs/manual/ds/parts/chapters/cdc.tex	161	DS-CDC-064 Empty
+ds:req:cdc-065	docs/manual/ds/parts/chapters/cdc.tex	166	DS-CDC-065 Oldest entry on the output
+ds:req:cdc-066	docs/manual/ds/parts/chapters/cdc.tex	171	DS-CDC-066 Recovery from a common reset
+ds:req:cdc-067	docs/manual/ds/parts/chapters/cdc.tex	176	DS-CDC-067 Recovery from a one-sided reset
+ds:req:cdc-068	docs/manual/ds/parts/chapters/cdc.tex	184	DS-CDC-068 Stored entries survive a gap in the read side
+ds:req:cdc-069	docs/manual/ds/parts/chapters/cdc.tex	189	DS-CDC-069 Minimum number of synchroniser ranks
+ds:req:cdc-100	docs/manual/ds/parts/chapters/cdc.tex	200	DS-CDC-100 Four-phase handshake
+ds:req:cdc-101	docs/manual/ds/parts/chapters/cdc.tex	205	DS-CDC-101 Only levels and status cross through synchronisers
+ds:req:cdc-102	docs/manual/ds/parts/chapters/cdc.tex	210	DS-CDC-102 Request while the destination is in reset
+ds:req:cdc-103	docs/manual/ds/parts/chapters/cdc.tex	215	DS-CDC-103 Destination reset during a transfer
+ds:req:cdc-104	docs/manual/ds/parts/chapters/cdc.tex	224	DS-CDC-104 Answer wins over reset status
+ds:req:cdc-105	docs/manual/ds/parts/chapters/cdc.tex	229	DS-CDC-105 Source reset during a transfer
+ds:req:cdc-106	docs/manual/ds/parts/chapters/cdc.tex	234	DS-CDC-106 One transfer on the destination face
+ds:req:cdc-107	docs/manual/ds/parts/chapters/cdc.tex	239	DS-CDC-107 Response unchanged
+ds:req:cdc-108	docs/manual/ds/parts/chapters/cdc.tex	244	DS-CDC-108 Any clock ratio
+ds:req:cdc-109	docs/manual/ds/parts/chapters/cdc.tex	249	DS-CDC-109 Reset width
+ds:req:cdc-110	docs/manual/ds/parts/chapters/cdc.tex	254	DS-CDC-110 Names of the handshake registers
+ds:req:cdc-111	docs/manual/ds/parts/chapters/cdc.tex	259	DS-CDC-111 Use for configuration and debug only
+ds:req:cdc-112	docs/manual/ds/parts/chapters/cdc.tex	264	DS-CDC-112 Return pulse of the ready output
+ds:req:cdc-113	docs/manual/ds/parts/chapters/cdc.tex	269	DS-CDC-113 No stray transfer after a destination reset
+ds:req:cdc-114	docs/manual/ds/parts/chapters/cdc.tex	274	DS-CDC-114 Quiet while the source reset is low
+ds:req:cdc-115	docs/manual/ds/parts/chapters/cdc.tex	279	DS-CDC-115 No destination select while the destination reset is low
+ds:req:cdc-116	docs/manual/ds/parts/chapters/cdc.tex	284	DS-CDC-116 Read data of a forced completion
+ds:req:cdc-150	docs/manual/ds/parts/chapters/cdc.tex	299	DS-CDC-150 One FIFO for each channel
+ds:req:cdc-151	docs/manual/ds/parts/chapters/cdc.tex	304	DS-CDC-151 Payload unchanged and in order
+ds:req:cdc-152	docs/manual/ds/parts/chapters/cdc.tex	309	DS-CDC-152 A reset on one face resets both
+ds:req:cdc-153	docs/manual/ds/parts/chapters/cdc.tex	314	DS-CDC-153 Reset is a hard flush
+ds:req:cdc-154	docs/manual/ds/parts/chapters/cdc.tex	323	DS-CDC-154 Quiet outputs during either reset
+ds:req:cdc-155	docs/manual/ds/parts/chapters/cdc.tex	328	DS-CDC-155 Any clock ratio without a bypass
+ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	333	DS-CDC-156 No deadlock when channels are full
+ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	338	DS-CDC-157 No combinational path between the faces
+ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	346	DS-CDC-158 Exact depth
+ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	351	DS-CDC-159 Valid is not withdrawn
 ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6662	DS-EXAMPLE-001 Example of a requirement
+fig:tm:ch:mod-cdc-primitives:soc	docs/manual/tm/parts/chapters/cdc.tex	34	Clock-domain crossing
+fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	427	Functional description
+fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	461	Functional description
+fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	513	Functional description
+fig:tm:mod:apb-cdc-bridge:sfsm	docs/manual/tm/parts/chapters/cdc.tex	444	Functional description
+fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	482	Functional description
+fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	595	Functional description
+fig:tm:mod:cdc-gray-fifo:block	docs/manual/tm/parts/chapters/cdc.tex	304	Functional description
+fig:tm:mod:cdc-gray-fifo:ring	docs/manual/tm/parts/chapters/cdc.tex	346	Functional description
+fig:tm:mod:cdc-gray-fifo:timing	docs/manual/tm/parts/chapters/cdc.tex	362	Functional description
+fig:tm:mod:cdc-reset-sync:block	docs/manual/tm/parts/chapters/cdc.tex	209	Functional description
+fig:tm:mod:cdc-reset-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	232	Functional description
+fig:tm:mod:cdc-sync:chain	docs/manual/tm/parts/chapters/cdc.tex	128	Functional description
+fig:tm:mod:cdc-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	142	Functional description
 fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6746	Figures
 fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6764	Figures
+tab:ds:req:cdc-map	docs/manual/ds/generated/requirements-cdc.tex	4	Requirements of area CDC and their verification
+tab:tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	41	Instances in the design
+tab:tm:mod:apb-cdc-bridge:params	docs/manual/common/generated/facts/apb-cdc-bridge-params.tex	4	Parameters of \code{apb_cdc_bridge}
+tab:tm:mod:apb-cdc-bridge:signals	docs/manual/common/generated/facts/apb-cdc-bridge-signals.tex	4	Signals of \code{apb_cdc_bridge}
+tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	602	Functional description
+tab:tm:mod:async-axi-fifo:params	docs/manual/common/generated/facts/async-axi-fifo-params.tex	4	Parameters of \code{async_axi_fifo}
+tab:tm:mod:async-axi-fifo:signals	docs/manual/common/generated/facts/async-axi-fifo-signals.tex	4	Signals of \code{async_axi_fifo}
+tab:tm:mod:cdc-gray-fifo:d2full	docs/manual/tm/parts/chapters/cdc.tex	319	Functional description
+tab:tm:mod:cdc-gray-fifo:params	docs/manual/common/generated/facts/cdc-gray-fifo-params.tex	4	Parameters of \code{cdc_gray_fifo}
+tab:tm:mod:cdc-gray-fifo:signals	docs/manual/common/generated/facts/cdc-gray-fifo-signals.tex	4	Signals of \code{cdc_gray_fifo}
+tab:tm:mod:cdc-reset-sync:params	docs/manual/common/generated/facts/cdc-reset-sync-params.tex	4	Parameters of \code{cdc_reset_sync}
+tab:tm:mod:cdc-reset-sync:signals	docs/manual/common/generated/facts/cdc-reset-sync-signals.tex	4	Signals of \code{cdc_reset_sync}
 tab:tm:mod:cdc-sync:params	docs/manual/common/generated/facts/cdc-sync-params.tex	4	Parameters of \code{cdc_sync}
 tab:tm:mod:cdc-sync:signals	docs/manual/common/generated/facts/cdc-sync-signals.tex	4	Signals of \code{cdc_sync}
+tab:um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	12	Choose the block
 tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6502	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
 tm:ch:about	docs/manual/tm/parts/00-about.tex	5	About this book
@@ -2063,16 +2164,18 @@ tm:ch:flow-overview	docs/manual/tm/parts/02-physical-design.tex	3	Flow overview
 tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7878	FPGA prototyping
 tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	5343	FreePDK45 flow
 tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10042	High-level synthesis
-tm:ch:mod-cdc-primitives	docs/manual/tm/parts/01-module-reference.tex	1120	CDC primitives
+tm:ch:mod-cdc-primitives	docs/manual/tm/parts/chapters/cdc.tex	3	Clock-domain crossing
+tm:ch:mod-cdc-primitives:constraints	docs/manual/tm/parts/chapters/cdc.tex	72	Timing constraints and CDC checks
+tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	37	Instances in the design
 tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
-tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	2047	Crypto accelerator
-tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	1326	DFT blocks
-tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	2349	FPGA wrappers
+tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	1655	Crypto accelerator
+tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	934	DFT blocks
+tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	1957	FPGA wrappers
 tm:ch:mod-gpu	docs/manual/tm/parts/01-module-reference.tex	459	GPU
 tm:ch:mod-memory-and-caches	docs/manual/tm/parts/01-module-reference.tex	290	Memory and caches
-tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	2261	NPU
-tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	1432	Peripherals
-tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1402	PLL subsystem
+tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1869	NPU
+tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	1040	Peripherals
+tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1010	PLL subsystem
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	463	SoC fabric
 tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6504	Constraint file notes
 tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9232	PDN and flow script notes
@@ -2361,30 +2464,31 @@ tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/par
 tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6927	Testability findings (proposals; no RTL changed)
 tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6987	Notes on tooling (for the next person)
 tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7035	Gap list toward real Stage 2
-tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	2052	\texttt{periph/aes128\_core.sv}
-tm:mod:apb-cdc-bridge	docs/manual/tm/parts/01-module-reference.tex	468	\texttt{soc/apb\_cdc\_bridge.sv}
-tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	630	\texttt{soc/apb\_interconnect.sv}
-tm:mod:async-axi-fifo	docs/manual/tm/parts/01-module-reference.tex	656	\texttt{soc/async\_axi\_fifo.sv}
-tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	682	\texttt{soc/axi4\_crossbar.sv}
-tm:mod:cdc-gray-fifo	docs/manual/tm/parts/01-module-reference.tex	1125	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
-tm:mod:cdc-reset-sync	docs/manual/tm/parts/01-module-reference.tex	1205	\texttt{soc/cdc/cdc\_reset\_sync.sv}
-tm:mod:cdc-sync	docs/manual/tm/parts/01-module-reference.tex	1253	\texttt{soc/cdc/cdc\_sync.sv}
-tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	2126	\texttt{periph/crypto\_accel.sv}
-tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	1331	\texttt{soc/dft/dft\_clk\_switch.sv}
-tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	1437	\texttt{periph/dma\_engine.sv}
-tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	2354	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
-tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	2369	\texttt{fpga/fpga\_sram\_1rw.sv}
-tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1510	\texttt{periph/gpio\_controller.sv}
-tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1585	\texttt{periph/i2c\_bit\_engine.sv}
-tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1637	\texttt{periph/i2c\_controller.sv}
-tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1696	\texttt{periph/interrupt\_controller.sv}
-tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	1380	\texttt{soc/dft/mbist\_ctrl.sv}
-tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	2266	\texttt{npu/npu\_mac\_array.sv}
-tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	2280	\texttt{npu/npu\_top.sv}
-tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	2308	\texttt{npu/npu\_weight\_mem.sv}
-tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1407	\texttt{soc/pll/pll\_subsystem.sv}
-tm:mod:pmu	docs/manual/tm/parts/01-module-reference.tex	704	\texttt{soc/pmu.sv}
-tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1732	\texttt{periph/pwm\_controller.sv}
+tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1660	\texttt{periph/aes128\_core.sv}
+tm:mod:apb-cdc-bridge	docs/manual/tm/parts/chapters/cdc.tex	397	\texttt{apb\_cdc\_bridge}
+tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	468	\texttt{soc/apb\_interconnect.sv}
+tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	562	\texttt{async\_axi\_fifo}
+tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	494	\texttt{soc/axi4\_crossbar.sv}
+tm:mod:cdc-gray-fifo	docs/manual/tm/parts/chapters/cdc.tex	268	\texttt{cdc\_gray\_fifo}
+tm:mod:cdc-reset-sync	docs/manual/tm/parts/chapters/cdc.tex	175	\texttt{cdc\_reset\_sync}
+tm:mod:cdc-sync	docs/manual/tm/parts/chapters/cdc.tex	100	\texttt{cdc\_sync}
+tm:mod:cdc-sync:debug	docs/manual/tm/parts/chapters/cdc.tex	162	Debug, test and DFT
+tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	1734	\texttt{periph/crypto\_accel.sv}
+tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	939	\texttt{soc/dft/dft\_clk\_switch.sv}
+tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	1045	\texttt{periph/dma\_engine.sv}
+tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	1962	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
+tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	1977	\texttt{fpga/fpga\_sram\_1rw.sv}
+tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1118	\texttt{periph/gpio\_controller.sv}
+tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1193	\texttt{periph/i2c\_bit\_engine.sv}
+tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1245	\texttt{periph/i2c\_controller.sv}
+tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1304	\texttt{periph/interrupt\_controller.sv}
+tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	988	\texttt{soc/dft/mbist\_ctrl.sv}
+tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	1874	\texttt{npu/npu\_mac\_array.sv}
+tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	1888	\texttt{npu/npu\_top.sv}
+tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	1916	\texttt{npu/npu\_weight\_mem.sv}
+tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	1015	\texttt{soc/pll/pll\_subsystem.sv}
+tm:mod:pmu	docs/manual/tm/parts/01-module-reference.tex	516	\texttt{soc/pmu.sv}
+tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1340	\texttt{periph/pwm\_controller.sv}
 tm:mod:rv32i-alu	docs/manual/tm/parts/01-module-reference.tex	96	\texttt{cpu/core/rv32i\_alu.sv}
 tm:mod:rv32i-cache-pkg	docs/manual/tm/parts/01-module-reference.tex	295	\texttt{mem/rv32i\_cache\_pkg.sv}
 tm:mod:rv32i-clock-gate	docs/manual/tm/parts/01-module-reference.tex	321	\texttt{mem/rv32i\_clock\_gate.sv}
@@ -2398,14 +2502,14 @@ tm:mod:rv32i-pipeline-ex1b	docs/manual/tm/parts/01-module-reference.tex	8	\textt
 tm:mod:rv32i-pipeline-ex1c	docs/manual/tm/parts/01-module-reference.tex	27	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
 tm:mod:rv32i-pipeline-ex2	docs/manual/tm/parts/01-module-reference.tex	60	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex2.sv}
 tm:mod:rv32i-pipeline-if	docs/manual/tm/parts/01-module-reference.tex	75	\texttt{cpu/core/pipeline/rv32i\_pipeline\_if.sv}
-tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	2203	\texttt{periph/sha256\_core.sv}
-tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	786	\texttt{soc/soc\_top.sv}
-tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1791	\texttt{periph/spi\_controller.sv}
-tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	1018	\texttt{soc/sram\_controller.sv}
-tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1857	\texttt{periph/trng.sv}
-tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1879	\texttt{periph/trng\_lfsr\_entropy.sv}
-tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1893	\texttt{periph/uart\_controller.sv}
-tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	2016	\texttt{periph/watchdog\_timer.sv}
+tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	1811	\texttt{periph/sha256\_core.sv}
+tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	598	\texttt{soc/soc\_top.sv}
+tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1399	\texttt{periph/spi\_controller.sv}
+tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	830	\texttt{soc/sram\_controller.sv}
+tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1465	\texttt{periph/trng.sv}
+tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1487	\texttt{periph/trng\_lfsr\_entropy.sv}
+tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1501	\texttt{periph/uart\_controller.sv}
+tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	1624	\texttt{periph/watchdog\_timer.sv}
 tm:part:decisions	docs/manual/tm/parts/05-decisions.tex	1	Decisions
 tm:part:dft-fpga-hls-and-analog	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1	DFT, FPGA, HLS and analog
 tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module reference
@@ -2802,6 +2906,12 @@ tm:suite:soc-wdt-fw-gen-wdt-hex	docs/manual/tm/parts/03-verification-infrastruct
 tm:suite:trng-lfsr-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1209	\texttt{tb/models/trng\_lfsr\_model.py}
 um:ch:about	docs/manual/um/parts/00-about.tex	5	About this book
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	102	Build and run commands
+um:ch:cdc-integration	docs/manual/um/parts/02-integration.tex	3	Clock-domain crossing integration
+um:ch:cdc-integration:checklist	docs/manual/um/parts/02-integration.tex	178	Checklist
+um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	7	Choose the block
+um:ch:cdc-integration:constrain	docs/manual/um/parts/02-integration.tex	136	Constrain the crossings
+um:ch:cdc-integration:instantiate	docs/manual/um/parts/02-integration.tex	30	Instantiate a block
+um:ch:cdc-integration:verify	docs/manual/um/parts/02-integration.tex	149	Verify the crossings
 um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	474	Coding guidelines
 um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2693	Continuous integration
 um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	425	Debug interface
@@ -3101,3 +3211,4 @@ um:guide:spyglass-lint-remediation:g-signedunsigned-mix-rule-signedunsignedexpr-
 um:guide:supported-instructions	docs/manual/um/parts/01-chapters.tex	366	Supported Instructions
 um:guide:supported-instructions:phase-1-white-check-mark-complete-rv32i-base	docs/manual/um/parts/01-chapters.tex	369	\texorpdfstring{Phase 1 \ok{} (Complete --- RV32I Base)}{Phase 1 (Complete --- RV32I Base)}
 um:guide:supported-instructions:phase-2-white-check-mark-verification-complete-rv32i-zicsr	docs/manual/um/parts/01-chapters.tex	394	\texorpdfstring{Phase 2 \ok{} (Verification Complete --- RV32I + Zicsr)}{Phase 2 (Verification Complete --- RV32I + Zicsr)}
+um:part:integration-guide	docs/manual/um/parts/02-integration.tex	1	Integration guide

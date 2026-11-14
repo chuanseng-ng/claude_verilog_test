@@ -1,0 +1,408 @@
+% Authored chapter: clock-domain crossing. Replaces the moved source text of five modules.
+% The moved text is in the Changes record, part Source archive.
+\chapter{Clock-domain crossing}\label{ds:ch:mod-cdc-primitives}
+
+\section{Scope}\label{ds:ch:mod-cdc-primitives:scope}
+This chapter states the rules for every signal that goes from one clock domain to another. It covers five modules in two groups. The first group has the three primitives \code{cdc_sync}, \code{cdc_reset_sync} and \code{cdc_gray_fifo}. The second group has two bridges that use the primitives. The bridge \code{apb_cdc_bridge} is for register access. The bridge \code{async_axi_fifo} is for the AXI4 bus of the CPU.
+
+The chapter does not cover the clock tree, the PLL or the clock gates. It states what each block does and what the user of the block has to give. \Cref{tm:ch:mod-cdc-primitives} in the Technical Manual describes how each block works. \Cref{um:ch:cdc-integration} in the User Manual tells how to use the blocks.
+
+\section{Definitions}\label{ds:ch:mod-cdc-primitives:definitions}
+The chapter uses these terms with a fixed meaning.
+\begin{description}
+  \item[Clock domain] The set of flops that one clock drives, or that clocks with a fixed phase relation drive. The constraint files declare two functional clocks for the SoC, one on \code{clk_i} and one on \code{cpu_clk_i}. The ASAP7 files name them \code{sys_clk} and \code{cpu_clk}. The test logic adds the TCK domain and the scan clock. The clocks \code{core_clk}, \code{cpu_core_clk} and \code{cpu_gated_clk} are derived from them.
+  \item[Crossing] A path from a flop in one clock domain to a flop in another clock domain.
+  \item[Metastability] The state of a flop that samples a signal while the signal changes. The output of the flop takes an unknown time to settle. The simulators of the project do not model it.
+  \item[Synchroniser] A chain of flops on the receiving clock. It gives a metastable first flop time to settle before the logic uses the value. \code{cdc_sync} and \code{cdc_reset_sync} are synchronisers.
+  \item[Rank] One flop of a synchroniser chain. The parameter \code{STAGES} is the number of ranks.
+  \item[MTBF] The mean time between failures. For a synchroniser, it is the mean time between two metastable events that reach the logic after the chain. More ranks give a longer MTBF. No test of the project measures it.
+  \item[Gray code] A binary code in which the next value differs from the present value in one bit. A counter in gray code changes one bit for each count.
+  \item[Return-to-zero handshake] A handshake in which a request level and an acknowledge level both return to zero before the next transfer. One transfer has four phases: the request rises, the acknowledge rises, the request falls, the acknowledge falls.
+  \item[Hard flush] A reset that discards all data that the block holds, without a response for it.
+\end{description}
+
+\section{Rules for all crossings}\label{ds:ch:mod-cdc-primitives:family}
+The SoC has these crossings. The CPU AXI4 bus goes through \code{u_cpu_axi_cdc}, which is the one intentional boundary between the CPU clock and \code{core_clk}. Three instances of \code{apb_cdc_bridge} carry register access: \code{u_apb_dbg_cdc} for the debug port, \code{u_apb_pll_cdc} and \code{u_apb_pll2_cdc} for the two PLL register blocks. Every other signal between the CPU clock and \code{core_clk} goes through \code{cdc_sync} or \code{cdc_reset_sync}. Peripherals also use \code{cdc_sync} for their asynchronous pins. \Cref{tm:ch:mod-cdc-primitives} lists the instances.
+
+\begin{requirement}{DS-CDC-001}{Crossings use the primitives}
+[verify={check:sim/Makefile; check:tools/cdc/cdc_config.yml; test:tb/tests/test_cdc_gate.py::test_main_fails_on_unwaived_crossing; test:tb/tests/test_cdc_gate.py::test_main_fails_on_stale_waiver; review}]
+A signal that goes from one clock domain to another must cross through \code{cdc_sync}, \code{cdc_reset_sync} or \code{cdc_gray_fifo}, or through a block that crosses only through these three. A crossing that does not follow this rule must have a written waiver in the CDC check configuration.
+\end{requirement}
+\begin{information}
+The design check is the target \code{cdc} of the \code{sim} Makefile. The target fails on an unwaived crossing only when \code{CDC_STRICT} is 1. Its default is 0, and then the run is informational. The gate does not fail on a crossing from one foreign domain that has no synchroniser. A review finds such a crossing, unless the list of required synchronisers names it.
+\end{information}
+
+\begin{requirement}{DS-CDC-002}{Multi-bit values cross in gray code}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_7_3_random; test:tb/cocotb/soc/test_async_axi_fifo.py::test_white_box_gray_pointer_single_bit_change; mutation:tools/verif/mutate_cdc_gray_fifo.py::c1_binary_wr_to_rd_raw; review}]
+A multi-bit value must cross through \code{cdc_sync} only if at most one bit of the value changes on each edge of the source clock. A binary bus that does not meet this condition must not cross through \code{cdc_sync}.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-003}{Synchroniser flops carry the attribute}
+[verify={check:tools/cdc/cdc_config.yml; review}]
+The flop array of each synchroniser must carry the attribute \code{magic_cdc}, so that the CDC check tool classifies the chain as an intentional crossing.
+\end{requirement}
+\begin{information}
+The CDC configuration does not test for the attribute. Only the entries of the list of required synchronisers depend on it, and they cover a part of the instances.
+\end{information}
+
+\begin{requirement}{DS-CDC-005}{No availability during reset}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_ready_low_in_reset; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_reset_state; mutation:tools/verif/mutate_cdc_gray_fifo.py::b1_ungated_wr_ready; mutation:tools/verif/mutate_cdc_gray_fifo.py::d1_empty_resets_to_valid; test:tb/cocotb/soc/test_async_axi_fifo.py::test_reset_asym_m_held_s_free_wide_ratio}]
+A ready output or a valid output of a block that crosses clock domains must be low while the reset of its own domain is asserted. A reset value must not tell the other side that the block is available.
+\end{requirement}
+\begin{rationale}
+A ready signal that is high in reset lets a master finish a handshake that the block then drops. The rule applies to every block that crosses clock domains. Tests at a clock ratio other than 1:1 show this fault class. Tests at 1:1 do not.
+\end{rationale}
+
+\begin{requirement}{DS-CDC-006}{Bounded delay of unsynchronised paths}
+[verify={check:pnr/constraints/phase5_soc_multiclock_check.sdc; check:pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc; check:pnr/scripts/check_cdc_timing.tcl; review}]
+The implementation constraints must give a bounded data-path delay to each path that crosses a clock domain and does not pass through a synchroniser. These paths are the storage read of each \code{cdc_gray_fifo}, the payload buses of \code{apb_cdc_bridge}, and each registered pointer or level that feeds a synchroniser. The bound must not exceed one period of the receiving clock.
+\end{requirement}
+\begin{information}
+The rule does not name a tool command. \Cref{tm:ch:mod-cdc-primitives:constraints} tells how each timing tool does it.
+\end{information}
+
+\section{\texttt{cdc\_sync}}\label{ds:mod:cdc-sync}
+The module \code{cdc_sync} carries a single bit, or a gray-coded bus, from any clock domain into the domain of \code{clk_i}. It is the base of all other blocks of this chapter. \Cref{tm:mod:cdc-sync} describes it.
+
+\begin{requirement}{DS-CDC-020}{Latency of the synchroniser}
+[verify={test:tb/cocotb/soc/test_cdc_sync.py::test_latency_after_release}]
+After the reset releases, a value on \code{d_i} that differs from \code{RESET_VAL} must appear on \code{q_o} at the \code{STAGES}-th rising edge of \code{clk_i} after the release, and not at an earlier edge.
+\end{requirement}
+\begin{information}
+Each rank passes its value to the next rank at each rising edge of \code{clk_i}. A value that is stable at the input before an edge reaches \code{q_o} after \code{STAGES} edges. The test starts the count at the reset release with the input already different from the reset value.
+\end{information}
+
+\begin{requirement}{DS-CDC-021}{Reset value without a clock}
+[verify={test:tb/cocotb/soc/test_cdc_sync.py::test_reset_value_held_during_reset; test:tb/cocotb/soc/test_cdc_sync.py::test_reset_value_is_async_clear; test:tb/cocotb/soc/test_cdc_sync.py::test_reset_value_reasserted_after_activity}]
+While \code{rst_n_i} is low, every rank and \code{q_o} must show \code{RESET_VAL}. The reset must take effect without an edge of \code{clk_i}.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-022}{Safe reset value}
+[verify={review}]
+The user must choose a \code{RESET_VAL} that the logic after \code{q_o} can safely see during reset.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-023}{Settling-delay model only in simulation}
+[verify={review}]
+The random settling-delay model must exist only when the macro \code{SIMULATION} is defined. It must be off unless an instance sets \code{RAND_CDC_DELAY_EN} to 1.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-024}{Minimum number of ranks}
+[verify={check:tb/cocotb/soc/Makefile}]
+Elaboration of \code{cdc_sync} must fail when \code{STAGES} is below 2.
+\end{requirement}
+\begin{information}
+The Makefile target \code{cdc_sync_stages1_neg} is the negative control of this rule.
+\end{information}
+
+\section{\texttt{cdc\_reset\_sync}}\label{ds:mod:cdc-reset-sync}
+The module \code{cdc_reset_sync} turns an asynchronous reset into a reset that asserts at once and deasserts in step with \code{clk_i}. It has a scan bypass for the test flow. \Cref{tm:mod:cdc-reset-sync} describes it.
+
+\begin{requirement}{DS-CDC-040}{Asynchronous assertion}
+[verify={test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_functional_reset_baseline}]
+With \code{scanmode_i} low, \code{rst_n_o} must assert when \code{rst_n_i} asserts, without an edge of \code{clk_i}.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-041}{Synchronous deassertion}
+[verify={test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_functional_mode_still_retimed_by_the_chain; test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_functional_reset_baseline}]
+With \code{scanmode_i} low, \code{rst_n_o} must deassert at the \code{STAGES}-th rising edge of \code{clk_i} after \code{rst_n_i} deasserts, and not at an earlier edge.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-042}{Scan bypass}
+[verify={test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_scan_rst_controls_when_scanmode_asserted; test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_rst_n_i_ignored_when_scanmode_asserted; test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_output_is_scan_reset_even_when_chain_flops_are_zero; test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_no_pulse_while_chain_flops_run_in_scan_mode; test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_mux_reverts_when_scanmode_deasserted}]
+With \code{scanmode_i} high, \code{rst_n_o} must equal \code{scan_rst_ni}, and \code{rst_n_i} must have no effect on \code{rst_n_o}.
+\end{requirement}
+
+\begin{information}
+The chain clears every rank without a clock edge, and \code{rst_n_o} stays low until \code{STAGES} edges of \code{clk_i} after the release. The module needs no minimum width of the reset pulse beyond the minimum pulse width of its flops.
+\end{information}
+
+\begin{requirement}{DS-CDC-044}{Scan connections}
+[verify={review}]
+The user must connect \code{scanmode_i} and \code{scan_rst_ni} at every instance. Without a scan flow, the user must tie \code{scanmode_i} to 0 and \code{scan_rst_ni} to 1. The user must not change \code{scanmode_i} while \code{clk_i} runs.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-045}{Minimum number of ranks}
+[verify={review}]
+Elaboration of \code{cdc_reset_sync} must fail when \code{STAGES} is below 2.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-046}{Scan reset ignored in functional mode}
+[verify={test:tb/cocotb/soc/test_cdc_reset_sync_scan.py::test_functional_mode_still_retimed_by_the_chain}]
+With \code{scanmode_i} low, \code{scan_rst_ni} must have no effect on \code{rst_n_o}.
+\end{requirement}
+
+\section{\texttt{cdc\_gray\_fifo}}\label{ds:mod:cdc-gray-fifo}
+The module \code{cdc_gray_fifo} is a FIFO with one clock on the write side and another clock on the read side. Both sides have a ready and valid handshake. \Cref{tm:mod:cdc-gray-fifo} describes it.
+
+\begin{requirement}{DS-CDC-060}{Legal depth}
+[verify={check:tb/cocotb/soc/Makefile}]
+Elaboration of \code{cdc_gray_fifo} must fail when \code{DEPTH} is not a power of two or is below 2.
+\end{requirement}
+\begin{information}
+The Makefile target \code{cdc_gray_fifo_depth_guard_neg} is the negative control of this rule.
+\end{information}
+
+\begin{requirement}{DS-CDC-061}{Entries cross once and in order}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_7_3_random; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_3_7_random; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_1_1_skewed_phase; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_very_slow_reader; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_very_slow_writer}]
+Each entry that the write side hands over with \code{wr_valid_i} and \code{wr_ready_o} high must appear once, in the same order, on \code{rd_data_o} with \code{rd_valid_o} high. An entry that the write side did not hand over must not appear.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-062}{Only the gray pointers cross}
+[verify={mutation:tools/verif/mutate_cdc_gray_fifo.py::c1_binary_wr_to_rd_raw; mutation:tools/verif/mutate_cdc_gray_fifo.py::c2_binary_wr_to_rd_gray_after; mutation:tools/verif/mutate_cdc_gray_fifo.py::c3_binary_rd_to_wr_gray_after; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_7_3_random; test:tb/cocotb/soc/test_async_axi_fifo.py::test_white_box_gray_pointer_single_bit_change; review}]
+The only signals that cross between the two domains of the FIFO, other than the storage read, must be the registered gray pointers. Each pointer must cross through one \code{cdc_sync} instance.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-063}{Full}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_full_boundary; mutation:tools/verif/mutate_cdc_gray_fifo.py::a1_general_expr_at_depth2; mutation:tools/verif/mutate_cdc_gray_fifo.py::a2_msb_only_inversion_d2; mutation:tools/verif/mutate_cdc_gray_fifo.py::a5_never_full; mutation:tools/verif/mutate_cdc_gray_fifo.py::a6_dge4_msb_not_inverted; mutation:tools/verif/mutate_cdc_gray_fifo.py::d2_write_ignores_ready}]
+When the FIFO holds \code{DEPTH} entries, \code{wr_ready_o} must be low. The FIFO must accept exactly \code{DEPTH} entries while the read side takes none.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-064}{Empty}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_empty_boundary; mutation:tools/verif/mutate_cdc_gray_fifo.py::d3_read_ignores_valid; mutation:tools/verif/mutate_cdc_gray_fifo.py::d4_empty_compares_next_vs_cur}]
+When the FIFO holds no entry, \code{rd_valid_o} must be low. An entry must not be visible on the read side earlier than \code{SYNC_STAGES}+1 rising edges of \code{rd_clk_i} after the write edge.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-065}{Oldest entry on the output}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_1_1_full; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_7_3_full}]
+While \code{rd_valid_o} is high, \code{rd_data_o} must hold the oldest entry that the read side has not taken.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-066}{Recovery from a common reset}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_reset_while_full_wr_first; test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_reset_while_full_rd_first}]
+When both resets are asserted together while the FIFO is full, and then release in either order, an old entry must not be visible. The FIFO must then carry new entries intact.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-067}{Recovery from a one-sided reset}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_one_sided_reset}]
+After a reset of only one domain, a common reset of both domains must restore an empty FIFO that carries new entries intact.
+\end{requirement}
+\begin{information}
+A reset of one domain clears the pointers of that domain only. The pointers of the two sides then disagree. The FIFO does not promise any data contract across a reset of one domain.
+\end{information}
+
+\begin{requirement}{DS-CDC-068}{Stored entries survive a gap in the read side}
+[verify={test:tb/cocotb/soc/test_cdc_gray_fifo.py::run_stream_very_slow_reader}]
+When the read side stops for a long time, the FIFO must keep all entries that it accepted and must return them in order when the read side restarts.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-069}{Minimum number of synchroniser ranks}
+[verify={review}]
+Elaboration of \code{cdc_gray_fifo} must fail when \code{SYNC_STAGES} is below 2.
+\end{requirement}
+\begin{information}
+The guard of the two internal \code{cdc_sync} instances gives this behaviour. No Makefile target tests it.
+\end{information}
+
+\section{\texttt{apb\_cdc\_bridge}}\label{ds:mod:apb-cdc-bridge}
+The module \code{apb_cdc_bridge} carries one APB4 transfer at a time from a slave face on \code{s_clk_i} to a master face on \code{m_clk_i}. It is for configuration and debug access. \Cref{tm:mod:apb-cdc-bridge} describes it.
+
+\begin{requirement}{DS-CDC-100}{Four-phase handshake}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_rz_four_phase_structural_proof}]
+Each forwarded transfer that the destination answers must use a return-to-zero handshake of four phases in this order: the request level \code{req_q} rises, the acknowledge level seen on the source side rises, \code{req_q} falls while the acknowledge is still high, and the acknowledge falls.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-101}{Only levels and status cross through synchronisers}
+[verify={review; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream}]
+Apart from the two reset synchronisers, only the levels \code{req_q} and \code{ack_q} and the reset status of the destination must cross through synchronisers. The command and the response must stay stable while the other side reads them.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-102}{Request while the destination is in reset}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_never_forwarded; review}]
+A request that starts while the source side sees the destination in reset must complete with \code{s_pready_o} high and \code{s_pslverr_o} high after the second rising edge of \code{s_clk_i} that follows the SETUP edge. The request must not cause a transfer on the \code{m_*} face.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-103}{Destination reset during a transfer}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side; review}]
+When the destination enters reset before \code{m_pready_i} completes the access, a forwarded request must complete with \code{s_pready_o} and \code{s_pslverr_o} high within \code{SYNC_STAGES_TO_S}+3 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
+\end{requirement}
+
+\begin{information}
+An error from the bridge during a reset of the destination does not show that the destination made no transfer. The destination can finish the access, and then reset before the acknowledge reaches the source. The source then sees the reset status and returns an error, while a write has taken place. Software has to treat such an error as ``access state unknown''. The bounds of \reqref{DS-CDC-102} and \reqref{DS-CDC-103} follow from the RTL, and no test measures them.
+\end{information}
+
+\begin{requirement}{DS-CDC-104}{Answer wins over reset status}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_ack_race_wins}]
+When the answer of the destination and the reset status of the destination reach the source side on the same edge of \code{s_clk_i}, the bridge must return the answer.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-105}{Source reset during a transfer}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_s_side; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_asym_s_held_m_free}]
+A reset of \code{s_rst_n_i} during a transfer must return the bridge to idle without a response. After the release, \code{s_pready_o} and \code{s_pslverr_o} must be low, and the next transfer must complete normally.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-106}{One transfer on the destination face}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_write; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_read; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_pready_wait_states}]
+Each forwarded request that no reset aborts must make exactly one APB transfer on the \code{m_*} face. The transfer must have a SETUP phase and then an ACCESS phase, and it must last until \code{m_pready_i} is high.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-107}{Response unchanged}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_response_data_integrity; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_pslverr_injection}]
+The read data and the error flag that the destination returns must reach \code{s_prdata_o} and \code{s_pslverr_o} unchanged.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-108}{Any clock ratio}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_clock_ratio_fast_s_slow_m; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_clock_ratio_slow_s_fast_m; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_clock_ratio_equal; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_clock_ratio_coprime}]
+The bridge must work at any ratio of \code{s_clk_i} to \code{m_clk_i}.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-109}{Reset width}
+[verify={review}]
+The user must hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i}, so that \code{u_m_rst_status_sync} samples the reset.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-110}{Names of the handshake registers}
+[verify={check:pnr/constraints/phase5_soc_multiclock_check.sdc}]
+The registers \code{req_q} and \code{ack_q} must keep their names, because the check constraint file finds them by name.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-111}{Use for configuration and debug only}
+[verify={review}]
+The user must use the bridge only for configuration and debug access. The user must not use it as a data path.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-112}{Return pulse of the ready output}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_back_to_back; review}]
+\code{s_pready_o} must be high for one \code{s_clk_i} cycle at the end of a transfer, and only after the acknowledge level on the source side has returned to low. A new SETUP phase in the cycle after the pulse must start a new transfer.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-113}{No stray transfer after a destination reset}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_back_to_back_resets_equal; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_back_to_back_resets_wide_ratio; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side}]
+After a pulse of \code{m_rst_n_i}, the \code{m_*} face must make exactly one transfer for each later request and no transfer for a request that the reset aborted.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-114}{Quiet while the source reset is low}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_asym_s_held_m_free}]
+With \code{scanmode_i} low and while \code{s_rst_n_i} is low, \code{s_pready_o}, \code{m_psel_o} and \code{m_penable_o} must be low, also when \code{m_rst_n_i} is high.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-115}{No destination select while the destination reset is low}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_asym_staggered_s_then_m; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side}]
+With \code{scanmode_i} low and while \code{m_rst_n_i} is low, \code{m_psel_o} must be low.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-116}{Read data of a forced completion}
+[verify={review}]
+A completion that the bridge forces, because the destination is in reset, must return \code{s_prdata_o} equal to zero.
+\end{requirement}
+
+\begin{information}
+The source side of the bridge resets from \code{s_rst_n_i} alone. The destination side resets from \code{s_rst_n_i} and \code{m_rst_n_i} together. The status of \code{m_rst_n_i} also crosses into the \code{s_clk_i} domain. This status reads ``not in reset'' for up to \code{SYNC_STAGES_TO_S} cycles of \code{s_clk_i} after the source reset of the bridge releases, also when \code{m_rst_n_i} is low. This is a reviewed local exception to \reqref{DS-CDC-005}.
+\end{information}
+\begin{rationale}
+The exception is safe because the reset of the destination side does not depend on this status. It stays asserted for as long as \code{m_rst_n_i} is low. The bridge holds the request level at zero when the status catches up. The transfer then ends with an error and never hangs. The bound of the false reading is the same as the latency of a synchroniser.
+\end{rationale}
+
+\section{\texttt{async\_axi\_fifo}}\label{ds:mod:async-axi-fifo}
+The module \code{async_axi_fifo} carries the five channels of an AXI4 bus between the CPU clock and the fabric clock. It has no transaction identifier on either face. \Cref{tm:mod:async-axi-fifo} describes it.
+
+\begin{requirement}{DS-CDC-150}{One FIFO for each channel}
+[verify={review; test:tb/cocotb/soc/test_async_axi_fifo.py::test_concurrent_read_write}]
+Each of the five AXI channels must cross through its own \code{cdc_gray_fifo}. The module must have no other sequential logic than these five FIFOs and two reset synchronisers.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-151}{Payload unchanged and in order}
+[verify={test:tb/cocotb/soc/test_async_axi_fifo.py::test_burst_integrity; test:tb/cocotb/soc/test_async_axi_fifo.py::test_single_write_read_4beat; test:tb/cocotb/soc/test_async_axi_fifo.py::test_error_response_crossing_fast_to_slow; test:tb/cocotb/soc/test_async_axi_fifo.py::test_error_response_crossing_coprime}]
+The payload of each channel must reach the other face unchanged and in order. This includes the burst fields, the strobes, the last flag and the response codes, also an error code.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-152}{A reset on one face resets both}
+[verify={review; test:tb/cocotb/soc/test_async_axi_fifo.py::test_cross_flush; test:tb/cocotb/soc/test_async_axi_fifo.py::test_reset_while_busy_s_side; test:tb/cocotb/soc/test_async_axi_fifo.py::test_reset_while_busy_m_side}]
+A reset on \code{s_rst_n_i} or on \code{m_rst_n_i} must discard the entries of all five FIFOs. A FIFO must accept its full depth again after the reset.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-153}{Reset is a hard flush}
+[verify={review}]
+A reset must discard the buffered beats without a response. The user must reset the attached master and the fabric from the same root as the two resets of the module.
+\end{requirement}
+
+\begin{information}
+In \code{soc_top} the two resets of \code{u_cpu_axi_cdc} come from two top-level ports, \code{cpu_rst_n_i} and \code{rst_n_i}. The common root is then an obligation of the board or the reset controller outside the SoC. A reset of \code{rst_n_i} alone flushes the bridge while \code{u_cpu} keeps running. The module needs no minimum width of the reset pulse beyond the minimum pulse width of its flops, because both reset chains clear without a clock edge.
+\end{information}
+
+\begin{requirement}{DS-CDC-154}{Quiet outputs during either reset}
+[verify={test:tb/cocotb/soc/test_async_axi_fifo.py::test_reset_asym_m_held_s_free_wide_ratio; test:tb/cocotb/soc/test_async_axi_fifo.py::test_reset_asym_s_held_m_free_wide_ratio; test:tb/cocotb/soc/test_async_axi_fifo.py::test_reset_asym_staggered_s_then_m_coprime; test:tb/cocotb/soc/test_async_axi_fifo.py::test_reset_asym_staggered_m_then_s_coprime}]
+With \code{scanmode_i} low and while \code{s_rst_n_i} or \code{m_rst_n_i} is low, all ready outputs and all valid outputs of both faces must be low.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-155}{Any clock ratio without a bypass}
+[verify={test:tb/cocotb/soc/test_async_axi_fifo.py::test_clock_ratio_equal; test:tb/cocotb/soc/test_async_axi_fifo.py::test_clock_ratio_slow_to_fast; test:tb/cocotb/soc/test_async_axi_fifo.py::test_clock_ratio_fast_to_slow; test:tb/cocotb/soc/test_async_axi_fifo.py::test_clock_ratio_coprime_phase_drift}]
+The module must work at a clock ratio of 1:1 and at other ratios. It must use the same path for all ratios.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-156}{No deadlock when channels are full}
+[verify={test:tb/cocotb/soc/test_async_axi_fifo.py::test_no_deadlock_all_fifos_full; test:tb/cocotb/soc/test_async_axi_fifo.py::test_backpressure_cpu_side; test:tb/cocotb/soc/test_async_axi_fifo.py::test_backpressure_fabric_side}]
+A full channel must not stop the other channels from draining. All accepted transfers must complete when the master releases the back-pressure.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-157}{No combinational path between the faces}
+[verify={test:tb/cocotb/soc/test_async_axi_fifo.py::test_no_combinational_crossing}]
+The valid and ready outputs of the \code{s_*} face must not change without an edge of \code{s_clk_i}, except when a reset asserts. While \code{s_bvalid_o} or \code{s_rvalid_o} is high, the payload outputs of that channel must not change without an edge of \code{s_clk_i}.
+\end{requirement}
+\begin{information}
+While a response channel is empty, its payload outputs on the \code{s_*} face can change on an edge of \code{m_clk_i}. They are valid only while the valid output is high. Either reset input clears both reset synchronisers without a clock edge, so the ready outputs and the valid outputs of both faces fall without a clock edge when either reset asserts.
+\end{information}
+
+\begin{requirement}{DS-CDC-158}{Exact depth}
+[verify={test:tb/cocotb/soc/test_async_axi_fifo.py::test_exact_depth_full}]
+With the \code{m_*} face stalled, the write address FIFO must accept exactly \code{AW_DEPTH} entries and the write data FIFO must accept exactly \code{W_DEPTH} entries.
+\end{requirement}
+
+\begin{requirement}{DS-CDC-159}{Valid is not withdrawn}
+[verify={test:tb/cocotb/soc/test_async_axi_fifo.py::test_no_valid_withdrawal_stress}]
+A valid output of the module must stay high until its handshake completes, unless \code{s_rst_n_i} or \code{m_rst_n_i} asserts.
+\end{requirement}
+
+\begin{information}
+The module has two reset synchroniser chains, \code{u_s_rst_sync} and \code{u_m_rst_sync}. Both start from \code{s_rst_n_i} ANDed with \code{m_rst_n_i}. The user connects \code{scanmode_i} and \code{scan_rst_ni} at every instance.
+\end{information}
+
+\section{Architecture decisions}\label{ds:ch:mod-cdc-primitives:decisions}
+Each subsection gives the decision, the alternatives that the team rejected, and what the decision means for the user.
+
+\subsection{FIFO with gray pointers and registered flags}\label{ds:ch:mod-cdc-primitives:dec-fifo}
+\textbf{Decision.} The FIFO keeps a binary pointer in each domain. Only the registered gray code of the pointer crosses. Each flag is a register that compares the next value of the local pointer with the synchronised pointer of the other side.
+
+\textbf{Alternatives rejected.} A handshake for each beat would cost one round trip through the synchronisers for each entry. A combinational flag would drive the ready and valid outputs from compare logic. A registered flag drives them from a flop. A flag that ignores the next value of the local pointer would lag behind a push or a pop of its own side.
+
+\textbf{Consequence for the user.} A write or a read of one side updates the flag of that side at the same edge. Only the effect of the other side arrives late. The flags are safe: they show full and empty too long, and never too short.
+
+\subsection{Four-phase handshake in the APB bridge}\label{ds:ch:mod-cdc-primitives:dec-rz}
+\textbf{Decision.} The bridge uses a return-to-zero handshake. Each side keeps only the present level of its own line and the synchronised level of the other line.
+
+\textbf{Alternatives rejected.} A two-phase toggle handshake needs a register on each side that holds the last seen value. A reset of one side can leave the two registers in disagreement. The history of the change is in the Changes record.
+
+\textbf{Consequence for the user.} A transfer needs two round trips through the synchronisers. The ready output waits for the end of the return-to-zero half. An APB master can start the next transfer in the next cycle, and it does not retry.
+
+\subsection{Reset topology}\label{ds:ch:mod-cdc-primitives:dec-reset}
+\textbf{Decision.} The AXI bridge resets as one unit. Both reset inputs feed both synchroniser chains, so a reset of either face flushes both. The APB bridge resets its source side from the source reset alone. Its destination side resets from both resets.
+
+\textbf{Alternatives rejected.} A one-sided reset of the AXI bridge would leave the bridge half flushed and could put invented beats into the domain that keeps running. For the APB bridge, a source side that follows the destination reset can wait for ever for a destination that cannot answer. The APB tree above the bridge then hangs.
+
+\textbf{Consequence for the user.} The AXI bridge needs the common reset root of \reqref{DS-CDC-153}. The APB bridge ends a transfer with an error when the destination is in reset (\reqref{DS-CDC-102}, \reqref{DS-CDC-103}). It gives no response when the source resets (\reqref{DS-CDC-105}).
+
+\subsection{Flop-array storage with a combinational read}\label{ds:ch:mod-cdc-primitives:dec-storage}
+\textbf{Decision.} The FIFO stores entries in an array of flops. The read data comes from the array without an output register.
+
+\textbf{Alternatives rejected.} A memory macro was not used. The depths of this design are 2 to 8 entries.
+
+\textbf{Consequence for the user.} The data is on \code{rd_data_o} in the same cycle that \code{rd_valid_o} rises. The read of the array is a path across the domains. \reqref{DS-CDC-006} bounds its delay.
+
+\subsection{No bypass at a clock ratio of 1:1}\label{ds:ch:mod-cdc-primitives:dec-bypass}
+\textbf{Decision.} The AXI bridge has no parameter that bypasses the FIFOs.
+
+\textbf{Alternatives rejected.} A bypass for equal clocks would need a second path with its own tests.
+
+\textbf{Consequence for the user.} A system with equal clocks still pays the latency of the FIFOs. The same tests cover all ratios (\reqref{DS-CDC-155}).
+
+\subsection{A separate constraint file for the crossing budgets}\label{ds:ch:mod-cdc-primitives:dec-sdc}
+\textbf{Decision.} The crossing budgets are in a check constraint file that declares the two clocks and does not relate them. The sign-off constraint file declares the clocks asynchronous and has no crossing budget.
+
+\textbf{Alternatives rejected.} A single file cannot do both. OpenSTA drops a maximum-delay constraint across an asynchronous clock group.
+
+\textbf{Consequence for the user.} The user adds a new crossing to the check file and keeps the names that the file matches (\reqref{DS-CDC-110}).
+
+\section{Requirements and verification}\label{ds:ch:mod-cdc-primitives:map}
+\Cref{tab:ds:req:cdc-map} lists each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review.
+
+\input{generated/requirements-cdc}
