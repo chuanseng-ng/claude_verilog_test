@@ -3033,3 +3033,45 @@ behind \code{ex1b_ex2_reg_q}. SoC context unchanged: the SoC runs this
 macro at 40 MHz and closes all 9 corners.
 
 \end{record}
+
+
+\section{PMU mutation campaign (\code{mutate_pmu_iso_ack.py})}\label{cr:defect:pmu-mutation-campaign}
+
+\begin{record}
+
+Date 2026-11-14. First recorded run of the campaign. Tool: \src{tools/verif/mutate_pmu_iso_ack.py}, Verilator 5.048 in the nix simulation shell, one run on one host, 27 mutants. A mutant is killed when any test of its suite fails. The suites are \code{pmu} for the \code{pmu.sv} mutants and \code{soc_pmu_iso_ack} for the \code{soc_top.sv} mutants. All statements are measured.
+
+\end{record}
+
+\begin{record}
+
+Result: 25 killed, 2 survived (both marked expected, both equivalent), 0 unexpected survivors, 0 invalid. Expected survivors: \code{t06_counter_not_reset} (the state is on in reset, so the counter is cleared at the first edge after the reset and nothing reads it outside a wait) and \code{s05_ack_after_cpu_gating} (the only source of the acknowledge synchroniser is cleared by \code{cpu_core_rst_n}, so the acknowledge reads 0 in that window with either reset).
+
+\end{record}
+
+\begin{record}
+
+New mutant \code{r01_cpu_gate_without_reset_term} removes \code{pmu_cpu_rst_n_cpu_sync} from \code{cpu_gated_clk_en}. It is killed by \code{test_cpu_clock_never_ticks_while_pmu_reset_asserted} and by \code{test_cpu_clock_never_ticks_while_forced_pmu_reset_and_clock_enabled}, and by no other test (2 of 13 tests fail). Before these tests, no test failed for this mutant. The first test measures a power cycle that the PMU sequences. The second asserts the PMU reset with the clock enable high, so the reset term is the only guard and the test does not depend on the order of the PMU actions.
+
+\end{record}
+
+\begin{record}
+
+Mutant \code{t04_timeout_one_long}: at the 16 of \code{tb_pmu} the constant of the mutant truncates to 0 in the 4-bit counter, so the wait times out after one cycle. This agrees with the 9 of 25 tests that fail. At the default of 255 the mutant is one cycle late. The description in the script is corrected.
+
+\end{record}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule
+Mutant group & Tests that fail \\
+\midrule
+\endhead
+\code{p01}..\code{p05} & 7, 20, 11, 4, 7 of 25 \\
+\code{t01}..\code{t05} & 3, 3, 3, 9, 4 of 25 \\
+\code{t07}..\code{t12} & 4, 3, 2, 1, 4, 21 of 25 \\
+\code{g01}, \code{g02} & 3, 5 of 25 \\
+\code{s01}..\code{s04} & 4, 6, 2, 1 of 13 \\
+\code{c01}, \code{c02} & 1, 1 of 13 \\
+\code{r01} & 2 of 13 \\
+\bottomrule
+\end{longtable}
