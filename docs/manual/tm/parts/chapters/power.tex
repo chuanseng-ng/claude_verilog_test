@@ -1,0 +1,477 @@
+% Authored chapter: power management. Replaces the moved source text of the PMU and the clock gate.
+% The moved text is in the Changes record, part Source archive.
+\chapter{Power management}\label{tm:ch:mod-power-management}
+
+This chapter describes the blocks that sequence the power state of the CPU domain and the GPU domain. The rules that the blocks follow are in \cref{ds:ch:mod-power-management}. The tasks of an integrator are in \cref{um:ch:power-integration}.
+
+The PMU is a model. It sequences a clock enable, an isolation control, a reset and two retention pulses for each domain. It does not remove a supply. It has no power switch and no retention cell. The file of the power intent states the domains and the clamps. \Cref{ds:ch:power-intent} and \cref{tm:pd:phase5-soc-upf} describe it. The converted evaluation document \cref{tm:pd:power-domain-evaluation} holds the history of the scope decision.
+
+The chapter has three parts. The PMU is in \cref{tm:mod:pmu}. The clock gate is in \cref{tm:mod:rv32i-clock-gate}. The wiring in \code{soc_top} is in \cref{tm:ch:mod-power-management:soc}. \Cref{fig:tm:ch:mod-power-management:soc} shows the whole structure.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[node distance=6mm, every node/.style={font=\scriptsize}]
+    \node[cvtblock, minimum width=22mm] (pmu) at (0,3.2) {\texttt{u\_pmu}\\\texttt{core\_clk}};
+    \node[cvtblock, minimum width=38mm] (rst) at (5.4,5.2) {\texttt{u\_cpu\_pmu\_rst\_sync}};
+    \node[cvtblock, minimum width=38mm] (dis) at (5.4,4.0) {\texttt{u\_cpu\_clk\_dis\_sync}};
+    \node[cvtblock, minimum width=38mm] (ien) at (5.4,2.8) {\texttt{u\_cpu\_iso\_en\_sync}};
+    \node[cvtblock, minimum width=38mm] (ack) at (5.4,1.0) {\texttt{u\_cpu\_iso\_ack\_sync}};
+    \node[cvtblock, minimum width=20mm] (ccg) at (10.8,4.6) {\texttt{u\_cpu\_cg}};
+    \node[cvtblock, minimum width=26mm] (cpu) at (15.4,4.6) {\texttt{u\_cpu}};
+    \node[cvtblock, minimum width=26mm] (crand) at (10.8,6.2) {reset AND};
+    \node[cvtblock, minimum width=26mm] (cclamp) at (15.4,3.2) {ISO\_CPU clamp};
+    \node[cvtblock, minimum width=26mm] (axi) at (15.4,1.8) {\texttt{u\_cpu\_axi\_cdc}};
+    \node[cvtblock, minimum width=20mm] (gcg) at (5.4,-1.2) {\texttt{u\_gpu\_cg}};
+    \node[cvtblock, minimum width=26mm] (rand) at (10.8,-3.6) {reset AND, scan mux};
+    \node[cvtblock, minimum width=26mm] (gpu) at (10.8,-1.2) {\texttt{u\_gpu}};
+    \node[cvtblock, minimum width=26mm] (gclamp) at (15.4,-1.2) {ISO\_GPU clamp};
+    \node[cvtblock, minimum width=26mm] (xbar) at (15.4,-3.6) {crossbar, IRQ};
+    \draw[cvtsig] (pmu.east) -- ++(0.9,0) |- (rst.west);
+    \draw[cvtsig] (pmu.east) -- ++(0.9,0) |- (dis.west);
+    \draw[cvtsig] (pmu.east) -- ++(0.9,0) |- (ien.west);
+    \draw[cvtsig] (rst.east) -- ++(0.8,0) |- ([yshift=2mm]ccg.west);
+    \draw[cvtsig] (dis.east) -- ++(0.8,0) |- ([yshift=-2mm]ccg.west);
+    \draw[cvtsig] (rst.east) -- ++(0.8,0) |- (crand.west);
+    \draw[cvtsig] (crand.east) -| (cpu.north);
+    \draw[cvtsig] (ccg.east) -- node[above]{\texttt{cpu\_gated\_clk}} (cpu.west);
+    \draw[cvtsig] (ien.east) -- ++(1.4,0) |- (cclamp.west);
+    \draw[cvtsig] (ien.south) -- (ack.north);
+    \draw[cvtsig] (ack.west) -| node[below, pos=0.25]{iso ack} ([xshift=5mm]pmu.south);
+    \draw[cvtsig] (cpu.south) -- (cclamp.north);
+    \draw[cvtsig] (cclamp.south) -- (axi.north);
+    \draw[thin] ([xshift=-5mm]pmu.south) -- (-0.5,-3.6);
+    \draw[cvtsig] (-0.5,-1.2) -- node[above]{\texttt{pmu\_gpu\_clk\_en}} (gcg.west);
+    \draw[cvtsig] (-0.5,-2.4) -- node[above, pos=0.15]{\texttt{pmu\_gpu\_iso\_en}} (13.1,-2.4) |- ([yshift=-2mm]gclamp.west);
+    \draw[cvtsig] (-0.5,-3.6) -- node[above]{\texttt{pmu\_gpu\_rst\_n}} (rand.west);
+    \draw[cvtsig] (gcg.east) -- node[above]{\texttt{gpu\_gated\_clk}} (gpu.west);
+    \draw[cvtsig] (rand.north) -- (gpu.south);
+    \draw[cvtsig] (gpu.east) -- ([yshift=2mm]gclamp.west);
+    \draw[cvtsig] (gclamp.south) -- (xbar.north);
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(cpu), label={[font=\scriptsize]north:\texttt{PD\_CPU}}] {};
+      \node[cvtdomain, fit=(gpu), label={[font=\scriptsize]north:\texttt{PD\_GPU}}] {};
+    \end{scope}
+  \end{tikzpicture}}
+  \caption{The power structure of \texttt{soc\_top}. The PMU runs on \texttt{core\_clk}. The synchronisers \texttt{u\_cpu\_pmu\_rst\_sync}, \texttt{u\_cpu\_clk\_dis\_sync} and \texttt{u\_cpu\_iso\_en\_sync} run on \texttt{cpu\_core\_clk}. \texttt{u\_cpu\_iso\_ack\_sync} runs on \texttt{core\_clk}. The reset AND above \texttt{u\_cpu\_cg} makes \texttt{cpu\_domain\_rst\_n} from \texttt{cpu\_core\_rst\_n}, \texttt{pmu\_cpu\_rst\_n\_cpu\_sync} and the synchronised watchdog reset. \texttt{cpu\_gated\_clk} also clocks the \texttt{s\_*} face of \texttt{u\_cpu\_axi\_cdc} and the \texttt{m\_*} face of \texttt{u\_apb\_dbg\_cdc}. The enable of \texttt{u\_cpu\_cg} is the inverse of the synchronised clock disable ANDed with the synchronised PMU reset, ORed with the MBIST terms. The test enable of both clock gates is \texttt{dft\_test\_en}. The ISO\_CPU clamp acts on the \texttt{s\_*} face of \texttt{u\_cpu\_axi\_cdc} and on \texttt{commit\_valid\_o}. The ISO\_GPU clamp acts between \texttt{u\_gpu} and the crossbar, and on \texttt{gpu\_irq\_o}. The arrow back to the PMU, marked iso ack, is the isolation acknowledge. The two dashed boxes are the domains \texttt{PD\_CPU} and \texttt{PD\_GPU}. All other blocks of the figure are in the always-on domain. The crossings are in \cref{fig:tm:ch:mod-cdc-primitives:soc}.}\label{fig:tm:ch:mod-power-management:soc}
+\end{figure}
+
+\section{\texttt{pmu}}\label{tm:mod:pmu}
+
+\subsection{Introduction}
+The module \code{pmu} has a register block of three registers and two sequencers. The register block is an \code{apb4_register_bank}. \Cref{ds:mod:apb4-register-bank} describes the bank. This section states only what the PMU uses of it: software writes the bits that \code{WMASK} allows, and the hardware writes a register in every cycle. The module implements \reqref{DS-PMU-001} to \reqref{DS-PMU-067}.
+
+\subsection{Functional description}
+Each domain has one sequencer. The two sequencers have the same code, made by a generate loop. The domain 0 is the CPU domain and the domain 1 is the GPU domain. A sequencer has nine states in a chain. \Cref{tab:tm:mod:pmu:states} shows the outputs of each state. \Cref{fig:tm:mod:pmu:fsm} shows the chain.
+
+\begin{table}[ht]
+  \centering
+  \caption{States of a sequencer and the outputs of each state}\label{tab:tm:mod:pmu:states}
+  \begin{tabular}{@{}lcccccl@{}}
+    \toprule
+    State & Code & \code{clk_en} & \code{iso_en} & \code{rst_n} & \code{ret_save} & \code{ret_restore}\\
+    \midrule
+    \code{DOM_ON} & 0 & 1 & 0 & 1 & 0 & 0\\
+    \code{DOM_PD_SAVE} & 1 & 1 & 0 & 1 & 1 & 0\\
+    \code{DOM_PD_ISO} & 2 & 1 & 1 & 1 & 0 & 0\\
+    \code{DOM_PD_GATE} & 3 & 0 & 1 & 1 & 0 & 0\\
+    \code{DOM_OFF} & 4 & 0 & 1 & 0 & 0 & 0\\
+    \code{DOM_PU_RST} & 5 & 0 & 1 & 1 & 0 & 0\\
+    \code{DOM_PU_CLK} & 6 & 1 & 1 & 1 & 0 & 0\\
+    \code{DOM_PU_RESTORE} & 7 & 1 & 1 & 1 & 0 & 1\\
+    \code{DOM_PU_ISO} & 8 & 1 & 0 & 1 & 0 & 0\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Three pairs of states show the same outputs: \code{DOM_PD_ISO} and \code{DOM_PU_CLK}, \code{DOM_PD_GATE} and \code{DOM_PU_RST}, and \code{DOM_ON} and \code{DOM_PU_ISO}. A test that reads the outputs only tells these states apart by their place in the sequence.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[>=Stealth, every node/.style={font=\scriptsize}, lbl/.style={font=\tiny, fill=white, inner sep=1pt}]
+    \foreach \nm/\an/\tx in {on/90/DOM\_ON, save/50/DOM\_PD\_SAVE, pdiso/10/DOM\_PD\_ISO, gate/-30/DOM\_PD\_GATE, off/-70/DOM\_OFF, purst/-110/DOM\_PU\_RST, puclk/-150/DOM\_PU\_CLK, restore/170/DOM\_PU\_RESTORE, puiso/130/DOM\_PU\_ISO}
+      \node[cvtstate] (\nm) at ({5.6*cos(\an)},{3.6*sin(\an)}) {\tx};
+    \draw[cvtsig] (on) -- node[lbl]{target off} (save);
+    \draw[cvtsig] (save) -- (pdiso);
+    \draw[cvtsig] (pdiso) -- node[lbl]{ack or timeout} (gate);
+    \draw[cvtsig] (gate) -- (off);
+    \draw[cvtsig] (off) -- node[lbl]{target on} (purst);
+    \draw[cvtsig] (purst) -- (puclk);
+    \draw[cvtsig] (puclk) -- (restore);
+    \draw[cvtsig] (restore) -- (puiso);
+    \draw[cvtsig] (puiso) -- node[lbl]{no ack or timeout} (on);
+    \draw[cvtsig] (on) edge[loop above] node[lbl]{target on} (on);
+    \draw[cvtsig] (pdiso) edge[loop right] node[lbl, align=left]{no ack and\\no timeout} (pdiso);
+    \draw[cvtsig] (off) edge[loop below] node[lbl]{target off} (off);
+    \draw[cvtsig] (puiso) edge[loop left] node[lbl, align=right]{ack and\\no timeout} (puiso);
+  \end{tikzpicture}}
+  \caption{State chain of one sequencer. An arrow without a label is taken at the next edge of \texttt{clk\_i}. A state stays while its exit condition is false. \texttt{target on} and \texttt{target off} are the decode of the mode for this domain. The conditions \texttt{ack} and \texttt{timeout} belong to the CPU domain. For the GPU domain the acknowledge is the isolation control of the domain itself, so the wait in \texttt{DOM\_PD\_ISO} and in \texttt{DOM\_PU\_ISO} lasts one cycle.}\label{fig:tm:mod:pmu:fsm}
+\end{figure}
+
+\paragraph{Mode and target.} The register bits \code{CTRL[1:0]} select the mode. The mode decodes into one target for each domain, on or off. A sequencer reads its target in \code{DOM_ON} and in \code{DOM_OFF} only. In the other states the target has no effect. A change of the mode during a sequence therefore waits until the sequence ends (\reqref{DS-PMU-024}).
+
+\paragraph{Output timing.} Each of the ten outputs is the output pin of a flop. The flop loads the decode of the next state at the same edge at which the state register loads the next state. An output therefore changes at the same edge as the state (\reqref{DS-PMU-026}). The registers \code{STATUS} and \code{DOMAIN_EN} are loaded by the hardware at every edge from the present state and the present outputs. A read of one of them shows the values of the previous cycle. \code{STATUS} and \code{DOMAIN_EN} lag by one cycle. The test of \reqref{DS-PMU-003} measures the lag of \code{DOMAIN_EN}. The lag of \code{STATUS} follows from the same structure in the RTL, and no test measures it.
+
+A write to \code{CTRL} also has a delay. The write completes at the edge at which \code{penable} and \code{psel} are high. The register holds the new mode after that edge. The sequencer reads the target at the next edge. The state changes at this next edge. So a write that completes at the edge E0 changes the state at the edge E1 after it. A read of \code{STATUS} that completes at E1 or E2 still shows the old idle state, because \code{STATUS} lags the state by one more cycle. This chain is derived from the RTL. The tests of the ordering show the first part: the state does not change at the edge of the write.
+
+\paragraph{Power-down.} \Cref{fig:tm:mod:pmu:power-down} shows a power-down of the CPU domain. At E1 the sequencer enters \code{DOM_PD_SAVE} and \code{cpu_ret_save_o} rises for one cycle. At E2 it enters \code{DOM_PD_ISO} and \code{cpu_iso_en_o} rises. The sequencer stays here until \code{cpu_iso_ack_i} is high. At the edge after the acknowledge it enters \code{DOM_PD_GATE} and \code{cpu_clk_en_o} falls. At the next edge it enters \code{DOM_OFF} and \code{cpu_rst_n_o} falls.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=3.8]
+    \texttt{clk\_i} & 20{c} \\
+    \texttt{pmu\_mode\_req} & 0.5D{00} 9.5D{01} \\
+    \texttt{dom\_state\_q} & 1.5D{ON} 1D{SAVE} 5D{PD\_ISO} 1D{GATE} 1.5D{OFF} \\
+    \texttt{cpu\_ret\_save\_o} & 1.5L 1H 7.5L \\
+    \texttt{cpu\_iso\_en\_o} & 2.5L 7.5H \\
+    \texttt{pmu\_cpu\_iso\_en\_sync} & 4.5L 5.5H \\
+    \texttt{cpu\_iso\_ack\_i} & 6.5L 3.5H \\
+    \texttt{cpu\_clk\_en\_o} & 7.5H 2.5L \\
+    \texttt{cpu\_rst\_n\_o} & 8.5H 1.5L \\
+    \texttt{pmu\_cpu\_rst\_n\_cpu\_sync} & 8.5H 1.5L \\
+    \texttt{pmu\_cpu\_clk\_dis\_sync} & 9.5L 0.5H \\
+    \texttt{cpu\_gated\_clk\_en} & 8.5H 1.5L \\
+  \end{tikztimingtable}
+  \caption{Power-down of the CPU domain with \texttt{cpu\_core\_clk} equal to \texttt{core\_clk} in frequency and phase. One unit is one period of \texttt{clk\_i}, and the rising edge is in the middle of the unit. The write of \texttt{CTRL} completes at the first edge. The waveforms are derived by hand from the RTL and are not measured. The length of the state \texttt{DOM\_PD\_ISO} follows from two synchronisers of two ranks each and depends on the clock ratio. Do not assume a timing relation that the diagram does not show. The clamp control \texttt{pmu\_cpu\_iso\_en\_sync} is in the CPU domain. In the CPU domain the PMU reset arrives right after E8 through the asynchronous clear of \texttt{u\_cpu\_pmu\_rst\_sync}, and it closes the clock gate. The clock disable arrives one edge later, at E9. \texttt{cpu\_gated\_clk} has its last edge at E8. Its edges E5 to E8 occur while the clamp is active.}\label{fig:tm:mod:pmu:power-down}
+\end{figure}
+
+\paragraph{Power-up.} \Cref{fig:tm:mod:pmu:power-up} shows a power-up of the CPU domain. A write of the mode NORMAL completes at the first edge. At E1 the sequencer enters \code{DOM_PU_RST} and \code{cpu_rst_n_o} rises. At E2 it enters \code{DOM_PU_CLK} and \code{cpu_clk_en_o} rises. At E3 it enters \code{DOM_PU_RESTORE} and \code{cpu_ret_restore_o} rises for one cycle. At E4 it enters \code{DOM_PU_ISO} and \code{cpu_iso_en_o} falls. The sequencer stays here until \code{cpu_iso_ack_i} is low, and then returns to \code{DOM_ON}.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=3.6]
+    \texttt{clk\_i} & 22{c} \\
+    \texttt{pmu\_mode\_req} & 0.5D{01} 10.5D{00} \\
+    \texttt{dom\_state\_q} & 1.5D{OFF} 1D{RST} 1D{CLK} 1D{REST} 5D{PU\_ISO} 1.5D{ON} \\
+    \texttt{cpu\_rst\_n\_o} & 1.5L 9.5H \\
+    \texttt{cpu\_clk\_en\_o} & 2.5L 8.5H \\
+    \texttt{cpu\_ret\_restore\_o} & 3.5L 1H 6.5L \\
+    \texttt{cpu\_iso\_en\_o} & 4.5H 6.5L \\
+    \texttt{pmu\_cpu\_iso\_en\_sync} & 6.5H 4.5L \\
+    \texttt{cpu\_iso\_ack\_i} & 8.5H 2.5L \\
+    \texttt{pmu\_cpu\_rst\_n\_cpu\_sync} & 3.5L 7.5H \\
+    \texttt{pmu\_cpu\_clk\_dis\_sync} & 4.5H 6.5L \\
+    \texttt{cpu\_gated\_clk\_en} & 4.5L 6.5H \\
+  \end{tikztimingtable}
+  \caption{Power-up of the CPU domain with \texttt{cpu\_core\_clk} equal to \texttt{core\_clk} in frequency and phase. One unit is one period of \texttt{clk\_i}. The state names in the row of \texttt{dom\_state\_q} are short for \texttt{DOM\_PU\_RST}, \texttt{DOM\_PU\_CLK} and \texttt{DOM\_PU\_RESTORE}. The waveforms are derived by hand from the RTL and are not measured. The state \texttt{DOM\_PU\_ISO} ends at the edge after \texttt{cpu\_iso\_ack\_i} falls. In the CPU domain the PMU reset releases at E3 and the clock disable falls at E4, so the first edge of \texttt{cpu\_gated\_clk} is E5. The clamp releases after E6, so the edges E5 and E6 occur while the clamp is still active. Do not assume a timing relation that the diagram does not show.}\label{fig:tm:mod:pmu:power-up}
+\end{figure}
+
+\paragraph{Isolation handshake.} The CPU domain runs on \code{cpu_core_clk}, which is independent of \code{core_clk}. The output \code{cpu_iso_en_o} at the port of the PMU does not show that the clamp is active. \code{soc_top} carries it through \code{u_cpu_iso_en_sync}, a \code{cdc_sync} on \code{cpu_core_clk}, to the clamp. The reset \code{cpu_rst_n_o} reaches the CPU domain through \code{u_cpu_pmu_rst_sync}, a \code{cdc_reset_sync}, and the assertion of its output is asynchronous. A reset that follows the isolation by a fixed number of cycles can therefore reach the CPU domain before the clamp is active. The acknowledge closes the loop. \code{u_cpu_iso_ack_sync} synchronises the clamp control of the CPU domain back into \code{core_clk}, and the sequencer waits for it. The wait for the acknowledge to fall in \code{DOM_PU_ISO} is the return-to-zero half of the handshake. Without it, a power-down that follows a power-up at once meets the acknowledge of the earlier cycle, which is still high while the release crosses the two synchronisers (\reqref{DS-PMU-067}). After a power-up whose wait ended by the timeout, the acknowledge can still be high, and the next power-down does not wait (\reqref{DS-PMU-067}).
+
+\paragraph{Timeout.} The counter \code{wait_cnt_q} has \code{$clog2(ISO_ACK_TIMEOUT)} bits. It counts the cycles in a wait. A cycle that is not a wait restarts it, so each wait has the full timeout (\reqref{DS-PMU-064}). The wait ends in the cycle in which the counter is \code{ISO_ACK_TIMEOUT-1}. The state therefore lasts \code{ISO_ACK_TIMEOUT} cycles, which the test of the PMU confirms for 16. The flag \code{cpu_iso_ack_to_q} sets at the end of a wait that timed out, and appears in \code{STATUS} bit 3. It clears at reset and in the cycle in which the CPU domain would leave \code{DOM_ON} for a power-down. A power-up does not clear it.
+
+The estimate of the round trip in the header of the module is 3R+3 cycles of \code{clk_i}, where R is the ratio of the periods. It comes from the depth of the synchronisers and is not measured. The default of 255 would cover a ratio of about 80 by this estimate. In \code{soc_top} the parameter has its default.
+
+\paragraph{GPU domain.} The GPU domain runs on \code{core_clk}, as the PMU does. The clamp control is the flop \code{iso_en_q} of the PMU. The sequencer of the GPU uses \code{iso_en_q} as its acknowledge, so the acknowledge is high in the cycle in which the clamp is raised, and low in the cycle in which it is released. Both waits last one cycle. The GPU has no timeout.
+
+\paragraph{Corner cases.} A write of a new mode during a sequence takes effect after the sequence ends. Only the value of \code{CTRL} at an edge where the sequencer is in \code{DOM_ON} or \code{DOM_OFF} has an effect. A value that software writes and then replaces during a sequence has no effect. For example, CPU\_OFF written and then NORMAL written while the CPU domain powers up leaves the domain on. The mode IDLE sequences both domains at the same time, and they do not depend on each other. A reset during a wait returns the domain to \code{DOM_ON}, clears the flag and restarts the counter. A CPU reset that is held low (\code{cpu_core_rst_n} low) holds \code{u_cpu_iso_en_sync} at 0. The acknowledge then never comes, and the wait ends by the timeout. A reset of the PMU in \code{DOM_OFF} sets the clock enable, the isolation control and the reset of the domain to their \code{DOM_ON} values at one edge. The power-up order of \reqref{DS-PMU-022} does not apply. In the CPU domain the clamp release and the clock enable then cross synchronisers of the same depth and arrive at about the same edge. This is derived from the RTL.
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:pmu:params} lists the parameters. A value of \code{ISO_ACK_TIMEOUT} below 2 stops the elaboration, because a timeout of 0 or 1 cannot be told from no wait. The guard is a \code{$fatal} in a generate block. The integrator sets the value above the round trip of the acknowledge (\reqref{DS-PMU-066}).
+
+\input{generated/facts/pmu-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:pmu:signals} lists the ports. In \code{soc_top} the input \code{cpu_iso_ack_i} is the net \code{pmu_cpu_iso_ack}.
+
+\input{generated/facts/pmu-signals}
+
+\subsection{Programmers model}
+The registers are in the APB slot that starts at 0x2000\_8000. \Cref{tab:tm:mod:pmu:regmap} lists them. The tables after it show the fields. A field marked RES0 reads 0 and ignores a write.
+
+\begin{table}[ht]
+  \centering
+  \caption{Registers of the PMU}\label{tab:tm:mod:pmu:regmap}
+  \begin{tabular}{@{}llllp{70mm}@{}}
+    \toprule
+    Offset & Name & Type & Reset & Description\\
+    \midrule
+    0x00 & \code{CTRL} & read and write & 0x0000\_0000 & Power mode.\\
+    0x04 & \code{STATUS} & read only & 0x0000\_0003 & State of the sequencers and the timeout flag.\\
+    0x08 & \code{DOMAIN_EN} & read only & 0x0000\_0033 & Image of the ten sequencing outputs.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \caption{Fields of \texttt{CTRL}}\label{tab:tm:mod:pmu:ctrl}
+  \begin{tabular}{@{}lllp{80mm}@{}}
+    \toprule
+    Bits & Name & Type & Description\\
+    \midrule
+    1:0 & \code{pmu_mode_req} & read and write & 00 NORMAL, 01 CPU\_OFF, 10 GPU\_OFF, 11 IDLE.\\
+    31:2 & --- & RES0 & Reserved.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \caption{Fields of \texttt{STATUS}}\label{tab:tm:mod:pmu:status}
+  \begin{tabular}{@{}lllp{80mm}@{}}
+    \toprule
+    Bits & Name & Type & Description\\
+    \midrule
+    0 & \code{cpu_domain_on} & read only & 1 when the CPU sequencer is in \code{DOM_ON}.\\
+    1 & \code{gpu_domain_on} & read only & 1 when the GPU sequencer is in \code{DOM_ON}.\\
+    2 & \code{busy} & read only & 1 while a sequencer is in a state other than \code{DOM_ON} and \code{DOM_OFF}.\\
+    3 & \code{cpu_iso_ack_timeout} & read only & Sticky flag of a timed-out wait of the CPU domain.\\
+    31:4 & --- & RES0 & Reserved.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The bit \code{cpu_domain_on} shows the state that the sequencer had in the previous cycle. When no wait timed out, the sequencer left \code{DOM_PU_ISO} after the clamp release was seen in the CPU domain, so the bit also tells that. When a wait timed out, the bit does not tell it.
+
+\begin{table}[ht]
+  \centering
+  \caption{Fields of \texttt{DOMAIN\_EN}}\label{tab:tm:mod:pmu:domain-en}
+  \begin{tabular}{@{}lllp{80mm}@{}}
+    \toprule
+    Bits & Name & Type & Description\\
+    \midrule
+    0 & \code{cpu_clk_en} & read only & Output \code{cpu_clk_en_o}.\\
+    1 & \code{gpu_clk_en} & read only & Output \code{gpu_clk_en_o}.\\
+    2 & \code{cpu_iso_en} & read only & Output \code{cpu_iso_en_o}.\\
+    3 & \code{gpu_iso_en} & read only & Output \code{gpu_iso_en_o}.\\
+    4 & \code{cpu_rst_n} & read only & Output \code{cpu_rst_n_o}.\\
+    5 & \code{gpu_rst_n} & read only & Output \code{gpu_rst_n_o}.\\
+    6 & \code{cpu_ret_save} & read only & Output \code{cpu_ret_save_o}.\\
+    7 & \code{cpu_ret_restore} & read only & Output \code{cpu_ret_restore_o}.\\
+    8 & \code{gpu_ret_save} & read only & Output \code{gpu_ret_save_o}.\\
+    9 & \code{gpu_ret_restore} & read only & Output \code{gpu_ret_restore_o}.\\
+    31:10 & --- & RES0 & Reserved.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Integration and timing constraints}
+Connect \code{cpu_iso_ack_i} as \code{soc_top} does, from a synchroniser on \code{clk_i} whose source is the clamp control in the CPU domain. Run the PMU on \code{core_clk} and \code{core_rst_n}, and never gate it or reset it by a domain reset (\reqref{DS-PMU-028}). The outputs \code{cpu_ret_save_o}, \code{cpu_ret_restore_o}, \code{gpu_ret_save_o} and \code{gpu_ret_restore_o} drive no cell in \code{soc_top}. The nets are declared with a lint waiver for unused signals.
+
+\subsection{Debug, test and DFT}
+The module has no scan port. A scan flow treats its flops as ordinary flops. In scan mode the reset \code{core_rst_n} equals the scan reset. The PMU reset is synchronous, so the scan reset takes effect at the next edge of the test clock. The PMU is not overridden in scan mode. \Cref{tm:ch:dft-architecture:166-clocking-scan-mode-pmu} describes the scan clocking.
+
+\subsection{Verification}
+Four suites and two checks verify the PMU. They are in \cref{tab:tm:mod:pmu:verification}.
+
+\begin{table}[ht]
+  \centering
+  \caption{Verification of the PMU}\label{tab:tm:mod:pmu:verification}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{90mm}@{}}
+    \toprule
+    Suite or check & What it covers\\
+    \midrule
+    \code{test_pmu} (target \code{pmu}) & 20 tests on the PMU alone. The testbench models the acknowledge by a set latency, a stuck level and a forced level. The tests cover the registers, the order of each sequence in each cycle, the wait and its timeout with a timeout of 16, the independence of the GPU, a reset during a wait and a power-down directly after a power-up.\\
+    \code{test_soc_pmu_iso_ack} (target \code{soc_pmu_iso_ack}) & 7 tests on \code{soc_top}. Four tests run a full power cycle of the CPU domain at four clock ratios with a monitor of the order of isolation, reset and clock enable. One test runs three power cycles without a gap. One test holds the CPU reset low so that no acknowledge comes. One test checks the GPU clamps in each cycle of a GPU power cycle.\\
+    \code{test_soc_pmu_multiclock} (target \code{soc_pmu_multiclock}) & 1 test. Firmware makes the DMA engine write CPU\_OFF to \code{CTRL}. The test checks the order of the states, the clamp and a frozen counter while the domain is off, and a counter that resumes after the power-up. The CPU clock is 3 ns and the fabric clock is 7 ns.\\
+    \code{test_soc_integration} and \code{test_soc_dft_scan} & The GPU power cycle by firmware with the clamp of \code{gpu_irq_o} and the loss of GPU state, and the scan resets with the PMU holding a domain off.\\
+    Registered-output check & \code{check_registered_outputs.py} proves that the ten outputs are flop outputs. \code{test_pmu_registered_outputs.py} runs it on \code{pmu.sv} and on ten mutants that each re-route one output to the decode. It needs \code{yosys} and \code{sv2v}. The CI workflow \code{rtl-checks} runs it and fails when the file skips.\\
+    Mutation script & \code{mutate_pmu_iso_ack.py} changes the text of \code{pmu.sv} or \code{soc_top.sv} in 26 ways and runs the suite \code{pmu} or \code{soc_pmu_iso_ack} on each copy. Two mutants are marked as expected survivors. No workflow runs the script. It is run by hand in the simulation shell. No result of a campaign is recorded in the repository or in the Changes record.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The suites are described in \cref{tm:suite:soc-test-pmu}, \cref{tm:suite:soc-test-soc-pmu-iso-ack} and \cref{tm:suite:soc-test-soc-pmu-multiclock}. The firmware of the live test is in \cref{tm:suite:soc-pmu-cycle-fw-gen-pmu-cycle-hex}.
+
+\paragraph{What the suites do not prove.} These limits apply.
+\begin{itemize}
+  \item The simulation has zero delay and does not model metastability. The settling-delay model of \code{cdc_sync} exists under the macro \code{SIMULATION} and is off in these suites (\cref{tm:mod:cdc-sync:debug}).
+  \item The order of the clamp before the reset is simulated at four clock ratios. The statement for other ratios is a structural argument.
+  \item The order of the clamp release after the reset release in a power-up is not guaranteed. The two paths are separate synchronisers. The monitor of the tests labels this check as nominal only. The design argument is that the lines that the clamp holds are sampled by \code{cpu_gated_clk}. This clock cannot run before the reset release is seen in the CPU domain, because the enable of \code{u_cpu_cg} contains \code{pmu_cpu_rst_n_cpu_sync}. This is a design argument and not a tested fact.
+  \item In a power-up the clock of the CPU domain starts before the clamp releases there. The derived waveform at 1:1 has two edges of \code{cpu_gated_clk} (E5 and E6) while \code{pmu_cpu_iso_en_sync} is still high. In a power-down the clamp is active for four edges (E5 to E8) before the clock stops. In these edges \code{u_cpu} sees the ready and valid inputs from \code{u_cpu_axi_cdc}, but the bridge sees the clamped valid and ready outputs of \code{u_cpu} as 0. A handshake that \code{u_cpu} completes in such an edge does not reach the bridge, so a request can be lost and a response can be taken twice. No test checks these edges. This is derived from the RTL. The other order, a clamp that releases before the clock starts, is harmless by the design argument: the held lines are sampled only by \code{cpu_gated_clk}, which cannot run before the reset release is seen in the CPU domain.
+  \item The mutation script has no recorded result. By reading, each mutant is killed by the tests that \cref{tab:ds:req:pmu-map} names. This is not measured. At the timeout of 16 that the test of the PMU uses, the counter has 4 bits, so the constant 16 in the mutant \code{t04_timeout_one_long} truncates to 0 and gives a timeout of one cycle and not one cycle too long.
+  \item The mutant \code{s05_ack_after_cpu_gating} gives the acknowledge synchroniser the reset \code{cpu_core_rst_n}. It survives by design in a zero-delay run, and no test or tool checks which reset the synchroniser uses.
+  \item No Makefile target tests the guard of \code{ISO_ACK_TIMEOUT} below 2.
+  \item The suites that run in the SoC start the CPU power-up by a deposit into the storage flop of \code{CTRL} and never by a bus write. The GPU power-up is a bus write from firmware.
+  \item No SoC test runs the CPU clock gate open by MBIST or \code{dft_test_en} while the PMU holds the CPU domain off. A macro-level test of the MBIST controller uses a gate that mirrors \code{u_cpu_cg}.
+\end{itemize}
+
+\subsection{Known limits}
+The PMU removes no supply and has no power switch and no retention cell. The retention pulses have no effect. The PMU has no drain step, so a CPU bus transfer in flight when the clock stops can wedge a slave engine of the crossbar. Nothing inside the CPU domain can request a power-up. Another bus master, for example the DMA engine, can write \code{CTRL} and wake the domain. In IDLE the CPU and the GPU are off, so the transfer has to be set up before the power-down. A reset of \code{rst_n_i} and \code{cpu_rst_n_i} together also returns the domain. No test wakes the CPU domain by a bus write. \code{STATUS} lags the state by one cycle.
+
+In the simulation model the CPU flops keep their state across a CPU power cycle. The CPU flops have a synchronous reset, and the clock does not run while the PMU reset is asserted. The live test checks that a counter resumes. This is a property of the model and not a guarantee of the design. The control flops of the GPU have an asynchronous reset. The domain reset clears them although the clock is gated. The vector register file of the GPU has no reset, and the SRAM banks of the shared memory have no connection to the domain reset.
+
+These points are read from the RTL and are not simulated.
+\begin{itemize}
+  \item After a power-up whose wait ended by the timeout, the acknowledge can still be high. The next power-down leaves \code{DOM_PD_ISO} after one cycle, and \code{STATUS} bit 3 clears when that power-down starts and is not set again (\reqref{DS-PMU-067}).
+  \item The control port of the GPU (\code{s_axil_*} of \code{gpu_top}) is held in reset while the GPU domain is off. Its ready signal for an address is high in reset and it never gives a response. An access to a GPU register while the domain is off is lost and the master waits, also after the power-up. The AXI ring was not read for a timeout.
+  \item An MBIST force opens the CPU clock gate while the PMU holds the CPU domain off. The CPU flops then see clock edges while \code{cpu_domain_rst_n} is low, and they reset (\reqref{DS-PMU-108}).
+  \item A reset of \code{rst_n_i} alone resets the PMU to NORMAL and flushes \code{u_cpu_axi_cdc}, but it does not reset \code{u_cpu}, because \code{cpu_domain_rst_n} does not drop while the clock runs (\reqref{DS-PMU-183}).
+\end{itemize}
+
+The PMU is not overridden in scan mode, and the clamps are not qualified by the scan mode. A clamp can be active during a scan if the PMU has a domain off when the scan starts. The domain resets follow the scan reset (\reqref{DS-PMU-107}).
+
+\section{\texttt{rv32i\_clock\_gate}}\label{tm:mod:rv32i-clock-gate}
+
+\subsection{Introduction}
+The module \code{rv32i_clock_gate} gates a clock with an enable and a test enable. It implements \reqref{DS-PMU-150} to \reqref{DS-PMU-153}. \Cref{tab:tm:mod:rv32i-clock-gate:instances} lists the instances.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{30mm}>{\raggedright\arraybackslash}p{34mm}>{\raggedright\arraybackslash}p{34mm}>{\raggedright\arraybackslash}p{32mm}@{}}
+\caption{Instances of \texttt{rv32i\_clock\_gate}}\label{tab:tm:mod:rv32i-clock-gate:instances}\\
+\toprule
+Instance & Parent file & Enable & Test enable\\
+\midrule
+\endfirsthead
+\toprule
+Instance & Parent file & Enable & Test enable\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\code{u_cpu_cg} & \code{soc_top} & \code{cpu_cg_en}, with \code{HARD_ROOT} of 1 & \code{dft_test_en}\\
+\code{u_gpu_cg} & \code{soc_top} & \code{pmu_gpu_clk_en} & \code{dft_test_en}\\
+\code{u_tag_cg}, \code{u_data_cg} & \code{rv32i_icache}, \code{rv32i_dcache}, only with \code{SRAM_ASAP7} & the active-low select of the SRAM, inverted & \code{test_en_i} of the cache\\
+\code{u_cg} & \code{npu_weight_mem}, only with \code{SRAM_ASAP7} & the active-low bank select, inverted & tied to 0\\
+\code{u_tck_cg} & \code{dft_ctrl} & \code{tap_shift_clk_en} & tied to 0\\
+\end{longtable}
+
+\subsection{Functional description}
+\Cref{fig:tm:mod:rv32i-clock-gate:block} shows the behavioural arm. The OR of \code{en} and \code{test_en} goes into a latch that is transparent while \code{clk} is low. The output of the latch ANDs with \code{clk}. The OR sits in front of the latch, so \code{test_en} has the same glitch-free behaviour as \code{en}.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[node distance=9mm, every node/.style={font=\scriptsize}]
+    \node[cvtblock, minimum width=14mm] (or) at (0,0) {OR};
+    \node[cvtblock, minimum width=34mm] (lat) at (4.6,0) {latch, open while \texttt{clk} low};
+    \node[cvtblock, minimum width=14mm] (and) at (9.2,0) {AND};
+    \draw[cvtsig] (-2.6,0.25) node[left]{\texttt{en}} -- ([yshift=2.5mm]or.west);
+    \draw[cvtsig] (-2.6,-0.25) node[left]{\texttt{test\_en}} -- ([yshift=-2.5mm]or.west);
+    \draw[cvtsig] (or) -- (lat);
+    \draw[cvtsig] (lat) -- node[above]{\texttt{en\_latch}} (and);
+    \draw[cvtsig] (and.east) -- ++(1.2,0) node[right]{\texttt{gclk}};
+    \draw[cvtsig] (4.6,-1.6) node[below]{\texttt{clk}} -- (lat.south);
+    \draw[cvtsig] (9.2,-1.6) -- (and.south);
+    \draw (4.6,-1.6) -- (9.2,-1.6);
+    \node[font=\small\bfseries] at (4.6,2.0) {behavioural arm};
+    \node[cvtblock, minimum width=46mm] (icg) at (1.8,-4.2) {\texttt{u\_icg}: \texttt{sky130\_fd\_sc\_hd\_\_sdlclkp\_4}};
+    \node[cvtblock, minimum width=46mm] (buf) at (9.2,-4.2) {\texttt{u\_root\_buf}: \texttt{sky130\_fd\_sc\_hd\_\_buf\_16}};
+    \draw[cvtsig] (-2.6,-4.0) node[left]{\texttt{en}, \texttt{test\_en}, \texttt{clk}} -- (icg.west);
+    \draw[cvtsig] (icg) -- node[above]{\texttt{icg\_gclk}} (buf);
+    \draw[cvtsig] (buf.east) -- ++(1.2,0) node[right]{\texttt{gclk}};
+    \node[font=\small\bfseries] at (4.6,-2.9) {Sky130 arm with \texttt{HARD\_ROOT} of 1};
+  \end{tikzpicture}}
+  \caption{Structure of \texttt{rv32i\_clock\_gate}. Upper part: the behavioural arm. Lower part: the Sky130 library arm for an instance with \texttt{HARD\_ROOT} of 1. The cell \texttt{u\_icg} has the pins \texttt{GATE} for \texttt{en} and \texttt{SCE} for \texttt{test\_en}.}\label{fig:tm:mod:rv32i-clock-gate:block}
+\end{figure}
+
+A value of \code{en} or \code{test_en} that arrives while \code{clk} is low goes through the latch at once. The value at the rising edge of \code{clk} decides if \code{gclk} follows \code{clk} in that high phase. \Cref{fig:tm:mod:rv32i-clock-gate:timing} shows two changes of \code{en}. The first rise arrives while \code{clk} is high. It has no effect in that phase, and \code{gclk} starts at the next high phase. The fall arrives while \code{clk} is high. It does not shorten the pulse in progress.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=5.2]
+    \texttt{clk} & 16{c} \\
+    \texttt{en} & 2.7L 3H 2.3L \\
+    \texttt{en\_latch} & 3L 3H 2L \\
+    \texttt{gclk} & 3.5L 0.5H 0.5L 0.5H 0.5L 0.5H 2L \\
+  \end{tikztimingtable}
+  \caption{Timing of the behavioural arm with \texttt{test\_en} low. One unit is one period of \texttt{clk}, and the rising edge is in the middle of the unit. \texttt{en} rises while \texttt{clk} is high, and the latch takes it when \texttt{clk} falls. \texttt{gclk} has three pulses. \texttt{en} falls while \texttt{clk} is high, and the latch takes it when \texttt{clk} falls. The pulse in progress is complete.}\label{fig:tm:mod:rv32i-clock-gate:timing}
+\end{figure}
+
+\paragraph{Arms.} The module has four arms. The code tests them in the order of \cref{tab:tm:mod:rv32i-clock-gate:arms}. The first arm whose condition is true is used.
+
+\begin{table}[ht]
+  \centering
+  \caption{Implementation arms of \texttt{rv32i\_clock\_gate}}\label{tab:tm:mod:rv32i-clock-gate:arms}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{24mm}>{\raggedright\arraybackslash}p{44mm}>{\raggedright\arraybackslash}p{52mm}@{}}
+    \toprule
+    Condition & Result & Where the flow sets it\\
+    \midrule
+    \code{FPGA_BUFGCE} & A \code{BUFGCE} with \code{CE} equal to \code{en | test_en}. The simulation and the lint use a stub. & The Vivado build of the FPGA prototype.\\
+    \code{USE_ICG_CELL} & The cell \code{ICGx1_ASAP7_75t_R}, instance \code{u_icg}, with \code{SE} equal to \code{test_en}. & The ASAP7 SV2V defines of the SoC and the CPU in the physical design Makefile. The define is for Yosys and not for Verilator.\\
+    \code{USE_SKY130_CLKCELLS} with \code{HARD_ROOT} of 1 & The cells \code{u_icg} and \code{u_root_buf}. & The Sky130 SV2V defines of the SoC in the physical design Makefile.\\
+    None of these & The behavioural latch and AND. & Simulation and lint. An instance with \code{HARD_ROOT} of 0 in every flow that sets neither of the first two defines.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The parameter \code{HARD_ROOT} matters only in the Sky130 library arm. The buffer \code{u_root_buf} drives the net that the clock tree builder owns. It is a plain buffer on purpose. The cell of a clock buffer is in the list of the clock tree builder, which then sees an existing clock buffer and builds no tree. A gate whose output feeds no clock tree keeps the behavioural arm.
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:rv32i-clock-gate:params} lists the parameter.
+
+\input{generated/facts/rv32i-clock-gate-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:rv32i-clock-gate:signals} lists the ports. The module has no reset.
+
+\input{generated/facts/rv32i-clock-gate-signals}
+
+\subsection{Integration and timing constraints}
+Keep \code{test_en} static while \code{clk} runs (\reqref{DS-PMU-152}). You can tie it to 0 where no scannable flop sits behind the gate. A gate in front of an SRAM macro that scan or MBIST reaches takes the test enable of its parent. The gates of the SRAM macros in the caches do so, and scan and MBIST open them. Set \code{HARD_ROOT} to 1 for a gate that is a clock root with a clock tree (\reqref{DS-PMU-153}). Keep the instance names \code{u_icg} and \code{u_root_buf}. The Sky130 configuration files \src{pnr/sky130/soc/config.json} and \src{pnr/sky130/soc/config_rccal.json} list \code{u_cpu_cg.g_cell.u_root_buf} in \code{RSZ_DONT_TOUCH_RX}. The ASAP7 constraint files match the pin of \code{u_icg} for the generated clock of the SRAM.
+
+\subsection{Debug, test and DFT}
+The test enable is the scan hook. The check of the power intent proves that the test enable of each top-level gate is the DFT test-enable net.
+
+\subsection{Verification}
+The suite \code{test_clock_gate_scan} runs through the target \code{clock_gate_scan}. It has four tests. They drive the clock by hand so that a change of \code{en} or \code{test_en} falls at an exact point of the clock phase. They check that \code{test_en} opens the gate, that the gate is the old gate with \code{test_en} low, that \code{test_en} does not glitch, and that a rise of \code{en} while \code{clk} is high does not glitch.
+
+The suite runs the behavioural arm only. A build with \code{FPGA=1} runs the \code{BUFGCE} arm against the stub \src{rtl/fpga/sim/BUFGCE.v}, which copies the behavioural arm. No simulation runs the ASAP7 cell or the Sky130 cells. The test of \code{en} covers a rising \code{en} while \code{clk} is high and not a falling one.
+
+\subsection{Known limits}
+The latch of the behavioural arm is a model. The library arms are not simulated. The rules of \code{test_en} are rules for the caller, and no check tests them.
+
+\section{SoC power integration}\label{tm:ch:mod-power-management:soc}
+\code{soc_top} carries the PMU outputs to the two domains. \Cref{fig:tm:ch:mod-power-management:soc} shows the structure. \Cref{tab:tm:ch:mod-cdc-primitives:instances} lists the four synchronisers as crossings.
+
+\paragraph{Clock enable of the CPU domain.} The synchroniser \code{u_cpu_clk_dis_sync} carries the inverse of \code{pmu_cpu_clk_en} into \code{cpu_core_clk}. The inverse makes the reset value 0 of \code{cdc_sync} mean that the clock runs. The net \code{cpu_gated_clk_en} is the inverse of \code{pmu_cpu_clk_dis_sync} ANDed with \code{pmu_cpu_rst_n_cpu_sync}. Both terms are synchroniser outputs on \code{cpu_core_clk}. \code{pmu_cpu_rst_n_cpu_sync} falls without a clock edge when the PMU asserts the reset, and it rises at an edge of \code{cpu_core_clk}. The latch of \code{u_cpu_cg} is closed while \code{cpu_core_clk} is high, so a fall of the enable cannot cut a pulse of \code{cpu_gated_clk}. The enable of \code{u_cpu_cg} is \code{cpu_cg_en}. It is \code{cpu_gated_clk_en} ORed with \code{mbist_force}, when the parameter \code{MBIST_CPU} is 1, and with \code{cpu_mbist_busy}. The net \code{cpu_mbist_busy} is the OR of two bits of the MBIST status when \code{MBIST_CPU} is 1 and 0 otherwise. The gate runs on \code{cpu_core_clk}, and its test enable is \code{dft_test_en}. An MBIST force or a test mode therefore runs \code{cpu_gated_clk} while the PMU holds the CPU domain off. The CPU flops then see clock edges while \code{cpu_domain_rst_n} is low, and they reset. The CPU MBIST cannot start in this state, because \code{rv32i_cpu_top} gates \code{mbist_run_i} with its reset.
+
+\paragraph{Clock enable of the GPU domain.} The gate \code{u_gpu_cg} runs on \code{core_clk} with the enable \code{pmu_gpu_clk_en} and the test enable \code{dft_test_en}. Its output is \code{gpu_gated_clk}, the clock of \code{u_gpu}.
+
+\paragraph{Isolation clamps.} \Cref{tab:tm:ch:mod-power-management:iso-cpu} and \cref{tab:tm:ch:mod-power-management:iso-gpu} list the clamped nets. A clamp is a two-input select that forces the net to 0 while its control is high. The payload bits are not clamped, because the valid signal qualifies them. The slave-side responses of \code{u_gpu} and the debug port of \code{u_cpu} are not clamped.
+
+\begin{table}[ht]
+  \centering
+  \caption{ISO\_CPU clamps}\label{tab:tm:ch:mod-power-management:iso-cpu}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{44mm}>{\raggedright\arraybackslash}p{36mm}>{\raggedright\arraybackslash}p{40mm}@{}}
+    \toprule
+    Clamped net & Control & Clock of the control\\
+    \midrule
+    \code{cpu_bridge_s_awvalid}, \code{cpu_bridge_s_wvalid}, \code{cpu_bridge_s_arvalid} & \code{pmu_cpu_iso_en_sync} & \code{cpu_core_clk}\\
+    \code{cpu_bridge_s_bready}, \code{cpu_bridge_s_rready} & \code{pmu_cpu_iso_en_sync} & \code{cpu_core_clk}\\
+    \code{commit_valid_o} & \code{pmu_cpu_iso_en_sync} & \code{cpu_core_clk}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[ht]
+  \centering
+  \caption{ISO\_GPU clamps}\label{tab:tm:ch:mod-power-management:iso-gpu}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{44mm}>{\raggedright\arraybackslash}p{36mm}>{\raggedright\arraybackslash}p{40mm}@{}}
+    \toprule
+    Clamped net & Control & Clock of the control\\
+    \midrule
+    \code{xbar_m_awvalid[2]}, \code{xbar_m_wvalid[2]}, \code{xbar_m_arvalid[2]} & \code{pmu_gpu_iso_en} & \code{core_clk}\\
+    \code{xbar_m_bready[2]}, \code{xbar_m_rready[2]} & \code{pmu_gpu_iso_en} & \code{core_clk}\\
+    \code{gif_axil_arvalid}, \code{gif_axil_rready} & \code{pmu_gpu_iso_en} & \code{core_clk}\\
+    \code{gpu_irq_o} & \code{pmu_gpu_iso_en} & \code{core_clk}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The control of the GPU clamp is the flop of the PMU and has no synchroniser, because the GPU runs on the clock of the PMU. The control of the CPU clamp is \code{pmu_cpu_iso_en_sync}. The CPU clamp sits at the \code{s_*} face of \code{u_cpu_axi_cdc}, outside \code{u_cpu}.
+
+\paragraph{Reset trees.} \Cref{tab:tm:ch:mod-power-management:resets} lists the resets of the two domains.
+
+\begin{table}[ht]
+  \centering
+  \caption{Reset nets of the power domains}\label{tab:tm:ch:mod-power-management:resets}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{32mm}>{\raggedright\arraybackslash}p{58mm}>{\raggedright\arraybackslash}p{30mm}@{}}
+    \toprule
+    Net & Expression & Resets\\
+    \midrule
+    \code{cpu_domain_rst_n} & \code{cpu_core_rst_n} AND \code{pmu_cpu_rst_n_cpu_sync} AND \code{wdt_cpu_rst_n_cpu_sync} & \code{u_cpu}, the \code{m_*} face of \code{u_apb_dbg_cdc}\\
+    \code{gpu_domain_rst_n} & The scan mux \code{u_gpu_domain_rm} between \code{core_rst_n} AND \code{pmu_gpu_rst_n} and the scan reset & \code{u_gpu}\\
+    \code{cpu_core_rst_n} & The reset that goes with \code{cpu_core_clk} & The \code{s_*} face of \code{u_cpu_axi_cdc}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The reset of the CPU domain does not pass through a mux of its own. In scan mode each of its three terms equals the scan reset. The GPU term \code{pmu_gpu_rst_n} is a PMU flop without a synchroniser, so the GPU reset has the scan mux.
+
+\paragraph{What a PMU power cycle does to the bridges.} The PMU stops \code{cpu_gated_clk} and asserts \code{cpu_domain_rst_n}. In the CPU domain the reset arrives at most about one cycle of \code{clk_i} after the clock stops, and it can arrive first. The \code{m_*} face of \code{u_apb_dbg_cdc} runs on \code{cpu_gated_clk} and resets from \code{cpu_domain_rst_n}. A debug access in flight at a power-down waits while the clock is stopped and the reset is not yet asserted. When the reset asserts, the bridge ends the access with an error response (\reqref{DS-CDC-103}). The access can have completed in the CPU domain although the response is an error. While the domain is off, each new debug access ends with an error response (\reqref{DS-CDC-102}). The bridge \code{u_cpu_axi_cdc} has its \code{s_*} face on \code{cpu_gated_clk} and resets from \code{cpu_core_rst_n}. The PMU reset does not flush it, so the bridge keeps its state as the model keeps the state of \code{u_cpu} (\reqref{DS-PMU-109}). The AXI bridge is in \cref{tm:mod:async-axi-fifo}.
+
+\paragraph{State of the domains.} The CPU domain has a synchronous reset, and its clock does not run while the PMU reset is asserted. A PMU power cycle does not reset its flops in the model. The control flops of the GPU have an asynchronous reset. The domain reset clears them although the clock is gated. The vector register file of the GPU has no reset, and the SRAM banks of the shared memory have no connection to the domain reset. The test of the GPU power cycle shows that \code{GPU_CTRL.irq_enable} and \code{GPU_STATUS.done} read 0 after the cycle. It does not read the vector registers or the shared memory.
+
+\paragraph{Watchdog reset.} The reset of the watchdog goes through its own synchroniser into \code{cpu_domain_rst_n}. It does not pass through the PMU. The enable of the CPU clock gate has no watchdog term, so the CPU clock has to run while the watchdog reset is asserted. While the PMU holds the CPU domain off, the CPU clock is stopped, so a watchdog reset has no effect on the CPU flops and does not wake the domain. The watchdog reset also resets the \code{m_*} face of \code{u_apb_dbg_cdc}, so it ends a debug access in flight with an error response.

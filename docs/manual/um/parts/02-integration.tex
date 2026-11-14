@@ -192,3 +192,107 @@ Tick each line before the review.
   \item[$\square$] The CDC check passes, and the new synchronisers are in the list of required synchronisers where they guard a pin.
   \item[$\square$] The test suite of each block that you changed passes.
 \end{itemize}
+
+\chapter{Power management integration}\label{um:ch:power-integration}
+
+This chapter gives the tasks for the PMU, the clock gates and the power wiring. The rules are in \cref{ds:ch:mod-power-management}. The description of each block is in \cref{tm:ch:mod-power-management}.
+
+\section{Register map}\label{um:ch:power-integration:registers}
+The registers of the PMU are in the APB slot at 0x2000\_8000. \code{CTRL} is at 0x00, \code{STATUS} is at 0x04 and \code{DOMAIN_EN} is at 0x08. \Cref{tab:tm:mod:pmu:regmap} lists the fields. The mode is in \code{CTRL[1:0]}: 00 NORMAL, 01 CPU\_OFF, 10 GPU\_OFF and 11 IDLE.
+
+\section{Power the GPU down and up}\label{um:ch:power-integration:gpu}
+The firmware of the integration test \src{tb/cocotb/soc/integ_fw/gen_integ_hex.py} does this in its image \code{gpu_iso}.
+
+\begin{procedure}
+  \item Write 0x2 to \code{CTRL}.
+  \item Read \code{STATUS} until bits 2 to 0 equal 0b001. This value shows the CPU domain on, the GPU domain off and \code{busy} low. Bit 3 can be 1 from an earlier CPU power cycle, so mask it. Do not poll for \code{busy} alone. \code{STATUS} follows the sequencer one cycle late, so a read right after the write can still show the old idle state.
+  \item Do not read or write a GPU register while the GPU domain is off. The control port of the GPU is held in reset with its clock stopped. It takes the address of an access but never returns a response, so the access does not complete and the bus master waits. The access is lost, also after the power-up.
+  \item To power the GPU up, write 0x0 to \code{CTRL} and read \code{STATUS} until bits 2 to 0 equal 0b011.
+  \item Set up the GPU again. The control registers of the GPU do not keep their values, for example \code{GPU_CTRL.irq_enable}. Do not rely on the vector registers or the shared memory either. The domain reset does not clear them, and no test shows their content.
+\end{procedure}
+
+\section{Power the CPU down}\label{um:ch:power-integration:cpu}
+A CPU power-down needs a plan for the wake-up. Nothing inside the CPU domain can request a power-up. Do not rely on the state of the CPU after the power cycle. The simulation keeps it, and this is not a guarantee.
+
+\begin{procedure}
+  \item Stop the AXI traffic of the CPU and flush the data cache. The PMU has no drain step. While the clamp is active and the clock still runs, a bus handshake of the CPU does not reach the fabric.
+  \item Make sure that no debug access into the CPU domain is in flight. An access in flight at the power-down ends with an error response, and it can have completed in the CPU domain. While the CPU domain is off, each debug access ends with an error response.
+  \item Arrange the wake-up before the power-down. Program another master, for example the DMA engine, to write the mode NORMAL into \code{CTRL} after the power-down. Without a wake-up write, only a reset of \code{rst_n_i} and \code{cpu_rst_n_i} together returns the CPU domain. No test wakes the CPU domain by a bus write.
+  \item Request the mode CPU\_OFF. The reference firmware \src{tb/cocotb/soc/pmu_cycle_fw/gen_pmu_cycle_hex.py} does not store to \code{CTRL} itself. It programs the DMA engine to copy the mode CPU\_OFF into \code{CTRL}, so that its own store is not in flight when its clock stops. A store of the CPU to \code{CTRL} is not tested.
+  \item After the wake-up, read \code{STATUS} bit 3. A value of 1 means that a wait for the clamp timed out, and the order of the clamp and the reset is not guaranteed for that power cycle. After a power-up whose wait timed out, the next power-down does not wait for the clamp, and bit 3 does not show it. This is read from the RTL, not simulated.
+\end{procedure}
+The reference firmware is a test of the model. It does not stop its traffic: its loop flushes the data cache in each pass. The tests wake the CPU domain by a deposit into the storage flop of \code{CTRL}. Use a write from another master in a real system.
+
+\section{Clocks and resets}\label{um:ch:power-integration:clocks}
+Take these points into account.
+\begin{itemize}
+  \item The PMU runs on \code{core_clk} and \code{core_rst_n}. Do not gate it and do not reset it by a domain reset.
+  \item \code{cpu_core_clk} has to run for the isolation handshake. When \code{cpu_core_rst_n} is low, the acknowledge does not come, the wait ends by the timeout and \code{STATUS} bit 3 sets.
+  \item The reset of the watchdog needs a running CPU clock. The enable of the CPU clock gate has no watchdog term.
+  \item An MBIST force opens the CPU clock gate also while the PMU holds the CPU domain off. The CPU flops then see clock edges in reset and lose their state. This is read from the RTL, not simulated. Run MBIST and scan only while the PMU is in the mode NORMAL.
+  \item Assert \code{cpu_rst_n_i} each time that you assert \code{rst_n_i} (\reqref{DS-PMU-186}). A reset of \code{rst_n_i} alone flushes the CPU bus bridge and does not reset the CPU.
+  \item In scan mode the PMU is not overridden, and the clamps do not depend on the scan mode. Before a scan, write the mode NORMAL and wait until bits 2 to 0 of \code{STATUS} read 0b011, so that no clamp is active during the scan.
+\end{itemize}
+Set \code{ISO_ACK_TIMEOUT} above the longest round trip of the acknowledge. The header of the module estimates it as 3R+3 cycles of \code{clk_i}, where R is the ratio of the clock periods. The default is 255. The value is an estimate and no test measures it. \code{soc_top} does not set \code{ISO_ACK_TIMEOUT}, so \code{u_pmu} has the default. To change it, add it to the parameter list of \code{u_pmu} in \code{soc_top}.
+
+\section{Integrate a clock gate}\label{um:ch:power-integration:gate}
+\begin{procedure}
+  \item Connect \code{en}, \code{test_en} and \code{clk}. Keep \code{test_en} static while \code{clk} runs.
+  \item You can tie \code{test_en} to \code{1'b0} where no scannable flop sits behind the gate. A gate in front of an SRAM macro that scan or MBIST reaches takes the test enable of its parent, as the cache gates do. For a gate in the CPU or GPU clock path, use \code{dft_test_en}.
+  \item Set \code{HARD_ROOT} to \code{1'b1} for a gate that is a clock root with a clock tree behind it.
+  \item Keep the instance names \code{u_icg} and \code{u_root_buf}. Do not replace the plain buffer \code{u_root_buf} by a clock buffer.
+\end{procedure}
+\begin{lstlisting}
+rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_dom_cg (
+    .en      (dom_cg_en),
+    .test_en (dft_test_en),
+    .clk     (dom_core_clk),
+    .gclk    (dom_gated_clk)
+);
+\end{lstlisting}
+
+\section{Keep the power intent in step}\label{um:ch:power-integration:upf}
+\Cref{tm:pd:phase5-soc-upf} describes the power intent file. Do these tasks after you add a top-level instance or a clamp.
+
+\begin{procedure}
+  \item Edit the \code{upf-check} lines of the roster and of the classes in \src{pnr/constraints/phase5_soc.upf}. Do not reword the existing lines.
+  \item Run \code{python tools/verif/check_upf.py -v}.
+  \item After an RTL change that moves ports, run \code{python tools/verif/check_upf.py gen-facts}, which needs \code{pyslang}. Then run \code{python tools/verif/check_upf.py gen-facts --check}.
+\end{procedure}
+
+\section{Verify}\label{um:ch:power-integration:verify}
+Run the simulation targets through the Nix shell.
+
+\begin{center}
+  \begin{tabular}{@{}p{50mm}p{88mm}@{}}
+    \toprule
+    Block & Command\\
+    \midrule
+    PMU alone & \code{nix develop --command make -C tb/cocotb/soc pmu}\\
+    Isolation handshake in the SoC & \code{nix develop --command make -C tb/cocotb/soc soc_pmu_iso_ack}\\
+    Live CPU power cycle & \code{nix develop --command make -C tb/cocotb/soc soc_pmu_multiclock}\\
+    GPU power cycle by firmware & \code{nix develop --command make -C tb/cocotb/soc soc_integration}\\
+    Clock gate & \code{nix develop --command make -C tb/cocotb/soc clock_gate_scan}\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+Each target prints a line with the number of tests, passes and failures. \Cref{tm:suite:soc-test-pmu}, \cref{tm:suite:soc-test-soc-pmu-iso-ack} and \cref{tm:suite:soc-test-soc-pmu-multiclock} describe the suites.
+
+To check that the ten sequencing outputs are flop outputs, run \code{python -m pytest tb/tests/test_pmu_registered_outputs.py}. It needs \code{yosys} and \code{sv2v}. Without \code{yosys} or \code{sv2v}, pytest skips the tests and reports no failure. A skip means that the check did not run. To check the iso-ack handshake against mutants, run \code{python3 tools/verif/mutate_pmu_iso_ack.py} inside the simulation shell. The last line starts with \code{KILLED} and names the survivors. Two mutants are expected survivors. A survivor that is not expected means that the suite does not check the changed behaviour. No result of a campaign is recorded in the repository.
+
+\section{Checklist}\label{um:ch:power-integration:checklist}
+Tick each line before the review.
+\begin{itemize}
+  \item[$\square$] The PMU runs on \code{core_clk} and \code{core_rst_n} and is not gated.
+  \item[$\square$] \code{cpu_iso_ack_i} comes from the clamp control of the CPU domain, synchronised into \code{core_clk}.
+  \item[$\square$] \code{ISO_ACK_TIMEOUT} is above the longest round trip of the acknowledge.
+  \item[$\square$] Firmware polls bits 2 to 0 of \code{STATUS} for the settled value after a write to \code{CTRL}.
+  \item[$\square$] Firmware sets up the GPU again after each GPU power-up.
+  \item[$\square$] A CPU power-down has a wake-up write from another master, or a reset of \code{rst_n_i} and \code{cpu_rst_n_i} together is the plan.
+  \item[$\square$] The bus traffic of the CPU is stopped and the data cache is flushed before a CPU power-down.
+  \item[$\square$] The PMU is in the mode NORMAL and both domains are on before a scan.
+  \item[$\square$] \code{test_en} of each gate is static, and \code{HARD_ROOT} is set for each clock root.
+  \item[$\square$] The names \code{u_icg} and \code{u_root_buf} are kept.
+  \item[$\square$] The \code{upf-check} lines are in step with the RTL, and \code{check_upf.py -v} passes.
+  \item[$\square$] The test suites of the PMU and the clock gate pass.
+\end{itemize}

@@ -1,0 +1,412 @@
+% Authored chapter: power management. Replaces the moved source text of the PMU and the clock gate.
+% The moved text is in the Changes record, part Source archive.
+\chapter{Power management}\label{ds:ch:mod-power-management}
+
+\section{Scope}\label{ds:ch:mod-power-management:scope}
+This chapter states the rules for the power sequencing of the SoC. It covers the module \code{pmu}, the module \code{rv32i_clock_gate}, and the power wiring in \code{soc_top}. The power wiring holds the clamps, the clock enables and the domain resets. The chapter also gives the rules for the software that uses the PMU.
+
+The chapter does not cover the file of the power intent. \Cref{ds:ch:power-intent} states it. The chapter does not cover the clock-domain crossing blocks that carry the PMU signals into the CPU domain. \Cref{ds:ch:mod-cdc-primitives} states them. \Cref{tm:ch:mod-power-management} in the Technical Manual describes how the blocks work. \Cref{um:ch:power-integration} in the User Manual tells how to use them.
+
+\begin{information}
+The PMU is a model of power sequencing. It does not remove a supply. It has no power switch. It has no retention cell. The clamps, the clock gates and the resets do the work that a real power switch would need around it. The sections below name each place where this model limit changes a rule.
+\end{information}
+
+\section{Definitions}\label{ds:ch:mod-power-management:definitions}
+The chapter uses these terms with a fixed meaning.
+\begin{description}
+  \item[Power domain] A set of instances that share one supply and one power state. The SoC has the CPU domain, the GPU domain, the SRAM domain and an always-on domain.
+  \item[Always-on domain] The power domain that stays powered while the CPU domain and the GPU domain are off. The PMU is in this domain.
+  \item[Mode] The value of the field \code{CTRL[1:0]}. The mode NORMAL is 00, CPU\_OFF is 01, GPU\_OFF is 10 and IDLE is 11.
+  \item[Sequencer] The state machine of one domain in the PMU. It walks the domain from on to off and back.
+  \item[Isolation clamp] Logic that forces the outputs of a power domain to a fixed value while the domain is off. In this SoC the clamp value is 0.
+  \item[Acknowledge] The level \code{cpu_iso_ack_i}. It is the clamp control of the CPU domain, synchronised back into the clock of the PMU. High means that the clamp is seen active. Low means that the clamp is seen released.
+  \item[Wait] The time that the sequencer of the CPU domain spends in the state \code{DOM_PD_ISO} or \code{DOM_PU_ISO} until the acknowledge arrives or the timeout ends.
+  \item[Timeout] The limit \code{ISO_ACK_TIMEOUT} of a wait, in cycles of \code{clk_i}.
+\end{description}
+
+\section{\texttt{pmu}}\label{ds:mod:pmu}
+The module \code{pmu} has a register block and two sequencers. The register block sets the mode. Each sequencer drives the clock enable, the isolation control, the reset and the two retention pulses of one domain. \Cref{tm:mod:pmu} describes it.
+
+\subsection{Programmers model}\label{ds:mod:pmu:registers}
+The registers have 32 bits. Their offsets are 0x00 for \code{CTRL}, 0x04 for \code{STATUS} and 0x08 for \code{DOMAIN_EN}.
+
+\begin{requirement}{DS-PMU-001}{CTRL mode field}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_ctrl_wmask; test:tb/cocotb/soc/test_pmu.py::test_register_walk}]
+The bits 1 and 0 of \code{CTRL} must be read and write, and must select the mode. The bits 31 to 2 must read 0 and must ignore a write.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-002}{STATUS fields}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_status_domain_en_readonly; test:tb/cocotb/soc/test_pmu.py::test_pmu_busy_semantics; test:tb/cocotb/soc/test_pmu.py::test_pmu_iso_ack_timeout_power_down; mutation:tools/verif/mutate_pmu_iso_ack.py::t11_flag_wrong_bit}]
+\code{STATUS} must be read only. Bit 0 must be \code{cpu_domain_on}. Bit 1 must be \code{gpu_domain_on}. Bit 2 must be \code{busy}. Bit 3 must be \code{cpu_iso_ack_timeout}. The bits 31 to 4 must read 0. A write to \code{STATUS} must have no effect.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-003}{DOMAIN\_EN fields}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_domain_en_mirrors_sequencer; test:tb/cocotb/soc/test_pmu.py::test_pmu_status_domain_en_readonly}]
+\code{DOMAIN_EN} must be read only. Its bits 9 to 0 must show the ten sequencing outputs, one cycle of \code{clk_i} after the outputs. From bit 0 to bit 9 the bits are \code{cpu_clk_en}, \code{gpu_clk_en}, \code{cpu_iso_en}, \code{gpu_iso_en}, \code{cpu_rst_n}, \code{gpu_rst_n}, \code{cpu_ret_save}, \code{cpu_ret_restore}, \code{gpu_ret_save} and \code{gpu_ret_restore}. The bits 31 to 10 must read 0.
+\end{requirement}
+\begin{information}
+\code{STATUS} is a register that the hardware loads in each cycle. It shows the state of the sequencers one cycle late, as \code{DOMAIN_EN} shows the outputs one cycle late. This is derived from the RTL. The test of \reqref{DS-PMU-003} measures it for \code{DOMAIN_EN} only.
+\end{information}
+
+\begin{requirement}{DS-PMU-004}{Reset values}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_reset_defaults}]
+After the reset, \code{CTRL} must be 0 (NORMAL), \code{STATUS} must be 0x3 and \code{DOMAIN_EN} must be 0x33. Both domains must be on. Every clock enable and every active-low reset must be high. Every isolation control and every retention pulse must be low.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-005}{Access response}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_register_walk; review}]
+Every APB access must end without an error response. An access to a word at offset 0x0C or above in the slot must read 0 and must drop a write.
+\end{requirement}
+\begin{information}
+The module ties \code{pready} high, so an access has no wait state. This holds by construction. No test counts wait states. The register bank ignores \code{paddr[1:0]}. The byte offsets 0x01 to 0x03 address \code{CTRL}, 0x05 to 0x07 address \code{STATUS} and 0x09 to 0x0B address \code{DOMAIN_EN}.
+\end{information}
+
+\begin{requirement}{DS-PMU-006}{Address of the registers}
+[verify={test:tb/cocotb/soc/test_soc_pmu_multiclock.py::test_pmu_live_power_cycle; test:tb/cocotb/soc/test_soc_multiclock_pll2.py::test_multiclock_pll2_apb_slot_decode; test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu; review}]
+The registers of the PMU must be in the address range 0x2000\_8000 to 0x2000\_8FFF.
+\end{requirement}
+
+\subsection{Sequencer}\label{ds:mod:pmu:sequencer}
+Each domain has one sequencer. The two sequencers have the same structure. The mode gives the target of each domain.
+
+\begin{requirement}{DS-PMU-020}{Mode and target}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_cpu_power_down_ordering; test:tb/cocotb/soc/test_pmu.py::test_pmu_gpu_power_down_ordering; test:tb/cocotb/soc/test_pmu.py::test_pmu_idle_both_domains_ordering; check:tools/verif/check_upf.py}]
+The mode 00 must set the target of both domains to on. The mode 01 must turn the CPU domain off and keep the GPU domain on. The mode 10 must turn the GPU domain off and keep the CPU domain on. The mode 11 must turn both domains off.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-021}{Order of a power-down}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_cpu_power_down_ordering; test:tb/cocotb/soc/test_pmu.py::test_pmu_gpu_power_down_ordering; test:tb/cocotb/soc/test_soc_pmu_multiclock.py::test_pmu_live_power_cycle; test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu}]
+At the outputs of the PMU, a power-down of a domain must do these actions in this order: assert \code{ret_save}, assert \code{iso_en}, stop the clock (\code{clk_en} low), assert the reset (\code{rst_n} low). Each action must start one cycle of \code{clk_i} after the action before it, except that the CPU domain must stay in the isolation step until \reqref{DS-PMU-060} lets it go.
+\end{requirement}
+\begin{information}
+In the CPU domain the reset asserts through the asynchronous clear of \code{u_cpu_pmu_rst_sync}, and the clock disable crosses two synchroniser ranks. The reset can therefore arrive first, and the reset term in the enable of \code{u_cpu_cg} then stops the clock (\cref{fig:tm:mod:pmu:power-down}). \reqref{DS-PMU-100} states the order that holds in the CPU domain.
+\end{information}
+
+\begin{requirement}{DS-PMU-022}{Order of a power-up}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_cpu_power_up_ordering; test:tb/cocotb/soc/test_pmu.py::test_pmu_gpu_power_up_ordering; test:tb/cocotb/soc/test_soc_pmu_multiclock.py::test_pmu_live_power_cycle; test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu}]
+At the outputs of the PMU, a power-up of a domain must do these actions in this order: release the reset, start the clock, assert \code{ret_restore}, release \code{iso_en}. Each action must start one cycle of \code{clk_i} after the action before it, except that the CPU domain must stay in the last step until \reqref{DS-PMU-061} lets it go.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-023}{One-cycle retention pulses}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_cpu_power_down_ordering; test:tb/cocotb/soc/test_pmu.py::test_pmu_cpu_power_up_ordering; test:tb/cocotb/soc/test_pmu.py::test_pmu_gpu_power_down_ordering; test:tb/cocotb/soc/test_pmu.py::test_pmu_gpu_power_up_ordering}]
+The output \code{ret_save} must be high for exactly one cycle of \code{clk_i} in a power-down. The output \code{ret_restore} must be high for exactly one cycle of \code{clk_i} in a power-up. Both outputs must be low at all other times.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-024}{No reversal of a sequence}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_mid_sequence_mode_change_no_reversal; test:tb/cocotb/soc/test_pmu.py::test_pmu_mid_wait_mode_flip_no_reversal}]
+A sequencer must read its target only while it is on or off. A change of the mode during a sequence must not reverse the sequence. The change must take effect after the sequence ends.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-025}{Independent domains}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_gpu_ignores_cpu_ack; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_dead_cpu_clock_does_not_hang_pmu; mutation:tools/verif/mutate_pmu_iso_ack.py::g01_gpu_uses_cpu_ack; mutation:tools/verif/mutate_pmu_iso_ack.py::g02_gpu_never_acks}]
+The GPU sequencer must not depend on \code{cpu_iso_ack_i} or on the state of the CPU sequencer. It must stay exactly one cycle of \code{clk_i} in \code{DOM_PD_ISO} and exactly one cycle in \code{DOM_PU_ISO}.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-026}{Registered outputs}
+[verify={check:tools/verif/check_registered_outputs.py; test:tb/tests/test_pmu_registered_outputs.py::test_shipped_pmu_outputs_are_flop_driven; test:tb/tests/test_pmu_registered_outputs.py::test_combinational_output_is_caught}]
+Each of the ten sequencing outputs must be driven directly by the output pin of a flop.
+\end{requirement}
+\begin{rationale}
+The outputs feed the data pins of synchronisers, the asynchronous clear of a reset synchroniser, an asynchronous reset and the select of a clamp. A glitch on one of these nets is an event. A zero-delay simulation cannot show a glitch, so a structural check proves the rule.
+\end{rationale}
+
+\begin{requirement}{DS-PMU-027}{Busy}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_busy_semantics}]
+The \code{busy} bit must be 1 while at least one sequencer is in a state other than on and off.
+\end{requirement}
+\begin{information}
+The test reads \code{busy} once while the CPU domain is in \code{DOM_PD_ISO}, and once in each settled state. It does not read \code{busy} during a power-up or during a sequence of the GPU domain.
+\end{information}
+
+\begin{requirement}{DS-PMU-028}{The PMU is not gated}
+[verify={review}]
+The PMU must run on \code{core_clk} and \code{core_rst_n}. The outputs of the PMU must not gate the clock of the PMU and must not reset the PMU.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-029}{Reset of the PMU}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_reset_during_iso_wait; review}]
+A reset of the PMU must return both domains to on, with the values of \reqref{DS-PMU-004}, and must clear the flag \code{cpu_iso_ack_timeout}.
+\end{requirement}
+\begin{information}
+The reset is synchronous, so it takes effect at an edge of \code{clk_i}. The test applies the reset while the CPU domain is in \code{DOM_OFF} and during a wait in \code{DOM_PD_ISO}. It does not apply a reset in each state. The rule holds for the other states by the structure of the reset branch. A reset does not walk the power-up order: all outputs take the values of \code{DOM_ON} at the same edge.
+\end{information}
+
+\subsection{Isolation handshake}\label{ds:mod:pmu:handshake}
+The CPU domain runs on a clock that is independent of the clock of the PMU. The output \code{cpu_iso_en_o} at the port of the PMU does not show that the clamp is active. The PMU waits for the acknowledge to learn it.
+
+\begin{requirement}{DS-PMU-060}{Power-down waits for the acknowledge}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_cpu_power_down_waits_for_ack; mutation:tools/verif/mutate_pmu_iso_ack.py::p01_pd_iso_ignores_ack; mutation:tools/verif/mutate_pmu_iso_ack.py::p02_pd_iso_waits_on_low_ack; mutation:tools/verif/mutate_pmu_iso_ack.py::t12_timeout_and_not_or}]
+In a power-down of the CPU domain, the PMU must not stop the clock and must not assert the reset until \code{cpu_iso_ack_i} is high or the wait has lasted \code{ISO_ACK_TIMEOUT} cycles.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-061}{Power-up waits for the release}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_cpu_power_up_waits_for_ack_release; mutation:tools/verif/mutate_pmu_iso_ack.py::p04_pu_iso_no_release_wait; mutation:tools/verif/mutate_pmu_iso_ack.py::p05_pu_iso_waits_on_high_ack}]
+In a power-up of the CPU domain, the sequencer must not return to on until \code{cpu_iso_ack_i} is low or the wait has lasted \code{ISO_ACK_TIMEOUT} cycles.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-062}{Timeout}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_iso_ack_timeout_power_down; test:tb/cocotb/soc/test_pmu.py::test_pmu_iso_ack_timeout_power_up; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_dead_cpu_clock_does_not_hang_pmu; mutation:tools/verif/mutate_pmu_iso_ack.py::t01_no_timeout_pd; mutation:tools/verif/mutate_pmu_iso_ack.py::t02_no_timeout_pu; mutation:tools/verif/mutate_pmu_iso_ack.py::t03_timeout_one_short; mutation:tools/verif/mutate_pmu_iso_ack.py::t04_timeout_one_long; mutation:tools/verif/mutate_pmu_iso_ack.py::t07_flag_never_set; mutation:tools/verif/mutate_pmu_iso_ack.py::t08_flag_set_on_any_wait}]
+When a wait ends because the timeout is reached, the sequence must go on and \code{STATUS} bit 3 must become 1. A wait that gets no acknowledge must stay in its state for exactly \code{ISO_ACK_TIMEOUT} cycles of \code{clk_i}. A wait that ends with the acknowledge must not set the flag.
+\end{requirement}
+\begin{information}
+The test of the PMU alone measures the exact length of an unanswered wait with a timeout of 16. The testbench gives the acknowledge by a model with a set latency. The SoC test with a dead CPU clock checks only a lower bound of the length, with the default timeout of 255. The tests do not prove that a clamp is active when a wait times out. The flag tells software that the order of \reqref{DS-PMU-100} is not guaranteed for this sequence.
+\end{information}
+
+\begin{requirement}{DS-PMU-063}{Life of the timeout flag}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_iso_ack_timeout_power_down; test:tb/cocotb/soc/test_pmu.py::test_pmu_reset_during_iso_wait; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_dead_cpu_clock_does_not_hang_pmu; mutation:tools/verif/mutate_pmu_iso_ack.py::t09_flag_not_cleared_by_power_down; mutation:tools/verif/mutate_pmu_iso_ack.py::t10_flag_not_reset}]
+The flag \code{cpu_iso_ack_timeout} must stay 1 until a reset or until the next power-down of the CPU domain starts. A power-up must not clear it.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-064}{Full timeout for each wait}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_iso_ack_timeout_power_down; test:tb/cocotb/soc/test_pmu.py::test_pmu_reset_during_iso_wait; mutation:tools/verif/mutate_pmu_iso_ack.py::t05_counter_carries_over}]
+Each wait must have the full timeout. The count must restart after each wait and after a reset.
+\end{requirement}
+\begin{information}
+The mutant \code{t06_counter_not_reset} survives by design. The reset of the counter is not needed, because the state is on in reset and a state that is not a wait clears the counter at the first edge.
+\end{information}
+
+\begin{requirement}{DS-PMU-065}{Minimum timeout}
+[verify={review}]
+Elaboration of \code{pmu} must fail when \code{ISO_ACK_TIMEOUT} is below 2.
+\end{requirement}
+\begin{information}
+No Makefile target tests this guard. A target in the style of the negative control of \code{cdc_sync} would test it.
+\end{information}
+
+\begin{requirement}{DS-PMU-066}{Size of the timeout}
+[verify={review}]
+The integrator must set \code{ISO_ACK_TIMEOUT} above the longest round trip of the acknowledge. The round trip starts at \code{cpu_iso_en_o} and ends at \code{cpu_iso_ack_i}.
+\end{requirement}
+\begin{information}
+The header of the module estimates the round trip as 3R+3 cycles of \code{clk_i}, where R is the ratio of the period of the CPU clock to the period of \code{clk_i}. The estimate comes from the depth of the two synchronisers. No test measures it. A timeout that is too small ends a wait while the domain is alive, and then the order of \reqref{DS-PMU-100} is lost. \code{soc_top} does not set \code{ISO_ACK_TIMEOUT}, so \code{u_pmu} has the default.
+\end{information}
+
+\begin{requirement}{DS-PMU-067}{No stale acknowledge}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_back_to_back_no_stale_ack; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_back_to_back_power_cycle_no_stale_ack}]
+A power-down that starts directly after a power-up must not use the acknowledge of the earlier power-up. When the wait of the power-up ended with the release of the acknowledge, the acknowledge must be low when the sequencer enters the isolation step.
+\end{requirement}
+\begin{information}
+When the wait of a power-up ends by the timeout, the acknowledge can still be high. The next power-down then leaves \code{DOM_PD_ISO} after one cycle without a new handshake. The flag \code{cpu_iso_ack_timeout} clears when that power-down starts and is not set again, so \code{STATUS} bit 3 does not show that the order of \reqref{DS-PMU-100} is not guaranteed. This is derived from the RTL. No test covers it.
+\end{information}
+
+\section{SoC power integration}\label{ds:ch:mod-power-management:soc}
+\code{soc_top} carries the PMU signals to the two domains. The CPU domain is on \code{cpu_core_clk}. The GPU domain is on \code{core_clk}. \Cref{tm:ch:mod-power-management:soc} lists the nets.
+
+\begin{requirement}{DS-PMU-100}{Clamp before reset and clock stop}
+[verify={test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_iso_before_reset_cpu_3x_slower; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_iso_before_reset_cpu_8x_slower; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_iso_before_reset_ratio_1_1; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_iso_before_reset_cpu_faster; mutation:tools/verif/mutate_pmu_iso_ack.py::s01_ack_from_unsynced_iso; mutation:tools/verif/mutate_pmu_iso_ack.py::s02_ack_tied_high}]
+After the reset of the SoC has ended and the synchronisers of the CPU domain have filled, and while \code{cpu_core_rst_n} is high, the PMU reset in the CPU domain (\code{pmu_cpu_rst_n_cpu_sync}) must be low only while the clamp control in the CPU domain (\code{pmu_cpu_iso_en_sync}) is high, and the enable of the CPU clock gate (\code{cpu_gated_clk_en}) must be low only while \code{pmu_cpu_iso_en_sync} is high. The rule does not apply to a power-down in which a wait ended by the timeout.
+\end{requirement}
+\begin{information}
+While \code{cpu_core_rst_n} is low, \code{pmu_cpu_iso_en_sync} is held at 0, and the PMU reset can still assert in the CPU domain. The clamp is then off while the domain is in reset. The CPU domain is in reset by \code{cpu_core_rst_n} at the same time. No test runs the monitor in this state. The monitor of the tests starts after the reset of the SoC and the settling of the synchronisers. The tests run a full power cycle at four clock ratios of the CPU clock to \code{core_clk}: 3 times slower, 8 times slower, 1:1 and 7 to 3 faster. The simulation has zero delay and does not model metastability. The rule for other ratios is by construction. The acknowledge can only be late and never early. The monitor of the tests checks the power-down order at every edge. It checks the power-up order only as a nominal order, because the two paths of the power-up are separate synchronisers and the order can change by one edge in silicon. \Cref{tm:mod:pmu} gives the design argument that makes the other order harmless.
+\end{information}
+
+\begin{requirement}{DS-PMU-101}{Source of the acknowledge}
+[verify={review; mutation:tools/verif/mutate_pmu_iso_ack.py::s01_ack_from_unsynced_iso; mutation:tools/verif/mutate_pmu_iso_ack.py::s03_ack_tied_low; mutation:tools/verif/mutate_pmu_iso_ack.py::s04_ack_not_synchronised}]
+The input \code{cpu_iso_ack_i} must be the clamp control of the CPU domain, synchronised into \code{core_clk} by \code{u_cpu_iso_ack_sync}. The synchroniser must use \code{core_clk} and \code{core_rst_n}.
+\end{requirement}
+\begin{information}
+The mutant \code{s05_ack_after_cpu_gating} gives the synchroniser the reset \code{cpu_core_rst_n}. It survives by design in a zero-delay run. No test and no tool checks which reset the synchroniser uses.
+\end{information}
+
+\begin{requirement}{DS-PMU-102}{Clock stop in reset}
+[verify={review}]
+With \code{dft_test_en}, \code{mbist_force} and \code{cpu_mbist_busy} low, \code{cpu_gated_clk} must have no rising edge while \code{pmu_cpu_rst_n_cpu_sync} is low.
+\end{requirement}
+\begin{information}
+The enable of \code{u_cpu_cg} contains \code{pmu_cpu_rst_n_cpu_sync}, so the rule holds by construction. No test fails when this term is removed. At the clock ratio of the live test the clock disable reaches the CPU domain before the PMU reset, so the clock stops without the term. The counter of the live test reaches SRAM only by a bus write, which the clamp blocks, so a frozen counter does not show a stopped clock. At 1:1 the derived waveform has the reset term stop the clock one edge before the clock disable arrives (\cref{fig:tm:mod:pmu:power-down}). \reqref{DS-PMU-108} gives the MBIST and test-mode exceptions.
+\end{information}
+
+\begin{requirement}{DS-PMU-103}{Clamp of the CPU domain}
+[verify={check:tools/verif/check_upf.py; review}]
+While \code{pmu_cpu_iso_en_sync} is high, the signals \code{cpu_bridge_s_awvalid}, \code{cpu_bridge_s_wvalid}, \code{cpu_bridge_s_arvalid}, \code{cpu_bridge_s_bready}, \code{cpu_bridge_s_rready} and \code{commit_valid_o} must be 0.
+\end{requirement}
+\begin{information}
+The live test \code{test_pmu_live_power_cycle} checks that the three valid signals and \code{commit_valid_o} are 0 while the domain is off. It does not check that the raw outputs of \code{u_cpu} are high at that time, so it does not show the clamp acting, and it does not check the two ready signals. For this reason the rule does not cite it. The checker \code{check_upf.py} proves that the clamped nets, the control net and the clamp value in the RTL equal the isolation strategy of the power intent. This structural check is the proof of the rule.
+\end{information}
+
+\begin{requirement}{DS-PMU-104}{Clamp of the GPU domain}
+[verify={test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gpu_isolation_clamps_follow_pmu_iso_en; test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu; check:tools/verif/check_upf.py; mutation:tools/verif/mutate_pmu_iso_ack.py::c01_gif_rready_unclamped; mutation:tools/verif/mutate_pmu_iso_ack.py::c02_gif_rready_inverted}]
+While \code{pmu_gpu_iso_en} is high, these eight outputs must be 0: the valid and ready signals \code{xbar_m_awvalid[2]}, \code{xbar_m_wvalid[2]}, \code{xbar_m_arvalid[2]}, \code{xbar_m_bready[2]} and \code{xbar_m_rready[2]}, the signals \code{gif_axil_arvalid} and \code{gif_axil_rready}, and \code{gpu_irq_o}.
+\end{requirement}
+\begin{information}
+Without GPU traffic only \code{gif_axil_rready} of the seven handshake signals is high, so only the clamp of this signal shows its action in the first test. The other six are checked against their equation in each cycle. The second test checks the clamp of \code{gpu_irq_o}.
+\end{information}
+
+\begin{requirement}{DS-PMU-105}{Reset of the GPU domain and the clamp}
+[verify={test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gpu_isolation_clamps_follow_pmu_iso_en}]
+The PMU output \code{gpu_rst_n_o} must be low only while \code{gpu_iso_en_o} is high.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-106}{Clock and reset of the CPU-domain synchronisers}
+[verify={review}]
+The synchronisers \code{u_cpu_clk_dis_sync} and \code{u_cpu_iso_en_sync} must use \code{cpu_core_clk} and \code{cpu_core_rst_n}. The reset synchroniser \code{u_cpu_pmu_rst_sync} must use \code{cpu_core_clk}, with \code{pmu_cpu_rst_n} as its source reset. These three synchronisers must not use \code{cpu_gated_clk}. The clock-enable crossing must carry the inverted enable, so that its reset value lets the clock run.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-107}{Domain resets in scan mode}
+[verify={test:tb/cocotb/soc/test_soc_dft_scan.py::test_scan_gpu_reset_with_pmu_gpu_off; test:tb/cocotb/soc/test_soc_dft_scan.py::test_scan_cpu_reset_with_pmu_cpu_off}]
+With scan mode on, \code{cpu_domain_rst_n} and \code{gpu_domain_rst_n} must follow the scan reset, also while the PMU holds the domain in reset.
+\end{requirement}
+\begin{information}
+The tests hold the CPU domain and the GPU domain off in turn. They do not apply a watchdog reset.
+\end{information}
+
+\begin{requirement}{DS-PMU-108}{Clock gates in test mode}
+[verify={check:tools/verif/check_upf.py; test:tb/cocotb/soc/test_clock_gate_scan.py::test_test_en_passes_clock_with_en_low}]
+The test enable of \code{u_cpu_cg} and \code{u_gpu_cg} must be \code{dft_test_en}. With \code{dft_test_en} high, both gates must pass the clock whatever their enable is.
+\end{requirement}
+\begin{information}
+The enable of \code{u_cpu_cg} also contains the MBIST terms \code{mbist_force} and \code{cpu_mbist_busy}, and the PMU does not know about them. While the PMU holds the CPU domain off, \code{mbist_force} opens the CPU clock gate although \code{cpu_domain_rst_n} is low. The CPU MBIST cannot start then, because \code{rv32i_cpu_top} gates \code{mbist_run_i} with its reset. The forced clock edges reach the CPU flops while their reset is low, so the CPU loses the state that the model otherwise keeps (\reqref{DS-PMU-181}). The test \code{test_mbist_force_opens_the_closed_clock_gate} shows that \code{mbist_force} opens a closed gate, in a bench that mirrors \code{u_cpu_cg} without the PMU reset. No SoC test covers an MBIST request while the PMU holds the CPU domain off. The PMU is not overridden in scan mode, and the clamps do not depend on the scan mode. A clamp can be active during a scan. \Cref{um:ch:power-integration} gives the rule for the user.
+\end{information}
+
+\begin{requirement}{DS-PMU-109}{Bridge reset in a PMU power cycle}
+[verify={test:tb/cocotb/soc/test_soc_pmu_multiclock.py::test_pmu_live_power_cycle; review}]
+The reset of the \code{s_*} face of \code{u_cpu_axi_cdc} must be \code{cpu_core_rst_n}. A PMU power cycle of the CPU domain must not reset the AXI bridge.
+\end{requirement}
+\begin{information}
+The reset of the \code{m_*} face of \code{u_apb_dbg_cdc} is \code{cpu_domain_rst_n}, so a PMU power cycle resets it. The CDC chapter states the bridges.
+\end{information}
+
+\section{\texttt{rv32i\_clock\_gate}}\label{ds:mod:rv32i-clock-gate}
+The module \code{rv32i_clock_gate} gates a clock with an enable. The PMU uses it for the CPU domain and the GPU domain. The caches, the weight memory of the NPU and the TAP clock gate use it too. \Cref{tm:mod:rv32i-clock-gate} describes it.
+
+\begin{requirement}{DS-PMU-150}{Glitch-free gate}
+[verify={test:tb/cocotb/soc/test_clock_gate_scan.py::test_en_still_glitch_free; test:tb/cocotb/soc/test_clock_gate_scan.py::test_test_en_low_is_the_old_gate}]
+The value of \code{en} or \code{test_en} at the rising edge of \code{clk} must decide if \code{gclk} follows \code{clk} in that high phase. A change of \code{en} or \code{test_en} while \code{clk} is high must not change \code{gclk}.
+\end{requirement}
+\begin{information}
+The tests simulate the behavioural arm only. The test of a change of \code{en} while \code{clk} is high covers a rising \code{en}. A falling \code{en} has no test of its own. The test of \code{test_en} covers both edges.
+\end{information}
+
+\begin{requirement}{DS-PMU-151}{Test enable opens the gate}
+[verify={test:tb/cocotb/soc/test_clock_gate_scan.py::test_test_en_passes_clock_with_en_low; test:tb/cocotb/soc/test_clock_gate_scan.py::test_test_en_does_not_glitch}]
+With \code{test_en} high, \code{gclk} must follow \code{clk} whatever \code{en} is. A change of \code{test_en} must have the same glitch-free behaviour as \code{en}.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-152}{Static test enable}
+[verify={review}]
+The user must keep \code{test_en} static while \code{clk} runs.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-153}{Clock root}
+[verify={review}]
+A gate that is a clock root with a clock tree behind it must set \code{HARD_ROOT} to 1. In the Sky130 library arm such a gate must keep the instance name \code{u_root_buf}, and \code{u_root_buf} must be a plain buffer and not a clock buffer.
+\end{requirement}
+\begin{information}
+The configuration of the Sky130 SoC flow lists \code{u_cpu_cg.g_cell.u_root_buf} in the list of cells that the resizer does not touch. No check fails when the name or the cell changes. A clock buffer in this place makes the clock tree builder skip the net.
+\end{information}
+
+\section{Software rules}\label{ds:ch:mod-power-management:software}
+These rules are for the software that writes \code{CTRL}.
+
+\begin{requirement}{DS-PMU-180}{GPU state after a power cycle}
+[verify={test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu}]
+Software must set up the GPU again after each GPU power-up. Software must not rely on any state of the GPU after a GPU power cycle.
+\end{requirement}
+\begin{information}
+The control flops of the GPU have an asynchronous reset, so the domain reset clears them although the clock is stopped. The test shows that \code{GPU_CTRL.irq_enable} and \code{GPU_STATUS.done} read 0 after the cycle, and that a second kernel runs. The vector register file has no reset, and the shared memory is made of SRAM banks that the domain reset does not reach. In the model both keep their content. The test does not read them.
+\end{information}
+
+\begin{requirement}{DS-PMU-181}{CPU state in CPU\_OFF}
+[verify={review}]
+Software must not rely on the state of the CPU after a CPU\_OFF or IDLE cycle. The state is not guaranteed.
+\end{requirement}
+\begin{information}
+In the simulation model the CPU keeps its state. Its flops have a synchronous reset, and the clock does not run while the PMU reset is asserted. The live test checks this property. It is a property of the model and not a guarantee. A real power switch removes the supply, and the power intent has no retention. The exception is a CPU clock gate that \code{dft_test_en} or \code{mbist_force} opens while the PMU reset is asserted (\reqref{DS-PMU-108}). The CPU flops are then reset.
+\end{information}
+
+\begin{requirement}{DS-PMU-182}{Quiet bus before a CPU power-down}
+[verify={review}]
+Before it requests a CPU power-down, software must stop the bus traffic of the CPU and the debug accesses into the CPU domain. The PMU has no drain step.
+\end{requirement}
+\begin{information}
+The clamp is active in the CPU domain for some edges of \code{cpu_gated_clk} before the clock stops, and again after the clock starts in a power-up. A bus handshake of the CPU in these edges does not reach the fabric. This is derived from the RTL.
+\end{information}
+
+\begin{requirement}{DS-PMU-183}{Wake-up of the CPU domain}
+[verify={review}]
+Before it enters the mode CPU\_OFF or IDLE, software must arrange that another master writes \code{CTRL} to wake the CPU domain. Without such a write, only a reset of both \code{rst_n_i} and \code{cpu_rst_n_i} returns the domain.
+\end{requirement}
+\begin{information}
+Nothing inside the CPU domain can request a power-up. The reference firmware uses the DMA engine to write the mode CPU\_OFF, not to wake the domain. The tests wake the domain by a deposit into the register. No test wakes the CPU domain by a bus write. A reset of \code{rst_n_i} alone resets the PMU to NORMAL and flushes \code{u_cpu_axi_cdc}, but it does not reset \code{u_cpu}. The CPU then restarts its clock without a reset, while the bridge has lost the transfers that the CPU can wait for. This is derived from the RTL.
+\end{information}
+
+\begin{requirement}{DS-PMU-184}{Poll for the settled value}
+[verify={review}]
+After a write to \code{CTRL}, software must poll \code{STATUS} until bits 2 to 0 show the target, and must not poll for \code{busy} alone.
+\end{requirement}
+\begin{information}
+\code{STATUS} follows the sequencers one cycle late. A read in the first cycles after the write can show the old idle state with \code{busy} low. This is derived from the RTL and not measured. Bit 3 is the sticky flag of the CPU domain. A poll that compares all of \code{STATUS} never ends while bit 3 is 1. The firmware of the integration test compares all of \code{STATUS}, which works only because no wait timed out before it.
+\end{information}
+
+\begin{requirement}{DS-PMU-185}{No GPU access while the GPU is off}
+[verify={review}]
+Software must not access a register of the GPU while the GPU domain is not on.
+\end{requirement}
+\begin{information}
+The control port of the GPU accepts an address while it is held in reset and never answers it. This is derived from the RTL.
+\end{information}
+
+\begin{requirement}{DS-PMU-186}{Fabric reset with CPU reset}
+[verify={review}]
+The integrator must assert \code{cpu_rst_n_i} each time that \code{rst_n_i} asserts.
+\end{requirement}
+\begin{information}
+A reset of \code{rst_n_i} alone flushes \code{u_cpu_axi_cdc} and does not reset \code{u_cpu}. The CPU can then wait for a transfer that the bridge no longer holds. This is derived from the RTL. No test applies \code{rst_n_i} alone during CPU traffic.
+\end{information}
+
+\section{Architecture decisions}\label{ds:ch:mod-power-management:decisions}
+Each subsection gives the decision, the alternatives that the team rejected, and what the decision means for the user.
+
+\subsection{Sequencing without supply removal}\label{ds:ch:mod-power-management:dec-model}
+\textbf{Decision.} The PMU is ordinary synchronous RTL. It sequences clock stop, isolation, reset and retention pulses. It does not remove a supply.
+
+\textbf{Alternatives rejected.} A model with power switches and retention cells needs a simulator that reads the power intent. The open-source flow of the project has none.
+
+\textbf{Consequence for the user.} The retention pulses have no effect (\reqref{DS-PMU-023}). The state of a domain after a power cycle follows from the clocks and the reset style and not from a retention cell (\reqref{DS-PMU-180}, \reqref{DS-PMU-181}).
+
+\subsection{One action for each cycle with registered outputs}\label{ds:ch:mod-power-management:dec-fsm}
+\textbf{Decision.} Each domain walks nine states, with one action in each state. Each output is the output pin of its own flop, and the flop loads the decode of the next state.
+
+\textbf{Alternatives rejected.} A decode of the binary state register drives glitches when several state bits change on one edge. The outputs feed an asynchronous clear and synchroniser pins, where a glitch is an event.
+
+\textbf{Consequence for the user.} The order of the actions is fixed by the state chain and is visible in each cycle. \reqref{DS-PMU-026} checks the structure.
+
+\subsection{Acknowledge from the CPU domain}\label{ds:ch:mod-power-management:dec-ack}
+\textbf{Decision.} The sequencer of the CPU domain waits for the acknowledge in the isolation step of the power-down, and for its release in the last step of the power-up.
+
+\textbf{Alternatives rejected.} A fixed spacing of two cycles of \code{clk_i} between the isolation and the reset depends on the clock ratio. The reset of the CPU domain asserts through an asynchronous clear, and the clamp control crosses through a synchroniser. The reset can then beat the clamp. Without the handshake, the reset reaches the CPU domain before the clamp at a CPU clock that is 3 times or 8 times slower. This is derived from the synchroniser depths. The test file states that its two slow-clock tests fail without the handshake. No record of that run is in the repository.
+
+\textbf{Consequence for the user.} The power-down of the CPU domain takes as long as the round trip of the acknowledge. The integrator sizes the timeout (\reqref{DS-PMU-066}). A power-up needs no acknowledge for the order of the clamp release and the reset release. The design argument is that the lines that the clamp holds are sampled by \code{cpu_gated_clk}, which cannot run before the PMU reset is released in the CPU domain. This argument is not a test result. In the nominal order the clock runs for some edges while the clamp is still active (\cref{tm:mod:pmu}).
+
+\subsection{Timeout in the wait}\label{ds:ch:mod-power-management:dec-timeout}
+\textbf{Decision.} A wait ends after \code{ISO_ACK_TIMEOUT} cycles, and the flag \code{cpu_iso_ack_timeout} records it.
+
+\textbf{Alternatives rejected.} An unbounded wait hangs the always-on PMU, with \code{busy} stuck, when no acknowledge can arrive. This is the case while \code{cpu_core_rst_n} is low, because the reset holds the synchroniser of the clamp control at 0.
+
+\textbf{Consequence for the user.} A power-down with a dead CPU domain ends. The user reads the flag to learn that the clamp was not seen (\reqref{DS-PMU-062}).
+
+\subsection{Synchronous reset of the PMU}\label{ds:ch:mod-power-management:dec-reset}
+\textbf{Decision.} The PMU has a synchronous reset.
+
+\textbf{Alternatives rejected.} An asynchronous reset needs a reset synchroniser in front of the PMU, and it makes the PMU differ from its neighbours.
+
+\textbf{Consequence for the user.} The PMU reset takes effect at a clock edge of \code{core_clk}. The peripherals on the same APB tree (\code{uart_controller}, \code{spi_controller}, \code{timer}, \code{interrupt_controller}, \code{apb4_register_bank} and \code{pll_apb_regs}) have no asynchronous reset edge, so the PMU follows the style of its bus.
+
+\subsection{Clock enable with the PMU reset}\label{ds:ch:mod-power-management:dec-clock}
+\textbf{Decision.} The enable of \code{u_cpu_cg} is the inverse of the synchronised clock disable ANDed with the synchronised PMU reset of the CPU domain.
+
+\textbf{Alternatives rejected.} An enable of the clock disable alone lets the two synchronisers show the reset and the clock enable on different edges. The CPU flops can then see a clock edge in reset.
+
+\textbf{Consequence for the user.} In the model, the CPU flops do not see a clock edge while the PMU reset is asserted (\reqref{DS-PMU-102}). This is why the CPU keeps its state in the simulation. \reqref{DS-PMU-181} tells software not to rely on it.
+
+\subsection{AXI bridge outside the domain reset}\label{ds:ch:mod-power-management:dec-bridge}
+\textbf{Decision.} The AXI bridge \code{u_cpu_axi_cdc} takes \code{cpu_core_rst_n} and not \code{cpu_domain_rst_n}.
+
+\textbf{Alternatives rejected.} The bridge resets as a hard flush. A flush at each PMU power-down would lose a response for which the CPU model still waits.
+
+\textbf{Consequence for the user.} A PMU power cycle keeps the bridge state, as the model keeps the CPU state (\reqref{DS-PMU-109}). Real power gating would need a drain step first (\reqref{DS-PMU-182}).
+
+\section{Requirements and verification}\label{ds:ch:mod-power-management:map}
+\Cref{tab:ds:req:pmu-map} lists each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review. A reference with the word \textbf{mutation} names a mutant of \code{mutate_pmu_iso_ack.py} that breaks the rule. No result of a campaign is recorded in the repository. That the cited tests kill each mutant is predicted by reading the tests and is not measured.
+
+\input{generated/requirements-pmu}

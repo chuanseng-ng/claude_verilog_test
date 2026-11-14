@@ -1,0 +1,106 @@
+# Words for the generated signal and parameter tables of the power blocks.
+# The RTL gives the names, directions, widths and defaults. This file gives the rest.
+# Run: python tools/docs/gen_fact_tables.py
+# A description in backticks is set as code. Every port and parameter needs an entry.
+# domain: the name of a clock port of the same module, or clock, async or quasi-static.
+family: power
+modules:
+  pmu:
+    rtl: rtl/soc/pmu.sv
+    deps: [rtl/soc/apb4_register_bank.sv]
+    label: tm:mod:pmu
+    params:
+      ADDR_W:
+        legal: "4 or more; 12 in the SoC"
+        description: "Byte address width of the APB slot. The slot holds 4 KB at 12."
+      ISO_ACK_TIMEOUT:
+        legal: "2 or more"
+        description: "Number of `clk_i` cycles that one isolation wait of the CPU domain can last before the sequencer goes on and sets STATUS bit 3. Elaboration stops with an error when the value is below 2."
+    ports:
+      clk_i:
+        domain: clock
+        description: "Clock of the unit. In the SoC it is `core_clk`."
+      rst_n_i:
+        domain: clk_i
+        description: "Active-low synchronous reset. In the SoC it is `core_rst_n`."
+      psel:
+        domain: clk_i
+        description: "APB select."
+      penable:
+        domain: clk_i
+        description: "APB enable. It is high in the ACCESS phase."
+      pwrite:
+        domain: clk_i
+        description: "APB direction. High for a write."
+      paddr:
+        domain: clk_i
+        description: "APB byte address inside the slot. Bits 1 and 0 are not used."
+      pwdata:
+        domain: clk_i
+        description: "APB write data."
+      pstrb:
+        domain: clk_i
+        description: "APB byte strobes."
+      prdata:
+        domain: clk_i
+        description: "APB read data. It is a combinational function of the address and the registers."
+      pready:
+        domain: clk_i
+        description: "APB ready. It is tied high. The unit adds no wait state."
+      pslverr:
+        domain: clk_i
+        description: "APB error. It is tied low. The unit never gives an error."
+      cpu_clk_en_o:
+        domain: clk_i
+        description: "Clock enable of the CPU domain. High means the clock runs. The output is the Q of a flop."
+      cpu_iso_en_o:
+        domain: clk_i
+        description: "Isolation control of the CPU domain. High means the clamp is asked. The output is the Q of a flop."
+      cpu_rst_n_o:
+        domain: clk_i
+        description: "Active-low reset of the CPU domain. The output is the Q of a flop."
+      cpu_ret_save_o:
+        domain: clk_i
+        description: "Retention save pulse of the CPU domain. It is high for one cycle in each power-down. No retention cell uses it."
+      cpu_ret_restore_o:
+        domain: clk_i
+        description: "Retention restore pulse of the CPU domain. It is high for one cycle in each power-up. No retention cell uses it."
+      cpu_iso_ack_i:
+        domain: clk_i
+        description: "Isolation acknowledge of the CPU domain, already synchronised into `clk_i` by the caller. High means the clamp is seen active. Low means the clamp is seen released."
+      gpu_clk_en_o:
+        domain: clk_i
+        description: "Clock enable of the GPU domain. High means the clock runs. The output is the Q of a flop."
+      gpu_iso_en_o:
+        domain: clk_i
+        description: "Isolation control of the GPU domain. High means the clamp is active. The output is the Q of a flop."
+      gpu_rst_n_o:
+        domain: clk_i
+        description: "Active-low reset of the GPU domain. The output is the Q of a flop."
+      gpu_ret_save_o:
+        domain: clk_i
+        description: "Retention save pulse of the GPU domain. It is high for one cycle in each power-down. No retention cell uses it."
+      gpu_ret_restore_o:
+        domain: clk_i
+        description: "Retention restore pulse of the GPU domain. It is high for one cycle in each power-up. No retention cell uses it."
+  rv32i_clock_gate:
+    rtl: rtl/mem/rv32i_clock_gate.sv
+    deps: []
+    label: tm:mod:rv32i-clock-gate
+    params:
+      HARD_ROOT:
+        legal: "0 or 1"
+        description: "1 marks a gate that is a clock root with a clock tree behind it. Only the Sky130 library arm reads it. The default is 0."
+    ports:
+      en:
+        domain: clk
+        description: "Functional enable. The gate takes it into the latch while `clk` is low."
+      test_en:
+        domain: quasi-static
+        description: "Test enable. High forces the gate open. Keep it static while `clk` runs. It can be tied to 0 where no scannable flop sits behind the gate."
+      clk:
+        domain: clock
+        description: "Source clock."
+      gclk:
+        domain: clock
+        description: "Gated clock."
