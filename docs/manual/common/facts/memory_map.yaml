@@ -1,0 +1,112 @@
+# Words for the generated memory-map tables.
+# The RTL packages give the regions: an index constant for each region, and an array of bases and
+# an array of limits for each level. This file gives the files, the levels and the words.
+# Run: python tools/docs/gen_memory_map.py
+# A text in backticks is set as code. Every region of the RTL needs an entry and every entry needs a region.
+# prefix: the index constants of a level are the integer constants that start with it; the rest is the entry key.
+# parent: the entry of an earlier level whose window holds every slot of this level.
+# leaf_bytes: the exact size of a slot that has no level below it (the slave takes paddr[11:0] only).
+# overrides: a slot that lies inside a slot with a lower index and wins there (the decode keeps the last match).
+family: memory_map
+label: ds:mm:address-map
+title: "Memory map of the SoC in address order"
+unmapped: "No slave. The crossbar answers DECERR."
+page_bytes: 4096
+rtl:
+  - rtl/soc/axi_pkg.sv
+  - rtl/soc/soc_addr_map_pkg.sv
+  - rtl/soc/soc_periph_map_pkg.sv
+levels:
+  crossbar:
+    title: "Crossbar slave windows"
+    protocol: AXI4
+    package: soc_addr_map_pkg
+    prefix: SLV_
+    count: SOC_N_SLAVES
+    base: SOC_SLV_BASE
+    limit: SOC_SLV_LIMIT
+    entries:
+      ROM:
+        target: "boot ROM `u_boot_rom`"
+        note: "A read gives OKAY and a write gives SLVERR. The reset PC of the CPU is the base."
+      SRAM:
+        target: "SRAM `u_sram`"
+        note: "The window is larger than the storage. `SRAM_MEM_WORDS` sets the size of the storage."
+      PERIPH:
+        target: "peripheral bridge `u_periph_bridge`"
+        note: "AXI4 to AXI-Lite bridge. The AXI-Lite level below decodes this window."
+  axilite:
+    title: "AXI-Lite interconnect slot windows"
+    protocol: AXI-Lite
+    package: soc_periph_map_pkg
+    parent: {level: crossbar, entry: PERIPH}
+    prefix: AXIL_
+    count: AXIL_N_SLAVES
+    base: AXIL_SLV_BASE
+    limit: AXIL_SLV_LIMIT
+    leaf_bytes: 4096
+    overrides:
+      - {entry: DMA, over: APB_BRIDGE}
+    entries:
+      GPU:
+        target: "GPU control port of `u_gpu`"
+        note: "Only the address bits `[11:0]` reach the slave."
+      APB_BRIDGE:
+        target: "APB bridge `u_axil_apb_bridge`"
+        note: "Window of every APB slot. The APB level below decodes it."
+      DMA:
+        target: "DMA control port of `u_dma`"
+        note: "The page lies inside the APB bridge window. The decode keeps the last match, so this slot wins."
+  apb:
+    title: "APB interconnect slot windows"
+    protocol: APB
+    package: soc_periph_map_pkg
+    parent: {level: axilite, entry: APB_BRIDGE}
+    prefix: APB_
+    count: APB_N_SLAVES
+    base: APB_SLV_BASE
+    limit: APB_SLV_LIMIT
+    leaf_bytes: 4096
+    entries:
+      UART:
+        target: "UART `u_uart`"
+        note: "Direct APB slave."
+      SPI:
+        target: "SPI `u_spi`"
+        note: "Direct APB slave."
+      TIMER:
+        target: "timer `u_timer`"
+        note: "Direct APB slave."
+      IRQ:
+        target: "interrupt controller `u_irq_ctrl`"
+        note: "Direct APB slave."
+      PLL:
+        target: "PLL `u_pll_sub` through `u_apb_pll_cdc`"
+        note: "The access crosses a clock domain through the CDC bridge."
+      PMU:
+        target: "power management unit `u_pmu`"
+        note: "Direct APB slave."
+      PLL2:
+        target: "PLL2 `u_cpu_pll_sub` through `u_apb_pll2_cdc`"
+        note: "The access crosses a clock domain through the CDC bridge."
+      GPIO:
+        target: "GPIO `u_gpio`"
+        note: "Direct APB slave."
+      PWM:
+        target: "PWM `u_pwm`"
+        note: "Direct APB slave."
+      WDT:
+        target: "watchdog timer `u_wdt`"
+        note: "Direct APB slave."
+      TRNG:
+        target: "TRNG `u_trng`"
+        note: "Direct APB slave."
+      I2C:
+        target: "I2C `u_i2c`"
+        note: "Direct APB slave."
+      CRYPTO:
+        target: "crypto accelerator `u_crypto`"
+        note: "Direct APB slave."
+      NPU:
+        target: "NPU `u_npu`"
+        note: "The last slot. Its page lies above 0x2000_FFFF. This has no effect, because `paddr` is 32 bits wide."

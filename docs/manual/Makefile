@@ -13,6 +13,7 @@ ds tm um cr:
 check:
 	$(PY) ../../tools/docs/gen_glossary.py --check
 	@$(PY) ../../tools/docs/gen_fact_tables.py --check || { rc=$$?; if [ $$rc -eq 3 ]; then echo "ERROR: pyslang is not installed, so the fact-table check cannot run (nix develop .#docs provides it; otherwise pip install pyslang==11.0.0)." >&2; fi; exit $$rc; }
+	@$(PY) ../../tools/docs/gen_memory_map.py --check || { rc=$$?; if [ $$rc -eq 3 ]; then echo "ERROR: pyslang is not installed, so the memory-map check cannot run (nix develop .#docs provides it; otherwise pip install pyslang==11.0.0)." >&2; fi; exit $$rc; }
 	$(PY) ../../tools/docs/check_requirements.py -v
 	$(PY) ../../tools/docs/check_doc_labels.py
 

@@ -1,5 +1,6 @@
 """Unit tests for tools/docs/gen_fact_tables.py."""
 
+import hashlib
 import sys
 from pathlib import Path
 
@@ -24,6 +25,10 @@ module widget #(
     assign q_o = '0;
 endmodule
 """
+
+# SHA-256 of the two files that GOOD_SV and GOOD_YAML produced before unpacked dimensions were read.
+SIG_SHA = "1099fdd2dbe9fa3fe63e305774c69409b9d3ea7793ee107d665f755f6f7372b8"
+PAR_SHA = "d569b7fe1b3c32abb9d5903eae90bcc7ed71f65174b09985ad8c2a1de26e46d7"
 
 NON_ANSI_SV = """\
 module oldstyle (clk_i, q_o);
@@ -323,13 +328,104 @@ def test_interface_port_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-un
     assert "unsupported port" in capsys.readouterr().err
 
 
-def test_unpacked_port_dimension_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
-    """An unpacked dimension on a port is not supported."""
-    sv = "module unp (input logic clk_i, input logic a_i [3:0]);\nendmodule\n"
+def test_queue_port_dimension_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A dimension without a fixed size on a port is not supported."""
+    sv = "module unp (input logic clk_i, input logic a_i [$]);\nendmodule\n"
     root = one_module(tmp_path, "unp", sv, {}, {"clk_i": "clock", "a_i": "async"})
     capsys.readouterr()
     assert run(root) == 2
-    assert "unpacked dimension on port a_i" in capsys.readouterr().err
+    assert "unsupported unpacked dimension on port a_i" in capsys.readouterr().err
+
+
+def test_unpacked_port_shows_packed_width_then_the_dimension(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A port with an unpacked dimension keeps its packed width and lists the dimension."""
+    sv = "module unp (input logic clk_i, input logic [7:0] a_i [4]);\nendmodule\n"
+    root = one_module(tmp_path, "unp", sv, {}, {"clk_i": "clock", "a_i": "async"})
+    assert run(root) == 0
+    assert signal_rows(root, "unp")["\\code{a_i}"] == (
+        "\\code{a_i} & in & 8 \\code{[4]} & async & Text.\\\\"
+    )
+
+
+def test_unpacked_dimension_of_parameters_shows_name_and_size(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A parameter-sized dimension shows the expression and the elaborated count."""
+    sv = (
+        "module unp #(parameter int unsigned N = 3, parameter int unsigned W = 4) (\n"
+        "    input logic clk_i,\n    output logic [W-1:0] a_o [N],\n    output logic b_o [N][2],\n"
+        "    input logic [7:0] c_i [3:0]\n);\nendmodule\n"
+    )
+    ports = {"clk_i": "clock", "a_o": "clk_i", "b_o": "clk_i", "c_i": "async"}
+    root = one_module(tmp_path, "unp", sv, {"N": "Count.", "W": "Width."}, ports)
+    assert run(root) == 0
+    rows = signal_rows(root, "unp")
+    assert rows["\\code{a_o}"].startswith("\\code{a_o} & out & \\code{W} (4) \\code{[N]} (3) &")
+    assert rows["\\code{b_o}"].startswith("\\code{b_o} & out & 1 \\code{[N]} (3) \\code{[2]} &")
+    assert rows["\\code{c_i}"].startswith("\\code{c_i} & in & 8 \\code{[3:0]} (4) &")
+
+
+def test_packed_and_unpacked_ports_in_one_module(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A packed port keeps its old cell next to an unpacked one."""
+    sv = (
+        "module mix #(parameter int unsigned N = 2) (\n"
+        "    input logic clk_i,\n    input logic [N-1:0] p_i,\n    input logic [N-1:0] u_i [N]\n"
+        ");\nendmodule\n"
+    )
+    root = one_module(
+        tmp_path, "mix", sv, {"N": "Count."}, {"clk_i": "clock", "p_i": "async", "u_i": "async"}
+    )
+    assert run(root) == 0
+    rows = signal_rows(root, "mix")
+    assert rows["\\code{p_i}"] == "\\code{p_i} & in & \\code{N} (2) & async & Text.\\\\"
+    assert (
+        rows["\\code{u_i}"]
+        == "\\code{u_i} & in & \\code{N} (2) \\code{[N]} (2) & async & Text.\\\\"
+    )
+
+
+def test_unpacked_parameter_shows_the_dimension_and_the_text(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """An unpacked parameter lists its dimension in the Type cell and its default as written."""
+    sv = (
+        "module unp #(parameter int unsigned N = 2,\n"
+        "    parameter logic [7:0] T [N] = '{default: '0}) (input logic clk_i);\nendmodule\n"
+    )
+    root = one_module(tmp_path, "unp", sv, {"N": "Count.", "T": "Table."}, {"clk_i": "clock"})
+    assert run(root) == 0
+    par = (out_dir(root) / "unp-params.tex").read_text(encoding="utf-8")
+    assert "\\code{T} & \\code{logic [7:0]} \\code{[N]} (2) & \\code{'{default: '0}} & any &" in par
+
+
+def test_unpacked_dimension_and_elaboration_must_agree() -> None:
+    """A declared unpacked size that disagrees with elaboration names the port and stops."""
+    written = gft.ModuleFacts("m", ports=[gft.Port("a_i", "input", "logic", [], udims=["N"])])
+    built = gft.ModuleFacts("m", ports=[gft.Port("a_i", "in", "", [], 1, [5])], env={"N": 4})
+    with pytest.raises(gft.FactError, match="port a_i: the unpacked dimension gives 4 elements"):
+        gft.merge(written, built)
+    short = gft.ModuleFacts("m", ports=[gft.Port("a_i", "in", "", [], 1, [])])
+    with pytest.raises(gft.FactError, match="port a_i: 1 unpacked dimension"):
+        gft.merge(
+            gft.ModuleFacts("m", ports=[gft.Port("a_i", "input", "logic", [], udims=["N"])]),
+            short,
+        )
+
+
+def test_packed_width_of_an_unpacked_port_is_still_cross_checked() -> None:
+    """The packed range of an unpacked port is compared with the elaborated element width."""
+    written = gft.ModuleFacts(
+        "m", ports=[gft.Port("a_i", "input", "logic [7:0]", ["7:0"], udims=["4"])]
+    )
+    built = gft.ModuleFacts("m", ports=[gft.Port("a_i", "in", "", [], 4, [4])])
+    with pytest.raises(gft.FactError, match="port a_i: the declared range gives 8 bits"):
+        gft.merge(written, built)
+
+
+def test_output_of_a_module_without_unpacked_dimensions_is_unchanged(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """The files of a plain module keep their exact text."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    sig = (out_dir(root) / "widget-signals.tex").read_text(encoding="utf-8")
+    par = (out_dir(root) / "widget-params.tex").read_text(encoding="utf-8")
+    assert hashlib.sha256(sig.encode()).hexdigest() == SIG_SHA
+    assert hashlib.sha256(par.encode()).hexdigest() == PAR_SHA
 
 
 def test_type_parameter_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
@@ -413,6 +509,16 @@ def test_family_option_leaves_other_files_alone(tmp_path) -> None:  # type: igno
     other.write_text("x\n", encoding="utf-8")
     assert run(root, "--family", "demo") == 0
     assert other.exists()
+
+
+def test_sidecar_of_the_memory_map_tool_is_not_a_family(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """The memory-map sidecar sits in the same directory and is not a family of modules."""
+    root = make_root(tmp_path)
+    (root / "docs/manual/common/facts/memory_map.yaml").write_text(
+        "family: memory_map\nlevels: {}\n", encoding="utf-8"
+    )
+    assert run(root) == 0
+    assert run(root, "--check") == 0
 
 
 def test_two_sidecars_for_one_module_exit_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]

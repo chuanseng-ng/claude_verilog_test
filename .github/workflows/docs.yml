@@ -97,6 +97,9 @@ jobs:
       - name: Fact tables are in sync with the RTL
         run: python tools/docs/gen_fact_tables.py --check
 
+      - name: Memory-map tables are in sync with the RTL
+        run: python tools/docs/gen_memory_map.py --check
+
       - name: Requirements and their test references
         run: python tools/docs/check_requirements.py -v
 
