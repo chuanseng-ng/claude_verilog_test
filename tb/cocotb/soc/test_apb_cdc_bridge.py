@@ -30,7 +30,15 @@ from types import SimpleNamespace
 import cocotb
 from bfm.apb4_master import APB4Master
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, Combine, ReadOnly, RisingEdge, Timer, with_timeout
+from cocotb.triggers import (
+    ClockCycles,
+    Combine,
+    FallingEdge,
+    ReadOnly,
+    RisingEdge,
+    Timer,
+    with_timeout,
+)
 from cocotb.utils import get_sim_time
 
 # ---------------------------------------------------------------------------
@@ -1492,3 +1500,648 @@ async def test_reset_asym_staggered_s_then_m(dut):
 async def test_reset_asym_staggered_m_then_s(dut):
     # Mirror ordering: m releases first, s held.
     await with_timeout(_apb_reset_asym_staggered_body(dut, 18, 4, order="m_first"), 100, "us")
+
+
+# =============================================================================
+# Directed confirmation of four reviewed behaviours (B1 to B4).
+# Doc: ds:mod:apb-cdc-bridge
+#
+# A review read these behaviours from the RTL and no simulation had shown them:
+#   B1  An error response can follow a destination write that already completed
+#       (DS-CDC-102, DS-CDC-103).
+#   B2  No timeout: with m_clk_i stopped and m_rst_n_i high, a transfer never completes.
+#   B3  A short m_rst_n_i pulse can make the destination repeat one request (DS-CDC-106).
+#   B4  Worst-case latency of the bounds of DS-CDC-102 and DS-CDC-103, per clock ratio.
+# The RTL is not changed. Each test of B1 to B3 that asserts the specified behaviour is marked
+# expect_fail: it must fail while the behaviour exists. If one of them passes, the review was
+# wrong or the RTL changed. Then replace it by a normal test that proves the rule. A harness
+# fault raises RuntimeError, not AssertionError, so expect_fail cannot hide it. Every
+# expect_fail test has a normal companion test that proves the checker and the stimulus.
+# =============================================================================
+
+# A pulse of m_rst_n_i that follows DS-CDC-109 lasts this many periods of the slower clock.
+LONG_PULSE_PERIODS = 8
+# Bound for B2: s_clk_i cycles that s_pready_o must stay low before the test calls it a stall.
+STALL_BOUND_S_CYCLES = 300
+RESTART_BOUND_S_CYCLES = 100
+# DS-CDC-102 counts rising edges of s_clk_i after the SETUP edge.
+DS102_MAX_EDGES = 2
+
+# (s period, m period, idle gaps in s cycles). A gap moves the m edges against the s edges.
+_ALIGNMENTS = (
+    (18, 4, (0, 1)),
+    (10, 10, (0,)),
+    (7, 11, (0, 1, 2, 3)),
+    (4, 9, (0, 1, 2, 3)),
+)
+_B4_RATIOS = ((4, 9), (18, 4), (10, 10), (7, 11))
+_SWEEP_CACHE: dict = {}
+_STALL_CACHE: dict = {}
+
+
+def _now_ns() -> int:
+    return int(round(get_sim_time(units="ns")))
+
+
+def _edge_gap_ns(origin: int, t: int, period: int) -> int:
+    """Time from t to the next rising edge of a clock with an edge at origin. An edge at t does
+    not count, because a flop clocked at t samples the value from before t."""
+    gap = (origin - t) % period
+    return gap if gap else period
+
+
+class _Observer:
+    """Passive monitors for one experiment; they never drive a signal.
+
+    m_xfers: one entry (time, pwrite, paddr, pwdata) per completed APB transfer on the m_* face.
+      The face is sampled at the falling edge of m_clk, where psel, penable and pready are stable
+      and the next rising edge completes the transfer.
+    s_done: one entry (time, pslverr, prdata) per s_pready_o pulse.
+    ack_s_seen and in_rst_seen record backdoor reads of ack_s and m_in_rst_s while armed.
+    """
+
+    def __init__(self, dut):
+        self.dut = dut
+        self.m_xfers: list = []
+        self.s_done: list = []
+        self.s_origin = None
+        self.armed = False
+        self.ack_s_seen = False
+        self.in_rst_seen = False
+        self._tasks: list = []
+
+    def start(self):
+        for coro in (self._watch_m(), self._watch_s()):
+            task = cocotb.start_soon(coro)
+            self._tasks.append(task)
+            _active_tasks.append(task)
+        return self
+
+    def stop(self) -> None:
+        for task in self._tasks:
+            task.kill()
+        self._tasks = []
+
+    async def _watch_m(self) -> None:
+        dut = self.dut
+        while True:
+            await FallingEdge(dut.m_clk)
+            await ReadOnly()
+            if int(dut.m_psel.value) and int(dut.m_penable.value) and int(dut.m_pready.value):
+                self.m_xfers.append(
+                    (
+                        _now_ns(),
+                        int(dut.m_pwrite.value),
+                        int(dut.m_paddr.value),
+                        int(dut.m_pwdata.value),
+                    )
+                )
+
+    async def _watch_s(self) -> None:
+        dut = self.dut
+        while True:
+            await RisingEdge(dut.s_clk)
+            await ReadOnly()
+            now = _now_ns()
+            if self.s_origin is None:
+                self.s_origin = now
+            if int(dut.s_pready.value):
+                self.s_done.append((now, int(dut.s_pslverr.value), int(dut.s_prdata.value)))
+            if self.armed:
+                if int(dut.u_dut.ack_s.value):
+                    self.ack_s_seen = True
+                if int(dut.u_dut.m_in_rst_s.value):
+                    self.in_rst_seen = True
+
+
+async def _wait_ack_q_rise(dut, limit: int = 400):
+    """Return the time of the m_clk edge after which ack_q reads 1, or None. The call returns in
+    a ReadOnly phase: the caller must await a trigger before it writes a signal."""
+    for _ in range(limit):
+        await RisingEdge(dut.m_clk)
+        await ReadOnly()
+        if int(dut.u_dut.ack_q.value):
+            return _now_ns()
+    return None
+
+
+def _err_count(row) -> int:
+    return sum(1 for _t, err, _d in row["s_done"] if err)
+
+
+def _fmt_row(row) -> str:
+    s_ns, m_ns = row["ratio"]
+    head = f"{row['plan']:<8} s/m={s_ns}/{m_ns} gap={row['gap']} edge_gap={row['edge_gap']}"
+    if row["skipped"]:
+        return f"{head} skipped (window too small)"
+    return (
+        f"{head} delay={row['delay']} width={row['width']} m_xfers={row['m_xfers']} "
+        f"s_done={len(row['s_done'])} s_err={_err_count(row)} ack_s_seen={row['ack_s_seen']} "
+        f"in_rst_seen={row['in_rst_seen']}"
+    )
+
+
+def _log_rows(dut, title, rows) -> None:
+    dut._log.info(title)
+    for row in rows:
+        dut._log.info("  " + _fmt_row(row))
+
+
+async def _ack_window_experiment(dut, s_ns, m_ns, gap, plan) -> dict:
+    """One write request; m_rst_n_i pulses low a fixed time after ack_q rises on the m side.
+
+    plan(edge_gap) returns (delay, width) in time units, or None when the window is too small.
+    edge_gap is the time from the ack_q rise to the next s_clk edge, so a delay below it means
+    that no s_clk edge sees ack_q high. A fresh reset and a fresh responder start each call.
+    """
+    ctx = await _setup(dut, s_ns, m_ns)
+    obs = _Observer(dut).start()
+    obs.armed = True
+    if gap:
+        await ClockCycles(dut.s_clk, gap)
+    master = cocotb.start_soon(ctx.s_master.write(0xE00, 0x5EED0001))
+    t_rise = await _wait_ack_q_rise(dut)
+    if t_rise is None or obs.s_origin is None:
+        raise RuntimeError("harness: ack_q never rose, or no s_clk edge was observed")
+    edge_gap = _edge_gap_ns(obs.s_origin, t_rise, s_ns)
+    choice = plan(edge_gap)
+    row = {"ratio": (s_ns, m_ns), "gap": gap, "edge_gap": edge_gap, "skipped": choice is None}
+    if choice is None:
+        await Timer(1, units="step")  # leave the ReadOnly phase before the cleanup writes
+    else:
+        delay, width = choice
+        await Timer(delay, units="ns")
+        dut.m_rst_n.value = 0
+        await Timer(width, units="ns")
+        dut.m_rst_n.value = 1
+        for _ in range(120):
+            await RisingEdge(dut.s_clk)
+            if obs.s_done:
+                break
+        # Time for a repeated transfer, if there is one, to show on the m_* face.
+        await Timer(30 * max(s_ns, m_ns), units="ns")
+        row.update(
+            delay=delay,
+            width=width,
+            m_writes=sum(1 for x in obs.m_xfers if x[1]),
+            m_xfers=len(obs.m_xfers),
+            s_done=list(obs.s_done),
+            ack_s_seen=obs.ack_s_seen,
+            in_rst_seen=obs.in_rst_seen,
+        )
+    master.kill()
+    obs.stop()
+    _idle_s_side(dut)
+    return row
+
+
+def _long_plans(s_ns, m_ns) -> dict:
+    """Pulses that follow DS-CDC-109. The first three start before any s_clk edge sees ack_q; the
+    last starts after the source has captured the acknowledge."""
+    long_w = LONG_PULSE_PERIODS * max(s_ns, m_ns)
+    return {
+        "early": lambda d: (1, long_w) if d >= 2 else None,
+        "mid": lambda d: (max(1, d // 2), long_w) if d >= 2 else None,
+        "last": lambda d: (d - 1, long_w) if d >= 2 else None,
+        "late": lambda d: (d + 2 * s_ns + 1, long_w),
+    }
+
+
+def _narrow_plans() -> dict:
+    """Pulses shorter than one s_clk period that end before the next s_clk edge after ack_q rises.
+    No s_clk edge sees ack_q high, and none samples the pulse."""
+    return {
+        "w1_p1": lambda d: (1, 1) if d >= 3 else None,
+        "w1_wide": lambda d: (1, d - 2) if d >= 3 else None,
+        "late_p1": lambda d: (d - 2, 1) if d >= 3 else None,
+    }
+
+
+async def _sweep(dut, kind) -> list:
+    """Run the pulse sweep once for the whole file. Tests of the same kind share its rows."""
+    if kind not in _SWEEP_CACHE:
+        rows = []
+        for s_ns, m_ns, gaps in _ALIGNMENTS:
+            plans = _long_plans(s_ns, m_ns) if kind == "long" else _narrow_plans()
+            for gap in gaps:
+                for name, plan in plans.items():
+                    row = await _ack_window_experiment(dut, s_ns, m_ns, gap, plan)
+                    row["plan"] = name
+                    rows.append(row)
+        _SWEEP_CACHE[kind] = rows
+        _log_rows(dut, f"pulse sweep '{kind}' ({len(rows)} points)", rows)
+    return _SWEEP_CACHE[kind]
+
+
+# --- B1. An error response after a completed write ---------------------------------------------
+
+@cocotb.test(expect_fail=True)
+async def test_b1_no_error_completion_after_completed_write(dut):
+    """Asserts: an errored request must not have written the destination (DS-CDC-102,
+    DS-CDC-103). Stimulus: m_rst_n_i pulses low, as DS-CDC-109 asks, a short time after ack_q
+    rises on the m side and before any s_clk edge samples it, at four clock ratios.
+
+    expect_fail: the review reads that the source then sees only the reset status, returns
+    s_pslverr_o=1, and the write has already happened. The failure message lists the points.
+    If this test passes, the reading was wrong or the RTL changed."""
+    rows = await with_timeout(_sweep(dut, "long"), 1000, "us")
+    bad = [r for r in rows if not r["skipped"] and r["m_writes"] >= 1 and _err_count(r) >= 1]
+    assert not bad, (
+        f"{len(bad)} point(s) returned an error for a request whose write completed on the m_* "
+        "face: " + "; ".join(_fmt_row(r) for r in bad[:6])
+    )
+
+
+async def _reset_before_access_experiment(dut, s_ns, m_ns) -> dict:
+    ctx = await _setup(dut, s_ns, m_ns, wait_states=40)
+    obs = _Observer(dut).start()
+    addr = 0xE40
+    ctx.responder.mem[addr] = 0x0BAD0BAD
+    master = cocotb.start_soon(ctx.s_master.write(addr, 0xC0DE0001))
+    for _ in range(400):
+        await RisingEdge(dut.m_clk)
+        await ReadOnly()
+        if int(dut.m_penable.value):
+            break
+    else:
+        raise RuntimeError("harness: the destination never reached the ACCESS phase")
+    await RisingEdge(dut.m_clk)
+    dut.m_rst_n.value = 0
+    for _ in range(120):
+        await RisingEdge(dut.s_clk)
+        if obs.s_done:
+            break
+    await Timer(30 * max(s_ns, m_ns), units="ns")
+    row = {
+        "ratio": (s_ns, m_ns),
+        "s_done": list(obs.s_done),
+        "m_xfers": len(obs.m_xfers),
+        "completed": ctx.responder.completed,
+        "mem": ctx.responder.mem.get(addr),
+    }
+    master.kill()
+    obs.stop()
+    _idle_s_side(dut)
+    return row
+
+
+async def _b1_control_reset_before_access_body(dut):
+    for s_ns, m_ns in _B4_RATIOS:
+        r = await _reset_before_access_experiment(dut, s_ns, m_ns)
+        tag = f"s/m={s_ns}/{m_ns}"
+        assert len(r["s_done"]) == 1, f"{tag}: expected one completion, got {len(r['s_done'])}"
+        assert r["s_done"][0][1] == 1, f"{tag}: a reset before the access must give s_pslverr_o=1"
+        assert r["m_xfers"] == 0 and r["completed"] == 0, f"{tag}: a transfer reached the m_* face"
+        assert r["mem"] == 0x0BAD0BAD, f"{tag}: the destination memory changed"
+    dut._log.info("B1 control: reset before the destination access gives an error and no write")
+
+
+@cocotb.test()
+async def test_b1_control_reset_before_access_errors_without_write(dut):
+    """Companion of the B1 test. A reset that arrives before the destination completes its access
+    must give an error and no write. This proves that the m_* face monitor and the error check
+    can both see their events. Ratios 4/9, 18/4, 10/10 and 7/11."""
+    await with_timeout(_b1_control_reset_before_access_body(dut), 200, "us")
+
+
+@cocotb.test()
+async def test_b1_control_window_reached_and_late_reset_clean(dut):
+    """Companion of the B1 test and of the B3 test. Proves, without asserting the B1 outcome:
+    (1) the stimulus reaches the window: for the early, mid and last plans no s_clk edge sees
+    ack_s, the write completes once on the m_* face, and the source completes the request once;
+    (2) a reset after the source captured the acknowledge gives an okay response and one write."""
+    rows = await with_timeout(_sweep(dut, "long"), 1000, "us")
+    live = [r for r in rows if not r["skipped"]]
+    window = [r for r in live if r["plan"] in ("early", "mid", "last")]
+    assert window, "the stimulus never reached the window before an s_clk edge samples ack_q"
+    for r in live:
+        tag = _fmt_row(r)
+        assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
+        assert r["m_writes"] == 1, f"the m_* face must show exactly one write: {tag}"
+    for r in window:
+        assert not r["ack_s_seen"], f"ack_s rose although no s_clk edge saw ack_q: {_fmt_row(r)}"
+    late = [r for r in live if r["plan"] == "late"]
+    assert late, "no point of the late plan ran"
+    for r in late:
+        assert r["ack_s_seen"] and _err_count(r) == 0, f"late reset must be clean: {_fmt_row(r)}"
+    dut._log.info(
+        f"B1 window reached at {len(window)} points; {len(late)} late-reset points are clean"
+    )
+
+
+# --- B2. No timeout when the destination clock stops --------------------------------------------
+
+async def _stall_experiment(dut, s_ns, m_ns, variant) -> dict:
+    """Stop m_clk (variant idle: before the request, req_q: when req_q rises, m_access: when the
+    destination is in its ACCESS phase), wait STALL_BOUND_S_CYCLES, restart m_clk, then run a
+    second write. Returns what the monitors saw."""
+    ctx = await _setup(dut, s_ns, m_ns)
+    obs = _Observer(dut).start()
+    addr, data = 0xF00, 0x5A5A0001
+    addr2, data2 = 0xF04, 0x5A5A0002
+
+    # Reference: one transfer with both clocks running.
+    master = cocotb.start_soon(ctx.s_master.write(0xE80, 0x11110000))
+    normal_cycles = 0
+    while not obs.s_done:
+        await RisingEdge(dut.s_clk)
+        normal_cycles += 1
+        if normal_cycles > STALL_BOUND_S_CYCLES:
+            raise RuntimeError("harness: the reference transfer did not complete")
+    await ClockCycles(dut.s_clk, 4)
+    n0, x0 = len(obs.s_done), len(obs.m_xfers)
+
+    def freeze() -> None:
+        ctx.m_clk_task.kill()
+        dut.m_clk.value = 0
+
+    if variant == "idle":
+        freeze()
+        await Timer(1, units="step")
+        master2 = cocotb.start_soon(ctx.s_master.write(addr, data))
+    else:
+        master2 = cocotb.start_soon(ctx.s_master.write(addr, data))
+        clk, probe = (
+            (dut.s_clk, dut.u_dut.req_q) if variant == "req_q" else (dut.m_clk, dut.m_penable)
+        )
+        for _ in range(200):
+            await RisingEdge(clk)
+            await ReadOnly()
+            if int(probe.value):
+                break
+        else:
+            raise RuntimeError(f"harness: the stop condition of variant {variant} never held")
+        await Timer(1, units="step")
+        freeze()
+        await Timer(1, units="step")
+
+    stall_done = None
+    for cyc in range(STALL_BOUND_S_CYCLES):
+        await RisingEdge(dut.s_clk)
+        await ReadOnly()
+        if int(dut.s_pready.value):
+            stall_done = cyc + 1
+            break
+    await Timer(1, units="step")
+
+    ctx.m_clk_task = cocotb.start_soon(Clock(dut.m_clk, m_ns, units="ns").start())
+    _active_tasks.append(ctx.m_clk_task)
+    restart_done = None
+    if stall_done is None:
+        for cyc in range(RESTART_BOUND_S_CYCLES):
+            await RisingEdge(dut.s_clk)
+            await ReadOnly()
+            if int(dut.s_pready.value):
+                restart_done = cyc + 1
+                break
+        await Timer(1, units="step")
+
+    # Let the first master return the bus to idle before a second write starts.
+    await ClockCycles(dut.s_clk, 4)
+    master3 = cocotb.start_soon(ctx.s_master.write(addr2, data2))
+    for _ in range(200):
+        await RisingEdge(dut.s_clk)
+        if len(obs.s_done) >= n0 + 2:
+            break
+    await Timer(20 * max(s_ns, m_ns), units="ns")
+    row = {
+        "ratio": (s_ns, m_ns),
+        "variant": variant,
+        "normal_cycles": normal_cycles,
+        "stall_done": stall_done,
+        "restart_done": restart_done,
+        "events": list(obs.s_done[n0:]),
+        "m_new": list(obs.m_xfers[x0:]),
+        "mem": (ctx.responder.mem.get(addr), ctx.responder.mem.get(addr2)),
+    }
+    for task in (master, master2, master3):
+        task.kill()
+    obs.stop()
+    _idle_s_side(dut)
+    return row
+
+
+async def _stall_rows(dut) -> list:
+    if "rows" not in _STALL_CACHE:
+        rows = []
+        for s_ns, m_ns in ((10, 10), (18, 4), (4, 9)):
+            for variant in ("idle", "req_q", "m_access"):
+                rows.append(await _stall_experiment(dut, s_ns, m_ns, variant))
+        _STALL_CACHE["rows"] = rows
+        for r in rows:
+            dut._log.info(
+                f"B2 s/m={r['ratio'][0]}/{r['ratio'][1]} stop={r['variant']:<8} "
+                f"reference_cycles={r['normal_cycles']} stall_done={r['stall_done']} "
+                f"restart_done={r['restart_done']} m_new={len(r['m_new'])}"
+            )
+    return _STALL_CACHE["rows"]
+
+
+@cocotb.test(expect_fail=True)
+async def test_b2_stalled_destination_clock_completes_within_bound(dut):
+    """Asserts: with m_rst_n_i high and m_clk_i stopped, the source must still complete the
+    request within STALL_BOUND_S_CYCLES cycles of s_clk_i, because it must not wait for a
+    destination that cannot answer. The bound is about 8 to 30 times the reference latency at the
+    ratios used. Stop points: before the request, when req_q rises, in the destination ACCESS
+    phase. Ratios 10/10, 18/4 and 4/9.
+
+    expect_fail: the review reads that S_REQ exits only on ack_s, a request that was never
+    forwarded, or a destination reset, so s_pready_o stays low until the clock runs again."""
+    rows = await with_timeout(_stall_rows(dut), 1000, "us")
+    stalled = [r for r in rows if r["stall_done"] is None]
+    assert not stalled, (
+        f"s_pready_o stayed low for {STALL_BOUND_S_CYCLES} s_clk cycles with m_clk stopped at "
+        + ", ".join(f"s/m={r['ratio'][0]}/{r['ratio'][1]} stop={r['variant']}" for r in stalled)
+    )
+
+
+@cocotb.test()
+async def test_b2_control_stall_then_restart_completes_once(dut):
+    """Companion of the B2 test. Documents the present stall-then-resume behaviour and proves the
+    bound is long: the reference transfer finishes in less than a quarter of the bound. After the
+    clock restarts, the stalled request completes with an okay response, the m_* face shows one
+    transfer with the right address and data, and a second write completes the same way. If a
+    timeout is added, change this test together with the B2 test."""
+    rows = await with_timeout(_stall_rows(dut), 1000, "us")
+    for r in rows:
+        tag = f"s/m={r['ratio'][0]}/{r['ratio'][1]} stop={r['variant']}"
+        assert r["normal_cycles"] * 4 <= STALL_BOUND_S_CYCLES, (
+            f"{tag}: reference latency {r['normal_cycles']} cycles is not short against the bound"
+        )
+        assert len(r["events"]) == 2, f"{tag}: expected two completions, got {len(r['events'])}"
+        assert [e[1] for e in r["events"]] == [0, 0], f"{tag}: a completion carried s_pslverr_o"
+        if r["stall_done"] is None:
+            assert r["restart_done"] is not None, f"{tag}: no completion after the restart"
+        xfers = [(x[1], x[2], x[3]) for x in r["m_new"]]
+        assert xfers == [(1, 0xF00, 0x5A5A0001), (1, 0xF04, 0x5A5A0002)], (
+            f"{tag}: unexpected transfers on the m_* face {xfers}"
+        )
+        assert r["mem"] == (0x5A5A0001, 0x5A5A0002), f"{tag}: destination memory {r['mem']}"
+    dut._log.info("B2 control: stalled requests complete once after the clock restarts")
+
+
+# --- B3. A short m_rst_n_i pulse can repeat a transfer -----------------------------------------
+
+@cocotb.test(expect_fail=True)
+async def test_b3_short_reset_pulse_makes_one_transfer(dut):
+    """Asserts: one request makes exactly one transfer on the m_* face (DS-CDC-106), also when
+    m_rst_n_i pulses low for less than one s_clk period. That pulse breaks DS-CDC-109, so the
+    review calls it a caller error; the owner asked to measure it. Sweep: pulse position and
+    width, 3 plans, four clock ratios, several alignments. Every point lies inside the window
+    where no s_clk edge sees ack_q and none samples the pulse.
+
+    expect_fail: the review reads that the reset clears the destination but the source still
+    holds req_q, so the destination runs the same request again after the release."""
+    rows = await with_timeout(_sweep(dut, "narrow"), 1000, "us")
+    live = [r for r in rows if not r["skipped"]]
+    dup = [r for r in live if r["m_xfers"] > 1]
+    dut._log.info(f"B3: {len(dup)} of {len(live)} short-pulse points repeated the transfer")
+    for r in dup:
+        dut._log.info("  repeated: " + _fmt_row(r))
+    assert not dup, (
+        f"{len(dup)} of {len(live)} points made more than one m_* transfer for one request: "
+        + "; ".join(_fmt_row(r) for r in dup[:6])
+    )
+
+
+@cocotb.test()
+async def test_b3_control_compliant_pulse_makes_one_transfer(dut):
+    """Companion of the B3 test. A pulse of m_rst_n_i that follows DS-CDC-109 never repeats a
+    transfer: at every point of the long sweep (pulse start before and after the acknowledge
+    reaches the source) the m_* face shows exactly one transfer and the source completes once."""
+    rows = await with_timeout(_sweep(dut, "long"), 1000, "us")
+    live = [r for r in rows if not r["skipped"]]
+    assert live, "no point of the long sweep ran"
+    for r in live:
+        tag = _fmt_row(r)
+        assert r["m_xfers"] == 1, f"a compliant pulse changed the transfer count: {tag}"
+        assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
+    dut._log.info(f"B3 control: {len(live)} compliant-pulse points made one transfer each")
+
+
+@cocotb.test()
+async def test_b3_control_short_pulse_window_reached(dut):
+    """Companion of the B3 test. Proves, without asserting the B3 outcome, that the short pulses
+    were not sampled by the status synchroniser (m_in_rst_s never rose), that the source
+    completed every request once, and that the sweep has points. A transfer count of one or of
+    two is accepted here."""
+    rows = await with_timeout(_sweep(dut, "narrow"), 1000, "us")
+    live = [r for r in rows if not r["skipped"]]
+    assert live, "no short-pulse point fitted before the next s_clk edge"
+    for r in live:
+        tag = _fmt_row(r)
+        assert not r["in_rst_seen"], f"the short pulse was sampled by the s domain: {tag}"
+        assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
+        assert 1 <= r["m_xfers"] <= 2, f"unexpected transfer count: {tag}"
+    dut._log.info(f"B3 control: {len(live)} short-pulse points, none sampled by the s domain")
+
+
+# --- B4. Worst-case latency of the bounds of DS-CDC-102 and DS-CDC-103 --------------------------
+
+async def _measure_ds102(dut, s_ns, m_ns) -> list:
+    """Edges of s_clk from the SETUP edge until s_pready_o reads 1, with the destination reset."""
+    ctx = await _setup(dut, s_ns, m_ns)
+    obs = _Observer(dut).start()
+    dut.m_rst_n.value = 0
+    await ClockCycles(dut.s_clk, int(dut.sync_stages_to_s_o.value) + 3)
+    if int(dut.u_dut.m_rst_n_s.value) != 0:
+        raise RuntimeError("harness: the s domain does not see the destination in reset")
+    counts = []
+    for rep in range(2):
+        master = cocotb.start_soon(ctx.s_master.read(0x80 + 4 * rep))
+        edges = None
+        for _ in range(40):
+            await RisingEdge(dut.s_clk)
+            await ReadOnly()
+            assert int(dut.m_psel.value) == 0, "m_psel rose while the destination is in reset"
+            if edges is None:
+                if int(dut.u_dut.s_state_q.value) == S_REQ:
+                    edges = 0
+            else:
+                edges += 1
+            if edges is not None and int(dut.s_pready.value):
+                break
+        else:
+            raise RuntimeError("harness: no completion within 40 s_clk edges")
+        assert int(dut.s_pslverr.value) == 1, "forced completion must carry s_pslverr_o=1"
+        counts.append(edges)
+        await RisingEdge(dut.s_clk)
+        _data, ok = await master
+        assert ok is False, "the read must report pslverr"
+    assert not obs.m_xfers, "a transfer reached the m_* face for a request made in reset"
+    return counts
+
+
+@cocotb.test()
+async def test_b4_ds102_latency_bound(dut):
+    """Measures DS-CDC-102: s_pready_o and s_pslverr_o read 1 after at most DS102_MAX_EDGES
+    rising edges of s_clk that follow the SETUP edge, with m_rst_n_i low and seen by the source.
+    Ratios 4/9, 18/4, 10/10 and 7/11. The measured maximum of each ratio is logged."""
+    for s_ns, m_ns in _B4_RATIOS:
+        counts = await with_timeout(_measure_ds102(dut, s_ns, m_ns), 200, "us")
+        dut._log.info(
+            f"B4 DS-CDC-102 s/m={s_ns}/{m_ns}: edges after SETUP {counts}, max {max(counts)}, "
+            f"DS bound {DS102_MAX_EDGES}"
+        )
+        assert max(counts) <= DS102_MAX_EDGES, (
+            f"s/m={s_ns}/{m_ns}: forced completion took {max(counts)} edges, DS bound is "
+            f"{DS102_MAX_EDGES}"
+        )
+
+
+async def _measure_ds103(dut, s_ns, m_ns) -> list:
+    """Edges of s_clk from the fall of m_rst_n_i until s_pready_o reads 1, for a forwarded request
+    that the destination never answers. The reset falls at three offsets inside one s period."""
+    ctx = await _setup(dut, s_ns, m_ns, wait_states=1000)
+    counts = []
+    for offset in sorted({0, s_ns // 2, s_ns - 1}):
+        master = cocotb.start_soon(ctx.s_master.read(0x40))
+        for _ in range(200):
+            await RisingEdge(dut.m_clk)
+            await ReadOnly()
+            if int(dut.m_penable.value):
+                break
+        else:
+            raise RuntimeError("harness: the destination never reached the ACCESS phase")
+        await RisingEdge(dut.s_clk)
+        if offset:
+            await Timer(offset, units="ns")
+        dut.m_rst_n.value = 0
+        edges = 0
+        for _ in range(40):
+            await RisingEdge(dut.s_clk)
+            edges += 1
+            await ReadOnly()
+            if int(dut.s_pready.value):
+                break
+        else:
+            raise RuntimeError("harness: no completion within 40 s_clk edges")
+        assert int(dut.s_pslverr.value) == 1, "completion after a destination reset needs an error"
+        counts.append(edges)
+        await RisingEdge(dut.s_clk)
+        dut.m_rst_n.value = 1
+        _data, ok = await master
+        assert ok is False, "the read must report pslverr"
+        n = _post_reset_recovery_cycles(dut)
+        await ClockCycles(dut.s_clk, n)
+        await ClockCycles(dut.m_clk, n)
+    return counts
+
+
+@cocotb.test()
+async def test_b4_ds103_latency_bound(dut):
+    """Measures DS-CDC-103: after m_rst_n_i falls, a forwarded request completes with an error
+    within SYNC_STAGES_TO_S+3 rising edges of s_clk. The log also gives the margin to the count
+    that the TM derives, SYNC_STAGES_TO_S+2, so the owner can tighten or keep the DS bound.
+    Ratios 4/9, 18/4, 10/10 and 7/11, with the reset at three offsets inside one s period."""
+    stages = int(dut.sync_stages_to_s_o.value)
+    for s_ns, m_ns in _B4_RATIOS:
+        counts = await with_timeout(_measure_ds103(dut, s_ns, m_ns), 400, "us")
+        dut._log.info(
+            f"B4 DS-CDC-103 s/m={s_ns}/{m_ns}: edges after the reset falls {counts}, "
+            f"max {max(counts)}, DS bound {stages + 3}, TM-derived count {stages + 2}"
+        )
+        assert min(counts) >= 1, f"s/m={s_ns}/{m_ns}: completion before any s_clk edge"
+        assert max(counts) <= stages + 3, (
+            f"s/m={s_ns}/{m_ns}: completion took {max(counts)} edges, DS bound is {stages + 3}"
+        )
