@@ -5,6 +5,10 @@
 
 This chapter describes the DFT architecture. It covers scan, JTAG and memory self-test.
 
+\begin{information}
+Some results in this chapter say that timing passes or is positive at all nine corners. The SRAM macro has one corner model, so these words mean nine corner labels on one model. Read \cref{tm:caveat:sky130-single-sram-corner} before you quote such a result.
+\end{information}
+
 \begin{relocated}{docs/design/DFT_ARCHITECTURE.md}
 % Converted from docs/design/DFT_ARCHITECTURE.md by tools/docs/md2tex.py; edit this file, not the original.
 
@@ -7879,6 +7883,10 @@ about 10 min, area about 3 min.
 
 This chapter describes the FPGA prototype. It gives the board choice and the measured results.
 
+\begin{information}
+The ASIC frequencies in this chapter are ASAP7 figures that do not stand. The prototype scale factors use them. The FPGA results themselves are not meant here. Read \cref{tm:ch:standing-caveats} before you quote an ASIC frequency or a scale factor from this chapter.
+\end{information}
+
 \begin{relocated}{docs/FPGA_BOARD_SELECTION.md}
 % Converted from docs/FPGA_BOARD_SELECTION.md by tools/docs/md2tex.py; edit this file, not the original.
 \section{\texorpdfstring{FPGA board selection (bead \code{hlrm}, GH
@@ -10042,6 +10050,10 @@ explicitly). The 7-series runs used the full \code{synth_xilinx} script.
 \chapter{High-level synthesis}\label{tm:ch:high-level-synthesis}
 
 This chapter describes the high-level synthesis work and its results.
+
+\begin{information}
+Some text of this chapter calls ASAP7 figures measured sign-off numbers. These figures do not stand as sign-off. Read \cref{tm:ch:standing-caveats} before you quote them.
+\end{information}
 
 \begin{relocated}{docs/CPP_TO_RTL_HLS_EVALUATION.md}
 % Converted from docs/CPP_TO_RTL_HLS_EVALUATION.md by tools/docs/md2tex.py; edit this file, not the original.

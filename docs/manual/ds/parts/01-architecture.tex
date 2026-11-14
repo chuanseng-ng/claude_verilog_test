@@ -5473,6 +5473,10 @@ is deferred to a potential Phase 3.5 or later.
 
 This chapter states the architecture of the GPU-lite engine. It defines the instruction set and the execution model.
 
+\begin{information}
+Some text of this chapter comes from plans of a past date. It reports ASAP7 sign-offs of the CPU and of the GPU, and a timing-closed top. These claims do not stand. Read \cref{tm:ch:standing-caveats} before you quote an ASAP7 figure from this chapter.
+\end{information}
+
 \begin{relocated}{docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md}
 % Converted from docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md by tools/docs/md2tex.py; edit this file, not the original.
 \section{Phase 4 GPU Architecture Specification}\label{ds:ch:phase4-gpu-architecture}
@@ -7523,6 +7527,10 @@ once doc is committed. \\
 
 This chapter states how the blocks join in the SoC. It defines the bus fabric and the integration rules.
 
+\begin{information}
+Some text of this chapter comes from plans of a past date. It reports an ASAP7 SoC sign-off and a full timing closure at all corners. These claims do not stand. Read \cref{tm:ch:standing-caveats} before you quote an ASAP7 figure from this chapter.
+\end{information}
+
 \begin{relocated}{docs/PHASE5_SOC_INTEGRATION_PLAN.md}
 % Converted from docs/PHASE5_SOC_INTEGRATION_PLAN.md by tools/docs/md2tex.py; edit this file, not the original.
 \section{Phase 5 SoC Integration --- Roadmap \& Implementation Plan}\label{ds:ch:phase5-soc-integration-plan}
@@ -9156,6 +9164,10 @@ cases \\
 \chapter{Phase 6 IP expansion}\label{ds:ch:phase-6-ip-expansion}
 
 This chapter states the blocks that Phase 6 adds. It lists the peripherals, the crypto accelerator and the NPU.
+
+\begin{information}
+The results of the batched Sky130 harden in this chapter say that timing is closed at all nine corners. The SRAM macro has one corner model, so these words mean nine corner labels on one model. Read \cref{tm:caveat:sky130-single-sram-corner} before you quote such a result.
+\end{information}
 
 \begin{relocated}{docs/PHASE6_IP_EXPANSION_PLAN.md}
 % Converted from docs/PHASE6_IP_EXPANSION_PLAN.md by tools/docs/md2tex.py; edit this file, not the original.
@@ -14964,6 +14976,11 @@ This chapter lists the architecture decisions that stay fixed. It gives the reas
 
 % Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
 \chapter{Key Design Decisions (From Specifications)}\label{ds:dec:key-design-decisions}
+
+\begin{information}
+The last paragraph of this chapter says that an ASAP7 frequency was demonstrated. This claim does not stand. Read \cref{tm:ch:standing-caveats} before you quote it.
+\end{information}
+
 \begin{relocated}{CLAUDE.md}
 
 \textbf{Phase 1 CPU}:

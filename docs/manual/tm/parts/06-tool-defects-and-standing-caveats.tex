@@ -3,3 +3,587 @@
 \chapter{Tool defects and caveats}\label{tm:ch:tool-defects-and-caveats}
 
 This chapter lists the known tool defects and the standing caveats. Each entry gives the effect and the work-around.
+
+\section{How to use this part}\label{tm:ch:tool-defects-and-caveats:use}
+A standing caveat is a limit on what a result shows. The limit stays until a named condition ends it. A tool defect is a behaviour of a tool, or of the flow around it, that gives a wrong result or no result without a clear error. Some entries are not faults of the tool itself. Each section says which part is silent.
+
+Read the caveats of \cref{tm:ch:standing-caveats} before you quote a result of a physical design flow. A figure that a flow report shows is not yet a result that you may quote. Quote the figure together with its caveat.
+
+Each caveat section has five parts.
+\begin{itemize}
+  \item The statement of the caveat.
+  \item What you may not conclude from a result.
+  \item What you may still say.
+  \item The evidence. It is a list of references to the Changes record and to the other books.
+  \item What ends the caveat. A section gives this part only when a source states the condition.
+\end{itemize}
+
+Each defect section of \cref{tm:ch:tool-defects} has five parts. They are the tool and the defect, how the defect shows, the rule or check that guards against it, the work-around and the evidence.
+
+The Changes record holds the dated history of each entry. The record says what happened. This part says what the reader may quote today. This part does not change a record. If this part and a record disagree, report it to the owner.
+
+\section{Summary of the standing caveats}\label{tm:ch:tool-defects-and-caveats:caveat-summary}
+\Cref{tab:tm:ch:tool-defects-and-caveats:caveats} lists the caveats in the order of the project guide. The last caveat comes from the practice rules of the project guide.
+
+\begin{table}[ht]
+  \centering
+  \caption{Standing caveats}\label{tab:tm:ch:tool-defects-and-caveats:caveats}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{32mm}>{\raggedright\arraybackslash}p{44mm}>{\raggedright\arraybackslash}p{34mm}>{\raggedright\arraybackslash}p{32mm}@{}}
+    \toprule
+    Caveat & What it limits & Evidence & Status\\
+    \midrule
+    Synlig macro views (\cref{tm:caveat:synlig-macro-views}) & Every use of the ASAP7 CPU and GPU macro views at gate level & \cref{cr:defect:asap7-cpu-synlig-ma7} & Stands until a run replaces the views\\
+    Figures rest on the views (\cref{tm:caveat:asap7-figures-rest-on-macro-views}) & Every ASAP7 CPU, GPU and SoC timing, power and area figure & \cref{cr:run:asap7:pause-button-decision-2026-09-20-shelved-until-a-32-gb-host-beads-lxvma7-2kn} & Ends with the first caveat\\
+    Zero-wire timing (\cref{tm:caveat:asap7-zero-wire-timing}) & The old ASAP7 timing figures & \cref{cr:run:phase5} & Stands for the old runs\\
+    Withdrawn DRC and antenna claims (\cref{tm:caveat:asap7-drc-antenna-withdrawn}) & Every ASAP7 claim of 0 DRC and 0 antenna & \cref{cr:run:phase5:routing-physical-closure-caveat-detailed-routing-committed-zero-wires-bead-xy6} & Stands\\
+    Empty power grid (\cref{tm:caveat:asap7-empty-power-grid}) & Every ASAP7 routing number & \cref{cr:run:phase5:pdn-caveat-2026-09-12-beads-gyx-4l8-every-asap7-run-has-an-empty-power-grid} & Ends with a routed run on a real grid\\
+    Present SoC point (\cref{tm:caveat:asap7-soc-setup-wns}) & The ASAP7 SoC timing claim & \cref{cr:run:phase5} & Stands until a new measurement\\
+    One SRAM corner (\cref{tm:caveat:sky130-single-sram-corner}) & Every Sky130 timing claim at a corner other than nom\_tt & \cref{cr:pd:sky130-soc-sdc} & Stands until the SRAM model has corners\\
+    Commercial flows (\cref{tm:caveat:commercial-flows-indicative}) & Every figure of the commercial flows & \cref{tm:pd:commercial-flow-comparison} & Stands\\
+    Sky130 CPU macro (\cref{tm:caveat:sky130-cpu-macro-sv2v}) & Every Sky130 result from before the rebuild of the macro & \cref{cr:defect:sky130-cpu-synlig-dud4} & Resolved for the macro\\
+    ASAP7 re-hardening (\cref{tm:caveat:asap7-reharden-host}) & The replacement of the ASAP7 CPU and GPU macro views, and a route on the real power grid & \cref{cr:run:asap7:pause-button-decision-2026-09-20-shelved-until-a-32-gb-host-beads-lxvma7-2kn} & Ends with a host of 32 GB or more\\
+    No ASAP7 physical verification (\cref{tm:caveat:asap7-no-physical-verification}) & Every ASAP7 claim of a DRC or an LVS result & \cref{tm:pd:sky130-real-drc-lvs:1-findings} & Stands\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Summary of the tool defects}\label{tm:ch:tool-defects-and-caveats:defect-summary}
+\Cref{tab:tm:ch:tool-defects-and-caveats:defects} lists the tool defects and the guard of each one. The column Guide names the rule or the practice of the project guide for the defect, by its title. A guard of the type review has no script.
+
+\begin{table}[ht]
+  \centering
+  \caption{Tool defects}\label{tab:tm:ch:tool-defects-and-caveats:defects}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{46mm}>{\raggedright\arraybackslash}p{24mm}>{\raggedright\arraybackslash}p{40mm}>{\raggedright\arraybackslash}p{30mm}@{}}
+    \toprule
+    Defect & Tool & Guard & Guide\\
+    \midrule
+    Select on a struct member (\cref{tm:defect:synlig-struct-member-select}) & Synlig & Source check \code{check_struct_member_select.py} & No select on a struct member\\
+    Miscompile of the CPU (\cref{tm:defect:synlig-cpu-miscompile}) & Synlig & Front end sv2v, and gate-versus-RTL simulation & Use the sv2v front end for macros\\
+    Undefined value that the log only warns about (\cref{tm:defect:synlig-undef-warning}) & Synlig & Synthesis gate \code{check_synth_undef.py} & ---\\
+    Silent blackbox (\cref{tm:defect:sv2v-blackbox}) & sv2v & Checks of the file lists & sv2v file lists; filelists from a generator\\
+    Use before declare (\cref{tm:defect:use-before-declare}) & Verilator and sv2v & Strict elaboration \code{check_elab_strict.py} & Strict elaboration\\
+    Hidden runtime mux (\cref{tm:defect:yosys-hides-runtime-mux}) & Yosys & Review, with the coarse-grain netlist & Runtime-indexed mux\\
+    Open power connections (\cref{tm:defect:sram-macro-instance-name}) & LibreLane (Sky130 SoC) & Review & SRAM macro instance name\\
+    Flow that continues after a failure (\cref{tm:defect:flow-swallows-failure}) & LibreLane patches & Gate \code{check_asap7_routing.py} (no DRC count) & ---\\
+    Zero-wire timing (\cref{tm:defect:sta-without-in-session-route}) & OpenROAD & Opt-in flow setting; annotation warning & ---\\
+    Macro power of zero (\cref{tm:defect:macro-power-omitted}) & Macro view flow & Macro power injection & ---\\
+    No \code{-datapath_only} (\cref{tm:defect:opensta-datapath-only}) & OpenSTA & Second check file & ---\\
+    Filter on \code{diff} (\cref{tm:defect:rtk-diff}) & rtk & Use \code{cmp -s} & Do not gate a decision on diff\\
+    Negated call in Xezim (\cref{tm:defect:xezim-negated-call}) & Xezim & None; use a second simulator & ---\\
+    CDC gate that is informational by default (\cref{tm:defect:cdc-gate-informational}) & Flow & Option \code{CDC_STRICT=1} & ---\\
+    Empty report that passes (\cref{tm:defect:empty-report-passes}) & Many & Wrappers of \src{tools/eda/} & ---\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\chapter{Standing caveats}\label{tm:ch:standing-caveats}
+
+This chapter has one section for each standing caveat. The order is the order of the project guide. The last section comes from the practice rules of the project guide.
+
+\section{Synlig macro views of ASAP7}\label{tm:caveat:synlig-macro-views}
+\subsection*{Statement}
+The Synlig front end built the ASAP7 views of the CPU macro and of the GPU macro. These views are functionally wrong. The record states that no completed run has replaced them. The committed views are in \src{pnr/asap7/cpu/macro/} and \src{pnr/asap7/gpu/macro/}. The flow of the SoC copies these views into \src{pnr/asap7/soc/macro/}, and git ignores the copies. Some records name the copies as the views.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item A gate-level result of the ASAP7 CPU macro shows how the RTL behaves.
+  \item The GPU view is correct. The record measured a wrong elaboration of one GPU block. It did not simulate the GPU netlist.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item An RTL simulation does not read the views, and the defect does not change its result.
+  \item The cause is the front end and not the RTL. A netlist that sv2v built from the same RTL was equal to the RTL on every program that the record tried. The ASAP7 CPU, GPU and SoC configurations now select sv2v.
+\end{itemize}
+
+\subsection*{Evidence}
+The record proves the defect on the CPU netlist by simulation (\cref{cr:defect:asap7-cpu-synlig-ma7:verdict,cr:defect:asap7-cpu-synlig-ma7:consequences}). The record measures the GPU case at the level of one block (\cref{cr:defect:synlig-struct-select-ainf:step-4-verdict-recommendation-limits}). The status history says that the views stay as built (\cref{cr:status:claude-md-overview}). The defect is in \cref{tm:defect:synlig-cpu-miscompile}.
+
+\subsection*{What ends the caveat}
+A completed place and route run on the sv2v front end replaces the views. The record states that this run is missing and that it waits for a larger host (\cref{tm:caveat:asap7-reharden-host}).
+
+\section{ASAP7 figures rest on the macro views}\label{tm:caveat:asap7-figures-rest-on-macro-views}
+\subsection*{Statement}
+Every ASAP7 timing, power and area figure of the CPU, the GPU and the SoC rests on the Synlig netlists of \cref{tm:caveat:synlig-macro-views}. The figures of the SoC read the macro views. The figures of the CPU and GPU blocks come from the netlists from which the views were made. The record says that these figures rest on a netlist with a proven functional miscompile. For the GPU, the record shows the fault on a part of one module and not by simulation of the netlist.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item A figure is the frequency, the power or the area of a working design.
+  \item A figure of the ASAP7 CPU, GPU or SoC is a sign-off figure.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item A figure is what the flow measured on that netlist.
+  \item Quote a figure only together with this caveat and with the caveats that follow.
+\end{itemize}
+
+\subsection*{Evidence}
+\Cref{cr:run:asap7:pause-button-decision-2026-09-20-shelved-until-a-32-gb-host-beads-lxvma7-2kn} and \cref{cr:status:claude-md-overview} state the carry-forward risk.
+
+\subsection*{What ends the caveat}
+It ends with the caveat of \cref{tm:caveat:synlig-macro-views}. A new run on the new views gives new figures. The old figures stay as they are.
+
+\section{Old ASAP7 timing on zero-wire parasitics}\label{tm:caveat:asap7-zero-wire-timing}
+\subsection*{Statement}
+The old ASAP7 timing figures come from a timing analysis on zero-wire parasitics. The analysis ran without a global route in the same session. The tool does not recover the parasitics from a saved database. In a test run on a CPU block of the same design family, most drivers had no parasitics and the report showed no violation. Treat these figures as unvalidated.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item An old timing figure is correct.
+  \item An old timing figure is wrong. The record calls the figures unvalidated and not confirmed wrong.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item The run directories of the old figures are gone, and the RTL has changed. Nobody can re-measure them.
+  \item The record measured the CPU again, with the fix, on the RTL of a later date and at the period of the old figure. The CPU does not meet that period on that RTL (\cref{tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20}). This is not a re-run of the old run.
+  \item A measurement of the SoC with the fix exists (\cref{tm:caveat:asap7-soc-setup-wns}).
+\end{itemize}
+
+\subsection*{Evidence}
+The opening notes of \cref{cr:run:phase5} state the defect, the test run that proved it and the scope of the old figures. The defect is in \cref{tm:defect:sta-without-in-session-route}.
+
+\subsection*{What ends the caveat}
+It does not end for the old runs, because their data is gone. A new run on the fixed flow gives a measured figure.
+
+\section{Withdrawn ASAP7 claims of 0 DRC and 0 antenna}\label{tm:caveat:asap7-drc-antenna-withdrawn}
+\subsection*{Statement}
+The project withdrew the ASAP7 claims of 0 DRC and 0 antenna. In the runs that carried the claims, detailed routing committed no wires. Each check reported zero, because nothing was routed to violate.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item An ASAP7 run from before the routing fix is clean for DRC or for antenna.
+  \item ASAP7 routing is closed.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item The record shows a CPU block run that committed wires, with a newer OpenROAD and a point fix for one column of macros. The record marks the fault as resolved for new runs. It does not make the old runs valid.
+  \item The record says that the caveat of routing with no wires still applies to the present SoC point (\cref{tm:caveat:asap7-soc-setup-wns}).
+  \item The first run that committed wires still had DRC violations. The record says that this run is not physical closure.
+  \item The ASAP7 flow does not run Magic, KLayout or Netgen (\cref{tm:caveat:asap7-no-physical-verification}).
+\end{itemize}
+
+\subsection*{Evidence}
+\Cref{cr:run:phase5:routing-physical-closure-caveat-detailed-routing-committed-zero-wires-bead-xy6} is the statement of the record. The lesson for patches of the flow is in \cref{tm:pd:librelane-patching:the-cautionary-case-drttcl}. The defect is in \cref{tm:defect:flow-swallows-failure}.
+
+\subsection*{What ends the caveat}
+The sources name no run that ends it. A routed run on a real power grid is the next step (\cref{tm:caveat:asap7-empty-power-grid}).
+
+\section{Empty ASAP7 power grid}\label{tm:caveat:asap7-empty-power-grid}
+\subsection*{Statement}
+The ASAP7 power grid was empty in every run that the record checked. The routing numbers of these runs are lower bounds.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item An ASAP7 DRC count or routing result is final.
+  \item An ASAP7 run is closed because its power report shows no grid violation. There were no violations, because there were no grid shapes.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item A fixed grid script exists. The record says that the fixed grid builds and passes the power grid check on the CPU, the GPU and the SoC. The record made this check without a route. Its IR drop figure is indicative only.
+  \item Only the LibreLane 3.0.14 configurations of the CPU and of the GPU select the fixed grid. The configurations of the SoC still select the old grid script, which has the same fault. This statement comes from the configuration files and not from a run record.
+  \item The record says that the empty grid does not change timing, power and area in kind. The other caveats still limit them.
+\end{itemize}
+
+\subsection*{Evidence}
+\Cref{cr:run:phase5:pdn-caveat-2026-09-12-beads-gyx-4l8-every-asap7-run-has-an-empty-power-grid} shows the count of grid shapes. \Cref{cr:run:phase5:routing-with-a-real-pdn-is-host-blocked-2026-09-12-bead-4l8} shows that a route with the real grid did not finish on the host of the record. \Cref{cr:run:phase5:pdn-fixed-2026-09-12-same-day-orfs-style-grid-builds-and-ir-drop-now-runs} gives the fixed grid and the indicative IR drop figure. The files \src{pnr/asap7/soc/pdn_orfs.tcl}, \src{pnr/asap7/cpu/config_3014.json} and \src{pnr/asap7/gpu/config_3014.json} show which configurations select the fixed grid.
+
+\subsection*{What ends the caveat}
+A configuration selects the fixed grid, a detailed route on that grid finishes, and the DRC count is reviewed. The record says that the route needs a machine with 32 GB or more (\cref{tm:caveat:asap7-reharden-host}). The record expects that the design needs work to close DRC with the grid in place.
+
+\section{Present ASAP7 SoC point}\label{tm:caveat:asap7-soc-setup-wns}
+\subsection*{Statement}
+The present ASAP7 SoC point is a setup WNS of $-727.37$~ps at a period of 1750~ps. Hold is clean.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item The SoC meets the period of 1750~ps.
+  \item An older SoC figure that shows a closed period stands.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item The point is a measurement on the fixed flow, of the RTL of the date of the run. The RTL changed after the run, so the point is the latest measurement and not a measurement of the present RTL. The record checked that no real signal driver lacked parasitics.
+  \item The point uses parasitics from the global route, not SPEF.
+  \item The record places the failing endpoints inside the SRAM array of the SoC.
+  \item The point still rests on the macro views (\cref{tm:caveat:synlig-macro-views}). The record says that the caveat of routing with no wires still applies to it (\cref{tm:caveat:asap7-drc-antenna-withdrawn}). The configurations of the SoC select the old grid script, so the caveat of the empty grid also applies (\cref{tm:caveat:asap7-empty-power-grid}).
+\end{itemize}
+
+\subsection*{Evidence}
+The update in the opening notes of \cref{cr:run:phase5} gives the point and its scope. \Cref{cr:status:phase-status:current-phase} repeats it.
+
+\subsection*{What ends the caveat}
+A new measurement replaces the point. The sources name no other condition.
+
+\section{Sky130 timing with one SRAM corner model}\label{tm:caveat:sky130-single-sram-corner}
+\subsection*{Statement}
+Sky130 timing uses one corner model of the SRAM. The model is nom\_tt only, and the flow applies it to every corner. The words ``clean at 9 corners'' mean nine corner labels on one SRAM model.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item A setup or hold result at a slow or a fast corner is independently verified for the paths through the SRAM.
+  \item A Sky130 timing result is a validated multi-corner sign-off.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item The CPU macro has a separate Liberty view for each corner. The record calls the paths that are wholly in standard-cell logic corner-accurate.
+  \item The CPU macro holds SRAM macros of its own. The flow of the CPU block reads one typical-corner Liberty view for them. So the paths through these SRAMs inside the CPU macro have the same limit as the paths through the SRAM of the SoC. This statement comes from the configuration of the CPU block and not from a run record.
+  \item The corner model of the SRAM does not change the physical gates: LVS, routing DRC and the power grid. This does not say that these gates are free of waivers or of checks that did not run (\cref{tm:caveat:asap7-no-physical-verification}).
+  \item A Sky130 timing result is a typical-corner result. The flow checked all nine corner labels, but the paths through the SRAM have the same timing at each label. Say both facts.
+\end{itemize}
+
+\subsection*{Evidence}
+The header of the constraint file of the Sky130 SoC gives the scope (\cref{cr:pd:sky130-soc-sdc}). The same limit is in \cref{tm:pd:node-strategy:sky130-real-drclvs-sign-off-gh-epic-102-stages-12-complete-2026-07-31} and in \cref{tm:pd:commercial-flow-comparison}. The file \src{pnr/sky130/cpu/config.json} lists the one SRAM Liberty view that the CPU block reads. The nine corner views of the CPU macro are in \cref{cr:defect:sky130-cpu-synlig-dud4:re-harden-on-sv2v-2026-10-11-remedy-applied}.
+
+\subsection*{What ends the caveat}
+The SRAM macro gets a model for each corner. The record says that a characterization by circuit simulation did not fit the host.
+
+\section{Commercial flows are indicative}\label{tm:caveat:commercial-flows-indicative}
+\subsection*{Statement}
+The commercial flows in \src{pnr/commercial/} are indicative. No arm meets the sign-off criteria. These are setup and hold WNS of zero or more and a TNS of zero at all nine corners.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item A commercial arm is signed off.
+  \item A commercial figure is a figure of silicon.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item The comparison judges the arms with one extractor and one timing tool.
+  \item The caveats of the comparison apply to every figure. The extractor is calibrated to the open extractor and not to silicon. The SRAM Liberty has the TT model at every corner. The three arms use three different synthesis netlists. The I/O latency model leaves artefacts at the slow and the fast corners. The IR figures are indicative.
+\end{itemize}
+
+\subsection*{Evidence}
+\Cref{tm:pd:commercial-flow-comparison} states the status and the caveats. \Cref{tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative} repeats them.
+
+\subsection*{What ends the caveat}
+The sources name no condition.
+
+\section{Sky130 CPU macro on sv2v}\label{tm:caveat:sky130-cpu-macro-sv2v}
+\subsection*{Statement}
+The project re-hardened the Sky130 CPU macro with the sv2v front end. The older views, which Synlig built, were wrong.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item A Sky130 result from before the re-harden describes the present macro.
+  \item A result after the re-harden differs from a result before it in one variable only. The record says that more than one variable changed.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item The gate netlist of the new macro was equal to the RTL on every program that the record tried. A negative control showed that the comparison can fail.
+  \item The check of the synthesis log and of the netlist now guards the flow (\cref{tm:defect:synlig-undef-warning}).
+\end{itemize}
+
+\subsection*{Evidence}
+\Cref{cr:defect:sky130-cpu-synlig-dud4:verdict} gives the fault of the old view. \Cref{cr:defect:sky130-cpu-synlig-dud4:consequences} gives the effect on the Sky130 SoC. \Cref{cr:defect:sky130-cpu-synlig-dud4:re-harden-on-sv2v-2026-10-11-remedy-applied} gives the re-harden.
+
+\subsection*{What ends the caveat}
+The caveat for the macro is resolved. It remains for each result from before the re-harden.
+
+\section{ASAP7 re-hardening needs a large host}\label{tm:caveat:asap7-reharden-host}
+\subsection*{Statement}
+The re-hardening of the ASAP7 CPU macro and of the ASAP7 GPU macro needs a host with 32 GB of memory or more.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item A change of a configuration setting repairs the routing regression. The record says that five single-variable experiments refuted every hypothesis at the level of the configuration.
+  \item The sv2v front end alone gives routed ASAP7 views. A re-harden on sv2v ended in a routing regression. The record did not prove the cause. The one explanation that it did not exclude is the pin-access geometry of the SRAM macro, and a change of that geometry needs the approval of the owner.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item The correct front end is set in the configurations. A completed run is missing.
+  \item A route on the real power grid did not finish on the host of the record.
+\end{itemize}
+
+\subsection*{Evidence}
+\Cref{cr:run:asap7:pause-button-decision-2026-09-20-shelved-until-a-32-gb-host-beads-lxvma7-2kn} gives the decision, the next step and the carry-forward risk. \Cref{cr:run:phase5:routing-with-a-real-pdn-is-host-blocked-2026-09-12-bead-4l8} gives the memory limit of the route. \Cref{cr:run:asap7:candidate-3-executed-as-two-bounded-pd-runs-both-refuted-2026-09-19-bead-lxv} gives the routing regression and the one explanation that stays open. \Cref{cr:status:claude-md-overview} repeats the decision.
+
+\subsection*{What ends the caveat}
+A host with 32 GB or more becomes available. The record then gives this order. First, re-run the CPU re-harden on sv2v with the real power grid. Then consider the geometry of the macro, and only with the approval of the owner.
+
+\section{ASAP7 flow: no physical verification}\label{tm:caveat:asap7-no-physical-verification}
+\subsection*{Statement}
+The ASAP7 flow of the CPU, the GPU and the SoC skips Magic, KLayout and Netgen. The configurations set \code{RUN_MAGIC_DRC}, \code{RUN_KLAYOUT_DRC}, \code{RUN_KLAYOUT_XOR} and \code{RUN_LVS} to false. The PDK is predictive. Only Sky130 has real DRC and LVS in this project. The record states that Magic and Netgen are blocked for FreePDK45. The flow reports no result for the checks that do not run. A reader can mistake the absence of a result for a clean result.
+
+\subsection*{What you may not conclude}
+\begin{itemize}
+  \item An ASAP7 layout is clean for DRC or for LVS.
+  \item A Sky130 DRC result has no waiver and no skipped check.
+\end{itemize}
+
+\subsection*{What you may still say}
+\begin{itemize}
+  \item A DRC or an LVS result is real only for a Sky130 run. State the limits of the run with it. Do not state such a result for ASAP7.
+  \item The Magic DRC count of the Sky130 runs has a waiver for the violations inside the SRAM footprints.
+  \item A Sky130 SoC harden of the record did not run KLayout DRC.
+\end{itemize}
+
+\subsection*{Evidence}
+\Cref{tm:pd:sky130-real-drc-lvs:1-findings} and \cref{tm:pd:node-strategy:sky130-real-drclvs-sign-off-gh-epic-102-stages-12-complete-2026-07-31} state the limit and the waiver. \Cref{tm:pd:sky130-real-drc-lvs:stage-2-re-harden-with-phase-6a-gpio-run-2026-09-26-00-07-59-2026-09-26-bead-00ef} shows the harden without KLayout DRC. The files \src{pnr/asap7/cpu/config.json}, \src{pnr/asap7/gpu/config.json} and \src{pnr/asap7/soc/config.json} hold the switches.
+
+\subsection*{What ends the caveat}
+The sources name no condition. The limit is in the flow.
+
+\chapter{Tool defects}\label{tm:ch:tool-defects}
+
+This chapter has one section for each tool defect. Each section names the guard of the defect and the work-around.
+
+\section{Synlig: select on a struct member}\label{tm:defect:synlig-struct-member-select}
+\subsection*{Tool and defect}
+Synlig reads a bit select, a part select or an element select on a struct member wrongly. Three forms are known. In the first form, the struct type has exactly two members with a packed range, and a select on any member of the type reads the wrong offset. In the second form, a part select on the left-hand side writes the whole member. In the third form, an element select of a multi-dimensional packed array member reads one bit.
+
+\subsection*{How it shows}
+Usually it does not show. There is no warning and no unknown value. A new member can change a working line into a broken line without a change of the line. In a port connection, Synlig also logs a range select out of bounds and ties the port to an unknown value. Lint and LVS do not find the defect. An equivalence check of each module against sv2v finds a select inside the module. It does not find a select in a port connection, because the broken wires are outside each module. sv2v is not affected.
+
+\subsection*{Guard}
+The rule of the project guide on selects of a struct member. The script \src{tools/verif/check_struct_member_select.py} scans \src{rtl/} for the idiom. It fails on any site. The waiver file \src{tools/verif/struct_member_select_baseline.txt} stays empty. The script is a tripwire on the source text. It does not elaborate the design. A select that spans several lines, or that a macro hides, is outside its scope.
+
+\subsection*{Work-around}
+Copy the member to a named full-width wire, then select from the wire. For a write, build the whole member in a named wire and assign the whole member. The copy adds no mux.
+
+\subsection*{Evidence}
+\Cref{cr:defect:synlig-struct-select-ainf:step-1-the-defect-rule-probe-evidence-toolsverifstruct-selectresultsround17txt-370-probes,cr:defect:synlig-struct-select-ainf:step-4-verdict-recommendation-limits} give the rule and the limits. \Cref{um:guide:coding-guidelines:13-language-constructs} and \cref{ds:inv:struct-member-select} give the coding rule.
+
+\section{Synlig: miscompile of the CPU and the front end}\label{tm:defect:synlig-cpu-miscompile}
+\subsection*{Tool and defect}
+Synlig elaborated two port connections of the hazard unit in the CPU as undefined values. Synthesis then merged the registered forwarding selects of the two operands. The netlist computes wrong results.
+
+\subsection*{How it shows}
+Only the log of the synthesis shows a warning. Lint, the checks of the synthesis, LVS and place and route pass. Timing analysis and place and route accept the smaller, wrong netlist. Checks of single modules do not find the defect, because the broken wires are in the port connection of an instance.
+
+\subsection*{Guard}
+The physical design practice in the project guide names the front end for macros. The configurations of the CPU, the GPU and the SoC for ASAP7, and of the CPU and the SoC for Sky130, set \code{USE_SYNLIG} to false and read an sv2v netlist. The configurations of several ASAP7 leaf blocks, of the ASAP7 template, of FreePDK45 and of the legacy flow still set it to true. Do not start a macro from such a configuration. A comparison of the gate netlist with the RTL by simulation finds the fault (\src{tools/verif/gls/sky130/run_netlist_proof.sh}).
+
+\subsection*{Work-around}
+Build macros with sv2v. Write the member of \cref{tm:defect:synlig-struct-member-select} to a named wire.
+
+\subsection*{Evidence}
+\Cref{cr:defect:sky130-cpu-synlig-dud4:verdict,cr:defect:sky130-cpu-synlig-dud4:why-nothing-caught-it} give the cause and the reasons that no check found it. \Cref{cr:defect:asap7-cpu-synlig-ma7:verdict} shows that the ASAP7 failure has the same cause.
+
+\section{Synlig: an undefined value that the log only warns about}\label{tm:defect:synlig-undef-warning}
+\subsection*{Tool and defect}
+Synlig logs a warning when it sets the result of a range select to undefined. No step of the flow stopped on this warning.
+
+\subsection*{How it shows}
+It shows only as a warning line of the form ``range select out of bounds'' or ``setting result bits to undef''.
+
+\subsection*{Guard}
+A gate in every \code{librelane-*} target of \src{pnr/Makefile}. The script \src{tools/verif/check_synth_undef.py} scans the log and checks the elaborated header. A line of this form in a Synlig log is a build failure. The gate is a tripwire for this class of defect. It does not find a mis-elaborated runtime mux, a defect that starts after elaboration, or a flow that does not use \src{pnr/Makefile}. It is not a proof that the front end is correct.
+
+\subsection*{Work-around}
+Run the gate in blocking mode. Compare the gate netlist with the RTL by simulation, as the functional proof.
+
+\subsection*{Evidence}
+\Cref{tm:flow:synth-undef-gate,tm:flow:synth-undef-gate:what-the-gate-does-not-cover} describe the gate and its limits. \Cref{um:guide:coding-guidelines:13-language-constructs} states the rule.
+
+\section{sv2v: a blackbox without an error}\label{tm:defect:sv2v-blackbox}
+\subsection*{Tool and defect}
+sv2v makes a blackbox for a module that is absent from its file list. It gives no error. sv2v also resolves each \code{ifdef} before Yosys reads the design. A define that only the configuration of the flow sets comes too late.
+
+\subsection*{How it shows}
+The flow completes and the netlist is wrong. No cocotb suite finds the fault, because cocotb does not run the physical design flow. One recorded case left out a define, so the netlist instantiated the SRAM module of the wrong technology and made a blackbox of it. A second recorded case left the CDC modules out of the file list of the SoC.
+
+\subsection*{Guard}
+The rules of the project guide on sv2v file lists and on generated file lists. The script \src{tools/verif/check_source_closure.py} checks that a list closes over its package imports. It does not find a module that is absent from the list. The script \src{tools/verif/check_periph_filelists.py} checks that each peripheral and NPU module is in all five lists. It checks only the modules in \src{rtl/periph/} and \src{rtl/npu/}. No script checks that a module of the CPU, the GPU or the SoC is in the sv2v file lists. The recorded case of missing modules was a set of CDC modules of the SoC. The script \src{tools/verif/gen_filelist.py} with the option \code{--check} checks the generated file lists.
+
+\subsection*{Work-around}
+Add each new module to the sv2v file lists in \src{pnr/Makefile}. Pass each define that selects a module to sv2v. Edit the Makefile sources, never the generated file lists.
+
+\subsection*{Evidence}
+\Cref{cr:status:phase5-workflow} records the case of the missing define. \Cref{um:ch:cdc-integration:verify} gives the task for a new module. The strict elaboration check also says that sv2v accepts missing modules (\cref{tm:defect:use-before-declare}).
+
+\section{Verilator and sv2v: use before declare}\label{tm:defect:use-before-declare}
+\subsection*{Tool and defect}
+Verilator and sv2v accept a name that the source uses before it declares the name. sv2v also accepts missing modules and undeclared names. VCS and Xcelium reject these.
+
+\subsection*{How it shows}
+The tools of the open flow accept the source. VCS and Xcelium reject it, and they do not run in the CI flow.
+
+\subsection*{Guard}
+The rule of the project guide on strict elaboration. The script \src{tools/verif/check_elab_strict.py} elaborates the design with pyslang. It runs each case through controls first, and it exits with an error if a control fails. It covers the arms of its \code{ARMS} table. Its limits are these.
+\begin{itemize}
+  \item A new define arm that is not in the table is not checked.
+  \item The macro arms use \code{--ignore-unknown-modules}. This option also hides a module that is really missing. Only the macro arms may use it.
+  \item The check covers the legality of the elaboration. It does not simulate.
+  \item It does not check the test benches.
+\end{itemize}
+
+\subsection*{Work-around}
+Declare each name before its first use. Add each new define arm to the \code{ARMS} table.
+
+\subsection*{Evidence}
+\Cref{ds:inv:strict-elaboration} gives the rule. \Cref{tm:dec:xezim:5-slang-as-use-before-declare-check-measured} gives the measurement. \Cref{um:ch:tool-flows} states that a use before declare is an RTL bug.
+
+\section{Yosys: a full synthesis hides the runtime mux}\label{tm:defect:yosys-hides-runtime-mux}
+\subsection*{Tool and defect}
+This is the intended behaviour of Yosys. The defect was in a proof that counted on the wrong netlist. A full \code{synth} in Yosys runs \code{techmap}. This lowers every \texttt{\$shiftx} and \texttt{\$pmux}. A count on the full netlist reads zero for any design. A proof that counts there proves nothing.
+
+\subsection*{How it shows}
+The count is zero, and the proof looks complete. On the coarse-grain netlist the count of \texttt{\$pmux} is not zero even for a design with no runtime index, because Yosys turns each \code{case} into a \texttt{\$pmux}, also a \code{case} with constant labels. The reviewer decides which cells come from a runtime index.
+
+\subsection*{Guard}
+The rule of the project guide on runtime-indexed muxes. There is no script. A reviewer checks it by hand.
+
+\subsection*{Work-around}
+Count \texttt{\$shiftx} and \texttt{\$pmux} on the coarse-grain netlist, with \code{synth -run :fine}. Count per module and do not flatten. The register bank of the peripherals has such cells of its own, so a flat count cannot be zero. Write the selects of new datapath RTL as two-input ternary trees, as one-hot AND-OR, or as shift registers.
+
+\subsection*{Evidence}
+\Cref{cr:status:phase5-workflow} records that an earlier proof was vacuous and that the coarse-grain method replaced it. \Cref{ds:ch:phase6-ip-expansion-plan:acceptance-criteria-6c-npu} states the criterion.
+
+\section{Open supply connections of the SRAM macro}\label{tm:defect:sram-macro-instance-name}
+\subsection*{Tool and defect}
+The flow of the Sky130 SoC connects the supply pins of its SRAM macros through an instance-name pattern in \code{PDN_MACRO_CONNECTIONS}, \code{.*u_sram_macro.*}. An instance with another name does not match. The flows of the other blocks use other patterns. LibreLane gives no error for an SRAM macro that no pattern matches.
+
+\subsection*{How it shows}
+The supply pins stay open and the flow gives no error.
+
+\subsection*{Guard}
+The rule of the project guide on the name of the SRAM macro instance. There is no script. A reviewer checks it by hand.
+
+\subsection*{Work-around}
+In the Sky130 SoC, name the SRAM macro instance \code{u_sram_macro}. Then the configuration of the flow needs no change.
+
+\subsection*{Evidence}
+\Cref{ds:ch:phase6-ip-expansion-plan:weight-sram-instantiation-3-way-all-macro} and \cref{cr:status:phase5-workflow} state the rule and the reason.
+
+\section{Flow patches that continue after a failure}\label{tm:defect:flow-swallows-failure}
+\subsection*{Tool and defect}
+A local patch of LibreLane wrapped the detailed route in a catch and let the flow continue after an error. A second patch did the same for the power grid. A pin-access error ended the route before any wire existed. A failure of the grid build left the grid empty. The flow continued in both cases.
+
+\subsection*{How it shows}
+Every later check reported zero, because nothing was routed and no grid existed. The flow printed a line that said the step continued, and the flow ended without a failure.
+
+\subsection*{Guard}
+The script \src{tools/verif/check_asap7_routing.py} fails when the route has no wires. It reads the routed nets of the layout file, the largest wire length of the metrics and the error lines of the route step. It exits 0 for a pass, 1 for a failure and 2 when it cannot read the run. A run that it cannot read never counts as a pass. It does not count DRC violations. A run that passes the gate can have many DRC violations. Several ASAP7 flow targets of \src{pnr/Makefile} run the gate after the flow. For some SoC targets the call depends on a condition. No CI workflow runs the gate.
+
+\subsection*{Work-around}
+The record resolved the route failure for new runs, with a newer pinned OpenROAD and a point fix for one column of macros. It resolved the grid failure with a grid in the style of the OpenROAD flow scripts. The configurations of the SoC do not select that grid yet (\cref{tm:caveat:asap7-empty-power-grid}). These fixes do not make the old runs valid. The point fix is a per-instance work-around, and a change of the placement can bring the error back. Judge a patch by whether it can hide a failure, and hold a patch of this type to a high bar.
+
+\subsection*{Evidence}
+\Cref{cr:run:phase5:routing-physical-closure-caveat-detailed-routing-committed-zero-wires-bead-xy6,cr:run:phase5:pdn-caveat-2026-09-12-beads-gyx-4l8-every-asap7-run-has-an-empty-power-grid} give the record. \Cref{tm:pd:librelane-patching:the-cautionary-case-drttcl} gives the lesson.
+
+\section{OpenROAD: timing without an in-session global route}\label{tm:defect:sta-without-in-session-route}
+\subsection*{Tool and defect}
+The timing step reads a saved database and asks for parasitics from the global route. OpenROAD does not recover these parasitics from a saved database alone. The analysis then runs on zero-wire parasitics.
+
+\subsection*{How it shows}
+The report shows no violation. In a test run on a block of the same design family, most drivers had no parasitics, and the report was clean.
+
+\subsection*{Guard}
+A patch of the shared LibreLane tree adds the setting \code{STA_POSTGRT_INSESSION_GRT}. When it is true, the step runs a global route in the same session before it reads the parasitics. The default is false, and then the step behaves as before. The repository keeps a copy of the patch in \src{pnr/librelane_patches/}. Two configurations of the ASAP7 SoC set the setting. The configurations of the CPU and of the GPU do not set it. The same patch counts the drivers without parasitics. By default it gives only a warning. It stops the step only when \code{STA_POSTGRT_UNANNOTATED_IS_ERROR} is 1.
+
+\subsection*{Work-around}
+Set \code{STA_POSTGRT_INSESSION_GRT} in the configuration, and read a timing figure only when no real signal driver lacks parasitics. The figures from the old flow stay unvalidated (\cref{tm:caveat:asap7-zero-wire-timing}).
+
+\subsection*{Evidence}
+The opening notes of \cref{cr:run:phase5} give the defect, the setting and the annotation gate.
+
+\section{OpenROAD: macro power reported as zero}\label{tm:defect:macro-power-omitted}
+\subsection*{Tool and defect}
+The flow wrote the Liberty views of the hard macros with the command \code{write_timing_model}. This command writes timing arcs only and no power tables. So the power report of the SoC flow gave zero watts for both hard macros, and it gave no warning. Every SoC power figure of the old runs is the power of the fabric only.
+
+\subsection*{How it shows}
+The macro row of the power report reads zero.
+
+\subsection*{Guard}
+A script, \src{pnr/scripts/asap7_macro_power.tcl}, reports the power of each macro on its own netlist and injects it into the Liberty view of the macro. The result has two stacked assumptions. The activity is flat and vectorless, and there is no wire RC for the macro. The record does not edit the old figures. It states the new figures with their own assumptions.
+
+\subsection*{Work-around}
+Quote a SoC power figure as fabric-only, or quote the macro-inclusive figure with its assumptions. Do not add a fabric figure and a macro figure that come from different methods without a note. The record also warns against one tool version. The OpenSTA of the newer LibreLane shell gives wrong values for the power report of this design.
+
+\subsection*{Evidence}
+\Cref{cr:run:phase5:power-figure-caveat-macro-power-omitted-from-every-figure-bead-ew3} gives the record.
+
+\section{OpenSTA: no \texorpdfstring{\code{-datapath_only}}{-datapath\_only} flag}\label{tm:defect:opensta-datapath-only}
+\subsection*{Tool and defect}
+OpenSTA does not implement \code{set_max_delay -datapath_only}. The command \code{read_sdc} stops with the error STA-0563 at this flag. OpenSTA also applies the standard precedence of SDC exceptions without exception: a false path or an asynchronous clock group between two clocks removes a maximum-delay constraint on the same path.
+
+\subsection*{How it shows}
+The flag gives an error, so this part is not silent. The second part is silent: the report gives the path as unconstrained, and no check fails. A single constraint file that declares the clock group and a crossing budget never applies the budget.
+
+\subsection*{Guard}
+The sign-off constraint file has no crossing budgets. The budgets are in a second file that declares the same clocks and does not relate them. A coverage gate in that file stops the read when a name pattern matches nothing.
+
+\subsection*{Work-around}
+Use the second file for the CDC budget check. A tool that has the flag can use it on the same paths.
+
+\subsection*{Evidence}
+\Cref{tm:ch:mod-cdc-primitives:constraints} describes both files. \Cref{ds:ch:verification-strategy} gives the history of the correction.
+
+\section{rtk: the filter on \texorpdfstring{\code{diff}}{diff}}\label{tm:defect:rtk-diff}
+\subsection*{Tool and defect}
+This defect depends on the version. The rtk version 0.42.0 had two defects in \code{rtk diff}. A change of only modified lines gave the verdict that the files were identical, and the content was dropped. The exit code was always 0. Version 0.48.0 fixes both defects. The section of \src{CLAUDE.md} on \code{rtk diff} says that the project machine was upgraded to version 0.48.0 and that both defects are verified gone there. Another clone or machine on an older version is affected. Check the version with \code{rtk --version}.
+
+\subsection*{How it shows}
+Below version 0.48.0, a test such as \code{if diff a b} always takes the branch for identical files, and the screen looks right. The hook that rewrites the command depends on the working directory and on how the command parses. So the same \code{diff} can be correct in one place and filtered in another.
+
+\subsection*{Guard}
+The verification practice of the project guide says: do not gate a decision on \code{diff}. Use \code{cmp -s} or \code{sha256sum}. These were correct in version 0.42.0 and in version 0.48.0. Setting \code{RTK_DISABLED=1} stops the rewrite by the hook. It does not stop an explicit call of \code{rtk diff}.
+
+\subsection*{Work-around}
+Use \code{cmp -s} for a yes or no verdict. Use \code{sha256sum} to compare files. Upgrade rtk when the version is below 0.48.0.
+
+\subsection*{Evidence}
+The section of \src{CLAUDE.md} on \code{rtk diff} states the condition, and \src{AGENTS.md} states the rule.
+
+\section{Xezim: a negated function call in a logical operation}\label{tm:defect:xezim-negated-call}
+\subsection*{Tool and defect}
+Xezim 0.11.4 gives a wrong value for \texttt{\textasciitilde f(x) || y} and for \texttt{\textasciitilde f(x) \&\& y}, where \code{f} is a function call. Verilator gives the correct value. The record infers that Xezim widens the negation in a logical operand, but it did not trace the source.
+
+\subsection*{How it shows}
+There is no error. The record found the idiom at three sites of \src{rtl/soc/sram_controller.sv}. On Xezim a legal SRAM write returns an error response. The record judges that this is not an RTL bug, because Verilator is correct and the RTL is legal. A similar fault that hides a failure instead of raising one would pass without notice.
+
+\subsection*{Guard}
+There is none. The record did not sweep other forms.
+
+\subsection*{Work-around}
+Do not use a Xezim result as the only evidence for a result.
+
+\subsection*{Evidence}
+\Cref{tm:dec:xezim:4-silent-miscompile-measured-reproduced-twice-independently} gives the measurement.
+
+\section{The CDC gate that is informational by default}\label{tm:defect:cdc-gate-informational}
+\subsection*{Tool and defect}
+The target \code{cdc} of the \code{sim} Makefile runs the CDC gate. The variable \code{CDC_STRICT} has the default 0. Then the run is informational: the gate can fail and the target still returns 0. This is a behaviour of the flow and not a fault of a tool.
+
+\subsection*{How it shows}
+The run prints a note that the gate failed and that the run exits 0. A script or a person that reads only the exit code sees a pass.
+
+\subsection*{Guard}
+The option \code{CDC_STRICT=1} makes the target fail on an unwaived crossing. The CI workflow of the RTL checks runs the target with this option. The gate does not fail on a crossing from one foreign domain that has no synchroniser, and a review finds such a crossing.
+
+\subsection*{Work-around}
+Run the target with \code{CDC_STRICT=1} when its result decides something, and read the gate output and not only the exit code.
+
+\subsection*{Evidence}
+\Cref{tm:ch:mod-cdc-primitives:constraints} and \cref{um:ch:cdc-integration:verify} describe the target and the option. \Cref{ds:ch:mod-cdc-primitives} gives the limit of the gate.
+
+\section{Tools that exit 0 with an empty report}\label{tm:defect:empty-report-passes}
+\subsection*{Tool and defect}
+OpenSTA exits 0 while it reports violated paths. An empty report cannot be told from a clean report by the exit code. A gate that reads an empty report as a pass passes a design that nothing checked.
+
+\subsection*{How it shows}
+The gate passes and the report is empty.
+
+\subsection*{Guard}
+The wrappers in \src{tools/eda/} turn a log into a short verdict with an exit code: 0 for a pass, 1 for a failure, 2 when the log cannot be read, and 3 when the tool is missing. An empty or unreadable report gives 2, never 0. The route gate of \cref{tm:defect:flow-swallows-failure} follows the same rule.
+
+\subsection*{Work-around}
+Build each gate on the wrappers, or on a check that has its own error exit code for a report that it cannot read.
+
+\subsection*{Evidence}
+\src{tools/eda/README.md} states the exit codes and the earlier gate that passed on an empty report. The tests of the parsers pin each path that exits 0 with nothing to report.
+
+\section{Candidates that this part does not include}\label{tm:ch:tool-defects:dropped}
+The rules of the project guide for the registered PMU outputs, the CDC primitives, the reset values, the generated files, the UPF facts, the pinned text, the coverage waivers, the macro pins and the bead reopen are design rules or process rules. They guard against mistakes of the author, not against a defect of a tool. They are not in this chapter.
+
+The Synlig front end keeps a shared parser cache when LibreLane runs from its own checkout. The cache can mix the source paths of two work trees. The record found no stale content in the one case that it checked, and it calls the cache a latent hazard. The sv2v front end does not use this cache, so the hazard is outside the present flow of the macros. It is not in this chapter.
+
+The unbounded timing repair of LibreLane 2.4.13 is not in this chapter, because the step does not end and the fault is not silent.
