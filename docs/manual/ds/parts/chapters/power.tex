@@ -356,6 +356,14 @@ The integrator must assert \code{cpu_rst_n_i} each time that \code{rst_n_i} asse
 A reset of \code{rst_n_i} alone flushes \code{u_cpu_axi_cdc} and does not reset \code{u_cpu}. The CPU can then wait for a transfer that the bridge no longer holds. This is derived from the RTL. No test applies \code{rst_n_i} alone during CPU traffic.
 \end{information}
 
+\begin{requirement}{DS-PMU-187}{Quiet bus before a GPU power-down}
+[verify={review}]
+Before it requests a GPU power-down, software must stop the bus traffic of the GPU. The PMU has no drain step.
+\end{requirement}
+\begin{information}
+The clamp ISO\_GPU forces the valid signals and the ready signals of the GPU master ports to 0. The ready signals are \code{bready} and \code{rready} of the data port, and \code{rready} of the instruction-fetch port. A response that the GPU has not taken when the clamp rises is then never taken. The crossbar engine that serves the transfer waits for it and holds its slave for every master (\cref{tm:mod:axi4-crossbar:limits}). The same holds for a write whose address phase is done and whose data phase is not. This is derived from the RTL and is not measured. It is the GPU counterpart of \reqref{DS-PMU-182}.
+\end{information}
+
 \section{Architecture decisions}\label{ds:ch:mod-power-management:decisions}
 Each subsection gives the decision, the alternatives that the team rejected, and what the decision means for the user.
 

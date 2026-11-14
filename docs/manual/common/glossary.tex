@@ -6,11 +6,16 @@
 \newglossaryentry{ASAP7}{name={ASAP7},description={A predictive 7 nm process design kit.}}
 \newacronym[description={Automatic test pattern generation. A method that creates the test patterns for manufacturing faults.}]{ATPG}{ATPG}{automatic test pattern generation}
 \newacronym[description={Advanced eXtensible Interface. A high-performance bus protocol.}]{AXI}{AXI}{Advanced eXtensible Interface}
+\newacronym[description={AXI4-Lite. A reduced form of AXI4 with single-beat transfers and no ID, used for control registers.}]{AXI-Lite}{AXI-Lite}{AXI4-Lite}
+\newglossaryentry{beat}{name={beat},description={One transfer of one data word on a data channel of a bus.}}
 \newglossaryentry{blackbox}{name={blackbox},description={A module that a tool keeps as an empty box with ports only, because it has no description of the module or because the flow tells it to.}}
+\newglossaryentry{burst}{name={burst},description={A transfer of one or more beats with one address.}}
 \newacronym[description={Clock domain crossing. A signal path between two clock domains.}]{CDC}{CDC}{clock domain crossing}
 \newglossaryentry{cocotb}{name={cocotb},description={A Python framework for the verification of RTL.}}
+\newglossaryentry{crossbar}{name={crossbar},description={A bus block that connects several masters to several slaves and sends each transfer to the slave that the address selects.}}
 \newacronym[description={Control and status register. A register that controls the CPU or reports its state.}]{CSR}{CSR}{control and status register}
 \newacronym[description={Clock tree synthesis. The step that builds the clock distribution network.}]{CTS}{CTS}{clock tree synthesis}
+\newacronym[description={Decode error response. The AXI response code that says no slave exists for the address.}]{DECERR}{DECERR}{decode error response}
 \newacronym[description={Design for test. The design methods that make a chip testable.}]{DFT}{DFT}{design for test}
 \newacronym[description={Direct memory access. A transfer of data that does not use the CPU.}]{DMA}{DMA}{direct memory access}
 \newacronym[description={Design rule check. A check of the layout against the rules of the process.}]{DRC}{DRC}{design rule check}
@@ -38,6 +43,7 @@
 \newglossaryentry{macro-view}{name={macro view},description={One of the files that describe a hard macro to the flow, such as the layout abstract, the timing library and the netlist.}}
 \newglossaryentry{Magic}{name={Magic},description={An open-source layout editor and design rule checker.}}
 \newacronym[description={Memory built-in self-test. Logic on the chip that tests its memories.}]{MBIST}{MBIST}{memory built-in self-test}
+\newglossaryentry{memory-map}{name={memory map},description={The list of address ranges of the SoC and the slave that answers each range.}}
 \newglossaryentry{metastability}{name={metastability},description={The state of a flop that samples a signal while the signal changes. Its output takes an unknown time to settle.}}
 \newacronym[description={Memory-mapped input/output. Access to a device through load and store instructions.}]{MMIO}{MMIO}{memory-mapped input/output}
 \newacronym[description={Mean time between failures. For a synchroniser, the mean time between two metastable events that reach the logic after the chain.}]{MTBF}{MTBF}{mean time between failures}
@@ -65,6 +71,7 @@
 \newacronym[description={Synopsys Design Constraints. A file format that states the timing constraints of a design.}]{SDC}{SDC}{Synopsys Design Constraints}
 \newacronym[description={Single instruction, multiple threads. An execution model where many threads run one instruction.}]{SIMT}{SIMT}{single instruction, multiple threads}
 \newglossaryentry{Sky130}{name={Sky130},description={The open 130 nm process design kit from SkyWater.}}
+\newacronym[description={Slave error response. The AXI response code that says the slave found an error in the transfer.}]{SLVERR}{SLVERR}{slave error response}
 \newacronym[description={System on chip. A chip that holds the processors, the memory and the peripherals.}]{SoC}{SoC}{system on chip}
 \newacronym[description={Standard Parasitic Exchange Format. A file format for the parasitic values of a layout.}]{SPEF}{SPEF}{Standard Parasitic Exchange Format}
 \newacronym[description={Static random-access memory. A memory that keeps its data while power is on.}]{SRAM}{SRAM}{static random-access memory}

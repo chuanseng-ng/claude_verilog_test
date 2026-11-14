@@ -1,0 +1,34 @@
+{
+  "ds-soc-addr-map-pkg": {
+    "sha256": "26a742e15aefbbfd8fc49fdf22b8d560566e04a9ccd63f869095148eec796361",
+    "lines": 34,
+    "source_label": "ds:mod:soc-addr-map-pkg"
+  },
+  "ds-soc-bus": {
+    "sha256": "ffff8c3ea8baa62b47efbb41b6cdb630268f7f28104f6e0fcd486f3c3f8d00a7",
+    "lines": 33,
+    "source_label": "ds:mod:soc-bus"
+  },
+  "ds-soc-periph-map-pkg": {
+    "sha256": "976325a8ceb786f9ad84ff4899f94c3bddeeb3a24997219cfb9ad133c4fab21e",
+    "lines": 50,
+    "source_label": "ds:mod:soc-periph-map-pkg"
+  },
+  "tm-axi4-crossbar": {
+    "sha256": "2bdff58618977086a2c3c5c451d7ea9a08cb692b3258af8980dfca68ea3de7a7",
+    "lines": 17,
+    "source_label": "tm:mod:axi4-crossbar"
+  },
+  "ds-memory-map-1": {
+    "sha256": "15d65c2828d134f236ac3e2add0356116846cb488cfab34c369e684b24a24dc8",
+    "lines": 191
+  },
+  "ds-memory-map-2": {
+    "sha256": "78df4e20ed447231dff3aea79dfe4126bbb074c4dcf7f3846068ecdf38d3651b",
+    "lines": 118
+  },
+  "ds-memory-map-3": {
+    "sha256": "2b1b5f78b6ba7ad05de9eb51c02a69ed77f075ca192d0d1962dbea59038dfd35",
+    "lines": 55
+  }
+}

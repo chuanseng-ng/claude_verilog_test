@@ -1981,6 +1981,515 @@ async def test_power_down_core(dut):
 \end{itemize}
 \end{relocated}
 
+\section{\texttt{soc/soc\_addr\_map\_pkg.sv}}\label{cr:arc:ds-soc-addr-map-pkg}
+
+This text was in the Design Specification section \cref{ds:mod:soc-addr-map-pkg}. The authored section replaced it. The text is unchanged.
+
+\begin{relocated}{rtl/soc/soc_addr_map_pkg.sv}
+
+\subsection*{Header}
+
+\begin{textblock}
+soc_addr_map_pkg.sv
+Phase 5 (M1) — SoC address-decode constants and helper.
+
+Defines the Phase 5 memory regions (per Doc: ds:mm:memory-map, reconciled
+to the AXI-Lite-native ring decision in Doc: ds:ch:phase5-soc-integration-plan M1) and
+a decode helper that maps an address to a data-fabric slave index.
+
+Region summary (data crossbar slaves):
+  Boot ROM : 0x0000_1000 .. 0x0000_1FFF   (4 KB, behavioral until M8)
+  Main SRAM: 0x0000_2000 .. 0x0FFF_FFFF   (behavioral AXI4 SRAM, M6)
+  Periph   : 0x2000_1000 .. 0x2001_0FFF   (AXI4→AXI-Lite bridge; Phase 7 M-c extended +PLL;
+             GH #92 extended again +PLL2; Phase 6a / bead ckc extended again +GPIO;
+             Phase 6 / bead f7vs.2 extended again to the final size, pre-allocating the
+             PWM/WDT/TRNG/I2C/CRYPTO/NPU slots; all six are live slaves as of bead f7vs.11)
+
+The crossbar itself is parameterized with SLV_BASE / SLV_LIMIT arrays so it
+stays reusable; the SoC top-level passes the constants below.  decode_slave()
+is the reference model used by the top-level and the testbench.
+\end{textblock}
+
+\subsection*{Header}
+
+\begin{textblock}
+SLV_ROM and SLV_SRAM are library constants referenced by the SoC top-level
+and testbenches (M4/M6/M8) but not consumed by every module that imports this
+package.  Suppress UNUSEDPARAM for the slave-index constants only.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{soc/soc\_bus.sv}}\label{cr:arc:ds-soc-bus}
+
+This text was in the Design Specification section \cref{ds:mod:soc-bus}. The authored section replaced it. The text is unchanged.
+
+\begin{relocated}{rtl/soc/soc_bus.sv}
+
+\subsection*{Header}
+
+\begin{textblock}
+soc_bus.sv
+SoC Bus Fabric Wrapper — Phase 5 / APB migration PR-7 structural refactor.
+
+Wraps the five bus modules that were previously instantiated inline in soc_top:
+  1. axi4_crossbar      — AXI4 data fabric (4 masters × 3 slaves)
+  2. axi4_to_axilite    — crossbar S2 (periph) → AXI-Lite master
+  3. axi_lite_interconnect — AXI-Lite ring (3 slaves: GPU, APB_BRIDGE, DMA)
+  4. axil_to_apb        — AXI-Lite ring slot 1 → APB master
+  5. apb_interconnect   — APB master → 14 APB peripheral slaves (Pre-Phase-6 #5: +PMU;
+                           GH #92: +PLL2; bead ckc: +GPIO; bead f7vs.6: +PWM; bead f7vs.7: +WDT; bead f7vs.8: +TRNG; bead f7vs.9: +I2C; bead f7vs.10: +CRYPTO; bead f7vs.11: +NPU)
+
+This is a PURE STRUCTURAL WRAPPER.  No logic is added or removed.
+Every signal that crossed the soc_top/bus boundary is an explicit port here.
+
+Port groups (matching soc_top's wire naming):
+  clk / rst_n              — single clock domain (core_clk / core_rst_n)
+  AXI4 master-facing [N_MASTERS]   — crossbar master ports (from CPU/GPU/DMA)
+  AXI4 slave-facing  [N_SLAVES]    — crossbar slave ports (to ROM/SRAM/periph)
+  AXI-Lite [AXIL_GPU] / [AXIL_DMA] — ring slaves that remain AXI-Lite direct
+  APB [N_APB_SLV]                  — per-peripheral APB ports
+
+Address-map packages (soc_addr_map_pkg, soc_periph_map_pkg) are used directly
+for all parameters — soc_bus is the single source of truth for fabric sizing.
+
+Lint: verilator -Wall 0 errors 0 warnings (same baseline as pre-refactor).
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{soc/soc\_periph\_map\_pkg.sv}}\label{cr:arc:ds-soc-periph-map-pkg}
+
+This text was in the Design Specification section \cref{ds:mod:soc-periph-map-pkg}. The authored section replaced it. The text is unchanged.
+
+\begin{relocated}{rtl/soc/soc_periph_map_pkg.sv}
+
+\subsection*{Header}
+
+\begin{textblock}
+soc_periph_map_pkg.sv
+Phase 5 (M1/M3) — AXI-Lite control-ring + APB peripheral sub-map.
+\end{textblock}
+
+\subsection*{Header}
+
+\begin{textblock}
+APB migration PR-7 topology (GH #92: +PLL2 slot, dual-PLL clock seam):
+  AXI-Lite ring (3 slaves): GPU, DMA, APB-bridge window
+    Slave 0: GPU ctrl    0x2000_1000 .. 0x2000_1FFF
+    Slave 1: APB bridge  0x2000_2000 .. 0x2001_0FFF  (covers the full 14-slot APB window)
+    Slave 2: DMA ctrl    0x2000_5000 .. 0x2000_5FFF
+
+  Note on overlapping window: DMA (index 2) overlaps the APB-bridge window.
+  axi_lite_interconnect's decode() iterates 0→N-1 and takes the LAST match,
+  so DMA (highest index) wins for 0x2000_5000-5FFF.  All other addresses in
+  _2000-_0FFF route to APB_BRIDGE (index 1).
+
+  APB sub-map, final 14-slot allocation (decoded by apb_interconnect; all 14 are
+  live slaves — APB_N_SLAVES = 14 as of the NPU, bead f7vs.11):
+    APB_UART    0: 0x2000_2000 .. 0x2000_2FFF                        (Phase 5)
+    APB_SPI     1: 0x2000_3000 .. 0x2000_3FFF                        (Phase 5)
+    APB_TIMER   2: 0x2000_4000 .. 0x2000_4FFF                        (Phase 5)
+    APB_IRQ     3: 0x2000_6000 .. 0x2000_6FFF                        (Phase 5)
+    APB_PLL     4: 0x2000_7000 .. 0x2000_7FFF                        (Phase 7 M-c)
+    APB_PMU     5: 0x2000_8000 .. 0x2000_8FFF                        (GH #100)
+    APB_PLL2    6: 0x2000_9000 .. 0x2000_9FFF  (CPU-domain PLL config, GH #92)
+    APB_GPIO    7: 0x2000_A000 .. 0x2000_AFFF                        (6a, bead ckc)
+    APB_PWM     8: 0x2000_B000 .. 0x2000_BFFF                        (6a-2, bead f7vs.6)
+    APB_WDT     9: 0x2000_C000 .. 0x2000_CFFF                        (6a-3, bead f7vs.7)
+    APB_TRNG   10: 0x2000_D000 .. 0x2000_DFFF                        (6a-4, bead f7vs.8)
+    APB_I2C    11: 0x2000_E000 .. 0x2000_EFFF                        (6a-5, bead f7vs.9)
+    APB_CRYPTO 12: 0x2000_F000 .. 0x2000_FFFF                        (6b, bead f7vs.10)
+    APB_NPU    13: 0x2001_0000 .. 0x2001_0FFF                        (6c, bead f7vs.11)
+
+  The window deliberately crosses out of 0x2000_xxxx into 0x2001_0FFF at the
+  14th slave (NPU). Verified inert: paddr is 32 bits end to end — both
+  axil_to_apb and apb_interconnect are instantiated with .ADDR_W(32)
+  (rtl/soc/soc_bus.sv:608,652) — and each peripheral consumes only
+  paddr[11:0], so the upper-byte rollover carries no decode meaning.
+
+  All global MMIO addresses are UNCHANGED from the original 7-slave ring.
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{docs/design/MEMORY\_MAP.md}}\label{cr:arc:ds-memory-map}
+
+This text was in the Design Specification chapter \cref{ds:ch:memory-map}. The authored section \cref{ds:ch:mod-bus-fabric:memory-map} replaced it. The register maps of the blocks stay in the chapter \cref{ds:ch:memory-map}. The text is unchanged. The labels inside the text are the labels of the old document. The text has three parts, and each part is in its own block.
+
+\begin{relocated}{docs/design/MEMORY_MAP.md}
+Complete address space allocation for RV32I SoC
+
+Document status: Frozen Last updated: 2026-09-20
+
+\subsection{Overview}\label{ds:mm:memory-map:overview}
+
+This document defines the memory map for all phases of the project, from
+single-CPU (Phase 1) through full SoC integration (Phase 5).
+
+\subsection{Address Space (32-bit)}\label{ds:mm:memory-map:address-space-32-bit}
+
+Total addressable space: 4 GB (0x0000\_\allowbreak{}0000 to
+0xFFFF\_\allowbreak{}FFFF)
+
+\subsection{Minimum Address Region}\label{ds:mm:memory-map:minimum-address-region}
+
+The minimum or smallest memory region should be 4 KB This restriction is
+due to Ubuntu\textquotesingle s page size being 4 KB
+
+\subsubsection{Global Memory Map (Phase 5 SoC)}\label{ds:mm:memory-map:global-memory-map-phase-5-soc}
+
+{\small\setlength{\tabcolsep}{4pt}
+
+{
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*217/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*72/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*193/1000\relax}
+  >{\centering\arraybackslash}p{\dimexpr(\linewidth-6\tabcolsep)*498/1000\relax}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Address Range
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Size
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Region
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+0x0000\_\allowbreak{}0000 - 0x0000\_\allowbreak{}0FFF & 4 KB & Reset \&
+Traps & Reset vector, trap handlers \\
+0x0000\_\allowbreak{}1000 - 0x0000\_\allowbreak{}1FFF & 4 KB & Boot ROM
+& Initial boot code \\
+0x0000\_\allowbreak{}2000 - 0x0FFF\_\allowbreak{}FFFF &
+\textasciitilde256 MB & Main Memory (RAM) & Instruction and data \\
+0x1000\_\allowbreak{}0000 - 0x1FFF\_\allowbreak{}FFFF & 256 MB &
+Reserved & Future memory expansion \\
+0x2000\_\allowbreak{}0000 - 0x2000\_\allowbreak{}0FFF & 4 KB & CPU Debug
+(APB3) & CPU debug registers (only remaining APB3 block) \\
+0x2000\_\allowbreak{}1000 - 0x2000\_\allowbreak{}1FFF & 4 KB & GPU
+Control (AXI-Lite) & GPU registers \\
+0x2000\_\allowbreak{}2000 - 0x2000\_\allowbreak{}2FFF & 4 KB & UART
+(AXI-Lite) & UART peripheral \\
+0x2000\_\allowbreak{}3000 - 0x2000\_\allowbreak{}3FFF & 4 KB & SPI
+(AXI-Lite) & SPI master \\
+0x2000\_\allowbreak{}4000 - 0x2000\_\allowbreak{}4FFF & 4 KB & Timer
+(AXI-Lite) & System timer \\
+0x2000\_\allowbreak{}5000 - 0x2000\_\allowbreak{}5FFF & 4 KB & DMA
+Control (AXI-Lite) & DMA engine control registers \\
+0x2000\_\allowbreak{}6000 - 0x2000\_\allowbreak{}6FFF & 4 KB & IRQ
+Control (AXI-Lite) & Interrupt controller registers \\
+0x2000\_\allowbreak{}7000 - 0x2000\_\allowbreak{}7FFF & 4 KB & PLL
+Control (APB4) & PLL subsystem config/\allowbreak{}status
+(\code{pll_apb_regs}) \\
+0x2000\_\allowbreak{}8000 - 0x2000\_\allowbreak{}8FFF & 4 KB & PMU
+Control (APB4) & Power-mode sequencer registers (\code{pmu.sv}, \ghref{98}/\allowbreak{}\#99/\allowbreak{}\#100). \code{STATUS[3]} = sticky
+\code{cpu_iso_ack_timeout} (bead \bead{3ogd}) \\
+0x2000\_\allowbreak{}9000 - 0x2000\_\allowbreak{}9FFF & 4 KB & PLL2
+Control (APB4) & Second PLL subsystem config/\allowbreak{}status,
+CPU-domain reference clock (\code{pll_apb_regs}, \ghref{92}) \\
+0x2000\_\allowbreak{}A000 - 0x2000\_\allowbreak{}AFFF & 4 KB & GPIO
+(APB4) & 32-pin GPIO controller (\code{gpio_controller.sv}, Phase 6a) \\
+0x2000\_\allowbreak{}B000 - 0x2000\_\allowbreak{}BFFF & 4 KB & PWM
+(APB4) & 4-channel PWM controller (\code{pwm_controller.sv}, Phase
+6a-2) \\
+0x2000\_\allowbreak{}C000 - 0x2000\_\allowbreak{}CFFF & 4 KB & WDT
+(APB4) & Watchdog timer with bark/bite (\code{watchdog_timer.sv}, Phase
+6a-3) \\
+0x2000\_\allowbreak{}D000 - 0x2000\_\allowbreak{}DFFF & 4 KB & TRNG
+(APB4) & True-random-number generator; LFSR entropy arm by default,
+always flags \code{INSECURE} (\code{trng.sv}, Phase 6a-4) \\
+0x2000\_\allowbreak{}E000 - 0x2000\_\allowbreak{}EFFF & 4 KB & I2C
+(APB4) & I2C master controller, open-drain, external pull-ups required
+(\code{i2c_controller.sv}, Phase 6a-5) \\
+0x2000\_\allowbreak{}F000 - 0x2000\_\allowbreak{}FFFF & 4 KB & CRYPTO
+(APB4) & AES-128 (ECB/CTR) + SHA-256 accelerator; \textbf{not production
+cryptography} (\code{crypto_accel.sv}, Phase 6b) \\
+0x2001\_\allowbreak{}0000 - 0x2001\_\allowbreak{}0FFF & 4 KB & NPU
+(APB4) & INT8 4×4 weight-stationary inference engine, 4 KB weight SRAM
+behind PIO (\code{npu_top.sv}, Phase 6c) \\
+0x2001\_\allowbreak{}1000 - 0x2FFF\_\allowbreak{}FFFF &
+\textasciitilde256 MB & Reserved & Future peripherals \\
+0x3000\_\allowbreak{}0000 - 0x7FFF\_\allowbreak{}FFFF & 1.25 GB &
+Reserved & Future use \\
+0x8000\_\allowbreak{}0000 - 0xFFFF\_\allowbreak{}FFFF & 2 GB & External
+Memory & Off-chip memory/\allowbreak{}devices \\
+\end{longtable}
+}
+
+}
+
+\begin{quote}
+\textbf{Phase 5 peripheral ring (APB migration PR-7, updated \ghref{92}):}
+peripherals attach to a CPU-driven \textbf{AXI4-Lite control
+interconnect} (\src{rtl/soc/axi_lite_interconnect.sv}) whose APB-bridge
+ring slot (slave 1, \code{0x2000_2000-0x2001_0FFF}) fans out through
+\code{axil_to_apb} + \code{apb_interconnect} into a genuine \textbf{APB4
+sub-tree of 14 slaves} (UART, SPI, Timer, IRQ, PLL, PMU, PLL2, GPIO,
+PWM, WDT, TRNG, I2C, CRYPTO, NPU; \src{rtl/soc/soc_periph_map_pkg.sv}
+APB\_\allowbreak{}UART..APB\_\allowbreak{}NPU). GPU/DMA control remain
+AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on
+the CPU debug slot (0x2000\_\allowbreak{}0000--0FFF), unrelated to this
+APB4 sub-tree. Address map is frozen in
+\src{rtl/soc/soc_periph_map_pkg.sv} (\code{decode_axil_slave()});
+unmapped accesses within 0x2000\_\allowbreak{}xxxx return DECERR.
+\end{quote}
+
+\subsection{Phase-Specific Maps}\label{ds:mm:memory-map:phase-specific-maps}
+
+\subsubsection{Phase 0-1: Single CPU (No SoC Integration)}\label{ds:mm:memory-map:phase-0-1-single-cpu-no-soc-integration}
+
+In Phases 0-1, only the CPU exists. The AXI4-Lite master connects
+directly to a simple memory model.
+
+\textbf{AXI4-Lite address space}:
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Address Range & Size & Description \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+0x0000\_\allowbreak{}0000 - 0x0000\_\allowbreak{}0FFF & 4 KB & Reset \&
+trap vectors \\
+0x0000\_\allowbreak{}1000 - 0x0000\_\allowbreak{}FFFF & 60 KB & Program
+memory \\
+0x0001\_\allowbreak{}0000 - 0xFFFF\_\allowbreak{}FFFF & \textasciitilde4
+GB & Data memory \\
+\end{longtable}
+}
+
+\textbf{APB3 debug interface} (CPU-local, 12-bit address):
+
+See CPU Debug Registers section below.
+
+\subsubsection{Phase 2-3: Pipelined CPU with Caches}\label{ds:mm:memory-map:phase-2-3-pipelined-cpu-with-caches}
+
+Same as Phase 1, but with cache between CPU and memory.
+
+\textbf{Cache configuration}:
+
+\begin{itemize}
+\tightlist
+\item
+  I-Cache: 4 KB, direct-mapped
+\item
+  D-Cache: 4 KB, direct-mapped
+\item
+  No cache coherence (single CPU)
+\end{itemize}
+
+\subsubsection{Phase 4: CPU + GPU (Pre-SoC Integration)}\label{ds:mm:memory-map:phase-4-cpu-gpu-pre-soc-integration}
+
+\textbf{AXI address space} (shared between CPU and GPU):
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Address Range & Size & Description \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+0x0000\_\allowbreak{}0000 - 0x0FFF\_\allowbreak{}FFFF & 256 MB & Shared
+memory (CPU+GPU) \\
+0x2000\_\allowbreak{}0000 - 0x2000\_\allowbreak{}0FFF & 4 KB & CPU Debug
+registers \\
+0x2000\_\allowbreak{}1000 - 0x2000\_\allowbreak{}1FFF & 4 KB & GPU
+Control registers \\
+\end{longtable}
+}
+
+\subsubsection{Phase 5: Full SoC}\label{ds:mm:memory-map:phase-5-full-soc}
+
+See Global Memory Map above.
+\end{relocated}
+
+\begin{relocated}{docs/design/MEMORY_MAP.md}
+\subsection{Reset and Trap Vectors}\label{ds:mm:memory-map:reset-and-trap-vectors}
+
+\subsubsection{Reset Vector}\label{ds:mm:memory-map:reset-vector}
+
+\textbf{Address}: 0x0000\_\allowbreak{}0000
+
+\textbf{Behavior}: PC loads this address on reset. Typically contains a
+jump to boot ROM.
+
+\textbf{Example boot code}:
+
+\begin{lstlisting}[language={}]
+0x0000_0000:  jal x0, 0x100    # Jump to trap handler setup
+\end{lstlisting}
+
+\subsubsection{Trap Vector}\label{ds:mm:memory-map:trap-vector}
+
+\textbf{Address}: 0x0000\_\allowbreak{}0100 (TRAP\_\allowbreak{}VECTOR
+constant in PHASE0\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md)
+
+\textbf{Behavior}: PC loads this address on any trap (illegal
+instruction in Phase 1).
+
+\textbf{Example trap handler}:
+
+\begin{lstlisting}[language={}]
+0x0000_0100:  # Trap handler entry
+              # Save context
+              # Determine trap cause
+              # Handle or abort
+\end{lstlisting}
+
+\subsection{Address Alignment Requirements}\label{ds:mm:memory-map:address-alignment-requirements}
+
+All addresses must be naturally aligned:
+
+{
+\begin{longtable}[]{@{}ccc@{}}
+\toprule\noalign{}
+Access Size & Alignment Requirement & Valid addr{[}1:0{]} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Byte (8-bit) & 1-byte aligned & Any \\
+Half (16-bit) & 2-byte aligned & 00, 10 \\
+Word (32-bit) & 4-byte aligned & 00 \\
+\end{longtable}
+}
+
+\textbf{Misaligned accesses}: Phase 1 treats misaligned accesses as
+illegal instruction traps.
+
+\subsection{Memory Access Permissions (Future)}\label{ds:mm:memory-map:memory-access-permissions-future}
+
+Phase 1 has no memory protection. Future phases may add:
+
+\begin{itemize}
+\tightlist
+\item
+  Read/\allowbreak{}write/\allowbreak{}execute permissions
+\item
+  Privileged vs user mode access
+\item
+  Memory protection unit (MPU)
+\end{itemize}
+
+\subsection{SoC Interconnect (Phase 5)}\label{ds:mm:memory-map:soc-interconnect-phase-5}
+
+As implemented in \src{rtl/soc/soc_top.sv} (M8):
+
+\textbf{Data plane} --- AXI4 crossbar (\code{axi4_crossbar.sv}), 4
+masters × 3 slaves:
+
+{
+\begin{longtable}[]{@{}ll@{}}
+\toprule\noalign{}
+Port & Agent \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+M0 & CPU (rv32i\_\allowbreak{}cpu\_\allowbreak{}top AXI4 master) \\
+M1 & GPU ifetch (axilite\_\allowbreak{}to\_\allowbreak{}axi4 read-only
+adapter) \\
+M2 & GPU data (gpu\_top \code{m_axi_*}) \\
+M3 & DMA engine \\
+S0 & Boot ROM (0x0000\_\allowbreak{}1000 --
+0x0000\_\allowbreak{}1FFF) \\
+S1 & SRAM controller (0x0000\_\allowbreak{}2000 --
+0x0FFF\_\allowbreak{}FFFF) \\
+S2 & Peripheral bridge → AXI-Lite ring (0x2000\_\allowbreak{}1000 --
+0x2000\_\allowbreak{}AFFF) \\
+\end{longtable}
+}
+
+\textbf{Control plane} --- \code{axi4_to_axilite} →
+\code{axi_lite_interconnect}, 6 AXI-Lite slaves: GPU(0), UART(1),
+SPI(2), TIMER(3), DMA(4), IRQ(5).
+
+\textbf{Debug plane} --- APB3 debug slave exposed at top-level ports (no
+APB bridge on the data path; the Phase 1--4
+AXI-Lite-crossbar/\allowbreak{}APB-bridge description is obsolete).
+
+\textbf{Interconnect assumptions} (violating these voids the
+deadlock-free guarantee):
+
+\begin{itemize}
+\tightlist
+\item
+  The AXI-Lite control ring is \textbf{single-master} (CPU config access
+  only); the interconnect has no arbitration. A second master (e.g.
+  DMA-to-peripheral in Phase 6) requires an interconnect upgrade.
+\item
+  The AXI4 crossbar locks a slave to one master per transaction (depth-1
+  outstanding per direction). Masters must \textbf{not} hold overlapping
+  AR + AW to the same slave expecting ordering between them.
+\end{itemize}
+\end{relocated}
+
+\begin{relocated}{docs/design/MEMORY_MAP.md}
+\subsection{Testing Recommendations}\label{ds:mm:memory-map:testing-recommendations}
+
+\subsubsection{Address Decode Testing}\label{ds:mm:memory-map:address-decode-testing}
+
+\begin{itemize}
+\tightlist
+\item
+  Verify all valid addresses return correct data
+\item
+  Verify invalid addresses return AXI DECERR or APB pslverr
+\item
+  Test boundary addresses (e.g., 0x0FFF\_\allowbreak{}FFFC,
+  0x1000\_\allowbreak{}0000)
+\end{itemize}
+
+\subsubsection{Alignment Testing}\label{ds:mm:memory-map:alignment-testing}
+
+\begin{itemize}
+\tightlist
+\item
+  Test misaligned accesses trigger traps
+\item
+  Test all valid alignments work correctly
+\end{itemize}
+
+\subsubsection{Debug Register Testing}\label{ds:mm:memory-map:debug-register-testing}
+
+\begin{itemize}
+\tightlist
+\item
+  Test halt/\allowbreak{}resume/\allowbreak{}step sequences
+\item
+  Test breakpoint triggers
+\item
+  Test register read/\allowbreak{}write when halted
+\item
+  Test writes ignored when running
+\end{itemize}
+
+\subsection{References}\label{ds:mm:memory-map:references}
+
+\begin{itemize}
+\tightlist
+\item
+  PHASE0\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md: Reset and
+  trap behavior
+\item
+  PHASE1\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md: CPU debug
+  interface details
+\item
+  PHASE4\_\allowbreak{}GPU\_\allowbreak{}ARCHITECTURE\_\allowbreak{}SPEC.md:
+  GPU register specifications
+\item
+  RTL\_\allowbreak{}DEFINITION.md: Interface signal definitions
+\end{itemize}
+\end{relocated}
+
 \chapter{Archived Technical Manual text}\label{cr:ch:source-archive-tm}
 
 This chapter holds the text that left the Technical Manual. Each section below names the section of the authored chapter that replaced the text.
@@ -2633,6 +3142,28 @@ soc_top.sv / dft_ctrl_ports.sv, and checked):
                   are not qualified by scan_mode_i, so under scan a clamp can
                   be active.  Documented, not changed (bead-worthy, see
                   Doc: ds:ch:upf-power-spec "Phase 5").
+\end{textblock}
+
+\end{relocated}
+
+\section{\texttt{soc/axi4\_crossbar.sv}}\label{cr:arc:tm-axi4-crossbar}
+
+This text was in the Technical Manual section \cref{tm:mod:axi4-crossbar}. The authored section replaced it. The text is unchanged.
+
+\begin{relocated}{rtl/soc/axi4_crossbar.sv}
+
+\subsection*{Before: logic [N\_SLAVES-1:0][IW-1:0]    \_s\_awid;}
+
+\begin{textblock}
+─────────────────────────────────────────────────────────────────────────
+Intermediate packed wires for all driven output port arrays.
+always_comb drives these (Synlig-safe: internal wires, not ports).
+Continuous assign in generate connects them to the unpacked port arrays.
+Synlig/UHDM bug: always_comb driving port array slices via loop index
+produces empty wire names in RTLIL (kernel/rtlil.cc:2150 assert).
+Continuous assign inside generate is not affected by this bug.
+─────────────────────────────────────────────────────────────────────────
+Slave-side output intermediates (N_SLAVES slices)
 \end{textblock}
 
 \end{relocated}

@@ -205,6 +205,7 @@ The registers of the PMU are in the APB slot at 0x2000\_8000. \code{CTRL} is at 
 The firmware of the integration test \src{tb/cocotb/soc/integ_fw/gen_integ_hex.py} does this in its image \code{gpu_iso}.
 
 \begin{procedure}
+  \item Stop the kernel of the GPU and wait until the GPU has no bus transfer in flight (\reqref{DS-PMU-187}). The PMU does not drain the bus of the GPU.
   \item Write 0x2 to \code{CTRL}.
   \item Read \code{STATUS} until bits 2 to 0 equal 0b001. This value shows the CPU domain on, the GPU domain off and \code{busy} low. Bit 3 can be 1 from an earlier CPU power cycle, so mask it. Do not poll for \code{busy} alone. \code{STATUS} follows the sequencer one cycle late, so a read right after the write can still show the old idle state.
   \item Do not read or write a GPU register while the GPU domain is off. The control port of the GPU is held in reset with its clock stopped. It takes the address of an access but never returns a response, so the access does not complete and the bus master waits. A test measured this for a read and a write at three CPU clock periods: no response came within 4000 cycles of \code{clk_i}. The test is marked \code{expect_fail} until the owner decides the RTL. The access is lost, also after the power-up. This last point is read from the RTL.
@@ -360,4 +361,87 @@ Tick each line before the review.
   \item[$\square$] After a change of a top-level instance, of ports, of clamps or of a test enable, the facts file is regenerated before the checker runs, and \code{check_upf.py gen-facts --check} passes.
   \item[$\square$] The test \code{test_clamp_sets_are_the_rtl_sets} names the clamps of the RTL.
   \item[$\square$] The test suites of the PMU and the clock gate pass.
+\end{itemize}
+
+\chapter{Bus fabric integration}\label{um:ch:bus-integration}
+
+This chapter gives the tasks for the address map and for the crossbar. The rules are in \cref{ds:ch:mod-bus-fabric}. The description of each block is in \cref{tm:ch:mod-bus-fabric}. The tasks for the bridges and the interconnects below the crossbar follow in a later part.
+
+\section{Read the memory map}\label{um:ch:bus-integration:map}
+Find the address in \cref{tab:ds:mm:address-map:all}. The table is generated from the address-map packages, so it is in step with the RTL.
+\begin{procedure}
+  \item Find the range of the address. The table lists the ranges in address order.
+  \item Read the column Path. It names the slot at each level of the fabric.
+  \item Read the column Note. The PLL slots at 0x2000\_7000 and 0x2000\_9000 cross a clock domain through a bridge. They have wait states and can end with an error.
+  \item Expect the response DECERR when no row holds the address. The range 0x2000\_0000 to 0x2000\_0FFF has no slave. The debug port of the CPU is not on the bus.
+  \item Do not use the SRAM range as a memory of 256 MB. The storage has \code{SRAM_MEM_WORDS} words and repeats across the range (\reqref{DS-MAP-042}). The default of \code{soc_top} is 1024 words.
+  \item Expect that the data cache does not cache an access at or above 0x2000\_0000.
+\end{procedure}
+
+\section{Firmware and master rules}\label{um:ch:bus-integration:rules}
+\begin{procedure}
+  \item Start the first instruction at 0x0000\_1000, the base of the boot ROM. \code{soc_top} sets \code{RESET_PC} to this value.
+  \item Do not write to the boot ROM range. The write ends with SLVERR and the ROM does not change.
+  \item Wait for the write response before a read of the same slave, when the read has to see the write. The crossbar keeps no order between a read and a write.
+  \item Check the response code of each transfer where your master shows it. A transfer to an unmapped address ends with DECERR and read data 0.
+  \item Do not access a register of the GPU while the GPU is off (\reqref{DS-PMU-185}). The access does not end.
+  \item Give a new master only one read and one write in flight, and take each response in bounded time (\reqref{DS-BUS-210}, \reqref{DS-BUS-212}).
+\end{procedure}
+
+\section{Add a master or a slave to the crossbar}\label{um:ch:bus-integration:xbar}
+In every task, the names are examples. Use the names of your design.
+
+\subsection{A new master}
+\begin{procedure}
+  \item Run the master on \code{core_clk} and \code{core_rst_n}, or connect it through a clock-domain bridge (\reqref{DS-BUS-222}).
+  \item Increase the localparam \code{N_MASTERS} in \code{soc_top}. It sets the parameter of \code{soc_bus}.
+  \item Check that \code{AXI_ID_WIDTH} in \code{axi_pkg} has enough bits for the new index. The crossbar cuts the index without a message (\reqref{DS-BUS-004}).
+  \item Connect the new master to the entry with the new index of each net \code{xbar_m_*}. The ports have no ID.
+  \item Choose the index with care. A lower index has a higher priority, and the crossbar has no fairness (\reqref{DS-BUS-024}).
+  \item Make the master meet the contract. It sends one read and one write at a time, it sets \code{WLAST} on the last beat, and it takes its responses (\reqref{DS-BUS-210}, \reqref{DS-BUS-211}, \reqref{DS-BUS-212}).
+\end{procedure}
+
+\subsection{A new slave}
+\begin{procedure}
+  \item Choose a range on the 4 KB grid that no other range holds, and add it to the package \code{soc_addr_map_pkg}: the base and the limit, the index \code{SLV_<NAME>}, and the count \code{SOC_N_SLAVES}.
+  \item Add the base and the limit to \code{SOC_SLV_BASE} and \code{SOC_SLV_LIMIT}. The packed array has the slave with index 0 at the lowest bits, so the list in braces starts with the highest index.
+  \item Add a flat port group to \code{soc_bus}. Copy the group \code{rom_*} and connect it to the crossbar array with the new index.
+  \item Add the slave to the sidecar \code{docs/manual/common/facts/memory_map.yaml} with its target and note, and run \code{python tools/docs/gen_memory_map.py}. The tool stops when the sidecar and the packages disagree, or when the new range overlaps another.
+  \item Add each new module to the file lists of every flow (\cref{um:ch:cdc-integration:verify}). The check \code{python tools/verif/check_periph_filelists.py} scans only \code{rtl/periph} and \code{rtl/npu}. It does not cover a module in \code{rtl/soc}, so check the lists by hand. Run \code{python tools/verif/gen_filelist.py --check}.
+  \item Add the instance of the slave to the always-on roster in the power intent, and run \code{python tools/verif/check_upf.py -v} (\cref{um:ch:power-integration:upf}).
+\end{procedure}
+
+\section{Verify}\label{um:ch:bus-integration:verify}
+Run the simulation targets through the Nix shell.
+
+\begin{center}
+  \begin{tabular}{@{}p{50mm}p{88mm}@{}}
+    \toprule
+    What & Command\\
+    \midrule
+    Crossbar alone & \code{nix develop --command make -C tb/cocotb/soc crossbar}\\
+    Boot and walks through the SoC & \code{nix develop --command make -C tb/cocotb/soc soc_integration}\\
+    Boot scoreboard & \code{nix develop --command make -C tb/cocotb/soc soc_boot}\\
+    \bottomrule
+  \end{tabular}
+\end{center}
+Then run these checks from the root of the repository:
+\begin{itemize}
+  \item \code{python tools/docs/gen_memory_map.py --check} proves that the table and the packages agree and that every page of the peripheral range has one owner.
+  \item \code{python tools/docs/gen_fact_tables.py --check} proves that the tables of ports and parameters are in step with the RTL.
+  \item \code{python tools/verif/check_periph_filelists.py} and \code{python tools/verif/gen_filelist.py --check} prove the file lists.
+\end{itemize}
+The crossbar bench has three masters, two slaves and a map of its own. It does not prove the priority, the held write address or a reset in a burst (\cref{tm:mod:axi4-crossbar}).
+
+\section{Checklist}\label{um:ch:bus-integration:checklist}
+Tick each line before the review.
+\begin{itemize}
+  \item[$\square$] The new range is on the 4 KB grid, and \code{gen_memory_map.py --check} passes.
+  \item[$\square$] \code{N_MASTERS} of \code{soc_top} and of \code{soc_bus} agree, and \code{AXI_ID_WIDTH} holds the index.
+  \item[$\square$] A new master has one read and one write in flight and takes its responses.
+  \item[$\square$] A new master has the index that gives it the right priority.
+  \item[$\square$] A new endpoint runs on \code{core_clk} or goes through a bridge.
+  \item[$\square$] Firmware does not use the SRAM range as a memory larger than \code{SRAM_MEM_WORDS} words, and does not access the GPU while it is off.
+  \item[$\square$] The file lists of all flows hold each new module.
+  \item[$\square$] The crossbar suite and the SoC suites pass.
 \end{itemize}

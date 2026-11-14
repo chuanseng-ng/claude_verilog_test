@@ -291,6 +291,38 @@
   definition: The JSON file that the checker of the power intent reads in place of the RTL. A program generates it from the RTL for the names that the power intent uses.
   glossary: true
 
+- term: AXI-Lite
+  kind: acronym
+  expansion: AXI4-Lite
+  definition: A reduced form of AXI4 with single-beat transfers and no ID, used for control registers.
+  glossary: true
+- term: DECERR
+  kind: acronym
+  expansion: decode error response
+  definition: The AXI response code that says no slave exists for the address.
+  glossary: true
+- term: SLVERR
+  kind: acronym
+  expansion: slave error response
+  definition: The AXI response code that says the slave found an error in the transfer.
+  glossary: true
+- term: crossbar
+  kind: technical-name
+  definition: A bus block that connects several masters to several slaves and sends each transfer to the slave that the address selects.
+  glossary: true
+- term: memory map
+  kind: technical-name
+  definition: The list of address ranges of the SoC and the slave that answers each range.
+  glossary: true
+- term: burst
+  kind: technical-name
+  definition: A transfer of one or more beats with one address.
+  glossary: true
+- term: beat
+  kind: technical-name
+  definition: One transfer of one data word on a data channel of a bus.
+  glossary: true
+
 - term: standing caveat
   kind: technical-name
   definition: A limit on what a result shows. The limit stays until a named condition ends it.

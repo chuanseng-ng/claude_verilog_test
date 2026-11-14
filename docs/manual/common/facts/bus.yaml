@@ -1,0 +1,613 @@
+# Words for the generated signal and parameter tables of the bus fabric.
+# The RTL gives the names, directions, widths and defaults. This file gives the rest.
+# Run: python tools/docs/gen_fact_tables.py
+# A description in backticks is set as code. Every port and parameter needs an entry.
+# domain: the name of a clock port of the same module, or clock, async or quasi-static.
+family: bus
+modules:
+  axi4_crossbar:
+    rtl: rtl/soc/axi4_crossbar.sv
+    deps: [rtl/soc/axi_pkg.sv]
+    label: tm:mod:axi4-crossbar
+    params:
+      N_MASTERS:
+        legal: "1 or more; 4 in the SoC"
+        description: "Number of master ports. The tables show the module default. The SoC sets 4."
+      N_SLAVES:
+        legal: "1 or more; 3 in the SoC"
+        description: "Number of slave ports. The tables show the module default. The SoC sets 3."
+      AW:
+        legal: "32 in the SoC"
+        description: "Width of an address."
+      DW:
+        legal: "32 in the SoC"
+        description: "Width of a data word."
+      SW:
+        legal: "`DW`/8"
+        description: "Width of the write strobes. One bit for each byte of a data word."
+      IW:
+        legal: "enough bits for the index of `N_MASTERS` masters; 4 in the SoC"
+        description: "Width of the ID that the crossbar drives to a slave. The ID is the index of the master. A narrower value drops the upper bits of the index without a message."
+      LENW:
+        legal: "8 in the SoC"
+        description: "Width of the burst length fields `AxLEN`."
+      SLV_BASE:
+        legal: "one inclusive base address for each slave"
+        description: "Base address of each slave window. It has one 32-bit field for each slave, and the lowest field is slave 0. The SoC passes `SOC_SLV_BASE`."
+      SLV_LIMIT:
+        legal: "one inclusive limit address for each slave"
+        description: "Last address of each slave window. The SoC passes `SOC_SLV_LIMIT`. The crossbar keeps the last matching slave when windows overlap."
+    ports:
+      clk:
+        domain: clock
+        description: "Clock of the crossbar. In the SoC it is `core_clk`."
+      rst_n:
+        domain: clk
+        description: "Active-low synchronous reset. In the SoC it is `core_rst_n`."
+      m_awaddr:
+        domain: clk
+        description: "Write address of the master of this index. The crossbar decodes it in the cycle that the engine accepts the address."
+      m_awlen:
+        domain: clk
+        description: "Burst length minus 1 of the write of the master of this index. The crossbar passes it to the slave."
+      m_awsize:
+        domain: clk
+        description: "Size code of a beat of the write of the master of this index. The crossbar passes it to the slave."
+      m_awburst:
+        domain: clk
+        description: "Burst type of the write of the master of this index. The crossbar passes it to the slave."
+      m_awvalid:
+        domain: clk
+        description: "The the master of this index offers a write address."
+      m_awready:
+        domain: clk
+        description: "The crossbar takes the write address of the master of this index. See the text about the second ready window."
+      m_wdata:
+        domain: clk
+        description: "Write data of the master of this index."
+      m_wstrb:
+        domain: clk
+        description: "Write strobes of the master of this index."
+      m_wlast:
+        domain: clk
+        description: "The beat is the last beat of the write of the master of this index. The crossbar ends the data phase on this bit."
+      m_wvalid:
+        domain: clk
+        description: "The the master of this index offers a write data beat."
+      m_wready:
+        domain: clk
+        description: "The crossbar takes the write data beat of the master of this index. It is high only while the write engine of the granted slave is in its data phase, or while the decode-error engine of the master sinks data."
+      m_bresp:
+        domain: clk
+        description: "Write response to the master of this index. The response of the slave, or DECERR from the decode-error engine."
+      m_bvalid:
+        domain: clk
+        description: "The crossbar offers the write response to the master of this index."
+      m_bready:
+        domain: clk
+        description: "The the master of this index takes the write response."
+      m_araddr:
+        domain: clk
+        description: "Read address of the master of this index. The crossbar decodes it in the cycle that the engine accepts the address."
+      m_arlen:
+        domain: clk
+        description: "Burst length minus 1 of the read of the master of this index. The crossbar passes it to the slave."
+      m_arsize:
+        domain: clk
+        description: "Size code of a beat of the read of the master of this index. The crossbar passes it to the slave."
+      m_arburst:
+        domain: clk
+        description: "Burst type of the read of the master of this index. The crossbar passes it to the slave."
+      m_arvalid:
+        domain: clk
+        description: "The the master of this index offers a read address."
+      m_arready:
+        domain: clk
+        description: "The crossbar takes the read address of the master of this index. See the text about the second ready window."
+      m_rdata:
+        domain: clk
+        description: "Read data to the master of this index. It is 0 for a decode-error beat."
+      m_rresp:
+        domain: clk
+        description: "Read response to the master of this index. The response of the slave, or DECERR from the decode-error engine."
+      m_rlast:
+        domain: clk
+        description: "The beat is the last beat of the read to the master of this index."
+      m_rvalid:
+        domain: clk
+        description: "The crossbar offers a read data beat to the master of this index."
+      m_rready:
+        domain: clk
+        description: "The the master of this index takes the read data beat."
+      s_awid:
+        domain: clk
+        description: "ID of the write: the index of the granted master."
+      s_awaddr:
+        domain: clk
+        description: "Address of the write, taken from the register that captured it."
+      s_awlen:
+        domain: clk
+        description: "Burst length minus 1 of the write."
+      s_awsize:
+        domain: clk
+        description: "Size code of a beat of the write."
+      s_awburst:
+        domain: clk
+        description: "Burst type of the write."
+      s_awvalid:
+        domain: clk
+        description: "The crossbar offers the write address to the slave of this index. It is high in the address state of the write engine."
+      s_awready:
+        domain: clk
+        description: "Slave `s` takes the write address."
+      s_wdata:
+        domain: clk
+        description: "Write data of the granted master. It is 0 outside the data state."
+      s_wstrb:
+        domain: clk
+        description: "Write strobes of the granted master. They are 0 outside the data state."
+      s_wlast:
+        domain: clk
+        description: "Last-beat flag of the granted master. It is 0 outside the data state."
+      s_wvalid:
+        domain: clk
+        description: "The write data of the granted master is valid. It is 0 outside the data state."
+      s_wready:
+        domain: clk
+        description: "Slave `s` takes the write data beat."
+      s_bid:
+        domain: clk
+        description: "Write response ID from the slave of this index. The crossbar does not use it."
+      s_bresp:
+        domain: clk
+        description: "Write response of the slave of this index."
+      s_bvalid:
+        domain: clk
+        description: "Slave `s` offers the write response."
+      s_bready:
+        domain: clk
+        description: "The crossbar takes the write response. It follows `m_bready` of the granted master in the response state."
+      s_arid:
+        domain: clk
+        description: "ID of the read: the index of the granted master."
+      s_araddr:
+        domain: clk
+        description: "Address of the read, taken from the register that captured it."
+      s_arlen:
+        domain: clk
+        description: "Burst length minus 1 of the read."
+      s_arsize:
+        domain: clk
+        description: "Size code of a beat of the read."
+      s_arburst:
+        domain: clk
+        description: "Burst type of the read."
+      s_arvalid:
+        domain: clk
+        description: "The crossbar offers the read address to the slave of this index. It is high in the address state of the read engine."
+      s_arready:
+        domain: clk
+        description: "Slave `s` takes the read address."
+      s_rid:
+        domain: clk
+        description: "Read data ID from the slave of this index. The crossbar does not use it."
+      s_rdata:
+        domain: clk
+        description: "Read data of the slave of this index."
+      s_rresp:
+        domain: clk
+        description: "Read response of the slave of this index."
+      s_rlast:
+        domain: clk
+        description: "Slave `s` marks the last read beat. The read engine ends on this bit."
+      s_rvalid:
+        domain: clk
+        description: "Slave `s` offers a read data beat."
+      s_rready:
+        domain: clk
+        description: "The crossbar takes the read data beat. It follows `m_rready` of the granted master in the data state."
+  soc_bus:
+    rtl: rtl/soc/soc_bus.sv
+    deps: [rtl/soc/axi_pkg.sv, rtl/soc/soc_addr_map_pkg.sv, rtl/soc/soc_periph_map_pkg.sv, rtl/soc/axi4_crossbar.sv, rtl/soc/axi4_to_axilite.sv, rtl/soc/axi_lite_interconnect.sv, rtl/soc/axil_to_apb.sv, rtl/soc/apb_interconnect.sv]
+    label: tm:mod:soc-bus
+    params:
+      N_MASTERS:
+        legal: "4 in the SoC"
+        description: "Number of master ports of the crossbar. The value has to equal `N_MASTERS` of `soc_top`. The sizes of the three levels below come from the address-map packages."
+    ports:
+      clk:
+        domain: clock
+        description: "Clock of the fabric. In the SoC it is `core_clk`."
+      rst_n:
+        domain: clk
+        description: "Active-low synchronous reset of the fabric. In the SoC it is `core_rst_n`."
+      m_awaddr:
+        domain: clk
+        description: "Write address of each master. The crossbar decodes it in the cycle that the engine accepts the address."
+      m_awlen:
+        domain: clk
+        description: "Burst length minus 1 of the write of each master. The crossbar passes it to the slave."
+      m_awsize:
+        domain: clk
+        description: "Size code of a beat of the write of each master. The crossbar passes it to the slave."
+      m_awburst:
+        domain: clk
+        description: "Burst type of the write of each master. The crossbar passes it to the slave."
+      m_awvalid:
+        domain: clk
+        description: "The each master offers a write address."
+      m_awready:
+        domain: clk
+        description: "The crossbar takes the write address of each master. See the text about the second ready window."
+      m_wdata:
+        domain: clk
+        description: "Write data of each master."
+      m_wstrb:
+        domain: clk
+        description: "Write strobes of each master."
+      m_wlast:
+        domain: clk
+        description: "The beat is the last beat of the write of each master. The crossbar ends the data phase on this bit."
+      m_wvalid:
+        domain: clk
+        description: "The each master offers a write data beat."
+      m_wready:
+        domain: clk
+        description: "The crossbar takes the write data beat of each master. It is high only while the write engine of the granted slave is in its data phase, or while the decode-error engine of the master sinks data."
+      m_bresp:
+        domain: clk
+        description: "Write response to each master. The response of the slave, or DECERR from the decode-error engine."
+      m_bvalid:
+        domain: clk
+        description: "The crossbar offers the write response to each master."
+      m_bready:
+        domain: clk
+        description: "The each master takes the write response."
+      m_araddr:
+        domain: clk
+        description: "Read address of each master. The crossbar decodes it in the cycle that the engine accepts the address."
+      m_arlen:
+        domain: clk
+        description: "Burst length minus 1 of the read of each master. The crossbar passes it to the slave."
+      m_arsize:
+        domain: clk
+        description: "Size code of a beat of the read of each master. The crossbar passes it to the slave."
+      m_arburst:
+        domain: clk
+        description: "Burst type of the read of each master. The crossbar passes it to the slave."
+      m_arvalid:
+        domain: clk
+        description: "The each master offers a read address."
+      m_arready:
+        domain: clk
+        description: "The crossbar takes the read address of each master. See the text about the second ready window."
+      m_rdata:
+        domain: clk
+        description: "Read data to each master. It is 0 for a decode-error beat."
+      m_rresp:
+        domain: clk
+        description: "Read response to each master. The response of the slave, or DECERR from the decode-error engine."
+      m_rlast:
+        domain: clk
+        description: "The beat is the last beat of the read to each master."
+      m_rvalid:
+        domain: clk
+        description: "The crossbar offers a read data beat to each master."
+      m_rready:
+        domain: clk
+        description: "The each master takes the read data beat."
+      rom_awid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. ID of the write: the index of the granted master."
+      rom_awaddr:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Address of the write."
+      rom_awlen:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Burst length minus 1 of the write."
+      rom_awsize:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Size code of a beat of the write."
+      rom_awburst:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Burst type of the write."
+      rom_awvalid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The fabric offers the write address."
+      rom_awready:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The slave takes the write address."
+      rom_wdata:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Write data."
+      rom_wstrb:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Write strobes."
+      rom_wlast:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Last-beat flag of the write."
+      rom_wvalid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The write data is valid."
+      rom_wready:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The slave takes the write data beat."
+      rom_bid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Write response ID. The crossbar does not use it."
+      rom_bresp:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Write response of the slave."
+      rom_bvalid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The slave offers the write response."
+      rom_bready:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The fabric takes the write response."
+      rom_arid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. ID of the read: the index of the granted master."
+      rom_araddr:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Address of the read."
+      rom_arlen:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Burst length minus 1 of the read."
+      rom_arsize:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Size code of a beat of the read."
+      rom_arburst:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Burst type of the read."
+      rom_arvalid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The fabric offers the read address."
+      rom_arready:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The slave takes the read address."
+      rom_rid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Read data ID. The crossbar does not use it."
+      rom_rdata:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Read data of the slave."
+      rom_rresp:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. Read response of the slave."
+      rom_rlast:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The slave marks the last read beat."
+      rom_rvalid:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The slave offers a read data beat."
+      rom_rready:
+        domain: clk
+        description: "Crossbar slave S0, the boot ROM. The fabric takes the read data beat."
+      mem_awid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. ID of the write: the index of the granted master."
+      mem_awaddr:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Address of the write."
+      mem_awlen:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Burst length minus 1 of the write."
+      mem_awsize:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Size code of a beat of the write."
+      mem_awburst:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Burst type of the write."
+      mem_awvalid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The fabric offers the write address."
+      mem_awready:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The slave takes the write address."
+      mem_wdata:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Write data."
+      mem_wstrb:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Write strobes."
+      mem_wlast:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Last-beat flag of the write."
+      mem_wvalid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The write data is valid."
+      mem_wready:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The slave takes the write data beat."
+      mem_bid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Write response ID. The crossbar does not use it."
+      mem_bresp:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Write response of the slave."
+      mem_bvalid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The slave offers the write response."
+      mem_bready:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The fabric takes the write response."
+      mem_arid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. ID of the read: the index of the granted master."
+      mem_araddr:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Address of the read."
+      mem_arlen:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Burst length minus 1 of the read."
+      mem_arsize:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Size code of a beat of the read."
+      mem_arburst:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Burst type of the read."
+      mem_arvalid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The fabric offers the read address."
+      mem_arready:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The slave takes the read address."
+      mem_rid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Read data ID. The crossbar does not use it."
+      mem_rdata:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Read data of the slave."
+      mem_rresp:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. Read response of the slave."
+      mem_rlast:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The slave marks the last read beat."
+      mem_rvalid:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The slave offers a read data beat."
+      mem_rready:
+        domain: clk
+        description: "Crossbar slave S1, the SRAM. The fabric takes the read data beat."
+      axil_gpu_awaddr:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Address of the write."
+      axil_gpu_awprot:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Protection bits of the write."
+      axil_gpu_awvalid:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The fabric offers the write address."
+      axil_gpu_awready:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The slave takes the write address."
+      axil_gpu_wdata:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Write data."
+      axil_gpu_wstrb:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Write strobes."
+      axil_gpu_wvalid:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The write data is valid."
+      axil_gpu_wready:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The slave takes the write data."
+      axil_gpu_bresp:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Write response of the slave."
+      axil_gpu_bvalid:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The slave offers the write response."
+      axil_gpu_bready:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The fabric takes the write response."
+      axil_gpu_araddr:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Address of the read."
+      axil_gpu_arprot:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Protection bits of the read."
+      axil_gpu_arvalid:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The fabric offers the read address."
+      axil_gpu_arready:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The slave takes the read address."
+      axil_gpu_rdata:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Read data of the slave."
+      axil_gpu_rresp:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. Read response of the slave."
+      axil_gpu_rvalid:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The slave offers the read data."
+      axil_gpu_rready:
+        domain: clk
+        description: "AXI-Lite slot 0, the GPU control port. The fabric takes the read data."
+      axil_dma_awaddr:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Address of the write."
+      axil_dma_awprot:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Protection bits of the write."
+      axil_dma_awvalid:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The fabric offers the write address."
+      axil_dma_awready:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The slave takes the write address."
+      axil_dma_wdata:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Write data."
+      axil_dma_wstrb:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Write strobes."
+      axil_dma_wvalid:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The write data is valid."
+      axil_dma_wready:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The slave takes the write data."
+      axil_dma_bresp:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Write response of the slave."
+      axil_dma_bvalid:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The slave offers the write response."
+      axil_dma_bready:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The fabric takes the write response."
+      axil_dma_araddr:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Address of the read."
+      axil_dma_arprot:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Protection bits of the read."
+      axil_dma_arvalid:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The fabric offers the read address."
+      axil_dma_arready:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The slave takes the read address."
+      axil_dma_rdata:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Read data of the slave."
+      axil_dma_rresp:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. Read response of the slave."
+      axil_dma_rvalid:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The slave offers the read data."
+      axil_dma_rready:
+        domain: clk
+        description: "AXI-Lite slot 2, the DMA control port. The fabric takes the read data."
+      apb_psel:
+        domain: clk
+        description: "Select of each APB slot."
+      apb_penable:
+        domain: clk
+        description: "Enable of each APB slot. It is high in the ACCESS phase."
+      apb_pwrite:
+        domain: clk
+        description: "Direction of the transfer. High for a write."
+      apb_paddr:
+        domain: clk
+        description: "Address of the transfer. Each slot uses bits `[11:0]` only."
+      apb_pwdata:
+        domain: clk
+        description: "Write data."
+      apb_pstrb:
+        domain: clk
+        description: "Write byte strobes."
+      apb_prdata:
+        domain: clk
+        description: "Read data from each APB slot."
+      apb_pready:
+        domain: clk
+        description: "Ready from each APB slot."
+      apb_pslverr:
+        domain: clk
+        description: "Error from each APB slot."

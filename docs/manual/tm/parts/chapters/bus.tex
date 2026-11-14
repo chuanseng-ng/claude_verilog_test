@@ -1,0 +1,375 @@
+% Authored chapter: bus fabric, part one. The fabric topology and the crossbar.
+% The bridges, the AXI-Lite and APB interconnects and the register banks follow in a later part.
+% The moved text is in the Changes record, part Source archive.
+\chapter{Bus fabric}\label{tm:ch:mod-bus-fabric}
+
+This chapter describes how the first level of the bus fabric works: the topology of the fabric, the address decode and the crossbar. The rules that the fabric follows are in \cref{ds:ch:mod-bus-fabric}. The tasks of an integrator are in \cref{um:ch:bus-integration}.
+
+The fabric has three protocol levels. The crossbar \code{u_xbar} carries AXI4 between four masters and three slaves. The peripheral bridge \code{u_periph_bridge} turns the traffic of its slave port into AXI-Lite, and the interconnect \code{u_axil_ic} sends each AXI-Lite transfer to one of three slots. The bridge \code{u_axil_apb_bridge} turns the traffic of one slot into APB4, and the interconnect \code{u_apb_ic} sends each APB transfer to one of 14 slots. \Cref{fig:tm:ch:mod-bus-fabric:topology} shows the instances. The part that follows this one describes the two bridges, the two interconnects and the register banks.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[every node/.style={font=\scriptsize}]
+    \node[cvtblock, minimum width=16mm] (cpu) at (0,7.2) {\texttt{u\_cpu}};
+    \node[cvtblock, minimum width=14mm] (isocpu) at (2.7,7.2) {\texttt{ISO\_CPU}};
+    \node[cvtblock, minimum width=26mm] (cdc) at (5.6,7.2) {\texttt{u\_cpu\_axi\_cdc}};
+    \node[cvtblock, minimum width=16mm, minimum height=32mm] (gpu) at (0,4.6) {\texttt{u\_gpu}};
+    \node[cvtblock, minimum width=14mm] (isoif) at (2.7,5.6) {\texttt{ISO\_GPU}};
+    \node[cvtblock, minimum width=26mm] (gif) at (5.6,5.6) {\texttt{u\_gif\_adapter}};
+    \node[cvtblock, minimum width=14mm] (isod) at (2.7,4.0) {\texttt{ISO\_GPU}};
+    \node[cvtblock, minimum width=26mm] (dma) at (5.6,0.2) {\texttt{u\_dma}};
+    \node[cvtblock, minimum width=22mm, minimum height=56mm] (xbar) at (9.6,4.9) {\texttt{u\_xbar}};
+    \coordinate (m0) at ([yshift=2.3cm]xbar.west);
+    \coordinate (m1) at ([yshift=0.7cm]xbar.west);
+    \coordinate (m2) at ([yshift=-0.9cm]xbar.west);
+    \coordinate (m3) at ([yshift=-2.3cm]xbar.west);
+    \coordinate (s0) at ([yshift=2.3cm]xbar.east);
+    \coordinate (s1) at ([yshift=0.7cm]xbar.east);
+    \coordinate (s2) at ([yshift=-0.7cm]xbar.east);
+    \node[cvtblock, minimum width=26mm] (rom) at (13.6,7.2) {\texttt{u\_boot\_rom}};
+    \node[cvtblock, minimum width=26mm] (sram) at (13.6,5.6) {\texttt{u\_sram}};
+    \node[cvtblock, minimum width=26mm] (per) at (13.6,4.2) {\texttt{u\_periph\_bridge}};
+    \node[cvtblock, minimum width=26mm] (ic) at (13.6,1.2) {\texttt{u\_axil\_ic}};
+    \node[cvtblock, minimum width=26mm] (brg) at (13.6,-0.3) {\texttt{u\_axil\_apb\_bridge}};
+    \node[cvtblock, minimum width=26mm] (apbic) at (13.6,-1.8) {\texttt{u\_apb\_ic}};
+    \node[cvtblock, minimum width=52mm] (apbd) at (8.0,-0.9) {12 APB slots: 0 to 3, 5, 7 to 13};
+    \node[cvtblock, minimum width=44mm] (cdc1) at (8.0,-2.1) {\texttt{u\_apb\_pll\_cdc}, APB slot 4};
+    \node[cvtblock, minimum width=44mm] (cdc2) at (8.0,-3.3) {\texttt{u\_apb\_pll2\_cdc}, APB slot 6};
+    \node[cvtblock, minimum width=20mm] (pll1) at (0,-2.1) {\texttt{u\_pll\_sub}};
+    \node[cvtblock, minimum width=20mm] (pll2) at (0,-3.3) {\texttt{u\_cpu\_pll\_sub}};
+    \node[font=\tiny, anchor=west] at ([xshift=1mm]m0) {M0};
+    \node[font=\tiny, anchor=west] at ([xshift=1mm]m1) {M1};
+    \node[font=\tiny, anchor=west] at ([xshift=1mm]m2) {M2};
+    \node[font=\tiny, anchor=west] at ([xshift=1mm]m3) {M3};
+    \node[font=\tiny, anchor=east] at ([xshift=-1mm]s0) {S0};
+    \node[font=\tiny, anchor=east] at ([xshift=-1mm]s1) {S1};
+    \node[font=\tiny, anchor=east] at ([xshift=-1mm]s2) {S2};
+    \draw[cvtsig] (cpu.east) -- (isocpu.west);
+    \draw[cvtsig] (isocpu.east) -- (cdc.west);
+    \draw[cvtsig] (cdc.east) -- node[above, font=\tiny]{AXI4} (m0);
+    \draw[cvtsig] ([yshift=1.0cm]gpu.east) -- (isoif.west);
+    \draw[cvtsig] (isoif.east) -- (gif.west);
+    \draw[cvtsig] (gif.east) -- node[above, font=\tiny]{AXI4} (m1);
+    \draw[cvtsig] ([yshift=-0.6cm]gpu.east) -- (isod.west);
+    \draw[cvtsig] (isod.east) -- node[above, font=\tiny, pos=0.8]{AXI4} (m2);
+    \draw[cvtsig] (dma.east) -| ([xshift=-4mm]m3) -- (m3);
+    \draw[cvtsig] (s0) -- (rom.west);
+    \draw[cvtsig] (s1) -- (sram.west);
+    \draw[cvtsig] (s2) -- (per.west);
+    \draw[cvtsig] (per.south) -- node[right, font=\tiny]{AXI-Lite} (ic.north);
+    \draw[cvtsig] (ic.south) -- node[right, font=\tiny]{slot 1, AXI-Lite} (brg.north);
+    \draw[cvtsig] (brg.south) -- node[right, font=\tiny]{APB4} (apbic.north);
+    \draw[cvtsig, dashed] ([yshift=2mm]ic.west) -| ([xshift=3mm]gpu.south);
+    \node[font=\tiny, anchor=south] at (4.0,1.45) {slot 0, AXI-Lite, control port of the GPU};
+    \draw[cvtsig] ([yshift=-2mm]ic.west) -| (dma.north);
+    \node[font=\tiny, anchor=north] at (11.0,0.95) {slot 2, AXI-Lite};
+    \draw[thin] (apbic.west) -- (11.0,-1.8);
+    \draw[thin] (11.0,-0.9) -- (11.0,-3.3);
+    \draw[cvtsig] (11.0,-0.9) -- (apbd.east);
+    \draw[cvtsig] (11.0,-2.1) -- (cdc1.east);
+    \draw[cvtsig] (11.0,-3.3) -- (cdc2.east);
+    \draw[cvtsig] (cdc1.west) -- (pll1.east);
+    \draw[cvtsig] (cdc2.west) -- (pll2.east);
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(cpu), label={[font=\scriptsize]north:CPU domain}] {};
+      \node[cvtdomain, fit=(gpu), label={[font=\scriptsize]south:GPU domain}] {};
+      \node[cvtdomain, fit=(cdc)(gif)(xbar)(rom)(sram)(per)(ic)(brg)(apbic)(dma)(apbd)(cdc1)(cdc2), label={[font=\scriptsize]north:\texttt{core\_clk} domain, fabric \texttt{u\_bus} inside}] {};
+      \node[cvtdomain, fit=(pll1), label={[font=\scriptsize]north:PLL clock}] {};
+      \node[cvtdomain, fit=(pll2), label={[font=\scriptsize]south:PLL clock}] {};
+    \end{scope}
+  \end{tikzpicture}}
+  \caption{The instances of the fabric in \texttt{soc\_top}. The module \texttt{soc\_bus}, instance \texttt{u\_bus}, holds \texttt{u\_xbar}, \texttt{u\_periph\_bridge}, \texttt{u\_axil\_ic}, \texttt{u\_axil\_apb\_bridge} and \texttt{u\_apb\_ic}. The clamps sit between the domains. Each GPU clamp forces the valid and ready outputs of the GPU to 0 while it is active. The CPU domain runs on \texttt{cpu\_gated\_clk}. The GPU runs on \texttt{gpu\_gated\_clk}, a gated copy of \texttt{core\_clk}, so no clock crossing separates it from the fabric. The dashed arrow reaches the control port of the GPU. The two PLL bridges end on the reference clocks of their PLL blocks. The boot ROM, the SRAM and the DMA engine run on \texttt{core\_clk}.}\label{fig:tm:ch:mod-bus-fabric:topology}
+\end{figure}
+
+\Cref{fig:tm:ch:mod-bus-fabric:decode} shows how an address goes through the three decode levels. The leaves for a decode error at the AXI-Lite level and at the APB level exist in the RTL. The SoC map cannot reach them (\reqref{DS-MAP-004}).
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[every node/.style={font=\scriptsize}]
+    \node[cvtblock, minimum width=14mm] (addr) at (0,0) {address};
+    \node[cvtblock, minimum width=22mm] (xb) at (2.5,0) {crossbar decode\\last match};
+    \node[cvtblock, minimum width=30mm] (rom) at (6.0,3.6) {S0 \texttt{u\_boot\_rom}\\0x0000\_1000\\0x0000\_1FFF};
+    \node[cvtblock, minimum width=30mm] (sram) at (6.0,2.0) {S1 \texttt{u\_sram}\\0x0000\_2000\\0x0FFF\_FFFF};
+    \node[cvtblock, minimum width=30mm] (per) at (6.0,0.4) {S2 \texttt{u\_periph\_bridge}\\0x2000\_1000\\0x2001\_0FFF};
+    \node[cvtblock, minimum width=30mm, draw=cvtok] (de0) at (6.0,-1.3) {no slave\\DECERR from\\the crossbar};
+    \node[cvtblock, minimum width=24mm] (al) at (9.6,0.4) {AXI-Lite decode\\last match};
+    \node[cvtblock, minimum width=30mm] (gp) at (13.0,2.4) {slot 0, GPU control\\0x2000\_1000\\0x2000\_1FFF};
+    \node[cvtblock, minimum width=30mm] (ab) at (13.0,0.8) {slot 1, APB bridge\\0x2000\_2000\\0x2001\_0FFF};
+    \node[cvtblock, minimum width=30mm] (dm) at (13.0,-0.8) {slot 2, DMA control\\0x2000\_5000\\0x2000\_5FFF};
+    \node[cvtblock, minimum width=30mm, draw=cvtwarn, dashed] (de1) at (13.0,-2.5) {no slot: DECERR\\not reachable};
+    \node[cvtblock, minimum width=24mm] (ap) at (16.4,0.8) {APB decode\\first match};
+    \node[cvtblock, minimum width=30mm] (as) at (19.8,1.6) {14 slots of 4 KB\\0x2000\_2000\\0x2001\_0FFF};
+    \node[cvtblock, minimum width=30mm, draw=cvtwarn, dashed] (de2) at (19.8,-0.2) {no slot: PSLVERR\\not reachable};
+    \draw[cvtsig] (addr) -- (xb);
+    \draw[cvtsig] (xb.east) -- (rom.west);
+    \draw[cvtsig] (xb.east) -- (sram.west);
+    \draw[cvtsig] (xb.east) -- (per.west);
+    \draw[cvtsig] (xb.east) -- (de0.west);
+    \draw[cvtsig] (per.east) -- (al.west);
+    \draw[cvtsig] (al.east) -- (gp.west);
+    \draw[cvtsig] (al.east) -- (ab.west);
+    \draw[cvtsig] (al.east) -- (dm.west);
+    \draw[cvtsig, dashed] (al.east) -- (de1.west);
+    \draw[cvtsig] (ab.east) -- (ap.west);
+    \draw[cvtsig] (ap.east) -- (as.west);
+    \draw[cvtsig, dashed] (ap.east) -- (de2.west);
+  \end{tikzpicture}}
+  \caption{The address decode tree. A dashed box is a default answer that the SoC map cannot reach. The crossbar and the AXI-Lite interconnect keep the last matching slot, so slot 2 wins in its page. The APB interconnect keeps the first matching slot. The SoC map has no overlap at the APB level.}\label{fig:tm:ch:mod-bus-fabric:decode}
+\end{figure}
+
+\section{Fabric topology}\label{tm:mod:soc-bus}
+
+\subsection{Introduction}
+The module \code{soc_bus} is a structural wrapper. It adds no logic. It holds the five bus modules of the fabric and it makes every signal that crosses the boundary between \code{soc_top} and the fabric a port. The rules for the topology are in \cref{ds:mod:soc-bus}.
+
+\subsection{Functional description}
+\paragraph{Sizes.} The address-map packages set the sizes of the three levels. The crossbar has four master ports, set by the parameter \code{N_MASTERS}, and \code{SOC_N_SLAVES} slave ports, which is 3. The AXI-Lite interconnect has \code{AXIL_N_SLAVES} slots, which is 3. The APB interconnect has \code{APB_N_SLAVES} slots, which is 14. The parameter \code{N_MASTERS} of \code{soc_bus} has to equal the localparam of \code{soc_top} that has the same name (\reqref{DS-BUS-005}).
+
+\paragraph{Slots of the three levels.} \Cref{tab:ds:mm:address-map:crossbar}, \cref{tab:ds:mm:address-map:axilite} and \cref{tab:ds:mm:address-map:apb} list the slots of each level with their constants, ranges and targets. A tool generates the tables from the packages. The table in the Design Specification, \cref{tab:ds:mm:address-map:all}, lists the leaf slots in address order.
+
+\input{generated/map/memory-map-crossbar}
+
+\input{generated/map/memory-map-axilite}
+
+\input{generated/map/memory-map-apb}
+
+\paragraph{Masters.} \Cref{tab:tm:mod:soc-bus:masters} lists the four master ports. All wires of the master ports in \code{soc_top} are the nets \code{xbar_m_*}.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{9mm}>{\raggedright\arraybackslash}p{34mm}>{\raggedright\arraybackslash}p{82mm}@{}}
+\caption{Master ports of the crossbar in the SoC}\label{tab:tm:mod:soc-bus:masters}\\
+\toprule
+Port & Master & Path to the crossbar\\
+\midrule
+\endfirsthead
+\toprule
+Port & Master & Path to the crossbar\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+M0 & CPU \code{u_cpu} & The AXI4 master of the CPU goes through the clamp ISO\_CPU and the bridge \code{u_cpu_axi_cdc}. The bridge crosses from \code{cpu_gated_clk} to \code{core_clk}. Its master face drives the port.\\
+M1 & GPU instruction fetch & The AXI-Lite master port of \code{u_gpu} goes through the clamp ISO\_GPU on its read address valid and read ready, and then through the adapter \code{u_gif_adapter}. The adapter is a read-only master. Its write channels are tied off.\\
+M2 & GPU data & The AXI4 port of \code{u_gpu}. \code{soc_top} sets the burst length to 0, the size to 4 bytes, the burst type to INCR and \code{WLAST} to 1, so each transfer has one beat. The clamp ISO\_GPU forces \code{AWVALID}, \code{WVALID}, \code{ARVALID}, \code{BREADY} and \code{RREADY} to 0.\\
+M3 & DMA engine \code{u_dma} & The AXI4 master of the DMA engine drives the port. The DMA engine has its own control port at AXI-Lite slot 2.\\
+\end{longtable}
+
+\Cref{tab:tm:ch:mod-power-management:iso-gpu} lists the clamped nets of the GPU domain.
+
+\paragraph{Storage behind the first two slots.} The boot ROM \code{u_boot_rom} has 1024 words. It takes the word index from the address bits 11 to 2, so its storage repeats every 4 KB (\reqref{DS-MAP-041}). The SRAM controller \code{u_sram} has \code{SRAM_MEM_WORDS} words, which is 1024 in \code{soc_top} by default. It takes the word index from the address bits above the byte offset, after it subtracts \code{SRAM_BASE}, and it uses the lowest bits that cover the word count. The storage repeats across the whole window (\reqref{DS-MAP-042}). The SRAM controller answers SLVERR for a burst whose last beat is outside the window. The design of the controller is in \cref{tm:mod:sram-controller}.
+
+\paragraph{Unmapped addresses.} The crossbar answers DECERR for an address that no window holds (\reqref{DS-MAP-020}, \reqref{DS-MAP-021}). The range 0x2000\_0000 to 0x2000\_0FFF is one of these. The debug port of the CPU is not on the bus. It is the top-level APB3 port, and it goes through \code{u_apb_dbg_cdc} (\cref{tm:ch:mod-cdc-primitives}).
+
+\paragraph{Address width on the way down.} The address is 32 bits wide on every level. Each peripheral takes the bits 11 to 0 only, so the step of the peripheral window from 0x2000\_FFFF to 0x2001\_0000 at the last APB slot has no effect. The control ports of the GPU and of the DMA engine take the bits 11 to 0, too.
+
+\paragraph{Clock and reset.} The fabric, the adapter \code{u_gif_adapter}, the ROM, the SRAM and the DMA engine run on \code{core_clk} with \code{core_rst_n} (\reqref{DS-BUS-001}). The control port of the GPU runs on \code{gpu_gated_clk} with \code{gpu_domain_rst_n}. The other endpoints are behind bridges, as \cref{fig:tm:ch:mod-bus-fabric:topology} shows.
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:soc-bus:params} lists the parameter.
+
+\input{generated/facts/soc-bus-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:soc-bus:signals} lists the ports. The ports \code{rom_*} and \code{mem_*} are the slave ports S0 and S1 of the crossbar. The slave port S2 is inside the module, where it goes to \code{u_periph_bridge}. The ports \code{axil_gpu_*} and \code{axil_dma_*} are the AXI-Lite slots 0 and 2. The slot 1 is inside the module. The ports \code{apb_*} are the 14 APB slots.
+
+\input{generated/facts/soc-bus-signals}
+
+\subsection{Integration and timing constraints}
+\code{soc_top} connects the master ports to the nets \code{xbar_m_*}, and the slave ports to the ROM, the SRAM, the GPU, the DMA engine and the peripherals. It connects \code{paddr[11:0]} of each APB slot and the bits 11 to 0 of the AXI-Lite addresses of the GPU and of the DMA engine. The instance name of the SRAM macro is a different subject and is in \cref{tm:mod:sram-controller}. No SDC or Tcl file under the physical design directory names an instance of the fabric. The power intent file names \code{u_bus} in its always-on roster.
+
+\subsection{Verification}
+The suites that exercise the whole path from a master to a slave are \code{soc_integration} and \code{soc_boot}. The register walk reaches the 14 peripheral windows from the CPU. The GPU walk and the DMA walk reach the three crossbar ranges and the unmapped ranges from the other masters. These tests run at one clock for the fabric and with zero delay. The firmware of each walk checks its own result, so a failure shows as a jump to a fail address. The walks are end-to-end checks and not proofs of single modules. The tests that read the SRAM or the ROM use a backdoor.
+
+\subsection{Known limits}
+The two PLL slots answer through a clock-domain bridge. They have wait states and can end with SLVERR (\reqref{DS-CDC-102}, \reqref{DS-CDC-103}). The access of a GPU register while the GPU is off does not end (\reqref{DS-PMU-185}, \cref{tm:mod:pmu}). The coverage waiver file of the project says that \code{apb_pslverr} never toggles. The PLL bridges give an error in some cases, so the waiver and the RTL do not agree. The owner decides which one changes.
+
+\section{\texttt{axi4\_crossbar}}\label{tm:mod:axi4-crossbar}
+
+\subsection{Introduction}
+The module \code{axi4_crossbar} connects \code{N_MASTERS} masters to \code{N_SLAVES} slaves. The master ports have no ID. The slave ports have an ID. The module defaults are three masters and two slaves. The SoC uses four masters and three slaves. The rules are in \cref{ds:mod:axi4-crossbar}, \cref{ds:ch:mod-bus-fabric:contract} and the requirements \reqref{DS-BUS-020} to \reqref{DS-BUS-035}.
+
+\subsection{Functional description}
+\paragraph{Decode.} The function \code{decode} returns the index of the last slave whose window holds the address, or \code{N_SLAVES} when no window holds it. The crossbar evaluates it on the live address of each master. An address that decodes to \code{N_SLAVES} goes to the decode-error engines of that master. The decode uses the first address of a burst only (\reqref{DS-MAP-005}).
+
+\paragraph{Arbitration.} For each slave and each direction, a priority encoder looks at the masters in the order of their index. It selects the first master that has its valid signal high and whose address decodes to the slave. The arbitration has no memory. It does not look at earlier grants. The write encoder and the read encoder are separate.
+
+\paragraph{Write engine.} Each slave has one write engine with four states. \Cref{tab:tm:mod:axi4-crossbar:wstates} lists what each state drives. \Cref{fig:tm:mod:axi4-crossbar:fsm} shows the states of both engines. The engine goes from \code{W_IDLE} to \code{W_AW} when the encoder has a winner. At that edge it stores the index of the winner in \code{wsel} and the address, the length, the size and the burst type of the winner in capture registers. In \code{W_AW} it drives the stored values to the slave with \code{s_awvalid} high and the ID equal to the index of the winner. It leaves \code{W_AW} when the slave takes the address. In \code{W_DATA} it connects the data channel of the winner to the slave. It leaves \code{W_DATA} when a beat with \code{s_wvalid}, \code{s_wready} and \code{m_wlast} high goes through. In \code{W_RESP} it connects \code{m_bready} of the winner to \code{s_bready} and it passes \code{s_bvalid} and \code{s_bresp} to the winner. It leaves \code{W_RESP} when the response is taken.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{19mm}>{\raggedright\arraybackslash}p{58mm}>{\raggedright\arraybackslash}p{49mm}@{}}
+\caption{States of the write engine of one slave}\label{tab:tm:mod:axi4-crossbar:wstates}\\
+\toprule
+State & Output to the slave & Output to the master\\
+\midrule
+\endfirsthead
+\toprule
+State & Output to the slave & Output to the master\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\code{W_IDLE} & No valid signal. & \code{m_awready} is 1 for the winning master that requests this slave.\\
+\code{W_AW} & \code{s_awvalid} is 1, with the stored address fields and the ID. & \code{m_awready} of the granted master is \code{s_awready}.\\
+\code{W_DATA} & Data, strobes, last and valid of the granted master. & \code{m_wready} of the granted master is \code{s_wready}.\\
+\code{W_RESP} & \code{s_bready} is \code{m_bready} of the granted master. & \code{m_bvalid} and \code{m_bresp} are those of the slave.\\
+\end{longtable}
+
+\paragraph{Read engine.} Each slave has one read engine with three states. In \code{R_IDLE} the engine accepts the winner and stores its index and its address fields. In \code{R_AR} it drives the stored values to the slave with \code{s_arvalid} high and the ID equal to the index of the winner. It leaves \code{R_AR} when the slave takes the address. In \code{R_DATA} it passes data, response, last and valid of the slave to the granted master, and it passes \code{m_rready} to the slave. It leaves \code{R_DATA} when a beat with \code{s_rvalid}, \code{s_rready} and \code{s_rlast} high goes through.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[->, >=Stealth, node distance=33mm, every node/.style={font=\scriptsize}, every edge/.style={draw, thin}]
+    \node[cvtstate] (widle) {\texttt{W\_IDLE}};
+    \node[cvtstate, right of=widle] (waw) {\texttt{W\_AW}};
+    \node[cvtstate, right of=waw] (wdata) {\texttt{W\_DATA}};
+    \node[cvtstate, right of=wdata] (wresp) {\texttt{W\_RESP}};
+    \path (widle) edge node[above, align=center]{a master\\requests} (waw);
+    \path (waw) edge node[above, align=center]{\texttt{s\_awready}} (wdata);
+    \path (wdata) edge node[above, align=center]{last beat\\taken} (wresp);
+    \path (wresp) edge[bend left=35] node[above]{\texttt{s\_bvalid} and \texttt{s\_bready}} (widle);
+    \node[cvtstate, below=18mm of widle] (ridle) {\texttt{R\_IDLE}};
+    \node[cvtstate, right of=ridle] (rar) {\texttt{R\_AR}};
+    \node[cvtstate, right of=rar] (rdata) {\texttt{R\_DATA}};
+    \path (ridle) edge node[above, align=center]{a master\\requests} (rar);
+    \path (rar) edge node[above, align=center]{\texttt{s\_arready}} (rdata);
+    \path (rdata) edge[bend left=35] node[above, align=center, xshift=8mm]{\texttt{s\_rvalid}, \texttt{s\_rready}\\and \texttt{s\_rlast}} (ridle);
+  \end{tikzpicture}
+  \caption{The state machines of the engines of one slave. The write engine is in the upper row and the read engine is in the lower row. A state stays until the condition of its exit arrow is true. The condition of the exit of \texttt{W\_DATA} is \texttt{s\_wvalid}, \texttt{s\_wready} and \texttt{m\_wlast} of the granted master. The crossbar has one pair of engines for each slave.}\label{fig:tm:mod:axi4-crossbar:fsm}
+\end{figure}
+
+\paragraph{Early accept and the capture registers.} In \code{W_IDLE} and \code{R_IDLE} the crossbar gives \code{m_awready} or \code{m_arready} to the winner in the same cycle as the request, without waiting for the slave. The address fields go into capture registers at that edge. The engine then drives the slave from the registers, so a master that raises \code{AWVALID} or \code{ARVALID} for one cycle only is held until the slave takes the address (\reqref{DS-BUS-025}, \reqref{DS-BUS-026}). Only the winner sees the early accept in one cycle for one slave.
+
+\paragraph{Decode-error engines.} Each master has a write engine and a read engine for unmapped addresses. The write engine has the states \code{DW_IDLE}, \code{DW_DATA} and \code{DW_RESP}. In \code{DW_IDLE} it gives \code{m_awready} when the address is unmapped. In \code{DW_DATA} it gives \code{m_wready} 1 for every beat and ends when it sees \code{m_wvalid} and \code{m_wlast}. In \code{DW_RESP} it gives \code{m_bvalid} with the response DECERR until \code{m_bready}. The read engine has the states \code{DR_IDLE} and \code{DR_DATA}. In \code{DR_IDLE} it gives \code{m_arready} when the address is unmapped, and it stores the length. In \code{DR_DATA} it gives one read beat for each cycle in which \code{m_rready} is high. Each beat has the response DECERR and the data 0. It marks the beat with the count that equals the stored length as the last beat. The engine of a master does not use a slave, so no valid signal of a slave rises (\reqref{DS-MAP-022}).
+
+\paragraph{Response resolution.} For each master, the crossbar scans the slaves. It takes the response signals of the slave whose engine is in the response state with this master as the granted master. The result is combined with the output of the decode-error engine by an OR. The response code and the data of a decode-error beat replace the slave values. The ready signals of the address channels have three sources: the early accept of an idle engine, the ready signal of the slave in the address state, and the decode-error engine. In the scan, a later slave index overwrites an earlier one, as \cref{tm:mod:axi4-crossbar:limits} shows.
+
+\paragraph{ID tagging.} The slave ports have an ID. The crossbar drives \code{s_awid} and \code{s_arid} with the index of the granted master, cut to \code{IW} bits. It does not read \code{s_bid} or \code{s_rid}. It finds the master of a response from the grant register of the engine (\reqref{DS-BUS-003}).
+
+\paragraph{Implementation note.} The crossbar drives packed internal wires with the prefix \code{_s_} and \code{_m_} from \code{always_comb} blocks. Continuous assignments connect the wires to the ports. Do not drive a slice of a port array from \code{always_comb} in a loop. The front end Synlig makes empty wire names for such a drive, and the later step of the flow stops with an error. The parameters \code{SLV_BASE} and \code{SLV_LIMIT} are packed arrays for the same reason. The function \code{decode} returns a 32-bit vector and not an integer, for the same reason. The tool defects part of this manual has no entry for this defect.
+
+\paragraph{Cycle diagrams.} The next three figures show the engines cycle by cycle. They are derived by hand from the RTL and are not measured. In each figure one unit is one clock period. The edge that ends cycle $k$ is E$k$, and it is at the right end of the cell of cycle $k$. The first half unit of the time axis is the time before cycle 0. The slave in the figures takes an address in the cycle in which it sees it, answers one cycle after it took the address of a read, or one cycle after it took the last data beat of a write, and all masters keep \code{RREADY} and \code{BREADY} high.
+
+\Cref{fig:tm:mod:axi4-crossbar:arb} shows two masters that read from the same idle slave. The master M0 and the master M1 raise \code{ARVALID} in cycle 0. M0 wins. It gets \code{m_arready} in cycle 0, and the engine stores its address at E0. M1 sees \code{m_arready} low. M0 gets \code{m_arready} again in cycle 1, because the engine is in \code{R_AR}. This is the second ready window of \cref{tm:mod:axi4-crossbar:limits}, and it has no effect here, because M0 has no request. The engine returns to \code{R_IDLE} in cycle 3, and M1 is accepted in that cycle.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=4.6]
+    \texttt{clk} & 14{c} \\
+    \texttt{m0\_arvalid} & 0.5L 1H 5.5L \\
+    \texttt{m1\_arvalid} & 0.5L 4H 2.5L \\
+    \texttt{m0\_arready} & 0.5L 2H 4.5L \\
+    \texttt{m1\_arready} & 3.5L 1H 2.5L \\
+    \texttt{rstate} & 1.5D{R\_IDLE} 1D{R\_AR} 1D{R\_DATA} 1D{R\_IDLE} 1D{R\_AR} 1.5D{R\_DATA} \\
+    \texttt{rsel} & 1.5U 3D{0} 2.5D{1} \\
+    \texttt{s\_arvalid} & 1.5L 1H 2L 1H 1.5L \\
+    \texttt{s\_rvalid} & 2.5L 1H 2L 1H 0.5L \\
+    \texttt{m0\_rvalid} & 2.5L 1H 3.5L \\
+    \texttt{m1\_rvalid} & 5.5L 1H 0.5L \\
+  \end{tikztimingtable}
+  \caption{Arbitration of two reads of single beats to one slave. The values are derived from the RTL and are not measured. One unit is one period of \texttt{clk}, and the rising edge is in the middle of the unit. Cycle 0 starts after the first half unit. The slave accepts an address in the cycle in which it sees it, and it gives one read beat one cycle after it accepted the address. The masters keep \texttt{rready} high. The values of the stored master \texttt{rsel} before E0 are not defined.}\label{fig:tm:mod:axi4-crossbar:arb}
+\end{figure}
+
+\Cref{fig:tm:mod:axi4-crossbar:read} shows one read of one master through the crossbar. The master raises \code{ARVALID} in cycle 0 and the crossbar accepts the address at E0. In cycle 1 the engine drives the stored address to the slave, and the slave takes it at E1. In cycle 2 the slave gives the read beat, and the beat goes through to the master in the same cycle, because the path from the slave to the master has no register. The beat has \code{RLAST}, and the engine returns to idle.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=4.6]
+    \texttt{clk} & 10{c} \\
+    \texttt{m\_arvalid} & 0.5L 1H 3.5L \\
+    \texttt{m\_arready} & 0.5L 2H 2.5L \\
+    \texttt{rstate} & 1.5D{R\_IDLE} 1D{R\_AR} 1D{R\_DATA} 1.5D{R\_IDLE} \\
+    \texttt{s\_arvalid} & 1.5L 1H 2.5L \\
+    \texttt{s\_arready} & 5H \\
+    \texttt{s\_rvalid} & 2.5L 1H 1.5L \\
+    \texttt{m\_rvalid} & 2.5L 1H 1.5L \\
+    \texttt{m\_rready} & 5H \\
+  \end{tikztimingtable}
+  \caption{One read of one beat through the crossbar. The values are derived from the RTL and are not measured. One unit is one period of \texttt{clk}. The slave takes an address at once and gives the read beat one cycle after it took the address. \texttt{m\_arready} is high in cycle 1 because the engine passes the \texttt{s\_arready} of the slave to the granted master in \texttt{R\_AR}.}\label{fig:tm:mod:axi4-crossbar:read}
+\end{figure}
+
+\Cref{fig:tm:mod:axi4-crossbar:write} shows one write of one beat. The master raises \code{AWVALID} and \code{WVALID} in cycle 0. The crossbar accepts the address at E0. The data beat waits, because the engine passes \code{m_wready} only in \code{W_DATA}. The slave takes the address in cycle 1, and the data beat goes through in cycle 2. The slave gives the response in cycle 3.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikztimingtable}[timing/wscale=4.6]
+    \texttt{clk} & 12{c} \\
+    \texttt{m\_awvalid} & 0.5L 1H 4.5L \\
+    \texttt{m\_awready} & 0.5L 2H 3.5L \\
+    \texttt{m\_wvalid} & 0.5L 3H 2.5L \\
+    \texttt{m\_wready} & 2.5L 1H 2.5L \\
+    \texttt{wstate} & 1.5D{W\_IDLE} 1D{W\_AW} 1D{W\_DATA} 1D{W\_RESP} 1.5D{W\_IDLE} \\
+    \texttt{s\_awvalid} & 1.5L 1H 3.5L \\
+    \texttt{s\_wvalid} & 2.5L 1H 2.5L \\
+    \texttt{s\_bvalid} & 3.5L 1H 1.5L \\
+    \texttt{m\_bvalid} & 3.5L 1H 1.5L \\
+  \end{tikztimingtable}
+  \caption{One write of one beat through the crossbar. The values are derived from the RTL and are not measured. One unit is one period of \texttt{clk}. The slave takes the address and the data at once and gives the response one cycle after the data beat. \texttt{m\_awready} is high in cycle 1 for the same reason as \texttt{m\_arready} in the read.}\label{fig:tm:mod:axi4-crossbar:write}
+\end{figure}
+
+\subsection{Configuration parameters}
+\Cref{tab:tm:mod:axi4-crossbar:params} lists the parameters. The widths in the next table are the widths at the module defaults of three masters and two slaves. The SoC uses four masters and three slaves.
+
+\input{generated/facts/axi4-crossbar-params}
+
+\subsection{Signal descriptions}
+\Cref{tab:tm:mod:axi4-crossbar:signals} lists the ports.
+
+\input{generated/facts/axi4-crossbar-signals}
+
+\subsection{Integration and timing constraints}
+Connect each master to a master port and keep the contract of \cref{ds:ch:mod-bus-fabric:contract}. Give the index of each master with care, because the index is the priority. A master that has the index 0 wins every request in a cycle in which it asks. The crossbar has no timeout, so a slave that never answers stops its engine. The reset is synchronous and has no drain step. The reset of the SoC reaches the crossbar and all its masters at the same time, except the GPU, which has the reset \code{gpu_domain_rst_n}.
+
+\subsection{Verification}
+The suite \code{crossbar} runs two Python modules against the bench \code{tb_axi4_crossbar} with three masters, two slaves and a map of its own. The slaves are the boot ROM range and the SRAM range. The bench has no peripheral slave. The tests prove the routing, the decode errors, the response steering, the stalls on every channel, the held address of a one-cycle read pulse and the completion of a read and a write of one master to one slave. The SoC walks prove the three crossbar ranges and the unmapped ranges for four masters. The tests of the suite do not prove these points:
+\begin{itemize}
+  \item the priority of the masters and the starvation of a low priority master;
+  \item that engines of different slaves run at the same time;
+  \item a \code{WLAST} that differs from \code{AWLEN};
+  \item two reads, or two writes, of one master to two slaves;
+  \item a new request in the cycle in which the engine is in \code{W_AW} or \code{R_AR};
+  \item a one-cycle pulse of \code{AWVALID};
+  \item a data beat that comes before the write address;
+  \item a reset of the crossbar during a burst;
+  \item the value of the ID at a slave port;
+  \item a burst that crosses the end of a range;
+  \item a burst type other than INCR, and a beat size smaller than 4 bytes.
+\end{itemize}
+The last point is as read from the calls of the cited tests. All tests run with zero delay and at one clock for the whole fabric. No mutation script exists for the crossbar.
+
+\subsection{Known limits}\label{tm:mod:axi4-crossbar:limits}
+These limits are read from the RTL. No simulation shows them. A master that meets the contract of \cref{ds:ch:mod-bus-fabric:contract} does not meet them.
+
+\paragraph{Second ready window.} In \code{W_AW} the crossbar passes \code{s_awready} of the slave to the granted master, and in \code{R_AR} it passes \code{s_arready}. The master sees the ready signal in a cycle in which the engine has already stored its address. If the master raises a new \code{AWVALID} or \code{ARVALID} in that cycle for the same slave, it can see the ready signal high. It then treats the request as taken, but the engine did not capture it. The request is lost. The early accept of an idle engine of another slave gives a correct handshake in the same cycle, and the lost request exists only for the busy engine. No master of the SoC sends a new request before the response of the old one, so the window has no effect today.
+
+\paragraph{Responses of two engines of one master.} For each master the crossbar scans the slaves and assigns the response signals of each slave whose engine serves this master. A later slave index replaces an earlier one. The ready signal of the master reaches both engines. If one master has two reads in flight to two slaves, the master sees the beats of the slave with the higher index, while the engine of the other slave can take its beat when \code{m_rready} is high. That beat is lost. If one master has two writes in flight to two slaves, both engines pass the same data beat. The master sees \code{m_wready} of the slave with the higher index only, so the two slaves can take different numbers of beats. The responses are mixed in the same way.
+
+\paragraph{Fixed priority.} The master with the lowest index wins when several masters ask for an idle engine in the same cycle. The arbitration has no memory. A master that asks again in the cycle in which its engine becomes idle wins against a master that has waited. The crossbar has no fairness mechanism. Whether a master starves depends on the traffic.
+
+\paragraph{No timeout.} An engine waits without limit for the slave, for \code{BREADY} and for \code{RREADY}. A slave that does not answer, or a master that does not take a response, stops the engine, and no other master can use this slave and this direction. Two cases are known. The control port of the GPU can take an address while it is in reset and never answer. \Cref{tm:mod:pmu} and \reqref{DS-PMU-185} have this case. The clamp of the GPU domain forces \code{xbar_m_bready[2]}, \code{xbar_m_rready[2]} and \code{gif_axil_rready} to 0. A GPU transfer that is in flight when the clamp rises keeps its engine, and so keeps the slave, until the clamp is released. The same holds for a GPU write whose data phase is not done, because the clamp forces the data valid signal of the GPU to 0. This is the reason for \reqref{DS-PMU-187}. After the release, the engine ends only if the GPU takes the response. This is not examined here.
+
+\paragraph{Trust in the last flag.} The write engine ends its data phase on \code{m_wlast}. The read engine ends on \code{s_rlast}. The crossbar does not count beats. A \code{WLAST} on the wrong beat gives the slave a burst that is shorter or longer than its \code{AWLEN}.
+
+\paragraph{A burst across the end of a range.} The crossbar decodes the first address only. A burst that starts in one range and runs past its end goes to the slave of the first beat.
+
+\paragraph{Reset.} The reset is synchronous and returns all engines to idle. A reset in a burst of a slave or of the crossbar leaves the other side out of step. \Cref{tab:tm:mod:axi4-crossbar:reset} lists the outputs that are not low while \code{rst_n} is low. The rule \reqref{DS-CDC-005} asks that a ready output is low in reset, for blocks that cross clock domains. The crossbar is not such a block, but the same defect class applies.
+
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{30mm}>{\raggedright\arraybackslash}p{46mm}>{\raggedright\arraybackslash}p{50mm}@{}}
+\caption{Outputs of the crossbar in reset}\label{tab:tm:mod:axi4-crossbar:reset}\\
+\toprule
+Output & Value while \code{rst_n} is low & Reason\\
+\midrule
+\endfirsthead
+\toprule
+Output & Value while \code{rst_n} is low & Reason\\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\code{m_awready}, \code{m_arready} & 1 for a master that raises the valid signal while the engine of its slave is idle, or while its address is unmapped and the decode-error engine is idle. & The early accept and the decode-error accept depend on the valid signal and on the state flops only. The reset clears the flops at the edge, so the handshake is lost.\\
+\code{m_wready}, \code{m_bvalid}, \code{m_rvalid} & 0 after the first edge in reset. & The states that drive them are idle.\\
+\code{s_awvalid}, \code{s_wvalid}, \code{s_bready}, \code{s_arvalid}, \code{s_rready} & 0 after the first edge in reset. & The engines are idle.\\
+\end{longtable}
+
+This is harmless today as far as the RTL shows. The crossbar, the DMA engine and the adapter \code{u_gif_adapter} have the reset \code{core_rst_n}. The master face of \code{u_cpu_axi_cdc} is quiet in reset (\reqref{DS-CDC-154}). The master M2 is in the GPU domain and has the reset \code{gpu_domain_rst_n}. The clamp forces its valid signals to 0 only while the clamp is active, and this section does not examine the outputs of the GPU in its reset. The inference is derived from the RTL. No test measures it.
+
+\paragraph{Unused ID inputs.} The ports \code{s_bid} and \code{s_rid} are inputs that the crossbar does not use. The comment in the RTL calls them reserved. The crossbar needs no ID echo, because each engine holds one transfer.

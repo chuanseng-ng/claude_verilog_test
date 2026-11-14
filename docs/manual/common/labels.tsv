@@ -125,17 +125,22 @@ cr:arc:ds-async-axi-fifo	docs/manual/cr/parts/06-source-archive.tex	600	\texttt{
 cr:arc:ds-cdc-gray-fifo	docs/manual/cr/parts/06-source-archive.tex	151	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
 cr:arc:ds-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	83	\texttt{soc/cdc/cdc\_reset\_sync.sv}
 cr:arc:ds-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	9	\texttt{soc/cdc/cdc\_sync.sv}
+cr:arc:ds-memory-map	docs/manual/cr/parts/06-source-archive.tex	2116	\texttt{docs/design/MEMORY\_MAP.md}
 cr:arc:ds-pmu	docs/manual/cr/parts/06-source-archive.tex	688	\texttt{soc/pmu.sv}
 cr:arc:ds-rv32i-clock-gate	docs/manual/cr/parts/06-source-archive.tex	898	\texttt{mem/rv32i\_clock\_gate.sv}
+cr:arc:ds-soc-addr-map-pkg	docs/manual/cr/parts/06-source-archive.tex	1984	\texttt{soc/soc\_addr\_map\_pkg.sv}
+cr:arc:ds-soc-bus	docs/manual/cr/parts/06-source-archive.tex	2023	\texttt{soc/soc\_bus.sv}
+cr:arc:ds-soc-periph-map-pkg	docs/manual/cr/parts/06-source-archive.tex	2061	\texttt{soc/soc\_periph\_map\_pkg.sv}
 cr:arc:ds-upf-power-spec	docs/manual/cr/parts/06-source-archive.tex	954	\texttt{docs/design/UPF\_POWER\_SPEC.md}
-cr:arc:tm-apb-cdc-bridge	docs/manual/cr/parts/06-source-archive.tex	2177	\texttt{soc/apb\_cdc\_bridge.sv}
-cr:arc:tm-async-axi-fifo	docs/manual/cr/parts/06-source-archive.tex	2339	\texttt{soc/async\_axi\_fifo.sv}
-cr:arc:tm-cdc-gray-fifo	docs/manual/cr/parts/06-source-archive.tex	2097	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
-cr:arc:tm-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	2049	\texttt{soc/cdc/cdc\_reset\_sync.sv}
-cr:arc:tm-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	1988	\texttt{soc/cdc/cdc\_sync.sv}
-cr:arc:tm-phase5-soc-upf	docs/manual/cr/parts/06-source-archive.tex	2467	\texttt{constraints/phase5\_soc.upf}
-cr:arc:tm-pmu	docs/manual/cr/parts/06-source-archive.tex	2365	\texttt{soc/pmu.sv}
-cr:arc:tm-rv32i-clock-gate	docs/manual/cr/parts/06-source-archive.tex	2447	\texttt{mem/rv32i\_clock\_gate.sv}
+cr:arc:tm-apb-cdc-bridge	docs/manual/cr/parts/06-source-archive.tex	2686	\texttt{soc/apb\_cdc\_bridge.sv}
+cr:arc:tm-async-axi-fifo	docs/manual/cr/parts/06-source-archive.tex	2848	\texttt{soc/async\_axi\_fifo.sv}
+cr:arc:tm-axi4-crossbar	docs/manual/cr/parts/06-source-archive.tex	3149	\texttt{soc/axi4\_crossbar.sv}
+cr:arc:tm-cdc-gray-fifo	docs/manual/cr/parts/06-source-archive.tex	2606	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
+cr:arc:tm-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	2558	\texttt{soc/cdc/cdc\_reset\_sync.sv}
+cr:arc:tm-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	2497	\texttt{soc/cdc/cdc\_sync.sv}
+cr:arc:tm-phase5-soc-upf	docs/manual/cr/parts/06-source-archive.tex	2976	\texttt{constraints/phase5\_soc.upf}
+cr:arc:tm-pmu	docs/manual/cr/parts/06-source-archive.tex	2874	\texttt{soc/pmu.sv}
+cr:arc:tm-rv32i-clock-gate	docs/manual/cr/parts/06-source-archive.tex	2956	\texttt{mem/rv32i\_clock\_gate.sv}
 cr:ch:about	docs/manual/cr/parts/00-about.tex	5	About this book
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
@@ -148,8 +153,8 @@ cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	1583
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
 cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
 cr:ch:source-archive-ds	docs/manual/cr/parts/06-source-archive.tex	5	Archived Design Specification text
-cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	1984	Archived Technical Manual text
-cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	2640	Archived User Manual text
+cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	2493	Archived Technical Manual text
+cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	3171	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
@@ -1170,10 +1175,22 @@ ds:ch:gpu-model:execution-model-simple-but-real	docs/manual/ds/parts/01-architec
 ds:ch:gpu-model:gpu-verification-python	docs/manual/ds/parts/01-architecture.tex	6531	GPU verification (Python)
 ds:ch:gpu-model:memory-model	docs/manual/ds/parts/01-architecture.tex	6501	Memory model
 ds:ch:gpu-model:pipeline-gpu-core	docs/manual/ds/parts/01-architecture.tex	6461	Pipeline (GPU core)
-ds:ch:interface-definitions	docs/manual/ds/parts/01-architecture.tex	13703	Interface definitions
-ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	14973	Locked architecture decisions
+ds:ch:interface-definitions	docs/manual/ds/parts/01-architecture.tex	13337	Interface definitions
+ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	14607	Locked architecture decisions
 ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	11954	Memory map
 ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	11387	Mixed-signal PLL
+ds:ch:mod-bus-fabric	docs/manual/ds/parts/chapters/bus.tex	4	Bus fabric
+ds:ch:mod-bus-fabric:contract	docs/manual/ds/parts/chapters/bus.tex	312	Contract on masters and slaves
+ds:ch:mod-bus-fabric:dec-decerr	docs/manual/ds/parts/chapters/bus.tex	369	A decode-error engine for each master
+ds:ch:mod-bus-fabric:dec-engine	docs/manual/ds/parts/chapters/bus.tex	350	One engine for each slave and direction
+ds:ch:mod-bus-fabric:dec-id	docs/manual/ds/parts/chapters/bus.tex	357	The master index is the ID
+ds:ch:mod-bus-fabric:dec-packed	docs/manual/ds/parts/chapters/bus.tex	374	Packed arrays for the parameters and the ports
+ds:ch:mod-bus-fabric:dec-priority	docs/manual/ds/parts/chapters/bus.tex	362	Fixed priority
+ds:ch:mod-bus-fabric:decisions	docs/manual/ds/parts/chapters/bus.tex	347	Architecture decisions
+ds:ch:mod-bus-fabric:definitions	docs/manual/ds/parts/chapters/bus.tex	11	Definitions
+ds:ch:mod-bus-fabric:map	docs/manual/ds/parts/chapters/bus.tex	381	Requirements and verification
+ds:ch:mod-bus-fabric:memory-map	docs/manual/ds/parts/chapters/bus.tex	27	Memory map
+ds:ch:mod-bus-fabric:scope	docs/manual/ds/parts/chapters/bus.tex	6	Scope
 ds:ch:mod-cdc-primitives	docs/manual/ds/parts/chapters/cdc.tex	3	Clock-domain crossing
 ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	399	No bypass at a clock ratio of 1:1
 ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	371	FIFO with gray pointers and registered flags
@@ -1187,25 +1204,25 @@ ds:ch:mod-cdc-primitives:family	docs/manual/ds/parts/chapters/cdc.tex	24	Rules f
 ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	413	Requirements and verification
 ds:ch:mod-cdc-primitives:scope	docs/manual/ds/parts/chapters/cdc.tex	5	Scope
 ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
-ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3580	Crypto accelerator
-ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	1730	DFT blocks
-ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	4193	FPGA wrappers
+ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3450	Crypto accelerator
+ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	1600	DFT blocks
+ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	4063	FPGA wrappers
 ds:ch:mod-gpu	docs/manual/ds/parts/03-module-contracts.tex	435	GPU
 ds:ch:mod-memory-and-caches	docs/manual/ds/parts/03-module-contracts.tex	336	Memory and caches
-ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	3991	NPU
-ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	2555	Peripherals
-ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2323	PLL subsystem
+ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	3861	NPU
+ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	2425	Peripherals
+ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2193	PLL subsystem
 ds:ch:mod-power-management	docs/manual/ds/parts/chapters/power.tex	3	Power management
-ds:ch:mod-power-management:dec-ack	docs/manual/ds/parts/chapters/power.tex	376	Acknowledge from the CPU domain
-ds:ch:mod-power-management:dec-bridge	docs/manual/ds/parts/chapters/power.tex	404	AXI bridge outside the domain reset
-ds:ch:mod-power-management:dec-clock	docs/manual/ds/parts/chapters/power.tex	397	Clock enable with the PMU reset
-ds:ch:mod-power-management:dec-fsm	docs/manual/ds/parts/chapters/power.tex	369	One action for each cycle with registered outputs
-ds:ch:mod-power-management:dec-model	docs/manual/ds/parts/chapters/power.tex	362	Sequencing without supply removal
-ds:ch:mod-power-management:dec-reset	docs/manual/ds/parts/chapters/power.tex	390	Synchronous reset of the PMU
-ds:ch:mod-power-management:dec-timeout	docs/manual/ds/parts/chapters/power.tex	383	Timeout in the wait
-ds:ch:mod-power-management:decisions	docs/manual/ds/parts/chapters/power.tex	359	Architecture decisions
+ds:ch:mod-power-management:dec-ack	docs/manual/ds/parts/chapters/power.tex	384	Acknowledge from the CPU domain
+ds:ch:mod-power-management:dec-bridge	docs/manual/ds/parts/chapters/power.tex	412	AXI bridge outside the domain reset
+ds:ch:mod-power-management:dec-clock	docs/manual/ds/parts/chapters/power.tex	405	Clock enable with the PMU reset
+ds:ch:mod-power-management:dec-fsm	docs/manual/ds/parts/chapters/power.tex	377	One action for each cycle with registered outputs
+ds:ch:mod-power-management:dec-model	docs/manual/ds/parts/chapters/power.tex	370	Sequencing without supply removal
+ds:ch:mod-power-management:dec-reset	docs/manual/ds/parts/chapters/power.tex	398	Synchronous reset of the PMU
+ds:ch:mod-power-management:dec-timeout	docs/manual/ds/parts/chapters/power.tex	391	Timeout in the wait
+ds:ch:mod-power-management:decisions	docs/manual/ds/parts/chapters/power.tex	367	Architecture decisions
 ds:ch:mod-power-management:definitions	docs/manual/ds/parts/chapters/power.tex	14	Definitions
-ds:ch:mod-power-management:map	docs/manual/ds/parts/chapters/power.tex	411	Requirements and verification
+ds:ch:mod-power-management:map	docs/manual/ds/parts/chapters/power.tex	419	Requirements and verification
 ds:ch:mod-power-management:scope	docs/manual/ds/parts/chapters/power.tex	5	Scope
 ds:ch:mod-power-management:soc	docs/manual/ds/parts/chapters/power.tex	192	SoC power integration
 ds:ch:mod-power-management:software	docs/manual/ds/parts/chapters/power.tex	300	Software rules
@@ -1499,8 +1516,8 @@ ds:ch:phase3-closure-phase4-plan:to-create	docs/manual/ds/parts/01-architecture.
 ds:ch:phase3-closure-phase4-plan:to-modify	docs/manual/ds/parts/01-architecture.tex	7318	To modify
 ds:ch:phase3-closure-phase4-plan:to-reuse-do-not-modify	docs/manual/ds/parts/01-architecture.tex	7358	To reuse (do not modify)
 ds:ch:phase3-closure-phase4-plan:tooling-patterns-to-reuse	docs/manual/ds/parts/01-architecture.tex	6723	Tooling patterns to reuse
-ds:ch:phase4-5-architecture	docs/manual/ds/parts/01-architecture.tex	15069	Phase 4: GPU-Lite SIMT Engine (frozen)
-ds:ch:phase4-5-architecture:phase-5-soc-integration-white-check-mark-complete-2026-06-24	docs/manual/ds/parts/01-architecture.tex	15098	\texorpdfstring{Phase 5: SoC Integration (\ok{} COMPLETE 2026-06-24)}{Phase 5: SoC Integration ( COMPLETE 2026-06-24)}
+ds:ch:phase4-5-architecture	docs/manual/ds/parts/01-architecture.tex	14703	Phase 4: GPU-Lite SIMT Engine (frozen)
+ds:ch:phase4-5-architecture:phase-5-soc-integration-white-check-mark-complete-2026-06-24	docs/manual/ds/parts/01-architecture.tex	14732	\texorpdfstring{Phase 5: SoC Integration (\ok{} COMPLETE 2026-06-24)}{Phase 5: SoC Integration ( COMPLETE 2026-06-24)}
 ds:ch:phase4-gpu-architecture	docs/manual/ds/parts/01-architecture.tex	5482	Phase 4 GPU Architecture Specification
 ds:ch:phase4-gpu-architecture:address-generation	docs/manual/ds/parts/01-architecture.tex	5928	Address generation
 ds:ch:phase4-gpu-architecture:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	6144	AI MAY assist with
@@ -1641,77 +1658,77 @@ ds:ch:power-intent:map	docs/manual/ds/parts/chapters/power-intent.tex	291	Requir
 ds:ch:power-intent:scope	docs/manual/ds/parts/chapters/power-intent.tex	5	Scope
 ds:ch:power-intent:states	docs/manual/ds/parts/chapters/power-intent.tex	156	Power states
 ds:ch:power-intent:switches	docs/manual/ds/parts/chapters/power-intent.tex	204	Switches and retention
-ds:ch:reference-model	docs/manual/ds/parts/01-architecture.tex	14282	Reference Model Specification
-ds:ch:reference-model:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	14846	AI MAY assist with
-ds:ch:reference-model:aihuman-responsibility	docs/manual/ds/parts/01-architecture.tex	14844	AI/Human Responsibility
-ds:ch:reference-model:class-gpukernelmodel	docs/manual/ds/parts/01-architecture.tex	14567	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
-ds:ch:reference-model:class-memorymodel	docs/manual/ds/parts/01-architecture.tex	14741	\texorpdfstring{Class: \code{MemoryModel}}{Class: }
-ds:ch:reference-model:class-rv32imodel	docs/manual/ds/parts/01-architecture.tex	14337	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
-ds:ch:reference-model:constructor	docs/manual/ds/parts/01-architecture.tex	14341	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
-ds:ch:reference-model:constructor-1	docs/manual/ds/parts/01-architecture.tex	14571	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
-ds:ch:reference-model:core-api	docs/manual/ds/parts/01-architecture.tex	14380	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
-ds:ch:reference-model:core-api-1	docs/manual/ds/parts/01-architecture.tex	14614	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
-ds:ch:reference-model:cpu-reference-model	docs/manual/ds/parts/01-architecture.tex	14332	CPU Reference Model
-ds:ch:reference-model:dependencies	docs/manual/ds/parts/01-architecture.tex	14878	Dependencies
-ds:ch:reference-model:design-principles	docs/manual/ds/parts/01-architecture.tex	14313	Design Principles
-ds:ch:reference-model:documentation-requirements	docs/manual/ds/parts/01-architecture.tex	14925	Documentation Requirements
-ds:ch:reference-model:example-unit-test	docs/manual/ds/parts/01-architecture.tex	14798	Example unit test
-ds:ch:reference-model:file-organization	docs/manual/ds/parts/01-architecture.tex	14828	File Organization
-ds:ch:reference-model:gpu-reference-model	docs/manual/ds/parts/01-architecture.tex	14562	GPU Reference Model
-ds:ch:reference-model:human-must	docs/manual/ds/parts/01-architecture.tex	14862	Human MUST
-ds:ch:reference-model:instruction-implementation	docs/manual/ds/parts/01-architecture.tex	14469	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
-ds:ch:reference-model:integration-with-cocotb-testbench	docs/manual/ds/parts/01-architecture.tex	14523	Integration with cocotb Testbench
-ds:ch:reference-model:integration-with-verification-plan	docs/manual/ds/parts/01-architecture.tex	14893	Integration with Verification Plan
-ds:ch:reference-model:memory-model	docs/manual/ds/parts/01-architecture.tex	14736	Memory Model
-ds:ch:reference-model:module-tbmodelsgpu-kernel-modelpy	docs/manual/ds/parts/01-architecture.tex	14565	\texorpdfstring{Module: \src{tb/models/gpu_kernel_model.py}}{Module: }
-ds:ch:reference-model:module-tbmodelsmemory-modelpy	docs/manual/ds/parts/01-architecture.tex	14739	\texorpdfstring{Module: \src{tb/models/memory_model.py}}{Module: }
-ds:ch:reference-model:module-tbmodelsrv32i-modelpy	docs/manual/ds/parts/01-architecture.tex	14335	\texorpdfstring{Module: \src{tb/models/rv32i_model.py}}{Module: }
-ds:ch:reference-model:overview	docs/manual/ds/parts/01-architecture.tex	14288	Overview
-ds:ch:reference-model:performance-considerations	docs/manual/ds/parts/01-architecture.tex	14911	Performance Considerations
-ds:ch:reference-model:references	docs/manual/ds/parts/01-architecture.tex	14955	References
-ds:ch:reference-model:state-representation	docs/manual/ds/parts/01-architecture.tex	14365	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
-ds:ch:reference-model:state-representation-1	docs/manual/ds/parts/01-architecture.tex	14592	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
-ds:ch:reference-model:test-strategy	docs/manual/ds/parts/01-architecture.tex	14782	Test strategy
-ds:ch:reference-model:testing-the-reference-models	docs/manual/ds/parts/01-architecture.tex	14777	Testing the Reference Models
-ds:ch:reference-model:usage-example	docs/manual/ds/parts/01-architecture.tex	14496	Usage Example
-ds:ch:reference-model:usage-example-1	docs/manual/ds/parts/01-architecture.tex	14700	Usage Example
-ds:ch:reference-model:version-control	docs/manual/ds/parts/01-architecture.tex	14941	Version Control
-ds:ch:reference-model:warp-execution	docs/manual/ds/parts/01-architecture.tex	14668	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
-ds:ch:reference-models	docs/manual/ds/parts/01-architecture.tex	14276	Reference models
-ds:ch:rtl-definition	docs/manual/ds/parts/01-architecture.tex	13709	RTL Interface Definitions
-ds:ch:rtl-definition:apb3-compliance-checklist	docs/manual/ds/parts/01-architecture.tex	14224	APB3 compliance checklist
-ds:ch:rtl-definition:apb3-slave-controlconfig-interface	docs/manual/ds/parts/01-architecture.tex	13992	Phase 4 (GPU-Lite Compute Engine)
-ds:ch:rtl-definition:apb3-slave-debug-interface	docs/manual/ds/parts/01-architecture.tex	13849	Phase 1 (Single-Cycle CPU)
-ds:ch:rtl-definition:axi4-lite-compliance-checklist	docs/manual/ds/parts/01-architecture.tex	14206	AXI4-Lite compliance checklist
-ds:ch:rtl-definition:axi4-lite-master-memory-interface	docs/manual/ds/parts/01-architecture.tex	13755	Phase 1 (Single-Cycle CPU)
-ds:ch:rtl-definition:axi4-lite-master-memory-interface-1	docs/manual/ds/parts/01-architecture.tex	13959	Phase 4 (GPU-Lite Compute Engine)
-ds:ch:rtl-definition:boot-configuration	docs/manual/ds/parts/01-architecture.tex	14159	Phase 5 (SoC Top-Level)
-ds:ch:rtl-definition:clock-and-reset	docs/manual/ds/parts/01-architecture.tex	13735	Phase 1 (Single-Cycle CPU)
-ds:ch:rtl-definition:clock-and-reset-1	docs/manual/ds/parts/01-architecture.tex	13952	Phase 4 (GPU-Lite Compute Engine)
-ds:ch:rtl-definition:commit-interface-verification-observability	docs/manual/ds/parts/01-architecture.tex	13902	Phase 1 (Single-Cycle CPU)
-ds:ch:rtl-definition:cpu-ip-interface	docs/manual/ds/parts/01-architecture.tex	13729	CPU IP Interface
-ds:ch:rtl-definition:dft-test-access-sky130-scan-bead-j41m2-gh-244	docs/manual/ds/parts/01-architecture.tex	14125	Phase 5 (SoC Top-Level)
-ds:ch:rtl-definition:external-apb-interface-apb3-master	docs/manual/ds/parts/01-architecture.tex	14094	Phase 5 (SoC Top-Level)
-ds:ch:rtl-definition:external-interrupts	docs/manual/ds/parts/01-architecture.tex	14112	Phase 5 (SoC Top-Level)
-ds:ch:rtl-definition:external-memory-interface-axi4-lite-master	docs/manual/ds/parts/01-architecture.tex	14074	Phase 5 (SoC Top-Level)
-ds:ch:rtl-definition:gpu-ip-interface	docs/manual/ds/parts/01-architecture.tex	13946	GPU IP Interface
-ds:ch:rtl-definition:interface-protocol-compliance	docs/manual/ds/parts/01-architecture.tex	14204	Interface Protocol Compliance
-ds:ch:rtl-definition:interrupt-output	docs/manual/ds/parts/01-architecture.tex	14029	Phase 4 (GPU-Lite Compute Engine)
-ds:ch:rtl-definition:jtag-tap-sky130-dft-stage-1b-bead-j41m3-gh-244	docs/manual/ds/parts/01-architecture.tex	14143	Phase 5 (SoC Top-Level)
-ds:ch:rtl-definition:peripheral-ip-interfaces	docs/manual/ds/parts/01-architecture.tex	14186	Peripheral IP Interfaces
-ds:ch:rtl-definition:phase-1-single-cycle-cpu	docs/manual/ds/parts/01-architecture.tex	13731	Phase 1 (Single-Cycle CPU)
-ds:ch:rtl-definition:phase-2-extensions	docs/manual/ds/parts/01-architecture.tex	13928	Phase 2+ Extensions
-ds:ch:rtl-definition:phase-4-extensions	docs/manual/ds/parts/01-architecture.tex	14052	Phase 4+ Extensions
-ds:ch:rtl-definition:phase-4-gpu-lite-compute-engine	docs/manual/ds/parts/01-architecture.tex	13948	Phase 4 (GPU-Lite Compute Engine)
-ds:ch:rtl-definition:phase-5-extensions	docs/manual/ds/parts/01-architecture.tex	14170	Phase 5+ Extensions
-ds:ch:rtl-definition:phase-5-soc-top-level	docs/manual/ds/parts/01-architecture.tex	14070	Phase 5 (SoC Top-Level)
-ds:ch:rtl-definition:protocol-standards	docs/manual/ds/parts/01-architecture.tex	13716	Protocol Standards
-ds:ch:rtl-definition:references	docs/manual/ds/parts/01-architecture.tex	14257	References
-ds:ch:rtl-definition:soc-integration-interface	docs/manual/ds/parts/01-architecture.tex	14068	SoC Integration Interface
-ds:ch:rtl-definition:spi-master-phase-5	docs/manual/ds/parts/01-architecture.tex	14193	SPI Master (Phase 5)
-ds:ch:rtl-definition:testing-requirements	docs/manual/ds/parts/01-architecture.tex	14240	Testing Requirements
-ds:ch:rtl-definition:timer-phase-5	docs/manual/ds/parts/01-architecture.tex	14199	Timer (Phase 5)
-ds:ch:rtl-definition:uart-phase-5	docs/manual/ds/parts/01-architecture.tex	14188	UART (Phase 5)
+ds:ch:reference-model	docs/manual/ds/parts/01-architecture.tex	13916	Reference Model Specification
+ds:ch:reference-model:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	14480	AI MAY assist with
+ds:ch:reference-model:aihuman-responsibility	docs/manual/ds/parts/01-architecture.tex	14478	AI/Human Responsibility
+ds:ch:reference-model:class-gpukernelmodel	docs/manual/ds/parts/01-architecture.tex	14201	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:class-memorymodel	docs/manual/ds/parts/01-architecture.tex	14375	\texorpdfstring{Class: \code{MemoryModel}}{Class: }
+ds:ch:reference-model:class-rv32imodel	docs/manual/ds/parts/01-architecture.tex	13971	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:constructor	docs/manual/ds/parts/01-architecture.tex	13975	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:constructor-1	docs/manual/ds/parts/01-architecture.tex	14205	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:core-api	docs/manual/ds/parts/01-architecture.tex	14014	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:core-api-1	docs/manual/ds/parts/01-architecture.tex	14248	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:cpu-reference-model	docs/manual/ds/parts/01-architecture.tex	13966	CPU Reference Model
+ds:ch:reference-model:dependencies	docs/manual/ds/parts/01-architecture.tex	14512	Dependencies
+ds:ch:reference-model:design-principles	docs/manual/ds/parts/01-architecture.tex	13947	Design Principles
+ds:ch:reference-model:documentation-requirements	docs/manual/ds/parts/01-architecture.tex	14559	Documentation Requirements
+ds:ch:reference-model:example-unit-test	docs/manual/ds/parts/01-architecture.tex	14432	Example unit test
+ds:ch:reference-model:file-organization	docs/manual/ds/parts/01-architecture.tex	14462	File Organization
+ds:ch:reference-model:gpu-reference-model	docs/manual/ds/parts/01-architecture.tex	14196	GPU Reference Model
+ds:ch:reference-model:human-must	docs/manual/ds/parts/01-architecture.tex	14496	Human MUST
+ds:ch:reference-model:instruction-implementation	docs/manual/ds/parts/01-architecture.tex	14103	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:integration-with-cocotb-testbench	docs/manual/ds/parts/01-architecture.tex	14157	Integration with cocotb Testbench
+ds:ch:reference-model:integration-with-verification-plan	docs/manual/ds/parts/01-architecture.tex	14527	Integration with Verification Plan
+ds:ch:reference-model:memory-model	docs/manual/ds/parts/01-architecture.tex	14370	Memory Model
+ds:ch:reference-model:module-tbmodelsgpu-kernel-modelpy	docs/manual/ds/parts/01-architecture.tex	14199	\texorpdfstring{Module: \src{tb/models/gpu_kernel_model.py}}{Module: }
+ds:ch:reference-model:module-tbmodelsmemory-modelpy	docs/manual/ds/parts/01-architecture.tex	14373	\texorpdfstring{Module: \src{tb/models/memory_model.py}}{Module: }
+ds:ch:reference-model:module-tbmodelsrv32i-modelpy	docs/manual/ds/parts/01-architecture.tex	13969	\texorpdfstring{Module: \src{tb/models/rv32i_model.py}}{Module: }
+ds:ch:reference-model:overview	docs/manual/ds/parts/01-architecture.tex	13922	Overview
+ds:ch:reference-model:performance-considerations	docs/manual/ds/parts/01-architecture.tex	14545	Performance Considerations
+ds:ch:reference-model:references	docs/manual/ds/parts/01-architecture.tex	14589	References
+ds:ch:reference-model:state-representation	docs/manual/ds/parts/01-architecture.tex	13999	\texorpdfstring{Class: \code{RV32IModel}}{Class: }
+ds:ch:reference-model:state-representation-1	docs/manual/ds/parts/01-architecture.tex	14226	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-model:test-strategy	docs/manual/ds/parts/01-architecture.tex	14416	Test strategy
+ds:ch:reference-model:testing-the-reference-models	docs/manual/ds/parts/01-architecture.tex	14411	Testing the Reference Models
+ds:ch:reference-model:usage-example	docs/manual/ds/parts/01-architecture.tex	14130	Usage Example
+ds:ch:reference-model:usage-example-1	docs/manual/ds/parts/01-architecture.tex	14334	Usage Example
+ds:ch:reference-model:version-control	docs/manual/ds/parts/01-architecture.tex	14575	Version Control
+ds:ch:reference-model:warp-execution	docs/manual/ds/parts/01-architecture.tex	14302	\texorpdfstring{Class: \code{GPUKernelModel}}{Class: }
+ds:ch:reference-models	docs/manual/ds/parts/01-architecture.tex	13910	Reference models
+ds:ch:rtl-definition	docs/manual/ds/parts/01-architecture.tex	13343	RTL Interface Definitions
+ds:ch:rtl-definition:apb3-compliance-checklist	docs/manual/ds/parts/01-architecture.tex	13858	APB3 compliance checklist
+ds:ch:rtl-definition:apb3-slave-controlconfig-interface	docs/manual/ds/parts/01-architecture.tex	13626	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:apb3-slave-debug-interface	docs/manual/ds/parts/01-architecture.tex	13483	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:axi4-lite-compliance-checklist	docs/manual/ds/parts/01-architecture.tex	13840	AXI4-Lite compliance checklist
+ds:ch:rtl-definition:axi4-lite-master-memory-interface	docs/manual/ds/parts/01-architecture.tex	13389	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:axi4-lite-master-memory-interface-1	docs/manual/ds/parts/01-architecture.tex	13593	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:boot-configuration	docs/manual/ds/parts/01-architecture.tex	13793	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:clock-and-reset	docs/manual/ds/parts/01-architecture.tex	13369	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:clock-and-reset-1	docs/manual/ds/parts/01-architecture.tex	13586	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:commit-interface-verification-observability	docs/manual/ds/parts/01-architecture.tex	13536	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:cpu-ip-interface	docs/manual/ds/parts/01-architecture.tex	13363	CPU IP Interface
+ds:ch:rtl-definition:dft-test-access-sky130-scan-bead-j41m2-gh-244	docs/manual/ds/parts/01-architecture.tex	13759	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:external-apb-interface-apb3-master	docs/manual/ds/parts/01-architecture.tex	13728	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:external-interrupts	docs/manual/ds/parts/01-architecture.tex	13746	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:external-memory-interface-axi4-lite-master	docs/manual/ds/parts/01-architecture.tex	13708	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:gpu-ip-interface	docs/manual/ds/parts/01-architecture.tex	13580	GPU IP Interface
+ds:ch:rtl-definition:interface-protocol-compliance	docs/manual/ds/parts/01-architecture.tex	13838	Interface Protocol Compliance
+ds:ch:rtl-definition:interrupt-output	docs/manual/ds/parts/01-architecture.tex	13663	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:jtag-tap-sky130-dft-stage-1b-bead-j41m3-gh-244	docs/manual/ds/parts/01-architecture.tex	13777	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:peripheral-ip-interfaces	docs/manual/ds/parts/01-architecture.tex	13820	Peripheral IP Interfaces
+ds:ch:rtl-definition:phase-1-single-cycle-cpu	docs/manual/ds/parts/01-architecture.tex	13365	Phase 1 (Single-Cycle CPU)
+ds:ch:rtl-definition:phase-2-extensions	docs/manual/ds/parts/01-architecture.tex	13562	Phase 2+ Extensions
+ds:ch:rtl-definition:phase-4-extensions	docs/manual/ds/parts/01-architecture.tex	13686	Phase 4+ Extensions
+ds:ch:rtl-definition:phase-4-gpu-lite-compute-engine	docs/manual/ds/parts/01-architecture.tex	13582	Phase 4 (GPU-Lite Compute Engine)
+ds:ch:rtl-definition:phase-5-extensions	docs/manual/ds/parts/01-architecture.tex	13804	Phase 5+ Extensions
+ds:ch:rtl-definition:phase-5-soc-top-level	docs/manual/ds/parts/01-architecture.tex	13704	Phase 5 (SoC Top-Level)
+ds:ch:rtl-definition:protocol-standards	docs/manual/ds/parts/01-architecture.tex	13350	Protocol Standards
+ds:ch:rtl-definition:references	docs/manual/ds/parts/01-architecture.tex	13891	References
+ds:ch:rtl-definition:soc-integration-interface	docs/manual/ds/parts/01-architecture.tex	13702	SoC Integration Interface
+ds:ch:rtl-definition:spi-master-phase-5	docs/manual/ds/parts/01-architecture.tex	13827	SPI Master (Phase 5)
+ds:ch:rtl-definition:testing-requirements	docs/manual/ds/parts/01-architecture.tex	13874	Testing Requirements
+ds:ch:rtl-definition:timer-phase-5	docs/manual/ds/parts/01-architecture.tex	13833	Timer (Phase 5)
+ds:ch:rtl-definition:uart-phase-5	docs/manual/ds/parts/01-architecture.tex	13822	UART (Phase 5)
 ds:ch:sdc-timing-spec	docs/manual/ds/parts/02-constraints-and-power-intent.tex	9	SDC Timing Constraints Specification
 ds:ch:sdc-timing-spec:ai-may-assist-with	docs/manual/ds/parts/02-constraints-and-power-intent.tex	744	AI MAY assist with
 ds:ch:sdc-timing-spec:ai-must-not-decide	docs/manual/ds/parts/02-constraints-and-power-intent.tex	758	AI MUST NOT decide
@@ -1868,8 +1885,8 @@ ds:ch:verification-plan:verification-stack	docs/manual/ds/parts/04-verification-
 ds:ch:verification-plan:waveform-viewing	docs/manual/ds/parts/04-verification-plan.tex	1372	Waveform Viewing
 ds:ch:verification-plan:what-was-migrated	docs/manual/ds/parts/04-verification-plan.tex	1462	What Was Migrated
 ds:ch:verification-strategy	docs/manual/ds/parts/04-verification-plan.tex	3	Verification strategy
-ds:dec:key-design-decisions	docs/manual/ds/parts/01-architecture.tex	14978	Key Design Decisions (From Specifications)
-ds:dec:locked-phase5	docs/manual/ds/parts/01-architecture.tex	15026	Phase 5 SoC locked architecture decisions
+ds:dec:key-design-decisions	docs/manual/ds/parts/01-architecture.tex	14612	Key Design Decisions (From Specifications)
+ds:dec:locked-phase5	docs/manual/ds/parts/01-architecture.tex	14660	Phase 5 SoC locked architecture decisions
 ds:dec:phase5-mmio-uncached	docs/manual/ds/parts/01-architecture.tex	8228	\texorpdfstring{PHASE5\_\allowbreak{}MMIO\_\allowbreak{}UNCACHED\_\allowbreak{}DECISION.md}{\cref{ds:dec:phase5-mmio-uncached}}
 ds:dec:phase5-mmio-uncached:1-problem-statement	docs/manual/ds/parts/01-architecture.tex	8239	Problem Statement
 ds:dec:phase5-mmio-uncached:2-memory-map-ground-truth	docs/manual/ds/parts/01-architecture.tex	8268	Memory Map Ground Truth
@@ -1891,90 +1908,91 @@ ds:dec:phase5-mmio-uncached:decision-3-ordering-and-hazards	docs/manual/ds/parts
 ds:dec:phase5-mmio-uncached:decision-4-single-beat-axi-bursts-to-the-peripheral-bridge	docs/manual/ds/parts/01-architecture.tex	8424	Decision 4 --- Single-Beat AXI Bursts to the Peripheral Bridge
 ds:dec:phase5-mmio-uncached:decision-5-blast-radius	docs/manual/ds/parts/01-architecture.tex	8444	Decision 5 --- Blast Radius
 ds:dec:phase5-mmio-uncached:decision-6-verification-hook	docs/manual/ds/parts/01-architecture.tex	8532	Decision 6 --- Verification Hook
-ds:inv:strict-elaboration	docs/manual/ds/parts/01-architecture.tex	15156	Strict elaboration rule
-ds:inv:struct-member-select	docs/manual/ds/parts/01-architecture.tex	15140	Struct-member select rule
+ds:inv:strict-elaboration	docs/manual/ds/parts/01-architecture.tex	14790	Strict elaboration rule
+ds:inv:struct-member-select	docs/manual/ds/parts/01-architecture.tex	14774	Struct-member select rule
 ds:mm:memory-map	docs/manual/ds/parts/01-architecture.tex	11960	Memory Map Specification
-ds:mm:memory-map:address-alignment-requirements	docs/manual/ds/parts/01-architecture.tex	13504	Address Alignment Requirements
-ds:mm:memory-map:address-decode-testing	docs/manual/ds/parts/01-architecture.tex	13648	Address Decode Testing
-ds:mm:memory-map:address-space-32-bit	docs/manual/ds/parts/01-architecture.tex	11971	Address Space (32-bit)
-ds:mm:memory-map:alignment-testing	docs/manual/ds/parts/01-architecture.tex	13661	Alignment Testing
-ds:mm:memory-map:breakpoint-registers	docs/manual/ds/parts/01-architecture.tex	12296	CPU Debug Registers (APB3 Slave)
-ds:mm:memory-map:control-and-status-registers	docs/manual/ds/parts/01-architecture.tex	12164	CPU Debug Registers (APB3 Slave)
-ds:mm:memory-map:cpu-debug-registers-apb3-slave	docs/manual/ds/parts/01-architecture.tex	12156	CPU Debug Registers (APB3 Slave)
-ds:mm:memory-map:crypto-registers-phase-6b	docs/manual/ds/parts/01-architecture.tex	13138	Peripheral Registers (Phase 5)
-ds:mm:memory-map:debug-register-testing	docs/manual/ds/parts/01-architecture.tex	13671	Debug Register Testing
-ds:mm:memory-map:detailed-register-maps	docs/manual/ds/parts/01-architecture.tex	12154	Detailed Register Maps
-ds:mm:memory-map:general-purpose-registers	docs/manual/ds/parts/01-architecture.tex	12243	CPU Debug Registers (APB3 Slave)
-ds:mm:memory-map:global-memory-map-phase-5-soc	docs/manual/ds/parts/01-architecture.tex	11981	Global Memory Map (Phase 5 SoC)
-ds:mm:memory-map:gpio-registers-phase-6a	docs/manual/ds/parts/01-architecture.tex	12707	Peripheral Registers (Phase 5)
-ds:mm:memory-map:gpu-control-registers-apb3-slave	docs/manual/ds/parts/01-architecture.tex	12360	GPU Control Registers (APB3 Slave)
-ds:mm:memory-map:gpu-core-registers	docs/manual/ds/parts/01-architecture.tex	12367	GPU Control Registers (APB3 Slave)
-ds:mm:memory-map:i2c-registers-phase-6a-5	docs/manual/ds/parts/01-architecture.tex	12988	Peripheral Registers (Phase 5)
-ds:mm:memory-map:interrupt-hierarchy-phase-5	docs/manual/ds/parts/01-architecture.tex	13591	Interrupt Hierarchy (Phase 5)
-ds:mm:memory-map:memory-access-permissions-future	docs/manual/ds/parts/01-architecture.tex	13525	Memory Access Permissions (Future)
-ds:mm:memory-map:minimum-address-region	docs/manual/ds/parts/01-architecture.tex	11976	Minimum Address Region
-ds:mm:memory-map:npu-registers-phase-6c	docs/manual/ds/parts/01-architecture.tex	13342	Peripheral Registers (Phase 5)
-ds:mm:memory-map:overview	docs/manual/ds/parts/01-architecture.tex	11966	Overview
-ds:mm:memory-map:peripheral-registers-phase-5	docs/manual/ds/parts/01-architecture.tex	12643	Peripheral Registers (Phase 5)
-ds:mm:memory-map:phase-0-1-single-cpu-no-soc-integration	docs/manual/ds/parts/01-architecture.tex	12085	Phase 0-1: Single CPU (No SoC Integration)
-ds:mm:memory-map:phase-2-3-pipelined-cpu-with-caches	docs/manual/ds/parts/01-architecture.tex	12113	Phase 2-3: Pipelined CPU with Caches
-ds:mm:memory-map:phase-4-cpu-gpu-pre-soc-integration	docs/manual/ds/parts/01-architecture.tex	12129	Phase 4: CPU + GPU (Pre-SoC Integration)
-ds:mm:memory-map:phase-5-full-soc	docs/manual/ds/parts/01-architecture.tex	12150	Phase 5: Full SoC
-ds:mm:memory-map:phase-specific-maps	docs/manual/ds/parts/01-architecture.tex	12083	Phase-Specific Maps
-ds:mm:memory-map:pwm-registers-phase-6a-2	docs/manual/ds/parts/01-architecture.tex	12773	Peripheral Registers (Phase 5)
-ds:mm:memory-map:references	docs/manual/ds/parts/01-architecture.tex	13685	References
-ds:mm:memory-map:reserved-space	docs/manual/ds/parts/01-architecture.tex	12346	CPU Debug Registers (APB3 Slave)
-ds:mm:memory-map:reset-and-trap-vectors	docs/manual/ds/parts/01-architecture.tex	13472	Reset and Trap Vectors
-ds:mm:memory-map:reset-vector	docs/manual/ds/parts/01-architecture.tex	13474	Reset Vector
-ds:mm:memory-map:soc-interconnect-phase-5	docs/manual/ds/parts/01-architecture.tex	13539	SoC Interconnect (Phase 5)
-ds:mm:memory-map:spi-registers	docs/manual/ds/parts/01-architecture.tex	12665	Peripheral Registers (Phase 5)
-ds:mm:memory-map:testing-recommendations	docs/manual/ds/parts/01-architecture.tex	13646	Testing Recommendations
-ds:mm:memory-map:timer-registers	docs/manual/ds/parts/01-architecture.tex	12687	Peripheral Registers (Phase 5)
-ds:mm:memory-map:trap-vector	docs/manual/ds/parts/01-architecture.tex	13487	Trap Vector
-ds:mm:memory-map:trng-registers-phase-6a-4	docs/manual/ds/parts/01-architecture.tex	12915	Peripheral Registers (Phase 5)
-ds:mm:memory-map:uart-registers	docs/manual/ds/parts/01-architecture.tex	12645	Peripheral Registers (Phase 5)
-ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.tex	12833	Peripheral Registers (Phase 5)
-ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	3585	\texttt{periph/aes128\_core.sv}
+ds:mm:memory-map:address-alignment-requirements	docs/manual/cr/parts/06-source-archive.tex	2347	Address Alignment Requirements
+ds:mm:memory-map:address-decode-testing	docs/manual/cr/parts/06-source-archive.tex	2438	Address Decode Testing
+ds:mm:memory-map:address-space-32-bit	docs/manual/cr/parts/06-source-archive.tex	2130	Address Space (32-bit)
+ds:mm:memory-map:alignment-testing	docs/manual/cr/parts/06-source-archive.tex	2451	Alignment Testing
+ds:mm:memory-map:breakpoint-registers	docs/manual/ds/parts/01-architecture.tex	12104	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:control-and-status-registers	docs/manual/ds/parts/01-architecture.tex	11972	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:cpu-debug-registers-apb3-slave	docs/manual/ds/parts/01-architecture.tex	11964	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:crypto-registers-phase-6b	docs/manual/ds/parts/01-architecture.tex	12946	Peripheral Registers (Phase 5)
+ds:mm:memory-map:debug-register-testing	docs/manual/cr/parts/06-source-archive.tex	2461	Debug Register Testing
+ds:mm:memory-map:detailed-register-maps	docs/manual/ds/parts/01-architecture.tex	11962	Detailed Register Maps
+ds:mm:memory-map:general-purpose-registers	docs/manual/ds/parts/01-architecture.tex	12051	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:global-memory-map-phase-5-soc	docs/manual/cr/parts/06-source-archive.tex	2140	Global Memory Map (Phase 5 SoC)
+ds:mm:memory-map:gpio-registers-phase-6a	docs/manual/ds/parts/01-architecture.tex	12515	Peripheral Registers (Phase 5)
+ds:mm:memory-map:gpu-control-registers-apb3-slave	docs/manual/ds/parts/01-architecture.tex	12168	GPU Control Registers (APB3 Slave)
+ds:mm:memory-map:gpu-core-registers	docs/manual/ds/parts/01-architecture.tex	12175	GPU Control Registers (APB3 Slave)
+ds:mm:memory-map:i2c-registers-phase-6a-5	docs/manual/ds/parts/01-architecture.tex	12796	Peripheral Registers (Phase 5)
+ds:mm:memory-map:interrupt-hierarchy-phase-5	docs/manual/ds/parts/01-architecture.tex	13280	Interrupt Hierarchy (Phase 5)
+ds:mm:memory-map:memory-access-permissions-future	docs/manual/cr/parts/06-source-archive.tex	2368	Memory Access Permissions (Future)
+ds:mm:memory-map:minimum-address-region	docs/manual/cr/parts/06-source-archive.tex	2135	Minimum Address Region
+ds:mm:memory-map:npu-registers-phase-6c	docs/manual/ds/parts/01-architecture.tex	13150	Peripheral Registers (Phase 5)
+ds:mm:memory-map:overview	docs/manual/cr/parts/06-source-archive.tex	2125	Overview
+ds:mm:memory-map:peripheral-registers-phase-5	docs/manual/ds/parts/01-architecture.tex	12451	Peripheral Registers (Phase 5)
+ds:mm:memory-map:phase-0-1-single-cpu-no-soc-integration	docs/manual/cr/parts/06-source-archive.tex	2244	Phase 0-1: Single CPU (No SoC Integration)
+ds:mm:memory-map:phase-2-3-pipelined-cpu-with-caches	docs/manual/cr/parts/06-source-archive.tex	2272	Phase 2-3: Pipelined CPU with Caches
+ds:mm:memory-map:phase-4-cpu-gpu-pre-soc-integration	docs/manual/cr/parts/06-source-archive.tex	2288	Phase 4: CPU + GPU (Pre-SoC Integration)
+ds:mm:memory-map:phase-5-full-soc	docs/manual/cr/parts/06-source-archive.tex	2309	Phase 5: Full SoC
+ds:mm:memory-map:phase-specific-maps	docs/manual/cr/parts/06-source-archive.tex	2242	Phase-Specific Maps
+ds:mm:memory-map:pwm-registers-phase-6a-2	docs/manual/ds/parts/01-architecture.tex	12581	Peripheral Registers (Phase 5)
+ds:mm:memory-map:references	docs/manual/cr/parts/06-source-archive.tex	2475	References
+ds:mm:memory-map:reserved-space	docs/manual/ds/parts/01-architecture.tex	12154	CPU Debug Registers (APB3 Slave)
+ds:mm:memory-map:reset-and-trap-vectors	docs/manual/cr/parts/06-source-archive.tex	2315	Reset and Trap Vectors
+ds:mm:memory-map:reset-vector	docs/manual/cr/parts/06-source-archive.tex	2317	Reset Vector
+ds:mm:memory-map:soc-interconnect-phase-5	docs/manual/cr/parts/06-source-archive.tex	2382	SoC Interconnect (Phase 5)
+ds:mm:memory-map:spi-registers	docs/manual/ds/parts/01-architecture.tex	12473	Peripheral Registers (Phase 5)
+ds:mm:memory-map:testing-recommendations	docs/manual/cr/parts/06-source-archive.tex	2436	Testing Recommendations
+ds:mm:memory-map:timer-registers	docs/manual/ds/parts/01-architecture.tex	12495	Peripheral Registers (Phase 5)
+ds:mm:memory-map:trap-vector	docs/manual/cr/parts/06-source-archive.tex	2330	Trap Vector
+ds:mm:memory-map:trng-registers-phase-6a-4	docs/manual/ds/parts/01-architecture.tex	12723	Peripheral Registers (Phase 5)
+ds:mm:memory-map:uart-registers	docs/manual/ds/parts/01-architecture.tex	12453	Peripheral Registers (Phase 5)
+ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.tex	12641	Peripheral Registers (Phase 5)
+ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	3455	\texttt{periph/aes128\_core.sv}
 ds:mod:apb-cdc-bridge	docs/manual/ds/parts/chapters/cdc.tex	197	\texttt{apb\_cdc\_bridge}
 ds:mod:apb4-register-bank	docs/manual/ds/parts/03-module-contracts.tex	561	\texttt{soc/apb4\_register\_bank.sv}
 ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	304	\texttt{async\_axi\_fifo}
 ds:mod:axi-lite-interconnect	docs/manual/ds/parts/03-module-contracts.tex	598	\texttt{soc/axi\_lite\_interconnect.sv}
 ds:mod:axi-lite-register-bank	docs/manual/ds/parts/03-module-contracts.tex	631	\texttt{soc/axi\_lite\_register\_bank.sv}
+ds:mod:axi4-crossbar	docs/manual/ds/parts/chapters/bus.tex	184	\texttt{axi4\_crossbar}
 ds:mod:cdc-gray-fifo	docs/manual/ds/parts/chapters/cdc.tex	135	\texttt{cdc\_gray\_fifo}
 ds:mod:cdc-reset-sync	docs/manual/ds/parts/chapters/cdc.tex	98	\texttt{cdc\_reset\_sync}
 ds:mod:cdc-sync	docs/manual/ds/parts/chapters/cdc.tex	64	\texttt{cdc\_sync}
-ds:mod:crypto-accel	docs/manual/ds/parts/03-module-contracts.tex	3672	\texttt{periph/crypto\_accel.sv}
-ds:mod:dft-clk-mux	docs/manual/ds/parts/03-module-contracts.tex	1735	\texttt{soc/dft/dft\_clk\_mux.sv}
-ds:mod:dft-clk-switch	docs/manual/ds/parts/03-module-contracts.tex	1786	\texttt{soc/dft/dft\_clk\_switch.sv}
-ds:mod:dft-ctrl	docs/manual/ds/parts/03-module-contracts.tex	1897	\texttt{soc/dft/dft\_ctrl.sv}
-ds:mod:dft-ctrl-ports	docs/manual/ds/parts/03-module-contracts.tex	1959	\texttt{soc/dft/dft\_ctrl\_ports.sv}
-ds:mod:dft-rst-mux	docs/manual/ds/parts/03-module-contracts.tex	1995	\texttt{soc/dft/dft\_rst\_mux.sv}
-ds:mod:dma-engine	docs/manual/ds/parts/03-module-contracts.tex	2560	\texttt{periph/dma\_engine.sv}
-ds:mod:fpga-sdp-ram-be	docs/manual/ds/parts/03-module-contracts.tex	4198	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
-ds:mod:fpga-sram-1rw	docs/manual/ds/parts/03-module-contracts.tex	4219	\texttt{fpga/fpga\_sram\_1rw.sv}
-ds:mod:gpio-controller	docs/manual/ds/parts/03-module-contracts.tex	2620	\texttt{periph/gpio\_controller.sv}
+ds:mod:crypto-accel	docs/manual/ds/parts/03-module-contracts.tex	3542	\texttt{periph/crypto\_accel.sv}
+ds:mod:dft-clk-mux	docs/manual/ds/parts/03-module-contracts.tex	1605	\texttt{soc/dft/dft\_clk\_mux.sv}
+ds:mod:dft-clk-switch	docs/manual/ds/parts/03-module-contracts.tex	1656	\texttt{soc/dft/dft\_clk\_switch.sv}
+ds:mod:dft-ctrl	docs/manual/ds/parts/03-module-contracts.tex	1767	\texttt{soc/dft/dft\_ctrl.sv}
+ds:mod:dft-ctrl-ports	docs/manual/ds/parts/03-module-contracts.tex	1829	\texttt{soc/dft/dft\_ctrl\_ports.sv}
+ds:mod:dft-rst-mux	docs/manual/ds/parts/03-module-contracts.tex	1865	\texttt{soc/dft/dft\_rst\_mux.sv}
+ds:mod:dma-engine	docs/manual/ds/parts/03-module-contracts.tex	2430	\texttt{periph/dma\_engine.sv}
+ds:mod:fpga-sdp-ram-be	docs/manual/ds/parts/03-module-contracts.tex	4068	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
+ds:mod:fpga-sram-1rw	docs/manual/ds/parts/03-module-contracts.tex	4089	\texttt{fpga/fpga\_sram\_1rw.sv}
+ds:mod:gpio-controller	docs/manual/ds/parts/03-module-contracts.tex	2490	\texttt{periph/gpio\_controller.sv}
 ds:mod:gpu-top	docs/manual/ds/parts/03-module-contracts.tex	440	\texttt{gpu/gpu\_top.sv}
-ds:mod:i2c-bit-engine	docs/manual/ds/parts/03-module-contracts.tex	2729	\texttt{periph/i2c\_bit\_engine.sv}
-ds:mod:i2c-controller	docs/manual/ds/parts/03-module-contracts.tex	2854	\texttt{periph/i2c\_controller.sv}
-ds:mod:interrupt-controller	docs/manual/ds/parts/03-module-contracts.tex	3005	\texttt{periph/interrupt\_controller.sv}
-ds:mod:jtag-tap	docs/manual/ds/parts/03-module-contracts.tex	2028	\texttt{soc/dft/jtag\_tap.sv}
-ds:mod:mbist-ctl-hold	docs/manual/ds/parts/03-module-contracts.tex	2104	\texttt{soc/dft/mbist\_ctl\_hold.sv}
-ds:mod:mbist-ctrl	docs/manual/ds/parts/03-module-contracts.tex	2125	\texttt{soc/dft/mbist\_ctrl.sv}
-ds:mod:mbist-status-sync	docs/manual/ds/parts/03-module-contracts.tex	2177	\texttt{soc/dft/mbist\_status\_sync.sv}
-ds:mod:mbist-xing	docs/manual/ds/parts/03-module-contracts.tex	2206	\texttt{soc/dft/mbist\_xing.sv}
-ds:mod:mem-collar	docs/manual/ds/parts/03-module-contracts.tex	2242	\texttt{soc/dft/mem\_collar.sv}
-ds:mod:npu-mac-array	docs/manual/ds/parts/03-module-contracts.tex	3996	\texttt{npu/npu\_mac\_array.sv}
-ds:mod:npu-top	docs/manual/ds/parts/03-module-contracts.tex	4042	\texttt{npu/npu\_top.sv}
-ds:mod:npu-weight-mem	docs/manual/ds/parts/03-module-contracts.tex	4124	\texttt{npu/npu\_weight\_mem.sv}
-ds:mod:pll-apb-regs	docs/manual/ds/parts/03-module-contracts.tex	2328	\texttt{soc/pll/pll\_apb\_regs.sv}
-ds:mod:pll-clkgen	docs/manual/ds/parts/03-module-contracts.tex	2382	\texttt{soc/pll/pll\_clkgen.sv}
-ds:mod:pll-rnm	docs/manual/ds/parts/03-module-contracts.tex	2425	\texttt{soc/pll/pll\_rnm.sv}
-ds:mod:pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2468	\texttt{soc/pll/pll\_subsystem.sv}
+ds:mod:i2c-bit-engine	docs/manual/ds/parts/03-module-contracts.tex	2599	\texttt{periph/i2c\_bit\_engine.sv}
+ds:mod:i2c-controller	docs/manual/ds/parts/03-module-contracts.tex	2724	\texttt{periph/i2c\_controller.sv}
+ds:mod:interrupt-controller	docs/manual/ds/parts/03-module-contracts.tex	2875	\texttt{periph/interrupt\_controller.sv}
+ds:mod:jtag-tap	docs/manual/ds/parts/03-module-contracts.tex	1898	\texttt{soc/dft/jtag\_tap.sv}
+ds:mod:mbist-ctl-hold	docs/manual/ds/parts/03-module-contracts.tex	1974	\texttt{soc/dft/mbist\_ctl\_hold.sv}
+ds:mod:mbist-ctrl	docs/manual/ds/parts/03-module-contracts.tex	1995	\texttt{soc/dft/mbist\_ctrl.sv}
+ds:mod:mbist-status-sync	docs/manual/ds/parts/03-module-contracts.tex	2047	\texttt{soc/dft/mbist\_status\_sync.sv}
+ds:mod:mbist-xing	docs/manual/ds/parts/03-module-contracts.tex	2076	\texttt{soc/dft/mbist\_xing.sv}
+ds:mod:mem-collar	docs/manual/ds/parts/03-module-contracts.tex	2112	\texttt{soc/dft/mem\_collar.sv}
+ds:mod:npu-mac-array	docs/manual/ds/parts/03-module-contracts.tex	3866	\texttt{npu/npu\_mac\_array.sv}
+ds:mod:npu-top	docs/manual/ds/parts/03-module-contracts.tex	3912	\texttt{npu/npu\_top.sv}
+ds:mod:npu-weight-mem	docs/manual/ds/parts/03-module-contracts.tex	3994	\texttt{npu/npu\_weight\_mem.sv}
+ds:mod:pll-apb-regs	docs/manual/ds/parts/03-module-contracts.tex	2198	\texttt{soc/pll/pll\_apb\_regs.sv}
+ds:mod:pll-clkgen	docs/manual/ds/parts/03-module-contracts.tex	2252	\texttt{soc/pll/pll\_clkgen.sv}
+ds:mod:pll-rnm	docs/manual/ds/parts/03-module-contracts.tex	2295	\texttt{soc/pll/pll\_rnm.sv}
+ds:mod:pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2338	\texttt{soc/pll/pll\_subsystem.sv}
 ds:mod:pmu	docs/manual/ds/parts/chapters/power.tex	27	\texttt{pmu}
 ds:mod:pmu:handshake	docs/manual/ds/parts/chapters/power.tex	134	Isolation handshake
 ds:mod:pmu:registers	docs/manual/ds/parts/chapters/power.tex	30	Programmers model
 ds:mod:pmu:sequencer	docs/manual/ds/parts/chapters/power.tex	69	Sequencer
-ds:mod:pwm-controller	docs/manual/ds/parts/03-module-contracts.tex	3049	\texttt{periph/pwm\_controller.sv}
+ds:mod:pwm-controller	docs/manual/ds/parts/03-module-contracts.tex	2919	\texttt{periph/pwm\_controller.sv}
 ds:mod:rv32i-alu	docs/manual/ds/parts/03-module-contracts.tex	97	\texttt{cpu/core/rv32i\_alu.sv}
 ds:mod:rv32i-clock-gate	docs/manual/ds/parts/chapters/power.tex	271	\texttt{rv32i\_clock\_gate}
 ds:mod:rv32i-cpu-top	docs/manual/ds/parts/03-module-contracts.tex	235	\texttt{cpu/rv32i\_cpu\_top.sv}
@@ -1985,24 +2003,49 @@ ds:mod:rv32i-icache	docs/manual/ds/parts/03-module-contracts.tex	409	\texttt{mem
 ds:mod:rv32i-pipeline-ex1b	docs/manual/ds/parts/03-module-contracts.tex	8	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1b.sv}
 ds:mod:rv32i-pipeline-ex1c	docs/manual/ds/parts/03-module-contracts.tex	35	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
 ds:mod:rv32i-pipeline-ex2	docs/manual/ds/parts/03-module-contracts.tex	78	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex2.sv}
-ds:mod:sha256-core	docs/manual/ds/parts/03-module-contracts.tex	3917	\texttt{periph/sha256\_core.sv}
-ds:mod:soc-addr-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	668	\texttt{soc/soc\_addr\_map\_pkg.sv}
-ds:mod:soc-bus	docs/manual/ds/parts/03-module-contracts.tex	707	\texttt{soc/soc\_bus.sv}
-ds:mod:soc-mbist	docs/manual/ds/parts/03-module-contracts.tex	2287	\texttt{soc/dft/soc\_mbist.sv}
-ds:mod:soc-periph-map-pkg	docs/manual/ds/parts/03-module-contracts.tex	745	\texttt{soc/soc\_periph\_map\_pkg.sv}
-ds:mod:soc-top	docs/manual/ds/parts/03-module-contracts.tex	800	\texttt{soc/soc\_top.sv}
-ds:mod:spi-controller	docs/manual/ds/parts/03-module-contracts.tex	3198	\texttt{periph/spi\_controller.sv}
-ds:mod:sram-controller	docs/manual/ds/parts/03-module-contracts.tex	1510	\texttt{soc/sram\_controller.sv}
-ds:mod:trng	docs/manual/ds/parts/03-module-contracts.tex	3256	\texttt{periph/trng.sv}
-ds:mod:trng-lfsr-entropy	docs/manual/ds/parts/03-module-contracts.tex	3332	\texttt{periph/trng\_lfsr\_entropy.sv}
-ds:mod:trng-ro-sky130	docs/manual/ds/parts/03-module-contracts.tex	3382	\texttt{periph/trng\_ro\_sky130.sv}
-ds:mod:uart-controller	docs/manual/ds/parts/03-module-contracts.tex	3420	\texttt{periph/uart\_controller.sv}
+ds:mod:sha256-core	docs/manual/ds/parts/03-module-contracts.tex	3787	\texttt{periph/sha256\_core.sv}
+ds:mod:soc-addr-map-pkg	docs/manual/ds/parts/chapters/bus.tex	138	\texttt{soc\_addr\_map\_pkg}
+ds:mod:soc-bus	docs/manual/ds/parts/chapters/bus.tex	144	Fabric topology
+ds:mod:soc-mbist	docs/manual/ds/parts/03-module-contracts.tex	2157	\texttt{soc/dft/soc\_mbist.sv}
+ds:mod:soc-periph-map-pkg	docs/manual/ds/parts/chapters/bus.tex	141	\texttt{soc\_periph\_map\_pkg}
+ds:mod:soc-top	docs/manual/ds/parts/03-module-contracts.tex	668	\texttt{soc/soc\_top.sv}
+ds:mod:spi-controller	docs/manual/ds/parts/03-module-contracts.tex	3068	\texttt{periph/spi\_controller.sv}
+ds:mod:sram-controller	docs/manual/ds/parts/03-module-contracts.tex	1378	\texttt{soc/sram\_controller.sv}
+ds:mod:trng	docs/manual/ds/parts/03-module-contracts.tex	3126	\texttt{periph/trng.sv}
+ds:mod:trng-lfsr-entropy	docs/manual/ds/parts/03-module-contracts.tex	3202	\texttt{periph/trng\_lfsr\_entropy.sv}
+ds:mod:trng-ro-sky130	docs/manual/ds/parts/03-module-contracts.tex	3252	\texttt{periph/trng\_ro\_sky130.sv}
+ds:mod:uart-controller	docs/manual/ds/parts/03-module-contracts.tex	3290	\texttt{periph/uart\_controller.sv}
 ds:mod:warp-scheduler	docs/manual/ds/parts/03-module-contracts.tex	523	\texttt{gpu/warp\_scheduler.sv}
-ds:mod:watchdog-timer	docs/manual/ds/parts/03-module-contracts.tex	3478	\texttt{periph/watchdog\_timer.sv}
+ds:mod:watchdog-timer	docs/manual/ds/parts/03-module-contracts.tex	3348	\texttt{periph/watchdog\_timer.sv}
 ds:part:architecture	docs/manual/ds/parts/01-architecture.tex	1	Architecture
 ds:part:constraints-and-power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1	Constraints and power intent
 ds:part:module-contracts	docs/manual/ds/parts/03-module-contracts.tex	1	Module contracts
 ds:part:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	1	Verification plan
+ds:req:bus-001	docs/manual/ds/parts/chapters/bus.tex	147	DS-BUS-001 One clock and one reset
+ds:req:bus-002	docs/manual/ds/parts/chapters/bus.tex	155	DS-BUS-002 Masters and slaves of the crossbar
+ds:req:bus-003	docs/manual/ds/parts/chapters/bus.tex	163	DS-BUS-003 Identifier of a transfer
+ds:req:bus-004	docs/manual/ds/parts/chapters/bus.tex	171	DS-BUS-004 Width of the ID
+ds:req:bus-005	docs/manual/ds/parts/chapters/bus.tex	179	DS-BUS-005 Number of masters
+ds:req:bus-020	docs/manual/ds/parts/chapters/bus.tex	187	DS-BUS-020 One transfer in an engine, no mixing of bursts
+ds:req:bus-021	docs/manual/ds/parts/chapters/bus.tex	195	DS-BUS-021 A read and a write to one slave
+ds:req:bus-022	docs/manual/ds/parts/chapters/bus.tex	203	DS-BUS-022 No order between a read and a write
+ds:req:bus-023	docs/manual/ds/parts/chapters/bus.tex	211	DS-BUS-023 Engines of different slaves run in parallel
+ds:req:bus-024	docs/manual/ds/parts/chapters/bus.tex	219	DS-BUS-024 Fixed priority
+ds:req:bus-025	docs/manual/ds/parts/chapters/bus.tex	227	DS-BUS-025 Read address held for the slave
+ds:req:bus-026	docs/manual/ds/parts/chapters/bus.tex	235	DS-BUS-026 Write address held for the slave
+ds:req:bus-027	docs/manual/ds/parts/chapters/bus.tex	243	DS-BUS-027 Write data after the write address
+ds:req:bus-028	docs/manual/ds/parts/chapters/bus.tex	251	DS-BUS-028 End of the data phase
+ds:req:bus-029	docs/manual/ds/parts/chapters/bus.tex	259	DS-BUS-029 Responses go to the right master
+ds:req:bus-030	docs/manual/ds/parts/chapters/bus.tex	267	DS-BUS-030 Stalls change no data
+ds:req:bus-031	docs/manual/ds/parts/chapters/bus.tex	275	DS-BUS-031 A decode error does not stop another master
+ds:req:bus-032	docs/manual/ds/parts/chapters/bus.tex	283	DS-BUS-032 Next transfer after a decode error
+ds:req:bus-033	docs/manual/ds/parts/chapters/bus.tex	288	DS-BUS-033 No timeout
+ds:req:bus-034	docs/manual/ds/parts/chapters/bus.tex	296	DS-BUS-034 Burst fields pass unchanged
+ds:req:bus-035	docs/manual/ds/parts/chapters/bus.tex	304	DS-BUS-035 Reset of the crossbar
+ds:req:bus-210	docs/manual/ds/parts/chapters/bus.tex	315	DS-BUS-210 One transfer in flight for each direction
+ds:req:bus-211	docs/manual/ds/parts/chapters/bus.tex	323	DS-BUS-211 Last beat of a write
+ds:req:bus-212	docs/manual/ds/parts/chapters/bus.tex	331	DS-BUS-212 A master takes its responses
+ds:req:bus-222	docs/manual/ds/parts/chapters/bus.tex	339	DS-BUS-222 Clock and reset of a new endpoint
 ds:req:cdc-001	docs/manual/ds/parts/chapters/cdc.tex	27	DS-CDC-001 Crossings use the primitives
 ds:req:cdc-002	docs/manual/ds/parts/chapters/cdc.tex	35	DS-CDC-002 Multi-bit values cross in gray code
 ds:req:cdc-003	docs/manual/ds/parts/chapters/cdc.tex	40	DS-CDC-003 Synchroniser flops carry the attribute
@@ -2057,6 +2100,19 @@ ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	346	DS-CDC-157 No combinati
 ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	354	DS-CDC-158 Exact depth
 ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	359	DS-CDC-159 Valid is not withdrawn
 ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6667	DS-EXAMPLE-001 Example of a requirement
+ds:req:map-001	docs/manual/ds/parts/chapters/bus.tex	34	DS-MAP-001 Ranges of the crossbar
+ds:req:map-002	docs/manual/ds/parts/chapters/bus.tex	42	DS-MAP-002 Slots of the AXI-Lite interconnect
+ds:req:map-003	docs/manual/ds/parts/chapters/bus.tex	50	DS-MAP-003 Slots of the APB interconnect
+ds:req:map-004	docs/manual/ds/parts/chapters/bus.tex	58	DS-MAP-004 Each page of the peripheral range has one owner
+ds:req:map-005	docs/manual/ds/parts/chapters/bus.tex	66	DS-MAP-005 Decode by the first address
+ds:req:map-020	docs/manual/ds/parts/chapters/bus.tex	74	DS-MAP-020 Read of an unmapped address
+ds:req:map-021	docs/manual/ds/parts/chapters/bus.tex	82	DS-MAP-021 Write to an unmapped address
+ds:req:map-022	docs/manual/ds/parts/chapters/bus.tex	90	DS-MAP-022 No slave sees an unmapped access
+ds:req:map-040	docs/manual/ds/parts/chapters/bus.tex	98	DS-MAP-040 Write to the boot ROM
+ds:req:map-041	docs/manual/ds/parts/chapters/bus.tex	106	DS-MAP-041 Index of the boot ROM
+ds:req:map-042	docs/manual/ds/parts/chapters/bus.tex	114	DS-MAP-042 Storage behind the SRAM range
+ds:req:map-045	docs/manual/ds/parts/chapters/bus.tex	122	DS-MAP-045 Uncached peripheral range
+ds:req:map-060	docs/manual/ds/parts/chapters/bus.tex	130	DS-MAP-060 Reset address of the CPU
 ds:req:pmu-001	docs/manual/ds/parts/chapters/power.tex	33	DS-PMU-001 CTRL mode field
 ds:req:pmu-002	docs/manual/ds/parts/chapters/power.tex	38	DS-PMU-002 STATUS fields
 ds:req:pmu-003	docs/manual/ds/parts/chapters/power.tex	43	DS-PMU-003 DOMAIN\_EN fields
@@ -2102,6 +2158,7 @@ ds:req:pmu-183	docs/manual/ds/parts/chapters/power.tex	327	DS-PMU-183 Wake-up of
 ds:req:pmu-184	docs/manual/ds/parts/chapters/power.tex	335	DS-PMU-184 Poll for the settled value
 ds:req:pmu-185	docs/manual/ds/parts/chapters/power.tex	343	DS-PMU-185 No GPU access while the GPU is off
 ds:req:pmu-186	docs/manual/ds/parts/chapters/power.tex	351	DS-PMU-186 Fabric reset with CPU reset
+ds:req:pmu-187	docs/manual/ds/parts/chapters/power.tex	359	DS-PMU-187 Quiet bus before a GPU power-down
 ds:req:pwr-001	docs/manual/ds/parts/chapters/power-intent.tex	34	DS-PWR-001 Power domains and their members
 ds:req:pwr-002	docs/manual/ds/parts/chapters/power-intent.tex	42	DS-PWR-002 One domain for each instance
 ds:req:pwr-003	docs/manual/ds/parts/chapters/power-intent.tex	47	DS-PWR-003 Always-on roster
@@ -2132,6 +2189,8 @@ ds:req:pwr-081	docs/manual/ds/parts/chapters/power-intent.tex	241	DS-PWR-081 Ver
 ds:req:pwr-082	docs/manual/ds/parts/chapters/power-intent.tex	246	DS-PWR-082 Both arms
 ds:req:pwr-083	docs/manual/ds/parts/chapters/power-intent.tex	254	DS-PWR-083 References exist
 ds:req:pwr-084	docs/manual/ds/parts/chapters/power-intent.tex	259	DS-PWR-084 Form of the directive lines
+fig:tm:ch:mod-bus-fabric:decode	docs/manual/tm/parts/chapters/bus.tex	120	Bus fabric
+fig:tm:ch:mod-bus-fabric:topology	docs/manual/tm/parts/chapters/bus.tex	83	Bus fabric
 fig:tm:ch:mod-cdc-primitives:soc	docs/manual/tm/parts/chapters/cdc.tex	34	Clock-domain crossing
 fig:tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	56	Power management
 fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	427	Functional description
@@ -2140,6 +2199,10 @@ fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	513	Functi
 fig:tm:mod:apb-cdc-bridge:sfsm	docs/manual/tm/parts/chapters/cdc.tex	444	Functional description
 fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	482	Functional description
 fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	597	Functional description
+fig:tm:mod:axi4-crossbar:arb	docs/manual/tm/parts/chapters/bus.tex	270	Functional description
+fig:tm:mod:axi4-crossbar:fsm	docs/manual/tm/parts/chapters/bus.tex	238	Functional description
+fig:tm:mod:axi4-crossbar:read	docs/manual/tm/parts/chapters/bus.tex	288	Functional description
+fig:tm:mod:axi4-crossbar:write	docs/manual/tm/parts/chapters/bus.tex	307	Functional description
 fig:tm:mod:cdc-gray-fifo:block	docs/manual/tm/parts/chapters/cdc.tex	304	Functional description
 fig:tm:mod:cdc-gray-fifo:ring	docs/manual/tm/parts/chapters/cdc.tex	346	Functional description
 fig:tm:mod:cdc-gray-fifo:timing	docs/manual/tm/parts/chapters/cdc.tex	362	Functional description
@@ -2159,7 +2222,9 @@ tab:ds:mm:address-map:all	docs/manual/common/generated/map/memory-map.tex	4	Memo
 tab:ds:mm:address-map:apb	docs/manual/common/generated/map/memory-map-apb.tex	4	APB interconnect slot windows
 tab:ds:mm:address-map:axilite	docs/manual/common/generated/map/memory-map-axilite.tex	4	AXI-Lite interconnect slot windows
 tab:ds:mm:address-map:crossbar	docs/manual/common/generated/map/memory-map-crossbar.tex	4	Crossbar slave windows
+tab:ds:req:bus-map	docs/manual/ds/generated/requirements-bus.tex	4	Requirements of area BUS and their verification
 tab:ds:req:cdc-map	docs/manual/ds/generated/requirements-cdc.tex	4	Requirements of area CDC and their verification
+tab:ds:req:map-map	docs/manual/ds/generated/requirements-map.tex	4	Requirements of area MAP and their verification
 tab:ds:req:pmu-map	docs/manual/ds/generated/requirements-pmu.tex	4	Requirements of area PMU and their verification
 tab:ds:req:pwr-map	docs/manual/ds/generated/requirements-pwr.tex	4	Requirements of area PWR and their verification
 tab:tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	41	Instances in the design
@@ -2173,6 +2238,10 @@ tab:tm:mod:apb-cdc-bridge:signals	docs/manual/common/generated/facts/apb-cdc-bri
 tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	604	Functional description
 tab:tm:mod:async-axi-fifo:params	docs/manual/common/generated/facts/async-axi-fifo-params.tex	4	Parameters of \code{async_axi_fifo}
 tab:tm:mod:async-axi-fifo:signals	docs/manual/common/generated/facts/async-axi-fifo-signals.tex	4	Signals of \code{async_axi_fifo}
+tab:tm:mod:axi4-crossbar:params	docs/manual/common/generated/facts/axi4-crossbar-params.tex	4	Parameters of \code{axi4_crossbar}
+tab:tm:mod:axi4-crossbar:reset	docs/manual/tm/parts/chapters/bus.tex	358	Known limits
+tab:tm:mod:axi4-crossbar:signals	docs/manual/common/generated/facts/axi4-crossbar-signals.tex	4	Signals of \code{axi4_crossbar}
+tab:tm:mod:axi4-crossbar:wstates	docs/manual/tm/parts/chapters/bus.tex	201	Functional description
 tab:tm:mod:cdc-gray-fifo:d2full	docs/manual/tm/parts/chapters/cdc.tex	319	Functional description
 tab:tm:mod:cdc-gray-fifo:params	docs/manual/common/generated/facts/cdc-gray-fifo-params.tex	4	Parameters of \code{cdc_gray_fifo}
 tab:tm:mod:cdc-gray-fifo:signals	docs/manual/common/generated/facts/cdc-gray-fifo-signals.tex	4	Signals of \code{cdc_gray_fifo}
@@ -2192,6 +2261,9 @@ tab:tm:mod:rv32i-clock-gate:arms	docs/manual/tm/parts/chapters/power.tex	382	Fun
 tab:tm:mod:rv32i-clock-gate:instances	docs/manual/tm/parts/chapters/power.tex	318	Introduction
 tab:tm:mod:rv32i-clock-gate:params	docs/manual/common/generated/facts/rv32i-clock-gate-params.tex	4	Parameters of \code{rv32i_clock_gate}
 tab:tm:mod:rv32i-clock-gate:signals	docs/manual/common/generated/facts/rv32i-clock-gate-signals.tex	4	Signals of \code{rv32i_clock_gate}
+tab:tm:mod:soc-bus:masters	docs/manual/tm/parts/chapters/bus.tex	142	Functional description
+tab:tm:mod:soc-bus:params	docs/manual/common/generated/facts/soc-bus-params.tex	4	Parameters of \code{soc_bus}
+tab:tm:mod:soc-bus:signals	docs/manual/common/generated/facts/soc-bus-signals.tex	4	Signals of \code{soc_bus}
 tab:tm:pd:phase5-soc-upf:clamps	docs/manual/tm/parts/chapters/power.tex	605	Isolation
 tab:tm:pd:phase5-soc-upf:classes	docs/manual/tm/parts/chapters/power.tex	634	Isolation
 tab:tm:pd:phase5-soc-upf:contents	docs/manual/tm/parts/chapters/power.tex	528	Contents of the file
@@ -2325,18 +2397,19 @@ tm:ch:flow-overview	docs/manual/tm/parts/02-physical-design.tex	3	Flow overview
 tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7882	FPGA prototyping
 tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	5351	FreePDK45 flow
 tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10050	High-level synthesis
+tm:ch:mod-bus-fabric	docs/manual/tm/parts/chapters/bus.tex	4	Bus fabric
 tm:ch:mod-cdc-primitives	docs/manual/tm/parts/chapters/cdc.tex	3	Clock-domain crossing
 tm:ch:mod-cdc-primitives:constraints	docs/manual/tm/parts/chapters/cdc.tex	72	Timing constraints and CDC checks
 tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	37	Instances in the design
 tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
-tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	1555	Crypto accelerator
-tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	834	DFT blocks
-tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	1857	FPGA wrappers
+tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	1535	Crypto accelerator
+tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	814	DFT blocks
+tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	1837	FPGA wrappers
 tm:ch:mod-gpu	docs/manual/tm/parts/01-module-reference.tex	439	GPU
 tm:ch:mod-memory-and-caches	docs/manual/tm/parts/01-module-reference.tex	290	Memory and caches
-tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1769	NPU
-tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	940	Peripherals
-tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	910	PLL subsystem
+tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1749	NPU
+tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	920	Peripherals
+tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	890	PLL subsystem
 tm:ch:mod-power-management	docs/manual/tm/parts/chapters/power.tex	3	Power management
 tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	421	SoC power integration
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	443	SoC fabric
@@ -2648,31 +2721,32 @@ tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/par
 tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6931	Testability findings (proposals; no RTL changed)
 tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6991	Notes on tooling (for the next person)
 tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7039	Gap list toward real Stage 2
-tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1560	\texttt{periph/aes128\_core.sv}
+tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1540	\texttt{periph/aes128\_core.sv}
 tm:mod:apb-cdc-bridge	docs/manual/tm/parts/chapters/cdc.tex	397	\texttt{apb\_cdc\_bridge}
 tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	448	\texttt{soc/apb\_interconnect.sv}
 tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	564	\texttt{async\_axi\_fifo}
-tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	474	\texttt{soc/axi4\_crossbar.sv}
+tm:mod:axi4-crossbar	docs/manual/tm/parts/chapters/bus.tex	188	\texttt{axi4\_crossbar}
+tm:mod:axi4-crossbar:limits	docs/manual/tm/parts/chapters/bus.tex	340	Known limits
 tm:mod:cdc-gray-fifo	docs/manual/tm/parts/chapters/cdc.tex	268	\texttt{cdc\_gray\_fifo}
 tm:mod:cdc-reset-sync	docs/manual/tm/parts/chapters/cdc.tex	175	\texttt{cdc\_reset\_sync}
 tm:mod:cdc-sync	docs/manual/tm/parts/chapters/cdc.tex	100	\texttt{cdc\_sync}
 tm:mod:cdc-sync:debug	docs/manual/tm/parts/chapters/cdc.tex	162	Debug, test and DFT
-tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	1634	\texttt{periph/crypto\_accel.sv}
-tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	839	\texttt{soc/dft/dft\_clk\_switch.sv}
-tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	945	\texttt{periph/dma\_engine.sv}
-tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	1862	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
-tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	1877	\texttt{fpga/fpga\_sram\_1rw.sv}
-tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1018	\texttt{periph/gpio\_controller.sv}
-tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1093	\texttt{periph/i2c\_bit\_engine.sv}
-tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1145	\texttt{periph/i2c\_controller.sv}
-tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1204	\texttt{periph/interrupt\_controller.sv}
-tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	888	\texttt{soc/dft/mbist\_ctrl.sv}
-tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	1774	\texttt{npu/npu\_mac\_array.sv}
-tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	1788	\texttt{npu/npu\_top.sv}
-tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	1816	\texttt{npu/npu\_weight\_mem.sv}
-tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	915	\texttt{soc/pll/pll\_subsystem.sv}
+tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	1614	\texttt{periph/crypto\_accel.sv}
+tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	819	\texttt{soc/dft/dft\_clk\_switch.sv}
+tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	925	\texttt{periph/dma\_engine.sv}
+tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	1842	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
+tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	1857	\texttt{fpga/fpga\_sram\_1rw.sv}
+tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	998	\texttt{periph/gpio\_controller.sv}
+tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1073	\texttt{periph/i2c\_bit\_engine.sv}
+tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1125	\texttt{periph/i2c\_controller.sv}
+tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1184	\texttt{periph/interrupt\_controller.sv}
+tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	868	\texttt{soc/dft/mbist\_ctrl.sv}
+tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	1754	\texttt{npu/npu\_mac\_array.sv}
+tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	1768	\texttt{npu/npu\_top.sv}
+tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	1796	\texttt{npu/npu\_weight\_mem.sv}
+tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	895	\texttt{soc/pll/pll\_subsystem.sv}
 tm:mod:pmu	docs/manual/tm/parts/chapters/power.tex	59	\texttt{pmu}
-tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1240	\texttt{periph/pwm\_controller.sv}
+tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1220	\texttt{periph/pwm\_controller.sv}
 tm:mod:rv32i-alu	docs/manual/tm/parts/01-module-reference.tex	96	\texttt{cpu/core/rv32i\_alu.sv}
 tm:mod:rv32i-cache-pkg	docs/manual/tm/parts/01-module-reference.tex	295	\texttt{mem/rv32i\_cache\_pkg.sv}
 tm:mod:rv32i-clock-gate	docs/manual/tm/parts/chapters/power.tex	312	\texttt{rv32i\_clock\_gate}
@@ -2686,14 +2760,15 @@ tm:mod:rv32i-pipeline-ex1b	docs/manual/tm/parts/01-module-reference.tex	8	\textt
 tm:mod:rv32i-pipeline-ex1c	docs/manual/tm/parts/01-module-reference.tex	27	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
 tm:mod:rv32i-pipeline-ex2	docs/manual/tm/parts/01-module-reference.tex	60	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex2.sv}
 tm:mod:rv32i-pipeline-if	docs/manual/tm/parts/01-module-reference.tex	75	\texttt{cpu/core/pipeline/rv32i\_pipeline\_if.sv}
-tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	1711	\texttt{periph/sha256\_core.sv}
-tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	496	\texttt{soc/soc\_top.sv}
-tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1299	\texttt{periph/spi\_controller.sv}
-tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	728	\texttt{soc/sram\_controller.sv}
-tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1365	\texttt{periph/trng.sv}
-tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1387	\texttt{periph/trng\_lfsr\_entropy.sv}
-tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1401	\texttt{periph/uart\_controller.sv}
-tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	1524	\texttt{periph/watchdog\_timer.sv}
+tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	1691	\texttt{periph/sha256\_core.sv}
+tm:mod:soc-bus	docs/manual/tm/parts/chapters/bus.tex	123	Fabric topology
+tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	474	\texttt{soc/soc\_top.sv}
+tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1279	\texttt{periph/spi\_controller.sv}
+tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	706	\texttt{soc/sram\_controller.sv}
+tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1345	\texttt{periph/trng.sv}
+tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1367	\texttt{periph/trng\_lfsr\_entropy.sv}
+tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1381	\texttt{periph/uart\_controller.sv}
+tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	1504	\texttt{periph/watchdog\_timer.sv}
 tm:part:decisions	docs/manual/tm/parts/05-decisions.tex	1	Decisions
 tm:part:dft-fpga-hls-and-analog	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1	DFT, FPGA, HLS and analog
 tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module reference
@@ -3091,6 +3166,12 @@ tm:suite:soc-wdt-fw-gen-wdt-hex	docs/manual/tm/parts/03-verification-infrastruct
 tm:suite:trng-lfsr-model	docs/manual/tm/parts/03-verification-infrastructure.tex	1209	\texttt{tb/models/trng\_lfsr\_model.py}
 um:ch:about	docs/manual/um/parts/00-about.tex	5	About this book
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	106	Build and run commands
+um:ch:bus-integration	docs/manual/um/parts/02-integration.tex	366	Bus fabric integration
+um:ch:bus-integration:checklist	docs/manual/um/parts/02-integration.tex	436	Checklist
+um:ch:bus-integration:map	docs/manual/um/parts/02-integration.tex	370	Read the memory map
+um:ch:bus-integration:rules	docs/manual/um/parts/02-integration.tex	381	Firmware and master rules
+um:ch:bus-integration:verify	docs/manual/um/parts/02-integration.tex	414	Verify
+um:ch:bus-integration:xbar	docs/manual/um/parts/02-integration.tex	391	Add a master or a slave to the crossbar
 um:ch:cdc-integration	docs/manual/um/parts/02-integration.tex	3	Clock-domain crossing integration
 um:ch:cdc-integration:checklist	docs/manual/um/parts/02-integration.tex	179	Checklist
 um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	7	Choose the block
@@ -3105,14 +3186,14 @@ um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
 um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6459	Issue tracking
 um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2242	Local quality checks
 um:ch:power-integration	docs/manual/um/parts/02-integration.tex	197	Power management integration
-um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	346	Checklist
-um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	227	Clocks and resets
-um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	215	Power the CPU down
-um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	239	Integrate a clock gate
+um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	347	Checklist
+um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	228	Clocks and resets
+um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	216	Power the CPU down
+um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	240	Integrate a clock gate
 um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	204	Power the GPU down and up
 um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	201	Register map
-um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	255	Keep the power intent in step
-um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	326	Verify
+um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	256	Keep the power intent in step
+um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	327	Verify
 um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6786	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	40	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	364	Supported instructions

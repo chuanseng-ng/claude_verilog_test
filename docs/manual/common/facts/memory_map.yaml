@@ -31,7 +31,7 @@ levels:
         note: "A read gives OKAY and a write gives SLVERR. The reset PC of the CPU is the base."
       SRAM:
         target: "SRAM `u_sram`"
-        note: "The window is larger than the storage. `SRAM_MEM_WORDS` sets the size of the storage."
+        note: "The window is larger than the storage. `SRAM_MEM_WORDS` sets the size of the storage. The storage repeats across the window."
       PERIPH:
         target: "peripheral bridge `u_periph_bridge`"
         note: "AXI4 to AXI-Lite bridge. The AXI-Lite level below decodes this window."

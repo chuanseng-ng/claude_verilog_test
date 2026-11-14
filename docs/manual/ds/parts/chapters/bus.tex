@@ -1,0 +1,388 @@
+% Authored chapter: bus fabric, part one. The memory map, the fabric topology, the crossbar and the contract on masters and slaves.
+% The bridges, the AXI-Lite and APB interconnects and the register banks follow in a later part.
+% The moved text is in the Changes record, part Source archive.
+\chapter{Bus fabric}\label{ds:ch:mod-bus-fabric}
+
+\section{Scope}\label{ds:ch:mod-bus-fabric:scope}
+This chapter states the rules for the address space of the SoC and for the first level of the bus fabric. It covers the memory map, the wrapper \code{soc_bus}, the crossbar \code{axi4_crossbar} and the contract that a master or a slave has to meet. The bridges to AXI4-Lite and to APB4, the two interconnects below the crossbar and the register banks are not in this part. The text points to them where a rule depends on them.
+
+The chapter does not cover the masters and slaves as blocks. The CPU, the GPU, the DMA engine and the peripherals have their own chapters. The clock-domain bridges are in \cref{ds:ch:mod-cdc-primitives}. The clamps of the power domains are in \cref{ds:ch:mod-power-management}. \Cref{tm:ch:mod-bus-fabric} in the Technical Manual describes how the fabric works. \Cref{um:ch:bus-integration} in the User Manual tells how to use it.
+
+\section{Definitions}\label{ds:ch:mod-bus-fabric:definitions}
+The chapter uses these terms with a fixed meaning. The RTL uses the words master and slave. The AMBA standards use the words manager and subordinate for the same roles.
+\begin{description}
+  \item[Master] A block that starts transfers on a bus. A master gives an address and takes the response.
+  \item[Slave] A block that answers transfers on a bus.
+  \item[Beat] One transfer of one data word on a data channel.
+  \item[Burst] A transfer of one or more beats with one address. \code{AxLEN} is the number of beats minus 1.
+  \item[Transfer] One read or one write, from its address handshake to its last response beat.
+  \item[Response code] The status of a transfer. OKAY means success. SLVERR means that the slave found an error. DECERR means that no slave exists for the address.
+  \item[Decode error] The answer of the crossbar to an address that no slave window holds. The crossbar answers with DECERR and does not use a slave.
+  \item[Slot] One slave position of a level of the fabric. The crossbar has three slots, the AXI-Lite interconnect has three slots, and the APB interconnect has 14 slots.
+  \item[Window] The range of addresses that one slot receives, from its base to its limit. Both ends are in the window.
+  \item[Engine] The state machine of the crossbar that serves one transfer between a master and a slave. Each slave has one write engine and one read engine.
+  \item[Grant] The choice of one master by an engine. The engine stays with this master until the last response of the transfer.
+\end{description}
+
+\section{Memory map}\label{ds:ch:mod-bus-fabric:memory-map}
+The SoC has one address space of 32 bits. The crossbar decodes it into three ranges. The rest of the space has no slave. The peripheral range is split again by the AXI-Lite interconnect and by the APB interconnect. \Cref{tab:ds:mm:address-map:all} lists every range in address order. A tool generates the table from the address-map packages, and a check in the document flow proves that the table and the packages agree. The table gives the slot at each level. The words \emph{AXI4 slot}, \emph{AXI-Lite slot} and \emph{APB slot} name the slot of the crossbar, of the AXI-Lite interconnect and of the APB interconnect.
+
+\input{generated/map/memory-map}
+
+Only the ranges in the table have a slave. The range 0x2000\_0000 to 0x2000\_0FFF has no slave on the bus. The debug port of the CPU is a top-level APB3 port, and it is not on the bus.
+
+\begin{requirement}{DS-MAP-001}{Ranges of the crossbar}
+[verify={check:tools/docs/gen_memory_map.py; test:tb/cocotb/soc/test_soc_integration.py::test_soc_register_walk; test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_walk_both_masters; test:tb/cocotb/soc/test_crossbar.py::test_routing_and_decerr}]
+The crossbar must send an address in the boot ROM range to slave 0, an address in the SRAM range to slave 1, and an address in the peripheral range to slave 2. \Cref{tab:ds:mm:address-map:all} gives the three ranges.
+\end{requirement}
+\begin{information}
+The check proves that the table and the address-map packages give the same ranges. It does not read the decode logic of the crossbar. The register walk reaches the peripheral range through the CPU. The GPU walk reaches all three ranges through the two GPU masters. The unit test of the crossbar uses a bench with two slaves, the boot ROM and the SRAM, and no peripheral slave. At SoC level the walks probe the unmapped addresses 0x1000\_0000, 0x2001\_1000, 0x4000\_0000 and 0x8000\_0000. No SoC test probes an address at the edge of the boot ROM range or of the SRAM range. The unit bench probes 0x0000\_0FFC and 0x1000\_0000. All simulations have zero delay.
+\end{information}
+
+\begin{requirement}{DS-MAP-002}{Slots of the AXI-Lite interconnect}
+[verify={check:tools/docs/gen_memory_map.py; test:tb/cocotb/soc/test_soc_integration.py::test_soc_dma_walk_rom_write_and_decode_errors; test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_walk_both_masters}]
+Inside the peripheral range, the AXI-Lite interconnect must send the page 0x2000\_1000 to the GPU control port at AXI-Lite slot 0, the page 0x2000\_5000 to the DMA control port at AXI-Lite slot 2, and every other page to the APB bridge at AXI-Lite slot 1.
+\end{requirement}
+\begin{information}
+The window of the APB bridge holds the page of the DMA control port. The interconnect keeps the last matching slot, so the DMA control port wins in its page. The DMA walk programs the DMA engine through its control port. The GPU walk launches a kernel through the control port of the GPU. If the DMA page went to the APB bridge, the firmware of the DMA walk could not start a transfer. This is predicted by reading, and it is not run. The tests use the SoC map. The unit tests of the interconnect use maps of their own.
+\end{information}
+
+\begin{requirement}{DS-MAP-003}{Slots of the APB interconnect}
+[verify={check:tools/docs/gen_memory_map.py; test:tb/cocotb/soc/test_soc_integration.py::test_soc_register_walk}]
+The APB interconnect must serve the 14 APB slots that \cref{tab:ds:mm:address-map:all} lists. Slot $n$ must have the page that the table gives for it, and each page must have the size 4 KB.
+\end{requirement}
+\begin{information}
+The register walk of the SoC firmware writes and reads back the registers of the 14 peripheral windows through the full path from the CPU. The walk skips the registers that start an action, for example the power-mode request of the PMU. It takes its registers from the tables of the unit walks. The check of the table proves the 4 KB size of each page.
+\end{information}
+
+\begin{requirement}{DS-MAP-004}{Each page of the peripheral range has one owner}
+[verify={check:tools/docs/gen_memory_map.py; test:tb/tests/test_docs_gen_memory_map.py::test_an_unclaimed_page_exits_1; test:tb/tests/test_docs_gen_memory_map.py::test_a_page_with_two_owners_exits_1; test:tb/tests/test_docs_gen_memory_map.py::test_a_slot_outside_its_parent_window_exits_1; test:tb/tests/test_docs_gen_memory_map.py::test_repository_map_structure_holds}]
+Each 4 KB page of the peripheral range must belong to exactly one slot at the lowest level, after the page of the DMA control port has overridden the APB bridge.
+\end{requirement}
+\begin{information}
+The check starts from the constants of the address-map packages. It stops when a limit is below its base, when a range is not on the 4 KB grid, when a slot has the wrong size, when two ranges overlap without a declared override, when a slot is outside its parent window, or when a page has no owner or two owners. It does not read the decode functions of the interconnects. The result is that no address of the peripheral range reaches the decode-error path of the AXI-Lite interconnect or of the APB interconnect, as far as the packages are right.
+\end{information}
+
+\begin{requirement}{DS-MAP-005}{Decode by the first address}
+[verify={review}]
+The crossbar must decode the address of the first beat of a burst only. A burst that starts in one range and runs past its end must go to the slave of the first beat.
+\end{requirement}
+\begin{information}
+No test crosses the end of a range with a burst. The SRAM controller answers SLVERR for a burst whose last beat is outside its own window. This is read from the RTL and is not covered by a test that this chapter cites.
+\end{information}
+
+\begin{requirement}{DS-MAP-020}{Read of an unmapped address}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_decerr_read_bursts; test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_walk_both_masters}]
+A read of an address that no crossbar range holds must give \code{ARLEN}+1 read beats. Each beat must have the response DECERR and the data 0. The last beat, and no other beat, must have \code{RLAST} high.
+\end{requirement}
+\begin{information}
+The unit test sends bursts of 1 to 256 beats with stalls from each of three masters, to the unmapped addresses 0x0, 0x0FFC, 0x1000\_0000, 0x2000\_1000 and 0xFFFF\_FFF0 of its own map. The address 0x2000\_1000 is unmapped only in the two-slave bench. In the SoC it is the GPU control port. The GPU walk loads from 0x1000\_0000 and 0x8000\_0000 and checks DECERR. None of the SoC tests that this chapter cites reads the ranges 0x0000\_0000 to 0x0000\_0FFF or 0x2000\_0000 to 0x2000\_0FFF.
+\end{information}
+
+\begin{requirement}{DS-MAP-021}{Write to an unmapped address}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_decerr_write_bursts; test:tb/cocotb/soc/test_soc_integration.py::test_soc_dma_walk_rom_write_and_decode_errors}]
+A write to an address that no crossbar range holds must take every write beat up to the beat with \code{WLAST} high, and must then give one write response with DECERR.
+\end{requirement}
+\begin{information}
+The unit test covers bursts of 1 to 64 beats with gaps between the data beats and stalls on the response. It checks that the response comes after the last data beat, that it waits for \code{BREADY}, and that no second response follows. The DMA walk accesses the addresses 0x1000\_0000, 0x2002\_0000, 0x4000\_0000 and 0x8000\_0000, and the GPU walk stores to 0x4000\_0000 and 0x2001\_1000. The firmware of each walk checks the result.
+\end{information}
+
+\begin{requirement}{DS-MAP-022}{No slave sees an unmapped access}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_decerr_read_bursts; test:tb/cocotb/soc/test_crossbar_errors.py::test_decerr_write_bursts}]
+No valid signal of a slave port may go high for an access to an address that no crossbar range holds.
+\end{requirement}
+\begin{information}
+The unit tests watch the write address, write data and read address valid signals of both slaves of the bench for the whole run. The DMA walk checks that the ROM port stays quiet during its unmapped phase.
+\end{information}
+
+\begin{requirement}{DS-MAP-040}{Write to the boot ROM}
+[verify={test:tb/cocotb/soc/test_boot_rom.py::test_write_burst_is_sunk_and_answered_slverr; test:tb/cocotb/soc/test_boot_rom.py::test_write_partial_strobes_do_not_modify_rom; test:tb/cocotb/soc/test_soc_integration.py::test_soc_dma_walk_rom_write_and_decode_errors}]
+A write to the boot ROM range must complete with the response SLVERR and must not change the content of the ROM.
+\end{requirement}
+\begin{information}
+The unit test of the ROM sends bursts of 1 to 8 beats and partial strobes. The DMA walk counts the handshakes at the ROM port, checks that each write has one response with SLVERR, and compares the whole ROM array before and after through a backdoor. The module \code{boot_rom} is described in the next part of this chapter.
+\end{information}
+
+\begin{requirement}{DS-MAP-041}{Index of the boot ROM}
+[verify={test:tb/cocotb/soc/test_boot_rom.py::test_read_index_is_masked_to_rom_depth}]
+The boot ROM must take the word index from the address bits 11 to 2, so that its 4 KB of storage repeat with the period 4 KB.
+\end{requirement}
+\begin{information}
+In the SoC the crossbar sends only the range 0x0000\_1000 to 0x0000\_1FFF to the ROM. The repeat shows only for a burst that runs past the end of the range, and no test of the SoC does this. The unit test reads the word at an address 4 KB above another address and gets the same word.
+\end{information}
+
+\begin{requirement}{DS-MAP-042}{Storage behind the SRAM range}
+[verify={test:tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_walk_both_masters; test:tb/cocotb/soc/test_soc_integration.py::test_soc_dma_walk_rom_write_and_decode_errors}]
+The SRAM range is 0x0000\_2000 to 0x0FFF\_FFFF. The storage behind it must have \code{SRAM_MEM_WORDS} words of 4 bytes, where \code{SRAM_MEM_WORDS} is a power of two. The storage must repeat across the range: an access to the address A must reach the word with the index $((A - \text{0x0000\_2000}) / 4) \bmod \text{\code{SRAM_MEM_WORDS}}$.
+\end{requirement}
+\begin{information}
+The default of \code{soc_top} is 1024 words, which is 4 KB. The default of the module \code{sram_controller} is 4096 words. The Sky130 macro arm needs 1024 words, and the FPGA arm needs a power of two. The GPU walk starts kernels whose data lies at the addresses $2^k + \text{0x2000}$ for the bit numbers $k$ from 12 to 27. It checks that each launch reads the same source words and writes to the same storage words. The DMA walk copies between 16 aliased destinations and reads the result through a backdoor. Both tests run with the default of the bench, 1024 words, and have zero delay. The tests read the storage through a backdoor. Some benches build the SoC with 65536 words, and none of the tests cited here uses that value. The range is not 256 MB of storage. Software cannot use the range as a memory of 256 MB.
+\end{information}
+
+\begin{requirement}{DS-MAP-045}{Uncached peripheral range}
+[verify={review}]
+The data cache of the CPU must not cache an access to an address at or above 0x2000\_0000. It must pass such an access to the bus as a transfer of one word.
+\end{requirement}
+\begin{information}
+The constant \code{MMIO_BASE} of \code{soc_addr_map_pkg} holds this address. The data cache tests use addresses below it only, so no cache test fails if the limit moves.
+\end{information}
+
+\begin{requirement}{DS-MAP-060}{Reset address of the CPU}
+[verify={test:tb/cocotb/soc/test_boot.py::test_boot_pc_scoreboard}]
+After a reset, the CPU must fetch its first instruction at 0x0000\_1000, the base of the boot ROM.
+\end{requirement}
+\begin{information}
+The module \code{rv32i_cpu_top} has the default reset address 0x0000\_0000. The SoC sets the parameter \code{RESET_PC} to 0x0000\_1000. The boot test compares each committed program counter with the stream of a reference model that starts at the ROM base. The range 0x0000\_0000 to 0x0000\_0FFF has no slave.
+\end{information}
+
+\section{\texttt{soc\_addr\_map\_pkg}}\label{ds:mod:soc-addr-map-pkg}
+The package \code{soc_addr_map_pkg} holds the constants of the crossbar level of the memory map. It gives the base and the limit of the boot ROM, the SRAM and the peripheral range, the index of each crossbar slot, the number of slots, the packed arrays \code{SOC_SLV_BASE} and \code{SOC_SLV_LIMIT} that \code{soc_bus} passes to the crossbar, and the constant \code{MMIO_BASE}. The package also holds a function \code{decode_slave}. No file of the RTL or of the tests calls the function, so it is not a reference model for any check. The values are in \cref{tab:ds:mm:address-map:all}. \Cref{tm:mod:soc-bus} lists the constants by level.
+
+\section{\texttt{soc\_periph\_map\_pkg}}\label{ds:mod:soc-periph-map-pkg}
+The package \code{soc_periph_map_pkg} holds the constants of the two levels below the crossbar. For the AXI-Lite interconnect it gives the slot indices, the bases, the limits and the arrays \code{AXIL_SLV_BASE} and \code{AXIL_SLV_LIMIT}. For the APB interconnect it gives one index, one base and one limit for each of the 14 slots, and the arrays \code{APB_SLV_BASE} and \code{APB_SLV_LIMIT}. The package also keeps older constants with the prefix \code{AXIL_} for peripherals that are APB slots today, and the fabric does not use them. The package holds a function \code{decode_axil_slave} that no file calls. The values are in \cref{tab:ds:mm:address-map:all}.
+
+\section{Fabric topology}\label{ds:mod:soc-bus}
+The module \code{soc_bus} is the wrapper of the fabric. It holds the crossbar \code{u_xbar}, the bridge \code{u_periph_bridge} to AXI-Lite, the AXI-Lite interconnect \code{u_axil_ic}, the bridge \code{u_axil_apb_bridge} to APB4 and the APB interconnect \code{u_apb_ic}. It adds no logic. Every signal that crosses its boundary is a port. The instance \code{u_bus} in \code{soc_top} is the only instance. \Cref{tm:mod:soc-bus} gives the ports and the figure of the topology.
+
+\begin{requirement}{DS-BUS-001}{One clock and one reset}
+[verify={review}]
+The fabric \code{u_bus}, the instruction-fetch adapter \code{u_gif_adapter}, the boot ROM \code{u_boot_rom} and the SRAM \code{u_sram} must run on \code{core_clk} and must reset with \code{core_rst_n}.
+\end{requirement}
+\begin{information}
+The endpoints in other domains are the CPU master, which goes through the bridge \code{u_cpu_axi_cdc} (\reqref{DS-CDC-111}), the two PLL register slots, which go through \code{apb_cdc_bridge} (\reqref{DS-CDC-102}), and the GPU. The GPU runs on \code{gpu_gated_clk}, a gated copy of \code{core_clk}, with the reset \code{gpu_domain_rst_n}. No crossing separates the GPU from the fabric. The clamps of the GPU domain act on its master ports (\reqref{DS-PMU-104}). The DMA engine runs on \code{core_clk} and \code{core_rst_n}. The fabric modules use both reset styles. The crossbar resets synchronously (\reqref{DS-BUS-035}).
+\end{information}
+
+\begin{requirement}{DS-BUS-002}{Masters and slaves of the crossbar}
+[verify={review}]
+The crossbar of the SoC must have the four masters M0 CPU, M1 GPU instruction fetch, M2 GPU data and M3 DMA engine, and the three slaves S0 boot ROM, S1 SRAM and S2 peripheral bridge, with these indices.
+\end{requirement}
+\begin{information}
+The GPU walk scores the transfers of M1 and M2 by the master index. The index of a master sets its priority (\reqref{DS-BUS-024}).
+\end{information}
+
+\begin{requirement}{DS-BUS-003}{Identifier of a transfer}
+[verify={review}]
+The master ports of the crossbar must carry no ID. Towards a slave the crossbar must drive \code{AWID} and \code{ARID} with the index of the granted master.
+\end{requirement}
+\begin{information}
+The crossbar routes each response with its grant register. It does not read \code{BID} or \code{RID}. No test checks the ID value at a slave port. One transfer is in flight in each engine, so responses cannot arrive out of order. The adapter \code{u_gif_adapter} drives an ID on its AXI4 port, but the crossbar has no input for it.
+\end{information}
+
+\begin{requirement}{DS-BUS-004}{Width of the ID}
+[verify={review}]
+The parameter \code{IW} of the crossbar must be large enough for the index of every master.
+\end{requirement}
+\begin{information}
+The crossbar cuts the index to \code{IW} bits without a message. No elaboration guard checks the width. The SoC uses 4 bits for 4 masters.
+\end{information}
+
+\begin{requirement}{DS-BUS-005}{Number of masters}
+[verify={review}]
+The parameter \code{N_MASTERS} of \code{soc_bus} must equal the number of master ports that \code{soc_top} connects.
+\end{requirement}
+
+\section{\texttt{axi4\_crossbar}}\label{ds:mod:axi4-crossbar}
+The module \code{axi4_crossbar} connects \code{N_MASTERS} masters to \code{N_SLAVES} slaves. The SoC uses four masters and three slaves. Each slave has a write engine and a read engine. A master that has no mapped slave for its address gets a decode-error answer from an engine of its own. \Cref{tm:mod:axi4-crossbar} describes the module.
+
+\begin{requirement}{DS-BUS-020}{One transfer in an engine, no mixing of bursts}
+[verify={review}]
+An engine must serve one transfer at a time and must stay with the granted master from the address phase to the last response beat. The beats of two masters must not interleave at one slave.
+\end{requirement}
+\begin{information}
+No test runs bursts of two masters to one slave and checks the order of the beats. The test that sends two masters to one slave uses single beats and checks that both writes complete.
+\end{information}
+
+\begin{requirement}{DS-BUS-021}{A read and a write to one slave}
+[verify={test:tb/cocotb/soc/test_crossbar.py::test_concurrent_ar_aw_same_slave}]
+A master that has one read and one write in flight to the same slave must see both transfers complete.
+\end{requirement}
+\begin{information}
+The test forces the two transfers to overlap with slave delays, three rounds, and a second master that reads while the first writes. A hang is the failure, and a time limit turns it into a test failure. The test would also pass with one shared engine, because a shared engine would serve the two transfers one after the other. It proves that the pair completes. It does not prove that the engines are independent in time.
+\end{information}
+
+\begin{requirement}{DS-BUS-022}{No order between a read and a write}
+[verify={review}]
+The crossbar must keep no order between a read and a write of one master to the same slave.
+\end{requirement}
+\begin{information}
+A master that needs a read to see its own write waits for the write response before it sends the read address. The SRAM controller has the same rule for its callers.
+\end{information}
+
+\begin{requirement}{DS-BUS-023}{Engines of different slaves run in parallel}
+[verify={review}]
+The engines of different slaves must be able to serve different masters at the same time.
+\end{requirement}
+\begin{information}
+The tests of two masters to two slaves pass also when the transfers run one after the other. No test measures an overlap in time.
+\end{information}
+
+\begin{requirement}{DS-BUS-024}{Fixed priority}
+[verify={review}]
+When several masters request an idle engine in the same cycle, the master with the lowest index must win.
+\end{requirement}
+\begin{information}
+The crossbar has no fairness mechanism and no memory of earlier grants. A master that requests again in the cycle in which its engine becomes idle wins against a master that has waited. No test checks the priority.
+\end{information}
+
+\begin{requirement}{DS-BUS-025}{Read address held for the slave}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_one_cycle_arvalid_pulse_is_held_to_slow_slave}]
+The crossbar must accept the read address of the winning master in the cycle in which the read engine is idle, and must then drive the captured address to the slave until the slave takes it. A pulse of \code{ARVALID} of one cycle must be enough.
+\end{requirement}
+\begin{information}
+The test sends a one-cycle pulse to a slave that delays \code{ARREADY} by 3 and by 8 cycles. It checks that the slave sees one address with the right value and length, and that the slave sees \code{ARVALID} for at least the delay.
+\end{information}
+
+\begin{requirement}{DS-BUS-026}{Write address held for the slave}
+[verify={review}]
+The crossbar must accept the write address of the winning master in the cycle in which the write engine is idle, and must then drive the captured address to the slave until the slave takes it.
+\end{requirement}
+\begin{information}
+The write engine has the same structure as the read engine. No test sends a one-cycle pulse of \code{AWVALID}.
+\end{information}
+
+\begin{requirement}{DS-BUS-027}{Write data after the write address}
+[verify={review}]
+The crossbar must give the write data of a master to the slave only after the slave has taken the write address.
+\end{requirement}
+\begin{information}
+A data beat that the master offers earlier waits, and the master sees \code{WREADY} low. No test of the crossbar offers a data beat before the address.
+\end{information}
+
+\begin{requirement}{DS-BUS-028}{End of the data phase}
+[verify={review}]
+The write engine must end the data phase on the \code{WLAST} of the master. The read engine must end the data phase on the \code{RLAST} of the slave. The crossbar must not count beats.
+\end{requirement}
+\begin{information}
+No test sends a \code{WLAST} that differs from \code{AWLEN}, and no test sends a slave \code{RLAST} that differs from \code{ARLEN}. The decode-error engine for reads counts \code{ARLEN}+1 beats itself.
+\end{information}
+
+\begin{requirement}{DS-BUS-029}{Responses go to the right master}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_slave_responses_are_steered_per_beat; test:tb/cocotb/soc/test_crossbar.py::test_response_steering}]
+Each response of a slave, the write response and each read beat, must reach the master that holds the engine. The response code of the slave must not change.
+\end{requirement}
+\begin{information}
+The unit tests send SLVERR and DECERR from a slave on single beats, and on the second and fourth beat of a burst, and they check each beat at the master. Two masters read from two slaves at the same time and each gets its own data.
+\end{information}
+
+\begin{requirement}{DS-BUS-030}{Stalls change no data}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_slave_side_stalls_on_every_channel; test:tb/cocotb/soc/test_crossbar.py::test_backpressure}]
+A ready signal held low by a slave, or by a master, must delay the transfer on that channel and must not change its data.
+\end{requirement}
+\begin{information}
+The tests delay the slave ready signals on all five channels and delay \code{BREADY} and \code{RREADY} of the masters. They check the data of four-beat bursts and the protocol checks of the bus models. The bench has three masters and two slaves, and the simulation has zero delay.
+\end{information}
+
+\begin{requirement}{DS-BUS-031}{A decode error does not stop another master}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_decerr_masters_run_concurrently_and_do_not_block_mapped}]
+A decode error of one master must not stop a mapped transfer of another master.
+\end{requirement}
+\begin{information}
+Each master has its own decode-error engines. The test runs an unmapped read burst of one master and an unmapped write burst of another master with stalls, while a third master reads eight words from a slave. All three complete with the right data. The test does not measure that the mapped transfer runs at full speed.
+\end{information}
+
+\begin{requirement}{DS-BUS-032}{Next transfer after a decode error}
+[verify={test:tb/cocotb/soc/test_crossbar_errors.py::test_decerr_then_mapped_on_same_master}]
+After a decode error, the crossbar must accept the next transfer of the same master.
+\end{requirement}
+
+\begin{requirement}{DS-BUS-033}{No timeout}
+[verify={review}]
+The crossbar must wait without a time limit for a slave and for \code{BREADY} and \code{RREADY} of a master.
+\end{requirement}
+\begin{information}
+While an engine waits, its slave is not available to any master. A slave that never answers, or a master that never takes its response, stops that slave for every master. The crossbar has no counter. \Cref{tm:mod:axi4-crossbar:limits} gives the cases. The access of a register of the GPU while the GPU is off is such a case (\reqref{DS-PMU-185}). The clamp of the GPU domain is another (\reqref{DS-PMU-187}).
+\end{information}
+
+\begin{requirement}{DS-BUS-034}{Burst fields pass unchanged}
+[verify={review}]
+The crossbar must pass \code{AxLEN}, \code{AxSIZE} and \code{AxBURST} to the slave without a change.
+\end{requirement}
+\begin{information}
+One test checks \code{ARLEN}, and the burst tests check four-beat INCR bursts. No test checks the size or the burst type of another value.
+\end{information}
+
+\begin{requirement}{DS-BUS-035}{Reset of the crossbar}
+[verify={review}]
+The reset of the crossbar must return every engine to idle. The crossbar must have no drain step.
+\end{requirement}
+\begin{information}
+The reset is synchronous. A reset of the crossbar, or of a slave, during a burst can leave an engine and a slave out of step. No test resets the crossbar during a burst. In the SoC all masters and slaves of the crossbar share \code{core_rst_n}, except the GPU. \Cref{tm:mod:axi4-crossbar:limits} lists the ready outputs in reset.
+\end{information}
+
+\section{Contract on masters and slaves}\label{ds:ch:mod-bus-fabric:contract}
+The crossbar is simple, and a master that follows these rules sees no loss of a request or of a beat. A master that does not follow them can lose a request or mix beats. The rules apply to every master that connects to the crossbar and to every slave that connects to a crossbar slot.
+
+\begin{requirement}{DS-BUS-210}{One transfer in flight for each direction}
+[verify={review}]
+A master must have at most one read and one write in flight. It must send a new read address only after the last read beat of the previous read, and a new write address only after the write response of the previous write.
+\end{requirement}
+\begin{information}
+The engine of a slave keeps the grant and the captured address. It offers the \code{READY} of the slave to the granted master in the address state of the engine. A new request in that cycle gets the ready of the old transfer, and the engine does not capture it. Two reads of one master to two slaves share the read channel to the master, and two writes share the write data channel. \Cref{tm:mod:axi4-crossbar:limits} gives the details. They are derived from the RTL and are not simulated. The DMA engine follows the rule, because one state machine drives its address and data channels one after the other. This chapter does not check the other masters.
+\end{information}
+
+\begin{requirement}{DS-BUS-211}{Last beat of a write}
+[verify={review}]
+A master must set \code{WLAST} on the beat number \code{AWLEN}+1 of a write, and on no other beat.
+\end{requirement}
+\begin{information}
+The crossbar ends the write on \code{WLAST} and does not compare it with \code{AWLEN}. A slave that counts the beats from \code{AWLEN} and a \code{WLAST} that differs from it leave the crossbar and the slave out of step.
+\end{information}
+
+\begin{requirement}{DS-BUS-212}{A master takes its responses}
+[verify={review}]
+A master must raise \code{BREADY} and \code{RREADY} in bounded time for each response that it expects.
+\end{requirement}
+\begin{information}
+A master that never takes a response stops the slave for every master (\reqref{DS-BUS-033}).
+\end{information}
+
+\begin{requirement}{DS-BUS-222}{Clock and reset of a new endpoint}
+[verify={review}]
+A new master or slave of the fabric must run on \code{core_clk} and \code{core_rst_n}, or must connect through a clock-domain bridge.
+\end{requirement}
+\begin{information}
+\Cref{ds:ch:mod-cdc-primitives} gives the bridges and \reqref{DS-CDC-001} gives the rule for every crossing.
+\end{information}
+
+\section{Architecture decisions}\label{ds:ch:mod-bus-fabric:decisions}
+Each subsection gives the decision, what the crossbar has instead of the other choice, and what the decision means for the user.
+
+\subsection{One engine for each slave and direction}\label{ds:ch:mod-bus-fabric:dec-engine}
+\textbf{Decision.} Each slave has one write engine and one read engine. An engine holds one transfer.
+
+\textbf{Other choice.} A crossbar with several transfers in flight needs IDs on the master side and a reorder rule. The crossbar has neither.
+
+\textbf{Consequence for the user.} Bursts never interleave at a slave, and the crossbar needs no ID routing. A master that does not take its response stops the slave (\reqref{DS-BUS-212}).
+
+\subsection{The master index is the ID}\label{ds:ch:mod-bus-fabric:dec-id}
+\textbf{Decision.} The master ports carry no ID. The crossbar drives the master index as the ID to the slave and routes responses with the grant register.
+
+\textbf{Consequence for the user.} A slave can see which master sent a transfer. A master does not choose its ID (\reqref{DS-BUS-003}).
+
+\subsection{Fixed priority}\label{ds:ch:mod-bus-fabric:dec-priority}
+\textbf{Decision.} The lowest master index wins. The rule follows the arbiter of the caches.
+
+\textbf{Other choice.} A rotating priority gives fairness. The crossbar has no such mechanism.
+
+\textbf{Consequence for the user.} A master with a low index can hold off a master with a high index for as long as it keeps requesting (\reqref{DS-BUS-024}).
+
+\subsection{A decode-error engine for each master}\label{ds:ch:mod-bus-fabric:dec-decerr}
+\textbf{Decision.} Each master has its own engines for unmapped addresses. They sink the write data and give the response beats of the master.
+
+\textbf{Consequence for the user.} A bad address ends with DECERR for a master that follows the contract, and it does not stop another master (\reqref{DS-BUS-031}).
+
+\subsection{Packed arrays for the parameters and the ports}\label{ds:ch:mod-bus-fabric:dec-packed}
+\textbf{Decision.} The crossbar uses packed arrays for its window parameters and its ports. It drives packed internal wires from procedural blocks and connects them to the ports with continuous assignments.
+
+\textbf{Reason.} The front end Synlig makes empty wire names when a procedural block drives a slice of a port array through a loop index. \Cref{tm:mod:axi4-crossbar} gives the detail.
+
+\textbf{Consequence for the user.} A change of the crossbar has to keep this structure.
+
+\section{Requirements and verification}\label{ds:ch:mod-bus-fabric:map}
+\Cref{tab:ds:req:map-map} and \cref{tab:ds:req:bus-map} list each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review.
+
+The tests of the fabric run in zero-delay simulation. The unit benches of the crossbar use three masters, two slaves and a map of their own. Some SoC tests read memory through a backdoor. No test of this chapter runs at a clock ratio other than one, because the whole fabric has one clock. No mutation campaign exists for the fabric.
+
+\input{generated/requirements-map}
+
+\input{generated/requirements-bus}

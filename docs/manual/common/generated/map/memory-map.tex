@@ -15,7 +15,7 @@ Range & Size & Target & Path & Note\\
 \endlastfoot
 \code{0x0000_0000}\newline\code{0x0000_0FFF} & 4 KB & none & - & No slave. The crossbar answers DECERR.\\
 \code{0x0000_1000}\newline\code{0x0000_1FFF} & 4 KB & boot ROM \code{u_boot_rom} & AXI4 slot 0 & A read gives OKAY and a write gives SLVERR. The reset PC of the CPU is the base.\\
-\code{0x0000_2000}\newline\code{0x0FFF_FFFF} & 262136 KB & SRAM \code{u_sram} & AXI4 slot 1 & The window is larger than the storage. \code{SRAM_MEM_WORDS} sets the size of the storage.\\
+\code{0x0000_2000}\newline\code{0x0FFF_FFFF} & 262136 KB & SRAM \code{u_sram} & AXI4 slot 1 & The window is larger than the storage. \code{SRAM_MEM_WORDS} sets the size of the storage. The storage repeats across the window.\\
 \code{0x1000_0000}\newline\code{0x2000_0FFF} & 262148 KB & none & - & No slave. The crossbar answers DECERR.\\
 \code{0x2000_1000}\newline\code{0x2000_1FFF} & 4 KB & GPU control port of \code{u_gpu} & AXI4 slot 2, AXI-Lite slot 0 & Only the address bits \code{[11:0]} reach the slave.\\
 \code{0x2000_2000}\newline\code{0x2000_2FFF} & 4 KB & UART \code{u_uart} & AXI4 slot 2, AXI-Lite slot 1, APB slot 0 & Direct APB slave.\\
