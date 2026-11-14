@@ -66,7 +66,7 @@ docs/design/MEMORY_MAP.md	docs/manual/ds/parts/01-architecture.tex	ds:mm:memory-
 docs/design/RTL_DEFINITION.md	docs/manual/ds/parts/01-architecture.tex	ds:ch:rtl-definition
 docs/design/REFERENCE_MODEL_SPEC.md	docs/manual/ds/parts/01-architecture.tex	ds:ch:reference-model
 docs/design/SDC_TIMING_SPEC.md	docs/manual/ds/parts/02-constraints-and-power-intent.tex	ds:ch:sdc-timing-spec
-docs/design/UPF_POWER_SPEC.md	docs/manual/ds/parts/02-constraints-and-power-intent.tex	ds:ch:upf-power-spec
+docs/design/UPF_POWER_SPEC.md	docs/manual/ds/parts/chapters/power-intent.tex	ds:ch:upf-power-spec
 docs/verification/VERIFICATION_PLAN.md	docs/manual/ds/parts/04-verification-plan.tex	ds:ch:verification-plan
 docs/design/OPENROAD_FLOW_SPEC.md	docs/manual/tm/parts/02-physical-design.tex	tm:pd:openroad-flow
 docs/LIBRELANE_PATCHING_EVALUATION.md	docs/manual/tm/parts/02-physical-design.tex	tm:pd:librelane-patching

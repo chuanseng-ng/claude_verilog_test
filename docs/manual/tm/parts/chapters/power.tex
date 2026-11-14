@@ -4,9 +4,9 @@
 
 This chapter describes the blocks that sequence the power state of the CPU domain and the GPU domain. The rules that the blocks follow are in \cref{ds:ch:mod-power-management}. The tasks of an integrator are in \cref{um:ch:power-integration}.
 
-The PMU is a model. It sequences a clock enable, an isolation control, a reset and two retention pulses for each domain. It does not remove a supply. It has no power switch and no retention cell. The file of the power intent states the domains and the clamps. \Cref{ds:ch:power-intent} and \cref{tm:pd:phase5-soc-upf} describe it. The converted evaluation document \cref{tm:pd:power-domain-evaluation} holds the history of the scope decision.
+The PMU is a model. It sequences a clock enable, an isolation control, a reset and two retention pulses for each domain. It does not remove a supply. It has no power switch and no retention cell. The file of the power intent states the domains and the clamps. \Cref{ds:ch:power-intent} states its rules and \cref{tm:pd:phase5-soc-upf} describes it. The converted evaluation document \cref{tm:pd:power-domain-evaluation} holds the history of the scope decision.
 
-The chapter has three parts. The PMU is in \cref{tm:mod:pmu}. The clock gate is in \cref{tm:mod:rv32i-clock-gate}. The wiring in \code{soc_top} is in \cref{tm:ch:mod-power-management:soc}. \Cref{fig:tm:ch:mod-power-management:soc} shows the whole structure.
+The chapter has four parts. The PMU is in \cref{tm:mod:pmu}. The clock gate is in \cref{tm:mod:rv32i-clock-gate}. The wiring in \code{soc_top} is in \cref{tm:ch:mod-power-management:soc}. The file of the power intent is in \cref{tm:pd:phase5-soc-upf}. \Cref{fig:tm:ch:mod-power-management:soc} shows the whole structure.
 
 \begin{figure}[ht]
   \centering
@@ -475,3 +475,318 @@ The reset of the CPU domain does not pass through a mux of its own. In scan mode
 \paragraph{State of the domains.} The CPU domain has a synchronous reset, and its clock does not run while the PMU reset is asserted. A PMU power cycle does not reset its flops in the model. The control flops of the GPU have an asynchronous reset. The domain reset clears them although the clock is gated. The vector register file of the GPU has no reset, and the SRAM banks of the shared memory have no connection to the domain reset. The test of the GPU power cycle shows that \code{GPU_CTRL.irq_enable} and \code{GPU_STATUS.done} read 0 after the cycle. It does not read the vector registers or the shared memory.
 
 \paragraph{Watchdog reset.} The reset of the watchdog goes through its own synchroniser into \code{cpu_domain_rst_n}. It does not pass through the PMU. The enable of the CPU clock gate has no watchdog term, so the CPU clock has to run while the watchdog reset is asserted. While the PMU holds the CPU domain off, the CPU clock is stopped, so a watchdog reset has no effect on the CPU flops and does not wake the domain. The watchdog reset also resets the \code{m_*} face of \code{u_apb_dbg_cdc}, so it ends a debug access in flight with an error response.
+
+\section{Power intent file}\label{tm:pd:phase5-soc-upf}
+
+\subsection{Introduction}
+The file \src{pnr/constraints/phase5_soc.upf} states the power intent of \code{soc_top}. It describes the power architecture that \code{soc_top} is designed for. The behavioural PMU sequences this architecture with clock gates, resets and clamps that are ordinary logic. The rules for the file are in \cref{ds:ch:power-intent}. The tasks that keep the file in step with the RTL are in \cref{um:ch:power-integration:upf}. The comment text that the file held before is in \cref{cr:arc:tm-phase5-soc-upf}.
+
+One program reads the commands of the file: \src{tools/verif/check_upf.py}. The CI workflow \code{qa-checks} runs it. The pinned-text check \src{tools/docs/check_pinned_text.py} reads the lines that start with the words \code{upf-check}, to prove that the checker can read them. The documentation checks \src{tools/docs/check_doc_labels.py} and \src{tools/docs/check_comment_budget.py} read its comments. No physical flow reads the file. The variable \code{UPF_FILE} in \src{pnr/Makefile} names \code{phase3_cache.upf}. No Makefile, script or workflow of the repository uses the variable, and no flow configuration names \code{phase5_soc.upf}. No simulator or linter that reads power intent is in the open flow of the project. So a power result of an implementation run is not a result of this power intent. Read the standing caveats in \cref{tm:part:tool-defects-and-standing-caveats} before you quote an ASAP7 power result.
+
+\Cref{fig:tm:pd:phase5-soc-upf:domains} shows the four power domains, the two clamps and their control nets.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{%
+  \begin{tikzpicture}[node distance=6mm, every node/.style={font=\scriptsize}]
+    \node[cvtblock, minimum width=24mm] (cpu) at (0,4) {\texttt{u\_cpu}};
+    \node[cvtblock, minimum width=24mm] (gpu) at (0,0) {\texttt{u\_gpu}};
+    \node[cvtblock, minimum width=30mm] (isoc) at (6.4,4) {\texttt{ISO\_CPU}};
+    \node[cvtblock, minimum width=30mm] (isog) at (6.4,0) {\texttt{ISO\_GPU}};
+    \node[cvtblock, minimum width=40mm] (rest) at (6.4,2) {always-on logic and top-level pins};
+    \node[cvtblock, minimum width=34mm] (ien) at (13.0,4) {\texttt{u\_cpu\_iso\_en\_sync}};
+    \node[cvtblock, minimum width=34mm] (pmu) at (13.0,0) {\texttt{u\_pmu}};
+    \node[cvtblock, minimum width=28mm] (sram) at (19.4,2) {\texttt{u\_sram}};
+    \draw[cvtsig] (cpu.east) -- node[above]{6 outputs} (isoc.west);
+    \draw[cvtsig] (gpu.east) -- node[above]{8 outputs} (isog.west);
+    \draw[cvtsig] (isoc.south) -- (rest.north);
+    \draw[cvtsig] (isog.north) -- (rest.south);
+    \draw[cvtsig] (ien.west) -- node[above]{\texttt{pmu\_cpu\_iso\_en\_sync}} (isoc.east);
+    \draw[cvtsig] (pmu.west) -- node[above]{\texttt{pmu\_gpu\_iso\_en}} (isog.east);
+    \draw[cvtsig] (pmu.north) -- node[right]{\texttt{pmu\_cpu\_iso\_en}} (ien.south);
+    \begin{scope}[on background layer]
+      \node[cvtdomain, fit=(cpu), label={[font=\scriptsize]north:\texttt{PD\_CPU}, \texttt{SS\_CPU}}] {};
+      \node[cvtdomain, fit=(gpu), label={[font=\scriptsize]south:\texttt{PD\_GPU}, \texttt{SS\_GPU}}] {};
+      \node[cvtdomain, fit=(isoc)(isog)(rest)(ien)(pmu), label={[font=\scriptsize]north:\texttt{PD\_PERIPH}, \texttt{SS\_AON}}] {};
+      \node[cvtdomain, fit=(sram), label={[font=\scriptsize]north:\texttt{PD\_SRAM}, \texttt{SS\_AON}}] {};
+    \end{scope}
+  \end{tikzpicture}}
+  \caption{The power domains of \texttt{soc\_top} in the power intent. The label of each dashed box gives the domain and its primary supply set. \texttt{PD\_CPU} and \texttt{PD\_GPU} are the gated domains. The two clamps are logic in the top scope, so they are in \texttt{PD\_PERIPH}, which also holds the other instances of the roster, for example the crossbar and the CDC bridges. The clamped outputs go to this logic and to top-level pins. The control of \texttt{ISO\_GPU} is the output of \texttt{u\_pmu}. The control of \texttt{ISO\_CPU} goes through the synchroniser \texttt{u\_cpu\_iso\_en\_sync}. The figure does not show the clock gates, the resets or the acknowledge path. \Cref{fig:tm:ch:mod-power-management:soc} shows them.}\label{fig:tm:pd:phase5-soc-upf:domains}
+\end{figure}
+
+\subsection{Contents of the file}
+The file starts with the version \code{3.0} and the design top \code{soc_top}. \Cref{tab:tm:pd:phase5-soc-upf:contents} lists what it defines. The comment lines that start with the word \code{upf-check} carry data for the checker. \Cref{tm:pd:phase5-soc-upf:checker} describes them.
+
+\begin{table}[ht]
+  \centering
+  \caption{Parts of the power intent file}\label{tab:tm:pd:phase5-soc-upf:contents}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{34mm}>{\raggedright\arraybackslash}p{40mm}>{\raggedright\arraybackslash}p{56mm}@{}}
+    \toprule
+    Part & Commands & Defines\\
+    \midrule
+    Supply ports and nets & \code{create_supply_port}, \code{create_supply_net}, \code{connect_supply_net}, \code{add_port_state} & Four supply ports and four supply nets, and the port states of the ports\\
+    Supply sets & \code{create_supply_set} & \code{SS_AON}, \code{SS_CPU} and \code{SS_GPU}\\
+    Power domains & \code{create_power_domain} & \code{PD_PERIPH}, \code{PD_SRAM}, \code{PD_CPU} and \code{PD_GPU}\\
+    Isolation & \code{set_isolation} & The strategies \code{ISO_CPU} and \code{ISO_GPU}\\
+    Power states & \code{add_power_state}, \code{create_power_state_group} & The states of the three supply sets and the group \code{SOC_PST}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The file has no \code{create_power_switch}, no retention command, no level shifter and no mapping of isolation cells.
+
+\subsection{Domains, supplies and the roster}
+\Cref{tab:tm:pd:phase5-soc-upf:supply} lists the supply ports, their port states and the supply sets. The port states carry voltage literals. The literals are the ASAP7 nominal values. A user of the Sky130 flow replaces them. The file models the two switchable rails \code{VDD_CPU} and \code{VDD_GPU} as supply ports with the port states ON and OFF, so that each supply net has a source.
+
+\begin{table}[ht]
+  \centering
+  \caption{Supply ports and supply sets}\label{tab:tm:pd:phase5-soc-upf:supply}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{28mm}>{\raggedright\arraybackslash}p{30mm}>{\raggedright\arraybackslash}p{34mm}>{\raggedright\arraybackslash}p{34mm}@{}}
+    \toprule
+    Supply port and net & Port states & Supply set that uses it & Role\\
+    \midrule
+    \code{VDD} & ON & \code{SS_AON} & Always-on power\\
+    \code{VSS} & GND & \code{SS_AON}, \code{SS_CPU}, \code{SS_GPU} & Ground of all sets\\
+    \code{VDD_CPU} & ON, OFF & \code{SS_CPU} & Switchable power of \code{PD_CPU}\\
+    \code{VDD_GPU} & ON, OFF & \code{SS_GPU} & Switchable power of \code{PD_GPU}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\Cref{tab:tm:pd:phase5-soc-upf:domains} lists the domains. The domain \code{PD_PERIPH} is the top scope, written as the element \code{.}, minus the three instances that the other domains hold. The top scope is in a domain so that the clamps and the other top-level logic are in a domain. The instances \code{u_cpu}, \code{u_gpu} and \code{u_sram} are modules \code{rv32i_cpu_top}, \code{gpu_top} and \code{sram_controller} in both arms.
+
+\begin{table}[ht]
+  \centering
+  \caption{Power domains}\label{tab:tm:pd:phase5-soc-upf:domains}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{22mm}>{\raggedright\arraybackslash}p{44mm}>{\raggedright\arraybackslash}p{22mm}>{\raggedright\arraybackslash}p{34mm}@{}}
+    \toprule
+    Domain & Elements & Primary supply set & Available supply set\\
+    \midrule
+    \code{PD_PERIPH} & The top scope except \code{u_cpu}, \code{u_gpu} and \code{u_sram} & \code{SS_AON} & None\\
+    \code{PD_SRAM} & \code{u_sram} & \code{SS_AON} & None\\
+    \code{PD_CPU} & \code{u_cpu} & \code{SS_CPU} & \code{SS_AON}\\
+    \code{PD_GPU} & \code{u_gpu} & \code{SS_GPU} & \code{SS_AON}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The roster names the top-level instances of \code{PD_PERIPH}. \Cref{tab:tm:pd:phase5-soc-upf:roster} lists them in the groups of the file. The comment above the first two groups gives the reason that the group stays powered. The comment above the other groups names the role of the group.
+
+\begin{table}[ht]
+  \centering
+  \caption{The always-on roster}\label{tab:tm:pd:phase5-soc-upf:roster}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{34mm}>{\raggedright\arraybackslash}p{96mm}@{}}
+    \toprule
+    Group in the file & Instances\\
+    \midrule
+    CPU-domain synchronisers & \code{u_cpu_clk_dis_sync}, \code{u_cpu_iso_en_sync}, \code{u_cpu_iso_ack_sync}, \code{u_cpu_pmu_rst_sync}, \code{u_cpu_wdt_rst_sync}, \code{u_ext_irq_sync}, \code{u_timer_irq_sync}\\
+    Clock gates & \code{u_cpu_cg}, \code{u_gpu_cg}\\
+    CDC bridges & \code{u_cpu_axi_cdc}, \code{u_apb_dbg_cdc}, \code{u_apb_pll_cdc}, \code{u_apb_pll2_cdc}\\
+    Power management and DFT & \code{u_pmu}, \code{u_dft_ctrl}, \code{u_mbist}, \code{u_gpu_domain_rm}\\
+    Clocking and fabric & \code{u_pll_sub}, \code{u_cpu_pll_sub}, \code{u_bus}, \code{u_gif_adapter}, \code{u_irq_ctrl}, \code{u_boot_rom}\\
+    Bus masters and peripherals & \code{u_dma}, \code{u_uart}, \code{u_spi}, \code{u_timer}, \code{u_gpio}, \code{u_pwm}, \code{u_wdt}, \code{u_trng}, \code{u_i2c}, \code{u_crypto}, \code{u_npu}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The comment of the first group says that the synchronisers run on \code{cpu_core_clk}, an ungated PLL output, so that they keep running while the clock of \code{u_cpu} is stopped. This holds for six of the seven. \code{u_cpu_iso_ack_sync} runs on \code{core_clk} and carries the acknowledge back to the PMU. It stays powered because the PMU waits for it. The reason of the second group is that a clock gate that lost power could not enable the clock of its own domain.
+
+\subsection{Isolation}
+The file has two isolation strategies. Both have the clamp value 0, the isolation sense high, the location \code{parent} and the isolation supply set \code{SS_AON}. \code{ISO_CPU} is for \code{PD_CPU} and its control net is \code{pmu_cpu_iso_en_sync}. \code{ISO_GPU} is for \code{PD_GPU} and its control net is \code{pmu_gpu_iso_en}. The net \code{pmu_cpu_iso_en_sync} is the output of \code{u_cpu_iso_en_sync} on \code{cpu_core_clk}. The net \code{pmu_gpu_iso_en} is the output \code{gpu_iso_en_o} of \code{u_pmu} on \code{core_clk}. \Cref{tab:tm:pd:phase5-soc-upf:clamps} gives the element of each strategy and the net of \code{soc_top} that carries the clamped value. The wiring of the clamps is in \cref{tm:ch:mod-power-management:soc}.
+
+\begin{table}[ht]
+  \centering
+  \caption{Elements of the isolation strategies and the clamped nets}\label{tab:tm:pd:phase5-soc-upf:clamps}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{22mm}>{\raggedright\arraybackslash}p{52mm}>{\raggedright\arraybackslash}p{50mm}@{}}
+    \toprule
+    Strategy & Element in the file & Net after the clamp in \code{soc_top}\\
+    \midrule
+    \code{ISO_CPU} & \code{u_cpu/axi_awvalid_o} & \code{cpu_bridge_s_awvalid}\\
+    \code{ISO_CPU} & \code{u_cpu/axi_wvalid_o} & \code{cpu_bridge_s_wvalid}\\
+    \code{ISO_CPU} & \code{u_cpu/axi_arvalid_o} & \code{cpu_bridge_s_arvalid}\\
+    \code{ISO_CPU} & \code{u_cpu/axi_bready_o} & \code{cpu_bridge_s_bready}\\
+    \code{ISO_CPU} & \code{u_cpu/axi_rready_o} & \code{cpu_bridge_s_rready}\\
+    \code{ISO_CPU} & \code{u_cpu/commit_valid_o} & \code{commit_valid_o}\\
+    \code{ISO_GPU} & \code{u_gpu/m_axi_awvalid} & \code{xbar_m_awvalid[2]}\\
+    \code{ISO_GPU} & \code{u_gpu/m_axi_wvalid} & \code{xbar_m_wvalid[2]}\\
+    \code{ISO_GPU} & \code{u_gpu/m_axi_arvalid} & \code{xbar_m_arvalid[2]}\\
+    \code{ISO_GPU} & \code{u_gpu/m_axi_bready} & \code{xbar_m_bready[2]}\\
+    \code{ISO_GPU} & \code{u_gpu/m_axi_rready} & \code{xbar_m_rready[2]}\\
+    \code{ISO_GPU} & \code{u_gpu/m_axil_if_arvalid} & \code{gif_axil_arvalid}\\
+    \code{ISO_GPU} & \code{u_gpu/m_axil_if_rready} & \code{gif_axil_rready}\\
+    \code{ISO_GPU} & \code{u_gpu/gpu_irq_o} & \code{gpu_irq_o}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The RTL clamp is a two-input select in \code{soc_top}. A flow that also inserted isolation cells from the strategies would put a second clamp in series with it. This is inferred from the structure. No flow does it.
+
+Each other output of \code{u_cpu} and \code{u_gpu} is classified in a comment line of the file. \Cref{tab:tm:pd:phase5-soc-upf:classes} lists the classes. The checker requires that each output is either isolated or classified. It does not test the meaning of a class. The meaning in the table comes from the names of the ports and the structure of the AXI channels.
+
+\begin{table}[ht]
+  \centering
+  \caption{Classes of the outputs that no strategy clamps}\label{tab:tm:pd:phase5-soc-upf:classes}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{24mm}>{\raggedright\arraybackslash}p{42mm}>{\raggedright\arraybackslash}p{64mm}@{}}
+    \toprule
+    Class & Meaning & Outputs\\
+    \midrule
+    \code{payload} & Address, data and control bits of an AXI channel. A clamped valid signal of the channel qualifies each of them. & \code{u_cpu}: \code{axi_awaddr_o}, \code{axi_awlen_o}, \code{axi_awsize_o}, \code{axi_awburst_o}, \code{axi_wdata_o}, \code{axi_wstrb_o}, \code{axi_wlast_o}, \code{axi_araddr_o}, \code{axi_arlen_o}, \code{axi_arsize_o}, \code{axi_arburst_o}. \code{u_gpu}: \code{m_axil_if_araddr}, \code{m_axi_araddr}, \code{m_axi_awaddr}, \code{m_axi_wdata}, \code{m_axi_wstrb}\\
+    \code{slave_response} & Response outputs of a slave port: the debug APB port of \code{u_cpu} and the AXI-Lite control port of \code{u_gpu}. & \code{u_cpu}: \code{apb_prdata_o}, \code{apb_pready_o}, \code{apb_pslverr_o}. \code{u_gpu}: \code{s_axil_awready}, \code{s_axil_wready}, \code{s_axil_bresp}, \code{s_axil_bvalid}, \code{s_axil_arready}, \code{s_axil_rdata}, \code{s_axil_rresp}, \code{s_axil_rvalid}\\
+    \code{observability} & Commit, trap, debug, scan-out and MBIST status outputs of \code{u_cpu}. & \code{u_cpu}: \code{commit_pc_o}, \code{commit_insn_o}, \code{trap_taken_o}, \code{trap_cause_o}, \code{debug_rs1_data_o}, \code{debug_rs2_data_o}, \code{debug_branch_taken_o}, \code{debug_take_branch_jump_o}, \code{debug_pc_src_o}, \code{debug_state_o}, \code{debug_ebreak_o}, \code{scan_out_o}, \code{mbist_status_o}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Power states}
+Each supply set has power states. \code{SS_AON} has the state ON. \code{SS_CPU} and \code{SS_GPU} have the states ON and OFF. The group \code{SOC_PST} defines the states of the SoC. The names and the encodings of \code{u_pmu/pmu_mode_req} come from the modes of \src{rtl/soc/pmu.sv}. \code{pmu_mode_req} is the requested mode. A state is a settled condition, and the transient cycles of a PMU sequence belong to no state. \Cref{tab:tm:pd:phase5-soc-upf:states} lists the states.
+
+\begin{table}[ht]
+  \centering
+  \caption{States of the group SOC\_PST}\label{tab:tm:pd:phase5-soc-upf:states}
+  \begin{tabular}{@{}lllll@{}}
+    \toprule
+    State & \code{pmu_mode_req} & \code{SS_CPU} & \code{SS_GPU} & \code{scan_mode_i}\\
+    \midrule
+    \code{NORMAL} & \code{2'b00} & ON & ON & 0\\
+    \code{CPU_OFF} & \code{2'b01} & OFF & ON & 0\\
+    \code{GPU_OFF} & \code{2'b10} & ON & OFF & 0\\
+    \code{IDLE} & \code{2'b11} & OFF & OFF & 0\\
+    \code{SCAN} & not used & ON & ON & 1\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\code{SS_AON} is ON in every state. The state \code{SCAN} is the test-mode override. It does not come from a PMU mode. The checker checks the connection that opens the clock gates in \code{SCAN}. It does not check the other three aspects of \cref{tab:tm:pd:phase5-soc-upf:scan}.
+
+\begin{table}[ht]
+  \centering
+  \caption{The state SCAN against the RTL}\label{tab:tm:pd:phase5-soc-upf:scan}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{30mm}>{\raggedright\arraybackslash}p{72mm}>{\raggedright\arraybackslash}p{22mm}@{}}
+    \toprule
+    Aspect with \code{scan_mode_i} high & What the RTL does & Matches the state SCAN\\
+    \midrule
+    Clock gates & \code{dft_ctrl} drives \code{dft_test_en} from the OR of \code{scan_mode_i} (through \code{dft_ctrl_ports}) and the scan mode of the JTAG TAP. Each top-level clock gate takes \code{dft_test_en} as its test enable, so the gate is open. & Yes, checked\\
+    Domain resets & Follow the scan reset (\reqref{DS-PMU-107}) & Yes, not checked\\
+    PMU & Not overridden. Its flops are ordinary scan flops. & No\\
+    Clamps & Not qualified by \code{scan_mode_i}. They follow \code{pmu_cpu_iso_en_sync} and \code{pmu_gpu_iso_en}. & No\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The JTAG TAP can set the scan mode of the SoC while \code{scan_mode_i} is low. Then \code{dft_test_en} is high and the clock gates are open, but the file describes this condition as a functional state, because each functional state requires only \code{scan_mode_i == 1'b0}. The checker does not read the TAP path.
+
+A clamp can be active during a scan. This depends on the PMU state that the scan chain holds. The file and this book document the limit. No rule removes it. Before a scan, put the PMU in the mode NORMAL and wait until both domains are on (\cref{um:ch:power-integration:clocks}).
+
+\subsection{Switches and retention}
+The file has no power switch. The PMU has no output that controls a switch, and no net of \code{soc_top} could drive one. The PMU drives the retention pulses \code{*_ret_save_o} and \code{*_ret_restore_o}. Nets in \code{soc_top} carry them, and no cell uses them. So the file has no retention command, and the checker refuses one.
+
+A real switch needs a control output in the RTL first. The shape of the command for a later change is this:
+\begin{lstlisting}
+create_power_switch PSW_CPU -domain PD_CPU \
+    -input_supply_port {vin VDD} -output_supply_port {vout VDD_CPU} \
+    -control_port {sleep_n <net that exists in soc_top>} \
+    -on_state {on vin {sleep_n}} -off_state {off {!sleep_n}}
+\end{lstlisting}
+The shape replaces the supply port \code{VDD_CPU} and its port states with a supply net that the switch drives. The checker takes the output of a switch as a source of a supply net. A trial that added this command to a copy of the file, with the net \code{pmu_cpu_iso_en_sync} as control, gave no finding. A control net that does not exist gives a finding (finding U08), and the options \code{-on_value} and \code{-off_value} give a finding (finding U01). A second trial removed the supply port \code{VDD_CPU}, its connection and its port states, and added the switch. It gave finding U04 for the OFF state of \code{SS_CPU}, because the checker derives from the port states that a rail can be off. So a real switch needs a change of the checker as well.
+
+The file names the order that a real switch has to keep. It cites IEEE 1801. The order is: save, isolate, [reset], switch off; switch on, [reset release], restore, release isolation. The PMU has these steps without the switch, and it stops the clock before the reset and starts it after the reset release (\reqref{DS-PMU-021} and \reqref{DS-PMU-022}).
+
+\subsection{The checker}\label{tm:pd:phase5-soc-upf:checker}
+The checker \src{tools/verif/check_upf.py} reads the file and checks it against the RTL. It reads four inputs. The first is the power intent. The second is the facts file. The third is the text of \src{rtl/soc/pmu.sv}, for the modes and the targets of the domains. The fourth is the text of \src{rtl/soc/dft/dft_ctrl_ports.sv}, for the drive of the test enable. The checker needs the Python standard library only. The command \code{check_upf.py gen-facts}, which writes the facts file, needs \code{pyslang}.
+
+\paragraph{Directive lines.} Two kinds of comment lines carry data that the file has no command for. A line of the first kind names one instance of the roster. The text after two hyphens is a comment for the reader.
+\begin{lstlisting}
+# upf-check aon u_pmu  -- the sequencer
+\end{lstlisting}
+A line of the second kind classifies outputs. The class is \code{payload}, \code{slave_response} or \code{observability}. Each output is a path of the form instance, slash, port.
+\begin{lstlisting}
+# upf-check unclamped payload: u_cpu/axi_awaddr_o u_cpu/axi_awlen_o
+\end{lstlisting}
+The checker reads a line only when the words \code{upf-check} and \code{aon} or \code{unclamped} follow the comment mark. A line of the first kind with more than one name is a finding. A line with an unknown class is a finding. The checker reads every other line that starts with the word \code{upf-check} as an ordinary comment. The pinned-text check reports such a line (\reqref{DS-PWR-084}). A line in which the word \code{upf-check} itself is misspelled is an ordinary comment to both checks. The checker then reports the instance or the output that the line was to name. The checker does not read the text after the two hyphens.
+
+\paragraph{The facts file.} The file \src{pnr/constraints/phase5_soc_rtl_facts.json} holds, for each arm, the data that the checker needs from the RTL. \Cref{tab:tm:pd:phase5-soc-upf:facts} lists the data. The file is generated. The command \code{check_upf.py gen-facts} elaborates \src{rtl/filelist/soc_top.f} with \code{pyslang} once for each arm and writes the file. The command \code{check_upf.py gen-facts --check} elaborates again and compares the text of the new data with the committed file. It prints the first lines of the difference on the standard error stream when they differ. The version of \code{pyslang} is pinned in \src{requirements.txt}. The command does not write a file with syntax findings in the power intent. The generator names \src{rtl/filelist/soc_top.f} by a relative path, so \code{gen-facts} and the drift test run only from the root of the repository. From another directory, for example \src{tb/tests}, the drift test fails with an error. The checker takes the top-level instances from the facts file and not from the RTL. After a change of a top-level instance, run \code{gen-facts} before the checker. With the old facts file the checker passes, and only the drift check fails. The keys of \code{paths} and \code{nets} come from the power intent, so an edit of the power intent that names a new net or a new instance path gives finding U08 until the facts are regenerated.
+
+\begin{table}[ht]
+  \centering
+  \caption{Data in the facts file for each arm}\label{tab:tm:pd:phase5-soc-upf:facts}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{30mm}>{\raggedright\arraybackslash}p{96mm}@{}}
+    \toprule
+    Key & Content\\
+    \midrule
+    \code{defines} & The defines of the arm. The arm \code{asap7} has \code{SRAM_ASAP7}, \code{USE_ICG_CELL} and \code{__pnr__}. The arm \code{sky130} has \code{SRAM_SKY130} and \code{__pnr__}.\\
+    \code{instances} & The module name of each top-level instance of \code{soc_top}\\
+    \code{ports} & The direction and the width of each port of the instances that the domains name\\
+    \code{clamps} & The clamps of \code{soc_top}: the element, the control net, the clamp value and the sense\\
+    \code{paths} & The module name of each instance path that the power intent names, or null. The power intent gives the list.\\
+    \code{nets} & The kind and the width of each net that the power intent names, or null. The power intent gives the list.\\
+    \code{clock_gates} & The test-enable connection of each top-level \code{rv32i_clock_gate}\\
+    \code{test_en_net} & The test-enable net that \code{dft_ctrl} drives\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The generator finds the clamps in the top scope of \code{soc_top}. It takes each continuous assignment that selects between a constant and a signal. The generator takes only a select net whose name contains the text \code{iso}. An inverted select net gives the sense low. The other side of the select gives the element: the top-level instance and the port that drive it. When no instance drives it, the element has a question mark in place of the instance, and the set equality fails. A clamp in another form is not seen. The facts then lack the clamp, and the set equality does not show that the power intent lacks it. A clamp that disappears from the RTL changes the facts, and the drift gate then fails.
+
+The two arms use the defines that \code{ARMS} in the checker names. The Sky130 netlist flow in \src{pnr/Makefile} also defines \code{USE_SKY130_CLKCELLS}. The arm \code{sky130} does not define it. The generator reads the top scope of \code{soc_top}, the ports of the three instances that the domains name and the test-enable connection of each clock gate. It does not read the inside of a clock gate.
+
+\paragraph{What each finding proves.} Each finding has an identifier. \Cref{tab:tm:pd:phase5-soc-upf:findings} lists them, with the tests that show the finding can fail. The checker prints one summary line for each group of checks, with the prefix \code{ok}, when the file is clean or when the option \code{-v} is given. The prefix does not show that the group passed. Only the finding lines and the last line \code{check_upf: PASS} or \code{check_upf: FAIL} give the result. The exit code is 0 when the file is clean. It is 1 for findings or for drift, 2 when an input cannot be read, and 3 when \code{pyslang} is missing for \code{gen-facts}. The checker reports a refused command (retention, isolation-cell mapping, level shifter and the legacy power-state-table commands) as finding U01.
+
+\begin{table}[ht]
+  \centering
+  \caption{Findings of the checker}\label{tab:tm:pd:phase5-soc-upf:findings}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{9mm}>{\raggedright\arraybackslash}p{66mm}>{\raggedright\arraybackslash}p{51mm}@{}}
+    \toprule
+    Id & What a clean run proves & Tests of \code{test_check_upf.py}\\
+    \midrule
+    U01 & The text parses. The version is 3.0. The design top is \code{soc_top}. Each command and option is known. No refused command is present. & \code{test_unknown_option_and_command_fail}, \code{test_nonstandard_switch_options_fail}, \code{test_wrong_upf_version_fails}, \code{test_retention_is_refused}, \code{test_unbalanced_brace_is_a_finding}\\
+    U02 & Each element and each excluded element of a domain exists in the elaborated \code{soc_top}, in both arms. & \code{test_missing_instance_fails}\\
+    U03 & No instance is in two domains. One domain holds the top scope. The excluded list of this domain equals the elements of the other domains. The roster equals the top-level instances of this domain, in both arms. Each roster line has one name. & \code{test_instance_in_two_domains_fails}, \code{test_roster_must_list_every_top_level_instance}, \code{test_roster_rejects_unknown_instance}, \code{test_new_top_level_instance_forces_roster_update}\\
+    U04 & Each supply net has a source. Each supply port is connected. Each supply set and each supply handle of a domain resolves. A rail with an OFF port state has an OFF power state, and the reverse. Each supply set has a power state. & \code{test_supply_net_without_source_fails}, \code{test_off_state_without_off_port_state_fails}\\
+    U05 & The isolation rules of \cref{ds:ch:power-intent:isolation}: each gated domain has a strategy with \code{-elements}. The clamp set equals the RTL set, with the same control net, clamp value and sense. The isolation supply is a supply set on the always-on rail. The location is \code{parent}. Each element is an output of an instance in the domain and is in one strategy only. The control net resolves in the facts. Each other output of a gated domain is classified, a classification names only such outputs, and the class is known. & \code{test_clamp_missing_from_upf_fails}, \code{test_clamp_not_in_rtl_fails}, \code{test_wrong_clamp_value_fails}, \code{test_wrong_sense_fails}, \code{test_input_port_cannot_be_isolated}, \code{test_isolation_supply_must_be_always_on}, \code{test_isolation_supply_must_be_a_supply_set_not_a_domain}, \code{test_unclassified_output_fails}, \code{test_rtl_clamp_added_without_upf_fails}, \code{test_rtl_clamp_removed_fails}, \code{test_rtl_clamp_net_change_fails}, \code{test_unresolved_net_in_facts_fails}\\
+    U06 & A switch names a domain that exists, supply nets that exist and a control port. A control or acknowledge net of a switch that the facts file has as unresolved gives U06. & None\\
+    U07 & The state group has the state names, the encodings and the rail states of \code{pmu.sv}. Each functional state excludes \code{SCAN}. The state \code{SCAN} has every rail on, does not depend on the mode, and its claim for the clock gates holds. & \code{test_state_encoding_mismatch_fails}, \code{test_state_rail_mismatch_fails}, \code{test_unknown_state_name_fails}, \code{test_scan_must_be_exclusive_with_functional_states}, \code{test_scan_state_claim_is_checked_against_rtl}\\
+    U08 & The facts file holds each net and each path that the power intent names. & \code{test_nonexistent_isolation_net_fails}, \code{test_switch_with_nonexistent_control_net_fails}\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Parse of the PMU text.} The checker reads \code{pmu.sv} as text. It finds the mode constants with the pattern \code{MODE_<name> = 2'b<bits>}. It finds each block that starts with \code{MODE_<name>: begin} and ends at the first word \code{end}, and it takes the targets of the two domains from the block. A comment inside such a block that contains the word \code{end} cuts the block short, and the targets of the mode are lost. The pinned-text check guards the blocks.
+
+\paragraph{Where it runs.} The workflow \code{qa-checks} runs \code{check_upf.py -v} in a step before the installation of the dependencies. The step needs no tool beyond Python. A later step runs \code{check_upf.py gen-facts --check}, after \code{pyslang} is installed. The step that runs \code{pytest} on \code{tb/tests} also runs \src{tb/tests/test_check_upf.py}. The drift test in this file skips when \code{pyslang} is not installed. The workflow runs both steps on each push to the main branch and on each pull request to it.
+
+\subsection{Verification}
+\Cref{tab:tm:pd:phase5-soc-upf:findings} lists the negative controls of the checker. The test \code{test_clamp_sets_are_the_rtl_sets} checks the facts file and not the checker. It states that each arm has 14 clamps, that each has the clamp value 0 and the sense high, and that the facts hold \code{u_gpu/m_axil_if_rready}. So a new clamp also needs an edit of this test.
+
+These aspects have a check in the code and no test:
+\begin{itemize}
+  \item The location \code{parent} of a strategy.
+  \item An isolation strategy for each gated domain, and the option \code{-elements} of a strategy.
+  \item An element that is not inside the domain of its strategy, and an element in two strategies.
+  \item A classification line that names an output of no gated domain, or an output that a strategy names, or an unknown class.
+  \item A roster line with more than one name.
+  \item A supply port that no supply net uses, a supply set without a power state, and a rail with an OFF port state but no OFF power state.
+  \item The rails and the independence from the mode in the state \code{SCAN}, and the assignment in \code{dft_ctrl_ports.sv}.
+  \item The refusal of the commands that map isolation cells and declare level shifters.
+  \item The design top \code{soc_top}.
+  \item The U06 findings of a switch.
+\end{itemize}
+A review run of the checker on changed copies of the file gave the expected finding for each aspect except the assignment in \code{dft_ctrl_ports.sv}, which the run did not change. This run is not a test in the repository.
+
+\subsection{Tool compatibility}
+The checker proves that the references of the file are real. It does not prove that any tool accepts the file. A measurement in the archived text of the power-intent document found that the command \code{read_upf} of OpenROAD reads only a small subset of UPF 3.0, and that it stopped at the first command of this file, \code{upf_version} (\cref{cr:arc:ds-upf-power-spec}). This chapter did not repeat the measurement. No gate depends on it.
+
+\subsection{Known limits}
+\begin{itemize}
+  \item The RTL removes no supply (\cref{tm:ch:mod-power-management}). No simulation reads the power states of the file.
+  \item The slave response outputs of \code{u_cpu} and \code{u_gpu} are not clamped. With a supply that is really removed they would drive unknown values into always-on logic.
+  \item The state \code{SCAN} does not match the RTL for the PMU and for the clamps (\cref{tab:tm:pd:phase5-soc-upf:scan}).
+  \item A passing check does not show that a clamp is electrically sufficient, and it does not show that a roster instance needs power. The checker reads the supply expressions of the power states only for the text OFF.
+  \item The checker does not read the reason that the file gives for a roster group.
+  \item The voltage literals are the ASAP7 nominal values. A user of the Sky130 flow replaces them.
+  \item The facts hold the two arms that \code{ARMS} names. The arm \code{sky130} lacks one define of the Sky130 netlist flow.
+  \item A clamp in a form that the generator does not know is not in the facts.
+  \item The checker does not require the domain \code{PD_SRAM}, the names of the domains other than \code{PD_CPU} and \code{PD_GPU}, the available supply \code{SS_AON}, the ground nets of the supply sets or the direction of a supply port. A file without the state \code{SCAN} passes. A supply net with both a supply port and a switch as source is not reported. A trial of each case passed. The rules in \cref{ds:ch:power-intent} state which parts a reviewer checks.
+  \item The checker reads the scan claim from \code{dft_ctrl_ports.sv} and not from \code{dft_ctrl.sv}. The JTAG TAP can open the clock gates while \code{scan_mode_i} is low.
+  \item The docstring of \code{check_upf.py} says that a retention command gives finding U06, but the code gives U01. It says that the option \code{-v} lists the finding identifiers, but \code{-v} prints the summary lines. It cites the path of the removed document of the power intent.
+  \item The comment above the first roster group in the file says that all the synchronisers run on \code{cpu_core_clk}, but \code{u_cpu_iso_ack_sync} runs on \code{core_clk}. The header says that the checker fails when an instance is added without a roster update. This holds only after the facts file is regenerated. The header says that the reason of each group is in the comment above it, which holds for the first two groups only.
+\end{itemize}
