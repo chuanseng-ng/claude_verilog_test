@@ -252,13 +252,74 @@ rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_dom_cg (
 \end{lstlisting}
 
 \section{Keep the power intent in step}\label{um:ch:power-integration:upf}
-\Cref{tm:pd:phase5-soc-upf} describes the power intent file. Do these tasks after you add a top-level instance or a clamp.
+\Cref{tm:pd:phase5-soc-upf} describes the power intent file and its checker. \Cref{ds:ch:power-intent} states the rules. Do these tasks when the power structure of \code{soc_top} changes. The checker is the only program that reads the commands of the file. A pass of the checker does not show that a tool accepts the file.
 
+\paragraph{Find what the change broke.} Run the checker. Each line of a finding starts with an identifier from U01 to U08. \Cref{tab:tm:pd:phase5-soc-upf:findings} explains the identifiers.
+\begin{lstlisting}
+python tools/verif/check_upf.py -v
+\end{lstlisting}
+In CI the two steps are \textit{UPF structural gate} and \textit{UPF facts drift gate} of the workflow \code{qa-checks}. The first prints \code{check_upf: FAIL} and one line for each finding. The second prints \code{DRIFT} and the first lines of the difference.
+
+\paragraph{A top-level instance changes.} You add an instance to \code{soc_top} or you remove one.
 \begin{procedure}
-  \item Edit the \code{upf-check} lines of the roster and of the classes in \src{pnr/constraints/phase5_soc.upf}. Do not reword the existing lines.
-  \item Run \code{python tools/verif/check_upf.py -v}.
-  \item After an RTL change that moves ports, run \code{python tools/verif/check_upf.py gen-facts}, which needs \code{pyslang}. Then run \code{python tools/verif/check_upf.py gen-facts --check}.
+  \item Add or remove its line of the roster in \src{pnr/constraints/phase5_soc.upf}. The line has the form \code{upf-check aon <instance>}. Put it in the group whose comment fits the instance.
+  \item If the instance is a clock gate \code{rv32i_clock_gate}, connect its test enable to \code{dft_test_en}. The checker requires this of each top-level clock gate.
+  \item Ask the reviewer whether the instance has to stay powered while the CPU domain and the GPU domain are off. If the instance has to lose power with a domain, stop. This is a change of the power architecture and needs the approval of the owner.
+  \item Regenerate the facts (see below). The checker reads the instances from the facts file, so it does not see the change before this step.
+  \item Run the checker.
 \end{procedure}
+
+\paragraph{A clamp changes.} You add a clamp or remove one, or you change its control net.
+\begin{procedure}
+  \item Write the clamp as a select between a constant and the raw output of an instance, as the clamps of \code{soc_top} are. Give the control net a name that contains the text \code{iso}. The generator of the facts finds no other form.
+  \item Add the output to the \code{-elements} list of the strategy \code{ISO_CPU} or \code{ISO_GPU}, or remove it. Keep the clamp value 0 and the sense high.
+  \item If the output was in a line that starts with \code{upf-check unclamped}, remove it from that line.
+  \item Regenerate the facts (see below).
+  \item Change the count and the names in the test \code{test_clamp_sets_are_the_rtl_sets} of \src{tb/tests/test_check_upf.py}. The test states the number of clamps.
+\end{procedure}
+
+\paragraph{An output of the CPU or the GPU changes.} You add an output port to \code{u_cpu} or \code{u_gpu}, or you remove one.
+\begin{procedure}
+  \item Decide whether the output needs a clamp. A handshake signal that leaves a gated domain needs one. Treat it as a clamp change.
+  \item Otherwise add the output to a line that starts with \code{upf-check unclamped} and choose the class \code{payload}, \code{slave_response} or \code{observability}. Choose \code{payload} only when a clamped valid signal of the same channel qualifies the output.
+  \item Regenerate the facts.
+\end{procedure}
+
+\paragraph{A power domain changes.} A new domain, a domain that is removed, or an instance that moves between domains is a change of the power architecture. Stop and ask the owner. The checker compares the rails of the power states only for \code{PD_CPU} and \code{PD_GPU}. A new gated domain also needs a supply set, a supply port with an OFF port state, an isolation strategy and a classification of each of its outputs.
+
+\paragraph{Regenerate the facts.} Do this after each change of a top-level instance of \code{soc_top}, of a port of \code{u_cpu}, \code{u_gpu} or \code{u_sram}, of a clamp, or of the test enable of a top-level clock gate. Do it also after an edit of the power intent that names a new net or a new instance path. Run the commands from the root of the repository.
+\begin{procedure}
+  \item Install the pinned \code{pyslang}: \code{pip install pyslang==11.0.0}.
+  \item Run \code{python tools/verif/check_upf.py gen-facts}.
+  \item Read the difference of \src{pnr/constraints/phase5_soc_rtl_facts.json}. The difference has to show only the change that you made. Do not edit the file by hand.
+  \item Run \code{python tools/verif/check_upf.py gen-facts --check}. It prints that the file is up to date.
+\end{procedure}
+
+\paragraph{A PMU mode changes.} You change a mode, its code or its targets in \src{rtl/soc/pmu.sv}.
+\begin{procedure}
+  \item Change the state of the group \code{SOC_PST} in the file. The name, the code of \code{pmu_mode_req} and the state of the rails of each state have to equal the PMU.
+  \item Do not write the word \code{end} in a comment inside a block of the form \code{MODE_<name>: begin}. The checker reads these blocks as text and stops at the first word \code{end}.
+\end{procedure}
+
+\paragraph{The test enable of a clock gate changes.} Connect the test enable of each top-level clock gate to \code{dft_test_en}. Keep the assignment \code{assign test_en_o = scan_mode_i} in \src{rtl/soc/dft/dft_ctrl_ports.sv}. The checker reads this assignment as text. Regenerate the facts.
+
+\paragraph{Check the result.} Run these commands from the root of the repository. Each command prints a result and sets an exit code.
+\begin{lstlisting}
+python tools/verif/check_upf.py -v
+python tools/verif/check_upf.py gen-facts --check
+python tools/docs/check_pinned_text.py --skip-waivers
+python -m pytest tb/tests/test_check_upf.py
+\end{lstlisting}
+Without \code{pyslang}, the command \code{gen-facts --check} stops with exit code 3, and the drift test of the pytest file skips. A skip means that the check did not run.
+
+Keep these points in mind.
+\begin{itemize}
+  \item Keep the form of each line that starts with the word \code{upf-check}: the kind, the names and the class. The checker and the pinned-text check read them. The checker does not read the text after the two hyphens. The file asks that you do not reword these lines.
+  \item A new comment line in the header of the file counts against the comment budget of \src{tools/docs/check_comment_budget.py}. The lines that start with the word \code{upf-check} do not count.
+  \item Do not add a power switch or a retention command. The PMU has no control output for a switch, and the RTL has no retention cell. \reqref{DS-PWR-061} and \reqref{DS-PWR-060} state the rules. The checker does not stop a switch.
+  \item The voltage literals in the file are the ASAP7 nominal values. Replace them for the Sky130 flow.
+  \item A change of the clamps or of the states changes what the PMU rules say. Check \cref{ds:ch:mod-power-management}.
+\end{itemize}
 
 \section{Verify}\label{um:ch:power-integration:verify}
 Run the simulation targets through the Nix shell.
@@ -294,5 +355,7 @@ Tick each line before the review.
   \item[$\square$] \code{test_en} of each gate is static, and \code{HARD_ROOT} is set for each clock root.
   \item[$\square$] The names \code{u_icg} and \code{u_root_buf} are kept.
   \item[$\square$] The \code{upf-check} lines are in step with the RTL, and \code{check_upf.py -v} passes.
+  \item[$\square$] After a change of a top-level instance, of ports, of clamps or of a test enable, the facts file is regenerated before the checker runs, and \code{check_upf.py gen-facts --check} passes.
+  \item[$\square$] The test \code{test_clamp_sets_are_the_rtl_sets} names the clamps of the RTL.
   \item[$\square$] The test suites of the PMU and the clock gate pass.
 \end{itemize}

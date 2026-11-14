@@ -127,13 +127,15 @@ cr:arc:ds-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	83	\texttt{s
 cr:arc:ds-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	9	\texttt{soc/cdc/cdc\_sync.sv}
 cr:arc:ds-pmu	docs/manual/cr/parts/06-source-archive.tex	688	\texttt{soc/pmu.sv}
 cr:arc:ds-rv32i-clock-gate	docs/manual/cr/parts/06-source-archive.tex	898	\texttt{mem/rv32i\_clock\_gate.sv}
-cr:arc:tm-apb-cdc-bridge	docs/manual/cr/parts/06-source-archive.tex	1147	\texttt{soc/apb\_cdc\_bridge.sv}
-cr:arc:tm-async-axi-fifo	docs/manual/cr/parts/06-source-archive.tex	1309	\texttt{soc/async\_axi\_fifo.sv}
-cr:arc:tm-cdc-gray-fifo	docs/manual/cr/parts/06-source-archive.tex	1067	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
-cr:arc:tm-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	1019	\texttt{soc/cdc/cdc\_reset\_sync.sv}
-cr:arc:tm-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	958	\texttt{soc/cdc/cdc\_sync.sv}
-cr:arc:tm-pmu	docs/manual/cr/parts/06-source-archive.tex	1335	\texttt{soc/pmu.sv}
-cr:arc:tm-rv32i-clock-gate	docs/manual/cr/parts/06-source-archive.tex	1417	\texttt{mem/rv32i\_clock\_gate.sv}
+cr:arc:ds-upf-power-spec	docs/manual/cr/parts/06-source-archive.tex	954	\texttt{docs/design/UPF\_POWER\_SPEC.md}
+cr:arc:tm-apb-cdc-bridge	docs/manual/cr/parts/06-source-archive.tex	2177	\texttt{soc/apb\_cdc\_bridge.sv}
+cr:arc:tm-async-axi-fifo	docs/manual/cr/parts/06-source-archive.tex	2339	\texttt{soc/async\_axi\_fifo.sv}
+cr:arc:tm-cdc-gray-fifo	docs/manual/cr/parts/06-source-archive.tex	2097	\texttt{soc/cdc/cdc\_gray\_fifo.sv}
+cr:arc:tm-cdc-reset-sync	docs/manual/cr/parts/06-source-archive.tex	2049	\texttt{soc/cdc/cdc\_reset\_sync.sv}
+cr:arc:tm-cdc-sync	docs/manual/cr/parts/06-source-archive.tex	1988	\texttt{soc/cdc/cdc\_sync.sv}
+cr:arc:tm-phase5-soc-upf	docs/manual/cr/parts/06-source-archive.tex	2467	\texttt{constraints/phase5\_soc.upf}
+cr:arc:tm-pmu	docs/manual/cr/parts/06-source-archive.tex	2365	\texttt{soc/pmu.sv}
+cr:arc:tm-rv32i-clock-gate	docs/manual/cr/parts/06-source-archive.tex	2447	\texttt{mem/rv32i\_clock\_gate.sv}
 cr:ch:about	docs/manual/cr/parts/00-about.tex	5	About this book
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
@@ -146,8 +148,8 @@ cr:ch:physical-design-files	docs/manual/cr/parts/05-source-file-history.tex	1583
 cr:ch:rtl	docs/manual/cr/parts/05-source-file-history.tex	3	RTL
 cr:ch:sky130-runs	docs/manual/cr/parts/02-run-histories.tex	6667	Sky130 runs
 cr:ch:source-archive-ds	docs/manual/cr/parts/06-source-archive.tex	5	Archived Design Specification text
-cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	954	Archived Technical Manual text
-cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	1437	Archived User Manual text
+cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	1984	Archived Technical Manual text
+cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	2640	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
@@ -1157,7 +1159,7 @@ ds:ch:design-expectation	docs/manual/ds/parts/01-architecture.tex	9	Design Expec
 ds:ch:design-expectation:cpu	docs/manual/ds/parts/01-architecture.tex	11	CPU
 ds:ch:design-expectation:gpu	docs/manual/ds/parts/01-architecture.tex	68	GPU
 ds:ch:design-expectation:soc	docs/manual/ds/parts/01-architecture.tex	104	SoC
-ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1836	DFT requirements
+ds:ch:dft-requirements	docs/manual/ds/parts/02-constraints-and-power-intent.tex	808	DFT requirements
 ds:ch:functional-coverage	docs/manual/ds/parts/04-verification-plan.tex	1627	Functional coverage
 ds:ch:gpu-lite-simt-engine	docs/manual/ds/parts/01-architecture.tex	5472	GPU-lite SIMT engine
 ds:ch:gpu-model	docs/manual/ds/parts/01-architecture.tex	6399	GPU Execution Model
@@ -1626,7 +1628,19 @@ ds:ch:phase7-pll-plan:7-milestones	docs/manual/ds/parts/01-architecture.tex	1178
 ds:ch:phase7-pll-plan:8-analog-agent-validation-this-phase-doubled-as-a-suite-test	docs/manual/ds/parts/01-architecture.tex	11834	Analog-agent validation (this phase doubled as a suite test)
 ds:ch:phase7-pll-plan:9-honest-sign-off-ledger-real-vs-indicative-vs-remaining	docs/manual/ds/parts/01-architecture.tex	11879	Honest sign-off ledger (real vs indicative vs remaining)
 ds:ch:phase7-pll-plan:how-to-use-this-document	docs/manual/ds/parts/01-architecture.tex	11403	How to use this document
-ds:ch:power-intent	docs/manual/ds/parts/02-constraints-and-power-intent.tex	806	Power intent
+ds:ch:power-intent	docs/manual/ds/parts/chapters/power-intent.tex	3	Power intent
+ds:ch:power-intent:dec-facts	docs/manual/ds/parts/chapters/power-intent.tex	284	A checker that reads a generated facts file
+ds:ch:power-intent:dec-follow	docs/manual/ds/parts/chapters/power-intent.tex	270	The power intent follows the RTL
+ds:ch:power-intent:dec-switch	docs/manual/ds/parts/chapters/power-intent.tex	277	Supply ports and no power switch
+ds:ch:power-intent:decisions	docs/manual/ds/parts/chapters/power-intent.tex	267	Architecture decisions
+ds:ch:power-intent:definitions	docs/manual/ds/parts/chapters/power-intent.tex	16	Definitions
+ds:ch:power-intent:domains	docs/manual/ds/parts/chapters/power-intent.tex	31	Domains and supplies
+ds:ch:power-intent:file	docs/manual/ds/parts/chapters/power-intent.tex	231	The file and its checker
+ds:ch:power-intent:isolation	docs/manual/ds/parts/chapters/power-intent.tex	87	Isolation
+ds:ch:power-intent:map	docs/manual/ds/parts/chapters/power-intent.tex	291	Requirements and verification
+ds:ch:power-intent:scope	docs/manual/ds/parts/chapters/power-intent.tex	5	Scope
+ds:ch:power-intent:states	docs/manual/ds/parts/chapters/power-intent.tex	156	Power states
+ds:ch:power-intent:switches	docs/manual/ds/parts/chapters/power-intent.tex	204	Switches and retention
 ds:ch:reference-model	docs/manual/ds/parts/01-architecture.tex	14270	Reference Model Specification
 ds:ch:reference-model:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	14834	AI MAY assist with
 ds:ch:reference-model:aihuman-responsibility	docs/manual/ds/parts/01-architecture.tex	14832	AI/Human Responsibility
@@ -1741,46 +1755,46 @@ ds:ch:sdc-timing-spec:timing-verification-goals	docs/manual/ds/parts/02-constrai
 ds:ch:soc-integration	docs/manual/ds/parts/01-architecture.tex	7522	SoC integration
 ds:ch:system-overview	docs/manual/ds/parts/01-architecture.tex	3	System overview
 ds:ch:timing-constraints	docs/manual/ds/parts/02-constraints-and-power-intent.tex	3	Timing constraints
-ds:ch:upf-power-spec	docs/manual/ds/parts/02-constraints-and-power-intent.tex	812	UPF Power Intent Specification
-ds:ch:upf-power-spec:ai-may-assist-with	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1772	AI MAY assist with
-ds:ch:upf-power-spec:ai-must-not-decide	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1786	AI MUST NOT decide
-ds:ch:upf-power-spec:aihuman-responsibilities	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1770	AI/Human Responsibilities
-ds:ch:upf-power-spec:checking	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1639	Checking
-ds:ch:upf-power-spec:human-must-review	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1802	Human MUST review
-ds:ch:upf-power-spec:incremental-power-strategy	docs/manual/ds/parts/02-constraints-and-power-intent.tex	840	Incremental Power Strategy
-ds:ch:upf-power-spec:isolation-cells	docs/manual/ds/parts/02-constraints-and-power-intent.tex	877	Isolation Cells
-ds:ch:upf-power-spec:known-gaps-and-follow-ups	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1599	Known gaps and follow-ups
-ds:ch:upf-power-spec:level-shifters	docs/manual/ds/parts/02-constraints-and-power-intent.tex	886	Level Shifters
-ds:ch:upf-power-spec:overview	docs/manual/ds/parts/02-constraints-and-power-intent.tex	818	Overview
-ds:ch:upf-power-spec:phase-1-single-domain-cpu	docs/manual/ds/parts/02-constraints-and-power-intent.tex	923	Phase 1: Single-Domain CPU
-ds:ch:upf-power-spec:phase-2-pipelined-cpu-with-power-domains	docs/manual/ds/parts/02-constraints-and-power-intent.tex	999	Phase 2: Pipelined CPU with Power Domains
-ds:ch:upf-power-spec:phase-3-cache-system-with-power-domains	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1247	Phase 3: Cache System with Power Domains
-ds:ch:upf-power-spec:phase-4-gpu-with-dvfs	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1333	Phase 4: GPU with DVFS
-ds:ch:upf-power-spec:phase-5-full-soc-integration	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1417	Phase 5: Full SoC Integration
-ds:ch:upf-power-spec:power-architecture	docs/manual/ds/parts/02-constraints-and-power-intent.tex	925	Power Architecture
-ds:ch:upf-power-spec:power-architecture-1	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1001	Power Architecture
-ds:ch:upf-power-spec:power-architecture-2	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1249	Power Architecture
-ds:ch:upf-power-spec:power-architecture-3	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1335	Power Architecture
-ds:ch:upf-power-spec:power-architecture-4	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1428	Power Architecture
-ds:ch:upf-power-spec:power-aware-verification	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1669	Power-Aware Verification
-ds:ch:upf-power-spec:power-domains	docs/manual/ds/parts/02-constraints-and-power-intent.tex	862	Power Domains
-ds:ch:upf-power-spec:power-management-goals	docs/manual/ds/parts/02-constraints-and-power-intent.tex	824	Power Management Goals
-ds:ch:upf-power-spec:power-mode-transitions-phase-2	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1194	Power Mode Transitions (Phase 2)
-ds:ch:upf-power-spec:power-state-tables-pst	docs/manual/ds/parts/02-constraints-and-power-intent.tex	906	Power State Tables (PST)
-ds:ch:upf-power-spec:power-states	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1530	Power states
-ds:ch:upf-power-spec:references	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1818	References
-ds:ch:upf-power-spec:retention-registers	docs/manual/ds/parts/02-constraints-and-power-intent.tex	895	Retention Registers
-ds:ch:upf-power-spec:supply-networks	docs/manual/ds/parts/02-constraints-and-power-intent.tex	869	Supply Networks
-ds:ch:upf-power-spec:tool-compatibility	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1656	Tool compatibility
-ds:ch:upf-power-spec:upf-additions-phase-3	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1286	UPF Additions (Phase 3)
-ds:ch:upf-power-spec:upf-additions-phase-4	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1363	UPF Additions (Phase 4)
-ds:ch:upf-power-spec:upf-best-practices	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1748	UPF Best Practices
-ds:ch:upf-power-spec:upf-concepts	docs/manual/ds/parts/02-constraints-and-power-intent.tex	860	UPF Concepts
-ds:ch:upf-power-spec:upf-file-phase1-cpuupf	docs/manual/ds/parts/02-constraints-and-power-intent.tex	951	\texorpdfstring{UPF File: phase1\_\allowbreak{}cpu.upf}{UPF File: phase1\_cpu.upf}
-ds:ch:upf-power-spec:upf-file-phase2-pipelined-cpuupf	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1039	\texorpdfstring{UPF File: phase2\_\allowbreak{}pipelined\_\allowbreak{}cpu.upf}{UPF File: phase2\_pipelined\_cpu.upf}
-ds:ch:upf-power-spec:upf-simulation-flow	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1671	UPF Simulation Flow
-ds:ch:upf-power-spec:upf-testbench-structure	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1708	UPF Testbench Structure
-ds:ch:upf-power-spec:what-is-modelled-and-what-is-deliberately-not	docs/manual/ds/parts/02-constraints-and-power-intent.tex	1476	What is modelled, and what is deliberately not
+ds:ch:upf-power-spec	docs/manual/ds/parts/chapters/power-intent.tex	3	Power intent
+ds:ch:upf-power-spec:ai-may-assist-with	docs/manual/cr/parts/06-source-archive.tex	1920	AI MAY assist with
+ds:ch:upf-power-spec:ai-must-not-decide	docs/manual/cr/parts/06-source-archive.tex	1934	AI MUST NOT decide
+ds:ch:upf-power-spec:aihuman-responsibilities	docs/manual/cr/parts/06-source-archive.tex	1918	AI/Human Responsibilities
+ds:ch:upf-power-spec:checking	docs/manual/cr/parts/06-source-archive.tex	1787	Checking
+ds:ch:upf-power-spec:human-must-review	docs/manual/cr/parts/06-source-archive.tex	1950	Human MUST review
+ds:ch:upf-power-spec:incremental-power-strategy	docs/manual/cr/parts/06-source-archive.tex	988	Incremental Power Strategy
+ds:ch:upf-power-spec:isolation-cells	docs/manual/cr/parts/06-source-archive.tex	1025	Isolation Cells
+ds:ch:upf-power-spec:known-gaps-and-follow-ups	docs/manual/cr/parts/06-source-archive.tex	1747	Known gaps and follow-ups
+ds:ch:upf-power-spec:level-shifters	docs/manual/cr/parts/06-source-archive.tex	1034	Level Shifters
+ds:ch:upf-power-spec:overview	docs/manual/cr/parts/06-source-archive.tex	966	Overview
+ds:ch:upf-power-spec:phase-1-single-domain-cpu	docs/manual/cr/parts/06-source-archive.tex	1071	Phase 1: Single-Domain CPU
+ds:ch:upf-power-spec:phase-2-pipelined-cpu-with-power-domains	docs/manual/cr/parts/06-source-archive.tex	1147	Phase 2: Pipelined CPU with Power Domains
+ds:ch:upf-power-spec:phase-3-cache-system-with-power-domains	docs/manual/cr/parts/06-source-archive.tex	1395	Phase 3: Cache System with Power Domains
+ds:ch:upf-power-spec:phase-4-gpu-with-dvfs	docs/manual/cr/parts/06-source-archive.tex	1481	Phase 4: GPU with DVFS
+ds:ch:upf-power-spec:phase-5-full-soc-integration	docs/manual/cr/parts/06-source-archive.tex	1565	Phase 5: Full SoC Integration
+ds:ch:upf-power-spec:power-architecture	docs/manual/cr/parts/06-source-archive.tex	1073	Power Architecture
+ds:ch:upf-power-spec:power-architecture-1	docs/manual/cr/parts/06-source-archive.tex	1149	Power Architecture
+ds:ch:upf-power-spec:power-architecture-2	docs/manual/cr/parts/06-source-archive.tex	1397	Power Architecture
+ds:ch:upf-power-spec:power-architecture-3	docs/manual/cr/parts/06-source-archive.tex	1483	Power Architecture
+ds:ch:upf-power-spec:power-architecture-4	docs/manual/cr/parts/06-source-archive.tex	1576	Power Architecture
+ds:ch:upf-power-spec:power-aware-verification	docs/manual/cr/parts/06-source-archive.tex	1817	Power-Aware Verification
+ds:ch:upf-power-spec:power-domains	docs/manual/cr/parts/06-source-archive.tex	1010	Power Domains
+ds:ch:upf-power-spec:power-management-goals	docs/manual/cr/parts/06-source-archive.tex	972	Power Management Goals
+ds:ch:upf-power-spec:power-mode-transitions-phase-2	docs/manual/cr/parts/06-source-archive.tex	1342	Power Mode Transitions (Phase 2)
+ds:ch:upf-power-spec:power-state-tables-pst	docs/manual/cr/parts/06-source-archive.tex	1054	Power State Tables (PST)
+ds:ch:upf-power-spec:power-states	docs/manual/cr/parts/06-source-archive.tex	1678	Power states
+ds:ch:upf-power-spec:references	docs/manual/cr/parts/06-source-archive.tex	1966	References
+ds:ch:upf-power-spec:retention-registers	docs/manual/cr/parts/06-source-archive.tex	1043	Retention Registers
+ds:ch:upf-power-spec:supply-networks	docs/manual/cr/parts/06-source-archive.tex	1017	Supply Networks
+ds:ch:upf-power-spec:tool-compatibility	docs/manual/cr/parts/06-source-archive.tex	1804	Tool compatibility
+ds:ch:upf-power-spec:upf-additions-phase-3	docs/manual/cr/parts/06-source-archive.tex	1434	UPF Additions (Phase 3)
+ds:ch:upf-power-spec:upf-additions-phase-4	docs/manual/cr/parts/06-source-archive.tex	1511	UPF Additions (Phase 4)
+ds:ch:upf-power-spec:upf-best-practices	docs/manual/cr/parts/06-source-archive.tex	1896	UPF Best Practices
+ds:ch:upf-power-spec:upf-concepts	docs/manual/cr/parts/06-source-archive.tex	1008	UPF Concepts
+ds:ch:upf-power-spec:upf-file-phase1-cpuupf	docs/manual/cr/parts/06-source-archive.tex	1099	\texorpdfstring{UPF File: phase1\_\allowbreak{}cpu.upf}{UPF File: phase1\_cpu.upf}
+ds:ch:upf-power-spec:upf-file-phase2-pipelined-cpuupf	docs/manual/cr/parts/06-source-archive.tex	1187	\texorpdfstring{UPF File: phase2\_\allowbreak{}pipelined\_\allowbreak{}cpu.upf}{UPF File: phase2\_pipelined\_cpu.upf}
+ds:ch:upf-power-spec:upf-simulation-flow	docs/manual/cr/parts/06-source-archive.tex	1819	UPF Simulation Flow
+ds:ch:upf-power-spec:upf-testbench-structure	docs/manual/cr/parts/06-source-archive.tex	1856	UPF Testbench Structure
+ds:ch:upf-power-spec:what-is-modelled-and-what-is-deliberately-not	docs/manual/cr/parts/06-source-archive.tex	1624	What is modelled, and what is deliberately not
 ds:ch:verification-plan	docs/manual/ds/parts/04-verification-plan.tex	9	Verification Plan
 ds:ch:verification-plan:1-smoke-tests-directed	docs/manual/ds/parts/04-verification-plan.tex	254	Test Categories
 ds:ch:verification-plan:2-isa-compliance-tests-directed	docs/manual/ds/parts/04-verification-plan.tex	295	Test Categories
@@ -2088,6 +2102,36 @@ ds:req:pmu-183	docs/manual/ds/parts/chapters/power.tex	325	DS-PMU-183 Wake-up of
 ds:req:pmu-184	docs/manual/ds/parts/chapters/power.tex	333	DS-PMU-184 Poll for the settled value
 ds:req:pmu-185	docs/manual/ds/parts/chapters/power.tex	341	DS-PMU-185 No GPU access while the GPU is off
 ds:req:pmu-186	docs/manual/ds/parts/chapters/power.tex	349	DS-PMU-186 Fabric reset with CPU reset
+ds:req:pwr-001	docs/manual/ds/parts/chapters/power-intent.tex	34	DS-PWR-001 Power domains and their members
+ds:req:pwr-002	docs/manual/ds/parts/chapters/power-intent.tex	42	DS-PWR-002 One domain for each instance
+ds:req:pwr-003	docs/manual/ds/parts/chapters/power-intent.tex	47	DS-PWR-003 Always-on roster
+ds:req:pwr-004	docs/manual/ds/parts/chapters/power-intent.tex	55	DS-PWR-004 Roster instances stay powered
+ds:req:pwr-005	docs/manual/ds/parts/chapters/power-intent.tex	63	DS-PWR-005 Supply set of each domain
+ds:req:pwr-006	docs/manual/ds/parts/chapters/power-intent.tex	71	DS-PWR-006 Rails of the supply sets
+ds:req:pwr-007	docs/manual/ds/parts/chapters/power-intent.tex	79	DS-PWR-007 Source of each supply net
+ds:req:pwr-020	docs/manual/ds/parts/chapters/power-intent.tex	90	DS-PWR-020 Clamped outputs equal the RTL
+ds:req:pwr-021	docs/manual/ds/parts/chapters/power-intent.tex	98	DS-PWR-021 Clamp value and sense
+ds:req:pwr-022	docs/manual/ds/parts/chapters/power-intent.tex	103	DS-PWR-022 Control net of a strategy
+ds:req:pwr-023	docs/manual/ds/parts/chapters/power-intent.tex	108	DS-PWR-023 Location of the clamps
+ds:req:pwr-024	docs/manual/ds/parts/chapters/power-intent.tex	116	DS-PWR-024 Isolation supply
+ds:req:pwr-025	docs/manual/ds/parts/chapters/power-intent.tex	124	DS-PWR-025 Isolated elements are outputs of the domain
+ds:req:pwr-026	docs/manual/ds/parts/chapters/power-intent.tex	132	DS-PWR-026 A strategy for each gated domain
+ds:req:pwr-027	docs/manual/ds/parts/chapters/power-intent.tex	140	DS-PWR-027 Classification of the other outputs
+ds:req:pwr-028	docs/manual/ds/parts/chapters/power-intent.tex	148	DS-PWR-028 Unclamped payload
+ds:req:pwr-040	docs/manual/ds/parts/chapters/power-intent.tex	159	DS-PWR-040 State names and encodings
+ds:req:pwr-041	docs/manual/ds/parts/chapters/power-intent.tex	167	DS-PWR-041 Rail states of the modes
+ds:req:pwr-042	docs/manual/ds/parts/chapters/power-intent.tex	175	DS-PWR-042 Functional states exclude scan
+ds:req:pwr-043	docs/manual/ds/parts/chapters/power-intent.tex	180	DS-PWR-043 The state SCAN
+ds:req:pwr-044	docs/manual/ds/parts/chapters/power-intent.tex	188	DS-PWR-044 Clock gates open in scan
+ds:req:pwr-045	docs/manual/ds/parts/chapters/power-intent.tex	196	DS-PWR-045 States of the supply sets
+ds:req:pwr-060	docs/manual/ds/parts/chapters/power-intent.tex	207	DS-PWR-060 No retention
+ds:req:pwr-061	docs/manual/ds/parts/chapters/power-intent.tex	215	DS-PWR-061 No power switch
+ds:req:pwr-062	docs/manual/ds/parts/chapters/power-intent.tex	223	DS-PWR-062 No cell mapping and no level shifter
+ds:req:pwr-080	docs/manual/ds/parts/chapters/power-intent.tex	233	DS-PWR-080 Facts file equals the RTL
+ds:req:pwr-081	docs/manual/ds/parts/chapters/power-intent.tex	241	DS-PWR-081 Version and commands
+ds:req:pwr-082	docs/manual/ds/parts/chapters/power-intent.tex	246	DS-PWR-082 Both arms
+ds:req:pwr-083	docs/manual/ds/parts/chapters/power-intent.tex	254	DS-PWR-083 References exist
+ds:req:pwr-084	docs/manual/ds/parts/chapters/power-intent.tex	259	DS-PWR-084 Form of the directive lines
 fig:tm:ch:mod-cdc-primitives:soc	docs/manual/tm/parts/chapters/cdc.tex	34	Clock-domain crossing
 fig:tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	56	Power management
 fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	427	Functional description
@@ -2108,10 +2152,12 @@ fig:tm:mod:pmu:power-down	docs/manual/tm/parts/chapters/power.tex	136	Functional
 fig:tm:mod:pmu:power-up	docs/manual/tm/parts/chapters/power.tex	157	Functional description
 fig:tm:mod:rv32i-clock-gate:block	docs/manual/tm/parts/chapters/power.tex	356	Functional description
 fig:tm:mod:rv32i-clock-gate:timing	docs/manual/tm/parts/chapters/power.tex	369	Functional description
+fig:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	514	Introduction
 fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6746	Figures
 fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6764	Figures
 tab:ds:req:cdc-map	docs/manual/ds/generated/requirements-cdc.tex	4	Requirements of area CDC and their verification
 tab:ds:req:pmu-map	docs/manual/ds/generated/requirements-pmu.tex	4	Requirements of area PMU and their verification
+tab:ds:req:pwr-map	docs/manual/ds/generated/requirements-pwr.tex	4	Requirements of area PWR and their verification
 tab:tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	41	Instances in the design
 tab:tm:ch:mod-power-management:iso-cpu	docs/manual/tm/parts/chapters/power.tex	426	SoC power integration
 tab:tm:ch:mod-power-management:iso-gpu	docs/manual/tm/parts/chapters/power.tex	440	SoC power integration
@@ -2140,6 +2186,16 @@ tab:tm:mod:rv32i-clock-gate:arms	docs/manual/tm/parts/chapters/power.tex	376	Fun
 tab:tm:mod:rv32i-clock-gate:instances	docs/manual/tm/parts/chapters/power.tex	312	Introduction
 tab:tm:mod:rv32i-clock-gate:params	docs/manual/common/generated/facts/rv32i-clock-gate-params.tex	4	Parameters of \code{rv32i_clock_gate}
 tab:tm:mod:rv32i-clock-gate:signals	docs/manual/common/generated/facts/rv32i-clock-gate-signals.tex	4	Signals of \code{rv32i_clock_gate}
+tab:tm:pd:phase5-soc-upf:clamps	docs/manual/tm/parts/chapters/power.tex	599	Isolation
+tab:tm:pd:phase5-soc-upf:classes	docs/manual/tm/parts/chapters/power.tex	628	Isolation
+tab:tm:pd:phase5-soc-upf:contents	docs/manual/tm/parts/chapters/power.tex	522	Contents of the file
+tab:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	560	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:facts	docs/manual/tm/parts/chapters/power.tex	711	The checker
+tab:tm:pd:phase5-soc-upf:findings	docs/manual/tm/parts/chapters/power.tex	736	The checker
+tab:tm:pd:phase5-soc-upf:roster	docs/manual/tm/parts/chapters/power.tex	577	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	663	Power states
+tab:tm:pd:phase5-soc-upf:states	docs/manual/tm/parts/chapters/power.tex	645	Power states
+tab:tm:pd:phase5-soc-upf:supply	docs/manual/tm/parts/chapters/power.tex	543	Domains, supplies and the roster
 tab:um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	12	Choose the block
 tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6502	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
@@ -2268,9 +2324,9 @@ tm:ch:mod-power-management	docs/manual/tm/parts/chapters/power.tex	3	Power manag
 tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	415	SoC power integration
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	443	SoC fabric
 tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6504	Constraint file notes
-tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9232	PDN and flow script notes
-tm:ch:pd-macro-placement-notes	docs/manual/tm/parts/02-physical-design.tex	8905	Macro placement and pin order notes
-tm:ch:pd-makefile-notes	docs/manual/tm/parts/02-physical-design.tex	10316	pnr Makefile notes
+tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9059	PDN and flow script notes
+tm:ch:pd-macro-placement-notes	docs/manual/tm/parts/02-physical-design.tex	8732	Macro placement and pin order notes
+tm:ch:pd-makefile-notes	docs/manual/tm/parts/02-physical-design.tex	10143	pnr Makefile notes
 tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure.tex	13920	Proprietary simulators
 tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	4406	Sky130 flow
 tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	13472	Synthesis undefined-value gate
@@ -2608,20 +2664,20 @@ tm:part:tool-defects-and-standing-caveats	docs/manual/tm/parts/06-tool-defects-a
 tm:part:verification-infrastructure	docs/manual/tm/parts/03-verification-infrastructure.tex	1	Verification infrastructure
 tm:pd:asap7-coalescer-hls-sdc	docs/manual/tm/parts/02-physical-design.tex	6508	\texttt{asap7/coalescer\_hls/constraints/asap7.sdc}
 tm:pd:asap7-coalescer-rtl-sdc	docs/manual/tm/parts/02-physical-design.tex	6542	\texttt{asap7/coalescer\_rtl/constraints/asap7.sdc}
-tm:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/tm/parts/02-physical-design.tex	8940	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
-tm:pd:asap7-cpu-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8909	\texttt{asap7/cpu/macro\_placement.cfg}
+tm:pd:asap7-cpu-macro-placement-3014-cfg	docs/manual/tm/parts/02-physical-design.tex	8767	\texttt{asap7/cpu/macro\_placement\_3014.cfg}
+tm:pd:asap7-cpu-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8736	\texttt{asap7/cpu/macro\_placement.cfg}
 tm:pd:asap7-cpu-sdc	docs/manual/tm/parts/02-physical-design.tex	6576	\texttt{asap7/cpu/constraints/asap7.sdc}
-tm:pd:asap7-gpu-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8969	\texttt{asap7/gpu/macro\_placement.cfg}
+tm:pd:asap7-gpu-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8796	\texttt{asap7/gpu/macro\_placement.cfg}
 tm:pd:asap7-gpu-sdc	docs/manual/tm/parts/02-physical-design.tex	6747	\texttt{asap7/gpu/constraints/asap7\_gpu.sdc}
 tm:pd:asap7-hazard-hls-sdc	docs/manual/tm/parts/02-physical-design.tex	6794	\texttt{asap7/hazard\_hls/constraints/asap7.sdc}
 tm:pd:asap7-hazard-rtl-sdc	docs/manual/tm/parts/02-physical-design.tex	6828	\texttt{asap7/hazard\_rtl/constraints/asap7.sdc}
-tm:pd:asap7-pdn-orfs-tcl	docs/manual/tm/parts/02-physical-design.tex	9264	\texttt{asap7/pdn\_asap7\_orfs.tcl}
-tm:pd:asap7-pdn-tcl	docs/manual/tm/parts/02-physical-design.tex	9236	\texttt{asap7/pdn\_asap7.tcl}
-tm:pd:asap7-soc-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8996	\texttt{asap7/soc/macro\_placement.cfg}
-tm:pd:asap7-soc-pdn-tcl	docs/manual/tm/parts/02-physical-design.tex	9323	\texttt{asap7/soc/pdn.tcl}
+tm:pd:asap7-pdn-orfs-tcl	docs/manual/tm/parts/02-physical-design.tex	9091	\texttt{asap7/pdn\_asap7\_orfs.tcl}
+tm:pd:asap7-pdn-tcl	docs/manual/tm/parts/02-physical-design.tex	9063	\texttt{asap7/pdn\_asap7.tcl}
+tm:pd:asap7-soc-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8823	\texttt{asap7/soc/macro\_placement.cfg}
+tm:pd:asap7-soc-pdn-tcl	docs/manual/tm/parts/02-physical-design.tex	9150	\texttt{asap7/soc/pdn.tcl}
 tm:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	6961	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
 tm:pd:asap7-soc-phase5-sdc	docs/manual/tm/parts/02-physical-design.tex	6864	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
-tm:pd:asap7-template-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9065	\texttt{asap7/template/macro\_placement.cfg}
+tm:pd:asap7-template-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8892	\texttt{asap7/template/macro\_placement.cfg}
 tm:pd:asap7-template-sdc	docs/manual/tm/parts/02-physical-design.tex	7166	\texttt{asap7/template/constraints/asap7.sdc}
 tm:pd:asap7-valu-hls-comb-sdc	docs/manual/tm/parts/02-physical-design.tex	7334	\texttt{asap7/valu\_hls\_comb/constraints/asap7.sdc}
 tm:pd:asap7-valu-hls-sdc	docs/manual/tm/parts/02-physical-design.tex	7300	\texttt{asap7/valu\_hls/constraints/asap7.sdc}
@@ -2643,7 +2699,7 @@ tm:pd:commercial-flow-comparison:5-history-arms-earlier-commercial-iterations-ju
 tm:pd:commercial-flow-comparison:6-lessons-by-tool	docs/manual/tm/parts/02-physical-design.tex	6154	Lessons by tool
 tm:pd:commercial-flow-comparison:7-open-items-and-follow-ups	docs/manual/tm/parts/02-physical-design.tex	6216	Open items and follow-ups
 tm:pd:commercial-flow-comparison:8-files	docs/manual/tm/parts/02-physical-design.tex	6270	Files
-tm:pd:config-vsrc-tcl	docs/manual/tm/parts/02-physical-design.tex	9356	\texttt{config/vsrc.tcl}
+tm:pd:config-vsrc-tcl	docs/manual/tm/parts/02-physical-design.tex	9183	\texttt{config/vsrc.tcl}
 tm:pd:constraints-index	docs/manual/tm/parts/02-physical-design.tex	2830	SDC Constraints Directory - File Index
 tm:pd:constraints-index:all-files	docs/manual/tm/parts/02-physical-design.tex	2839	All Files
 tm:pd:constraints-index:constraint-summary-at-a-glance	docs/manual/tm/parts/02-physical-design.tex	3001	Constraint Summary at a Glance
@@ -2737,10 +2793,10 @@ tm:pd:constraints-sdc-files-summary:synthesis-stage	docs/manual/tm/parts/02-phys
 tm:pd:constraints-sdc-files-summary:total-port-count	docs/manual/tm/parts/02-physical-design.tex	4070	Total Port Count
 tm:pd:constraints-sdc-files-summary:verification-checklist	docs/manual/tm/parts/02-physical-design.tex	4158	Verification Checklist
 tm:pd:constraints-sdc-files-summary:workflow-recommendations	docs/manual/tm/parts/02-physical-design.tex	4082	Workflow Recommendations
-tm:pd:freepdk45-gen-via-stubs-py	docs/manual/tm/parts/02-physical-design.tex	10270	\texttt{freepdk45/gen\_via\_stubs.py}
-tm:pd:freepdk45-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9096	\texttt{freepdk45/macro\_placement.cfg}
-tm:pd:freepdk45-sdc	docs/manual/tm/parts/02-physical-design.tex	8460	\texttt{freepdk45/constraints/freepdk45.sdc}
-tm:pd:librelane-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9133	\texttt{librelane/macro\_placement.cfg}
+tm:pd:freepdk45-gen-via-stubs-py	docs/manual/tm/parts/02-physical-design.tex	10097	\texttt{freepdk45/gen\_via\_stubs.py}
+tm:pd:freepdk45-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8923	\texttt{freepdk45/macro\_placement.cfg}
+tm:pd:freepdk45-sdc	docs/manual/tm/parts/02-physical-design.tex	8287	\texttt{freepdk45/constraints/freepdk45.sdc}
+tm:pd:librelane-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8960	\texttt{librelane/macro\_placement.cfg}
 tm:pd:librelane-patching	docs/manual/tm/parts/02-physical-design.tex	1228	Editing the shared LibreLane install --- evaluation
 tm:pd:librelane-patching:cons-and-real-risks	docs/manual/tm/parts/02-physical-design.tex	1350	Cons and real risks
 tm:pd:librelane-patching:finding-the-install-is-already-extensively-patched	docs/manual/tm/parts/02-physical-design.tex	1255	Finding: the install is already extensively patched
@@ -2748,7 +2804,7 @@ tm:pd:librelane-patching:pros-of-patching-for-a-post-rcx-repair-stage	docs/manua
 tm:pd:librelane-patching:recommendation	docs/manual/tm/parts/02-physical-design.tex	1391	Recommendation
 tm:pd:librelane-patching:the-cautionary-case-drttcl	docs/manual/tm/parts/02-physical-design.tex	1295	\texorpdfstring{The cautionary case: \code{drt.tcl}}{The cautionary case: }
 tm:pd:librelane-patching:the-question	docs/manual/tm/parts/02-physical-design.tex	1234	The question
-tm:pd:makefile	docs/manual/tm/parts/02-physical-design.tex	10320	\texttt{Makefile}
+tm:pd:makefile	docs/manual/tm/parts/02-physical-design.tex	10147	\texttt{Makefile}
 tm:pd:node-strategy	docs/manual/tm/parts/02-physical-design.tex	6297	Technology Node Strategy
 tm:pd:node-strategy:asap7-phase-23-sign-off-achieved-at-run-43-2026-05-20	docs/manual/tm/parts/02-physical-design.tex	6466	ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
 tm:pd:node-strategy:commercial-flows-pnrcommercial-sky130-only-indicative	docs/manual/tm/parts/02-physical-design.tex	6348	\texorpdfstring{Commercial flows (\src{pnr/commercial/}, Sky130 only, indicative)}{Commercial flows (, Sky130 only, indicative)}
@@ -2809,10 +2865,11 @@ tm:pd:phase2-cpu-sdc	docs/manual/tm/parts/02-physical-design.tex	7518	\texttt{co
 tm:pd:phase2-cpu-upf	docs/manual/tm/parts/02-physical-design.tex	7571	\texttt{constraints/phase2\_cpu.upf}
 tm:pd:phase3-cache-sdc	docs/manual/tm/parts/02-physical-design.tex	7653	\texttt{constraints/phase3\_cache.sdc}
 tm:pd:phase3-cache-upf	docs/manual/tm/parts/02-physical-design.tex	7735	\texttt{constraints/phase3\_cache.upf}
-tm:pd:phase5-soc-multiclock-check-sdc	docs/manual/tm/parts/02-physical-design.tex	8229	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
-tm:pd:phase5-soc-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	8028	\texttt{constraints/phase5\_soc\_multiclock.sdc}
+tm:pd:phase5-soc-multiclock-check-sdc	docs/manual/tm/parts/02-physical-design.tex	8056	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
+tm:pd:phase5-soc-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	7855	\texttt{constraints/phase5\_soc\_multiclock.sdc}
 tm:pd:phase5-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	7782	\texttt{constraints/phase5\_soc.sdc}
-tm:pd:phase5-soc-upf	docs/manual/tm/parts/02-physical-design.tex	7855	\texttt{constraints/phase5\_soc.upf}
+tm:pd:phase5-soc-upf	docs/manual/tm/parts/chapters/power.tex	479	Power intent file
+tm:pd:phase5-soc-upf:checker	docs/manual/tm/parts/chapters/power.tex	694	The checker
 tm:pd:power-domain-evaluation	docs/manual/tm/parts/02-physical-design.tex	2568	Per-IP Power Domains + On/Off Sequencing --- Evaluation (pre-Phase-6 \#5)
 tm:pd:power-domain-evaluation:1-findings	docs/manual/tm/parts/02-physical-design.tex	2648	Findings
 tm:pd:power-domain-evaluation:2-the-blocker-that-sets-the-scope	docs/manual/tm/parts/02-physical-design.tex	2676	The blocker that sets the scope
@@ -2836,21 +2893,21 @@ tm:pd:rvb-fanout-fix:c2-approval-required	docs/manual/tm/parts/02-physical-desig
 tm:pd:rvb-fanout-fix:c3-verification-plan-once-an-option-is-approved-and-implemented	docs/manual/tm/parts/02-physical-design.tex	2493	C.3 Verification plan (once an option is approved and implemented)
 tm:pd:rvb-fanout-fix:c4-pd-re-run-scope	docs/manual/tm/parts/02-physical-design.tex	2527	C.4 PD re-run scope
 tm:pd:rvb-fanout-fix:d-explicitly-out-of-scope-for-this-study	docs/manual/tm/parts/02-physical-design.tex	2542	D. Explicitly out of scope for this study
-tm:pd:scripts-01-synth-tcl	docs/manual/tm/parts/02-physical-design.tex	9406	\texttt{scripts/01\_synth.tcl}
-tm:pd:scripts-02-floorplan-tcl	docs/manual/tm/parts/02-physical-design.tex	9431	\texttt{scripts/02\_floorplan.tcl}
-tm:pd:scripts-03-place-tcl	docs/manual/tm/parts/02-physical-design.tex	9466	\texttt{scripts/03\_place.tcl}
-tm:pd:scripts-04-cts-tcl	docs/manual/tm/parts/02-physical-design.tex	9491	\texttt{scripts/04\_cts.tcl}
-tm:pd:scripts-05-route-tcl	docs/manual/tm/parts/02-physical-design.tex	9517	\texttt{scripts/05\_route.tcl}
-tm:pd:scripts-06-parasitics-tcl	docs/manual/tm/parts/02-physical-design.tex	9554	\texttt{scripts/06\_parasitics.tcl}
-tm:pd:scripts-07-sta-tcl	docs/manual/tm/parts/02-physical-design.tex	9573	\texttt{scripts/07\_sta.tcl}
-tm:pd:scripts-08-power-tcl	docs/manual/tm/parts/02-physical-design.tex	9612	\texttt{scripts/08\_power.tcl}
-tm:pd:scripts-asap7-macro-power-tcl	docs/manual/tm/parts/02-physical-design.tex	9648	\texttt{scripts/asap7\_macro\_power.tcl}
-tm:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/tm/parts/02-physical-design.tex	9934	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
-tm:pd:scripts-check-cdc-timing-tcl	docs/manual/tm/parts/02-physical-design.tex	9777	\texttt{scripts/check\_cdc\_timing.tcl}
-tm:pd:scripts-check-multiclock-sdc-tcl	docs/manual/tm/parts/02-physical-design.tex	10036	\texttt{scripts/check\_multiclock\_sdc.tcl}
-tm:pd:scripts-report-per-clock-timing-tcl	docs/manual/tm/parts/02-physical-design.tex	10079	\texttt{scripts/report\_per\_clock\_timing.tcl}
-tm:pd:scripts-sta-load-sky130-soc-tcl	docs/manual/tm/parts/02-physical-design.tex	10094	\texttt{scripts/sta\_load\_sky130\_soc.tcl}
-tm:pd:scripts-sta-scan-queries-sky130-soc-tcl	docs/manual/tm/parts/02-physical-design.tex	10135	\texttt{scripts/sta\_scan\_queries\_sky130\_soc.tcl}
+tm:pd:scripts-01-synth-tcl	docs/manual/tm/parts/02-physical-design.tex	9233	\texttt{scripts/01\_synth.tcl}
+tm:pd:scripts-02-floorplan-tcl	docs/manual/tm/parts/02-physical-design.tex	9258	\texttt{scripts/02\_floorplan.tcl}
+tm:pd:scripts-03-place-tcl	docs/manual/tm/parts/02-physical-design.tex	9293	\texttt{scripts/03\_place.tcl}
+tm:pd:scripts-04-cts-tcl	docs/manual/tm/parts/02-physical-design.tex	9318	\texttt{scripts/04\_cts.tcl}
+tm:pd:scripts-05-route-tcl	docs/manual/tm/parts/02-physical-design.tex	9344	\texttt{scripts/05\_route.tcl}
+tm:pd:scripts-06-parasitics-tcl	docs/manual/tm/parts/02-physical-design.tex	9381	\texttt{scripts/06\_parasitics.tcl}
+tm:pd:scripts-07-sta-tcl	docs/manual/tm/parts/02-physical-design.tex	9400	\texttt{scripts/07\_sta.tcl}
+tm:pd:scripts-08-power-tcl	docs/manual/tm/parts/02-physical-design.tex	9439	\texttt{scripts/08\_power.tcl}
+tm:pd:scripts-asap7-macro-power-tcl	docs/manual/tm/parts/02-physical-design.tex	9475	\texttt{scripts/asap7\_macro\_power.tcl}
+tm:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/tm/parts/02-physical-design.tex	9761	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
+tm:pd:scripts-check-cdc-timing-tcl	docs/manual/tm/parts/02-physical-design.tex	9604	\texttt{scripts/check\_cdc\_timing.tcl}
+tm:pd:scripts-check-multiclock-sdc-tcl	docs/manual/tm/parts/02-physical-design.tex	9863	\texttt{scripts/check\_multiclock\_sdc.tcl}
+tm:pd:scripts-report-per-clock-timing-tcl	docs/manual/tm/parts/02-physical-design.tex	9906	\texttt{scripts/report\_per\_clock\_timing.tcl}
+tm:pd:scripts-sta-load-sky130-soc-tcl	docs/manual/tm/parts/02-physical-design.tex	9921	\texttt{scripts/sta\_load\_sky130\_soc.tcl}
+tm:pd:scripts-sta-scan-queries-sky130-soc-tcl	docs/manual/tm/parts/02-physical-design.tex	9962	\texttt{scripts/sta\_scan\_queries\_sky130\_soc.tcl}
 tm:pd:sky130-cdc-maxss	docs/manual/tm/parts/02-physical-design.tex	4886	Sky130 SoC CDC budget failure at the ss corners (bead j41m.5 / j41m.4)
 tm:pd:sky130-cdc-maxss:1-what-fails	docs/manual/tm/parts/02-physical-design.tex	4896	What fails
 tm:pd:sky130-cdc-maxss:2-why-hold-padding-on-the-crossing-not-wire-or-placement	docs/manual/tm/parts/02-physical-design.tex	4948	Why: hold padding on the crossing, not wire or placement
@@ -2861,8 +2918,8 @@ tm:pd:sky130-cdc-maxss:6-scan-mode-hold-the-approach-chosen-and-what-is-not-veri
 tm:pd:sky130-cdc-maxss:7-evidence-run-2026-10-17-14-07-01-read-only-one-sta-at-a-time	docs/manual/tm/parts/02-physical-design.tex	5161	\texorpdfstring{Evidence (RUN\_\allowbreak{}2026-10-17\_\allowbreak{}14-07-01, read-only; one STA at a time)}{Evidence (RUN\_2026-10-17\_14-07-01, read-only; one STA at a time)}
 tm:pd:sky130-cdc-maxss:8-re-harden-5-with-the-hold-exemption-run-2026-10-17-23-06-56-measured-2026-10-18	docs/manual/tm/parts/02-physical-design.tex	5220	\texorpdfstring{Re-harden \#5 with the hold exemption: RUN\_\allowbreak{}2026-10-17\_\allowbreak{}23-06-56 (measured, 2026-10-18)}{Re-harden \#5 with the hold exemption: RUN\_2026-10-17\_23-06-56 (measured, 2026-10-18)}
 tm:pd:sky130-cdc-maxss:scan-view-hold-on-the-34-pins-information-for-stage-2-not-a-passfail	docs/manual/tm/parts/02-physical-design.tex	5305	\texorpdfstring{Scan-view hold on the 34 pins (information for Stage 2, NOT a pass/\allowbreak{}fail)}{Scan-view hold on the 34 pins (information for Stage 2, NOT a pass/fail)}
-tm:pd:sky130-cpu-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9163	\texttt{sky130/cpu/macro\_placement.cfg}
-tm:pd:sky130-cpu-sdc	docs/manual/tm/parts/02-physical-design.tex	8475	\texttt{sky130/cpu/constraints/sky130\_cpu.sdc}
+tm:pd:sky130-cpu-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	8990	\texttt{sky130/cpu/macro\_placement.cfg}
+tm:pd:sky130-cpu-sdc	docs/manual/tm/parts/02-physical-design.tex	8302	\texttt{sky130/cpu/constraints/sky130\_cpu.sdc}
 tm:pd:sky130-real-drc-lvs	docs/manual/tm/parts/02-physical-design.tex	4413	Sky130 (+FreePDK45) Harden + Real DRC/LVS --- Evaluation (pre-Phase-6 \#6)
 tm:pd:sky130-real-drc-lvs:1-findings	docs/manual/tm/parts/02-physical-design.tex	4425	Findings
 tm:pd:sky130-real-drc-lvs:2-why-go-and-why-staged	docs/manual/tm/parts/02-physical-design.tex	4467	Why GO (and why staged)
@@ -2876,12 +2933,12 @@ tm:pd:sky130-real-drc-lvs:stage-1-cpu-standalone-gh-103-bead-closed	docs/manual/
 tm:pd:sky130-real-drc-lvs:stage-2-cpu-macro-peripherals-soc-no-gpu-gh-104-bead-9t6-closed	docs/manual/tm/parts/02-physical-design.tex	4587	\texorpdfstring{Stage 2 --- CPU macro + peripherals SoC, no GPU (GH \#104, bead \code{9t6} closed)}{Stage 2 --- CPU macro + peripherals SoC, no GPU (GH \#104, bead closed)}
 tm:pd:sky130-real-drc-lvs:stage-2-re-harden-with-phase-6a-gpio-run-2026-09-26-00-07-59-2026-09-26-bead-00ef	docs/manual/tm/parts/02-physical-design.tex	4625	\texorpdfstring{Stage 2 re-harden with Phase 6a GPIO --- \code{RUN_2026-09-26_00-07-59} (2026-09-26, bead \code{00ef})}{Stage 2 re-harden with Phase 6a GPIO --- (2026-09-26, bead )}
 tm:pd:sky130-real-drc-lvs:stages-3-4-gpu-gh-105-106	docs/manual/tm/parts/02-physical-design.tex	4781	Stages 3 \& 4 --- GPU (GH \#105, \#106)
-tm:pd:sky130-soc-cdc-check-sdc	docs/manual/tm/parts/02-physical-design.tex	8710	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
-tm:pd:sky130-soc-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9204	\texttt{sky130/soc/macro\_placement.cfg}
-tm:pd:sky130-soc-pdn-tcl	docs/manual/tm/parts/02-physical-design.tex	10157	\texttt{sky130/soc/pdn.tcl}
-tm:pd:sky130-soc-plugin-librelane-cvt-tcl-scan-insert	docs/manual/tm/parts/02-physical-design.tex	10211	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/scan\_insert.tcl}
-tm:pd:sky130-soc-plugin-librelane-cvt-tcl-wrap	docs/manual/tm/parts/02-physical-design.tex	10184	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/cvt\_wrap.tcl}
-tm:pd:sky130-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	8557	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
+tm:pd:sky130-soc-cdc-check-sdc	docs/manual/tm/parts/02-physical-design.tex	8537	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
+tm:pd:sky130-soc-macro-placement-cfg	docs/manual/tm/parts/02-physical-design.tex	9031	\texttt{sky130/soc/macro\_placement.cfg}
+tm:pd:sky130-soc-pdn-tcl	docs/manual/tm/parts/02-physical-design.tex	9984	\texttt{sky130/soc/pdn.tcl}
+tm:pd:sky130-soc-plugin-librelane-cvt-tcl-scan-insert	docs/manual/tm/parts/02-physical-design.tex	10038	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/scan\_insert.tcl}
+tm:pd:sky130-soc-plugin-librelane-cvt-tcl-wrap	docs/manual/tm/parts/02-physical-design.tex	10011	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/cvt\_wrap.tcl}
+tm:pd:sky130-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	8384	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
 tm:suite:aes128-model	docs/manual/tm/parts/03-verification-infrastructure.tex	972	\texttt{tb/models/aes128\_model.py}
 tm:suite:bfm-i2c-slave	docs/manual/tm/parts/03-verification-infrastructure.tex	1283	\texttt{tb/cocotb/bfm/i2c\_slave.py}
 tm:suite:common-sim-portability-mk	docs/manual/tm/parts/03-verification-infrastructure.tex	1376	\texttt{tb/cocotb/common/sim\_portability.mk}
@@ -3010,14 +3067,14 @@ um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
 um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6455	Issue tracking
 um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2238	Local quality checks
 um:ch:power-integration	docs/manual/um/parts/02-integration.tex	196	Power management integration
-um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	283	Checklist
+um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	344	Checklist
 um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	226	Clocks and resets
 um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	214	Power the CPU down
 um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	238	Integrate a clock gate
 um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	203	Power the GPU down and up
 um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	200	Register map
 um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	254	Keep the power intent in step
-um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	263	Verify
+um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	324	Verify
 um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6781	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	40	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	360	Supported instructions

@@ -1,0 +1,294 @@
+% Authored chapter: power intent of the SoC. Replaces the converted document UPF_POWER_SPEC.
+% The converted document is in the Changes record, part Source archive.
+\chapter{Power intent}\label{ds:ch:power-intent}\label{ds:ch:upf-power-spec}
+
+\section{Scope}\label{ds:ch:power-intent:scope}
+This chapter states the rules for the power intent of \code{soc_top}. The power intent is the file \src{pnr/constraints/phase5_soc.upf}. The chapter states what the file holds, how the file agrees with the RTL, and what the checker \src{tools/verif/check_upf.py} enforces. \Cref{tm:pd:phase5-soc-upf} in the Technical Manual describes the file and the checker. \Cref{um:ch:power-integration:upf} in the User Manual tells what to do when the power structure changes.
+
+The chapter covers the power intent of \code{soc_top} only. The repository holds other UPF files for the CPU and for the caches. This chapter does not cover them. The earlier document that covered several phases is in \cref{cr:arc:ds-upf-power-spec}. It describes files that are not the power intent of \code{soc_top}. It holds statements that no longer match the repository.
+
+\Cref{ds:ch:mod-power-management} states how the PMU and the clock gates use the power domains. This chapter does not repeat those rules.
+
+\begin{information}
+No physical flow, simulator or linter of the project reads the file. The checker is the only program that reads its commands. The pinned-text check reads its directive lines, and the documentation checks read its comments. The power intent describes the power architecture that \code{soc_top} is designed for. The RTL does not remove a supply. So a result of an implementation run is not a result of this power intent. Read the standing caveats in \cref{tm:part:tool-defects-and-standing-caveats} before you quote an ASAP7 power result.
+\end{information}
+
+\section{Definitions}\label{ds:ch:power-intent:definitions}
+The chapter uses these terms with a fixed meaning.
+\begin{description}
+  \item[Supply set] A named group of supply nets that gives a power domain its power and its ground.
+  \item[Power domain] A set of instances that share one supply and one power state. In the file each domain has one supply set as primary supply. \Cref{ds:ch:mod-power-management:definitions} gives the same term for the PMU.
+  \item[Gated domain] A power domain whose primary supply has a power net that differs from the power net of the always-on domain. In the file these are \code{PD_CPU} and \code{PD_GPU}.
+  \item[Always-on domain] The power domain that holds the top scope of \code{soc_top}. The checker finds it by its element \code{.}. In the file this is \code{PD_PERIPH}. \code{PD_SRAM} has the same primary supply, but this chapter does not call it the always-on domain.
+  \item[Always-on roster] The list of the top-level instances of the always-on domain. The text calls it the roster. The file holds it as comment lines that start with the words \code{upf-check aon}.
+  \item[Isolation strategy] A \code{set_isolation} command. It names the outputs of a domain, the clamp value and the control net.
+  \item[Classification line] A comment line that starts with the words \code{upf-check unclamped}. It names outputs of a gated domain that no isolation strategy clamps, with their class.
+  \item[Power state] A named condition of a supply set or of the whole SoC.
+  \item[Facts file] The file \src{pnr/constraints/phase5_soc_rtl_facts.json}. A program generates it from the RTL, for the nets and instance paths that the power intent names. The checker reads it in place of the RTL.
+  \item[Arm] One of the two sets of defines for which the facts file holds the elaborated SoC. The arms are named \code{asap7} and \code{sky130}.
+\end{description}
+
+\section{Domains and supplies}\label{ds:ch:power-intent:domains}
+The file has four power domains. \code{PD_CPU} and \code{PD_GPU} are gated. \code{PD_PERIPH} and \code{PD_SRAM} have the always-on supply.
+
+\begin{requirement}{DS-PWR-001}{Power domains and their members}
+[verify={check:tools/verif/check_upf.py; review}]
+The power intent must define the power domains \code{PD_CPU}, \code{PD_GPU}, \code{PD_SRAM} and \code{PD_PERIPH}. \code{PD_CPU} must hold \code{u_cpu}, \code{PD_GPU} must hold \code{u_gpu}, \code{PD_SRAM} must hold \code{u_sram}, and \code{PD_PERIPH} must hold the top scope and all other instances.
+\end{requirement}
+\begin{information}
+The checker enforces part of the rule. It reports a finding when a named instance does not exist in the elaborated \code{soc_top} (finding U02, see \reqref{DS-PWR-083}). It reports a finding when no domain holds the top scope, or when the excluded instances of this domain differ from the instances of the other domains (finding U03). The isolation check requires that \code{u_cpu} is in the domain of \code{ISO_CPU} and \code{u_gpu} in the domain of \code{ISO_GPU}, and the state check needs the names \code{PD_CPU} and \code{PD_GPU} (\reqref{DS-PWR-041}). The checker does not require the domain \code{PD_SRAM} and does not check the names \code{PD_SRAM} and \code{PD_PERIPH}. A trial that moved \code{u_sram} into the roster of \code{PD_PERIPH} and removed \code{PD_SRAM} passed. A reviewer checks these parts.
+\end{information}
+
+\begin{requirement}{DS-PWR-002}{One domain for each instance}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_instance_in_two_domains_fails}]
+Each top-level instance of \code{soc_top} must be in exactly one power domain.
+\end{requirement}
+
+\begin{requirement}{DS-PWR-003}{Always-on roster}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_roster_must_list_every_top_level_instance; test:tb/tests/test_check_upf.py::test_roster_rejects_unknown_instance; test:tb/tests/test_check_upf.py::test_new_top_level_instance_forces_roster_update}]
+The roster must name each top-level instance of the always-on domain, and it must name no other instance.
+\end{requirement}
+\begin{information}
+The checker reads the top-level instances from the facts file. After an instance is added to \code{soc_top} or removed from it, the drift check of the facts file fails until the facts file is regenerated (\reqref{DS-PWR-080}). After that, the checker fails until the roster names the instance. The change forces a review of the power intent.
+\end{information}
+
+\begin{requirement}{DS-PWR-004}{Roster instances stay powered}
+[verify={review}]
+Each instance of the roster must stay powered while \code{PD_CPU} and \code{PD_GPU} are off.
+\end{requirement}
+\begin{information}
+The comment above the first two groups of the roster gives the reason that the group stays powered. The comment above each other group names only the role of the group. The checker compares names. It does not read the reasons and it cannot tell whether an instance needs power. A reviewer decides this when the roster changes.
+\end{information}
+
+\begin{requirement}{DS-PWR-005}{Supply set of each domain}
+[verify={check:tools/verif/check_upf.py; review}]
+\code{PD_PERIPH} and \code{PD_SRAM} must have the supply set \code{SS_AON} as primary supply. \code{PD_CPU} must have \code{SS_CPU} as primary supply. \code{PD_GPU} must have \code{SS_GPU} as primary supply. \code{PD_CPU} and \code{PD_GPU} must list \code{SS_AON} as an available supply.
+\end{requirement}
+\begin{information}
+The checker requires that each named supply set exists. It finds the gated domains from the power nets of the primary supplies. A wrong supply set fails the check of the power states (\reqref{DS-PWR-041}) or the check of the isolation (\reqref{DS-PWR-026}). The checker does not require the available supply \code{SS_AON} of \code{PD_CPU} and \code{PD_GPU}. A trial that removed it from \code{PD_CPU} passed. A reviewer checks this part.
+\end{information}
+
+\begin{requirement}{DS-PWR-006}{Rails of the supply sets}
+[verify={check:tools/verif/check_upf.py; review}]
+\code{SS_AON} must have the power net \code{VDD} and the ground net \code{VSS}. \code{SS_CPU} must have the power net \code{VDD_CPU} and the ground net \code{VSS}. \code{SS_GPU} must have the power net \code{VDD_GPU} and the ground net \code{VSS}.
+\end{requirement}
+\begin{information}
+The checker requires that each net of a supply set exists, and it compares the power nets with the power net of the always-on domain. It does not check the ground nets. A trial that gave \code{SS_CPU} the ground net \code{VDD} passed. A reviewer checks the names of the nets.
+\end{information}
+
+\begin{requirement}{DS-PWR-007}{Source of each supply net}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_supply_net_without_source_fails}]
+Each supply net must have a source, which is a supply port or the output of a power switch. Each supply port must connect to a supply net.
+\end{requirement}
+\begin{information}
+The file models \code{VDD_CPU} and \code{VDD_GPU} as supply ports that an outside source drives. Each has the port states ON and OFF. The file has no power switch (\reqref{DS-PWR-061}). The checker takes each connected supply port as a source. It does not check the direction of the port.
+\end{information}
+
+\section{Isolation}\label{ds:ch:power-intent:isolation}
+\code{soc_top} clamps handshake outputs of \code{u_cpu} and \code{u_gpu} with ordinary logic. The isolation strategies of the file describe these clamps. The rules of the behaviour of the clamps are \reqref{DS-PMU-103} and \reqref{DS-PMU-104}.
+
+\begin{requirement}{DS-PWR-020}{Clamped outputs equal the RTL}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_clamp_missing_from_upf_fails; test:tb/tests/test_check_upf.py::test_clamp_not_in_rtl_fails; test:tb/tests/test_check_upf.py::test_rtl_clamp_added_without_upf_fails; test:tb/tests/test_check_upf.py::test_rtl_clamp_removed_fails}]
+The set of outputs that the isolation strategies name must equal the set of outputs that \code{soc_top} clamps.
+\end{requirement}
+\begin{information}
+The strategy \code{ISO_CPU} is for \code{PD_CPU} and the strategy \code{ISO_GPU} is for \code{PD_GPU}. An output is named once only. The facts file holds the clamps of the RTL. The generator finds a clamp as a continuous assignment in the top scope. The assignment selects between a constant and a named signal, and the select signal is a net whose name contains the text \code{iso}, or the inverse of such a net. The element is the top-level instance output that drives the signal. A new clamp in another form is not found, and the set equality cannot show that the file lacks it.
+\end{information}
+
+\begin{requirement}{DS-PWR-021}{Clamp value and sense}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_wrong_clamp_value_fails; test:tb/tests/test_check_upf.py::test_wrong_sense_fails}]
+Each isolation strategy must have the clamp value 0 and the isolation sense high, and these must equal the clamp value and the sense of each clamp that the strategy names in \code{soc_top}.
+\end{requirement}
+
+\begin{requirement}{DS-PWR-022}{Control net of a strategy}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_nonexistent_isolation_net_fails; test:tb/tests/test_check_upf.py::test_rtl_clamp_net_change_fails; test:tb/tests/test_check_upf.py::test_unresolved_net_in_facts_fails}]
+The control net of \code{ISO_CPU} must be \code{pmu_cpu_iso_en_sync}, and the control net of \code{ISO_GPU} must be \code{pmu_gpu_iso_en}. Each of the two nets must exist in \code{soc_top} and must be the control net of the clamps that its strategy names.
+\end{requirement}
+
+\begin{requirement}{DS-PWR-023}{Location of the clamps}
+[verify={check:tools/verif/check_upf.py}]
+Each isolation strategy must have the location \code{parent}.
+\end{requirement}
+\begin{information}
+The clamps are logic in the top scope of \code{soc_top}. The top scope is in the always-on domain, outside \code{u_cpu} and \code{u_gpu}. No test in the test file of the checker changes the location.
+\end{information}
+
+\begin{requirement}{DS-PWR-024}{Isolation supply}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_isolation_supply_must_be_always_on; test:tb/tests/test_check_upf.py::test_isolation_supply_must_be_a_supply_set_not_a_domain}]
+The isolation supply of each strategy must be a supply set whose power net equals the power net of the always-on domain.
+\end{requirement}
+\begin{information}
+Both strategies use \code{SS_AON}. A clamp with its own domain as supply would lose power with the domain.
+\end{information}
+
+\begin{requirement}{DS-PWR-025}{Isolated elements are outputs of the domain}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_input_port_cannot_be_isolated}]
+Each element of an isolation strategy must be an output port of an instance that is inside the domain of the strategy.
+\end{requirement}
+\begin{information}
+The test adds an input port to a strategy. An element outside the domain of its strategy has a check and no test.
+\end{information}
+
+\begin{requirement}{DS-PWR-026}{A strategy for each gated domain}
+[verify={check:tools/verif/check_upf.py}]
+Each gated domain must have an isolation strategy.
+\end{requirement}
+\begin{information}
+No test in the test file of the checker removes a strategy.
+\end{information}
+
+\begin{requirement}{DS-PWR-027}{Classification of the other outputs}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_unclassified_output_fails}]
+Each output of a gated domain that no strategy names must be in a classification line with the class \code{payload}, \code{slave_response} or \code{observability}. A classification line must not name an output that a strategy names, and it must name only outputs of gated domains.
+\end{requirement}
+\begin{information}
+The classes are \code{payload}, \code{slave_response} and \code{observability}. The \code{slave_response} outputs of \code{u_cpu} and \code{u_gpu} are not clamped. With a supply that is really removed, these outputs would drive unknown values into always-on logic. The file records this as a known gap. The test removes an output from a classification line. A classification of an isolated output, of an output of no gated domain and an unknown class have a check and no test.
+\end{information}
+
+\begin{requirement}{DS-PWR-028}{Unclamped payload}
+[verify={review}]
+An output must be classified as payload only when a clamped valid signal of the same channel qualifies it.
+\end{requirement}
+\begin{information}
+The checker requires the classification. It does not check the qualification.
+\end{information}
+
+\section{Power states}\label{ds:ch:power-intent:states}
+The power state group \code{SOC_PST} names the settled conditions of the SoC. A state is a settled condition. The transient cycles of a PMU sequence belong to no named state.
+
+\begin{requirement}{DS-PWR-040}{State names and encodings}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_state_encoding_mismatch_fails; test:tb/tests/test_check_upf.py::test_unknown_state_name_fails}]
+The state group must have one state for each mode of the PMU, with the name of the mode and the value of \code{pmu_mode_req} of the mode, and it must have no other state except \code{SCAN}. The states are NORMAL (00), CPU\_OFF (01), GPU\_OFF (10) and IDLE (11).
+\end{requirement}
+\begin{information}
+The checker reads the modes from the text of \src{rtl/soc/pmu.sv}. \Cref{ds:ch:mod-power-management} states the modes of the PMU.
+\end{information}
+
+\begin{requirement}{DS-PWR-041}{Rail states of the modes}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_state_rail_mismatch_fails}]
+In each state that is a PMU mode, \code{SS_CPU} and \code{SS_GPU} must be ON when the target of the domain in that mode is on and OFF when it is off, and \code{SS_AON} must be ON.
+\end{requirement}
+\begin{information}
+The targets are the values of \code{dom_target_on} in the text of \code{pmu.sv}. \reqref{DS-PMU-020} states them for the PMU.
+\end{information}
+
+\begin{requirement}{DS-PWR-042}{Functional states exclude scan}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_scan_must_be_exclusive_with_functional_states}]
+Each state that is a PMU mode must require \code{scan_mode_i == 1'b0}.
+\end{requirement}
+
+\begin{requirement}{DS-PWR-043}{The state SCAN}
+[verify={check:tools/verif/check_upf.py; review}]
+The state \code{SCAN} must require \code{scan_mode_i == 1'b1}, must have every supply set ON, and must not depend on \code{pmu_mode_req}.
+\end{requirement}
+\begin{information}
+The checker checks the state \code{SCAN} and the clock gates (\reqref{DS-PWR-044}) only when the state exists. A file without the state \code{SCAN} passes. A reviewer checks that the state is present.
+\end{information}
+
+\begin{requirement}{DS-PWR-044}{Clock gates open in scan}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_scan_state_claim_is_checked_against_rtl}]
+In the state \code{SCAN}, the test enable of each top-level clock gate of \code{soc_top} must be the net \code{dft_test_en}, which is the output \code{test_en_o} of \code{u_dft_ctrl}.
+\end{requirement}
+\begin{information}
+The checker reads the test enable of each gate from the facts file. It also requires the assignment \code{assign test_en_o = scan_mode_i} in the text of \src{rtl/soc/dft/dft_ctrl_ports.sv}. It does not read \src{rtl/soc/dft/dft_ctrl.sv}. In \code{dft_ctrl}, \code{test_en_o} is the OR of the test enable of \code{dft_ctrl_ports} and the scan mode of the JTAG TAP. So \code{scan_mode_i} high opens the gates. The TAP can also open them while \code{scan_mode_i} is low, and the state \code{SCAN} does not describe that case. The test of the checker changes the gate connection in the facts. No test changes the assignment in \code{dft_ctrl_ports.sv}. \reqref{DS-PMU-108} states the connection for the clock gates. This rule states that the state \code{SCAN} of the file depends on it. The state \code{SCAN} does not match the RTL in two points. The PMU is not overridden in scan mode, and the clamps do not depend on \code{scan_mode_i}. A clamp can be active during a scan. No rule removes this limit. \reqref{DS-PMU-107} and \reqref{DS-PMU-108} state what the RTL does in scan mode, and \cref{tm:pd:phase5-soc-upf} lists the limit.
+\end{information}
+
+\begin{requirement}{DS-PWR-045}{States of the supply sets}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_off_state_without_off_port_state_fails}]
+Each supply set must have a power state. \code{SS_AON} must have the state ON. \code{SS_CPU} and \code{SS_GPU} must have the states ON and OFF. A supply set must have an OFF state exactly when its power port has an OFF port state.
+\end{requirement}
+\begin{information}
+The checker looks for the text OFF in the state expressions of a supply set. It does not parse the expressions. The test removes the OFF port state of \code{VDD_GPU}. A rail with an OFF port state and no OFF power state, and a supply set without a power state, have a check and no test.
+\end{information}
+
+\section{Switches and retention}\label{ds:ch:power-intent:switches}
+The RTL has no power switch and no retention cell. The PMU drives retention pulses, and \code{soc_top} uses none of them.
+
+\begin{requirement}{DS-PWR-060}{No retention}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_retention_is_refused}]
+The power intent must not declare retention.
+\end{requirement}
+\begin{information}
+The checker refuses the commands \code{set_retention}, \code{set_retention_control} and \code{map_retention_cell}.
+\end{information}
+
+\begin{requirement}{DS-PWR-061}{No power switch}
+[verify={review}]
+The power intent must not declare a power switch.
+\end{requirement}
+\begin{information}
+The PMU has no output that controls a switch. The checker accepts a switch command when its options are known, its domain and supply nets exist, it has a control port and its control net is in the facts file. It does not report a supply net that has both a supply port and a switch as source. A check cannot find a switch that someone adds with an existing control net. A reviewer finds it. \Cref{tm:pd:phase5-soc-upf} shows the form of a switch for a later change that adds the control.
+\end{information}
+
+\begin{requirement}{DS-PWR-062}{No cell mapping and no level shifter}
+[verify={check:tools/verif/check_upf.py}]
+The power intent must not map isolation cells and must not declare a level shifter.
+\end{requirement}
+\begin{information}
+The clamps are ordinary logic and the file has one nominal supply voltage. The checker refuses the commands \code{map_isolation_cell} and \code{set_level_shifter}. No test in the test file of the checker uses them.
+\end{information}
+
+\section{The file and its checker}\label{ds:ch:power-intent:file}
+
+\begin{requirement}{DS-PWR-080}{Facts file equals the RTL}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_facts_file_matches_fresh_elaboration}]
+The facts file must equal the file that a new elaboration of \code{soc_top} gives for both arms.
+\end{requirement}
+\begin{information}
+The command \code{check_upf.py gen-facts --check} compares the two files. The test skips when \code{pyslang} is not installed, and a skip is not a pass. The command and the test find the file list by a path relative to the working directory. Run them from the root of the repository. From another directory they stop with an error.
+\end{information}
+
+\begin{requirement}{DS-PWR-081}{Version and commands}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_wrong_upf_version_fails; test:tb/tests/test_check_upf.py::test_unknown_option_and_command_fail; test:tb/tests/test_check_upf.py::test_committed_upf_is_clean}]
+The file must state UPF version 3.0 and the design top \code{soc_top}, and it must use only commands and options that the checker knows.
+\end{requirement}
+
+\begin{requirement}{DS-PWR-082}{Both arms}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_rtl_clamp_added_without_upf_fails; test:tb/tests/test_check_upf.py::test_rtl_clamp_removed_fails}]
+The power intent must hold for both arms of the facts file.
+\end{requirement}
+\begin{information}
+The two arms use different defines. The facts file records them. The arm \code{asap7} defines \code{SRAM_ASAP7}, \code{USE_ICG_CELL} and \code{__pnr__}. The arm \code{sky130} defines \code{SRAM_SKY130} and \code{__pnr__}. The Sky130 netlist flow of \src{pnr/Makefile} also defines \code{USE_SKY130_CLKCELLS}, which the arm does not define.
+\end{information}
+
+\begin{requirement}{DS-PWR-083}{References exist}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_missing_instance_fails; test:tb/tests/test_check_upf.py::test_unresolved_net_in_facts_fails}]
+Each instance path and each design net that the file names must exist in the elaborated \code{soc_top}.
+\end{requirement}
+
+\begin{requirement}{DS-PWR-084}{Form of the directive lines}
+[verify={check:tools/docs/check_pinned_text.py; test:tb/tests/test_docs_check_pinned_text.py::test_upf_directive_lines_must_parse; review}]
+Each comment line of the file that starts with the words \code{upf-check} must have the form that the checker reads.
+\end{requirement}
+\begin{information}
+The checker reads a line whose kind word is wrong as a comment. It then reports a missing roster entry or a missing classification, and not the wrong word. The pinned-text check reports a line that starts with the word \code{upf-check} and does not have the kind \code{aon} or \code{unclamped}. Neither check reports a line in which the word \code{upf-check} itself is misspelled. A reviewer checks this part. A change of the words of a directive line is a change of the power intent.
+\end{information}
+
+\section{Architecture decisions}\label{ds:ch:power-intent:decisions}
+Each subsection gives the decision, the alternative that the team rejected, and what the decision means for the user.
+
+\subsection{The power intent follows the RTL}\label{ds:ch:power-intent:dec-follow}
+\textbf{Decision.} The isolation strategies name exactly the outputs that \code{soc_top} clamps. A checker enforces the equality.
+
+\textbf{Alternative rejected.} A strategy for each output of the domain. An earlier version of the file did this, and its clamps did not match the RTL, which clamps only handshake signals. A file that no tool read also drifted from the RTL without notice.
+
+\textbf{Consequence for the user.} A change of a clamp, of an output of \code{u_cpu} or \code{u_gpu}, or of a top-level instance fails the drift check of the facts file until the facts file is regenerated, and then fails the checker until the file follows. \Cref{um:ch:power-integration:upf} tells what to do.
+
+\subsection{Supply ports and no power switch}\label{ds:ch:power-intent:dec-switch}
+\textbf{Decision.} The file models \code{VDD_CPU} and \code{VDD_GPU} as supply ports with an OFF port state. It declares no power switch.
+
+\textbf{Alternative rejected.} A power switch with a control net that the RTL does not have. The PMU has no switch control output, and no net of \code{soc_top} could drive one. An earlier version of the file named such nets.
+
+\textbf{Consequence for the user.} The OFF states are reachable in the file, and every supply net has a source. A flow that reads the file does not see a switch. A real switch needs a control output in the RTL first.
+
+\subsection{A checker that reads a generated facts file}\label{ds:ch:power-intent:dec-facts}
+\textbf{Decision.} A program elaborates the RTL once for each arm and writes the facts file. The checker reads only this file, the text of the power intent and two RTL files as text. The checker needs the standard library only. A second command compares the committed facts file with a new elaboration.
+
+\textbf{Alternative rejected.} A checker that elaborates the RTL on each run. It would need \code{pyslang} at each run of the gate.
+
+\textbf{Consequence for the user.} Regenerate the facts file after each change of a top-level instance, of a port of \code{u_cpu}, \code{u_gpu} or \code{u_sram}, of a clamp, of the test enable of a top-level clock gate, or of a net or instance path that the power intent names. Review the difference (\cref{um:ch:power-integration:upf}). Never edit the facts file by hand.
+
+\section{Requirements and verification}\label{ds:ch:power-intent:map}
+\Cref{tab:ds:req:pwr-map} lists each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review. A reference that starts with \textbf{check} names a program that enforces the rule at each run. The checker proves references and set equalities. It does not prove that any tool accepts the file, and it does not prove that a clamp is enough electrically.
+
+\input{generated/requirements-pwr}
