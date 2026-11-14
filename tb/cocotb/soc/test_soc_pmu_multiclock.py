@@ -27,10 +27,12 @@ Doc: tm:suite:soc-test-soc-pmu-multiclock
 """
 
 import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import cocotb
-from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, with_timeout
+from cocotb.triggers import ClockCycles, FallingEdge, ReadOnly, RisingEdge, with_timeout
+from cocotb.utils import get_sim_time
 
 from common.hier import read_only
 from soc_clocks import start_soc_clocks
@@ -39,6 +41,12 @@ from sram_backdoor import sram_mem
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+_CFW_DIR = Path(__file__).resolve().parent / "pmu_cycle_fw"
+if str(_CFW_DIR) not in sys.path:
+    sys.path.insert(0, str(_CFW_DIR))
+
+import gen_pmu_confirm_fw as cfw  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Module-level task handle tracking (coroutine leakage guard, matching every
@@ -468,3 +476,680 @@ async def _pmu_live_cycle_body(dut) -> None:
 @cocotb.test()
 async def test_pmu_live_power_cycle(dut):
     await with_timeout(_pmu_live_cycle_body(dut), 400, "us")
+
+
+# =============================================================================
+# Directed confirmation of two reviewed behaviours (P2 and P3, SoC level).
+# Doc: ds:mod:pmu
+#
+# A review read these behaviours from the RTL and no simulation had shown them:
+#   P2  The CPU clock runs while the CPU clamp is active, at the start of a power-down and at the
+#       end of a power-up. A bus handshake that u_cpu completes in such an edge does not reach
+#       u_cpu_axi_cdc: the clamp holds the valid and ready outputs of u_cpu at 0, not its inputs
+#       (DS-PMU-100, DS-PMU-182, DS-PMU-183).
+#   P3  A register access to the GPU control slave while the GPU domain is off does not end
+#       (DS-PMU-185). The slave takes the address and never answers.
+# The RTL is not changed. Each test that asserts the specified behaviour is marked expect_fail: it
+# must fail while the behaviour exists. If one of them passes, the review was wrong or the RTL
+# changed. Then replace it by a normal test that proves the rule. A harness fault raises
+# RuntimeError, not AssertionError, so expect_fail cannot hide it. Each expect_fail test has a
+# normal companion test that proves the checker and the stimulus. The firmware images are built in
+# the test process (pmu_cycle_fw/gen_pmu_confirm_fw.py), so no binary is committed.
+# =============================================================================
+
+# CPU clock periods: equal to the fabric, faster, three times slower.
+CONFIRM_RATIOS = (FABRIC_PERIOD_NS, CPU_PERIOD_NS, 3 * FABRIC_PERIOD_NS)
+CONFIRM_ROM_CLEAR_WORDS = 64
+CONFIRM_SETTLE_FABRIC = 40
+CONFIRM_SETTLE_CPU = 8
+CHANNELS = ("aw", "w", "ar", "b", "r")
+GPU_WINDOW_PAGE = cfw.GPU_BASE >> 12
+
+
+def _now_ns() -> int:
+    return int(round(get_sim_time("ns")))
+
+
+async def _confirm_reset_and_rom(dut, cpu_ns: int, words: list) -> None:
+    """Clocks, idle inputs, both resets asserted, ROM image loaded. The resets stay asserted."""
+    _kill_active_tasks()
+    clk_task, cpu_clk_task = start_soc_clocks(dut, FABRIC_PERIOD_NS, cpu_period_ns=cpu_ns)
+    _active_tasks.extend([clk_task, cpu_clk_task])
+    dut.rst_n_i.value = 0
+    dut.cpu_rst_n_i.value = 0
+    dut.apb_paddr_i.value = 0
+    dut.apb_psel_i.value = 0
+    dut.apb_penable_i.value = 0
+    dut.apb_pwrite_i.value = 0
+    dut.apb_pwdata_i.value = 0
+    dut.uart_rx_i.value = 1
+    dut.spi_miso_i.value = 0
+    dut.gpio_in_i.value = 0
+    dut.i2c_scl_i.value = 1
+    dut.i2c_sda_i.value = 1
+    mem = dut.u_soc.u_boot_rom.mem
+    for i in range(CONFIRM_ROM_CLEAR_WORDS):
+        mem[i].value = 0
+    _load_rom(dut, words)
+    await ClockCycles(dut.clk_i, 6)
+    await ClockCycles(dut.cpu_clk_i, 6)
+
+
+async def _confirm_release(dut) -> None:
+    """Release both resets and wait for the PLL stub lock and the synchroniser fill."""
+    dut.rst_n_i.value = 1
+    dut.cpu_rst_n_i.value = 1
+    await ClockCycles(dut.clk_i, 60)
+    await ClockCycles(dut.cpu_clk_i, 60)
+
+
+async def _confirm_set_mode(dut, mode: int) -> None:
+    """Backdoor write of PMU CTRL, the cell that a bus write to 0x2000_8000 reaches."""
+    await RisingEdge(dut.clk_i)
+    dut.u_soc.u_pmu.u_regbank.regs[0].value = mode
+    await ReadOnly()
+
+
+async def _confirm_settle(dut) -> None:
+    await ClockCycles(dut.clk_i, CONFIRM_SETTLE_FABRIC)
+    await ClockCycles(dut.cpu_clk_i, CONFIRM_SETTLE_CPU)
+
+
+# --- P2. Handshakes of u_cpu while the clamp is active ------------------------------------------
+
+P2_MAX_POINTS = 16          # most trigger offsets per clock ratio in the sweep
+P2_WARMUP_READS = 3         # PMU STATUS reads of the noisy loop before the trigger
+P2_PERIOD_READS = 6         # reads used to measure the period of the noisy loop
+P2_QUIET_SETTLE_CPU_CYCLES = 400
+P2_QUIET_MIN_CPU_CYCLES = 150
+P2_POST_CPU_CYCLES = 300
+P2_QUIET_OFFSETS = (0, 1, 2, 3)
+_P2_CACHE: dict = {}
+
+
+class _ClampMonitor:
+    """Passive monitor of the bus edges of u_cpu. It never drives a signal.
+
+    At each falling edge of cpu_clk_i it records the nets that the next rising edge acts on, so the
+    record is the state before the edge. At the rising edge it checks that cpu_gated_clk pulsed.
+    The monitor reads nets of u_cpu, u_cpu_axi_cdc and the clamp, and no value of a helper of this
+    file. Per epoch it counts the gated edges, the gated edges with the clamp active
+    (pmu_cpu_iso_en_sync high before the edge) and the handshakes of u_cpu on each channel. A
+    handshake of u_cpu is raw valid with ready on AW, W and AR, and raw ready with valid on B and R.
+    `lost` counts the handshakes at edges with the clamp active: the bridge sees valid and ready
+    of u_cpu as 0 there, so it does not see the handshake.
+    """
+
+    def __init__(self, dut) -> None:
+        self.dut = dut
+        self.epoch = "boot"
+        self.edges: dict = defaultdict(int)
+        self.clamped: dict = defaultdict(int)
+        self.hs: dict = defaultdict(lambda: dict.fromkeys(CHANNELS, 0))
+        self.lost: dict = defaultdict(lambda: dict.fromkeys(CHANNELS, 0))
+        self.ar_log: list = []
+        self.last_hs_ns = None
+        self.pcs: dict = defaultdict(set)
+        self._task = None
+
+    def start(self):
+        self._task = cocotb.start_soon(self._run())
+        _active_tasks.append(self._task)
+        return self
+
+    def stop(self) -> None:
+        if self._task is not None:
+            self._task.kill()
+            self._task = None
+
+    def _snap(self) -> tuple:
+        s = self.dut.u_soc
+        return (
+            int(s.pmu_cpu_iso_en_sync.value),
+            int(s.cpu_axi_awvalid_raw.value) & int(s.cpu_bridge_s_awready.value),
+            int(s.cpu_axi_wvalid_raw.value) & int(s.cpu_bridge_s_wready.value),
+            int(s.cpu_axi_arvalid_raw.value) & int(s.cpu_bridge_s_arready.value),
+            int(s.cpu_axi_bready_raw.value) & int(s.cpu_bridge_s_bvalid.value),
+            int(s.cpu_axi_rready_raw.value) & int(s.cpu_bridge_s_rvalid.value),
+            int(s.cpu_bridge_s_araddr.value),
+        )
+
+    async def _run(self) -> None:
+        s = self.dut.u_soc
+        clk = self.dut.cpu_clk_i
+        while True:
+            await FallingEdge(clk)
+            await ReadOnly()
+            pre = self._snap()
+            await RisingEdge(clk)
+            await ReadOnly()
+            if not int(s.cpu_gated_clk.value):
+                continue
+            self._edge(pre)
+            if int(s.cpu_commit_valid_raw.value):
+                self.pcs[self.epoch].add(int(self.dut.commit_pc_o.value))
+
+    def _edge(self, pre: tuple) -> None:
+        iso = pre[0]
+        ep = self.epoch
+        now = _now_ns()
+        self.edges[ep] += 1
+        if iso:
+            self.clamped[ep] += 1
+        for name, val in zip(CHANNELS, pre[1:6]):
+            if val:
+                self.hs[ep][name] += 1
+                self.last_hs_ns = now
+                if iso:
+                    self.lost[ep][name] += 1
+        if pre[3]:
+            self.ar_log.append((now, pre[6]))
+
+    def status_reads(self) -> list:
+        return [t for t, addr in self.ar_log if addr == cfw.PMU_BASE + cfw.PMU_STATUS]
+
+
+async def _wait_status_reads(dut, mon, count: int, limit: int = 4000) -> None:
+    for _ in range(limit):
+        if len(mon.status_reads()) >= count:
+            return
+        await RisingEdge(dut.clk_i)
+    raise RuntimeError(
+        f"harness: {len(mon.status_reads())} PMU STATUS reads of the CPU in {limit} fabric cycles, "
+        f"{count} needed")
+
+
+async def _p2_period(dut, cpu_ns: int) -> int:
+    """Period of the noisy loop in cpu_clk_i cycles: the median gap between its STATUS reads."""
+    words, _labels = cfw.noisy_image()
+    await _confirm_reset_and_rom(dut, cpu_ns, words)
+    mon = _ClampMonitor(dut).start()
+    mon.epoch = "pre"
+    await _confirm_release(dut)
+    await _wait_status_reads(dut, mon, P2_PERIOD_READS)
+    mon.stop()
+    times = mon.status_reads()
+    gaps = sorted(b - a for a, b in zip(times, times[1:]))
+    period = max(1, round(gaps[len(gaps) // 2] / cpu_ns))
+    if period < 2:
+        raise RuntimeError(f"harness: noisy loop period of {period} cpu cycles is implausible")
+    return period
+
+
+async def _p2_experiment(dut, cpu_ns: int, fw: str, off: int) -> dict:
+    """One power cycle of the CPU domain while the CPU runs image fw ("noisy" or "quiet").
+
+    The request goes in `off` cpu_clk_i cycles after the third PMU STATUS read of the noisy loop,
+    or after a fixed settle time plus `off` for the quiet image."""
+    words, labels = cfw.noisy_image() if fw == "noisy" else cfw.quiet_image()
+    await _confirm_reset_and_rom(dut, cpu_ns, words)
+    mon = _ClampMonitor(dut).start()
+    mon.epoch = "pre"
+    await _confirm_release(dut)
+    if fw == "noisy":
+        await _wait_status_reads(dut, mon, P2_WARMUP_READS)
+        if off:
+            await ClockCycles(dut.cpu_clk_i, off)
+    else:
+        await ClockCycles(dut.cpu_clk_i, P2_QUIET_SETTLE_CPU_CYCLES + off)
+    t_request = _now_ns()
+    quiet_ns = None if mon.last_hs_ns is None else t_request - mon.last_hs_ns
+    mon.epoch = "down"
+    await _confirm_set_mode(dut, MODE_CPU_OFF)
+    await _wait_for_dom_state(dut, {DOM_OFF}, 4000, "p2 power-down")
+    await _confirm_settle(dut)
+    mon.epoch = "up"
+    await _confirm_set_mode(dut, MODE_NORMAL)
+    await _wait_for_dom_state(dut, {DOM_ON}, 4000, "p2 power-up")
+    await _confirm_settle(dut)
+    mon.epoch = "post"
+    await ClockCycles(dut.cpu_clk_i, P2_POST_CPU_CYCLES)
+    mon.stop()
+    return {
+        "cpu_ns": cpu_ns,
+        "fw": fw,
+        "off": off,
+        "clamped": {ep: mon.clamped[ep] for ep in ("down", "up")},
+        "edges": {ep: mon.edges[ep] for ep in ("down", "up", "post")},
+        "lost": {ep: dict(mon.lost[ep]) for ep in ("down", "up")},
+        "hs": {ep: dict(mon.hs[ep]) for ep in ("pre", "down", "up", "post")},
+        "quiet_ns": quiet_ns,
+        "pcs": {ep: set(mon.pcs[ep]) for ep in ("pre", "post")},
+        "loop_pc": labels.get("QUIET_LOOP"),
+    }
+
+
+def _lost_total(row: dict) -> int:
+    return sum(sum(row["lost"][ep].values()) for ep in ("down", "up"))
+
+
+def _fmt_p2(row: dict) -> str:
+    lost = {ep: {k: v for k, v in row["lost"][ep].items() if v} for ep in ("down", "up")}
+    return (
+        f"cpu={row['cpu_ns']}ns off={row['off']} clamped edges down/up="
+        f"{row['clamped']['down']}/{row['clamped']['up']} lost down={lost['down']} "
+        f"up={lost['up']} ar after power-up={row['hs']['post']['ar']}"
+    )
+
+
+async def _p2_sweep(dut) -> dict:
+    """Noisy image, trigger offsets over one loop period, at every clock ratio. Cached."""
+    if "noisy" not in _P2_CACHE:
+        out: dict = {}
+        for cpu_ns in CONFIRM_RATIOS:
+            period = await _p2_period(dut, cpu_ns)
+            step = max(2, -(-period // P2_MAX_POINTS))
+            rows = []
+            for off in range(0, period, step):
+                rows.append(await _p2_experiment(dut, cpu_ns, "noisy", off))
+            out[cpu_ns] = {"period": period, "step": step, "rows": rows}
+            dut._log.info(f"P2 noisy cpu={cpu_ns}ns loop period {period} cpu cycles, step {step}")
+            for row in rows:
+                dut._log.info("  " + _fmt_p2(row))
+        _P2_CACHE["noisy"] = out
+    return _P2_CACHE["noisy"]
+
+
+@cocotb.test(expect_fail=True)
+async def test_p2_no_cpu_handshake_while_clamp_active(dut):
+    """Asserts: no handshake of u_cpu completes at a gated edge while the clamp control in the CPU
+    domain is active, because the bridge does not see such a handshake (DS-PMU-100, DS-PMU-182).
+    Stimulus: the CPU reads PMU STATUS in a loop, so every pass is one AXI read. The power-down and
+    the power-up are requested at offsets over one loop period, at three clock ratios.
+
+    expect_fail: the review reads that the clock runs for some edges with the clamp active and
+    that u_cpu sees ready and valid inputs that the clamp does not hold. The failure message lists
+    the points. If this test passes, the reading was wrong or the RTL changed."""
+    sweep = await with_timeout(_p2_sweep(dut), 6000, "us")
+    bad = [row for entry in sweep.values() for row in entry["rows"] if _lost_total(row)]
+    total = sum(len(entry["rows"]) for entry in sweep.values())
+    assert not bad, (
+        f"{len(bad)} of {total} point(s) had a handshake of u_cpu at a gated edge with the clamp "
+        "active, which the bridge does not see: " + "; ".join(_fmt_p2(r) for r in bad[:6])
+    )
+
+
+@cocotb.test()
+async def test_p2_control_clamp_window_reached(dut):
+    """Proves the stimulus of the P2 test reaches the window. At 1:1 and with the CPU faster, some
+    trigger offset has at least one gated edge with the clamp active in the power-down and in the
+    power-up. The counts at every ratio are logged. At 3x slower the count can be 0 by phase, so it
+    is logged and not asserted. The hand derivation at 1:1 gives four and two edges."""
+    sweep = await with_timeout(_p2_sweep(dut), 6000, "us")
+    for cpu_ns, entry in sweep.items():
+        down = [r["clamped"]["down"] for r in entry["rows"]]
+        up = [r["clamped"]["up"] for r in entry["rows"]]
+        reads = [r["hs"]["pre"]["ar"] for r in entry["rows"]]
+        dut._log.info(
+            f"P2 window cpu={cpu_ns}ns: clamped edges in the power-down {min(down)}..{max(down)}, "
+            f"in the power-up {min(up)}..{max(up)} (hand derivation at 1:1: 4 and 2)")
+        assert all(n > 0 for n in reads), f"cpu={cpu_ns}ns: no CPU read before a trigger"
+        if cpu_ns <= FABRIC_PERIOD_NS:
+            assert max(down) >= 1, f"cpu={cpu_ns}ns: no clamped gated edge at power-down"
+            assert max(up) >= 1, f"cpu={cpu_ns}ns: no clamped gated edge at power-up"
+
+
+@cocotb.test()
+async def test_p2_control_quiet_firmware_loses_no_handshake(dut):
+    """Software that follows the stop-traffic rule (DS-PMU-183): the CPU runs register instructions
+    only, and the request goes in when no handshake has happened for a long time. Then no handshake
+    of u_cpu falls in the power-down or the power-up, at three clock ratios and four alignments.
+    The clamp window exists at these runs (see the control above). The CPU runs its loop before and
+    after the power cycle, which shows that it is alive and resumed."""
+
+    async def body():
+        rows = []
+        for cpu_ns in CONFIRM_RATIOS:
+            for off in P2_QUIET_OFFSETS:
+                rows.append(await _p2_experiment(dut, cpu_ns, "quiet", off))
+        return rows
+
+    rows = await with_timeout(body(), 3000, "us")
+    for row in rows:
+        tag = f"cpu={row['cpu_ns']}ns off={row['off']}"
+        min_quiet_ns = P2_QUIET_MIN_CPU_CYCLES * row["cpu_ns"]
+        if row["loop_pc"] not in row["pcs"]["pre"]:
+            raise RuntimeError(f"harness: {tag}: the quiet loop did not run before the request")
+        if row["quiet_ns"] is not None and row["quiet_ns"] < min_quiet_ns:
+            raise RuntimeError(
+                f"harness: {tag}: bus traffic {row['quiet_ns']}ns before the request")
+        assert _lost_total(row) == 0, f"{tag}: a handshake fell in a clamp window: {_fmt_p2(row)}"
+        for ep in ("down", "up"):
+            assert not any(row["hs"][ep].values()), (
+                f"{tag}: bus traffic in the {ep} epoch: {row['hs'][ep]}")
+        assert row["loop_pc"] in row["pcs"]["post"], f"{tag}: no loop commit after the power-up"
+    seen_down = max(r["clamped"]["down"] for r in rows)
+    seen_up = max(r["clamped"]["up"] for r in rows)
+    assert seen_down >= 1 and seen_up >= 1, (
+        f"the clamp window held no gated edge (down {seen_down}, up {seen_up}): nothing is proved")
+    dut._log.info(
+        f"P2 quiet: {len(rows)} power cycles, no lost handshake, "
+        f"most clamped edges: down {seen_down}, up {seen_up}")
+
+
+# --- P3. A GPU register access while the GPU domain is off --------------------------------------
+
+P3_BOUND_CYCLES = 4000             # fabric cycles that the access under test may take
+P3_AFTER_POWER_UP_CYCLES = 2000    # fabric cycles observed after the GPU is powered up again
+P3_RESET_LOG_FROM_CYCLE = 20       # skip the first cycles: the flops have not seen a clock yet
+_P3_CACHE: dict = {}
+
+
+class _P3Monitor:
+    """Passive monitor of the GPU control access path. It never drives a signal.
+
+    CPU interface: an AXI scoreboard on the s_* face of u_cpu_axi_cdc, sampled before each gated
+    edge. It follows the requests of u_cpu in order, so a response is matched to its request. A
+    transaction in the GPU window (0x2000_1000 page) is an `op` with the time of its request and of
+    its response. GPU slot: the control slave signals at the interconnect, sampled before each
+    fabric edge, counted per phase. Commits: the commit PC at the marker labels of the image.
+    """
+
+    def __init__(self, dut, labels: dict) -> None:
+        self.dut = dut
+        self.pc_label = {pc: name for name, pc in labels.items()}
+        self.commits: dict = {}
+        self.phase = "on"
+        self.cycle = 0
+        self.phase_start = {"on": 0}
+        self.ops: list = []
+        self._wq: list = []
+        self._rq: list = []
+        self.reset_ready: Counter = Counter()
+        self.slot: dict = defaultdict(lambda: defaultdict(int))
+        self.first: dict = defaultdict(dict)
+        self._tasks: list = []
+
+    def start(self):
+        for coro in (self._run_cpu(), self._run_slot()):
+            task = cocotb.start_soon(coro)
+            self._tasks.append(task)
+            _active_tasks.append(task)
+        return self
+
+    def stop(self) -> None:
+        for task in self._tasks:
+            task.kill()
+        self._tasks = []
+
+    def set_phase(self, name: str) -> None:
+        self.phase = name
+        self.phase_start[name] = self.cycle
+
+    def ops_since(self, t_ns: int) -> list:
+        return [op for op in self.ops if op["t_req"] >= t_ns]
+
+    async def _run_cpu(self) -> None:
+        s = self.dut.u_soc
+        clk = self.dut.cpu_clk_i
+        while True:
+            await FallingEdge(clk)
+            await ReadOnly()
+            pre = (
+                int(s.cpu_bridge_s_awvalid.value) & int(s.cpu_bridge_s_awready.value),
+                int(s.cpu_bridge_s_awaddr.value),
+                int(s.cpu_bridge_s_bvalid.value) & int(s.cpu_bridge_s_bready.value),
+                int(s.cpu_bridge_s_arvalid.value) & int(s.cpu_bridge_s_arready.value),
+                int(s.cpu_bridge_s_araddr.value),
+                int(s.cpu_bridge_s_arlen.value),
+                int(s.cpu_bridge_s_rvalid.value) & int(s.cpu_bridge_s_rready.value),
+                int(s.cpu_bridge_s_rdata.value),
+                int(s.cpu_bridge_s_rlast.value),
+            )
+            await RisingEdge(clk)
+            await ReadOnly()
+            if not int(s.cpu_gated_clk.value):
+                continue
+            now = _now_ns()
+            self._scoreboard(pre, now)
+            if int(self.dut.commit_valid_o.value):
+                name = self.pc_label.get(int(self.dut.commit_pc_o.value))
+                if name is not None and name not in self.commits:
+                    self.commits[name] = now
+
+    def _scoreboard(self, pre: tuple, now: int) -> None:
+        aw, awaddr, bh, ar, araddr, arlen, rh, rdata, rlast = pre
+        if aw:
+            op = None
+            if awaddr >> 12 == GPU_WINDOW_PAGE:
+                op = {"kind": "write", "addr": awaddr, "t_req": now, "t_resp": None, "data": None}
+                self.ops.append(op)
+            self._wq.append(op)
+        if bh and self._wq:
+            op = self._wq.pop(0)
+            if op is not None:
+                op["t_resp"] = now
+        if ar:
+            op = None
+            if araddr >> 12 == GPU_WINDOW_PAGE:
+                op = {"kind": "read", "addr": araddr, "t_req": now, "t_resp": None, "data": None}
+                self.ops.append(op)
+            self._rq.append([op, arlen + 1])
+        if rh and self._rq:
+            head = self._rq[0]
+            if head[0] is not None and head[0]["data"] is None:
+                head[0]["data"] = rdata
+            head[1] -= 1
+            if rlast or head[1] <= 0:
+                self._rq.pop(0)
+                if head[0] is not None:
+                    head[0]["t_resp"] = now
+
+    async def _run_slot(self) -> None:
+        s = self.dut.u_soc
+        while True:
+            await FallingEdge(self.dut.clk_i)
+            await ReadOnly()
+            self.cycle += 1
+            rst_n = int(s.gpu_domain_rst_n.value)
+            v = {
+                "aw": int(s.bus_axil_gpu_awvalid.value), "awr": int(s.bus_axil_gpu_awready.value),
+                "w": int(s.bus_axil_gpu_wvalid.value), "wr": int(s.bus_axil_gpu_wready.value),
+                "ar": int(s.bus_axil_gpu_arvalid.value), "arr": int(s.bus_axil_gpu_arready.value),
+                "b": int(s.bus_axil_gpu_bvalid.value), "r": int(s.bus_axil_gpu_rvalid.value),
+            }
+            if not rst_n and self.cycle > P3_RESET_LOG_FROM_CYCLE:
+                self.reset_ready[(v["awr"], v["wr"], v["arr"], v["r"], v["b"])] += 1
+            counts = self.slot[self.phase]
+            rel = self.cycle - self.phase_start[self.phase]
+            for key, on in (
+                ("aw_valid", v["aw"]), ("aw_hs", v["aw"] and v["awr"]),
+                ("w_valid", v["w"]), ("w_hs", v["w"] and v["wr"]),
+                ("ar_valid", v["ar"]), ("ar_hs", v["ar"] and v["arr"]),
+                ("b_valid", v["b"]), ("r_valid", v["r"]),
+            ):
+                if on:
+                    counts[key] += 1
+                    self.first[self.phase].setdefault(key, rel)
+
+
+async def _wait_marker(dut, mon, name: str, limit: int) -> bool:
+    for _ in range(limit):
+        if name in mon.commits:
+            return True
+        await RisingEdge(dut.clk_i)
+    return name in mon.commits
+
+
+def _p3_op_summary(op) -> dict:
+    if op is None:
+        return {"issued": False}
+    return {
+        "issued": True,
+        "t_req": op["t_req"],
+        "completed": op["t_resp"] is not None,
+        "cycles": None if op["t_resp"] is None
+        else round((op["t_resp"] - op["t_req"]) / FABRIC_PERIOD_NS),
+        "data": op["data"],
+    }
+
+
+async def _p3_poll_op(dut, mon, t_begin: int, limit: int):
+    """Poll up to `limit` fabric cycles for the response of the first GPU op since t_begin."""
+    for cyc in range(limit):
+        await RisingEdge(dut.clk_i)
+        ops = mon.ops_since(t_begin)
+        if ops and ops[0]["t_resp"] is not None:
+            return cyc + 1
+    return limit
+
+
+async def _p3_experiment(dut, cpu_ns: int, kind: str) -> dict:
+    words, labels = cfw.gpu_access_image(kind)
+    await _confirm_reset_and_rom(dut, cpu_ns, words)
+    mon = _P3Monitor(dut, labels).start()
+    await _confirm_release(dut)
+    row: dict = {"cpu_ns": cpu_ns, "kind": kind, "aborted": None}
+    if not await _wait_marker(dut, mon, "ON_ACCESS_DONE", P3_BOUND_CYCLES):
+        mon.stop()
+        row["aborted"] = "the access with the GPU on did not complete"
+        row["on_done"] = False
+        row["on_ops"] = [_p3_op_summary(op) for op in mon.ops]
+        return row
+    row["on_done"] = True
+    if not await _wait_marker(dut, mon, "ACCESS_BEGIN", P3_BOUND_CYCLES):
+        mon.stop()
+        row["aborted"] = "the firmware did not reach the access with the GPU off"
+        return row
+    if int(dut.u_soc.gpu_domain_rst_n.value) != 0:
+        mon.stop()
+        row["aborted"] = "the GPU domain reset is not asserted at the access"
+        return row
+    t_begin = mon.commits["ACCESS_BEGIN"]
+    row["fail_seen"] = "FAIL" in mon.commits
+    row["on_ops"] = [_p3_op_summary(op) for op in mon.ops if op["t_req"] < t_begin]
+    mon.set_phase("off_access")
+    waited = await _p3_poll_op(dut, mon, t_begin, P3_BOUND_CYCLES)
+    ops = mon.ops_since(t_begin)
+    row["off_op"] = _p3_op_summary(ops[0] if ops else None)
+    row["off_waited"] = waited
+    row["off_commits"] = {n: n in mon.commits for n in ("ACCESS_DONE", "NEXT_DONE")}
+    row["off_slot"] = {k: v for k, v in mon.slot["off_access"].items()}
+    row["off_first"] = dict(mon.first["off_access"])
+    mon.set_phase("after_power_up")
+    await _confirm_set_mode(dut, MODE_NORMAL)
+    for _ in range(P3_BOUND_CYCLES):
+        await RisingEdge(dut.clk_i)
+        if int(dut.u_soc.u_pmu.dom_state_q[1].value) == DOM_ON:
+            break
+    else:
+        mon.stop()
+        raise RuntimeError("harness: the GPU domain did not return to DOM_ON")
+    waited_after = await _p3_poll_op(dut, mon, t_begin, P3_AFTER_POWER_UP_CYCLES)
+    ops = mon.ops_since(t_begin)
+    row["after_op"] = _p3_op_summary(ops[0] if ops else None)
+    row["after_waited"] = waited_after
+    row["after_commits"] = {n: n in mon.commits for n in ("ACCESS_DONE", "NEXT_DONE")}
+    row["after_slot"] = {k: v for k, v in mon.slot["after_power_up"].items()}
+    row["reset_ready"] = dict(mon.reset_ready)
+    mon.stop()
+    return row
+
+
+def _p3_describe(row: dict) -> str:
+    tag = f"{row['kind']} cpu={row['cpu_ns']}ns"
+    if row["aborted"]:
+        return f"P3 {tag}: ABORTED: {row['aborted']}"
+    op = row["off_op"]
+    first = row["off_first"]
+    slot = row["off_slot"]
+    if not op["issued"]:
+        cpu_line = "CPU AXI: no request in the GPU window left the CPU"
+    elif op["completed"]:
+        cpu_line = f"CPU AXI: request issued, response after {op['cycles']} fabric cycles"
+    else:
+        cpu_line = (
+            f"CPU AXI: request issued, NO response in {row['off_waited']} fabric cycles")
+    kind_valid = "ar_valid" if row["kind"] == "read" else "aw_valid"
+    kind_hs = "ar_hs" if row["kind"] == "read" else "aw_hs"
+    slot_line = (
+        f"GPU slot: {kind_valid[:2]} valid first at +{first.get(kind_valid)}, accepted "
+        f"(valid and ready) first at +{first.get(kind_hs)}, accepted {slot.get(kind_hs, 0)}x; "
+        f"w valid {slot.get('w_valid', 0)} cycles, w accepted {slot.get('w_hs', 0)}x; "
+        f"b valid {slot.get('b_valid', 0)} cycles; r valid {slot.get('r_valid', 0)} cycles")
+    after = row["after_op"]
+    after_line = (
+        "after GPU power-up: " +
+        ("response arrived" if after.get("completed") else f"still no response in "
+         f"{row['after_waited']} fabric cycles"))
+    ready = ", ".join(
+        f"awready={a} wready={w} arready={ar} rvalid={r} bvalid={b} x{n}"
+        for (a, w, ar, r, b), n in sorted(row["reset_ready"].items()))
+    return (
+        f"P3 {tag}: {cpu_line}; {slot_line}; commits after the access {row['off_commits']}; "
+        f"{after_line}; slave outputs while its reset is asserted: {ready}")
+
+
+async def _p3_sweep(dut) -> list:
+    """Read and write at each clock ratio. Cached for the whole file."""
+    if "rows" not in _P3_CACHE:
+        rows = []
+        for cpu_ns in CONFIRM_RATIOS:
+            for kind in ("read", "write"):
+                row = await _p3_experiment(dut, cpu_ns, kind)
+                rows.append(row)
+                dut._log.info(_p3_describe(row))
+        _P3_CACHE["rows"] = rows
+    return _P3_CACHE["rows"]
+
+
+def _p3_require_reached(rows: list) -> None:
+    for row in rows:
+        if row["aborted"]:
+            raise RuntimeError(f"harness: {row['kind']} cpu={row['cpu_ns']}ns: {row['aborted']}")
+
+
+@cocotb.test(expect_fail=True)
+async def test_p3_gpu_access_while_off_completes_within_bound(dut):
+    """Asserts: a register access to the GPU control slave while the GPU domain is off ends within
+    a long bound, with an error response or defined data (DS-PMU-185). Stimulus: the CPU reads and
+    writes GPU_KERNEL_PC after it has requested GPU_OFF and read STATUS as off, at three clock
+    ratios. The bound is P3_BOUND_CYCLES fabric cycles; the control access takes far fewer.
+
+    expect_fail: the review reads that the slave shows arready=1 and awready=1 while in reset and
+    never answers, so the master waits. If this test passes, the reading was wrong or the RTL
+    changed (an upstream timeout or an error response). The log says what happened at each
+    interface."""
+    rows = await with_timeout(_p3_sweep(dut), 6000, "us")
+    _p3_require_reached(rows)
+    bad = [r for r in rows if not r["off_op"].get("completed")]
+    assert not bad, (
+        f"{len(bad)} of {len(rows)} access(es) did not end within {P3_BOUND_CYCLES} fabric cycles: "
+        + "; ".join(f"{r['kind']} cpu={r['cpu_ns']}ns {r['off_op']}" for r in bad[:6]))
+
+
+@cocotb.test(expect_fail=True)
+async def test_p3_control_slave_ready_low_while_in_reset(dut):
+    """Asserts: while the GPU domain reset is asserted, awready and arready of the control slave
+    are low (AGENTS.md rule 6: a reset value must not advertise availability).
+
+    expect_fail: the review reads awready = ~aw_cap_q and arready = ~ar_cap_q, which are 1 in
+    reset. The values are in the log of every access."""
+    rows = await with_timeout(_p3_sweep(dut), 6000, "us")
+    _p3_require_reached(rows)
+    bad = {}
+    for row in rows:
+        for (awr, _wr, arr, _r, _b), n in row["reset_ready"].items():
+            if awr or arr:
+                bad[(row["kind"], row["cpu_ns"], f"awready={awr} arready={arr}")] = n
+    assert not bad, (
+        "the control slave advertised availability while in reset: "
+        + "; ".join(f"{k[0]} cpu={k[1]}ns {k[2]} for {n} cycles" for k, n in bad.items()))
+
+
+@cocotb.test()
+async def test_p3_control_access_with_gpu_on_completes(dut):
+    """Proves the stimulus and the scoreboard of the P3 tests. With the GPU on, the same image
+    writes GPU_KERNEL_PC and reads it back. Both transactions get a response at the CPU interface,
+    the read returns the value that was written, and the firmware does not reach its FAIL label.
+    The access under test is reached with the GPU domain reset asserted, in every run."""
+    rows = await with_timeout(_p3_sweep(dut), 6000, "us")
+    _p3_require_reached(rows)
+    for row in rows:
+        tag = f"{row['kind']} cpu={row['cpu_ns']}ns"
+        assert row["on_done"], f"{tag}: the access with the GPU on did not complete"
+        assert not row["fail_seen"], f"{tag}: the firmware read back a wrong value"
+        on_ops = row["on_ops"]
+        assert [o["issued"] and o["completed"] for o in on_ops] == [True, True], f"{tag}: {on_ops}"
+        assert on_ops[1]["data"] == cfw.SENTINEL, f"{tag}: read back {on_ops[1]['data']:#x}"
+    dut._log.info(f"P3 control: {len(rows)} runs, GPU on: write and read back complete")
