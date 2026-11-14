@@ -273,6 +273,17 @@ def test_req_and_arc_kinds_pass(tmp_path, capsys) -> None:  # type: ignore[no-un
     assert rc == 0, out
 
 
+def test_caveat_kind_passes_and_unknown_kind_fails(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The kind caveat is in the scheme. A kind outside the scheme is still a finding."""
+    text = GOOD_TM + "\\section{C}\\label{tm:caveat:some-limit}\n\\cref{tm:caveat:some-limit}\n"
+    rc, out = run(tree(tmp_path, {"docs/manual/tm/tm.tex": text}), capsys)
+    assert rc == 0, out
+    bad = GOOD_TM + "\\section{C}\\label{tm:limitation:some-limit}\n"
+    rc, out = run(tree(tmp_path, {"docs/manual/tm/tm.tex": bad}), capsys)
+    assert rc == 1
+    assert any("tm:limitation:some-limit" in ln and "scheme" in ln for ln in out)
+
+
 def test_requirement_defines_derived_label(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
     """A requirement environment defines the label that its ID derives."""
     text = (
