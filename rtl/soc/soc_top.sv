@@ -113,7 +113,7 @@ module soc_top
     output logic        cpu_pll_locked_o,   // 1 when CPU-domain PLL has acquired lock
 
     // DFT test access.
-    // Direct (parallel) scan access; the JTAG TAP of Stage 1b (j41m.3, ports
+    // Direct (parallel) scan access; the JTAG TAP of Stage 1b (ports
     // below) is OR-ed on top by dft_ctrl. Inactive values
     // (functional mode, bit-identical to the pre-DFT design): scan_mode_i=0,
     // scan_en_i=0, scan_rst_ni=1, scan_clk_i=0 (any level; never selected).
@@ -182,7 +182,7 @@ module soc_top
     logic         mbist_wr_ready;
     logic [138:0] mbist_status;
 
-    // MBIST CPU domain (c54a): soc_mbist's holding-register outputs into u_cpu's mbist_* ports, and the
+    // MBIST CPU domain: soc_mbist's holding-register outputs into u_cpu's mbist_* ports, and the
     // macro's 69-bit status block back. With MBIST_CPU = 0 the three outputs of soc_mbist are tied inactive
     // and mb_cpu_status is ignored. mb_cpu_ctl_rst_n is the controller reset of the stand-alone (fabric)
     // instantiation; the macro's controller folds the CPU reset into run, so it has no consumer here.
@@ -242,7 +242,7 @@ module soc_top
     logic core_clk;     // PLL output clock — feeds all child clk ports
     logic core_rst_n;   // gated reset: rst_n_i & pll_locked (from pll_subsystem)
     logic pll_locked;   // raw PLL lock flag — export to top-level port
-    // j41m.2: the reference clock each pll_subsystem actually runs on (clk_i /
+    // The reference clock each pll_subsystem actually runs on (clk_i /
     // cpu_clk_i, or the test clock in scan mode). The APB CDC bridges' destination
     // faces share that reference and must use it, not the raw port.
     logic pll_ref_clk;
@@ -801,7 +801,7 @@ module soc_top
         // Interrupt inputs. They are synchronised into the CPU domain. Both sources are level-held.
         .ext_irq_i                  (ext_irq_cpu_sync),
         .timer_irq_i                (timer_irq_cpu_sync),
-        // DFT (j41m.4). clk_i above is already the test clock in scan mode (dft_clk_mux
+        // DFT. clk_i above is already the test clock in scan mode (dft_clk_mux
         // ahead of u_cpu_cg), cpu_domain_rst_n already equals dft_scan_rst_n in scan mode,
         // so the macro needs only mode/enable/data. dft_scan_en is the TAP-or-pin scan
         // enable from dft_ctrl, NOT the raw scan_en_i port.
@@ -809,7 +809,7 @@ module soc_top
         .scan_en_i                  (dft_scan_en),
         .scan_in_i                  (cpu_scan_in_w),
         .scan_out_o                 (cpu_scan_out_w),
-        // MBIST (c54a, section 16.7): CPU-domain holding register in, 69-bit status block out. Quasi-static
+        // MBIST (section 16.7): CPU-domain holding register in, 69-bit status block out. Quasi-static
         // levels crossing from cpu_core_clk into the gated clk_i of the same source and frequency.
         .mbist_run_i                (mb_cpu_run),
         .mbist_cfg_i                (mb_cpu_cfg),
@@ -1596,9 +1596,9 @@ module soc_top
     ) u_crypto (
         .clk     (core_clk),
         .rst_n   (core_rst_n),
-        // DFT (j41m.2): forces the key_q / rk_q read nets to 0 in scan mode.
+        // DFT: forces the key_q / rk_q read nets to 0 in scan mode.
         .scan_mode_i (dft_scan_mode),
-        // j41m.17: wipe applied -> scan enable may rise (see dft_scan_en above).
+        // Wipe applied -> scan enable may rise (see dft_scan_en above).
         .scan_wipe_done_o (crypto_wipe_done),
         .psel    (apb_psel    [APB_CRYPTO]),
         .penable (apb_penable [APB_CRYPTO]),
@@ -1725,7 +1725,7 @@ module soc_top
         // Reference clock domain — NOT core_clk (see note above)
         .clk_i       (clk_i),
         .rst_n_i     (rst_n_i),
-        // DFT test controls (j41m.2)
+        // DFT test controls
         .scan_mode_i (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
         .scan_clk_i  (dft_test_clk),
@@ -1803,7 +1803,7 @@ module soc_top
         // and NOT cpu_core_clk (see bootstrap-deadlock note above).
         .clk_i       (cpu_clk_i),
         .rst_n_i     (cpu_rst_n_i),
-        // DFT test controls (j41m.2)
+        // DFT test controls
         .scan_mode_i (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
         .scan_clk_i  (dft_test_clk),

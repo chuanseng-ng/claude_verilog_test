@@ -93,7 +93,7 @@ verilator --version
 You can use Vivado simulator (xsim):
 
 ```bash
-make SIM=xcelium  # Cadence Xcelium, not Vivado xsim. See docs/verification/PROPRIETARY_SIM_FLOW.md
+make SIM=xcelium  # Cadence Xcelium, not Vivado xsim. See Doc: um:flow:proprietary-sim
 ```
 
 ## Step 3: Verify Installation

@@ -3,7 +3,7 @@
 LibreLane imports every importable module named ``librelane_plugin_*`` at start-up
 (``librelane/plugins.py``), so putting this directory on ``PYTHONPATH`` registers the steps
 below without touching the shared LibreLane install that every ASAP7 / Sky130 / FreePDK45 flow
-in this repo uses. See docs/SKY130_SLEW_CAP_E45J.md for the measurement that motivates it.
+in this repo uses. See Doc: cr:defect:sky130-slew-cap-e45j for the measurement that motivates it.
 
 What it adds
 ------------

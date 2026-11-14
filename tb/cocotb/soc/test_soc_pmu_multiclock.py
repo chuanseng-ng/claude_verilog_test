@@ -334,6 +334,7 @@ async def _pmu_live_cycle_body(dut) -> None:
     # exactly where it was frozen -- proving architectural state (PC +
     # registers) survived the live, clock-gate-only power cycle intact and
     # the loop resumed on the exact next instruction, not from RESET_PC.
+    # Survival is a property of the model, not a guarantee (DS-PMU-181).
     #
     # Note on DIAG_RESUME_WINDOW_CPU_CLK_CYCLES's
     # size: the loop body's per-iteration CSRW dcache_flush (see
@@ -468,7 +469,7 @@ async def _pmu_live_cycle_body(dut) -> None:
 #
 # This test regression-guards that fix: it must keep PASSING (no
 # expect_fail) to prove a live, firmware-triggered PMU power-cycle of the
-# CPU domain survives with zero architectural-state corruption under a
+# CPU domain keeps its state with zero corruption (a model property, DS-PMU-181) under a
 # genuinely asynchronous CPU/fabric clock ratio. Do not re-add
 # expect_fail=True, and do not "fix" a future regression here by weakening
 # the assertions above -- trace it back to soc_top.sv's u_cpu_axi_cdc

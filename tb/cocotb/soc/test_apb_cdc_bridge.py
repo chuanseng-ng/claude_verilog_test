@@ -58,7 +58,7 @@ def _post_reset_recovery_cycles(dut) -> int:
     SYNC_STAGES_TO_M, read back from the RTL via sync_stages_to_{s,m}_o
     rather than hardcoded a second time -- see tb_apb_cdc_bridge.sv
     header) whose NOMINAL settling latency is STAGES cycles. Under the
-    RAND_CDC_DELAY_EN settling-delay injector (default OFF, not shipped), either
+    RAND_CDC_DELAY_EN settling-delay injector (default OFF, compiled only in simulation), either
     synchroniser can legitimately take one extra cycle. A recovery wait
     pinned to the bare nominal STAGES is exactly-tight against the
     synchroniser's own worst case, not generously tight against it --

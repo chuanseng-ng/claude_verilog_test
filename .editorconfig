@@ -1,6 +1,6 @@
 # EditorConfig — https://editorconfig.org
 # Single source of truth for whitespace/EOL conventions
-# (see docs/development/CODING_GUIDELINES.md).
+# (see Doc: um:guide:coding-guidelines).
 
 root = true
 

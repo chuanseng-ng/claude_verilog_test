@@ -17,9 +17,9 @@ Bug-class note: commit_valid_o and commit_pc_o come from the CPU-domain (cpu_gat
 so every polling loop uses RisingEdge(dut.cpu_clk_i), never dut.clk_i. Backdoor points: see
 soc_top.sv (cpu_bridge_s_*ready, cpu_domain_rst_n, core_rst_n).
 Metastability: a randomised EXTRA SETTLING CYCLE on a synchroniser first stage is modelable in a
-2-state simulator and reproduces the same-edge-assumption bug class. No injector exists today (see
-rtl/soc/cdc/cdc_sync.sv), so these tests characterise the synchronised, deterministic RTL behaviour
-only. Analog metastability is not modelable in cocotb flows.
+2-state simulator and reproduces the same-edge-assumption bug class. The injector exists (see
+rtl/soc/cdc/cdc_sync.sv) and this suite leaves it off. So these tests show the synchronised,
+deterministic RTL behaviour only. Analog metastability is not modelable in cocotb flows.
 Run: make -C tb/cocotb/soc soc_multiclock_reset
 Doc: tm:suite:soc-test-soc-multiclock-reset
 """

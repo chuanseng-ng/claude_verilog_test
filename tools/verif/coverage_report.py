@@ -3,8 +3,8 @@
 
 Why this exists (GH #216, bead nkj7)
 ------------------------------------
-``VERIFICATION_PLAN.md`` sets a >95 % line-coverage exit criterion but, until the
-``soc_coverage`` Makefile target, nothing measured it for the SoC regression
+The verification plan (Doc: ds:ch:verification-plan) sets a >95 % line-coverage exit criterion
+but, until the ``soc_coverage`` Makefile target, nothing measured it for the SoC regression
 (``tb/cocotb/soc`` ``soc_all_ci``).  That target runs the regression instrumented, merges
 every per-simulation ``.dat`` with ``verilator_coverage --write`` and calls this script.
 
@@ -73,7 +73,7 @@ line, or an ordinal anchor's count changed.  ``--gate`` fails on any stale waive
 Exit status
 -----------
 Without ``--gate``: 0 for any coverage level (informational; see
-``docs/verification/SOC_COVERAGE_REPORT.md``).  Nonzero (2) on a missing, malformed or empty
+Doc: tm:flow:soc-coverage-report).  Nonzero (2) on a missing, malformed or empty
 ``.dat``, on a bad waiver or ratchet file, or when no triaged RTL was measured at all: a clean
 exit over no data is never a pass (cf. bead dwp).  With ``--gate``: additionally 1 when any
 triaged module fails the gate (see below).  Exit 2 always means "could not evaluate", never
@@ -1290,10 +1290,10 @@ def render_markdown(report: Report, gate: GateResult | None = None) -> str:
     verdict = (
         "Gate enforced on the triaged trees (and the line floor on the line-only trees "
         "when enabled): see the Gate section below "
-        "(`docs/verification/SOC_COVERAGE_REPORT.md`)."
+        "(Doc: tm:flow:soc-coverage-report)."
         if gate is not None
         else "Informational: no coverage percentage gates "
-        "(see `docs/verification/SOC_COVERAGE_REPORT.md`)."
+        "(see Doc: tm:flow:soc-coverage-report)."
     )
     lines = [
         "# SoC line + toggle coverage",
