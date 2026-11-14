@@ -10,6 +10,8 @@ array set LN {tt sky130_fd_sc_hd__tt_025C_1v80 ss sky130_fd_sc_hd__ss_100C_1v60 
 array set MC {tt nom_tt_025C_1v80 ss nom_ss_100C_1v60 ff nom_ff_n40C_1v95}
 set search_path [list $B]
 set link_path [list * $LN($L).db]
+# register->output-port paths have no set_output_delay, so they are unconstrained; without this get_timing_paths returns nothing (all NA, 2026-11-14)
+set timing_report_unconstrained_paths true
 # macro pin caps (pF) from the SoC's macro Liberty, this corner
 # macro pin caps (pF), extracted from that Liberty by mk_pincap.py (runs/pincap_<lib>.tsv: pin <TAB> capacitance)
 set capof [dict create]

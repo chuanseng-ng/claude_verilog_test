@@ -44,6 +44,13 @@
    "source": "pnr/commercial/constraints/sky130_cpu_iolat_pv.sdc",
    "rule": "md5 of the file"
   },
+  "soc_budget": {
+   "value": "fdbefe240bf1654eca46e82615ecf75b",
+   "unit": "md5",
+   "label": "derived",
+   "source": "pnr/commercial/constraints/sky130_cpu_iolat_pv_soc.sdc",
+   "rule": "md5 of the file"
+  },
   "own:icc2_b6": {
    "value": "44ce62ce6e6075a2110cd5f62a5b4100",
    "unit": "md5",
@@ -4185,6 +4192,362 @@
      }
     },
     "rule": "arm: each arm's own mean register-clock-pin latency; shared: mean of the three arms per corner"
+   },
+   "soc_budget": {
+    "label": "derived",
+    "source": [
+     "pnr/commercial/compare/snapshot/soc_budget/budget_evidence.tsv",
+     "pnr/commercial/compare/snapshot/soc_budget/arrival_tt.tsv",
+     "pnr/commercial/compare/snapshot/soc_budget/arrival_ss.tsv",
+     "pnr/commercial/compare/snapshot/soc_budget/arrival_ff.tsv",
+     "pnr/commercial/compare/snapshot/iolat_pv/iobud_soc.tsv"
+    ],
+    "unit": "ns (set_input_delay -max, after the launching clock edge)",
+    "values": {
+     "tt": {
+      "awready": {
+       "bits": 1,
+       "arrival_ns": 2.1269,
+       "k_arrival_ns": 4.3,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "wready": {
+       "bits": 1,
+       "arrival_ns": 2.1244,
+       "k_arrival_ns": 4.3,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "arready": {
+       "bits": 1,
+       "arrival_ns": 2.3285,
+       "k_arrival_ns": 4.7,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "bresp": {
+       "bits": 2,
+       "arrival_ns": 0.9301,
+       "k_arrival_ns": 1.9,
+       "current_ns": 2.0,
+       "budget_ns": 1.9,
+       "note": "relaxed"
+      },
+      "bvalid": {
+       "bits": 1,
+       "arrival_ns": 0.5856,
+       "k_arrival_ns": 1.2,
+       "current_ns": 2.0,
+       "budget_ns": 1.2,
+       "note": "relaxed"
+      },
+      "rdata": {
+       "bits": 32,
+       "arrival_ns": 3.0667,
+       "k_arrival_ns": 6.2,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rresp": {
+       "bits": 2,
+       "arrival_ns": 2.8069,
+       "k_arrival_ns": 5.7,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rvalid": {
+       "bits": 1,
+       "arrival_ns": 0.8065,
+       "k_arrival_ns": 1.7,
+       "current_ns": 2.0,
+       "budget_ns": 1.7,
+       "note": "relaxed"
+      },
+      "rlast": {
+       "bits": 1,
+       "arrival_ns": 2.8607,
+       "k_arrival_ns": 5.8,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "paddr": {
+       "bits": 12,
+       "arrival_ns": 0.4239,
+       "k_arrival_ns": 0.9,
+       "current_ns": 3.5,
+       "budget_ns": 0.9,
+       "note": "relaxed"
+      },
+      "psel": {
+       "bits": 1,
+       "arrival_ns": 0.925,
+       "k_arrival_ns": 1.9,
+       "current_ns": 3.5,
+       "budget_ns": 1.9,
+       "note": "relaxed"
+      },
+      "penable": {
+       "bits": 1,
+       "arrival_ns": 0.6768,
+       "k_arrival_ns": 1.4,
+       "current_ns": 3.5,
+       "budget_ns": 1.4,
+       "note": "relaxed"
+      },
+      "pwrite": {
+       "bits": 1,
+       "arrival_ns": 0.3869,
+       "k_arrival_ns": 0.8,
+       "current_ns": 3.5,
+       "budget_ns": 0.8,
+       "note": "relaxed"
+      },
+      "pwdata": {
+       "bits": 32,
+       "arrival_ns": 0.3913,
+       "k_arrival_ns": 0.8,
+       "current_ns": 3.5,
+       "budget_ns": 0.8,
+       "note": "relaxed"
+      }
+     },
+     "ss": {
+      "awready": {
+       "bits": 1,
+       "arrival_ns": 4.2352,
+       "k_arrival_ns": 8.5,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "wready": {
+       "bits": 1,
+       "arrival_ns": 4.2304,
+       "k_arrival_ns": 8.5,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "arready": {
+       "bits": 1,
+       "arrival_ns": 4.5668,
+       "k_arrival_ns": 9.2,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "bresp": {
+       "bits": 2,
+       "arrival_ns": 1.8132,
+       "k_arrival_ns": 3.7,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "bvalid": {
+       "bits": 1,
+       "arrival_ns": 1.2915,
+       "k_arrival_ns": 2.6,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rdata": {
+       "bits": 32,
+       "arrival_ns": 5.6959,
+       "k_arrival_ns": 11.4,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rresp": {
+       "bits": 2,
+       "arrival_ns": 5.2971,
+       "k_arrival_ns": 10.6,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rvalid": {
+       "bits": 1,
+       "arrival_ns": 1.7178,
+       "k_arrival_ns": 3.5,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rlast": {
+       "bits": 1,
+       "arrival_ns": 5.3767,
+       "k_arrival_ns": 10.8,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "paddr": {
+       "bits": 12,
+       "arrival_ns": 0.8655,
+       "k_arrival_ns": 1.8,
+       "current_ns": 3.5,
+       "budget_ns": 1.8,
+       "note": "relaxed"
+      },
+      "psel": {
+       "bits": 1,
+       "arrival_ns": 1.7999,
+       "k_arrival_ns": 3.6,
+       "current_ns": 3.5,
+       "budget_ns": 3.5,
+       "note": "kept current (derived >= current)"
+      },
+      "penable": {
+       "bits": 1,
+       "arrival_ns": 1.3082,
+       "k_arrival_ns": 2.7,
+       "current_ns": 3.5,
+       "budget_ns": 2.7,
+       "note": "relaxed"
+      },
+      "pwrite": {
+       "bits": 1,
+       "arrival_ns": 0.8032,
+       "k_arrival_ns": 1.7,
+       "current_ns": 3.5,
+       "budget_ns": 1.7,
+       "note": "relaxed"
+      },
+      "pwdata": {
+       "bits": 32,
+       "arrival_ns": 0.8099,
+       "k_arrival_ns": 1.7,
+       "current_ns": 3.5,
+       "budget_ns": 1.7,
+       "note": "relaxed"
+      }
+     },
+     "ff": {
+      "awready": {
+       "bits": 1,
+       "arrival_ns": 1.2966,
+       "k_arrival_ns": 2.6,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "wready": {
+       "bits": 1,
+       "arrival_ns": 1.2949,
+       "k_arrival_ns": 2.6,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "arready": {
+       "bits": 1,
+       "arrival_ns": 1.4712,
+       "k_arrival_ns": 3.0,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "bresp": {
+       "bits": 2,
+       "arrival_ns": 0.586,
+       "k_arrival_ns": 1.2,
+       "current_ns": 2.0,
+       "budget_ns": 1.2,
+       "note": "relaxed"
+      },
+      "bvalid": {
+       "bits": 1,
+       "arrival_ns": 0.3475,
+       "k_arrival_ns": 0.7,
+       "current_ns": 2.0,
+       "budget_ns": 0.7,
+       "note": "relaxed"
+      },
+      "rdata": {
+       "bits": 32,
+       "arrival_ns": 1.9982,
+       "k_arrival_ns": 4.0,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rresp": {
+       "bits": 2,
+       "arrival_ns": 1.8236,
+       "k_arrival_ns": 3.7,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "rvalid": {
+       "bits": 1,
+       "arrival_ns": 0.5121,
+       "k_arrival_ns": 1.1,
+       "current_ns": 2.0,
+       "budget_ns": 1.1,
+       "note": "relaxed"
+      },
+      "rlast": {
+       "bits": 1,
+       "arrival_ns": 1.867,
+       "k_arrival_ns": 3.8,
+       "current_ns": 2.0,
+       "budget_ns": 2.0,
+       "note": "kept current (derived >= current)"
+      },
+      "paddr": {
+       "bits": 12,
+       "arrival_ns": 0.2748,
+       "k_arrival_ns": 0.6,
+       "current_ns": 3.5,
+       "budget_ns": 0.6,
+       "note": "relaxed"
+      },
+      "psel": {
+       "bits": 1,
+       "arrival_ns": 0.5685,
+       "k_arrival_ns": 1.2,
+       "current_ns": 3.5,
+       "budget_ns": 1.2,
+       "note": "relaxed"
+      },
+      "penable": {
+       "bits": 1,
+       "arrival_ns": 0.4394,
+       "k_arrival_ns": 0.9,
+       "current_ns": 3.5,
+       "budget_ns": 0.9,
+       "note": "relaxed"
+      },
+      "pwrite": {
+       "bits": 1,
+       "arrival_ns": 0.2459,
+       "k_arrival_ns": 0.5,
+       "current_ns": 3.5,
+       "budget_ns": 0.5,
+       "note": "relaxed"
+      },
+      "pwdata": {
+       "bits": 32,
+       "arrival_ns": 0.2489,
+       "k_arrival_ns": 0.5,
+       "current_ns": 3.5,
+       "budget_ns": 0.5,
+       "note": "relaxed"
+      }
+     }
+    },
+    "rule": "budget = min(current SDC delay, ceil_0.1(K * arrival)); arrival = SoC-side driver cells (DC-mapped async_axi_fifo / apb_cdc_bridge) launch edge to macro pin, macro-Liberty pin load, zero wire; K = 2.0; no SoC SPEF on the host"
    }
   },
   "io_violators": {
@@ -15180,6 +15543,409 @@
      "label": "judge",
      "unit": "mW",
      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroad_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 93.10000000000001,
+      "clock_network_mW": 42.8,
+      "register_mW": 2.926,
+      "combinational_mW": 18.3,
+      "memory_mW": 29.1
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "soc_budget": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.397893,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.525697,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52807_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -3.685081,
+       "setup_tns": -1867.829655,
+       "setup_viol": 1649,
+       "hold_wns": 1.344958,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -3.425896,
+       "r2rx_setup_tns": -1178.527619,
+       "r2rx_setup_viol": 987,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_psel_i",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1649,
+         "viol_r2r": 971,
+         "viol_io": 678,
+         "wns_r2r": -3.4259,
+         "wns_io": -3.6851
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.928449,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.24252,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.576636,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.542046,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52807_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -3.400082,
+       "setup_tns": -1235.431444,
+       "setup_viol": 1305,
+       "hold_wns": 1.334896,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -2.777033,
+       "r2rx_setup_tns": -763.768709,
+       "r2rx_setup_viol": 761,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_psel_i",
+       "setup_worst_end": "_49279_/D",
+       "hold_worst_start": "_53707_/CLK",
+       "hold_worst_end": "_53709_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1305,
+         "viol_r2r": 756,
+         "viol_io": 549,
+         "wns_r2r": -2.777,
+         "wns_io": -3.4001
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.066365,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.249573,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.15839,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.495161,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52807_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.326357,
+       "setup_tns": -2901.801493,
+       "setup_viol": 1872,
+       "hold_wns": 1.306305,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.326357,
+       "r2rx_setup_tns": -1859.68343,
+       "r2rx_setup_viol": 1122,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_52681_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1872,
+         "viol_r2r": 1102,
+         "viol_io": 770,
+         "wns_r2r": -4.3264,
+         "wns_io": -4.0428
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.713226,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.212176,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52811_/D",
+       "hold_worst_start": "_54173_/CLK",
+       "hold_worst_end": "_54175_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 106674,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -4.326357,
+      "hold_wns_worst": 0.212176,
+      "setup_tns_sum": -6005.063,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 4826,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 2870,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant soc_budget; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroad_nom_tt/power_B.txt",
      "values": {
       "total_mW": 93.10000000000001,
       "clock_network_mW": 42.8,
@@ -28324,6 +29090,394 @@
      "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
     }
    },
+   "soc_budget": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.494968,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.136169,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_3__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_3__6_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_2__3_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_3__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 0.298971,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.482148,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_ex1b_ex2_reg_q_reg_pc__3_/CLK",
+       "setup_worst_end": "u_core_u_csr_mepc_q_reg_9_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_2__3_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_3__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.865301,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.011519,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_3__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_3__6_/D",
+       "hold_worst_start": "u_core_ex1a_ex1b_reg_q_reg_instruction__3_/CLK",
+       "hold_worst_end": "u_core_ex1c_ex1b_reg_q_reg_instruction__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.555773,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.134732,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_3__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_3__6_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_2__3_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_3__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 0.498999,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.47943,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_ex1b_ex2_reg_q_reg_pc__3_/CLK",
+       "setup_worst_end": "u_core_u_csr_mepc_q_reg_9_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_2__3_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_3__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.917012,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.012323,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_3__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_3__6_/D",
+       "hold_worst_start": "u_core_ex1a_ex1b_reg_q_reg_instruction__3_/CLK",
+       "hold_worst_end": "u_core_ex1c_ex1b_reg_q_reg_instruction__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.406819,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.138277,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_3__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_3__6_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_2__3_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_3__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 0.034754,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.485917,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_mem_trap_entry_r_reg/CLK",
+       "setup_worst_end": "u_core_u_if_pc_q_reg_31_/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_addr_q_reg_2__3_/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_addr_q_reg_3__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.785122,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.010622,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core_u_icache_gen_data_sram_3__u_data_sram/clk0",
+       "setup_worst_end": "u_core_u_icache_data_dout_r_reg_3__6_/D",
+       "hold_worst_start": "u_core_ex1a_ex1b_reg_q_reg_instruction__3_/CLK",
+       "hold_worst_end": "u_core_ex1c_ex1b_reg_q_reg_instruction__3_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 41035,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": 0.034754,
+      "hold_wns_worst": 0.010622,
+      "setup_tns_sum": 0.0,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 0,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 0,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 9,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 9
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant soc_budget; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/soc_budget/icc2b9_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 69.3,
+      "clock_network_mW": 25.2,
+      "register_mW": 2.25,
+      "combinational_mW": 12.9,
+      "memory_mW": 28.9
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
    "drv_nom_tt_base": {
     "label": "judge",
     "unit": "violating pins",
@@ -36878,6 +38032,409 @@
      "label": "judge",
      "unit": "mW",
      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/innovusb11_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 74.5,
+      "clock_network_mW": 23.8,
+      "register_mW": 1.712,
+      "combinational_mW": 20.1,
+      "memory_mW": 28.9
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "soc_budget": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.417864,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.409948,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_u_tag_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_tag_dout_r_reg[2]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_slot_q_reg[1][1]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_slot_q_reg[2][1]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -0.698635,
+       "setup_tns": -15.147285,
+       "setup_viol": 32,
+       "hold_wns": 0.991838,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_psel_i",
+       "setup_worst_end": "apb_prdata_o_reg[11]/D",
+       "hold_worst_start": "u_mbist_ctrl_slot_q_reg[1]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_slot_q_reg[0][1]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 32,
+         "viol_r2r": 0,
+         "viol_io": 32,
+         "wns_r2r": 0.0,
+         "wns_io": -0.6986
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.77904,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.182237,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_u_tag_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_tag_dout_r_reg[2]/D",
+       "hold_worst_start": "u_core/u_ex2_ex_mem_reg_o_reg[mem_wdata_aligned][6]/CLK",
+       "hold_worst_end": "u_core/u_dcache_dc_wdata_q_reg[6]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.479819,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.403063,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_u_tag_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_tag_dout_r_reg[2]/D",
+       "hold_worst_start": "u_core/ex1c_ex1b_reg_q_reg[dec_redirect_target][19]/CLK",
+       "hold_worst_end": "u_core/ex_pc_target_r_reg[19]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -0.3109,
+       "setup_tns": -3.626656,
+       "setup_viol": 24,
+       "hold_wns": 0.962168,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_psel_i",
+       "setup_worst_end": "apb_prdata_o_reg[11]/D",
+       "hold_worst_start": "u_mbist_ctrl_slot_q_reg[1]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_slot_q_reg[0][1]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 24,
+         "viol_r2r": 0,
+         "viol_io": 24,
+         "wns_r2r": 0.0,
+         "wns_io": -0.3109
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.857131,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.175173,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_u_tag_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_tag_dout_r_reg[2]/D",
+       "hold_worst_start": "u_core/u_ex2_ex_mem_reg_o_reg[mem_wdata_aligned][6]/CLK",
+       "hold_worst_end": "u_core/u_dcache_dc_wdata_q_reg[6]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.299511,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.41449,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_icache_u_tag_sram/clk0",
+       "setup_worst_end": "u_core/u_icache_tag_dout_r_reg[2]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_slot_q_reg[1][1]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_slot_q_reg[2][1]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -1.263597,
+       "setup_tns": -33.549378,
+       "setup_viol": 32,
+       "hold_wns": 1.011201,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_psel_i",
+       "setup_worst_end": "apb_prdata_o_reg[6]/D",
+       "hold_worst_start": "u_mbist_ctrl_tg_slot_q_reg[1][1]/CLK",
+       "hold_worst_end": "u_mbist_ctrl_tg_slot_q_reg[2][1]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 32,
+         "viol_r2r": 0,
+         "viol_io": 32,
+         "wns_r2r": 0.0,
+         "wns_io": -1.2636
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.632568,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.188772,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core/u_dcache_gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "u_core/u_dcache_data_dout_r_reg[0][19]/D",
+       "hold_worst_start": "u_core/u_ex2_ex_mem_reg_o_reg[mem_wdata_aligned][6]/CLK",
+       "hold_worst_end": "u_core/u_dcache_dc_wdata_q_reg[6]/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 45406,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -1.263597,
+      "hold_wns_worst": 0.175173,
+      "setup_tns_sum": -52.323,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 88,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 0,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 9
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant soc_budget; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/soc_budget/innovusb11_nom_tt/power_B.txt",
      "values": {
       "total_mW": 74.5,
       "clock_network_mW": 23.8,

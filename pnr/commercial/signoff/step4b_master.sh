@@ -13,7 +13,7 @@ step() { n=$1; shift; [ -f $M/$n.done ] && { echo "$(date +%T) skip $n" >> $L; r
 while pgrep -f "run_pt_arriva[l].sh" >/dev/null; do sleep 15; done
 [ -s soc_budget/runs/dc/out/async_axi_fifo.mapped.v ] && [ -s soc_budget/runs/dc/out/apb_cdc_bridge.mapped.v ] && echo 0 > $M/dc.done
 step dc $S/run_dc.sh
-[ -s soc_budget/runs/dc/arrival_tt.tsv ] && [ -s soc_budget/runs/dc/arrival_ss.tsv ] && [ -s soc_budget/runs/dc/arrival_ff.tsv ] && echo 0 > $M/arrival.done
+[ -s soc_budget/runs/dc/arrival_tt.tsv ] && [ -s soc_budget/runs/dc/arrival_ss.tsv ] && [ -s soc_budget/runs/dc/arrival_ff.tsv ]  && ! grep -qP "\tNA\tNA\tnone" soc_budget/runs/dc/arrival_*.tsv && echo 0 > $M/arrival.done
 step arrival $S/run_pt_arrival.sh
 step budget python3 -I $S/mk_budget.py
 step sdc python3 -I ../constraints/gen_soc_budget_sdc.py

@@ -1,0 +1,10 @@
+variant=soc_budget
+key=icc2b9_min_ff
+latency_table=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/iolat_pv/iolat_pv_arm.tsv
+latency_table_md5=9b67943cc3819d1d1b1de6b131c37e1c
+budget_table=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/iolat_pv/iobud_soc.tsv
+budget_table_md5=dc5cf4e1f4089cf2c081dbbe75a38a92
+sdc=pnr/commercial/constraints/sky130_cpu_iolat_pv_soc.sdc
+sdc_md5=fdbefe240bf1654eca46e82615ecf75b
+echo_latency=IOLAT_PV key=icc2b9_min_ff early=1.3696 late=1.3697
+echo_budget=IOBUD key=min_ff awready=2.0 wready=2.0 arready=2.0 bresp=1.2 bvalid=0.7 rdata=2.0 rresp=2.0 rvalid=1.1 rlast=2.0 paddr=0.6 psel=1.2 penable=0.9 pwrite=0.5 pwdata=0.5

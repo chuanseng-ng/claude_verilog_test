@@ -200,7 +200,7 @@ def pvsum():
         return D["judge"][a][var]["summary"]["values"]
 
     rows = []
-    for lab, var in (("fixed iolat", "iolat"), ("**per-view iolat**", "iolat_pv"), ("shared latency per corner (4.2e)", "iolat_pvs")):
+    for lab, var in (("fixed iolat", "iolat"), ("**per-view iolat**", "iolat_pv"), ("shared latency per corner (4.2e)", "iolat_pvs"), ("**SoC-context input budgets (4.2f)**", "soc_budget")):
         for kind in ("setup", "hold"):
             def c(a, var=var, kind=kind):
                 v = sm(a, var)
@@ -211,6 +211,38 @@ def pvsum():
     for lab, f in rows:
         t.append(f"| {lab} | " + " | ".join(f(a) for a in ARMS) + " |")
     return "\n".join(t)
+
+
+STARTPOINTS = {
+    "awready": "reset synchroniser flop `u_s_rst_sync_sync_q_reg_1_`", "wready": "reset synchroniser flop", "arready": "reset synchroniser flop",
+    "bresp": "`u_b_fifo_rd_bin_q` (8:1 read mux)", "bvalid": "`u_b_fifo_empty_q`", "rdata": "`u_r_fifo_rd_bin_q` (8:1 read mux)", "rresp": "`u_r_fifo_rd_bin_q`",
+    "rlast": "`u_r_fifo_rd_bin_q`", "rvalid": "`u_r_fifo_empty_q`", "paddr": "`cmd_paddr_cap_q`", "psel": "`d_state_q`", "penable": "`d_state_q`", "pwrite": "`cmd_pwrite_cap_q`", "pwdata": "`cmd_pwdata_cap_q`",
+}
+
+
+def soc_budget_table():
+    ev = D["clock_latency"]["tables"]["soc_budget"]["values"]
+    rows = ["| group (bits) | startpoint (SoC side) | tt: arrival / budget | ss: arrival / budget | ff: arrival / budget | current SDC delay |", "|---|---|---|---|---|---|"]
+    for g, st in STARTPOINTS.items():
+        cs = []
+        for lib in ("tt", "ss", "ff"):
+            e = ev[lib][g]
+            cs.append(f"{e['arrival_ns']:.2f} / {e['budget_ns']:.1f}" + (" (capped)" if e["note"].startswith("kept") else ""))
+        rows.append(f"| {g} ({ev['tt'][g]['bits']}) | {st} | " + " | ".join(cs) + f" | {ev['tt'][g]['current_ns']:.1f} |")
+    return "\n".join(rows)
+
+
+def soc_delta():
+    """per arm and corner: setup WNS / TNS / violators (total; I/O-only) before (per-view iolat, 4.2b) and after (SoC-context budgets)."""
+    def c(v):
+        io = int(v["setup_viol"]) - int(v["r2rx_setup_viol"])
+        return f"{v['setup_wns']:+.3f} / {z(v['setup_tns']):.1f} / {int(v['setup_viol'])} (I/O {io})"
+
+    rows = ["| corner | arm | before: per-view iolat (4.2b) | after: SoC-context budgets (4.2f) |", "|---|---|---|---|"]
+    for cn in CORNERS:
+        for a in ARMS:
+            rows.append(f"| {cn} | {nm(a)} | {c(D['judge'][a]['iolat_pv']['corners'][cn]['values'])} | {c(D['judge'][a]['soc_budget']['corners'][cn]['values'])} |")
+    return "\n".join(rows)
 
 
 def r2r():
@@ -225,7 +257,7 @@ def r2r():
 
 SECTIONS = {
     "base": lambda: judge_table("base"), "iolat": lambda: judge_table("iolat"), "iolat_pv": lambda: judge_table("iolat_pv"), "iolat_pvs": lambda: judge_table("iolat_pvs"),
-    "own": lambda: judge_table("own", [a for a in ARMS if a != "openroad_b2"]), "latency": latency, "power": power, "native": native, "physical": physical, "cost": cost, "pvsum": pvsum, "r2r": r2r,
+    "own": lambda: judge_table("own", [a for a in ARMS if a != "openroad_b2"]), "latency": latency, "power": power, "native": native, "physical": physical, "cost": cost, "pvsum": pvsum, "r2r": r2r, "soc_budget": lambda: judge_table("soc_budget"), "soc_budget_table": soc_budget_table, "soc_delta": soc_delta,
 }
 
 if __name__ == "__main__":
