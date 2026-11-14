@@ -35,7 +35,7 @@ import sys
 from pathlib import Path
 
 import cocotb
-from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, with_timeout
+from cocotb.triggers import ClockCycles, FallingEdge, ReadOnly, RisingEdge, with_timeout
 from cocotb.utils import get_sim_time
 
 from soc_clocks import start_soc_clocks
@@ -664,3 +664,220 @@ async def test_p4_control_sequenced_power_up_releases_cpu_clamp_last(dut):
         assert ev["iso"] >= ev["rst"] and ev["iso"] >= ev["en"], f"clamp released early: {tag}"
         if cpu_ns in P4_STRICT_RATIOS:
             assert _p4_strict(ev), f"sequenced power-up did not release the clamp last: {tag}"
+
+
+# =============================================================================
+# The reset term of the CPU clock gate enable.
+# Doc: ds:mod:pmu
+#
+# cpu_gated_clk_en is ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync. The two terms reach the CPU
+# domain by different paths. The clock disable passes SYNC_STAGES_TO_CPU flops. The PMU reset
+# asserts at the reset synchroniser without a clock edge. At 1:1 the PMU asserts the reset one
+# core_clk edge after it disables the clock. The reset has then already reached the CPU domain,
+# but the clock disable is one edge away. Without the reset term u_cpu_cg passes that edge, and
+# cpu_gated_clk pulses while the domain is in reset. The rule below is the one the comment of
+# cpu_gated_clk_en states: cpu_gated_clk does not tick while the PMU reset is asserted in
+# cpu_core_clk. No other test sees the term, because INV2 of the invariant monitor only needs the
+# clamp, which is active at that time.
+# =============================================================================
+
+GATE_RATIOS = (FABRIC_NS, 3 * FABRIC_NS, 8 * FABRIC_NS, 3)
+_GATE_CACHE: dict = {}
+
+
+class _GateTickMonitor:
+    """Passive monitor. At every falling edge of cpu_clk_i it records pmu_cpu_rst_n_cpu_sync and
+    pmu_cpu_clk_dis_sync. At the next rising edge it reads cpu_gated_clk, which is 1 after the edge
+    only if u_cpu_cg passed that edge. A tick is a violation when the reset was already asserted at
+    the falling edge before it. The enable latch of u_cpu_cg is transparent while cpu_core_clk is
+    low, so the value at the falling edge decides the tick."""
+
+    def __init__(self, dut) -> None:
+        self.dut = dut
+        self.ticks_reset_high = 0
+        self.ticks_reset_low: list = []
+        self.low_reset_edges = 0
+        self.low_reset_edges_clock_enabled = 0
+        self._task = None
+
+    def start(self) -> None:
+        self._task = cocotb.start_soon(self._run())
+        _active_tasks.append(self._task)
+
+    def stop(self) -> None:
+        if self._task is not None:
+            self._task.kill()
+            self._task = None
+
+    async def _run(self) -> None:
+        soc = _soc(self.dut)
+        while True:
+            await FallingEdge(self.dut.cpu_clk_i)
+            await ReadOnly()
+            rst = int(soc.pmu_cpu_rst_n_cpu_sync.value)
+            dis = int(soc.pmu_cpu_clk_dis_sync.value)
+            await RisingEdge(self.dut.cpu_clk_i)
+            await ReadOnly()
+            ticked = int(soc.cpu_gated_clk.value)
+            if rst == 0:
+                self.low_reset_edges += 1
+                if dis == 0:
+                    self.low_reset_edges_clock_enabled += 1
+                if ticked:
+                    self.ticks_reset_low.append((get_sim_time("ns"), dis))
+            elif ticked:
+                self.ticks_reset_high += 1
+
+
+async def _gate_experiment(dut, cpu_ns: int) -> dict:
+    await _setup(dut, cpu_ns)
+    if _dom_state(dut) != DOM_ON:
+        raise RuntimeError("harness: the CPU PMU domain did not start at DOM_ON")
+    mon = _GateTickMonitor(dut)
+    mon.start()
+    await ClockCycles(dut.cpu_clk_i, 8)
+    await _set_mode(dut, MODE_CPU_OFF)
+    await _wait_state(dut, {DOM_OFF}, 4000, "power-down")
+    await ClockCycles(dut.clk_i, 40)
+    await ClockCycles(dut.cpu_clk_i, 8)
+    await _set_mode(dut, MODE_NORMAL)
+    await _wait_state(dut, {DOM_ON}, 4000, "power-up")
+    await ClockCycles(dut.clk_i, 40)
+    await ClockCycles(dut.cpu_clk_i, 8)
+    mon.stop()
+    return {
+        "cpu_ns": cpu_ns,
+        "ticks_reset_high": mon.ticks_reset_high,
+        "ticks_reset_low": list(mon.ticks_reset_low),
+        "low_reset_edges": mon.low_reset_edges,
+        "low_reset_edges_clock_enabled": mon.low_reset_edges_clock_enabled,
+    }
+
+
+async def _gate_sweep(dut) -> list:
+    if "rows" not in _GATE_CACHE:
+        rows = []
+        for cpu_ns in GATE_RATIOS:
+            rows.append(await _gate_experiment(dut, cpu_ns))
+            r = rows[-1]
+            dut._log.info(
+                f"gate cpu={cpu_ns}ns: ticks outside reset {r['ticks_reset_high']}, "
+                f"reset-low edges {r['low_reset_edges']} "
+                f"(with the clock disable not yet seen: {r['low_reset_edges_clock_enabled']}), "
+                f"ticks in reset {r['ticks_reset_low']}")
+        _GATE_CACHE["rows"] = rows
+    return _GATE_CACHE["rows"]
+
+
+@cocotb.test()
+async def test_cpu_clock_never_ticks_while_pmu_reset_asserted(dut):
+    """Asserts: cpu_gated_clk does not tick at an edge of cpu_core_clk that follows a half cycle
+    with pmu_cpu_rst_n_cpu_sync low. A CPU power-down and a power-up run at 1:1, 3x and 8x slower
+    CPU clocks and with the CPU faster. The reset term of cpu_gated_clk_en is what holds this at
+    1:1 and with a slower CPU clock; the mutant that removes the term fails here. This view depends
+    on the order of the PMU actions: if the PMU disables the clock earlier, the clock disable term
+    stops the clock first and this test stops telling whether the reset term exists. The forced
+    test below does not depend on the order."""
+    rows = await with_timeout(_gate_sweep(dut), 3000, "us")
+    bad = [r for r in rows if r["ticks_reset_low"]]
+    assert not bad, "cpu_gated_clk ticked while the PMU reset was asserted: " + "; ".join(
+        f"cpu={r['cpu_ns']}ns ticks (ns, clock disable seen) {r['ticks_reset_low']}" for r in bad)
+
+
+@cocotb.test()
+async def test_cpu_clock_gate_control_monitor_sees_ticks_and_reset_window(dut):
+    """Companion of the test above. Proves the monitor can see both sides of its rule at every
+    ratio: the gated clock ticks while the reset is released (the monitor does not read a stuck
+    clock), the PMU reset is asserted in the CPU domain for several edges, and at the first of
+    those edges the clock disable has not reached the CPU domain yet at 1:1 and with a slower CPU
+    clock (the window in which only the reset term stops the clock)."""
+    rows = await with_timeout(_gate_sweep(dut), 3000, "us")
+    for r in rows:
+        tag = f"cpu={r['cpu_ns']}ns"
+        assert r["ticks_reset_high"] > 10, f"{tag}: gated clock barely ticked outside reset"
+        assert r["low_reset_edges"] >= 4, f"{tag}: the PMU reset was never seen asserted"
+        if r["cpu_ns"] >= FABRIC_NS:
+            assert r["low_reset_edges_clock_enabled"] >= 1, (
+                f"{tag}: the clock disable always arrived first, so the reset term was not "
+                "exercised")
+
+
+# The sequenced power-down above stops the clock by the reset term only because the PMU asserts the
+# reset one edge after it disables the clock and the reset crosses without a clock edge. A change of
+# the PMU order (clock disable before the reset by more edges) moves the first stop to the clock
+# disable term, and the sequenced test then no longer tells whether the reset term exists. The
+# forced test below keeps the clock enable of the PMU high and asserts only the PMU reset of the
+# CPU domain, by a deposit into the output flop. The clock disable term cannot stop the clock then,
+# so the reset term is the only guard, whatever order the PMU uses.
+_FORCED_CACHE: dict = {}
+
+
+async def _forced_reset_experiment(dut, cpu_ns: int) -> dict:
+    await _setup(dut, cpu_ns)
+    soc = _soc(dut)
+    if _dom_state(dut) != DOM_ON:
+        raise RuntimeError("harness: the CPU PMU domain did not start at DOM_ON")
+    mon = _GateTickMonitor(dut)
+    mon.start()
+    await ClockCycles(dut.cpu_clk_i, 8)
+    hold = 3 * max(1, -(-cpu_ns // FABRIC_NS)) + 4
+    for _ in range(hold):
+        await RisingEdge(dut.clk_i)
+        soc.u_pmu.rst_n_q[DOM_CPU].value = 0
+    await RisingEdge(dut.clk_i)
+    await ReadOnly()
+    if int(soc.pmu_cpu_clk_dis_sync.value) != 0 or _dom_state(dut) != DOM_ON:
+        raise RuntimeError("harness: the clock disable or the PMU state changed")
+    await ClockCycles(dut.cpu_clk_i, 12)
+    await ClockCycles(dut.clk_i, 12)
+    mon.stop()
+    return {
+        "cpu_ns": cpu_ns,
+        "hold": hold,
+        "ticks_reset_high": mon.ticks_reset_high,
+        "ticks_reset_low": list(mon.ticks_reset_low),
+        "low_reset_edges": mon.low_reset_edges,
+        "low_reset_edges_clock_enabled": mon.low_reset_edges_clock_enabled,
+    }
+
+
+async def _forced_sweep(dut) -> list:
+    if "rows" not in _FORCED_CACHE:
+        rows = []
+        for cpu_ns in GATE_RATIOS:
+            rows.append(await _forced_reset_experiment(dut, cpu_ns))
+            r = rows[-1]
+            dut._log.info(
+                f"forced reset cpu={cpu_ns}ns: reset-low edges {r['low_reset_edges']} "
+                f"(clock disable not seen: {r['low_reset_edges_clock_enabled']}), ticks outside "
+                f"reset {r['ticks_reset_high']}, ticks in reset {r['ticks_reset_low']}")
+        _FORCED_CACHE["rows"] = rows
+    return _FORCED_CACHE["rows"]
+
+
+@cocotb.test()
+async def test_cpu_clock_never_ticks_while_forced_pmu_reset_and_clock_enabled(dut):
+    """Asserts: with the PMU clock enable high, a PMU reset of the CPU domain stops cpu_gated_clk
+    (no tick at an edge that follows a half cycle with pmu_cpu_rst_n_cpu_sync low). Only the reset
+    term of cpu_gated_clk_en can stop the clock here. The reset is forced for several periods of
+    clk_i by a deposit into the PMU output flop. Ratios 1:1, 3x and 8x slower, and the CPU faster."""
+    rows = await with_timeout(_forced_sweep(dut), 3000, "us")
+    bad = [r for r in rows if r["ticks_reset_low"]]
+    assert not bad, "cpu_gated_clk ticked while the PMU reset was asserted: " + "; ".join(
+        f"cpu={r['cpu_ns']}ns ticks (ns, clock disable seen) {r['ticks_reset_low']}" for r in bad)
+
+
+@cocotb.test()
+async def test_cpu_clock_gate_control_forced_reset_window_reached(dut):
+    """Companion of the forced test. Proves the stimulus reaches the window: at every ratio the PMU
+    reset is seen asserted in the CPU domain for several edges, the clock disable never reached the
+    CPU domain in them (so only the reset term can stop the clock), and the gated clock ticks
+    outside the reset (the monitor does not read a stuck clock)."""
+    rows = await with_timeout(_forced_sweep(dut), 3000, "us")
+    for r in rows:
+        tag = f"cpu={r['cpu_ns']}ns"
+        assert r["low_reset_edges"] >= 2, f"{tag}: the forced reset was seen on too few edges"
+        assert r["low_reset_edges_clock_enabled"] == r["low_reset_edges"], (
+            f"{tag}: the clock disable arrived during the reset, so the reset term is not the "
+            "sole guard")
+        assert r["ticks_reset_high"] > 10, f"{tag}: gated clock barely ticked outside reset"

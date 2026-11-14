@@ -2145,3 +2145,221 @@ async def test_b4_ds103_latency_bound(dut):
         assert max(counts) <= stages + 2, (
             f"s/m={s_ns}/{m_ns}: completion took {max(counts)} edges, DS bound is {stages + 2}"
         )
+
+
+# --- B5. A read whose reset hits between the first and the second acknowledge stage ------------
+#
+# Doc: ds:mod:apb-cdc-bridge
+#
+# The source copies resp_prdata_dq and resp_pslverr_dq when it sees ack_s, in the same edge. The
+# acknowledge reaches ack_s through SYNC_STAGES_TO_S flops that the destination reset does not
+# clear. The destination reset clears resp_prdata_dq and resp_pslverr_dq at once. If m_rst_n_i
+# falls after the first stage has taken ack_q and before ack_s reads 1, ack_s still rises, and the
+# source copies the cleared payload with the response of a completed transfer. The B1 sweep uses
+# writes, which carry no data, so it cannot show this.
+
+READ_ADDR = 0xE20
+READ_DATA = 0xA5C30F1E
+_READ_CACHE: dict = {}
+
+
+class _CaptureProbe:
+    """Records, at the falling edge of s_clk, each cycle in which the source is in S_REQ with
+    ack_s high. The next rising edge of s_clk copies the payload of the destination. The probe
+    stores the payload at that moment: resp_prdata_dq and resp_pslverr_dq."""
+
+    def __init__(self, dut):
+        self.dut = dut
+        self.captures: list = []
+        self._task = None
+
+    def start(self):
+        self._task = cocotb.start_soon(self._run())
+        _active_tasks.append(self._task)
+        return self
+
+    def stop(self) -> None:
+        if self._task is not None:
+            self._task.kill()
+            self._task = None
+
+    async def _run(self) -> None:
+        dut = self.dut
+        while True:
+            await FallingEdge(dut.s_clk)
+            await ReadOnly()
+            if int(dut.u_dut.s_state_q.value) == S_REQ and int(dut.u_dut.ack_s.value):
+                self.captures.append(
+                    (int(dut.u_dut.resp_prdata_dq.value), int(dut.u_dut.resp_pslverr_dq.value))
+                )
+
+
+def _read_plans(s_ns, m_ns) -> dict:
+    """Reset pulses of DS-CDC-109 length. d is the time from the ack_q rise to the next s_clk
+    edge, the edge that takes ack_q into the first stage. The e1 plans start the pulse after that
+    edge and before the next one, in three places. pre starts before it and late after the source
+    has copied the response."""
+    long_w = LONG_PULSE_PERIODS * max(s_ns, m_ns)
+    return {
+        "pre": lambda d: (1, long_w) if d >= 2 else None,
+        "e1_first": lambda d: (d + 1, long_w),
+        "e1_mid": lambda d: (d + max(1, s_ns // 2), long_w),
+        "e1_last": lambda d: (d + s_ns - 1, long_w),
+        "late": lambda d: (d + 3 * s_ns + 1, long_w),
+    }
+
+
+async def _read_window_experiment(dut, s_ns, m_ns, gap, plan) -> dict:
+    """One read of READ_ADDR. m_rst_n_i pulses low a fixed time after ack_q rises on the m side."""
+    ctx = await _setup(dut, s_ns, m_ns, mem={READ_ADDR: READ_DATA})
+    obs = _Observer(dut).start()
+    obs.armed = True
+    probe = _CaptureProbe(dut).start()
+    if gap:
+        await ClockCycles(dut.s_clk, gap)
+    master = cocotb.start_soon(ctx.s_master.read(READ_ADDR))
+    t_rise = await _wait_ack_q_rise(dut)
+    if t_rise is None or obs.s_origin is None:
+        raise RuntimeError("harness: ack_q never rose, or no s_clk edge was observed")
+    edge_gap = _edge_gap_ns(obs.s_origin, t_rise, s_ns)
+    choice = plan(edge_gap)
+    row = {"ratio": (s_ns, m_ns), "gap": gap, "edge_gap": edge_gap, "skipped": choice is None}
+    if choice is None:
+        await Timer(1, units="step")
+    else:
+        delay, width = choice
+        await Timer(delay, units="ns")
+        dut.m_rst_n.value = 0
+        await Timer(width, units="ns")
+        dut.m_rst_n.value = 1
+        for _ in range(120):
+            await RisingEdge(dut.s_clk)
+            if obs.s_done:
+                break
+        await Timer(30 * max(s_ns, m_ns), units="ns")
+        row.update(
+            delay=delay,
+            width=width,
+            m_reads=sum(1 for x in obs.m_xfers if not x[1]),
+            s_done=list(obs.s_done),
+            ack_s_seen=obs.ack_s_seen,
+            captures=list(probe.captures),
+        )
+    master.kill()
+    obs.stop()
+    probe.stop()
+    _idle_s_side(dut)
+    return row
+
+
+def _bad_okay_read(row) -> list:
+    """Completions with s_pslverr_o=0 whose data differ from the data the destination returned."""
+    return [(t, d) for t, err, d in row["s_done"] if not err and d != READ_DATA]
+
+
+def _cleared_capture(row) -> bool:
+    """True when the source copied a payload that the reset had cleared, after the destination
+    read was done: a copy with data 0 and no error flag."""
+    return any(data == 0 and err == 0 for data, err in row["captures"])
+
+
+def _fmt_read_row(row) -> str:
+    s_ns, m_ns = row["ratio"]
+    head = f"{row['plan']:<8} s/m={s_ns}/{m_ns} gap={row['gap']} edge_gap={row['edge_gap']}"
+    if row["skipped"]:
+        return f"{head} skipped (window too small)"
+    return (
+        f"{head} delay={row['delay']} width={row['width']} m_reads={row['m_reads']} "
+        f"s_done={[(err, hex(d)) for _t, err, d in row['s_done']]} captures={row['captures']} "
+        f"ack_s_seen={row['ack_s_seen']}"
+    )
+
+
+async def _read_sweep(dut) -> list:
+    if "rows" not in _READ_CACHE:
+        rows = []
+        for s_ns, m_ns, gaps in _ALIGNMENTS:
+            plans = _read_plans(s_ns, m_ns)
+            for gap in gaps:
+                for name, plan in plans.items():
+                    row = await _read_window_experiment(dut, s_ns, m_ns, gap, plan)
+                    row["plan"] = name
+                    rows.append(row)
+        _READ_CACHE["rows"] = rows
+        live = [r for r in rows if not r["skipped"]]
+        bad = [r for r in live if _bad_okay_read(r)]
+        hit = [r for r in live if _cleared_capture(r)]
+        dut._log.info(
+            f"B5 read sweep: {len(rows)} points, {len(live)} ran, {len(hit)} copied a cleared "
+            f"payload, {len(bad)} completed okay with wrong data"
+        )
+        for r in rows:
+            dut._log.info("  " + _fmt_read_row(r))
+    return _READ_CACHE["rows"]
+
+
+@cocotb.test(expect_fail=True)
+async def test_b5_read_never_completes_okay_with_wrong_data(dut):
+    """Asserts: a read that completes with s_pslverr_o=0 returns the data that the destination
+    answered (DS-CDC-102, DS-CDC-103). Stimulus: m_rst_n_i pulses low, as DS-CDC-109 asks, at five
+    places around the acknowledge, among them three between the first stage taking ack_q and
+    ack_s reading 1. Four clock ratios, several alignments.
+
+    expect_fail: the review reads that ack_s still rises after the reset has cleared
+    resp_prdata_dq and resp_pslverr_dq, so the source copies data 0 with an okay response. The
+    failure message lists the points. If this test passes, the reading was wrong or the RTL
+    changed."""
+    rows = await with_timeout(_read_sweep(dut), 1500, "us")
+    bad = [r for r in rows if not r["skipped"] and _bad_okay_read(r)]
+    assert not bad, (
+        f"{len(bad)} point(s) completed a read okay with data other than 0x{READ_DATA:08x}: "
+        + "; ".join(_fmt_read_row(r) for r in bad[:6])
+    )
+
+
+@cocotb.test()
+async def test_b5_control_window_reached(dut):
+    """Companion of the B5 test. Proves, without asserting the B5 outcome, that the stimulus
+    reaches the window. For the e1 plans the acknowledge passes the first stage before the reset,
+    so ack_s rises; the destination read is done once; the source completes once. At least one
+    point has the source copy the payload after the reset has cleared it (data 0, no error flag);
+    the count is logged. The late plan completes okay with the right data at every point."""
+    rows = await with_timeout(_read_sweep(dut), 1500, "us")
+    live = [r for r in rows if not r["skipped"]]
+    e1 = [r for r in live if r["plan"].startswith("e1_")]
+    assert e1, "no e1 point ran"
+    for r in live:
+        tag = _fmt_read_row(r)
+        assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
+        assert r["m_reads"] == 1, f"the m_* face must show exactly one read: {tag}"
+    for r in e1:
+        assert r["ack_s_seen"], f"ack_s did not rise at an e1 point: {_fmt_read_row(r)}"
+    hit = [r for r in e1 if _cleared_capture(r)]
+    dut._log.info(f"B5 control: {len(hit)} of {len(e1)} e1 points copied a cleared payload")
+    assert hit, "no e1 point reached the copy of a cleared payload: the window is not reached"
+    late = [r for r in live if r["plan"] == "late"]
+    assert late, "no point of the late plan ran"
+    for r in late:
+        assert not _bad_okay_read(r) and _err_count(r) == 0, (
+            f"a reset after the copy must leave an okay read with the right data: {_fmt_read_row(r)}"
+        )
+        assert r["s_done"][0][2] == READ_DATA, f"late read data wrong: {_fmt_read_row(r)}"
+
+
+@cocotb.test()
+async def test_b5_control_check_flags_wrong_data_and_passes_right_data(dut):
+    """Companion of the B5 test. Proves the check can fail and can pass. A read without any reset
+    returns READ_DATA with an okay response at every ratio, and the check accepts it. The check
+    rejects an okay completion with data 0 and accepts an error completion with data 0."""
+    good = {"s_done": [(0, 0, READ_DATA)]}
+    wrong = {"s_done": [(0, 0, 0)]}
+    errored = {"s_done": [(0, 1, 0)]}
+    assert not _bad_okay_read(good) and _bad_okay_read(wrong) and not _bad_okay_read(errored)
+    for s_ns, m_ns in _B4_RATIOS:
+        ctx = await _setup(dut, s_ns, m_ns, mem={READ_ADDR: READ_DATA})
+        obs = _Observer(dut).start()
+        data, ok = await with_timeout(ctx.s_master.read(READ_ADDR), 50, "us")
+        obs.stop()
+        assert ok and data == READ_DATA, f"s/m={s_ns}/{m_ns}: read gave {data:#x} ok={ok}"
+        assert not _bad_okay_read({"s_done": [(0, 0 if ok else 1, data)]})
+    dut._log.info("B5 control: a read without reset returns the destination data at four ratios")

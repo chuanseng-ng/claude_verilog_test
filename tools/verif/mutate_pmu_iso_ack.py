@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mutation campaign for the PMU iso-ack handshake (bead 3ogd).
+"""Mutation campaign for the PMU iso-ack handshake and the CPU clock-gate enable.
 
 Each mutant is a textual edit of rtl/soc/pmu.sv or rtl/soc/soc_top.sv applied to a private copy of
 the rtl tree under OUT_DIR and fed to the very same suites CI runs through `make <suite> RTL=<tree>`:
@@ -50,7 +50,9 @@ MUTANTS = [
      [("((dom_state_q[d] == DOM_PU_ISO) &&  iso_ack_w[d]);", "1'b0;")], None),
     ("t03_timeout_one_short", "pmu", PMU, "timeout expires one cycle early",
      [("(wait_cnt_q == CW'(ISO_ACK_TIMEOUT - 1))", "(wait_cnt_q == CW'(ISO_ACK_TIMEOUT - 2))")], None),
-    ("t04_timeout_one_long", "pmu", PMU, "timeout expires one cycle late",
+    ("t04_timeout_one_long", "pmu", PMU,
+     "timeout constant is ISO_ACK_TIMEOUT, not ISO_ACK_TIMEOUT - 1: one cycle late at the default of 255, "
+     "but at the 16 of tb_pmu the CW=4 cast truncates it to 0, so the wait times out after one cycle",
      [("(wait_cnt_q == CW'(ISO_ACK_TIMEOUT - 1))", "(wait_cnt_q == CW'(ISO_ACK_TIMEOUT))")], None),
     ("t05_counter_carries_over", "pmu", PMU, "the counter holds (not cleared) between waits",
      [("else                             wait_cnt_q <= '0;", "else                             wait_cnt_q <= wait_cnt_q;")], None),
@@ -99,6 +101,9 @@ MUTANTS = [
      [("assign gif_axil_rready    = pmu_gpu_iso_en ? 1'b0 : gpu_gif_rready_raw;", "assign gif_axil_rready    = gpu_gif_rready_raw;")], None),
     ("c02_gif_rready_inverted", "soc_pmu_iso_ack", TOP, "m_axil_if_rready clamp polarity inverted",
      [("assign gif_axil_rready    = pmu_gpu_iso_en ? 1'b0 : gpu_gif_rready_raw;", "assign gif_axil_rready    = pmu_gpu_iso_en ? gpu_gif_rready_raw : 1'b0;")], None),
+    # ---- part 3: the reset term of the CPU clock gate enable ----------------------------------
+    ("r01_cpu_gate_without_reset_term", "soc_pmu_iso_ack", TOP, "u_cpu_cg enable loses the pmu_cpu_rst_n_cpu_sync term",
+     [("assign cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync;", "assign cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync;")], None),
 ]
 
 
