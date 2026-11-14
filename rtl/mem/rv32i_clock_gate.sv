@@ -13,7 +13,8 @@
 //   - Keep test_en quasi-static: a test-mode level that never toggles while the clock runs.
 //   - test_en can be tied to 1'b0 where gclk feeds no scannable flop. The cache SRAM gates (SRAM_ASAP7 arm) take the cache port test_en_i, so scan and MBIST can open them.
 //   - Set HARD_ROOT = 1 for a gate that is a clock root with a CTS tree. A gate with HARD_ROOT = 0 keeps the behavioural arm.
-//   - Do not rename u_icg or u_root_buf. pnr/sky130/soc/config*.json lists them in RSZ_DONT_TOUCH_RX. The netlist checks grep for them.
+//   - Do not rename u_icg or u_root_buf. The ASAP7 SDC files match *u_icg/GCLK. The netlist checks grep for both names.
+//     pnr/sky130/soc/config*.json list only u_root_buf (the one in u_cpu_cg) in RSZ_DONT_TOUCH_RX, not u_icg.
 //   - u_root_buf must be a plain buf_16, not clkbuf_16. clkbuf_16 is in CTS_CLK_BUFFERS, so TritonCTS treats the net as already buffered and builds no clock tree.
 // Doc: ds:mod:rv32i-clock-gate, tm:mod:rv32i-clock-gate, cr:mod:rv32i-clock-gate, tm:ch:dft-architecture
 

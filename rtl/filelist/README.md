@@ -57,7 +57,8 @@ is what the cocotb regression elaborates.
 | `SRAM_CTRL_2P` | `sram_controller` dual-port variant (sim) |
 | `TRNG_RO_SKY130` | Sky130 ring-oscillator entropy; needs `rtl/periph/trng_ro_sky130.sv` (in no list) |
 
-`USE_SKY130_CLKCELLS` does not exist in `rtl/` and is not documented as a define.
+`USE_SKY130_CLKCELLS` is used in `rtl/mem/rv32i_clock_gate.sv`. It is set by `SKY130_SOC_SV2V_DEFINES`
+in `pnr/Makefile`, not by these lists, and the table above does not document it.
 In the `SRAM_*` and `__pnr__` arms the macros / ICG cell are hard macros with no source in these
 lists; elaborating them reports exactly those cells as undefined (documented blackboxes).
 

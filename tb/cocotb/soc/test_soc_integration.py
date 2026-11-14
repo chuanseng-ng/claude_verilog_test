@@ -297,7 +297,11 @@ async def test_soc_pll_register_programming(dut):
 # ---------------------------------------------------------------------------
 @cocotb.test()
 async def test_soc_gpu_isolation_via_pmu(dut):
-    """PMU GPU_OFF / NORMAL: sequence order, isolation clamp on gpu_irq_o, state survives."""
+    """PMU GPU_OFF / NORMAL: sequence order, isolation clamp on gpu_irq_o, control state lost.
+
+    The async domain reset clears the GPU control flops, so the raw irq drops. The test does not
+    read the vector registers or the shared memory. A second kernel then runs to completion.
+    """
     await _setup(dut, _read_hex(_FW_DIR / "gpu_iso.hex"))
     soc = dut.u_soc
     sig = ("pmu_gpu_ret_save", "pmu_gpu_iso_en", "pmu_gpu_clk_en", "pmu_gpu_rst_n",
