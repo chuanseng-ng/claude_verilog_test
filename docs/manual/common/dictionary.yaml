@@ -246,6 +246,22 @@
   kind: technical-name
   definition: A handshake in which the request level and the acknowledge level both return to zero before the next transfer.
   glossary: true
+- term: isolation clamp
+  kind: technical-name
+  definition: Logic that forces the outputs of a power domain to a fixed value while the domain is off.
+  glossary: true
+- term: power domain
+  kind: technical-name
+  definition: A set of instances that share one supply and one power state.
+  glossary: true
+- term: always-on domain
+  kind: technical-name
+  definition: A power domain that stays powered while the other domains are off.
+  glossary: true
+- term: retention
+  kind: technical-name
+  definition: The property of a cell that keeps its value while its supply is off.
+  glossary: true
 
 # --- tools ---
 - term: Verilator
