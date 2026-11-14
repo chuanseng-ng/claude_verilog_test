@@ -158,4 +158,4 @@ It **does not** model metastability, does not check synchroniser *depth*
 against an MTBF target, and does not verify that a qualified crossing's
 handshake protocol is actually correct — that is the directed cocotb suites'
 job (`async_axi_fifo`, `apb_cdc_bridge`, `soc_multiclock`) and STA's
-(`set_max_delay -datapath_only` in `phase5_soc_multiclock.sdc`).
+(`set_max_delay` between the two clock domains in `phase5_soc_multiclock_check.sdc`).

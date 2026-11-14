@@ -225,6 +225,23 @@ def test_main_exit_1_on_reopen_and_names_the_bead(
     assert "zz-1" in out and cbr.REOPEN_MARKER in out
 
 
+def test_main_failure_hint_states_the_rule_that_the_check_applies(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The hint must not tell the reader to do something that the check then rejects."""
+    base = _write(tmp_path / "base.jsonl", _row("zz-1", "closed"))
+    head = _write(tmp_path / "head.jsonl", _row("zz-1", "open"))
+    assert cbr.main(["--base-file", str(base), "--head-file", str(head)]) == 1
+    out = " ".join(capsys.readouterr().out.split())
+    assert f"new line that starts with '{cbr.REOPEN_MARKER}:'" in out
+    assert "note containing" not in out
+    # The example command in the hint must itself satisfy the check.
+    example = next(ln for ln in out.split(" bd update ") if "--append-notes" in ln)
+    note = example.split('"')[1]
+    licensed = _row("zz-1", "open", notes=note)
+    assert cbr.has_new_reopen_marker(_row("zz-1", "closed"), licensed)
+
+
 def test_main_exit_2_on_unparsable_input(tmp_path: Path) -> None:
     """Main exit 2 on unparsable input."""
     base = tmp_path / "base.jsonl"

@@ -243,8 +243,11 @@ def main(argv: list[str] | None = None) -> int:
         "\nThis is the bead-78ld hazard: a checkout imported an older issues.jsonl into\n"
         "the Dolt DB and later commits exported the reverted state. To fix, re-close\n"
         "each bead (bd close <id> --reason ...) and commit the export. If the reopen\n"
-        f"is deliberate, add a note containing '{REOPEN_MARKER}', e.g.\n"
+        f"is deliberate, add a new line that starts with '{REOPEN_MARKER}:' to the\n"
+        "notes of the bead, e.g.\n"
         f'  bd update <id> --append-notes "{REOPEN_MARKER}: <why>"\n'
+        "A mention in the middle of a line does not count. A marker line that is\n"
+        "already on the base does not count.\n"
         "See the Beads section of CLAUDE.md."
     )
     return 1
