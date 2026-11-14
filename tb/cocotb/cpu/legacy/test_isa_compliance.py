@@ -12,7 +12,7 @@ Port the tests one at a time and validate each.
 This suite cannot run against the current DUT. It drives the Phase 1 port names (`dut.clk`,
 `dut.rst_n`) and rv32i_cpu_top now has `clk_i`, so every test fails at its first signal access
 (37 of 37 fail with "rv32i_cpu_top contains no object named clk"). The `isa` target of
-tb/cocotb/cpu/Makefile was removed for that reason (GH #368). Use `make isa_uvm`, which covers
+tb/cocotb/cpu/Makefile was removed for that reason. Use `make isa_uvm`, which covers
 all 37 instructions.
 Doc: tm:suite:cpu-legacy-test-isa-compliance
 """
