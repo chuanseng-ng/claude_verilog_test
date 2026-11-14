@@ -5,9 +5,9 @@ This chapter shows how to set up the project and run the first test.
 % Rewritten in STE style from docs/readme/README.md; the verbatim original is in git history (at commit 23e35004).
 \section{README Detail Set}\label{um:guide:readme-index}
 
-The detail pages are split out of the root \src{README.md}.
+The detail content of the root \src{README.md} is in sections of this manual.
 This keeps the README easy to scan.
-Each page holds the deep content that the README links to.
+Each section holds the deep content that the README links to.
 
 {
 \begin{longtable}[]{@{}
@@ -15,7 +15,7 @@ Each page holds the deep content that the README links to.
   >{\raggedright\arraybackslash}p{\dimexpr(\linewidth-2\tabcolsep)*660/1000\relax}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
-Page
+Section
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 Contents
 \end{minipage} \\
@@ -23,15 +23,15 @@ Contents
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Doc: cr:status:phase-history & Per-phase completion records (Phase 0--4)
-and implemented-feature lists \\
-QUICK\_\allowbreak{}START.md (\cref{um:guide:quick-start}) & Build/run
+Phase history (\cref{cr:status:phase-history}) & Completion records of Phase 0 to Phase 6, the DFT and FPGA work in progress, and
+implemented-feature lists for Phase 1 and Phase 2 \\
+Quick start (\cref{um:guide:quick-start}) & Build/run
 commands for every phase (pytest, cocotb, cache sims) \\
-SUPPORTED\_\allowbreak{}INSTRUCTIONS.md (\cref{um:guide:supported-instructions})
+Supported instructions (\cref{um:guide:supported-instructions})
 & RV32I base + Zicsr instruction tables \\
-DEBUG\_\allowbreak{}INTERFACE.md (\cref{um:guide:debug-interface}) &
+Debug interface (\cref{um:guide:debug-interface}) &
 APB3 debug register map \\
-PROJECT\_\allowbreak{}STRUCTURE.md (\cref{um:guide:project-structure}) &
+Project structure (\cref{um:guide:project-structure}) &
 Full repository directory tree \\
 \end{longtable}
 }
@@ -41,27 +41,22 @@ Full repository directory tree \\
 This chapter describes the directory tree of the repository.
 
 \begin{information}
-A comment in the tree below says that the GPU has an ASAP7 sign-off. This claim does not stand. Read \cref{tm:ch:standing-caveats} before you quote an ASAP7 figure.
+The ASAP7 figures of the GPU are unvalidated. Read \cref{tm:ch:standing-caveats} before you quote an ASAP7 figure.
 \end{information}
 
 % Rewritten in STE style from docs/readme/PROJECT_STRUCTURE.md; the verbatim original is in git history (at commit 23e35004).
 \section{Project Structure}\label{um:guide:project-structure}
 
 \begin{logblock}
-├── docs/                         # Specifications (Phase 0)
-│   ├── ROADMAP.md                # Project phases and plan
-│   ├── PHASE_STATUS.md           # Current phase status
-│   ├── readme/                   # README detail set (this directory)
-│   ├── design/
-│   │   ├── PHASE0_ARCHITECTURE_SPEC.md   # CPU architectural spec
-│   │   ├── PHASE1_ARCHITECTURE_SPEC.md   # CPU implementation spec (Phase 1)
-│   │   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md # GPU architecture spec (Phase 4)
-│   │   ├── RTL_DEFINITION.md     # Interface signal definitions
-│   │   ├── MEMORY_MAP.md         # Address space and registers
-│   │   └── REFERENCE_MODEL_SPEC.md # Python reference model API
-│   └── verification/
-│       └── VERIFICATION_PLAN.md  # Verification strategy
-├── tb/                           # Testbench and reference models
+├── docs/                         # Documentation
+│   ├── README.md                 # How to build and read the books
+│   └── manual/                   # The four LaTeX books
+│       ├── ds/                   # Design Specification
+│       ├── tm/                   # Technical Manual
+│       ├── um/                   # User Manual
+│       ├── cr/                   # Changes record
+│       └── common/               # Class, macros, glossary, labels, fact sidecars
+├── tb/                          # Testbench and reference models
 │   ├── models/                   # Python reference models (Phase 0)
 │   │   ├── rv32i_model.py        # CPU instruction-accurate model
 │   │   ├── gpu_kernel_model.py   # GPU SIMT execution model
@@ -82,7 +77,7 @@ A comment in the tree below says that the GPU has an ASAP7 sign-off. This claim 
 │   │   │   └── ...
 │   │   ├── rv32i_cpu_top.sv      # Top-level with AXI4-Lite + APB3
 │   │   └── rv32i_axi_arbiter.sv  # IF/MEM priority arbiter
-│   ├── gpu/                      # ✅ Phase 4 GPU-Lite (9 modules; ASAP7 571 MHz signoff)
+│   ├── gpu/                      # ✅ Phase 4 GPU-Lite (9 modules; ASAP7 figures unvalidated)
 │   ├── mem/                      # ✅ Phase 3 caches (~1,424 lines)
 │   │   ├── rv32i_cache_pkg.sv    # Cache parameters and types
 │   │   ├── rv32i_icache.sv       # I-cache (4 KB, direct-mapped, FENCE.I)
@@ -164,7 +159,7 @@ Complete}{Phase 2: RTL Simulation  Complete}}\label{um:guide:quick-start:phase-2
 # Navigate to cocotb test directory (WSL)
 cd tb/cocotb/cpu
 
-# Run all Phase 2 test suites (111 tests)
+# Run all Phase 2 test suites (112 tests)
 make phase2_all
 
 # Run individual suites
@@ -222,7 +217,7 @@ where \code{<key>} is a sha256 of everything that has an effect on the compiled 
 The key covers these items: the top level, the ordered source list, \code{COMPILE_ARGS}, and
 \code{EXTRA_ARGS} with every \code{-G}/\code{-D}/\code{-I} in it.
 The key also covers \code{BUILD_ARGS}, the build-time env, the verilator / g++ / cocotb versions, and the content of \code{cxx_shim.sh}.
-Suites with an identical model share one directory: the 15 full-SoC \code{tb_soc_top} suites compile one time, not 15 times.
+Suites with an identical model share one directory: the full-SoC \code{tb_soc_top} suites compile one time, not one time for each suite.
 MODULE, TESTCASE and plusargs are runtime-only and are not in the key.
 
 The \emph{content} of the source files is not hashed.
@@ -250,8 +245,8 @@ python3 tools/eda/run_cocotb_targets.py --sim vcs --jobs 3 $(python3 tools/eda/r
 With cocotb 1.x, \code{make} exits 0 even when tests fail.
 Judge the result from \code{results.xml}; the driver does this.
 The full setup, the pass floors, the portability rules and the troubleshooting are in
-docs/\allowbreak{}verification/\allowbreak{}PROPRIETARY\_\allowbreak{}SIM\_\allowbreak{}FLOW.md (\cref{um:flow:proprietary-sim}).
-For VCS coverage, see \src{docs/verification/COMMERCIAL_SIM_COVERAGE.md} (\cref{tm:flow:commercial-sim-coverage}).
+\cref{um:flow:proprietary-sim}.
+For VCS coverage, see \cref{tm:flow:commercial-sim-coverage}.
 
 \subsection{RTL Linting \& Formatting}\label{um:guide:quick-start:rtl-linting-formatting}
 
@@ -358,7 +353,8 @@ CI does not run it.
 Exit 0 means PASS.
 Exit 1 means unwaived Fatal/\allowbreak{}Error.
 Exit 2 means INCOMPLETE (the rules did not run).
-As of 2026-10-24, the CDC/RDC crossing rules do not run on the licence set of this host, so \code{cdc}/\code{rdc} report
+The CDC/RDC crossing rules need the SpyGlass \code{cdc_adv_checker} licence feature.
+If the licence set does not give this feature, the rules do not run and \code{cdc}/\code{rdc} report
 INCOMPLETE.
 See \cref{um:flow:dqc}.
 
@@ -372,7 +368,11 @@ This chapter lists the instructions that the CPU supports.
 \subsection{\texorpdfstring{Phase 1 \ok{} (Complete --- RV32I
 Base)}{Phase 1  (Complete --- RV32I Base)}}\label{um:guide:supported-instructions:phase-1-white-check-mark-complete-rv32i-base}
 
-All 37 RV32I base integer instructions are verified and pass:
+The list below has 40 RV32I base instructions.
+The ISA compliance suite (54 tests) checks the 37 instructions that are not system instructions.
+A separate test shows that FENCE retires as a NOP.
+A separate test shows that EBREAK halts the CPU.
+The pipelined CPU decodes ECALL as an illegal instruction, and the fault injection suite checks this.
 
 \begin{itemize}
 \tightlist
@@ -397,7 +397,7 @@ All 37 RV32I base integer instructions are verified and pass:
 \subsection{\texorpdfstring{Phase 2 \ok{} (Verification Complete ---
 RV32I + Zicsr)}{Phase 2  (Verification Complete --- RV32I + Zicsr)}}\label{um:guide:supported-instructions:phase-2-white-check-mark-verification-complete-rv32i-zicsr}
 
-The CPU of this phase supports all Phase 1 instructions and also these items:
+The CPU of this phase supports all Phase 1 instructions except ECALL and also these items:
 
 \begin{itemize}
 \tightlist
@@ -421,8 +421,8 @@ The CPU of this phase supports all Phase 1 instructions and also these items:
   (MEIP)
 \end{itemize}
 
-See \src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase0-architecture}) for RV32I semantics
-and \src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase2-architecture}) for CSR and interrupt
+See \cref{ds:ch:phase0-architecture} for RV32I semantics
+and \cref{ds:ch:phase2-architecture} for CSR and interrupt
 details.
 
 \chapter{Debug interface}\label{um:ch:debug-interface}
@@ -470,7 +470,7 @@ address \\
 \end{longtable}
 }
 
-See \src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) for complete register definitions.
+See \cref{ds:mm:memory-map} for complete register definitions.
 
 \chapter{Coding guidelines}\label{um:ch:coding-guidelines}
 
@@ -2594,7 +2594,9 @@ Make sure that the dependencies are the same:
 pip install -r requirements.txt --upgrade
 \end{lstlisting}
 
-Check the Python version:
+Check the Python version of the QA tools.
+CI runs these tools on Python 3.11 and 3.12.
+The simulation Makefile is tuned for another Python version (see the header of \src{flake.nix}).
 
 \begin{lstlisting}[language=bash]
 python --version
@@ -6807,37 +6809,37 @@ Purpose
 \endlastfoot
 \cref{cr:status:roadmap} & High-level project plan and phases \\
 \cref{cr:status:phase-status} & Current project status and next steps \\
-\src{docs/design/PHASE0_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase0-architecture}) & CPU architectural
+Phase 0 architecture specification (\cref{ds:ch:phase0-architecture}) & CPU architectural
 requirements (Phase 0) \\
-\src{docs/design/PHASE1_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase1-architecture}) & CPU implementation spec
+Phase 1 architecture specification (\cref{ds:ch:phase1-architecture}) & CPU implementation spec
 (Phase 1) - \ok{} Complete \\
-\src{docs/design/PHASE2_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase2-architecture}) & Pipelined CPU spec
+Phase 2 architecture specification (\cref{ds:ch:phase2-architecture}) & Pipelined CPU spec
 (Phase 2) - \ok{} Complete \\
-\src{docs/design/PHASE3_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase3-architecture}) & Cache architecture spec
+Phase 3 architecture specification (\cref{ds:ch:phase3-architecture}) & Cache architecture spec
 (Phase 3) - \ok{} Approved \\
-\src{docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md} (\cref{ds:ch:phase4-gpu-architecture}) & GPU architecture
+Phase 4 GPU architecture specification (\cref{ds:ch:phase4-gpu-architecture}) & GPU architecture
 spec (Phase 4) --- frozen ISA/\allowbreak{}execution model \\
-\src{docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md} (\cref{ds:ch:phase3-closure-phase4-plan}) & Phase 3 closure + Phase 4
+Phase 3 closure and Phase 4 plan (\cref{ds:ch:phase3-closure-phase4-plan}) & Phase 3 closure + Phase 4
 implementation plan (golden spec) \\
-\src{docs/PHASE5_SOC_INTEGRATION_PLAN.md} (\cref{ds:ch:phase5-soc-integration-plan}) & Phase 5 SoC integration
+Phase 5 SoC integration plan (\cref{ds:ch:phase5-soc-integration-plan}) & Phase 5 SoC integration
 roadmap --- 12 milestones M1--M12 (golden spec) \\
-\src{docs/PHASE6_IP_EXPANSION_PLAN.md} (\cref{ds:ch:phase6-ip-expansion-plan}) & Phase 6 IP expansion ---
+Phase 6 IP expansion plan (\cref{ds:ch:phase6-ip-expansion-plan}) & Phase 6 IP expansion ---
 remaining 6a peripherals + 6b crypto + 6c NPU (golden spec) \\
-\src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) & DFT scan + MBIST + JTAG
+DFT architecture (\cref{tm:ch:dft-architecture}) & DFT scan + MBIST + JTAG
 architecture for the Sky130 SoC (epic \code{j41m}) \\
-\src{docs/design/TESSENT_MBIST_EVALUATION.md} (\cref{tm:dec:tessent-mbist-evaluation}) & Parallel evaluation of
+Tessent MBIST evaluation (\cref{tm:dec:tessent-mbist-evaluation}) & Parallel evaluation of
 Siemens Tessent MemoryBIST vs the in-house MBIST (flow in
 \src{dft/tessent/mbist/}; epic \code{j41m}) \\
-\src{docs/FPGA_BOARD_SELECTION.md} (\cref{tm:dec:fpga-board-selection}) & FPGA board recommendation and
+FPGA board selection (\cref{tm:dec:fpga-board-selection}) & FPGA board recommendation and
 measured ECP5 fmax lower bound (epic \code{hlrm}) \\
-\src{docs/design/RTL_DEFINITION.md} (\cref{ds:ch:rtl-definition}) & Interface signal definitions \\
-\src{docs/design/MEMORY_MAP.md} (\cref{ds:mm:memory-map}) & Address space and register map \\
-\src{docs/design/DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) & Sky130 DFT (scan + MBIST) Stage
+RTL interface definitions (\cref{ds:ch:rtl-definition}) & Interface signal definitions \\
+Memory map specification (\cref{ds:mm:memory-map}) & Address space and register map \\
+DFT architecture (\cref{tm:ch:dft-architecture}) & Sky130 DFT (scan + MBIST) Stage
 0 feasibility, architecture, decisions (\ghref{244}) \\
-\src{docs/design/TESSENT_ATPG_FLOW.md} (\cref{tm:flow:tessent-atpg}) & Tessent scan insertion + ATPG
+Tessent ATPG flow (\cref{tm:flow:tessent-atpg}) & Tessent scan insertion + ATPG
 evaluation flow for the Sky130 SoC fabric (\src{dft/tessent/atpg/}, epic
 \code{j41m}, Stage 2 evaluation) \\
-\src{docs/design/REFERENCE_MODEL_SPEC.md} (\cref{ds:ch:reference-model}) & Python reference model
+Reference model specification (\cref{ds:ch:reference-model}) & Python reference model
 API \\
 \end{longtable}
 }
@@ -6862,17 +6864,18 @@ Purpose
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\src{docs/design/OPENROAD_FLOW_SPEC.md} (\cref{tm:pd:openroad-flow}) & Complete OpenROAD flow
+OpenROAD flow specification (\cref{tm:pd:openroad-flow}) & Complete OpenROAD flow
 documentation \\
-\src{docs/design/UPF_POWER_SPEC.md} (\cref{ds:ch:upf-power-spec}) & Power intent and UPF
+UPF power specification (\cref{ds:ch:upf-power-spec}) & Power intent and UPF
 specification \\
-\src{docs/design/SDC_TIMING_SPEC.md} (\cref{ds:ch:sdc-timing-spec}) & Timing constraints and STA
+SDC timing specification (\cref{ds:ch:sdc-timing-spec}) & Timing constraints and STA
 guidelines \\
 \src{pnr/README.md} & Physical design directory structure \\
-\src{docs/COMMERCIAL_FLOW_COMPARISON.md} (\cref{tm:pd:commercial-flow-comparison}) & Sky130 CPU macro: OpenROAD vs
+Commercial flow comparison (\cref{tm:pd:commercial-flow-comparison}) & Sky130 CPU macro: OpenROAD vs
 DC-\textgreater ICC2 vs Genus-\textgreater Innovus, one
 StarRC-\textgreater PrimeTime judge; data in
-\src{pnr/commercial/compare/comparison.json} \\
+\src{pnr/commercial/compare/comparison.json}.
+The commercial flows are indicative and no arm meets sign-off (\cref{tm:caveat:commercial-flows-indicative}) \\
 \end{longtable}
 }
 
@@ -6896,7 +6899,7 @@ Purpose
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) & Verification strategy
+Verification plan (\cref{ds:ch:verification-plan}) & Verification strategy
 (RTL + physical design) \\
 \cref{um:flow:proprietary-sim} & VCS / Xcelium setup,
 regression run, portability rules (EDA hosts without nix) \\
@@ -6904,7 +6907,7 @@ regression run, portability rules (EDA hosts without nix) \\
 lint/\allowbreak{}CDC/\allowbreak{}RDC + Cadence HAL flow
 (\texttt{make\ -\allowbreak{}C\ dqc\ .\allowbreak{}.\allowbreak{}.\allowbreak{}}),
 waivers, licence matrix, open RTL findings \\
-\src{docs/XEZIM_EVALUATION.md} (\cref{tm:dec:xezim}) & Measured evaluation of xezim as
+Xezim evaluation (\cref{tm:dec:xezim}) & Measured evaluation of xezim as
 secondary compile/\allowbreak{}sim tool vs
 Verilator/\allowbreak{}VCS/\allowbreak{}Xcelium/\allowbreak{}slang: not
 adopted for regression; pyslang recommended for use-before-declare (bead
@@ -6920,7 +6923,7 @@ bug fixes \\
 
 \section{README detail set}\label{um:guide:key-documentation:readme-detail-set}
 
-\code{docs/readme/} holds the deep content split out of the root README.
+The User Manual holds the deep content of the root README.
 The deep content is in these sections:
 \cref{cr:status:phase-history}, \cref{um:guide:quick-start} (build/\allowbreak{}run
 commands per phase), \cref{um:guide:supported-instructions},
@@ -6948,13 +6951,16 @@ cd pnr && make report_summary
 \end{textblock}
 
 Commit with the \code{[Category]} convention (see below).
-Use \code{rtk}-prefixed commands for token-efficient output (see RTK section).
+AI agents prefix commands with \code{rtk} for token-efficient output.
+The rule is in \src{CLAUDE.md}.
 
 \textbf{Analog/\allowbreak{}mixed-signal flow (Phase 7+)}:
 The \code{analog} nix devshell gives the open analog toolchain (ngspice /
 xschem / magic / klayout / netgen).
+The shell is in the \code{flake.nix} of the external LibreLane checkout.
+It is not in the \code{flake.nix} of this repository.
 Enter it with
-\texttt{nix\ develop\ \textasciitilde{}/\allowbreak{}Downloads/\allowbreak{}Github/\allowbreak{}librelane\#analog}
+\texttt{nix\ develop\ \textless{}librelane-\allowbreak{}checkout\textgreater{}\#analog}
 (OpenVAF is not in nixpkgs → ngspice-behavioral fallback).
 
 The state of the analog flow is in
@@ -6963,13 +6969,13 @@ These files are \textbf{separate from the digital \src{design_state.json}} at th
 Full-SoC AMS cosim (RNM PLL through \code{Vtop}) needs
 \code{MAKEFLAGS=-j2} (OOM on a 15 GiB host otherwise).
 It also needs \code{SIM_BUILD} routed to \code{/nobackup}.
-See \src{docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md} (\cref{ds:ch:phase7-pll-plan}).
+See \cref{ds:ch:phase7-pll-plan}.
 
 \section{Project Structure}\label{um:guide:frequently-used-commands:project-structure}
 
 The top level has \src{rtl/} (\code{cpu/}, \code{gpu/}, \code{mem/} caches,
 \code{periph/}, \code{soc/}), \src{tb/} (\code{models/} Python +
-\code{cocotb/}), \src{docs/} (specs + \code{readme/} detail set),
+\code{cocotb/}), \src{docs/} (the books in \code{manual/}),
 \src{pnr/} (physical design), \src{sim/}, \src{micro_p/} (archived Phase
 1).
 
@@ -6983,7 +6989,7 @@ The Python reference models for the CPU and the GPU are in \src{tb/models/}:
 \code{rv32i_model.py} (CPU instruction-accurate),
 \code{gpu_kernel_model.py} (GPU SIMT), \code{memory_model.py},
 \code{cache_model.py} (DirectMappedCache).
-See \src{docs/design/REFERENCE_MODEL_SPEC.md} (\cref{ds:ch:reference-model}) for the complete API.
+See \cref{ds:ch:reference-model} for the complete API.
 
 \begin{lstlisting}[language=Python]
 from tb.models.rv32i_model import RV32IModel
@@ -7005,7 +7011,7 @@ assert result['rd'] == 1
   random instructions.
 \end{itemize}
 
-See \src{docs/verification/VERIFICATION_PLAN.md} (\cref{ds:ch:verification-plan}) for the phase-by-phase plan.
+See \cref{ds:ch:verification-plan} for the phase-by-phase plan.
 The per-phase completion history is in \cref{cr:status:phase-history}.
 
 
@@ -7027,4 +7033,4 @@ Existing verified RTL is grandfathered --- no style-only mass edits.
 
 \section{Questions?}\label{um:guide:commit-and-coding-rules:questions}
 
-Refer to specifications in \src{docs/} --- they are the source of truth.
+Refer to the books in \src{docs/manual/} --- they are the source of truth.
