@@ -5,20 +5,26 @@
 //   Only the req and ack levels cross, through cdc_sync. The payload buses stay stable and are read after the level arrives.
 //   s_pready_o pulses only after the full round trip. The throughput is halved.
 // Parameters: ADDR_W. SYNC_STAGES_TO_S and SYNC_STAGES_TO_M set the synchroniser stages. The default is 2.
-// Clocks and resets: s_rst_n_i and m_rst_n_i are active low. The source FSM resets with s_rst_n_i only.
-//   The destination FSM resets with rst_both_n, which is s_rst_n_i & m_rst_n_i.
-//   m_rst_n_i also crosses into s_clk_i through cdc_sync as m_rst_n_s.
-// Behaviour: If the destination is in reset, the source completes the request with s_pready_o=1 and s_pslverr_o=1.
-//   The source never waits for a destination that cannot answer. An error response does not prove that the destination made no transfer.
+// Clocks and resets: s_rst_n_i and m_rst_n_i are active low.
+//   The source FSM resets with s_rst_n_i only.
+//   The destination FSM, its command capture and armed_q reset with rst_both_n, which is s_rst_n_i & m_rst_n_i.
+//   The completion record (ack_q, resp_prdata_dq, resp_pslverr_dq) and the u_req_sync synchroniser reset with
+//   s_rst_n_i only, through u_comp_rst_sync. A destination reset therefore cannot erase a completed transfer.
+//   m_rst_sync_n (the destination reset after u_m_rst_sync) holds u_m_alive_sync in reset. The reset is asserted
+//   without a clock, so a pulse of any width reaches the s_clk_i domain. u_m_alive_dly_sync then resamples it as m_rst_n_s.
+// Behaviour: A transfer that completed before the destination reset ends with the real response, also for a read.
+//   A destination reset before completion ends with s_pready_o=1 and s_pslverr_o=1, and no later transfer.
+//   m_rst_n_s lags the reset by one cycle more than ack_s lags ack_q, so a completed response always wins the race.
+//   armed_q stops the destination from starting a request that was served or abandoned before the reset. It sets
+//   only when req_m is low.
+//   If the destination clock stops after the completion, a destination reset ends S_DROP, so the source never waits for it.
+//   A request that finds a stale ack_s, or the destination in reset, completes locally with an error and no transfer.
 // Caller rules:
-//   - Hold m_rst_n_i low for more than one period of s_clk_i, so that u_m_rst_status_sync samples the reset.
-//     A shorter pulse can stay hidden from the s_clk_i domain, and the destination can run a transfer again.
-//     This is a caller error.
-//   - STA must set set_max_delay -datapath_only on the four payload buses, on req_q and ack_q, and on m_rst_n_i to m_rst_n_s.
+//   - STA must set set_max_delay -datapath_only on the four payload buses, on req_q and ack_q, and on resp_prdata_dq and resp_pslverr_dq.
+//     The path from m_rst_sync_n to u_m_alive_sync is a reset crossing: constrain it as in the CDC check scripts.
+//   - m_rst_n_i must not glitch, because it acts on the s_clk_i domain without a clock.
 //   - Connect scanmode_i and scan_rst_ni at every instance.
 //   - Use the bridge for configuration and debug paths only. It is not a data path.
-//   - m_rst_n_s can read 1 for up to SYNC_STAGES_TO_S s_clk_i cycles after s_rst_sync_n releases, even while m_rst_n_i is low.
-//     This is a reviewed local exception.
 //   - A reset on s_rst_n_i abandons a destination transfer with no response and no SLVERR. The upstream master re-issues it after reset.
 //   - phase5_soc_multiclock_check.sdc matches req_q and ack_q by name. Do not rename them.
 // Doc: ds:mod:apb-cdc-bridge, tm:mod:apb-cdc-bridge, cr:mod:apb-cdc-bridge
@@ -91,26 +97,47 @@ module apb_cdc_bridge #(
         .rst_n_o     (m_rst_sync_n)
     );
 
-    // m_in_rst_s is the cdc_sync of ~m_rst_n_i. It is 1 when the destination is in reset.
-    // The polarity makes the reset value of cdc_sync mean not in reset.
-    // m_rst_n_s reads 1 for up to SYNC_STAGES_TO_S s_clk_i cycles after s_rst_sync_n releases, even if m_rst_n_i is low.
-    // This is a reviewed local exception. m_rst_sync_n holds the destination in reset in that time.
-    logic m_in_rst_s;   // 1 = destination domain observed in reset
+    // Completion-record reset: s_rst_n_i only, so a destination reset keeps a completed response.
+    logic m_comp_rst_n;
+
+    cdc_reset_sync #(
+        .STAGES (SYNC_STAGES_TO_M)
+    ) u_comp_rst_sync (
+        .clk_i       (m_clk_i),
+        .rst_n_i     (s_rst_n_i),
+        .scanmode_i  (scanmode_i),
+        .scan_rst_ni (scan_rst_ni),
+        .rst_n_o     (m_comp_rst_n)
+    );
+
+    // m_alive_fast_s is low from the start of any destination reset until SYNC_STAGES_TO_S s_clk_i edges after
+    // m_rst_sync_n releases. It asserts without a clock. Only u_m_alive_dly_sync reads it.
+    logic m_alive_fast_s;
+
+    cdc_reset_sync #(
+        .STAGES (SYNC_STAGES_TO_S)
+    ) u_m_alive_sync (
+        .clk_i       (s_clk_i),
+        .rst_n_i     (m_rst_sync_n),
+        .scanmode_i  (scanmode_i),
+        .scan_rst_ni (scan_rst_ni),
+        .rst_n_o     (m_alive_fast_s)
+    );
+
+    // m_rst_n_s is 1 when the destination is observed alive. It falls SYNC_STAGES_TO_S+1 s_clk_i edges after the
+    // reset starts, one edge later than ack_s can follow an ack_q that was set before the reset.
     logic m_rst_n_s;    // 1 = destination domain observed NOT in reset (alive)
 
     cdc_sync #(
-        .WIDTH  (1),
-        .STAGES (SYNC_STAGES_TO_S)
-    ) u_m_rst_status_sync (
+        .WIDTH     (1),
+        .STAGES    (SYNC_STAGES_TO_S + 1),
+        .RESET_VAL (1'b0)
+    ) u_m_alive_dly_sync (
         .clk_i   (s_clk_i),
         .rst_n_i (s_rst_sync_n),
-        .d_i     (~m_rst_n_i),
-        .q_o     (m_in_rst_s)
+        .d_i     (m_alive_fast_s),
+        .q_o     (m_rst_n_s)
     );
-
-    // m_rst_n_s is the inverse of m_in_rst_s.
-    // See ds:mod:apb-cdc-bridge.
-    assign m_rst_n_s = !m_in_rst_s;
 
     // =========================================================================
     // Source domain (s_clk_i): command capture + req level + FSM
@@ -132,14 +159,14 @@ module apb_cdc_bridge #(
     logic [31:0]       cmd_pwdata_q;
     logic [3:0]        cmd_pstrb_q;
     logic              req_q;    // level: 1 = request asserted to the destination
-    // Latched once at SETUP: was this request actually forwarded to the
-    // destination (destination observed live), or was it captured only to
-    // be locally error-completed (destination already observed in reset)?
-    // Gates both the S_REQ exit condition and the response below — see
-    // See ds:mod:apb-cdc-bridge.
+    // Latched once at SETUP: the request was forwarded (destination observed alive and no stale ack_s),
+    // or captured only to be completed locally with an error. See ds:mod:apb-cdc-bridge.
     logic              req_fwd_q;
 
-    logic              ack_s;   // defined below; forward-referenced here (SV allows it)
+    logic              ack_s;
+    logic              fwd_ok;
+
+    assign fwd_ok = m_rst_n_s && !ack_s;
 
     always_comb begin
         s_state_d = s_state_q;
@@ -149,7 +176,9 @@ module apb_cdc_bridge #(
                 // S_REQ ends on ack_s, on !req_fwd_q or on !m_rst_n_s. ack_s has priority.
                 if (ack_s || !req_fwd_q || !m_rst_n_s) s_state_d = S_DROP;
             end
-            S_DROP: if (!ack_s) s_state_d = S_DONE;
+            // S_DROP ends when ack_s falls. It also ends when the request was never forwarded, or when
+            // the destination is in reset, because ack_q cannot clear without the destination clock.
+            S_DROP: if (!ack_s || !req_fwd_q || !m_rst_n_s) s_state_d = S_DONE;
             S_DONE: s_state_d = S_IDLE;
             default: s_state_d = S_IDLE;
         endcase
@@ -177,13 +206,13 @@ module apb_cdc_bridge #(
                 cmd_paddr_q  <= s_paddr_i;
                 cmd_pwdata_q <= s_pwdata_i;
                 cmd_pstrb_q  <= s_pstrb_i;
-                req_fwd_q    <= m_rst_n_s;
+                req_fwd_q    <= fwd_ok;
             end
             // req_q asserts once per forwarded request and clears when ack_s is seen.
             // req_q is clamped to 0 while m_rst_n_s is low.
             if (!m_rst_n_s) begin
                 req_q <= 1'b0;
-            end else if (s_state_q == S_IDLE && s_psel_i && !s_penable_i) begin
+            end else if (s_state_q == S_IDLE && s_psel_i && !s_penable_i && fwd_ok) begin
                 req_q <= 1'b1;
             end else if (s_state_q == S_REQ && ack_s) begin
                 req_q <= 1'b0;
@@ -201,17 +230,16 @@ module apb_cdc_bridge #(
         .STAGES (SYNC_STAGES_TO_M)
     ) u_req_sync (
         .clk_i   (m_clk_i),
-        .rst_n_i (m_rst_sync_n),
+        .rst_n_i (m_comp_rst_n),
         .d_i     (req_q),
         .q_o     (req_m)
     );
 
-    // D_ACK holds ack_q until req_m falls. Then it clears ack_q and returns to D_IDLE.
+    // The destination FSM has no ack state: ack_q holds the completion until req_m falls.
     typedef enum logic [1:0] {
-        D_IDLE,    // waiting for req_m to read 1
+        D_IDLE,    // waiting for an armed request
         D_SETUP,   // APB SETUP phase (psel=1, penable=0), one cycle
-        D_ACCESS,  // APB ACCESS phase (psel=1, penable=1), wait for m_pready_i
-        D_ACK      // ack_q asserted; waiting for req_m to fall before re-arming
+        D_ACCESS   // APB ACCESS phase (psel=1, penable=1), wait for m_pready_i
     } d_state_e;
 
     d_state_e d_state_q, d_state_d;
@@ -220,17 +248,20 @@ module apb_cdc_bridge #(
     logic [ADDR_W-1:0] cmd_paddr_cap_q;
     logic [31:0]       cmd_pwdata_cap_q;
     logic [3:0]        cmd_pstrb_cap_q;
-    logic              ack_q;   // level: 1 = response ready, held until req_m falls
+    logic              armed_q;   // 1 = req_m was seen low since the last start or reset
+    logic              ack_q;     // level: 1 = response ready, held until req_m falls
     logic [31:0]       resp_prdata_dq;
     logic              resp_pslverr_dq;
+    logic              d_start;
+
+    assign d_start = (d_state_q == D_IDLE) && armed_q && req_m;
 
     always_comb begin
         d_state_d = d_state_q;
         unique case (d_state_q)
-            D_IDLE:   if (req_m)      d_state_d = D_SETUP;
+            D_IDLE:   if (d_start)    d_state_d = D_SETUP;
             D_SETUP:  d_state_d = D_ACCESS;
-            D_ACCESS: if (m_pready_i) d_state_d = D_ACK;
-            D_ACK:    if (!req_m)     d_state_d = D_IDLE;
+            D_ACCESS: if (m_pready_i) d_state_d = D_IDLE;
             default:  d_state_d = D_IDLE;
         endcase
     end
@@ -242,27 +273,36 @@ module apb_cdc_bridge #(
             cmd_paddr_cap_q  <= '0;
             cmd_pwdata_cap_q <= '0;
             cmd_pstrb_cap_q  <= '0;
-            ack_q            <= 1'b0;
-            resp_prdata_dq   <= '0;
-            resp_pslverr_dq  <= 1'b0;
+            armed_q          <= 1'b0;
         end else begin
             d_state_q <= d_state_d;
             // Cross-domain combinational capture of the source-domain command latch.
             // STA must set set_max_delay -datapath_only on this read. See ds:mod:apb-cdc-bridge.
-            if (d_state_q == D_IDLE && req_m) begin
+            if (d_start) begin
                 cmd_pwrite_cap_q <= cmd_pwrite_q;
                 cmd_paddr_cap_q  <= cmd_paddr_q;
                 cmd_pwdata_cap_q <= cmd_pwdata_q;
                 cmd_pstrb_cap_q  <= cmd_pstrb_q;
+                armed_q          <= 1'b0;
+            end else if (!req_m) begin
+                armed_q          <= 1'b1;
             end
-            if (d_state_q == D_ACCESS && m_pready_i) begin
-                resp_prdata_dq  <= m_prdata_i;
-                resp_pslverr_dq <= m_pslverr_i;
-                ack_q           <= 1'b1;
-            end
-            if (d_state_q == D_ACK && !req_m) begin
-                ack_q <= 1'b0;
-            end
+        end
+    end
+
+    // The completion record clears only with the source reset. It loads from the FSM state, which the
+    // destination reset clears: a reset in the cycle of the completion gives completed or not completed.
+    always_ff @(posedge m_clk_i or negedge m_comp_rst_n) begin
+        if (!m_comp_rst_n) begin
+            ack_q           <= 1'b0;
+            resp_prdata_dq  <= '0;
+            resp_pslverr_dq <= 1'b0;
+        end else if (d_state_q == D_ACCESS && m_pready_i) begin
+            resp_prdata_dq  <= m_prdata_i;
+            resp_pslverr_dq <= m_pslverr_i;
+            ack_q           <= 1'b1;
+        end else if (ack_q && !req_m) begin
+            ack_q           <= 1'b0;
         end
     end
 
@@ -286,7 +326,7 @@ module apb_cdc_bridge #(
         .q_o     (ack_s)
     );
 
-    // Source-domain response capture. ack_s selects the real destination response.
+    // Source-domain response capture. ack_s of a forwarded request selects the real destination response.
     // A forced completion makes prdata 0 and pslverr 1. STA must set set_max_delay -datapath_only on the read of resp_*_dq.
     logic [31:0] resp_prdata_q;
     logic        resp_pslverr_q;
@@ -296,7 +336,7 @@ module apb_cdc_bridge #(
             resp_prdata_q  <= '0;
             resp_pslverr_q <= 1'b0;
         end else if (s_state_q == S_REQ) begin
-            if (ack_s) begin
+            if (ack_s && req_fwd_q) begin
                 resp_prdata_q  <= resp_prdata_dq;
                 resp_pslverr_q <= resp_pslverr_dq;
             end else if (!req_fwd_q || !m_rst_n_s) begin

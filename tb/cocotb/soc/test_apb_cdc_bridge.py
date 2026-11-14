@@ -49,29 +49,20 @@ RESET_HOLD_NS = 300
 
 
 def _post_reset_recovery_cycles(dut) -> int:
-    """Cycles to wait, on the relevant destination clock(s), after a reset
-    domain releases before code may assume this crossing's reset-status
-    synchronisers have resolved and issue a transaction expected to
-    succeed.
+    """Cycles to wait on each clock, one after the other, after a reset releases before a
+    transaction may be expected to succeed.
 
-    Both directions here are cdc_sync instances (SYNC_STAGES_TO_S /
-    SYNC_STAGES_TO_M, read back from the RTL via sync_stages_to_{s,m}_o
-    rather than hardcoded a second time -- see tb_apb_cdc_bridge.sv
-    header) whose NOMINAL settling latency is STAGES cycles. Under the
-    RAND_CDC_DELAY_EN settling-delay injector (default OFF, compiled only in simulation), either
-    synchroniser can legitimately take one extra cycle. A recovery wait
-    pinned to the bare nominal STAGES is exactly-tight against the
-    synchroniser's own worst case, not generously tight against it --
-    that is precisely what was found: a literal
-    `ClockCycles(dut.m_clk, 3)` (== STAGES+1) in
-    test_availability_never_forwarded failed deterministically once the
-    injector's one-extra-cycle fault model was active, because the
-    post-recovery write landed one cycle before the synchroniser had
-    actually resolved. Returns STAGES+1 (worst-case settling) + 1 cycle of
-    slack for the receiving FSM to act on the newly-resolved value.
+    After the raw m_rst_n_i release the source sees the destination alive again after:
+    SYNC_STAGES_TO_M edges of m_clk_i (u_m_rst_sync), then SYNC_STAGES_TO_S edges of s_clk_i
+    (u_m_alive_sync), then SYNC_STAGES_TO_S+1 edges of s_clk_i (u_m_alive_dly_sync). The
+    RAND_CDC_DELAY_EN injector can add one edge to each synchroniser. The parameters are read
+    back from the RTL through sync_stages_to_{s,m}_o. The wait is applied once on s_clk and once
+    on m_clk, so the sum covers any clock ratio of this suite. Returns the worst case of the
+    chain plus 2 cycles for the FSMs to act.
     """
-    stages = max(int(dut.sync_stages_to_s_o.value), int(dut.sync_stages_to_m_o.value))
-    return stages + 2
+    s = int(dut.sync_stages_to_s_o.value)
+    m = int(dut.sync_stages_to_m_o.value)
+    return m + 2 * s + 1 + 3 + 2
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +71,11 @@ def _post_reset_recovery_cycles(dut) -> int:
 # _active_tasks / _kill_active_tasks).
 # ---------------------------------------------------------------------------
 _active_tasks: list = []
+
+
+def _in_rst(dut) -> int:
+    """1 when the source domain observes the destination in reset (m_rst_n_s low)."""
+    return 1 - int(dut.u_dut.m_rst_n_s.value)
 
 
 def _kill_active_tasks() -> None:
@@ -326,7 +322,7 @@ async def _reset_defaults_body(dut):
 # test_rz_four_phase_structural_proof looked for S_DONE's 3 while its message
 # said S_DROP, so it failed on correct RTL.
 S_IDLE, S_REQ, S_DROP, S_DONE = 0, 1, 2, 3
-D_IDLE, D_SETUP, D_ACCESS, D_ACK = 0, 1, 2, 3
+D_IDLE, D_SETUP, D_ACCESS = 0, 1, 2
 
 @cocotb.test()
 async def test_reset_defaults(dut):
@@ -942,40 +938,20 @@ async def test_availability_never_forwarded(dut):
 # --- 17. ack_s wins a same-s_clk-edge race against destination-reset -------
 
 async def _availability_ack_race_wins_body(dut):
-    """Prove that when ack_s (the real destination response, already
-    safely captured at the destination and independently propagating) and
-    !m_rst_n_s (the destination-reset-detected condition) become true on the
-    EXACT SAME s_clk edge, ack_s wins -- apb_cdc_bridge.sv's
-    `if (ack_s) ... else if (!req_fwd_q || !m_rst_n_s) ...` checks ack_s
-    first, so this is a deterministic priority encoding on two already-
-    synchronised, registered single-bit signals (no metastability, no real
-    hardware race) -- but it is only actually EXERCISED if both are
-    engineered to change on the identical edge.
+    """Prove that the real response of a request that completed before a destination reset wins
+    against the reset status, and that the reset status always lags it.
 
-    ack_q's assert-edge (0->1) at the destination is NOT influenced by
-    m_rst_n_i at all (u_ack_sync's reset is s_rst_sync_n, never m_rst_n_i),
-    so it is safe to let the ack complete for real at the destination first,
-    then align m_rst_n_i's assertion so its OWN independent 2-stage
-    synchroniser (u_m_rst_status_sync) settles on the same edge that ack_q's
-    propagation (through u_ack_sync, also 2-stage, both clocked by s_clk_i)
-    completes. Getting the timestep-boundary offset for that byte-perfect
-    is delicate under cocotb's RisingEdge/ReadOnly discipline (you cannot
-    write a signal in the same timestep you just read it via ReadOnly), so
-    this test self-calibrates: it sweeps the exact number of edges to wait
-    after observing ack_q assert before asserting m_rst_n_i, on a fresh
-    transaction each time, until it observes (via safe ReadOnly reads of
-    ack_s / m_in_rst_s -- ack_s is ack_q's synchronised copy in the s
-    domain, renamed from ack_toggle_s) that
-    both actually changed on the same s_clk edge, then checks the response
-    from that specific run. Only the FIRST assert (0->1) is tracked here --
-    under the old NRZ encoding this was ack_toggle_q's only meaningful
-    transition per request; under RZ, ack_q also later deasserts (1->0,
-    the "return to zero" half), but that is irrelevant to this race, which
-    only cares about the moment the real response first becomes visible.
+    ack_q is not cleared by m_rst_n_i, and m_rst_n_s falls SYNC_STAGES_TO_S+1 s_clk edges after
+    the reset, one edge later than the SYNC_STAGES_TO_S edges that ack_s needs after ack_q rose.
+    The test starts a read, waits for ack_q to rise, writes m_rst_n_i low 1 to 6 m_clk edges
+    later and, on each fresh run, records the s_clk edge on which ack_s first rises and the edge
+    on which m_rst_n_s first falls. The first rise of ack_s must never come after the fall
+    of m_rst_n_s, and the response must be the real one at every offset. The smallest lag
+    between the two is logged.
     """
     addr = 0xB00
     golden = 0xCAFED00D
-    aligned = None
+    lags = []
 
     for wait_edges in range(1, 7):
         ctx = await _setup(dut, 10, 10)
@@ -995,66 +971,39 @@ async def _availability_ack_race_wins_body(dut):
             prev_ack_q = cur
         assert flip_seen, f"wait_edges={wait_edges}: ack_q never asserted at the destination"
 
-        # Advance wait_edges more m_clk edges (== s_clk edges here, 10/10
-        # phase-aligned) before writing m_rst_n_i -- the earliest possible
-        # write is 1 edge after the ReadOnly-based detection above (cocotb
-        # cannot write in the same timestep it just read via ReadOnly), so
-        # this sweep's wait_edges=1 is the tightest offset actually reachable.
+        # The earliest possible write is one edge after the ReadOnly detection above.
         for _ in range(wait_edges):
             await RisingEdge(dut.m_clk)
         dut.m_rst_n.value = 0
 
-        prev_ack_s = int(dut.u_dut.ack_s.value)
-        prev_in_rst = int(dut.u_dut.m_in_rst_s.value)
-        ack_s_edge = None
-        rst_edge = None
-        for i in range(10):
+        ack_rise = None
+        rst_fall = None
+        for i in range(12):
             await RisingEdge(dut.s_clk)
             await ReadOnly()
-            cur_ack_s = int(dut.u_dut.ack_s.value)
-            cur_in_rst = int(dut.u_dut.m_in_rst_s.value)
-            if ack_s_edge is None and cur_ack_s != prev_ack_s:
-                ack_s_edge = i
-            if rst_edge is None and cur_in_rst != prev_in_rst:
-                rst_edge = i
-            prev_ack_s, prev_in_rst = cur_ack_s, cur_in_rst
-            if ack_s_edge is not None and rst_edge is not None:
+            if ack_rise is None and int(dut.u_dut.ack_s.value):
+                ack_rise = i
+            if rst_fall is None and _in_rst(dut):
+                rst_fall = i
+            if ack_rise is not None and rst_fall is not None:
                 break
+        assert ack_rise is not None and rst_fall is not None, (
+            f"wait_edges={wait_edges}: ack_s or the reset status never changed (ack {ack_rise}, rst {rst_fall})"
+        )
+        assert ack_rise <= rst_fall, (
+            f"wait_edges={wait_edges}: ack_s rose at edge {ack_rise}, after the reset status at {rst_fall}"
+        )
+        lags.append(rst_fall - ack_rise)
 
-        if ack_s_edge is not None and rst_edge is not None and ack_s_edge == rst_edge:
-            data, ok = await t
-            aligned = (wait_edges, ack_s_edge, data, ok)
-            break
-
-        # Not aligned this attempt -- clean up and try the next offset with
-        # a fresh _setup() (which fully re-resets everything, including
-        # ack_q back to 0, so each attempt is independent). The watch
-        # loop above always exits from a ReadOnly phase (whether it broke on
-        # a match or ran out of iterations), so a RisingEdge is needed first
-        # to reach a writable region before touching m_rst_n.
-        t.kill()
+        data, ok = await t
+        assert ok is True, f"wait_edges={wait_edges}: the real response was lost (ok={ok})"
+        assert data == golden, f"wait_edges={wait_edges}: data mismatch {data:#x}"
         await RisingEdge(dut.s_clk)
         dut.m_rst_n.value = 1
         await ClockCycles(dut.m_clk, 5)
 
-    assert aligned is not None, (
-        "could not engineer ack_s and the destination-reset-detected "
-        "condition to land on the same s_clk edge within the swept "
-        "wait_edges range 1..6 -- test calibration needs adjustment"
-    )
-    wait_edges, ack_s_edge, data, ok = aligned
-    assert ok is True, (
-        f"ack_s and the destination-reset-detected condition landed on the "
-        f"same s_clk edge (wait_edges={wait_edges}, edge offset {ack_s_edge}) "
-        f"but the response was NOT the real one (ok={ok}) -- ack_s must win "
-        "this race per apb_cdc_bridge.sv's if/else-if priority"
-    )
-    assert data == golden, f"race-won response data mismatch: {data:#x}"
-    dut._log.info(
-        f"availability ack-race OK: at wait_edges={wait_edges}, ack_s and "
-        f"m_in_rst_s both changed on the same s_clk edge (offset {ack_s_edge}) -- "
-        f"ack_s won, real data 0x{data:08x} returned, not a fabricated pslverr=1"
-    )
+    dut._log.info(f"availability ack-race OK: reset status lag behind ack_s per offset {lags}, min {min(lags)}")
+    assert min(lags) >= 0
 
 
 @cocotb.test()
@@ -1506,20 +1455,18 @@ async def test_reset_asym_staggered_m_then_s(dut):
 # Directed confirmation of four reviewed behaviours (B1 to B4).
 # Doc: ds:mod:apb-cdc-bridge
 #
-# A review read these behaviours from the RTL and no simulation had shown them:
-#   B1  An error response can follow a destination write that already completed
-#       (DS-CDC-102, DS-CDC-103).
+# A review read these behaviours from the RTL and a simulation confirmed them. The RTL now
+# makes a destination reset unable to repeat, fail or corrupt a transfer:
+#   B1  A destination reset after a completed write returns the real response, not an error.
 #   B2  No timeout: with m_clk_i stopped and m_rst_n_i high, a transfer never completes.
-#   B3  A short m_rst_n_i pulse can make the destination repeat one request (DS-CDC-106).
+#       This stays an expect_fail test.
+#   B3  A destination reset pulse of any width makes at most one transfer.
 #   B4  Worst-case latency of the bounds of DS-CDC-102 and DS-CDC-103, per clock ratio.
-# The RTL is not changed. Each test of B1 to B3 that asserts the specified behaviour is marked
-# expect_fail: it must fail while the behaviour exists. If one of them passes, the review was
-# wrong or the RTL changed. Then replace it by a normal test that proves the rule. A harness
-# fault raises RuntimeError, not AssertionError, so expect_fail cannot hide it. Every
-# expect_fail test has a normal companion test that proves the checker and the stimulus.
+#   B5  A read whose reset hits between the acknowledge stages returns the real data.
+# Each companion test proves the checker and the stimulus of the test beside it.
 # =============================================================================
 
-# A pulse of m_rst_n_i that follows DS-CDC-109 lasts this many periods of the slower clock.
+# A long pulse of m_rst_n_i lasts this many periods of the slower clock.
 LONG_PULSE_PERIODS = 8
 # Bound for B2: s_clk_i cycles that s_pready_o must stay low before the test calls it a stall.
 STALL_BOUND_S_CYCLES = 300
@@ -1610,7 +1557,7 @@ class _Observer:
             if self.armed:
                 if int(dut.u_dut.ack_s.value):
                     self.ack_s_seen = True
-                if int(dut.u_dut.m_in_rst_s.value):
+                if _in_rst(dut):
                     self.in_rst_seen = True
 
 
@@ -1735,21 +1682,20 @@ async def _sweep(dut, kind) -> list:
 
 # --- B1. An error response after a completed write ---------------------------------------------
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_b1_no_error_completion_after_completed_write(dut):
-    """Asserts: an errored request must not have written the destination (DS-CDC-102,
-    DS-CDC-103). Stimulus: m_rst_n_i pulses low, as DS-CDC-109 asks, a short time after ack_q
-    rises on the m side and before any s_clk edge samples it, at four clock ratios.
-
-    expect_fail: the review reads that the source then sees only the reset status, returns
-    s_pslverr_o=1, and the write has already happened. The failure message lists the points.
-    If this test passes, the reading was wrong or the RTL changed."""
+    """Asserts: a write that completed on the m_* face before the destination reset returns an
+    okay response, and an errored request has not written the destination (DS-CDC-102,
+    DS-CDC-103). Stimulus: m_rst_n_i pulses low a short time after ack_q rises on the m side and
+    before any s_clk edge samples it, at four clock ratios. The failure message lists the points."""
     rows = await with_timeout(_sweep(dut, "long"), 1000, "us")
-    bad = [r for r in rows if not r["skipped"] and r["m_writes"] >= 1 and _err_count(r) >= 1]
+    live = [r for r in rows if not r["skipped"]]
+    bad = [r for r in live if r["m_writes"] >= 1 and _err_count(r) >= 1]
     assert not bad, (
         f"{len(bad)} point(s) returned an error for a request whose write completed on the m_* "
         "face: " + "; ".join(_fmt_row(r) for r in bad[:6])
     )
+    assert all(_err_count(r) == 0 for r in live), "a completed write must return okay at every point"
 
 
 async def _reset_before_access_experiment(dut, s_ns, m_ns) -> dict:
@@ -1806,10 +1752,11 @@ async def test_b1_control_reset_before_access_errors_without_write(dut):
 
 @cocotb.test()
 async def test_b1_control_window_reached_and_late_reset_clean(dut):
-    """Companion of the B1 test and of the B3 test. Proves, without asserting the B1 outcome:
-    (1) the stimulus reaches the window: for the early, mid and last plans no s_clk edge sees
-    ack_s, the write completes once on the m_* face, and the source completes the request once;
-    (2) a reset after the source captured the acknowledge gives an okay response and one write."""
+    """Companion of the B1 test and of the B3 test. Proves that the stimulus reaches the window:
+    for the early, mid and last plans the pulse starts before the first s_clk edge that samples
+    ack_q, the write completes once on the m_* face, the source completes the request once, and
+    ack_s still rises although the destination reset cleared the destination FSM. A reset after
+    the source captured the acknowledge gives an okay response and one write."""
     rows = await with_timeout(_sweep(dut, "long"), 1000, "us")
     live = [r for r in rows if not r["skipped"]]
     window = [r for r in live if r["plan"] in ("early", "mid", "last")]
@@ -1819,7 +1766,9 @@ async def test_b1_control_window_reached_and_late_reset_clean(dut):
         assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
         assert r["m_writes"] == 1, f"the m_* face must show exactly one write: {tag}"
     for r in window:
-        assert not r["ack_s_seen"], f"ack_s rose although no s_clk edge saw ack_q: {_fmt_row(r)}"
+        assert r["delay"] < r["edge_gap"], f"the pulse starts after the first sampling edge: {_fmt_row(r)}"
+        assert r["ack_s_seen"], f"ack_s did not survive the destination reset: {_fmt_row(r)}"
+        assert r["in_rst_seen"], f"the source did not observe the reset: {_fmt_row(r)}"
     late = [r for r in live if r["plan"] == "late"]
     assert late, "no point of the late plan ran"
     for r in late:
@@ -1982,31 +1931,29 @@ async def test_b2_control_stall_then_restart_completes_once(dut):
 
 # --- B3. A short m_rst_n_i pulse can repeat a transfer -----------------------------------------
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_b3_short_reset_pulse_makes_one_transfer(dut):
     """Asserts: one request makes exactly one transfer on the m_* face (DS-CDC-106), also when
-    m_rst_n_i pulses low for less than one s_clk period. That pulse breaks DS-CDC-109, so the
-    review calls it a caller error; the owner asked to measure it. Sweep: pulse position and
-    width, 3 plans, four clock ratios, several alignments. Every point lies inside the window
-    where no s_clk edge sees ack_q and none samples the pulse.
-
-    expect_fail: the review reads that the reset clears the destination but the source still
-    holds req_q, so the destination runs the same request again after the release."""
+    m_rst_n_i pulses low for less than one s_clk period. Sweep: pulse position and width, 3
+    plans, four clock ratios, several alignments. Every point lies inside the window where no
+    s_clk edge sees ack_q and none samples the raw pulse. The source must still observe every
+    pulse, and complete once with an okay response."""
     rows = await with_timeout(_sweep(dut, "narrow"), 1000, "us")
     live = [r for r in rows if not r["skipped"]]
-    dup = [r for r in live if r["m_xfers"] > 1]
-    dut._log.info(f"B3: {len(dup)} of {len(live)} short-pulse points repeated the transfer")
-    for r in dup:
-        dut._log.info("  repeated: " + _fmt_row(r))
+    dup = [r for r in live if r["m_xfers"] != 1]
+    dut._log.info(f"B3: {len(dup)} of {len(live)} short-pulse points did not make exactly one transfer")
     assert not dup, (
-        f"{len(dup)} of {len(live)} points made more than one m_* transfer for one request: "
+        f"{len(dup)} of {len(live)} points made other than one m_* transfer for one request: "
         + "; ".join(_fmt_row(r) for r in dup[:6])
     )
+    for r in live:
+        assert len(r["s_done"]) == 1 and _err_count(r) == 0, f"completion is not one okay: {_fmt_row(r)}"
+    assert all(r["in_rst_seen"] for r in live), "the source missed a short pulse"
 
 
 @cocotb.test()
 async def test_b3_control_compliant_pulse_makes_one_transfer(dut):
-    """Companion of the B3 test. A pulse of m_rst_n_i that follows DS-CDC-109 never repeats a
+    """Companion of the B3 test. A long pulse of m_rst_n_i never repeats a
     transfer: at every point of the long sweep (pulse start before and after the acknowledge
     reaches the source) the m_* face shows exactly one transfer and the source completes once."""
     rows = await with_timeout(_sweep(dut, "long"), 1000, "us")
@@ -2021,19 +1968,17 @@ async def test_b3_control_compliant_pulse_makes_one_transfer(dut):
 
 @cocotb.test()
 async def test_b3_control_short_pulse_window_reached(dut):
-    """Companion of the B3 test. Proves, without asserting the B3 outcome, that the short pulses
-    were not sampled by the status synchroniser (m_in_rst_s never rose), that the source
-    completed every request once, and that the sweep has points. A transfer count of one or of
-    two is accepted here."""
+    """Companion of the B3 test. Proves that the window is reached: every short pulse starts and
+    ends between two s_clk edges that follow the ack_q rise, so a plain sample of the raw pin
+    would miss it, and the sweep has points. The source still completes every request once."""
     rows = await with_timeout(_sweep(dut, "narrow"), 1000, "us")
     live = [r for r in rows if not r["skipped"]]
     assert live, "no short-pulse point fitted before the next s_clk edge"
     for r in live:
         tag = _fmt_row(r)
-        assert not r["in_rst_seen"], f"the short pulse was sampled by the s domain: {tag}"
+        assert r["delay"] + r["width"] < r["edge_gap"], f"the pulse reaches an s_clk edge: {tag}"
         assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
-        assert 1 <= r["m_xfers"] <= 2, f"unexpected transfer count: {tag}"
-    dut._log.info(f"B3 control: {len(live)} short-pulse points, none sampled by the s domain")
+    dut._log.info(f"B3 control: {len(live)} short-pulse points, all inside one s_clk gap")
 
 
 # --- B4. Worst-case latency of the bounds of DS-CDC-102 and DS-CDC-103 --------------------------
@@ -2131,7 +2076,7 @@ async def _measure_ds103(dut, s_ns, m_ns) -> list:
 @cocotb.test()
 async def test_b4_ds103_latency_bound(dut):
     """Measures DS-CDC-103: after m_rst_n_i falls, a forwarded request completes with an error
-    within SYNC_STAGES_TO_S+2 rising edges of s_clk. The log gives the measured maximum of each
+    within SYNC_STAGES_TO_S+3 rising edges of s_clk. The log gives the measured maximum of each
     ratio.
     Ratios 4/9, 18/4, 10/10 and 7/11, with the reset at three offsets inside one s period."""
     stages = int(dut.sync_stages_to_s_o.value)
@@ -2139,11 +2084,11 @@ async def test_b4_ds103_latency_bound(dut):
         counts = await with_timeout(_measure_ds103(dut, s_ns, m_ns), 400, "us")
         dut._log.info(
             f"B4 DS-CDC-103 s/m={s_ns}/{m_ns}: edges after the reset falls {counts}, "
-            f"max {max(counts)}, DS bound {stages + 2}"
+            f"max {max(counts)}, DS bound {stages + 3}"
         )
         assert min(counts) >= 1, f"s/m={s_ns}/{m_ns}: completion before any s_clk edge"
-        assert max(counts) <= stages + 2, (
-            f"s/m={s_ns}/{m_ns}: completion took {max(counts)} edges, DS bound is {stages + 2}"
+        assert max(counts) <= stages + 3, (
+            f"s/m={s_ns}/{m_ns}: completion took {max(counts)} edges, DS bound is {stages + 3}"
         )
 
 
@@ -2298,32 +2243,33 @@ async def _read_sweep(dut) -> list:
     return _READ_CACHE["rows"]
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_b5_read_never_completes_okay_with_wrong_data(dut):
     """Asserts: a read that completes with s_pslverr_o=0 returns the data that the destination
-    answered (DS-CDC-102, DS-CDC-103). Stimulus: m_rst_n_i pulses low, as DS-CDC-109 asks, at five
-    places around the acknowledge, among them three between the first stage taking ack_q and
-    ack_s reading 1. Four clock ratios, several alignments.
-
-    expect_fail: the review reads that ack_s still rises after the reset has cleared
-    resp_prdata_dq and resp_pslverr_dq, so the source copies data 0 with an okay response. The
-    failure message lists the points. If this test passes, the reading was wrong or the RTL
-    changed."""
+    answered (DS-CDC-102, DS-CDC-103), and a read that completed before the reset returns it
+    with an okay response. Stimulus: m_rst_n_i pulses low at five places around the
+    acknowledge, among them three between the first stage taking ack_q and ack_s reading 1.
+    Four clock ratios, several alignments. The failure message lists the points."""
     rows = await with_timeout(_read_sweep(dut), 1500, "us")
-    bad = [r for r in rows if not r["skipped"] and _bad_okay_read(r)]
+    live = [r for r in rows if not r["skipped"]]
+    bad = [r for r in live if _bad_okay_read(r)]
     assert not bad, (
         f"{len(bad)} point(s) completed a read okay with data other than 0x{READ_DATA:08x}: "
         + "; ".join(_fmt_read_row(r) for r in bad[:6])
     )
+    for r in live:
+        assert _err_count(r) == 0 and r["s_done"][0][2] == READ_DATA, (
+            f"a read that completed before the reset must return okay with the data: {_fmt_read_row(r)}"
+        )
 
 
 @cocotb.test()
 async def test_b5_control_window_reached(dut):
     """Companion of the B5 test. Proves, without asserting the B5 outcome, that the stimulus
     reaches the window. For the e1 plans the acknowledge passes the first stage before the reset,
-    so ack_s rises; the destination read is done once; the source completes once. At least one
-    point has the source copy the payload after the reset has cleared it (data 0, no error flag);
-    the count is logged. The late plan completes okay with the right data at every point."""
+    so ack_s rises; the destination read is done once; the source completes once. The source
+    copies the held payload at every e1 point (no copy of a cleared payload), and the number of
+    copies is logged. The late plan completes okay with the right data at every point."""
     rows = await with_timeout(_read_sweep(dut), 1500, "us")
     live = [r for r in rows if not r["skipped"]]
     e1 = [r for r in live if r["plan"].startswith("e1_")]
@@ -2334,9 +2280,12 @@ async def test_b5_control_window_reached(dut):
         assert r["m_reads"] == 1, f"the m_* face must show exactly one read: {tag}"
     for r in e1:
         assert r["ack_s_seen"], f"ack_s did not rise at an e1 point: {_fmt_read_row(r)}"
-    hit = [r for r in e1 if _cleared_capture(r)]
-    dut._log.info(f"B5 control: {len(hit)} of {len(e1)} e1 points copied a cleared payload")
-    assert hit, "no e1 point reached the copy of a cleared payload: the window is not reached"
+    for r in e1:
+        assert not _cleared_capture(r), f"the source copied a cleared payload: {_fmt_read_row(r)}"
+        assert r["captures"] and all(c == (READ_DATA, 0) for c in r["captures"]), (
+            f"the source must copy the held payload: {_fmt_read_row(r)}"
+        )
+    dut._log.info(f"B5 control: {len(e1)} e1 points copied the held payload")
     late = [r for r in live if r["plan"] == "late"]
     assert late, "no point of the late plan ran"
     for r in late:
@@ -2363,3 +2312,320 @@ async def test_b5_control_check_flags_wrong_data_and_passes_right_data(dut):
         assert ok and data == READ_DATA, f"s/m={s_ns}/{m_ns}: read gave {data:#x} ok={ok}"
         assert not _bad_okay_read({"s_done": [(0, 0 if ok else 1, data)]})
     dut._log.info("B5 control: a read without reset returns the destination data at four ratios")
+
+
+# =============================================================================
+# Destination reset: no repeat, no error after a completion, no stale answer.
+# Doc: ds:mod:apb-cdc-bridge
+#
+# The tests below check the design rules of the reset-exempt completion record (ack_q,
+# resp_prdata_dq, resp_pslverr_dq, u_req_sync), the stretched reset status (u_m_alive_sync,
+# u_m_alive_dly_sync) and the armed_q gate. Every test has a stimulus that a plain sample of
+# m_rst_n_i, or a destination reset that clears the completion record, would fail.
+# =============================================================================
+
+RESET_ADDR = 0xE60
+RESET_SENTINEL = 0x0BAD0BAD
+RESET_WDATA = 0xC0DE0001
+_PULSE_RATIOS = ((18, 4), (4, 9))
+_REPEAT_RATIOS = ((18, 4), (4, 9), (10, 10), (7, 11))
+
+
+async def _pulse_experiment(dut, s_ns, m_ns, wait_states, width, trigger, delay=0) -> dict:
+    """One write request. m_rst_n_i pulses low for `width` ns once the trigger holds: trigger
+    "access" waits until the destination is in its ACCESS phase, trigger "req_q" waits for the
+    rise of req_q on an s_clk edge and then `delay` ns. After the pulse the test waits until
+    the source completes, then 60 s_clk periods more, so a repeated transfer could show."""
+    ctx = await _setup(dut, s_ns, m_ns, wait_states=wait_states)
+    obs = _Observer(dut).start()
+    obs.armed = True
+    ctx.responder.mem[RESET_ADDR] = RESET_SENTINEL
+    master = cocotb.start_soon(ctx.s_master.write(RESET_ADDR, RESET_WDATA))
+    if trigger == "access":
+        for _ in range(400):
+            await RisingEdge(dut.m_clk)
+            await ReadOnly()
+            if int(dut.m_penable.value):
+                break
+        else:
+            raise RuntimeError("harness: the destination never reached the ACCESS phase")
+        await RisingEdge(dut.m_clk)
+    else:
+        for _ in range(100):
+            await RisingEdge(dut.s_clk)
+            await ReadOnly()
+            if int(dut.u_dut.req_q.value):
+                break
+        else:
+            raise RuntimeError("harness: req_q never rose")
+        await Timer(1, units="step")
+        if delay:
+            await Timer(delay, units="ns")
+    dut.m_rst_n.value = 0
+    await Timer(width, units="ns")
+    dut.m_rst_n.value = 1
+    for _ in range(200):
+        await RisingEdge(dut.s_clk)
+        if obs.s_done:
+            break
+    await Timer(60 * s_ns, units="ns")
+    row = {
+        "ratio": (s_ns, m_ns),
+        "width": width,
+        "delay": delay,
+        "s_done": list(obs.s_done),
+        "m_xfers": len(obs.m_xfers),
+        "completed": ctx.responder.completed,
+        "mem": ctx.responder.mem.get(RESET_ADDR),
+        "in_rst_seen": obs.in_rst_seen,
+    }
+    master.kill()
+    obs.stop()
+    _idle_s_side(dut)
+    return row
+
+
+def _fmt_pulse_row(r) -> str:
+    s_ns, m_ns = r["ratio"]
+    return (
+        f"s/m={s_ns}/{m_ns} width={r['width']} delay={r['delay']} m_xfers={r['m_xfers']} "
+        f"s_done={[(e, hex(d)) for _t, e, d in r['s_done']]} mem={r['mem']:#x} in_rst_seen={r['in_rst_seen']}"
+    )
+
+
+async def _abandon_body(dut):
+    for s_ns, m_ns in _PULSE_RATIOS:
+        for width in (1, max(1, s_ns // 2), int(1.1 * s_ns), 3 * s_ns):
+            r = await _pulse_experiment(dut, s_ns, m_ns, 40, width, "access")
+            tag = _fmt_pulse_row(r)
+            assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
+            assert r["s_done"][0][1] == 1, f"an abandoned request must end with an error: {tag}"
+            assert r["m_xfers"] == 0 and r["completed"] == 0, f"a transfer ran after the reset: {tag}"
+            assert r["mem"] == RESET_SENTINEL, f"the destination memory changed: {tag}"
+            assert r["in_rst_seen"], f"the source did not see the pulse: {tag}"
+    dut._log.info("abandon: a reset pulse of any width in the ACCESS phase gives one error and no transfer")
+
+
+@cocotb.test()
+async def test_reset_abandon_then_release_makes_no_transfer(dut):
+    """A request in the destination ACCESS phase (40 wait states) meets a pulse of m_rst_n_i of
+    half, 1.1 and 3 s_clk periods and a very short pulse, at ratios 18/4 and 4/9. The pulse ends before the
+    source clamps req_q and before req_m falls. Asserts: one error completion, no transfer on
+    the m_* face during 60 s_clk periods after the release, destination memory unchanged, and
+    the source saw the pulse. Without the armed_q gate the destination starts the request again."""
+    await with_timeout(_abandon_body(dut), 600, "us")
+
+
+async def _repeat_body(dut):
+    rows = []
+    for s_ns, m_ns in _REPEAT_RATIOS:
+        for width in (int(1.1 * s_ns), 2 * s_ns, 3 * s_ns):
+            for delay in tuple(k * m_ns for k in (0, 2, 3, 4, 5, 6, 7, 9)):
+                rows.append(await _pulse_experiment(dut, s_ns, m_ns, 0, width, "req_q", delay))
+    for r in rows:
+        tag = _fmt_pulse_row(r)
+        assert len(r["s_done"]) == 1, f"the source must complete once: {tag}"
+        assert r["m_xfers"] <= 1, f"more than one transfer for one request: {tag}"
+        assert r["in_rst_seen"], f"the source did not see the pulse: {tag}"
+    errs = sum(1 for r in rows if r["s_done"][0][1])
+    dut._log.info(f"repeat sweep: {len(rows)} points, {errs} errors, {len(rows) - errs} okay, none repeated")
+    assert errs and errs < len(rows), "the sweep did not cross the completion point"
+
+
+@cocotb.test()
+async def test_reset_pulse_widths_make_at_most_one_transfer(dut):
+    """Pulses of 1.1, 2 and 3 s_clk periods start 0 to 9 m_clk periods after req_q rises, so
+    they land before, inside and after the destination transfer. Four clock ratios. Asserts: at
+    most one transfer on the m_* face, one completion, and the source saw every pulse. The
+    sweep must contain okay and error completions, so it crosses the point of completion."""
+    await with_timeout(_repeat_body(dut), 1500, "us")
+
+
+async def _hold_body(dut):
+    ctx = await _setup(dut, 10, 10, mem={READ_ADDR: READ_DATA})
+    master = cocotb.start_soon(ctx.s_master.read(READ_ADDR))
+    t = await _wait_ack_q_rise(dut)
+    assert t is not None, "ack_q never rose"
+    await Timer(1, units="step")
+    assert int(dut.u_dut.ack_q.value) == 1 and int(dut.u_dut.resp_prdata_dq.value) == READ_DATA
+    dut.m_rst_n.value = 0
+    await Timer(1, units="ns")
+    await ReadOnly()
+    assert int(dut.u_dut.ack_q.value) == 1, "ack_q was cleared by the destination reset"
+    assert int(dut.u_dut.resp_prdata_dq.value) == READ_DATA, "resp_prdata_dq was cleared by the destination reset"
+    assert int(dut.u_dut.d_state_q.value) == D_IDLE, "the destination FSM kept its state in reset"
+    assert int(dut.u_dut.armed_q.value) == 0, "armed_q must be 0 in reset"
+    assert int(dut.u_dut.m_alive_fast_s.value) == 0, "the reset status must assert without a clock edge"
+    await Timer(1, units="ns")
+    dut.m_rst_n.value = 1
+    data, ok = await master
+    assert ok is True and data == READ_DATA, f"the completed read lost its response ({data:#x}, ok={ok})"
+    # armed_q sets again only after req_m has fallen.
+    for _ in range(30):
+        await RisingEdge(dut.m_clk)
+        await ReadOnly()
+        if int(dut.u_dut.armed_q.value):
+            assert int(dut.u_dut.req_m.value) == 0, "armed_q rose while req_m was still high"
+            break
+    else:
+        raise AssertionError("armed_q never set after the transfer ended")
+    await Timer(1, units="step")
+
+
+@cocotb.test()
+async def test_reset_keeps_completion_record_and_asserts_status_without_clock(dut):
+    """A destination reset one nanosecond long, after ack_q rose and before the source took the
+    answer: ack_q and resp_prdata_dq stay (they clear only with the source reset), the FSM and
+    armed_q clear, the status m_alive_fast_s falls in the same time step although no clock edge
+    comes, and the read returns okay with the data. armed_q sets again only while req_m is low."""
+    await with_timeout(_hold_body(dut), 100, "us")
+
+
+async def _s_reset_body(dut):
+    ctx = await _setup(dut, 10, 10, mem={READ_ADDR: READ_DATA})
+    master = cocotb.start_soon(ctx.s_master.read(READ_ADDR))
+    t = await _wait_ack_q_rise(dut)
+    assert t is not None, "ack_q never rose"
+    await Timer(1, units="step")
+    master.kill()
+    _idle_s_side(dut)
+    dut.s_rst_n.value = 0
+    await Timer(1, units="ns")
+    await ReadOnly()
+    assert int(dut.u_dut.ack_q.value) == 0, "the source reset did not clear ack_q"
+    assert int(dut.u_dut.resp_prdata_dq.value) == 0, "the source reset did not clear resp_prdata_dq"
+    await Timer(1, units="step")
+    dut.s_rst_n.value = 1
+    await ClockCycles(dut.s_clk, _post_reset_recovery_cycles(dut))
+    await ClockCycles(dut.m_clk, _post_reset_recovery_cycles(dut))
+    await Timer(1, units="step")
+    data, ok = await with_timeout(ctx.s_master.read(READ_ADDR), 50, "us")
+    assert ok and data == READ_DATA, f"no clean read after the source reset ({data:#x}, ok={ok})"
+
+
+@cocotb.test()
+async def test_source_reset_clears_completion_record(dut):
+    """The source reset clears ack_q and resp_prdata_dq at once (DS-CDC-105), and the bridge
+    serves a read after the release."""
+    await with_timeout(_s_reset_body(dut), 100, "us")
+
+
+async def _clock_stop_body(dut, s_ns, m_ns):
+    ctx = await _setup(dut, s_ns, m_ns)
+    obs = _Observer(dut).start()
+    addr = 0xE70
+    master = cocotb.start_soon(ctx.s_master.write(addr, 0x7A7A0001))
+    t = await _wait_ack_q_rise(dut)
+    assert t is not None, "ack_q never rose"
+    await Timer(1, units="step")
+    ctx.m_clk_task.kill()
+    dut.m_clk.value = 0
+    # With the clock stopped, ack_q cannot clear. The source waits in S_DROP.
+    stuck = True
+    for _ in range(40):
+        await RisingEdge(dut.s_clk)
+        await ReadOnly()
+        if int(dut.s_pready.value):
+            stuck = False
+            break
+    assert stuck, "the source finished without the escape: the stimulus did not reach the stuck state"
+    assert int(dut.u_dut.s_state_q.value) == S_DROP and int(dut.u_dut.ack_s.value) == 1
+    await Timer(1, units="step")
+    # The reset needs no clock. The source must complete with the real answer.
+    stages = int(dut.sync_stages_to_s_o.value)
+    dut.m_rst_n.value = 0
+    edges = 0
+    done = False
+    for _ in range(40):
+        await RisingEdge(dut.s_clk)
+        edges += 1
+        await ReadOnly()
+        if int(dut.s_pready.value):
+            done = True
+            break
+    assert done, "the source never completed after the destination reset"
+    assert edges <= stages + 3, f"completion took {edges} edges, bound {stages + 3}"
+    assert int(dut.s_pslverr.value) == 0, "a write that completed must return okay"
+    ok = await master
+    assert ok is True
+    assert ctx.responder.mem.get(addr) == 0x7A7A0001
+    assert len(obs.m_xfers) == 1, f"expected one write, saw {len(obs.m_xfers)}"
+    obs.stop()
+    await Timer(1, units="step")
+    return edges
+
+
+async def _clock_stop_all(dut):
+    out = []
+    for s_ns, m_ns in ((10, 10), (18, 4), (4, 9)):
+        out.append((s_ns, m_ns, await _clock_stop_body(dut, s_ns, m_ns)))
+    dut._log.info(f"clock stop then reset: completion edges {out}")
+
+
+@cocotb.test()
+async def test_reset_ends_drop_state_when_destination_clock_stops(dut):
+    """The destination clock stops after the write completed. The source waits in S_DROP (the
+    test proves that it does), and a destination reset without any clock edge ends the wait
+    within SYNC_STAGES_TO_S+3 s_clk edges, with an okay response and one write on the m_* face.
+    Without the escape from S_DROP the source waits until the clock returns."""
+    await with_timeout(_clock_stop_all(dut), 400, "us")
+
+
+async def _stale_ack_body(dut, s_ns, m_ns):
+    ctx = await _setup(dut, s_ns, m_ns)
+    obs = _Observer(dut).start()
+    first = await ctx.s_master.write(0xE80, 0x11110000)
+    assert first is True
+    await ClockCycles(dut.s_clk, 4)
+    await ClockCycles(dut.m_clk, 4)
+    n0 = len(obs.m_xfers)
+    ctx.m_clk_task.kill()
+    dut.m_clk.value = 0
+    await Timer(1, units="step")
+    dut.u_dut.ack_q.value = 1
+    await ClockCycles(dut.s_clk, 6)
+    await ReadOnly()
+    assert int(dut.u_dut.ack_s.value) == 1, "the stale ack_s did not reach the source domain"
+    await Timer(1, units="step")
+    master = cocotb.start_soon(ctx.s_master.write(0xE84, 0x22220000))
+    edges = None
+    for _ in range(30):
+        await RisingEdge(dut.s_clk)
+        await ReadOnly()
+        if edges is None:
+            if int(dut.u_dut.s_state_q.value) == S_REQ:
+                edges = 0
+        else:
+            edges += 1
+        if edges is not None and int(dut.s_pready.value):
+            break
+    else:
+        raise AssertionError("a request that meets a stale ack_s never completed")
+    assert int(dut.s_pslverr.value) == 1, "a request that meets a stale ack_s must end with an error"
+    assert edges <= DS102_MAX_EDGES, f"local completion took {edges} edges"
+    ok = await master
+    assert ok is False
+    assert len(obs.m_xfers) == n0 and ctx.responder.mem.get(0xE84) is None, "the stale ack_s let a request through"
+    # Restart the clock: the stale ack clears and a new write succeeds.
+    ctx.m_clk_task = cocotb.start_soon(Clock(dut.m_clk, m_ns, units="ns").start())
+    _active_tasks.append(ctx.m_clk_task)
+    await ClockCycles(dut.s_clk, 12)
+    await ClockCycles(dut.m_clk, 12)
+    await Timer(1, units="step")
+    ok2 = await with_timeout(ctx.s_master.write(0xE88, 0x33330000), 50, "us")
+    assert ok2 is True and ctx.responder.mem.get(0xE88) == 0x33330000
+    obs.stop()
+
+
+async def _stale_ack_all(dut):
+    for s_ns, m_ns in ((10, 10), (18, 4), (4, 9)):
+        await _stale_ack_body(dut, s_ns, m_ns)
+
+
+@cocotb.test()
+async def test_stale_ack_completes_locally_with_error(dut):
+    """ack_q is forced to 1 while the destination clock is stopped, so ack_s is high at the next
+    SETUP. The request must complete within DS102_MAX_EDGES edges with s_pslverr_o=1 and no
+    transfer, never with a stale okay and never by waiting for ack_s to fall. After the clock
+    restarts, the next write is okay."""
+    await with_timeout(_stale_ack_all(dut), 400, "us")
