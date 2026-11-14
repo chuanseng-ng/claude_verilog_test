@@ -9,11 +9,11 @@
 //   The destination FSM resets with rst_both_n, which is s_rst_n_i & m_rst_n_i.
 //   m_rst_n_i also crosses into s_clk_i through cdc_sync as m_rst_n_s.
 // Behaviour: If the destination is in reset, the source completes the request with s_pready_o=1 and s_pslverr_o=1.
-//   The source never waits for a destination that cannot answer. No write is made on the destination for an errored request.
+//   The source never waits for a destination that cannot answer. An error response does not prove that the destination made no transfer.
 // Caller rules:
-//   - Hold s_rst_n_i and m_rst_n_i low for at least SYNC_STAGES+1 periods of the other clock.
-//   - Hold m_rst_n_i low for at least SYNC_STAGES_TO_M+1 periods of m_clk_i and SYNC_STAGES_TO_S+1 periods of s_clk_i.
-//     A shorter pulse can hide the reset from the s domain. This is a caller error.
+//   - Hold m_rst_n_i low for more than one period of s_clk_i, so that u_m_rst_status_sync samples the reset.
+//     A shorter pulse can stay hidden from the s_clk_i domain, and the destination can run a transfer again.
+//     This is a caller error.
 //   - STA must set set_max_delay -datapath_only on the four payload buses, on req_q and ack_q, and on m_rst_n_i to m_rst_n_s.
 //   - Connect scanmode_i and scan_rst_ni at every instance.
 //   - Use the bridge for configuration and debug paths only. It is not a data path.
@@ -61,12 +61,10 @@ module apb_cdc_bridge #(
 );
 
     // ── Reset: ASYMMETRIC. See ds:mod:apb-cdc-bridge. ───────
-    // rst_both_n still exists and still couples the DESTINATION domain to
-    // BOTH resets (a conservative, reviewed choice; see ds:mod:apb-cdc-bridge, no longer
-    // strictly required for RZ correctness but retained for this bead's
-    // minimal-diff scope). The SOURCE domain's own reset sync (u_s_rst_sync,
-    // just below) is deliberately rooted in s_rst_n_i alone, NOT rst_both_n
-    // — that decoupling is the actual availability fix.
+    // The destination reset uses both resets: rst_both_n is s_rst_n_i & m_rst_n_i
+    // (see ds:mod:apb-cdc-bridge). The source reset synchroniser u_s_rst_sync
+    // (just below) uses s_rst_n_i alone, not rst_both_n. So the source stays
+    // available when the destination is in reset.
     logic rst_both_n;
     assign rst_both_n = s_rst_n_i & m_rst_n_i;
 

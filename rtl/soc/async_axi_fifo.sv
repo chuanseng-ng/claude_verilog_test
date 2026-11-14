@@ -12,11 +12,13 @@
 // Caller rules:
 //   - Reset is a hard flush, not a graceful abort. Buffered beats are lost. No wlast and no SLVERR is made.
 //   - s_rst_n_i and m_rst_n_i must share a common root that also resets the master and the fabric.
-//   - Hold each reset low for at least SYNC_STAGES+1 periods of the other clock. Do not wire a short pulse.
+//   - The module needs no minimum width of a reset pulse beyond the minimum pulse width of its flops.
+//     Both cdc_reset_sync chains clear without a clock edge.
 //   - STA must set set_max_delay -datapath_only on the mem_q read path and on both gray-pointer crossings
 //     in each of the five FIFO instances.
 //   - Connect scanmode_i and scan_rst_ni at every instance. Both reach the two cdc_reset_sync instances.
-//   - Each channel costs about SYNC_STAGES+2 receiving-domain cycles per traversal.
+//   - A beat is visible on the other face SYNC_STAGES+1 rising edges of the receiving clock after the edge that accepts it.
+//     The count is exact in a simulation with ideal flops. SYNC_STAGES is the parameter of the cdc_gray_fifo of the channel.
 //   - The module has no bypass parameter.
 // Doc: ds:mod:async-axi-fifo, tm:mod:async-axi-fifo
 
@@ -28,14 +30,15 @@ module async_axi_fifo #(
     parameter int unsigned LENW  = axi_pkg::AXI_LEN_WIDTH,
     parameter int unsigned SIZEW = axi_pkg::AXI_SIZE_WIDTH,
 
-    // ── Per-channel FIFO depths (power of two; validated at >= 4 only -- cdc_gray_fifo itself accepts 2 since 3snb, not validated here) ──
+    // ── Per-channel FIFO depths (power of two). This module has no depth check; the guard in cdc_gray_fifo accepts 2.
+    //    The tests of this module run depths 4 and 8 only. ──
     parameter int unsigned AW_DEPTH = 4,
     parameter int unsigned W_DEPTH  = 8,
     parameter int unsigned B_DEPTH  = 4,
     parameter int unsigned AR_DEPTH = 4,
     parameter int unsigned R_DEPTH  = 8,
 
-    // ── Synchroniser stage counts, split so a future change (#96) can raise
+    // ── Synchroniser stage counts, split so a future change can raise
     //    the CPU (s) side to 3 for MTBF without changing the fabric (m)
     //    side default. Applied per-instance to the whole cdc_gray_fifo (both
     //    of its internal pointer-sync directions) since cdc_gray_fifo itself

@@ -564,7 +564,7 @@ async def _reset_while_busy_s_side_body(dut):
     genuinely NEW transactions afterward.
 
     Kill-timing note (fixed alongside the cdc_gray_fifo
-    wr_ready_o reset-gating fix, commit 7a9f9d4): the interrupted master
+    wr_ready_o reset-gating fix): the interrupted master
     task is killed AT reset assertion, not after release+settling. A real
     AXI master is itself part of the domain this reset covers, so its own
     issuing FSM would be wiped by the very same reset edge -- it would never
@@ -1109,8 +1109,8 @@ async def test_white_box_gray_pointer_single_bit_change(dut):
 #
 # design_state.json's gh93_cdc_verification record documents that BOTH RTL
 # bugs found (soc_top.sv's cpu_gated_clk stopped
-# during the CPU's own reset window; commit 7a9f9d4 -- this module's
-# cdc_gray_fifo.sv wr_ready_o not gated by wr_rst_n_i) shared one root
+# during the CPU's own reset window; and, for this module, cdc_gray_fifo.sv
+# wr_ready_o not gated by wr_rst_n_i) shared one root
 # signature: a reset value that advertises availability while cross-domain
 # readiness has not actually been established -- invisible whenever both
 # domains release reset together, which was every scenario before the
@@ -1130,8 +1130,9 @@ async def test_white_box_gray_pointer_single_bit_change(dut):
 # full-throttle traffic on all 5 channels simultaneously. The essential
 # property under test: while EITHER physical reset input is low, every
 # *_ready output must read 0 (zero acceptance) and every read-side *_valid
-# output must read 0 (zero silent pass-through) -- exactly what 7a9f9d4
-# fixed (`wr_ready_o = wr_rst_n_i && !full_q`, not just `!full_q`). After
+# output must read 0 (zero silent pass-through) -- exactly what the wr_ready_o
+# reset gating in cdc_gray_fifo fixed (`wr_ready_o = wr_rst_n_i && !full_q`,
+# not just `!full_q`). After
 # both inputs release, one real transaction must complete cleanly, exactly
 # once, proving nothing offered during the rejected window was silently
 # latched.

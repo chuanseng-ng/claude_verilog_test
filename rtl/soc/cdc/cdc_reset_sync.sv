@@ -7,7 +7,7 @@
 // Parameters: STAGES. The default is 2. The value must be at least 2.
 // Clocks and resets: clk_i is the destination clock. rst_n_i is the active-low source reset.
 // Caller rules:
-//   - Hold rst_n_i low for at least STAGES+1 periods of clk_i.
+//   - The module needs no minimum width of the rst_n_i pulse beyond the minimum pulse width of its flops.
 //   - Connect scanmode_i and scan_rst_ni at every instance. Without a scan flow, tie scanmode_i=1'b0 and scan_rst_ni=1'b1.
 //   - Keep scanmode_i quasi-static. Set it before the first test clock edge. Do not toggle it while clk_i runs.
 //   - In scan mode the tester owns the timing of the scan_rst_ni release.
