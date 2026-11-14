@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mutation campaign for the PMU iso-ack handshake (bead 3ogd).
+"""Mutation campaign for the PMU iso-ack handshake, the edge qualifiers, STATUS_CLR and the CPU clamp qualifier.
 
 Each mutant is a textual edit of rtl/soc/pmu.sv or rtl/soc/soc_top.sv applied to a private copy of
 the rtl tree under OUT_DIR and fed to the very same suites CI runs through `make <suite> RTL=<tree>`:
@@ -33,72 +33,113 @@ TOP = "rtl/soc/soc_top.sv"
 MUTANTS = [
     # ---- pmu.sv: the wait states -------------------------------------------------------------
     ("p01_pd_iso_ignores_ack", "pmu", PMU, "DOM_PD_ISO advances without waiting for the ack",
-     [("(iso_ack_w[d] || wait_hit[d]) ? DOM_PD_GATE", "1'b1 ? DOM_PD_GATE")], None),
+     [("(pd_ack_ok[d] || wait_hit[d]) ? DOM_OFF", "1'b1 ? DOM_OFF")], None),
     ("p02_pd_iso_waits_on_low_ack", "pmu", PMU, "DOM_PD_ISO waits for the ack to be LOW",
-     [("(iso_ack_w[d] || wait_hit[d]) ? DOM_PD_GATE", "(!iso_ack_w[d] || wait_hit[d]) ? DOM_PD_GATE")], None),
+     [("(pd_ack_ok[d] || wait_hit[d]) ? DOM_OFF", "(!pd_ack_ok[d] || wait_hit[d]) ? DOM_OFF")], None),
     ("p03_pd_iso_reverses_without_ack", "pmu", PMU, "no ack -> the power-down reverses to ON",
-     [("                                                                                   : DOM_PD_ISO;",
-       "                                                                                   : DOM_ON;")], None),
-    ("p04_pu_iso_no_release_wait", "pmu", PMU, "DOM_PU_ISO settles at ON without waiting for the ack to fall (stale ack)",
-     [("(!iso_ack_w[d] || wait_hit[d]) ? DOM_ON", "1'b1 ? DOM_ON")], None),
+     [(": DOM_PD_ISO;", ": DOM_ON;")], None),
+    ("p04_pu_iso_no_release_wait", "pmu", PMU, "DOM_PU_ISO advances without waiting for the ack to fall (stale ack)",
+     [("(pu_ack_ok[d] || wait_hit[d]) ? DOM_PU_CLK", "1'b1 ? DOM_PU_CLK")], None),
     ("p05_pu_iso_waits_on_high_ack", "pmu", PMU, "DOM_PU_ISO waits for the ack to be HIGH",
-     [("(!iso_ack_w[d] || wait_hit[d]) ? DOM_ON", "(iso_ack_w[d] || wait_hit[d]) ? DOM_ON")], None),
+     [("(pu_ack_ok[d] || wait_hit[d]) ? DOM_PU_CLK", "(!pu_ack_ok[d] || wait_hit[d]) ? DOM_PU_CLK")], None),
     # ---- pmu.sv: the timeout -----------------------------------------------------------------
     ("t01_no_timeout_pd", "pmu", PMU, "the power-down wait can never time out (PMU hangs)",
-     [("((dom_state_q[d] == DOM_PD_ISO) && !iso_ack_w[d]) ||", "1'b0 ||")], None),
+     [("((dom_state_q[d] == DOM_PD_ISO) && !pd_ack_ok[d]) ||", "1'b0 ||")], None),
     ("t02_no_timeout_pu", "pmu", PMU, "the power-up wait can never time out",
-     [("((dom_state_q[d] == DOM_PU_ISO) &&  iso_ack_w[d]);", "1'b0;")], None),
+     [("((dom_state_q[d] == DOM_PU_ISO) && !pu_ack_ok[d]);", "1'b0;")], None),
     ("t03_timeout_one_short", "pmu", PMU, "timeout expires one cycle early",
      [("(wait_cnt_q == CW'(ISO_ACK_TIMEOUT - 1))", "(wait_cnt_q == CW'(ISO_ACK_TIMEOUT - 2))")], None),
-    ("t04_timeout_one_long", "pmu", PMU, "timeout expires one cycle late",
+    ("t04_timeout_one_long", "pmu", PMU,
+     "timeout constant is ISO_ACK_TIMEOUT, not ISO_ACK_TIMEOUT - 1: one cycle late at the default of 255, "
+     "but at the 16 of tb_pmu the CW=4 cast truncates it to 0, so the wait times out after one cycle",
      [("(wait_cnt_q == CW'(ISO_ACK_TIMEOUT - 1))", "(wait_cnt_q == CW'(ISO_ACK_TIMEOUT))")], None),
     ("t05_counter_carries_over", "pmu", PMU, "the counter holds (not cleared) between waits",
      [("else                             wait_cnt_q <= '0;", "else                             wait_cnt_q <= wait_cnt_q;")], None),
     ("t06_counter_not_reset", "pmu", PMU, "the counter has no reset",
-     [("                        wait_cnt_q       <= '0;\n                        cpu_iso_ack_to_q <= 1'b0;\n                    end else begin",
-       "                        cpu_iso_ack_to_q <= 1'b0;\n                    end else begin")],
+     [("                        wait_cnt_q       <= '0;\n                        cpu_iso_ack_to_q <= 1'b0;\n",
+       "                        cpu_iso_ack_to_q <= 1'b0;\n")],
      "equivalent: dom_state_q is reset to DOM_ON, so wait_active is 0 from the first cycle of reset and "
      "the counter's own 'else' branch clears it on the first edge after release; nothing reads the counter "
      "outside a wait"),
     ("t07_flag_never_set", "pmu", PMU, "STATUS[3] is never set on a timeout",
-     [("else if (wait_hit[d])                              cpu_iso_ack_to_q <= 1'b1;", "else if (1'b0)                                     cpu_iso_ack_to_q <= 1'b1;")], None),
+     [("if (wait_hit[d])        cpu_iso_ack_to_q <= 1'b1;", "if (1'b0)               cpu_iso_ack_to_q <= 1'b1;")], None),
     ("t08_flag_set_on_any_wait", "pmu", PMU, "STATUS[3] is set whenever a wait starts, not only on timeout",
-     [("else if (wait_hit[d])                              cpu_iso_ack_to_q <= 1'b1;", "else if (wait_active)                               cpu_iso_ack_to_q <= 1'b1;")], None),
-    ("t09_flag_not_cleared_by_power_down", "pmu", PMU, "STATUS[3] is sticky forever (only reset clears it)",
-     [("if (dom_state_q[d] == DOM_ON && !dom_target_on[d]) cpu_iso_ack_to_q <= 1'b0;\n                        else if",
-       "if (1'b0) cpu_iso_ack_to_q <= 1'b0;\n                        else if")], None),
+     [("if (wait_hit[d])        cpu_iso_ack_to_q <= 1'b1;", "if (wait_active)         cpu_iso_ack_to_q <= 1'b1;")], None),
     ("t10_flag_not_reset", "pmu", PMU, "STATUS[3] has no reset",
-     [("                        wait_cnt_q       <= '0;\n                        cpu_iso_ack_to_q <= 1'b0;\n                    end else begin",
-       "                        wait_cnt_q       <= '0;\n                    end else begin")], None),
+     [("                        cpu_iso_ack_to_q <= 1'b0;\n                        ack_low_seen_q   <= 1'b0;",
+       "                        ack_low_seen_q   <= 1'b0;")], None),
     ("t11_flag_wrong_bit", "pmu", PMU, "the flag is reported at STATUS[4]",
      [("{28'b0, cpu_iso_ack_to_q, pmu_busy, gpu_domain_on, cpu_domain_on}", "{27'b0, cpu_iso_ack_to_q, 1'b0, pmu_busy, gpu_domain_on, cpu_domain_on}")], None),
     ("t12_timeout_and_not_or", "pmu", PMU, "timeout and ack must BOTH hold to advance PD_ISO",
-     [("(iso_ack_w[d] || wait_hit[d]) ? DOM_PD_GATE", "(iso_ack_w[d] && wait_hit[d]) ? DOM_PD_GATE")], None),
+     [("(pd_ack_ok[d] || wait_hit[d]) ? DOM_OFF", "(pd_ack_ok[d] && wait_hit[d]) ? DOM_OFF")], None),
     # ---- pmu.sv: GPU independence ------------------------------------------------------------
     ("g01_gpu_uses_cpu_ack", "pmu", PMU, "the GPU domain waits on the CPU ack",
-     [("assign iso_ack_w[d] = iso_en_q[d];", "assign iso_ack_w[d] = cpu_iso_ack_i;")], None),
-    ("g02_gpu_never_acks", "pmu", PMU, "the GPU's internal ack is tied low",
-     [("assign iso_ack_w[d] = iso_en_q[d];", "assign iso_ack_w[d] = 1'b0;")], None),
+     [("assign pd_ack_ok[d] = iso_en_q[d];", "assign pd_ack_ok[d] = cpu_iso_ack_i;"),
+      ("assign pu_ack_ok[d] = !iso_en_q[d];", "assign pu_ack_ok[d] = !cpu_iso_ack_i;")], None),
+    ("g02_gpu_never_acks", "pmu", PMU, "the GPU's power-down ack is tied low",
+     [("assign pd_ack_ok[d] = iso_en_q[d];", "assign pd_ack_ok[d] = 1'b0;")], None),
+    # ---- pmu.sv: the edge qualifiers and STATUS_CLR (prefix q) ---------------------------------
+    ("q01_pd_qualifier_removed", "pmu", PMU, "the power-down wait accepts a stale high ack (no ack_low_seen_q term)",
+     [("assign pd_ack_ok[d] = cpu_iso_ack_i && ack_low_seen_q;", "assign pd_ack_ok[d] = cpu_iso_ack_i;")], None),
+    ("q02_pu_qualifier_removed", "pmu", PMU, "the power-up wait accepts a stale low ack (no ack_high_seen_q term)",
+     [("assign pu_ack_ok[d] = !cpu_iso_ack_i && ack_high_seen_q;", "assign pu_ack_ok[d] = !cpu_iso_ack_i;")], None),
+    ("q03_pd_arm_forced_set", "pmu", PMU, "ack_low_seen_q is forced 1 outside the wait (always armed)",
+     [("ack_low_seen_q <= !cpu_iso_ack_i;", "ack_low_seen_q <= 1'b1;")], None),
+    ("q04_pu_arm_forced_set", "pmu", PMU, "ack_high_seen_q is forced 1 outside the wait (always armed)",
+     [("ack_high_seen_q <= cpu_iso_ack_i;", "ack_high_seen_q <= 1'b1;")], None),
+    ("q05_autoclear_reinstated", "pmu", PMU, "STATUS[3] clears at the start of every CPU power-down again",
+     [("if (wait_hit[d])        cpu_iso_ack_to_q <= 1'b1;",
+       "if (dom_state_q[d] == DOM_ON && !dom_target_on[d]) cpu_iso_ack_to_q <= 1'b0;\n"
+       "                        else if (wait_hit[d])        cpu_iso_ack_to_q <= 1'b1;")], None),
+    ("q06_status_clr_ignores_pstrb", "pmu", PMU, "STATUS_CLR acts without pstrb[0]",
+     [("psel && penable && pwrite && pstrb[0] && pwdata[0]", "psel && penable && pwrite && pwdata[0]")], None),
+    ("q07_status_clr_ignores_pwdata", "pmu", PMU, "STATUS_CLR acts on any written data",
+     [("psel && penable && pwrite && pstrb[0] && pwdata[0]", "psel && penable && pwrite && pstrb[0]")], None),
+    ("q08_status_clr_any_word", "pmu", PMU, "STATUS_CLR decodes every word",
+     [("({{(32-(ADDR_W-2)){1'b0}}, addr_word_w} == 32'(REG_STATUS_CLR));", "1'b1;")], None),
+    ("q09_clear_beats_set", "pmu", PMU, "a STATUS_CLR write in the timeout cycle hides the timeout",
+     [("if (wait_hit[d])        cpu_iso_ack_to_q <= 1'b1;\n                        else if (sts_clr_w)     cpu_iso_ack_to_q <= 1'b0;",
+       "if (sts_clr_w)          cpu_iso_ack_to_q <= 1'b0;\n                        else if (wait_hit[d])   cpu_iso_ack_to_q <= 1'b1;")], None),
+    ("q10_status_clr_never_clears", "pmu", PMU, "STATUS_CLR has no effect",
+     [("else if (sts_clr_w)     cpu_iso_ack_to_q <= 1'b0;", "else if (1'b0)          cpu_iso_ack_to_q <= 1'b0;")], None),
     # ---- soc_top.sv: the return crossing ------------------------------------------------------
     ("s01_ack_from_unsynced_iso", "soc_pmu_iso_ack", TOP, "ack is a sync of the RAW pmu_cpu_iso_en (never waits for the CPU domain)",
-     [(".d_i     (pmu_cpu_iso_en_sync),\n        .q_o     (pmu_cpu_iso_ack)", ".d_i     (pmu_cpu_iso_en),\n        .q_o     (pmu_cpu_iso_ack)")], None),
+     [(".d_i     (cpu_iso_clamp_q),\n        .q_o     (pmu_cpu_iso_ack)", ".d_i     (pmu_cpu_iso_en),\n        .q_o     (pmu_cpu_iso_ack)")], None),
     ("s02_ack_tied_high", "soc_pmu_iso_ack", TOP, "cpu_iso_ack_i tied 1 (the pre-3ogd behaviour, plus 0-cycle wait)",
      [(".cpu_iso_ack_i       (pmu_cpu_iso_ack),", ".cpu_iso_ack_i       (1'b1),")], None),
     ("s03_ack_tied_low", "soc_pmu_iso_ack", TOP, "cpu_iso_ack_i tied 0 (every power-down times out)",
      [(".cpu_iso_ack_i       (pmu_cpu_iso_ack),", ".cpu_iso_ack_i       (1'b0),")], None),
-    ("s04_ack_not_synchronised", "soc_pmu_iso_ack", TOP, "the return crossing is a bare wire (no cdc_sync into core_clk)",
+    ("s04_ack_not_synchronised", "soc_pmu_iso_ack", TOP, "the return crossing is clocked by cpu_core_clk (no sync into core_clk)",
      [("    ) u_cpu_iso_ack_sync (\n        .clk_i   (core_clk),", "    ) u_cpu_iso_ack_sync (\n        .clk_i   (cpu_core_clk),")], None),
     ("s05_ack_after_cpu_gating", "soc_pmu_iso_ack", TOP, "ack sync reset by cpu_core_rst_n instead of core_rst_n",
-     [(".rst_n_i (core_rst_n),\n        .d_i     (pmu_cpu_iso_en_sync),", ".rst_n_i (cpu_core_rst_n),\n        .d_i     (pmu_cpu_iso_en_sync),")],
-     "functionally equivalent in a zero-delay run: the ack sync's only source, u_cpu_iso_en_sync, is "
+     [(".rst_n_i (core_rst_n),\n        .d_i     (cpu_iso_clamp_q),", ".rst_n_i (cpu_core_rst_n),\n        .d_i     (cpu_iso_clamp_q),")],
+     "functionally equivalent in a zero-delay run: the ack sync's only source, cpu_iso_clamp_q, is "
      "itself cleared by cpu_core_rst_n, so the ack reads 0 in that reset window either way; the mutant "
      "differs only in WHICH domain's reset releases the flop (a reset-domain structure fact, not a "
      "behaviour). NOT detectable by cocotb and not claimed to be covered by any gate (UNVERIFIED)"),
+    ("s06_ack_from_unregistered_clamp", "soc_pmu_iso_ack", TOP, "ack synchroniser fed by the combinational cpu_iso_clamp, not the flop",
+     [(".d_i     (cpu_iso_clamp_q),\n        .q_o     (pmu_cpu_iso_ack)", ".d_i     (cpu_iso_clamp),\n        .q_o     (pmu_cpu_iso_ack)")],
+     "the registered clamp is a glitch-safety property of the crossing: it adds one cpu_core_clk cycle of "
+     "latency and removes a combinational path to a synchroniser D pin. In a zero-delay run the "
+     "combinational form orders the handshake the same way (the ack still follows the clamp), so no "
+     "cocotb assertion can tell them apart. Covered structurally by tools/verif/check_registered_outputs.py "
+     "and the CDC constraint on cpu_iso_clamp_q"),
+    ("s07_ack_means_request_seen", "soc_pmu_iso_ack", TOP, "ack synchroniser fed by the synchronised request, not the qualified clamp",
+     [(".d_i     (cpu_iso_clamp_q),\n        .q_o     (pmu_cpu_iso_ack)", ".d_i     (pmu_cpu_iso_en_sync),\n        .q_o     (pmu_cpu_iso_ack)")],
+     "with the PMU gating the clock before it raises the request, the closed gate is already true when the "
+     "request arrives, so request-seen and clamp-active-and-gate-closed rise and fall together, one cpu_core_clk "
+     "cycle apart. Not distinguishable in sequenced operation; the clamp-qualified form matters only for a skewed "
+     "request, which the injection tests check on cpu_iso_clamp itself"),
     # ---- part 2: ISO_GPU clamp on m_axil_if_rready -------------------------------------------
     ("c01_gif_rready_unclamped", "soc_pmu_iso_ack", TOP, "m_axil_if_rready clamp removed (PR #301)",
      [("assign gif_axil_rready    = pmu_gpu_iso_en ? 1'b0 : gpu_gif_rready_raw;", "assign gif_axil_rready    = gpu_gif_rready_raw;")], None),
     ("c02_gif_rready_inverted", "soc_pmu_iso_ack", TOP, "m_axil_if_rready clamp polarity inverted",
      [("assign gif_axil_rready    = pmu_gpu_iso_en ? 1'b0 : gpu_gif_rready_raw;", "assign gif_axil_rready    = pmu_gpu_iso_en ? gpu_gif_rready_raw : 1'b0;")], None),
+    # ---- part 3: the CPU clamp qualifier (prefix q, suite soc_pmu_multiclock) -----------------
+    ("q11_raw_clamp", "soc_pmu_multiclock", TOP, "the clamp is the raw synchronised request (qualifier removed)",
+     [("assign cpu_iso_clamp    = pmu_cpu_iso_en_sync & ~cpu_gated_clk_en;", "assign cpu_iso_clamp    = pmu_cpu_iso_en_sync;")], None),
+    ("q12_clamp_without_reset_term", "soc_pmu_multiclock", TOP, "the clamp qualifier uses the clock disable only, not the reset term of the gate",
+     [("assign cpu_iso_clamp    = pmu_cpu_iso_en_sync & ~cpu_gated_clk_en;", "assign cpu_iso_clamp    = pmu_cpu_iso_en_sync & pmu_cpu_clk_dis_sync;")], None),
 ]
 
 

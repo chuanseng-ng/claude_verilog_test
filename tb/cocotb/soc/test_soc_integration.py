@@ -356,8 +356,8 @@ async def test_soc_gpu_isolation_via_pmu(dut):
     # async-reset flops then drop the level-held irq): require it actually acted.
     assert clamped_cycles >= 1, "gpu_irq_raw=1 with iso_en=1 was never observed: clamp never acted"
 
-    # Power-down order: ret_save -> iso_en -> clk gate -> reset.  Power-up: the reverse
-    # (reset release -> clk ungate -> ret_restore -> iso release).  (pmu.sv header.)
+    # Power-down order: ret_save -> clk gate -> iso_en -> reset.  Power-up: the reverse
+    # (reset release -> ret_restore -> iso release -> clk ungate).  (pmu.sv header.)
     def first(name, val, after=-1):
         for c, n, v in events:
             if n == name and v == val and c > after:
@@ -365,15 +365,15 @@ async def test_soc_gpu_isolation_via_pmu(dut):
         raise AssertionError(f"no {name}->{val} event after cycle {after}: {events}")
 
     t_save = first("pmu_gpu_ret_save", 1)
-    t_iso = first("pmu_gpu_iso_en", 1)
     t_gate = first("pmu_gpu_clk_en", 0)
+    t_iso = first("pmu_gpu_iso_en", 1)
     t_rst = first("pmu_gpu_rst_n", 0)
-    assert t_save < t_iso < t_gate < t_rst, f"power-down order wrong: {events}"
+    assert t_save < t_gate < t_iso < t_rst, f"power-down order wrong: {events}"
     t_rst_up = first("pmu_gpu_rst_n", 1, t_rst)
-    t_clk_up = first("pmu_gpu_clk_en", 1, t_gate)
     t_restore = first("pmu_gpu_ret_restore", 1, t_rst)
     t_iso_off = first("pmu_gpu_iso_en", 0, t_iso)
-    assert t_rst_up < t_clk_up < t_restore < t_iso_off, f"power-up order wrong: {events}"
+    t_clk_up = first("pmu_gpu_clk_en", 1, t_gate)
+    assert t_rst_up < t_restore < t_iso_off < t_clk_up, f"power-up order wrong: {events}"
 
     # The irq cleared after IRQ_CLR, and the GPU's DMA-visible result survived intact.
     for _ in range(100):
