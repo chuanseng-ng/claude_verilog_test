@@ -25,8 +25,7 @@ Tests drive the power cycle by a backdoor deposit into the PMU CTRL cell (as
 INVARIANT MONITOR (after every clk_i and cpu_clk_i rising edge, ReadOnly; armed once the
 synchroniser chains fill): INV1 pmu_cpu_rst_n_cpu_sync == 0 -> pmu_cpu_iso_en_sync == 1. INV2
 cpu_iso_clamp == 1 -> cpu_gated_clk_en == 0 (the clamp is active only while the clock gate is
-closed). INV3 pmu_cpu_iso_en_sync == 0 ->
-pmu_cpu_rst_n_cpu_sync == 1 (power-UP; NOMINAL-ONLY, silicon can swap the order by one edge, benign
+closed). INV3 pmu_cpu_iso_en_sync == 0 -> pmu_cpu_rst_n_cpu_sync == 1 (power-UP; NOMINAL-ONLY, silicon can swap the order by one edge, benign
 by structure, see pmu.sv). INV4 pmu_cpu_iso_ack changes only on clk_i edges.
 Run: make -C tb/cocotb/soc soc_pmu_iso_ack
 Doc: tm:suite:soc-test-soc-pmu-iso-ack
