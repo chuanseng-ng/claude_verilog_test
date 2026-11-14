@@ -135,7 +135,7 @@ jobs:
           # The step fails when the summed pass count of the shards is below PASS_FLOOR. soc_coverage.yml holds
           # the same value. Change it when a pull request adds or removes tests. The derivation of the
           # current value is in the book. Doc: cr:flow:ci-cocotb
-          PASS_FLOOR: '896'
+          PASS_FLOOR: '913'
         run: |
           set -o pipefail
           n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'cocotb-soc-shard-*' | wc -l)
