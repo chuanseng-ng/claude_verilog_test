@@ -363,6 +363,19 @@ def test_provenance_argument_and_comment_untouched(tmp_path):
     assert read(root, "docs/manual/tm/a.tex") == src
 
 
+def test_rewritten_comment_untouched(tmp_path):
+    """Check the Rewritten-from comment keeps its old path, with and without a commit note."""
+    src = (
+        "% Rewritten in STE style from docs/PLAN.md; the verbatim original is in git history.\n"
+        "\\section{Plan}\n"
+        "% Rewritten in STE style from docs/PLAN.md; the verbatim original is in git history"
+        " (before commit 23e35004).\n"
+    )
+    root = make_repo(tmp_path, {"docs/manual/tm/a.tex": src})
+    assert run(root, apply=True) == 0
+    assert read(root, "docs/manual/tm/a.tex") == src
+
+
 def test_provenance_line_still_repoints_other_paths(tmp_path):
     """Check only the provenance argument is protected, not the rest of the line."""
     src = "\\begin{relocated}{docs/PLAN.md} see docs/design/SPEC.md\n"
