@@ -2155,6 +2155,10 @@ fig:tm:mod:rv32i-clock-gate:timing	docs/manual/tm/parts/chapters/power.tex	375	F
 fig:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	520	Introduction
 fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6751	Figures
 fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6769	Figures
+tab:ds:mm:address-map:all	docs/manual/common/generated/map/memory-map.tex	4	Memory map of the SoC in address order
+tab:ds:mm:address-map:apb	docs/manual/common/generated/map/memory-map-apb.tex	4	APB interconnect slot windows
+tab:ds:mm:address-map:axilite	docs/manual/common/generated/map/memory-map-axilite.tex	4	AXI-Lite interconnect slot windows
+tab:ds:mm:address-map:crossbar	docs/manual/common/generated/map/memory-map-crossbar.tex	4	Crossbar slave windows
 tab:ds:req:cdc-map	docs/manual/ds/generated/requirements-cdc.tex	4	Requirements of area CDC and their verification
 tab:ds:req:pmu-map	docs/manual/ds/generated/requirements-pmu.tex	4	Requirements of area PMU and their verification
 tab:ds:req:pwr-map	docs/manual/ds/generated/requirements-pwr.tex	4	Requirements of area PWR and their verification

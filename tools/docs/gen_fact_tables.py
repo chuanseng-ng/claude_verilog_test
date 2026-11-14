@@ -42,6 +42,8 @@ NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*$")
 LITERAL_RE = re.compile(r"^-?(?:\d[\d_]*|\d*'[sS]?[bBdDhHoO][0-9a-fA-FxXzZ_?]+|'[01xXzZ])$")
 CODE_SPAN_RE = re.compile(r"^[A-Za-z0-9_.:/\[\]()=+*<>',!-]*$")
 BUILTIN_TYPES = ("", "logic", "bit", "reg", "wire")
+SIZED_DIMS = ("RangeDimensionSpecifier",)
+OTHER_SIDECARS = ("memory_map",)  # in the same directory, read by gen_memory_map.py
 DIRECTIONS = {"input": "in", "output": "out", "inout": "inout", "in": "in", "out": "out"}
 _ESCAPES = {
     "\\": r"\textbackslash{}",
@@ -82,6 +84,8 @@ class Port:
     type_text: str
     dims: list[str]
     width: int = 0
+    usizes: list[int] = field(default_factory=list)
+    udims: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -92,6 +96,8 @@ class Param:
     type_text: str
     default_text: str
     value: str = ""
+    usizes: list[int] = field(default_factory=list)
+    udims: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -188,10 +194,9 @@ def syntax_pass(sl: Slang, rtl: Path, module: str) -> ModuleFacts:
                 continue
             type_text = node_text(sl.syntax, decl.type)
             for d in decl.declarators:
-                if d.dimensions:
-                    raise FactError(f"cannot parse {module}: unpacked parameter {d.name.valueText}")
+                udims = unpacked_dims(sl, module, "parameter", d)
                 default = node_text(sl.syntax, d.initializer.expr) if d.initializer else ""
-                facts.params.append(Param(d.name.valueText, type_text, default))
+                facts.params.append(Param(d.name.valueText, type_text, default, udims=udims))
     ports = header.ports
     if ports is None:
         return facts
@@ -210,8 +215,7 @@ def syntax_pass(sl: Slang, rtl: Path, module: str) -> ModuleFacts:
         if hkind not in ("VariablePortHeader", "NetPortHeader"):
             raise FactError(f"cannot parse {module}: unsupported port header {hkind}")
         name = port.declarator.name.valueText
-        if port.declarator.dimensions:
-            raise FactError(f"cannot parse {module}: unpacked dimension on port {name}")
+        udims = unpacked_dims(sl, module, "port", port.declarator)
         direction = head.direction.valueText
         type_text = node_text(sl.syntax, head.dataType)
         if not direction:
@@ -220,8 +224,25 @@ def syntax_pass(sl: Slang, rtl: Path, module: str) -> ModuleFacts:
             direction, type_text = previous
         previous = (direction, type_text)
         dims = re.findall(r"\[([^\[\]]*)\]", type_text)
-        facts.ports.append(Port(name, direction, type_text, dims))
+        facts.ports.append(Port(name, direction, type_text, dims, udims=udims))
     return facts
+
+
+def unpacked_dims(sl: Slang, module: str, what: str, declarator: Any) -> list[str]:
+    """Return the text of each unpacked dimension of a declarator: [N] gives N, [3:0] gives 3:0."""
+    out = []
+    for dim in declarator.dimensions:
+        spec = getattr(dim, "specifier", None)
+        text = (
+            node_text(sl.syntax, spec) if spec is not None and kind_of(spec) in SIZED_DIMS else ""
+        )
+        if not text:
+            name = declarator.name.valueText
+            raise FactError(
+                f"cannot parse {module}: unsupported unpacked dimension on {what} {name}"
+            )
+        out.append(text)
+    return out
 
 
 def parse_int(raw: str) -> int | None:
@@ -270,7 +291,8 @@ def elaborate(sl: Slang, module: str, files: list[Path]) -> ModuleFacts:
         if type(p).__name__ != "PortSymbol":
             raise FactError(f"cannot parse {module}: unsupported port {p.name}")
         direction = str(p.direction).split(".")[-1].lower()
-        facts.ports.append(Port(p.name, direction, "", [], int(p.type.bitWidth)))
+        element, sizes = split_unpacked(module, p.name, p.type)
+        facts.ports.append(Port(p.name, direction, "", [], int(element.bitWidth), sizes))
     for p in body.parameters:
         if type(p).__name__ != "ParameterSymbol":
             continue
@@ -279,8 +301,21 @@ def elaborate(sl: Slang, module: str, files: list[Path]) -> ModuleFacts:
         if number is not None:
             facts.env[p.name] = number
         if not getattr(p, "isLocalParam", False):
-            facts.params.append(Param(p.name, str(p.type), "", format_value(raw)))
+            _, sizes = split_unpacked(module, p.name, p.type)
+            facts.params.append(Param(p.name, str(p.type), "", format_value(raw), sizes))
     return facts
+
+
+def split_unpacked(module: str, name: str, typ: Any) -> tuple[Any, list[int]]:
+    """Return the element type of a declaration and the size of each unpacked dimension."""
+    sizes: list[int] = []
+    while typ.isUnpackedArray:
+        rng = getattr(typ, "range", None)
+        if rng is None:
+            raise FactError(f"cannot parse {module}: unsupported unpacked dimension on {name}")
+        sizes.append(int(rng.width))
+        typ = typ.elementType
+    return typ, sizes
 
 
 def eval_size(expr: str, env: dict[str, int]) -> int | None:
@@ -338,6 +373,8 @@ def merge(written: ModuleFacts, built: ModuleFacts) -> ModuleFacts:
         if w.direction not in DIRECTIONS:
             raise FactError(f"cannot parse {module}: port {w.name}: direction {w.direction!r}")
         w.direction = DIRECTIONS[w.direction]
+        w.usizes = b.usizes
+        check_unpacked(module, "port", w, built.env)
         if base_type(w) in BUILTIN_TYPES:
             sizes = [dim_size(d, built.env) for d in w.dims]
             if None not in sizes:
@@ -349,13 +386,46 @@ def merge(written: ModuleFacts, built: ModuleFacts) -> ModuleFacts:
                     )
     for w, b in zip(written.params, built.params, strict=True):
         w.value = b.value
+        w.usizes = b.usizes
+        check_unpacked(module, "parameter", w, built.env)
         if not w.type_text:
             w.type_text = b.type_text
     return written
 
 
+def check_unpacked(module: str, what: str, item: Port | Param, env: dict[str, int]) -> None:
+    """Stop when the written unpacked dimensions and the elaborated ones disagree."""
+    if len(item.udims) != len(item.usizes):
+        raise FactError(
+            f"cannot parse {module}: {what} {item.name}: {len(item.udims)} unpacked dimension(s) "
+            f"as written and {len(item.usizes)} after elaboration"
+        )
+    for dim, size in zip(item.udims, item.usizes, strict=True):
+        expected = dim_size(dim, env)
+        if expected is not None and expected != size:
+            raise FactError(
+                f"cannot parse {module}: {what} {item.name}: the unpacked dimension gives "
+                f"{expected} elements and elaboration gives {size}"
+            )
+
+
+def unpacked_cell(item: Port | Param) -> str:
+    """Return the unpacked dimensions as written, each followed by its count when it is a name."""
+    cells = []
+    for dim, size in zip(item.udims, item.usizes, strict=True):
+        text = f"[{dim.replace(' ', '')}]"
+        cells.append(code(text) if dim.strip().isdigit() else f"{code(text)} ({size})")
+    return " ".join(cells)
+
+
 def width_cell(port: Port) -> str:
-    """Return the Width cell: the declared range in compact form, then the default width."""
+    """Return the Width cell: the packed width, then the unpacked dimensions."""
+    packed = packed_width_cell(port)
+    return f"{packed} {unpacked_cell(port)}" if port.udims else packed
+
+
+def packed_width_cell(port: Port) -> str:
+    """Return the packed width: the declared range in compact form, then the default width."""
     if base_type(port) not in BUILTIN_TYPES:
         return f"{code(port.type_text)} ({port.width})"
     dims = port.dims
@@ -380,7 +450,7 @@ def width_cell(port: Port) -> str:
 def default_cell(param: Param) -> str:
     """Return the Default cell: the text as written, then the resolved value."""
     text = param.default_text
-    if LITERAL_RE.match(text) or param.value == text:
+    if param.udims or LITERAL_RE.match(text) or param.value == text:
         return code(text)
     return f"{code(text)} ({code(param.value)})"
 
@@ -418,10 +488,11 @@ def render_params(facts: ModuleFacts, entry: dict[str, Any], rtl: str, yaml_path
     rows = []
     for p in facts.params:
         info = entry["params"][p.name]
+        type_cell = code(p.type_text) + (f" {unpacked_cell(p)}" if p.udims else "")
         rows.append(
             [
                 code(p.name),
-                code(p.type_text),
+                type_cell,
                 default_cell(p),
                 describe(info["legal"]),
                 describe(info["description"]),
@@ -530,7 +601,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.family:
         families = [facts_dir / f"{args.family}.yaml"]
     else:
-        families = sorted(facts_dir.glob("*.yaml"))
+        families = sorted(p for p in facts_dir.glob("*.yaml") if p.stem not in OTHER_SIDECARS)
     if not families or not all(f.is_file() for f in families):
         print(f"gen_fact_tables: no sidecar file in {facts_dir}", file=sys.stderr)
         return 2

@@ -1,0 +1,451 @@
+"""Unit tests for tools/docs/gen_memory_map.py."""
+
+import re
+import sys
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("pyslang")
+
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "tools" / "docs"))
+
+import gen_memory_map as gmm  # type: ignore[import-not-found]  # noqa: E402  # pylint: disable=import-error
+
+# A small map with the three levels of the SoC: a crossbar, an AXI-Lite level and an APB level.
+# The window IO (0x4000 to 0x7FFF) holds four pages: CTL, A, DMA (which overrides BRIDGE) and B.
+XBAR = [("ROM", 0x1000, 0x1FFF), ("RAM", 0x2000, 0x3FFF), ("IO", 0x4000, 0x7FFF)]
+LITE = [("CTL", 0x4000, 0x4FFF), ("BRIDGE", 0x5000, 0x7FFF), ("DMA", 0x6000, 0x6FFF)]
+APB = [("A", 0x5000, 0x5FFF), ("B", 0x7000, 0x7FFF)]
+
+SIDECAR = """\
+family: memory_map
+label: ds:mm:address-map
+title: "Memory map in address order"
+rtl: [rtl/map_pkg.sv]
+page_bytes: 4096
+unmapped: "No slave. The crossbar answers DECERR."
+levels:
+  crossbar:
+    title: "Crossbar windows"
+    protocol: AXI4
+    package: map_pkg
+    prefix: SLV_
+    count: N_SLV
+    base: SLV_BASE
+    limit: SLV_LIMIT
+    entries:
+      ROM: {target: "boot ROM `u_rom`", note: "Read only."}
+      RAM: {target: "RAM `u_ram`", note: "Storage."}
+      IO: {target: "bridge `u_io`", note: "Peripheral window."}
+  lite:
+    title: "AXI-Lite windows"
+    protocol: AXI-Lite
+    package: map_pkg
+    parent: {level: crossbar, entry: IO}
+    prefix: LITE_
+    count: N_LITE
+    base: LITE_BASE
+    limit: LITE_LIMIT
+    leaf_bytes: 4096
+    overrides:
+      - {entry: DMA, over: BRIDGE}
+    entries:
+      CTL: {target: "control `u_ctl`", note: "Control port."}
+      BRIDGE: {target: "APB bridge `u_br`", note: "All APB slots."}
+      DMA: {target: "DMA `u_dma`", note: "Overrides the bridge."}
+  apb:
+    title: "APB windows"
+    protocol: APB
+    package: map_pkg
+    parent: {level: lite, entry: BRIDGE}
+    prefix: APB_
+    count: N_APB
+    base: APB_BASE
+    limit: APB_LIMIT
+    leaf_bytes: 4096
+    entries:
+      A: {target: "device `u_a`", note: "First."}
+      B: {target: "device `u_b`", note: "Second. 100% & more #1."}
+"""
+
+
+def hexw(value: int) -> str:
+    """Return a 32-bit SystemVerilog hex literal."""
+    return f"32'h{value >> 16:04X}_{value & 0xFFFF:04X}"
+
+
+def package_text(xbar=None, lite=None, apb=None) -> str:  # type: ignore[no-untyped-def]
+    """Return the package of the fixture map. Each list holds (name, base, limit) in index order."""
+    out = ["package map_pkg;"]
+    xbar, lite, apb = xbar or XBAR, lite or LITE, apb or APB
+    for prefix, count, rows in (("SLV_", "N_SLV", xbar), ("LITE_", "N_LITE", lite)):
+        for i, (name, _, _) in enumerate(rows):
+            out.append(f"    localparam int unsigned {prefix}{name} = {i};")
+        out.append(f"    localparam int unsigned {count} = {len(rows)};")
+        for kind, col in (("BASE", 1), ("LIMIT", 2)):
+            items = ", ".join(hexw(r[col]) for r in reversed(rows))
+            out.append(f"    localparam logic [{count}-1:0][31:0] {prefix}{kind} = {{{items}}};")
+    for i, (name, _, _) in enumerate(apb):
+        out.append(f"    localparam int unsigned APB_{name} = {i};")
+    out.append(f"    localparam int unsigned N_APB = {len(apb)};")
+    for kind, col in (("BASE", 1), ("LIMIT", 2)):
+        items = ", ".join(hexw(r[col]) for r in apb)
+        out.append(f"    localparam logic [31:0] APB_{kind} [N_APB] = '{{{items}}};")
+    out.append("endpackage")
+    return "\n".join(out) + "\n"
+
+
+def make_root(root: Path, sv: str | None = None, sidecar: str = SIDECAR) -> Path:
+    """Create a synthetic repository with one package and one sidecar file."""
+    files = {
+        "rtl/map_pkg.sv": package_text() if sv is None else sv,
+        "docs/manual/common/facts/memory_map.yaml": sidecar,
+    }
+    for name, text in files.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8", newline="\n")
+    return root
+
+
+def out_dir(root: Path) -> Path:
+    """Return the directory of the generated files."""
+    return root / "docs/manual/common/generated/map"
+
+
+def run(root: Path, *extra: str) -> int:
+    """Run the generator on a synthetic root."""
+    return int(gmm.main(["--root", str(root), *extra]))
+
+
+def lines_of(root: Path, name: str) -> list[str]:
+    """Return the lines of one generated file."""
+    return (out_dir(root) / name).read_text(encoding="utf-8").splitlines()
+
+
+def check_out(capsys) -> str:  # type: ignore[no-untyped-def]
+    """Return what the last run printed, standard output first."""
+    got = capsys.readouterr()
+    return str(got.out) + str(got.err)
+
+
+def test_values_come_from_the_elaborated_package(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """The combined table lists every leaf and every gap in address order with its values."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    text = lines_of(root, "memory-map.tex")
+    assert text[0].startswith("% Generated by tools/docs/gen_memory_map.py from rtl/map_pkg.sv")
+    rows = [ln for ln in text if ln.startswith("\\code{0x")]
+    firsts = [re.match(r"\\code\{(0x[0-9A-F_]+)\}", r).group(1) for r in rows]  # type: ignore[union-attr]
+    assert firsts == [
+        "0x0000_0000",
+        "0x0000_1000",
+        "0x0000_2000",
+        "0x0000_4000",
+        "0x0000_5000",
+        "0x0000_6000",
+        "0x0000_7000",
+        "0x0000_8000",
+    ]
+    assert rows[1] == (
+        "\\code{0x0000_1000}\\newline\\code{0x0000_1FFF} & 4 KB & boot ROM \\code{u_rom} & "
+        "AXI4 slot 0 & Read only.\\\\"
+    )
+    assert rows[2].split(" & ")[1] == "8 KB"
+    assert rows[3].split(" & ")[3] == "AXI4 slot 2, AXI-Lite slot 0"
+    assert rows[4].split(" & ")[3] == "AXI4 slot 2, AXI-Lite slot 1, APB slot 0"
+    assert rows[5].split(" & ")[2] == "DMA \\code{u_dma}"
+    assert rows[6].split(" & ")[3] == "AXI4 slot 2, AXI-Lite slot 1, APB slot 1"
+    assert rows[0].endswith("& none & - & No slave. The crossbar answers DECERR.\\\\")
+    assert rows[7].startswith("\\code{0x0000_8000}\\newline\\code{0xFFFF_FFFF} & 4194272 KB")
+    assert "\\label{tab:ds:mm:address-map:all}" in "\n".join(text)
+    assert "\\caption{Memory map in address order}" in "\n".join(text)
+
+
+def test_level_tables_show_slot_constant_range_and_size(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Each level has a table with the index, the constant, the range and the size."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    sig = "\n".join(lines_of(root, "memory-map-apb.tex"))
+    assert "\\label{tab:ds:mm:address-map:apb}" in sig
+    assert (
+        "1 & \\code{APB_B} & \\code{0x0000_7000}\\newline\\code{0x0000_7FFF} & 4 KB & "
+        "device \\code{u_b} & Second. 100\\% \\& more \\#1.\\\\"
+    ) in sig
+    lite = "\n".join(lines_of(root, "memory-map-lite.tex"))
+    assert "2 & \\code{LITE_DMA} & \\code{0x0000_6000}\\newline\\code{0x0000_6FFF}" in lite
+    xbar = "\n".join(lines_of(root, "memory-map-crossbar.tex"))
+    assert "1 & \\code{SLV_RAM} & \\code{0x0000_2000}\\newline\\code{0x0000_3FFF} & 8 KB" in xbar
+
+
+def test_check_passes_after_a_write_and_fails_on_one_byte(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The check is clean after a write and names a file that changed by one byte."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    capsys.readouterr()
+    assert run(root, "--check") == 0
+    assert "files are in sync" in check_out(capsys)
+    path = out_dir(root) / "memory-map-apb.tex"
+    data = bytearray(path.read_bytes())
+    data[-3] ^= 1
+    path.write_bytes(bytes(data))
+    assert run(root, "--check") == 1
+    assert "memory-map-apb.tex is out of date" in check_out(capsys)
+
+
+def test_drift_of_an_address_in_the_rtl_is_detected(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """Moving a slot in the RTL makes the committed table stale."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    # Swap the two APB slots: the structure stays legal but the table changes.
+    swapped = [("A", 0x7000, 0x7FFF), ("B", 0x5000, 0x5FFF)]
+    (root / "rtl/map_pkg.sv").write_text(package_text(apb=swapped), encoding="utf-8")
+    capsys.readouterr()
+    assert run(root, "--check") == 1
+    assert "is out of date" in check_out(capsys)
+
+
+def test_check_names_a_missing_output(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The check names every output file that does not exist."""
+    root = make_root(tmp_path)
+    capsys.readouterr()
+    assert run(root, "--check") == 1
+    out = check_out(capsys)
+    assert "memory-map.tex is missing" in out and "memory-map-crossbar.tex is missing" in out
+
+
+def test_sidecar_entry_without_a_region_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A sidecar entry for a region that the RTL does not have is a finding."""
+    text = SIDECAR.replace(
+        '      A: {target: "device `u_a`"',
+        '      GONE: {target: "x", note: "y"}\n      A: {target: "device `u_a`"',
+    )
+    root = make_root(tmp_path, sidecar=text)
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "apb: sidecar entry GONE has no region in the RTL" in check_out(capsys)
+    assert not out_dir(root).exists()
+
+
+def test_rtl_region_without_a_sidecar_entry_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A region of the RTL without a sidecar entry is a finding."""
+    apb = [*APB, ("C", 0x8000, 0x8FFF)]
+    root = make_root(tmp_path, sv=package_text(apb=apb))
+    capsys.readouterr()
+    assert run(root) == 1
+    out = check_out(capsys)
+    assert "apb: RTL region C (APB_C) has no sidecar entry" in out
+    assert not out_dir(root).exists()
+
+
+def test_overlapping_crossbar_regions_exit_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """Two regions of one level must not overlap."""
+    xbar = [XBAR[0], ("RAM", 0x2000, 0x4FFF), XBAR[2]]
+    root = make_root(tmp_path, sv=package_text(xbar=xbar))
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "crossbar: RAM and IO overlap" in check_out(capsys)
+    assert not out_dir(root).exists()
+
+
+def test_an_overlap_that_the_sidecar_does_not_declare_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The AXI-Lite override is allowed only when the sidecar declares it."""
+    root = make_root(tmp_path, sidecar=SIDECAR.replace("      - {entry: DMA, over: BRIDGE}\n", ""))
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "lite: BRIDGE and DMA overlap and no override is declared" in check_out(capsys)
+
+
+def test_an_override_that_does_not_overlap_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A declared override with nothing to override is a stale declaration."""
+    lite = [LITE[0], ("BRIDGE", 0x5000, 0x5FFF), LITE[2]]
+    apb = [("A", 0x5000, 0x5FFF), ("B", 0x7000, 0x7FFF)]
+    root = make_root(tmp_path, sv=package_text(lite=lite, apb=apb))
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "lite: override DMA over BRIDGE: the windows do not overlap" in check_out(capsys)
+
+
+def test_an_unclaimed_page_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """Every page of a window that has slots below it needs exactly one owner."""
+    root = make_root(
+        tmp_path,
+        sv=package_text(apb=APB[:1]),
+        sidecar=SIDECAR.replace(
+            '      B: {target: "device `u_b`", note: "Second. 100% & more #1."}\n', ""
+        ),
+    )
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "crossbar: IO: page 0x0000_7000 is claimed by no slot" in check_out(capsys)
+    assert not out_dir(root).exists()
+
+
+def test_a_page_with_two_owners_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A slot below the overridden page claims a page that the override already owns."""
+    apb = [APB[0], ("B", 0x6000, 0x6FFF)]
+    root = make_root(tmp_path, sv=package_text(apb=apb))
+    capsys.readouterr()
+    assert run(root) == 1
+    out = check_out(capsys)
+    assert "page 0x0000_6000 is claimed by 2 slots (lite DMA, apb B)" in out
+    assert "page 0x0000_7000 is claimed by no slot" in out
+
+
+def test_a_slot_outside_its_parent_window_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A slot must lie inside the window of the entry that its level hangs below."""
+    apb = [APB[0], ("B", 0x9000, 0x9FFF)]
+    root = make_root(tmp_path, sv=package_text(apb=apb))
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "apb: B (0x0000_9000-0x0000_9FFF) lies outside lite BRIDGE" in check_out(capsys)
+
+
+def test_a_region_off_the_page_grid_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The base and the end of a region sit on the page grid."""
+    xbar = [("ROM", 0x1800, 0x1FFF), *XBAR[1:]]
+    root = make_root(tmp_path, sv=package_text(xbar=xbar))
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "crossbar: ROM (0x0000_1800-0x0000_1FFF) is not aligned to 4096 bytes" in check_out(
+        capsys
+    )
+
+
+def test_a_leaf_of_the_wrong_size_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A leaf slot of a level with leaf_bytes has exactly that size."""
+    lite = [LITE[0], LITE[1], ("DMA", 0x6000, 0x7FFF)]
+    root = make_root(tmp_path, sv=package_text(lite=lite))
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "lite: DMA must be 4096 bytes and is 8192 bytes" in check_out(capsys)
+
+
+def test_a_limit_below_the_base_exits_1(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A region whose limit is below its base is a finding."""
+    xbar = [("ROM", 0x1FFF, 0x1000), *XBAR[1:]]
+    root = make_root(tmp_path, sv=package_text(xbar=xbar))
+    capsys.readouterr()
+    assert run(root) == 1
+    assert "crossbar: ROM: the limit 0x0000_1000 is below the base 0x0000_1FFF" in check_out(capsys)
+
+
+def test_count_that_disagrees_with_the_index_constants_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The count constant must equal the number of index constants."""
+    root = make_root(tmp_path, sv=package_text().replace("N_SLV = 3", "N_SLV = 4"))
+    capsys.readouterr()
+    assert run(root) == 2
+    assert "crossbar: 3 index constants SLV_* but N_SLV is 4" in check_out(capsys)
+
+
+def test_missing_package_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A package that the files do not define is a setup error."""
+    root = make_root(tmp_path, sidecar=SIDECAR.replace("package: map_pkg", "package: other_pkg", 1))
+    capsys.readouterr()
+    assert run(root) == 2
+    assert "package other_pkg not found" in check_out(capsys)
+
+
+def test_elaboration_error_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """An RTL error is a setup error."""
+    root = make_root(
+        tmp_path, sv=package_text().replace("endpackage", "localparam int X = nope;\nendpackage")
+    )
+    capsys.readouterr()
+    assert run(root) == 2
+    assert "elaboration errors" in check_out(capsys)
+
+
+def test_unsafe_character_in_a_code_span_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """Text that TeX would read as a comment or a macro stops the tool before it writes."""
+    root = make_root(tmp_path, sidecar=SIDECAR.replace("`u_rom`", "`u%rom`"))
+    capsys.readouterr()
+    assert run(root) == 2
+    assert "unsupported character in code span" in check_out(capsys)
+    assert not out_dir(root).exists()
+
+
+def test_plain_text_is_escaped(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """A percent sign, an ampersand and a hash sign in a note are escaped."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    assert "Second. 100\\% \\& more \\#1." in "\n".join(lines_of(root, "memory-map.tex"))
+
+
+def test_missing_sidecar_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """Without the sidecar file the tool has nothing to do."""
+    capsys.readouterr()
+    assert run(tmp_path) == 2
+    assert "memory_map.yaml" in check_out(capsys)
+
+
+def test_bad_sidecar_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A sidecar without a level list is a setup error."""
+    root = make_root(tmp_path, sidecar="family: memory_map\n")
+    capsys.readouterr()
+    assert run(root) == 2
+    assert "cannot parse" in check_out(capsys)
+
+
+def test_bad_label_exits_2(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The label of the tables must follow the book label scheme."""
+    root = make_root(tmp_path, sidecar=SIDECAR.replace("ds:mm:address-map", "bad label"))
+    capsys.readouterr()
+    assert run(root) == 2
+    assert "'label' must be a book label" in check_out(capsys)
+
+
+def test_orphan_file_fails_check_and_is_deleted_by_a_run(tmp_path, capsys) -> None:  # type: ignore[no-untyped-def]
+    """A generated file that the sidecar does not produce is reported, then removed."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    orphan = out_dir(root) / "memory-map-gone.tex"
+    orphan.write_text("% Generated by tools/docs/gen_memory_map.py\n", encoding="utf-8")
+    capsys.readouterr()
+    assert run(root, "--check") == 1
+    assert "memory-map-gone.tex is not produced by the sidecar" in check_out(capsys)
+    assert orphan.exists()
+    assert run(root) == 0
+    assert "deleted docs/manual/common/generated/map/memory-map-gone.tex" in check_out(capsys)
+    assert not orphan.exists()
+    assert run(root, "--check") == 0
+
+
+def test_output_has_no_carriage_return(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """The files are written with LF only."""
+    root = make_root(tmp_path)
+    assert run(root) == 0
+    for path in out_dir(root).glob("*.tex"):
+        assert b"\r" not in path.read_bytes()
+
+
+def test_missing_pyslang_exits_3(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Without pyslang the tool exits with code 3."""
+    root = make_root(tmp_path)
+
+    def fail() -> None:
+        raise ImportError("no pyslang")
+
+    monkeypatch.setattr(gmm, "load_slang", fail)
+    assert run(root) == 3
+
+
+def test_repository_map_is_in_sync_from_another_directory(tmp_path, monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    """The committed tables match the RTL, and the tool finds the repository from any directory."""
+    monkeypatch.chdir(tmp_path)
+    capsys.readouterr()
+    rc = gmm.main(["--check"])
+    assert rc == 0, check_out(capsys)
+
+
+def test_repository_map_structure_holds() -> None:
+    """The structural checks pass on the real packages and the real sidecar."""
+    sl = gmm.load_slang()
+    model, findings = gmm.build(sl, REPO, gmm.load_sidecar(REPO / gmm.SIDECAR))
+    assert findings == []
+    assert gmm.check_map(model) == []
+    apb = model.levels["apb"]
+    assert [s.index for s in apb] == list(range(14))
+    assert apb[13].base == 0x20010000 and apb[13].limit == 0x20010FFF
