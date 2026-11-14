@@ -395,8 +395,9 @@ def build_gpu_iso(asm):
     asm.emit(NOP)
 
     # The GPU's flops use ASYNC reset (posedge clk or negedge rst_n), so asserting the
-    # domain reset clears its state even with the clock gated: unlike the CPU, nothing
-    # survives a PMU power cycle.  Prove it from software: GPU_CTRL.irq_enable (was 1),
+    # domain reset clears its control flops even with the clock gated.  The vector register
+    # file has no reset and the shared memory has no reset connection, so this check does not
+    # read them.  Prove the control loss from software: GPU_CTRL.irq_enable (was 1),
     # and GPU_STATUS.done (was 1) both read back 0.
     asm.emit(LW(7, 6, gpuirq.GPU_OFF_CTRL))
     asm.emit(ANDI(7, 7, 4))

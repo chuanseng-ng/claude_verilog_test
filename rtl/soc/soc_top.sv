@@ -529,7 +529,7 @@ module soc_top
     logic cpu_domain_rst_n, gpu_domain_rst_n;
     assign cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync & wdt_cpu_rst_n_cpu_sync;
 
-    // DFT (j41m.2): cpu_domain_rst_n needs no override of its own -- in scan mode all
+    // DFT: cpu_domain_rst_n needs no override of its own -- in scan mode all
     // three terms equal dft_scan_rst_n (cpu_core_rst_n through pll_subsystem's u_core_rm,
     // the two syncs through cdc_reset_sync's output mux), so their AND does too.
     // gpu_domain_rst_n is the exception: pmu_gpu_rst_n is a PMU flop output with no
@@ -829,8 +829,8 @@ module soc_top
     // =========================================================================
     // u_cpu_axi_cdc is the one CDC boundary between cpu_gated_clk and core_clk. Its reset is a hard flush.
     // s_rst_n_i is cpu_core_rst_n. Do not change it to cpu_domain_rst_n.
-    // A PMU power cycle must keep the bridge state, as it keeps u_cpu. cpu_domain_rst_n also drops for the PMU reset.
-    // A flush would lose a response that u_cpu still waits for.
+    // The bridge keeps its state in a PMU power cycle, because a flush would lose a response that u_cpu waits for.
+    // u_cpu state in CPU_OFF is not guaranteed: its clock stops and its reset is synchronous. Doc: ds:req:pmu-181
     // Known gap: a mid-burst CPU transaction at clock gating can still wedge a crossbar slave engine. No drain step exists.
     // s_clk_i ticks throughout the cpu_core_rst_n low window, so the reset-width rule of async_axi_fifo holds.
     // =========================================================================
@@ -1037,7 +1037,7 @@ module soc_top
     assign xbar_m_arburst [2] = AXI_BURST_INCR;
 
     // ISO_GPU functional-isolation clamp (`-location parent`, clamp_value 0):
-    // forces the GPU->fabric handshake (incl. m_axil_if_rready, h3lm) + IRQ to 0 while pmu_gpu_iso_en is
+    // forces the GPU->fabric handshake (incl. m_axil_if_rready) + IRQ to 0 while pmu_gpu_iso_en is
     // asserted. See clamp-scope note above u_gpu.
     assign xbar_m_awvalid [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_awvalid_raw;
     assign xbar_m_wvalid  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_wvalid_raw;

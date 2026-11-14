@@ -18,7 +18,7 @@
 //   - The CPU power-down waits for cpu_iso_ack_i=1. The CPU power-up waits for cpu_iso_ack_i=0.
 //   - After ISO_ACK_TIMEOUT cycles the wait ends and STATUS[3] sets.
 //   - ISO_ACK_TIMEOUT must exceed the worst-case ack round trip, about 3*R+3 clk_i cycles when cpu_core_clk is R times slower
-//     than clk_i. The default 255 covers R up to about 80. A value that is too small breaks the isolate-first order.
+//     than clk_i. The default 255 covers R up to about 80 (an unmeasured estimate). A value that is too small breaks the isolate-first order.
 //   - soc_top holds the isolation clamps. The UPF sense is high and the clamp value is 0.
 //   - Retention save and restore have no effect. The GPU loses its state on a power cycle.
 //   - Software must re-initialise the GPU after every power-up. It must not rely on CPU state surviving.
