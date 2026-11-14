@@ -152,6 +152,7 @@ cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	1984	Archived
 cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	2640	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
+cr:defect:apb-cdc-bridge-reset-race	docs/manual/cr/parts/03-investigations.tex	3118	APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
 cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
 cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	306	Controls (MEASURED unless marked)
@@ -1177,16 +1178,17 @@ ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	149
 ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	11957	Memory map
 ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	11390	Mixed-signal PLL
 ds:ch:mod-cdc-primitives	docs/manual/ds/parts/chapters/cdc.tex	3	Clock-domain crossing
-ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	401	No bypass at a clock ratio of 1:1
-ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	373	FIFO with gray pointers and registered flags
-ds:ch:mod-cdc-primitives:dec-reset	docs/manual/ds/parts/chapters/cdc.tex	387	Reset topology
-ds:ch:mod-cdc-primitives:dec-rz	docs/manual/ds/parts/chapters/cdc.tex	380	Four-phase handshake in the APB bridge
-ds:ch:mod-cdc-primitives:dec-sdc	docs/manual/ds/parts/chapters/cdc.tex	408	A separate constraint file for the crossing budgets
-ds:ch:mod-cdc-primitives:dec-storage	docs/manual/ds/parts/chapters/cdc.tex	394	Flop-array storage with a combinational read
-ds:ch:mod-cdc-primitives:decisions	docs/manual/ds/parts/chapters/cdc.tex	370	Architecture decisions
+ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	433	No bypass at a clock ratio of 1:1
+ds:ch:mod-cdc-primitives:dec-comp-record	docs/manual/ds/parts/chapters/cdc.tex	419	Completion record outside the destination reset
+ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	398	FIFO with gray pointers and registered flags
+ds:ch:mod-cdc-primitives:dec-reset	docs/manual/ds/parts/chapters/cdc.tex	412	Reset topology
+ds:ch:mod-cdc-primitives:dec-rz	docs/manual/ds/parts/chapters/cdc.tex	405	Four-phase handshake in the APB bridge
+ds:ch:mod-cdc-primitives:dec-sdc	docs/manual/ds/parts/chapters/cdc.tex	440	A separate constraint file for the crossing budgets
+ds:ch:mod-cdc-primitives:dec-storage	docs/manual/ds/parts/chapters/cdc.tex	426	Flop-array storage with a combinational read
+ds:ch:mod-cdc-primitives:decisions	docs/manual/ds/parts/chapters/cdc.tex	395	Architecture decisions
 ds:ch:mod-cdc-primitives:definitions	docs/manual/ds/parts/chapters/cdc.tex	10	Definitions
 ds:ch:mod-cdc-primitives:family	docs/manual/ds/parts/chapters/cdc.tex	24	Rules for all crossings
-ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	415	Requirements and verification
+ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	447	Requirements and verification
 ds:ch:mod-cdc-primitives:scope	docs/manual/ds/parts/chapters/cdc.tex	5	Scope
 ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
 ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3584	Crypto accelerator
@@ -1941,7 +1943,7 @@ ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.t
 ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	3589	\texttt{periph/aes128\_core.sv}
 ds:mod:apb-cdc-bridge	docs/manual/ds/parts/chapters/cdc.tex	197	\texttt{apb\_cdc\_bridge}
 ds:mod:apb4-register-bank	docs/manual/ds/parts/03-module-contracts.tex	561	\texttt{soc/apb4\_register\_bank.sv}
-ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	306	\texttt{async\_axi\_fifo}
+ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	331	\texttt{async\_axi\_fifo}
 ds:mod:axi-lite-interconnect	docs/manual/ds/parts/03-module-contracts.tex	598	\texttt{soc/axi\_lite\_interconnect.sv}
 ds:mod:axi-lite-register-bank	docs/manual/ds/parts/03-module-contracts.tex	631	\texttt{soc/axi\_lite\_register\_bank.sv}
 ds:mod:cdc-gray-fifo	docs/manual/ds/parts/chapters/cdc.tex	135	\texttt{cdc\_gray\_fifo}
@@ -2037,29 +2039,32 @@ ds:req:cdc-100	docs/manual/ds/parts/chapters/cdc.tex	200	DS-CDC-100 Four-phase h
 ds:req:cdc-101	docs/manual/ds/parts/chapters/cdc.tex	205	DS-CDC-101 Only levels and status cross through synchronisers
 ds:req:cdc-102	docs/manual/ds/parts/chapters/cdc.tex	210	DS-CDC-102 Request while the destination is in reset
 ds:req:cdc-103	docs/manual/ds/parts/chapters/cdc.tex	215	DS-CDC-103 Destination reset during a transfer
-ds:req:cdc-104	docs/manual/ds/parts/chapters/cdc.tex	228	DS-CDC-104 Answer wins over reset status
-ds:req:cdc-105	docs/manual/ds/parts/chapters/cdc.tex	233	DS-CDC-105 Source reset during a transfer
-ds:req:cdc-106	docs/manual/ds/parts/chapters/cdc.tex	238	DS-CDC-106 One transfer on the destination face
-ds:req:cdc-107	docs/manual/ds/parts/chapters/cdc.tex	246	DS-CDC-107 Response unchanged
-ds:req:cdc-108	docs/manual/ds/parts/chapters/cdc.tex	251	DS-CDC-108 Any clock ratio
-ds:req:cdc-109	docs/manual/ds/parts/chapters/cdc.tex	256	DS-CDC-109 Reset width
-ds:req:cdc-110	docs/manual/ds/parts/chapters/cdc.tex	264	DS-CDC-110 Names of the handshake registers
-ds:req:cdc-111	docs/manual/ds/parts/chapters/cdc.tex	269	DS-CDC-111 Use for configuration and debug only
-ds:req:cdc-112	docs/manual/ds/parts/chapters/cdc.tex	274	DS-CDC-112 Return pulse of the ready output
-ds:req:cdc-113	docs/manual/ds/parts/chapters/cdc.tex	279	DS-CDC-113 No stray transfer after a destination reset
-ds:req:cdc-114	docs/manual/ds/parts/chapters/cdc.tex	284	DS-CDC-114 Quiet while the source reset is low
-ds:req:cdc-115	docs/manual/ds/parts/chapters/cdc.tex	289	DS-CDC-115 No destination select while the destination reset is low
-ds:req:cdc-116	docs/manual/ds/parts/chapters/cdc.tex	294	DS-CDC-116 Read data of a forced completion
-ds:req:cdc-150	docs/manual/ds/parts/chapters/cdc.tex	309	DS-CDC-150 One FIFO for each channel
-ds:req:cdc-151	docs/manual/ds/parts/chapters/cdc.tex	314	DS-CDC-151 Payload unchanged and in order
-ds:req:cdc-152	docs/manual/ds/parts/chapters/cdc.tex	319	DS-CDC-152 A reset on one face resets both
-ds:req:cdc-153	docs/manual/ds/parts/chapters/cdc.tex	324	DS-CDC-153 Reset is a hard flush
-ds:req:cdc-154	docs/manual/ds/parts/chapters/cdc.tex	333	DS-CDC-154 Quiet outputs during either reset
-ds:req:cdc-155	docs/manual/ds/parts/chapters/cdc.tex	338	DS-CDC-155 Any clock ratio without a bypass
-ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	343	DS-CDC-156 No deadlock when channels are full
-ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	348	DS-CDC-157 No combinational path between the faces
-ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	356	DS-CDC-158 Exact depth
-ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	361	DS-CDC-159 Valid is not withdrawn
+ds:req:cdc-104	docs/manual/ds/parts/chapters/cdc.tex	230	DS-CDC-104 Answer wins over reset status
+ds:req:cdc-105	docs/manual/ds/parts/chapters/cdc.tex	235	DS-CDC-105 Source reset during a transfer
+ds:req:cdc-106	docs/manual/ds/parts/chapters/cdc.tex	240	DS-CDC-106 One transfer on the destination face
+ds:req:cdc-107	docs/manual/ds/parts/chapters/cdc.tex	248	DS-CDC-107 Response unchanged
+ds:req:cdc-108	docs/manual/ds/parts/chapters/cdc.tex	253	DS-CDC-108 Any clock ratio
+ds:req:cdc-110	docs/manual/ds/parts/chapters/cdc.tex	258	DS-CDC-110 Names that the checks match
+ds:req:cdc-111	docs/manual/ds/parts/chapters/cdc.tex	266	DS-CDC-111 Use for configuration and debug only
+ds:req:cdc-112	docs/manual/ds/parts/chapters/cdc.tex	271	DS-CDC-112 Return pulse of the ready output
+ds:req:cdc-113	docs/manual/ds/parts/chapters/cdc.tex	276	DS-CDC-113 No stray transfer after a destination reset
+ds:req:cdc-114	docs/manual/ds/parts/chapters/cdc.tex	281	DS-CDC-114 Quiet while the source reset is low
+ds:req:cdc-115	docs/manual/ds/parts/chapters/cdc.tex	286	DS-CDC-115 No destination select while the destination reset is low
+ds:req:cdc-116	docs/manual/ds/parts/chapters/cdc.tex	291	DS-CDC-116 Read data of a forced completion
+ds:req:cdc-117	docs/manual/ds/parts/chapters/cdc.tex	296	DS-CDC-117 Completed transfer survives a destination reset
+ds:req:cdc-118	docs/manual/ds/parts/chapters/cdc.tex	304	DS-CDC-118 At most one transfer for a destination reset pulse
+ds:req:cdc-119	docs/manual/ds/parts/chapters/cdc.tex	312	DS-CDC-119 No wait for an acknowledge after a destination reset
+ds:req:cdc-120	docs/manual/ds/parts/chapters/cdc.tex	320	DS-CDC-120 Stale acknowledge gives a local error
+ds:req:cdc-150	docs/manual/ds/parts/chapters/cdc.tex	334	DS-CDC-150 One FIFO for each channel
+ds:req:cdc-151	docs/manual/ds/parts/chapters/cdc.tex	339	DS-CDC-151 Payload unchanged and in order
+ds:req:cdc-152	docs/manual/ds/parts/chapters/cdc.tex	344	DS-CDC-152 A reset on one face resets both
+ds:req:cdc-153	docs/manual/ds/parts/chapters/cdc.tex	349	DS-CDC-153 Reset is a hard flush
+ds:req:cdc-154	docs/manual/ds/parts/chapters/cdc.tex	358	DS-CDC-154 Quiet outputs during either reset
+ds:req:cdc-155	docs/manual/ds/parts/chapters/cdc.tex	363	DS-CDC-155 Any clock ratio without a bypass
+ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	368	DS-CDC-156 No deadlock when channels are full
+ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	373	DS-CDC-157 No combinational path between the faces
+ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	381	DS-CDC-158 Exact depth
+ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	386	DS-CDC-159 Valid is not withdrawn
 ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6663	DS-EXAMPLE-001 Example of a requirement
 ds:req:pmu-001	docs/manual/ds/parts/chapters/power.tex	36	DS-PMU-001 CTRL mode field
 ds:req:pmu-002	docs/manual/ds/parts/chapters/power.tex	41	DS-PMU-002 STATUS fields
@@ -2143,11 +2148,11 @@ ds:req:pwr-084	docs/manual/ds/parts/chapters/power-intent.tex	259	DS-PWR-084 For
 fig:tm:ch:mod-cdc-primitives:soc	docs/manual/tm/parts/chapters/cdc.tex	34	Clock-domain crossing
 fig:tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	61	Power management
 fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	427	Functional description
-fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	461	Functional description
-fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	513	Functional description
+fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	459	Functional description
+fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	515	Functional description
 fig:tm:mod:apb-cdc-bridge:sfsm	docs/manual/tm/parts/chapters/cdc.tex	444	Functional description
-fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	482	Functional description
-fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	597	Functional description
+fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	480	Functional description
+fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	609	Functional description
 fig:tm:mod:cdc-gray-fifo:block	docs/manual/tm/parts/chapters/cdc.tex	304	Functional description
 fig:tm:mod:cdc-gray-fifo:ring	docs/manual/tm/parts/chapters/cdc.tex	346	Functional description
 fig:tm:mod:cdc-gray-fifo:timing	docs/manual/tm/parts/chapters/cdc.tex	362	Functional description
@@ -2178,7 +2183,7 @@ tab:tm:ch:tool-defects-and-caveats:caveats	docs/manual/tm/parts/06-tool-defects-
 tab:tm:ch:tool-defects-and-caveats:defects	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	55	Summary of the tool defects
 tab:tm:mod:apb-cdc-bridge:params	docs/manual/common/generated/facts/apb-cdc-bridge-params.tex	4	Parameters of \code{apb_cdc_bridge}
 tab:tm:mod:apb-cdc-bridge:signals	docs/manual/common/generated/facts/apb-cdc-bridge-signals.tex	4	Signals of \code{apb_cdc_bridge}
-tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	604	Functional description
+tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	616	Functional description
 tab:tm:mod:async-axi-fifo:params	docs/manual/common/generated/facts/async-axi-fifo-params.tex	4	Parameters of \code{async_axi_fifo}
 tab:tm:mod:async-axi-fifo:signals	docs/manual/common/generated/facts/async-axi-fifo-signals.tex	4	Signals of \code{async_axi_fifo}
 tab:tm:mod:cdc-gray-fifo:d2full	docs/manual/tm/parts/chapters/cdc.tex	319	Functional description
@@ -2660,7 +2665,7 @@ tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-
 tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1564	\texttt{periph/aes128\_core.sv}
 tm:mod:apb-cdc-bridge	docs/manual/tm/parts/chapters/cdc.tex	397	\texttt{apb\_cdc\_bridge}
 tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	448	\texttt{soc/apb\_interconnect.sv}
-tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	564	\texttt{async\_axi\_fifo}
+tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	576	\texttt{async\_axi\_fifo}
 tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	474	\texttt{soc/axi4\_crossbar.sv}
 tm:mod:cdc-gray-fifo	docs/manual/tm/parts/chapters/cdc.tex	268	\texttt{cdc\_gray\_fifo}
 tm:mod:cdc-reset-sync	docs/manual/tm/parts/chapters/cdc.tex	175	\texttt{cdc\_reset\_sync}
@@ -3101,11 +3106,11 @@ tm:suite:trng-lfsr-model	docs/manual/tm/parts/03-verification-infrastructure.tex
 um:ch:about	docs/manual/um/parts/00-about.tex	5	About this book
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	98	Build and run commands
 um:ch:cdc-integration	docs/manual/um/parts/02-integration.tex	3	Clock-domain crossing integration
-um:ch:cdc-integration:checklist	docs/manual/um/parts/02-integration.tex	179	Checklist
+um:ch:cdc-integration:checklist	docs/manual/um/parts/02-integration.tex	178	Checklist
 um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	7	Choose the block
-um:ch:cdc-integration:constrain	docs/manual/um/parts/02-integration.tex	137	Constrain the crossings
+um:ch:cdc-integration:constrain	docs/manual/um/parts/02-integration.tex	136	Constrain the crossings
 um:ch:cdc-integration:instantiate	docs/manual/um/parts/02-integration.tex	30	Instantiate a block
-um:ch:cdc-integration:verify	docs/manual/um/parts/02-integration.tex	150	Verify the crossings
+um:ch:cdc-integration:verify	docs/manual/um/parts/02-integration.tex	149	Verify the crossings
 um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	475	Coding guidelines
 um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2693	Continuous integration
 um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	428	Debug interface
@@ -3113,15 +3118,15 @@ um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6459	Documentati
 um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
 um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6455	Issue tracking
 um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2239	Local quality checks
-um:ch:power-integration	docs/manual/um/parts/02-integration.tex	197	Power management integration
-um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	348	Checklist
-um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	229	Clocks and resets
-um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	215	Power the CPU down
-um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	241	Integrate a clock gate
-um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	204	Power the GPU down and up
-um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	201	Register map
-um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	257	Keep the power intent in step
-um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	328	Verify
+um:ch:power-integration	docs/manual/um/parts/02-integration.tex	196	Power management integration
+um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	347	Checklist
+um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	228	Clocks and resets
+um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	214	Power the CPU down
+um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	240	Integrate a clock gate
+um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	203	Power the GPU down and up
+um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	200	Register map
+um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	256	Keep the power intent in step
+um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	327	Verify
 um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6782	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	39	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	361	Supported instructions

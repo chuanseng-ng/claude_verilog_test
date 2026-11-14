@@ -34,7 +34,7 @@ DS-CDC-105	active	docs/manual/ds/parts/chapters/cdc.tex
 DS-CDC-106	active	docs/manual/ds/parts/chapters/cdc.tex
 DS-CDC-107	active	docs/manual/ds/parts/chapters/cdc.tex
 DS-CDC-108	active	docs/manual/ds/parts/chapters/cdc.tex
-DS-CDC-109	active	docs/manual/ds/parts/chapters/cdc.tex
+DS-CDC-109	retired	docs/manual/ds/parts/chapters/cdc.tex
 DS-CDC-110	active	docs/manual/ds/parts/chapters/cdc.tex
 DS-CDC-111	active	docs/manual/ds/parts/chapters/cdc.tex
 DS-CDC-112	active	docs/manual/ds/parts/chapters/cdc.tex
@@ -132,3 +132,7 @@ DS-PMU-007	active	docs/manual/ds/parts/chapters/power.tex
 DS-PMU-008	active	docs/manual/ds/parts/chapters/power.tex
 DS-PMU-110	active	docs/manual/ds/parts/chapters/power.tex
 DS-PMU-187	active	docs/manual/ds/parts/chapters/power.tex
+DS-CDC-117	active	docs/manual/ds/parts/chapters/cdc.tex
+DS-CDC-118	active	docs/manual/ds/parts/chapters/cdc.tex
+DS-CDC-119	active	docs/manual/ds/parts/chapters/cdc.tex
+DS-CDC-120	active	docs/manual/ds/parts/chapters/cdc.tex

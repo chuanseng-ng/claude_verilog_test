@@ -13,10 +13,10 @@ Signal & Dir & Width & Clock domain & Description\\
 \endhead
 \bottomrule
 \endlastfoot
-\code{scanmode_i} & in & 1 & quasi-static & Scan mode. It goes to both internal reset synchronisers. Tie low without scan.\\
-\code{scan_rst_ni} & in & 1 & async & Active-low scan reset. It goes to both internal reset synchronisers. Tie high without scan.\\
+\code{scanmode_i} & in & 1 & quasi-static & Scan mode. It goes to the four internal reset synchronisers. Tie low without scan.\\
+\code{scan_rst_ni} & in & 1 & async & Active-low scan reset. It goes to the four internal reset synchronisers. Tie high without scan.\\
 \code{s_clk_i} & in & 1 & clock & Clock of the source face.\\
-\code{s_rst_n_i} & in & 1 & async & Active-low reset of the source face. The bridge synchronises it inside. It also resets the destination side.\\
+\code{s_rst_n_i} & in & 1 & async & Active-low reset of the source face. The bridge synchronises it inside. It also resets the destination side and the completion record.\\
 \code{s_psel_i} & in & 1 & \code{s_clk_i} & APB select from the upstream master.\\
 \code{s_penable_i} & in & 1 & \code{s_clk_i} & APB enable from the upstream master.\\
 \code{s_pwrite_i} & in & 1 & \code{s_clk_i} & APB write flag. The bridge captures it in the SETUP cycle.\\
@@ -27,7 +27,7 @@ Signal & Dir & Width & Clock domain & Description\\
 \code{s_pready_o} & out & 1 & \code{s_clk_i} & APB ready. It is high for one cycle at the end of each transfer.\\
 \code{s_pslverr_o} & out & 1 & \code{s_clk_i} & APB error. It holds the error flag of the last completed transfer. It is high after an error completion that the bridge forces.\\
 \code{m_clk_i} & in & 1 & clock & Clock of the destination face.\\
-\code{m_rst_n_i} & in & 1 & async & Active-low reset of the destination face. The bridge synchronises it inside. It also crosses into the \code{s_clk_i} domain as a status.\\
+\code{m_rst_n_i} & in & 1 & async & Active-low reset of the destination face. The bridge synchronises it inside. After its synchroniser it clears the reset status in the \code{s_clk_i} domain without a clock. Drive it from a reset that cannot glitch.\\
 \code{m_psel_o} & out & 1 & \code{m_clk_i} & APB select to the downstream slave. High in the SETUP and ACCESS phases.\\
 \code{m_penable_o} & out & 1 & \code{m_clk_i} & APB enable to the downstream slave. High in the ACCESS phase.\\
 \code{m_pwrite_o} & out & 1 & \code{m_clk_i} & APB write flag of the captured transfer. It holds its value when the bridge is idle.\\

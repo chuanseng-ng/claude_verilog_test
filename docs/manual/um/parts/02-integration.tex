@@ -93,7 +93,7 @@ cdc_gray_fifo #(
   \item Connect the \code{s_*} face to the APB master and the \code{m_*} face to the APB slave. Set \code{ADDR_W} to the address width of both.
   \item Connect \code{s_pstrb_i}. If the master has no strobes, tie it to \code{4'hF}. Leave \code{m_pstrb_o} open if the slave has no strobes.
   \item Connect the scan pins as for the reset synchroniser.
-  \item Hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i}. A shorter pulse makes the destination run a transfer again. A test measured this at every short-pulse point that it tried. The test is marked \code{expect_fail} until the owner decides the RTL (\cref{ds:mod:apb-cdc-bridge}).
+  \item Drive \code{m_rst_n_i} from a reset that cannot glitch. The bridge reacts to the destination reset without a clock, so a reset pulse of any width is seen. The bridge needs no minimum width of the pulse (\cref{ds:mod:apb-cdc-bridge}).
   \item Use the bridge for configuration and debug access only. Do not use it for bulk data.
 \end{procedure}
 \begin{lstlisting}
@@ -123,11 +123,10 @@ apb_cdc_bridge #(
 \begin{warningbox}
 The bridge \code{apb_cdc_bridge} has these limits. Plan for them.
 \begin{itemize}
-  \item An error from the bridge during a reset of the destination does not prove that the destination made no transfer. A write can have taken place. Treat such an error as ``access state unknown''. A test measured an error after a completed write at four clock ratios.
   \item The bridge has no timeout. When \code{m_clk_i} stops and \code{m_rst_n_i} stays high, the transfer waits, and the APB master upstream waits with it. A test measured that \code{s_pready_o} stays low for 300 cycles of \code{s_clk_i}. In \code{soc_top} the \code{m_*} face of \code{u_apb_dbg_cdc} runs on \code{cpu_gated_clk}, which the PMU can stop. Do not stop \code{m_clk_i} while a transfer can be in flight, or assert \code{m_rst_n_i} before you stop it.
-  \item A pulse on \code{m_rst_n_i} that is too short makes the destination run a transfer again.
+  \item A transfer that completed before a destination reset returns its real response, so software cannot learn of the reset from that access. An error response shows that the destination did not complete the access.
 \end{itemize}
-The three tests that measured these limits assert the specified behaviour and are marked \code{expect_fail}. They are expected to fail until the owner decides the RTL. \Cref{tm:mod:apb-cdc-bridge} gives the results.
+The test that measured the missing timeout asserts the specified behaviour and is marked \code{expect_fail}. It is expected to fail until the owner decides the RTL. \Cref{tm:mod:apb-cdc-bridge} gives the results.
 \end{warningbox}
 \begin{warningbox}
 The bridge \code{async_axi_fifo} has these limits. While a response channel (B or R) is empty, its payload outputs on the \code{s_*} face can change on an edge of \code{m_clk_i}. Use the payload only while the valid output is high. A reset of one face also withdraws the valid outputs of the other face. In \code{soc_top}, a CPU transaction in the middle of a burst at clock gating can wedge a crossbar slave engine, because no drain step exists.
@@ -184,7 +183,7 @@ Tick each line before the review.
   \item[$\square$] \code{RESET_VAL} of each \code{cdc_sync} is safe for the logic after it.
   \item[$\square$] Each multi-bit value that crosses \code{cdc_sync} changes one bit at a time.
   \item[$\square$] \code{scanmode_i} and \code{scan_rst_ni} are connected at every instance.
-  \item[$\square$] \code{m_rst_n_i} of an APB bridge is held low for more than one period of \code{s_clk_i}.
+  \item[$\square$] \code{m_rst_n_i} of an APB bridge comes from a reset that cannot glitch.
   \item[$\square$] The two resets of an AXI4 bridge have a common root with the master and the fabric.
   \item[$\square$] The module is in the source lists of all flows.
   \item[$\square$] The names \code{sync_q}, \code{req_q}, \code{ack_q}, \code{u_wr_ptr_to_rd}, \code{u_rd_ptr_to_wr} and \code{rst_sync} are kept where the files match them.
