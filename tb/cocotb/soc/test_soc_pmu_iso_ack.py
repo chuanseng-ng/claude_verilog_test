@@ -807,17 +807,17 @@ async def test_cpu_clock_gate_control_monitor_sees_ticks_and_reset_window(dut):
     """Companion of the test above. Proves the monitor can see both sides of its rule at every
     ratio: the gated clock ticks while the reset is released (the monitor does not read a stuck
     clock), the PMU reset is asserted in the CPU domain for several edges, and at the first of
-    those edges the clock disable has not reached the CPU domain yet at 1:1 and with a slower CPU
-    clock (the window in which only the reset term stops the clock)."""
+    those edges the clock disable has already reached the CPU domain. The PMU gates the clock
+    before it asserts the reset, so in a sequenced power-down the reset term is never the first
+    stop: this view no longer tells whether the reset term exists. The forced test below does."""
     rows = await with_timeout(_gate_sweep(dut), 3000, "us")
     for r in rows:
         tag = f"cpu={r['cpu_ns']}ns"
         assert r["ticks_reset_high"] > 10, f"{tag}: gated clock barely ticked outside reset"
         assert r["low_reset_edges"] >= 4, f"{tag}: the PMU reset was never seen asserted"
-        if r["cpu_ns"] >= FABRIC_NS:
-            assert r["low_reset_edges_clock_enabled"] >= 1, (
-                f"{tag}: the clock disable always arrived first, so the reset term was not "
-                "exercised")
+        assert r["low_reset_edges_clock_enabled"] == 0, (
+            f"{tag}: the clock was still enabled at an edge with the PMU reset asserted, so the "
+            "PMU did not gate the clock before the reset")
 
 
 # The sequenced power-down above stops the clock by the reset term only because the PMU asserts the
