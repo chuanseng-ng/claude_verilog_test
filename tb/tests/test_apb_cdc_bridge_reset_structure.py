@@ -98,7 +98,9 @@ def test_dbg_bridge_destination_reset_is_cpu_domain_reset():
 def bridge_instances(text: str) -> dict:
     """Instance name -> module for the cdc_sync and cdc_reset_sync instances of the bridge."""
     out = {}
-    for mod, inst in re.findall(r"\b(cdc_sync|cdc_reset_sync)\b\s*(?:#\s*\(.*?\))?\s*(\w+)\s*\(", _strip(text), re.S):
+    for mod, inst in re.findall(
+        r"\b(cdc_sync|cdc_reset_sync)\b\s*(?:#\s*\(.*?\))?\s*(\w+)\s*\(", _strip(text), re.S
+    ):
         out[inst] = mod
     return out
 
@@ -113,20 +115,35 @@ def m_rst_only_in_rst_both(text: str) -> bool:
 
 def test_bridge_instances_and_raw_reset_use():
     inst = bridge_instances(BRIDGE)
-    for name in ("u_req_sync", "u_ack_sync", "u_m_alive_sync", "u_m_alive_dly_sync", "u_comp_rst_sync"):
+    for name in (
+        "u_req_sync",
+        "u_ack_sync",
+        "u_m_alive_sync",
+        "u_m_alive_dly_sync",
+        "u_comp_rst_sync",
+    ):
         assert name in inst, f"{name} missing"
     assert "u_m_rst_status_sync" not in inst
     assert m_rst_only_in_rst_both(BRIDGE)
     mutated = BRIDGE.replace(".rst_n_i       (m_rst_sync_n)", ".rst_n_i       (m_rst_n_i)", 1)
     if mutated == BRIDGE:
-        mutated = BRIDGE.replace("u_m_alive_sync (\n        .clk_i       (s_clk_i),\n        .rst_n_i     (m_rst_sync_n)",
-                                 "u_m_alive_sync (\n        .clk_i       (s_clk_i),\n        .rst_n_i     (m_rst_n_i)", 1)
+        mutated = BRIDGE.replace(
+            "u_m_alive_sync (\n        .clk_i       (s_clk_i),\n"
+            "        .rst_n_i     (m_rst_sync_n)",
+            "u_m_alive_sync (\n        .clk_i       (s_clk_i),\n        .rst_n_i     (m_rst_n_i)",
+            1,
+        )
     assert mutated != BRIDGE and not m_rst_only_in_rst_both(mutated)
 
 
 def constraint_tokens(sdc: str) -> set:
     """Bridge instance names that the CDC constraint text matches."""
-    toks = set(re.findall(r"\bu_(?:req_sync|ack_sync|m_rst_status_sync|m_alive_sync|m_alive_dly_sync|comp_rst_sync)\b", sdc))
+    toks = set(
+        re.findall(
+            r"\bu_(?:req_sync|ack_sync|m_rst_status_sync|m_alive_sync|m_alive_dly_sync|comp_rst_sync)\b",
+            sdc,
+        )
+    )
     return toks
 
 
@@ -135,8 +152,12 @@ def test_constraint_files_match_existing_instances():
     for name, sdc in (("sky130", SKY130_CHECK), ("asap7", ASAP7_CHECK)):
         for tok in constraint_tokens(sdc):
             assert tok in inst, f"{name} check file matches {tok}, which the bridge no longer has"
-    stale = SKY130_CHECK + '\ncdc_apply_sync_budget x "u_apb_dbg_cdc*u_m_rst_status_sync" 1 a b "d"\n'
-    assert any(t not in inst for t in constraint_tokens(stale)), "negative control: stale name not detected"
+    stale = (
+        SKY130_CHECK + '\ncdc_apply_sync_budget x "u_apb_dbg_cdc*u_m_rst_status_sync" 1 a b "d"\n'
+    )
+    assert any(t not in inst for t in constraint_tokens(stale)), (
+        "negative control: stale name not detected"
+    )
 
 
 def async_match_patterns(sdc: str) -> list:
