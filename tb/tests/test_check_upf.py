@@ -93,7 +93,7 @@ def test_pmu_modes_parse() -> None:
 
 def test_nonexistent_isolation_net_fails() -> None:
     # The old UPF's actual defect: cpu_iso_en does not exist in soc_top.
-    expect(run(mutate("pmu_cpu_iso_en_sync", "cpu_iso_en", -1)), "U08", "cpu_iso_en")
+    expect(run(mutate("cpu_iso_clamp", "cpu_iso_en", -1)), "U08", "cpu_iso_en")
 
 
 def test_clamp_missing_from_upf_fails() -> None:

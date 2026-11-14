@@ -100,7 +100,7 @@ MUTANTS = [
     ("q09_clear_beats_set", "pmu", PMU, "a STATUS_CLR write in the timeout cycle hides the timeout",
      [("if (wait_hit[d])        cpu_iso_ack_to_q <= 1'b1;\n                        else if (sts_clr_w)     cpu_iso_ack_to_q <= 1'b0;",
        "if (sts_clr_w)          cpu_iso_ack_to_q <= 1'b0;\n                        else if (wait_hit[d])   cpu_iso_ack_to_q <= 1'b1;")], None),
-    ("q10_status_clr_never_clears", "pmu", PMU, "STATUS_CLR has no effect",
+    ("t09_flag_not_cleared_by_power_down", "pmu", PMU, "STATUS[3] is sticky forever: STATUS_CLR has no effect, only a reset clears it",
      [("else if (sts_clr_w)     cpu_iso_ack_to_q <= 1'b0;", "else if (sts_clr_w && 1'b0) cpu_iso_ack_to_q <= 1'b0;")], None),
     # ---- soc_top.sv: the return crossing ------------------------------------------------------
     ("s01_ack_from_unsynced_iso", "soc_pmu_iso_ack", TOP, "ack is a sync of the RAW pmu_cpu_iso_en (never waits for the CPU domain)",
