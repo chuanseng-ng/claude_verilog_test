@@ -4,6 +4,10 @@
 
 This chapter describes the physical design flow. It shows the steps from netlist to layout.
 
+\begin{information}
+Some text of this chapter comes from plans and runs of a past date. The section on the power domain evaluation reports an ASAP7 SoC sign-off and a power figure of that run. The gate lists of the flow specification have boxes that are marked as passed, for routing without DRC violations, for timing closure and for all corners. These ASAP7 claims do not stand. The power figure counts the fabric only. Sky130 results with real DRC and LVS are not meant here. Read \cref{tm:ch:standing-caveats} before you quote an ASAP7 figure or an ASAP7 gate from this chapter.
+\end{information}
+
 \begin{relocated}{docs/design/OPENROAD_FLOW_SPEC.md}
 % Converted from docs/design/OPENROAD_FLOW_SPEC.md by tools/docs/md2tex.py; edit this file, not the original.
 \section{OpenROAD Physical Design Flow Specification}\label{tm:pd:openroad-flow}
@@ -4407,6 +4411,10 @@ after clock tree synthesis.
 
 This chapter describes the Sky130 flow. It gives the configuration and the results.
 
+\begin{information}
+Some results in this chapter say that timing is closed or clean at all nine corners. The SRAM macro has one corner model, so these words mean nine corner labels on one model. Read \cref{tm:caveat:sky130-single-sram-corner} before you quote such a result. The chapter also calls ASAP7 runs sign-offs. These sign-offs do not stand (\cref{tm:ch:standing-caveats}). The DRC and LVS results of the Sky130 runs have the limits in \cref{tm:caveat:asap7-no-physical-verification}.
+\end{information}
+
 \begin{relocated}{docs/SKY130_REAL_DRC_LVS_EVALUATION.md}
 % Converted from docs/SKY130_REAL_DRC_LVS_EVALUATION.md by tools/docs/md2tex.py; edit this file, not the original.
 \section{Sky130 (+FreePDK45) Harden + Real DRC/LVS --- Evaluation
@@ -6295,6 +6303,11 @@ here.
 
 % Moved verbatim from CLAUDE.md by tools/docs/md2tex.py; edit this file, not the original.
 \chapter{Technology Node Strategy}\label{tm:pd:node-strategy}
+
+\begin{information}
+The text of this chapter is a historical record. The table of nodes and the section on ASAP7 report an ASAP7 sign-off, a frequency that the flow achieved and a count of 0 DRC and 0 antenna. These claims do not stand. The ASAP7 netlists that Synlig built are functionally wrong, the timing figures are unvalidated, and the claims of clean routing are withdrawn. Read \cref{tm:ch:standing-caveats} before you quote any ASAP7 figure from this chapter. The reasons are in \cref{tm:caveat:asap7-figures-rest-on-macro-views,tm:caveat:asap7-zero-wire-timing,tm:caveat:asap7-drc-antenna-withdrawn}.
+\end{information}
+
 \begin{relocated}{CLAUDE.md}
 
 Three nodes are supported by the existing \src{pnr/Makefile}. Use the
@@ -6504,6 +6517,10 @@ result is setup WNS \textbf{−169.7 ps / TNS −70,913 ps / 1008 violators}
 \chapter{Constraint file notes}\label{tm:ch:pd-constraint-notes}
 
 This chapter holds comment text that was removed from the constraint files (SDC and UPF).
+
+\begin{information}
+The comment text of this chapter comes from dated runs. Some of it states that an ASAP7 run was signed off, that its timing closed, or that its DRC count was 0. These statements do not stand. Read \cref{tm:ch:standing-caveats} before you quote a figure or a status from this chapter.
+\end{information}
 
 \section{\texttt{asap7/coalescer\_hls/constraints/asap7.sdc}}\label{tm:pd:asap7-coalescer-hls-sdc}
 
@@ -10143,6 +10160,10 @@ dbu_user = 1e-4 → 1 unit = 0.0001 um (KLayout convention)
 \chapter{pnr Makefile notes}\label{tm:ch:pd-makefile-notes}
 
 This chapter holds comment text that was removed from the Makefile of the flows.
+
+\begin{information}
+The comment text of this chapter comes from dated runs. It names ASAP7 runs as sign-offs. These sign-offs do not stand. Read \cref{tm:ch:standing-caveats} before you quote a run or a status from this chapter.
+\end{information}
 
 \section{\texttt{Makefile}}\label{tm:pd:makefile}
 

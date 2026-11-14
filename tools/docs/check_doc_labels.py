@@ -30,7 +30,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 BOOKS = ("ds", "tm", "um", "cr")
-KINDS = "part ch mod pd suite dec defect run fix status guide flow mm inv app req arc".split()
+KINDS = (
+    "part ch mod pd suite dec defect run fix status caveat guide flow mm inv app req arc".split()
+)
 SLUG = r"[a-z0-9][a-z0-9-]*"
 LABEL_RE = re.compile(
     rf"^(?:(?:fig|tab|lst|eq):)?(?:{'|'.join(BOOKS)}):(?:{'|'.join(KINDS)}):{SLUG}(?::{SLUG})*$"

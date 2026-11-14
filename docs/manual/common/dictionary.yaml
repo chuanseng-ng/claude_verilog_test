@@ -291,6 +291,23 @@
   definition: The JSON file that the checker of the power intent reads in place of the RTL. A program generates it from the RTL for the names that the power intent uses.
   glossary: true
 
+- term: standing caveat
+  kind: technical-name
+  definition: A limit on what a result shows. The limit stays until a named condition ends it.
+  glossary: true
+- term: blackbox
+  kind: technical-name
+  definition: A module that a tool keeps as an empty box with ports only, because it has no description of the module or because the flow tells it to.
+  glossary: true
+- term: macro view
+  kind: technical-name
+  definition: One of the files that describe a hard macro to the flow, such as the layout abstract, the timing library and the netlist.
+  glossary: true
+- term: front end
+  kind: technical-name
+  definition: The tool, or the part of a tool, that reads the SystemVerilog source for synthesis and gives the first form of the design. In this project the front end is Synlig or sv2v.
+  glossary: true
+
 # --- tools ---
 - term: Verilator
   kind: tool
