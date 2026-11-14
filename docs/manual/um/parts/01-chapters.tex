@@ -6695,7 +6695,7 @@ The tool writes two files for each module in \src{docs/manual/common/generated/f
 
 The tool has four exit codes. Code 0 is success. Code 1 is a stale table, or an entry that is absent or stale. Code 2 is an RTL file or sidecar file that the tool cannot parse, or a port width that the two passes of the tool do not agree on. Code 3 is a host without pyslang. Install pyslang with \code{pip install pyslang==11.0.0}.
 
-The documentation workflow runs the check, so an RTL port change without a new table fails there. The check also fails for a generated file that no sidecar produces. A normal run deletes such a file. The target \code{make -C docs/manual check} prints a warning and skips this check when pyslang is absent. The workflow never skips it.
+The documentation workflow runs the check, so an RTL port change without a new table fails there. The check also fails for a generated file that no sidecar produces. A normal run deletes such a file. The target \code{make -C docs/manual check} fails when pyslang is absent, so a missing pyslang is never read as a pass. The Nix docs shell (\code{nix develop .\#docs}) provides pyslang 11.0.0, the version that the workflow installs.
 
 Never edit a file under \code{docs/manual/*/generated/} or \code{docs/manual/common/generated/}. Change the RTL or the sidecar file and run the tool again.
 

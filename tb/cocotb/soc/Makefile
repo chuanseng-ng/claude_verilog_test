@@ -311,18 +311,13 @@ CLOCK_GATE_SCAN_SOURCES = \
 	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(SOC_DIR)/tb_clock_gate_scan.sv
 
-# tb_dft_muxes instantiates the three DFT leaf modules dft_clk_mux, dft_rst_mux and dft_ctrl_ports. The list also holds
-# jtag_tap, dft_clk_switch, dft_ctrl and their dependencies, which this DUT does not use.
+# tb_dft_muxes instantiates exactly three DUT modules: dft_clk_mux, dft_rst_mux and dft_ctrl_ports (see tb_dft_muxes.sv). None of
+# them instantiates another module or imports a package, so these are the only RTL files this suite needs. jtag_tap, dft_clk_switch,
+# dft_ctrl, the CDC primitives and rv32i_clock_gate have their own suites (JTAG_TAP_SOURCES, DFT_CLK_SWITCH_SOURCES, ...).
 DFT_MUXES_SOURCES = \
 	$(RTL)/soc/dft/dft_clk_mux.sv \
 	$(RTL)/soc/dft/dft_rst_mux.sv \
 	$(RTL)/soc/dft/dft_ctrl_ports.sv \
-	$(RTL)/soc/dft/jtag_tap.sv \
-	$(RTL)/soc/dft/dft_clk_switch.sv \
-	$(RTL)/soc/dft/dft_ctrl.sv \
-	$(RTL)/soc/cdc/cdc_sync.sv \
-	$(RTL)/soc/cdc/cdc_reset_sync.sv \
-	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(SOC_DIR)/tb_dft_muxes.sv
 
 # DFT Stage 1b: the JTAG TAP alone. cdc_reset_sync is the TAP's
@@ -1187,6 +1182,7 @@ apb_interconnect: $(call sp_lint,apb_interconnect_lint)
 		$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 			VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
 			EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=$$n +define+TB_N_SLAVES=$$n" \
+			$(BUILD_ARGS) \
 			sim; \
 	done; \
 	echo "=== apb_interconnect overlap test: N_SLAVES=2 OVERLAP_TEST=1 ==="; \
@@ -1194,6 +1190,7 @@ apb_interconnect: $(call sp_lint,apb_interconnect_lint)
 	$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 		VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=2 -GOVERLAP_TEST=1 +define+TB_N_SLAVES=2 +define+TB_OVERLAP_TEST=1" \
+		$(BUILD_ARGS) \
 		sim
 
 # async_axi_fifo lint + sim.

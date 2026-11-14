@@ -176,6 +176,60 @@
           }
         else pkgs.verible;
 
+      # ── pyslang, pinned to the CI version (issue #371) ─────────────────────────
+      # tools/docs/gen_fact_tables.py reads the RTL with pyslang, and .github/workflows/docs.yml pip-installs
+      # pyslang==11.0.0 for it. nixpkgs has NO pyslang package (checked: python3Packages has no *slang* attribute; only the
+      # C++ `slang` 2.x), so the `docs` shell could not run the fact-table check. This repackages the same upstream PyPI
+      # binary wheel CI installs, pinned by sha256, so `nix develop .#docs` and CI run the same pyslang. It is a prebuilt
+      # wheel for one interpreter (cp313 here, the version flake.lock gives python3): the assert below fails loudly when a nixpkgs bump moves the default
+      # python3, instead of building a wheel for the wrong interpreter. Bump all three together: `version`, the hashes
+      # below (from https://pypi.org/pypi/pyslang/<version>/json) and the pin in docs.yml / requirements.txt.
+      pyslangFor = pkgs:
+        let
+          version = "11.0.0";
+          py = pkgs.python3;
+          wheels = {
+            x86_64-linux = {
+              url = "https://files.pythonhosted.org/packages/23/cc/4277ce5f936c892daa6924bd5e89dd25d46385d757d9a1b313f67c833e8f/pyslang-${version}-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl";
+              sha256 = "3557e20a45b5535e24ed2481ab07d2ea136ec6e17e448f846eff38c8bf2dde22";
+            };
+            aarch64-linux = {
+              url = "https://files.pythonhosted.org/packages/c7/c7/6ce0a6ea26692c31f137746d3fab3523c83c7a4f5d5717555b4b678e47c0/pyslang-${version}-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl";
+              sha256 = "35e45f80dde9e90a34788601f931329bbac849f2fa3706cf94ed44bff6addf3d";
+            };
+            aarch64-darwin = {
+              url = "https://files.pythonhosted.org/packages/2b/61/94c0de6dba22b1bdf52d4b62e593cb305275a008bf1ad75635252cb793d9/pyslang-${version}-cp313-cp313-macosx_11_0_arm64.whl";
+              sha256 = "f9d6c1a20b6d9b3db9ef45411f13aacf85d4fb984f56c719195afce91b2e93e7";
+            };
+            x86_64-darwin = {
+              url = "https://files.pythonhosted.org/packages/bb/44/2daaecee70cca93f89375165f9cd23ecad71a865a42a3f98f7373e4f0c46/pyslang-${version}-cp313-cp313-macosx_11_0_universal2.whl";
+              sha256 = "84e6e7217336bccc6b66ca912ddbaa6abc79d507681840fcd451ad403bb5249c";
+            };
+          };
+          wheel = wheels.${pkgs.stdenv.hostPlatform.system};
+        in
+        assert lib.assertMsg (py.pythonVersion == "3.13")
+          "pyslangFor: the pinned wheels are cp313 but nixpkgs python3 is ${py.pythonVersion}; pin the matching wheels in flake.nix";
+        py.pkgs.buildPythonPackage {
+          pname = "pyslang";
+          inherit version;
+          format = "wheel";
+          src = pkgs.fetchurl {
+            name = baseNameOf wheel.url;
+            inherit (wheel) url sha256;
+          };
+          # The manylinux wheel links libstdc++ dynamically; patch its RPATH to the nix store.
+          nativeBuildInputs = lib.optionals pkgs.stdenv.isLinux [ pkgs.autoPatchelfHook ];
+          buildInputs = lib.optionals pkgs.stdenv.isLinux [ pkgs.stdenv.cc.cc.lib ];
+          pythonImportsCheck = [ "pyslang" ];
+          doCheck = false;
+          meta = {
+            description = "Python bindings for the slang SystemVerilog frontend, pinned to the CI version";
+            homepage = "https://github.com/MikePopoloski/slang";
+            license = lib.licenses.mit;
+          };
+        };
+
       # ── Documentation TeX Live set ─────────────────────────────────────────────
       # The books under docs/manual are built with lualatex by tools/docs/build_books.py.
       # scheme-small plus exactly the packages the document class and macros load, so the
@@ -337,14 +391,15 @@
 
           # Documentation shell: builds the LaTeX books under docs/manual (tools/docs/build_books.py, `make -C docs/manual`)
           # and runs the doc checks. The TeX set is the same docs-tex package CI installs; python3 carries PyYAML for
-          # gen_glossary.py and pytest for tb/tests/test_docs_*.py. pandoc serves the Markdown-to-LaTeX tools.
+          # gen_glossary.py, pytest for tb/tests/test_docs_*.py and the pinned pyslang (pyslangFor) for gen_fact_tables.py, so
+          # `make -C docs/manual check` runs the fact-table check instead of skipping it. pandoc serves the Markdown-to-LaTeX tools.
           docs = pkgs.mkShell {
             name = "soc-docs";
 
             packages = with pkgs; [
               (docsTexFor pkgs)
               pandoc
-              (python3.withPackages (ps: [ ps.pyyaml ps.pytest ]))
+              (python3.withPackages (ps: [ ps.pyyaml ps.pytest (pyslangFor pkgs) ]))
               git
               gnumake
             ];
