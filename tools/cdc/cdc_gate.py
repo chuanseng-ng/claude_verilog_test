@@ -184,7 +184,7 @@ def cdc_register_names(path: Path) -> dict[str, str]:
     CDC       = single-source crossing marked magic_cdc (the normal case).
     BAD+magic = a magic_cdc-marked register whose input cone cdc_snitch counted as more than one
                 entry. cdc_snitch counts INPUT PINS of the cells in the cone (see
-                docs/verification/CDC_SNITCH_POC.md and the reproducer in DFT_ARCHITECTURE.md
+                Doc: tm:flow:cdc-snitch-poc and the reproducer in Doc: tm:ch:dft-architecture
                 15.9), so a latch-launched (two pins: E and D) or any 2-input-logic-launched
                 synchroniser can never classify CDC. Only entries that opt in with
                 `latch_launched: true` may be satisfied by this second class."""

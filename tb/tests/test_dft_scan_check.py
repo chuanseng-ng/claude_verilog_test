@@ -236,7 +236,7 @@ def test_tap_alt_clock_is_allowed_only_when_declared(tmp_path: Path) -> None:
 # TAP flop, `u_sw_rst` resets the consumer `u_clk_sw`; both are instances of the same 2-flop
 # `rsync`. The two chains are structurally identical (same clock, same async clear, D = 1), which
 # is exactly why cdc_snitch's opt_merge folds them into one and its report cannot tell them apart
-# (docs/design/DFT_ARCHITECTURE.md 15.5): the checker runs before any such merge, so it sees both.
+# (Doc: tm:ch:dft-architecture 15.5): the checker runs before any such merge, so it sees both.
 _RS_TOP = """
 module rsync (input wire clk_i, input wire rst_ni, output wire rst_no);
     reg s0_q, s1_q;

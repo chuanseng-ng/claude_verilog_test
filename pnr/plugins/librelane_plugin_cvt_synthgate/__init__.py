@@ -184,7 +184,7 @@ def _census_tripwire(step, mode: str) -> None:
     if census.main([str(netlist)]) != 0 and mode != "warn":
         raise StepError(
             "CVT netlist census tripwire fired: fwd_b_* flops missing or flop count out of band "
-            f"({netlist}); this is the dud4 casualty signature (docs/SYNTH_UNDEF_GATE.md)"
+            f"({netlist}); this is the dud4 casualty signature (Doc: tm:flow:synth-undef-gate)"
         )
 
 

@@ -2,7 +2,7 @@
 # Spyglass lint waiver file — phase5_soc / soc_top
 # =============================================================================
 # GH #116 — Spyglass lint violation remediation.
-# Plan: docs/development/SPYGLASS_LINT_REMEDIATION_PLAN.md (dispositions locked
+# Plan: Doc: um:guide:spyglass-lint-remediation (dispositions locked
 # with the user; this file implements section 3, "WAIVE + DOCUMENT items").
 #
 # Every waiver below carries a rationale explaining WHY the flagged construct
@@ -23,17 +23,17 @@
 # K. SynchReset-ML (x56) — synchronous-reset CPU pipeline + peripherals
 # -----------------------------------------------------------------------------
 # Design intent, not an oversight: this project uses an ALL-SYNCHRONOUS reset
-# discipline end-to-end (CODING_GUIDELINES.md section 1.4), by explicit
+# discipline end-to-end (Doc: um:guide:coding-guidelines section 1.4), by explicit
 # architectural choice. The entire CPU pipeline (IF/ID/EX1a/EX1b/EX1c/EX2/MEM/
 # WB), rv32i_core, rv32i_csr_file, and every peripheral (uart_controller,
 # spi_controller, timer, interrupt_controller, dma_engine) reset on
 # `always_ff @(posedge clk)` with `if (!rst_n)` inside the clocked block —
 # never `posedge clk or negedge rst_n`. This was signed off at ASAP7 (1282 MHz
-# CPU standalone, 571 MHz SoC, run 14/run 23 — see docs/PHASE5_RUN_HISTORY.md)
+# CPU standalone, 571 MHz SoC, run 14/run 23 — see Doc: cr:run:phase5)
 # and re-verified through the M11/M12 physical-design flow on this exact
 # reset structure. Converting to asynchronous reset is a SEPARATE, explicitly
 # out-of-scope effort (tracked as the existing P3 audit item in
-# CODING_GUIDELINES.md section 1.4) because it would require: (a) whole-CPU
+# Doc: um:guide:coding-guidelines section 1.4) because it would require: (a) whole-CPU
 # functional re-verification (async reset changes recovery/removal timing and
 # can change first-cycle-after-reset behaviour), and (b) a full ASAP7 PPA
 # re-sign-off (reset tree becomes a real clock-like network needing its own

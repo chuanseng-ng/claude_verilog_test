@@ -9,7 +9,7 @@ could not be met for any peripheral.  The suites now sample ``cocotb-coverage`` 
 through ``tb/cocotb/soc/func_cov.py`` and write one YAML file per simulator process
 (``$FUNC_COV_DIR/<module>__<pid>.yml``, the library's own ``export_to_yaml`` format).  This script
 merges every such file of a run (all CI shards) and gates the result.  Method, evaluation and how a
-peripheral adds a model: ``docs/verification/FUNCTIONAL_COVERAGE.md``.
+peripheral adds a model: Doc: tm:flow:functional-coverage.
 
 Merge
 -----

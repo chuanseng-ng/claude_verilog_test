@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Source-idiom checker for struct-member selects (bead ainf) - BLOCKING, zero allowed sites.
 
-Rule (docs/development/CODING_GUIDELINES.md, 1.3): never take a bit, part or element select
+Rule (Doc: um:guide:coding-guidelines, 1.3): never take a bit, part or element select
 directly on a struct member, read or write.  Copy the member to a named signal first and select
 from that: `logic [W-1:0] w; assign w = s.m;` then `w[hi:lo]`.
 
-Why (docs/SYNLIG_STRUCT_SELECT_AINF.md): the Synlig frontend mis-elaborates
+Why (Doc: cr:defect:synlig-struct-select-ainf): the Synlig frontend mis-elaborates
   D1  s.m[hi:lo] / s.m[i]  when the struct TYPE has exactly two members declared with a packed range
   D2  y.m[hi:lo] = v       (LHS part-select of a struct member), for any struct type
   D3  s.m[i]               when m is a multi-dim packed array member (read as ONE BIT)
@@ -118,7 +118,7 @@ def main(argv: list | None = None) -> int:
     if sites:
         print(
             f"FAIL: {len(sites)} select(s) taken directly on a struct member. Synlig "
-            "mis-elaborates these (docs/SYNLIG_STRUCT_SELECT_AINF.md): copy the member to a "
+            "mis-elaborates these (Doc: cr:defect:synlig-struct-select-ainf): copy the member to a "
             "named signal first and select from that.",
             file=sys.stderr,
         )
