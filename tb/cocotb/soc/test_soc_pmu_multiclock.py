@@ -547,6 +547,36 @@ async def test_pmu_live_power_cycle(dut):
 
 
 @cocotb.test()
+async def test_pmu_live_power_cycle_monitor_sees_violating_firmware(dut):
+    """Control for the monitor of the live test. Firmware that breaks the stop-traffic rule
+    (cfw.violating_image) requests the power-down through the DMA engine and keeps its bus traffic
+    going. The monitor then counts handshakes of the CPU between the DMA start and DOM_OFF, so the
+    zero of the live test is not an artefact of the monitor. The CPU is then powered up and runs
+    for a while: it resumes its loop."""
+
+    async def body():
+        words, _labels = cfw.violating_image()
+        await _confirm_reset_and_rom(dut, CPU_PERIOD_NS, words)
+        mon = _ClampMonitor(dut).start()
+        mon.epoch = "pre"
+        _active_tasks.append(cocotb.start_soon(_mark_request(dut, mon)))
+        await _confirm_release(dut)
+        await _wait_for_dom_state(dut, {DOM_OFF}, POWERDOWN_TIMEOUT_CLK_I_CYCLES, "power-down")
+        mon.epoch = "off"
+        down = dict(mon.hs["down"])
+        await _confirm_set_mode(dut, MODE_NORMAL)
+        await _wait_for_dom_state(dut, {DOM_ON}, POWERUP_TIMEOUT_CLK_I_CYCLES, "power-up")
+        await ClockCycles(dut.cpu_clk_i, DIAG_RESUME_WINDOW_CPU_CLK_CYCLES)
+        mon.stop()
+        return down
+
+    down = await with_timeout(body(), 400, "us")
+    assert down["aw"] + down["w"] + down["ar"] + down["r"] > 0, (
+        f"the monitor saw no bus handshake of firmware that keeps its traffic going: {down}"
+    )
+
+
+@cocotb.test()
 async def test_pmu_live_power_cycle_clears_timeout_flag(dut):
     """The same live power cycle with a timed-out wait for the clamp acknowledge. The firmware
     reads STATUS[3] at 1, records the fault and writes STATUS_CLR, and STATUS[3] then reads 0."""
