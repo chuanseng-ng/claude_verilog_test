@@ -1,0 +1,34 @@
+rule	inside	straddle	outside
+Core local interconnect width < 0.14um (li.c1)	0	0	1024
+Diffusion width < 0.15um (diff/tap.1)	0	0	732
+Local interconnect minimum area < 0.0561um^2 (li.6)	0	0	1330
+Local interconnect overlap of diffusion contact < 0.08um in one direction (li.5)	0	0	727
+Local interconnect overlap of poly contact < 0.08um in one direction (li.5)	0	0	222
+Local interconnect width < 0.17um (li.1)	0	0	1529
+Metal1 minimum area < 0.083um^2 (met1.6)	0	0	181
+Metal1 overlap of local interconnect contact < 0.06um in one direction (met1.5)	0	0	2
+Metal1 width < 0.14um (met1.1)	0	0	317
+Metal2 minimum area < 0.0676um^2 (met2.6)	0	0	146
+Metal2 width < 0.14um (met2.1)	0	0	670
+Metal3 minimum area < 0.24um^2 (met3.6)	0	0	40
+Metal3 width < 0.3um (met3.1)	0	0	44
+Metal4 minimum area < 0.24um^2 (met4.4a)	0	0	23
+N-diff distance to P-tap must be < 15.0um (LU.2)	0	0	124
+N-diffusion contact width < 0.17um (licon.1)	0	0	217
+N-diffusion overlap of N-diffusion contact < 0.06um in one direction (licon.5c)	0	0	1
+N-diode contact width < 0.17um (licon.1)	0	0	180
+N-well overlap of N-tap < 0.18um (diff/tap.10)	0	0	184
+N-well overlap of P-Diffusion < 0.18um (diff/tap.8)	0	0	5522
+N-well width < 0.84um (nwell.1)	0	0	111
+P-diff distance to N-tap must be < 15.0um (LU.3)	0	0	24
+P-diffusion contact width < 0.17um (licon.1)	0	0	1072
+P-diffusion overlap of P-diffusion contact < 0.06um in one direction (licon.5c)	0	0	31
+P-tap contact width     < 0.17um (licon.1)	0	0	25
+P-tap minimum area < 0.07011um^2 (psd.10b)	0	0	50
+P-tap overlap of P-tap contact < 0.12um in one direction (licon.7)	0	0	84
+Via1 width < 0.26um (via.1a + 2 * via.4a)	0	1	564
+mcon.width < 0.17um (mcon.1)	0	0	64
+poly contact width        < 0.17um (licon.1)	0	0	454
+poly overlap of poly contact < 0.08um in one direction (licon.8a)	0	0	207
+poly width < 0.15um (poly.1a)	0	0	1946
+via2 width < 0.28um (via2.1a + 2 * via2.4)	0	0	40
