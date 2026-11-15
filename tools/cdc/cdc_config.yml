@@ -215,6 +215,25 @@ required_synchronisers:
     reason: >
       soc_top.sv u_cpu_iso_ack_sync carries cpu_iso_clamp_q (the registered CPU clamp, qualified by the
       closed clock gate) back into core_clk as pmu.cpu_iso_ack_i, the 4-phase partner of cpu_iso_en_o.
+  # The APB_PLL bridge. Its two faces are DISTINCT clock domains by decision: the s face runs on core_clk, the PLL
+  # output, and the m face on pll_ref_clk, the raw reference of u_pll_sub. In the elaborated SoC both are one net,
+  # because pll_clkgen_stub passes its reference through, so cdc_snitch classes the stage-0 flops OK1 and not CDC.
+  # `same_domain_ok: true` accepts that class for these entries only, and only for a flop that carries magic_cdc.
+  # A deleted, bypassed or renamed synchroniser still leaves the entry unmet. With a PLL output on its own net the
+  # same flops classify CDC, which the entries accept too. A report line without magic, or a renamed instance,
+  # turns the entry red (tb/tests/test_cdc_gate.py).
+  - id: apb-pll-bridge-req-sync
+    dest: '^u_apb_pll_cdc\.u_req_sync\.sync_q\[0\]:D$'
+    same_domain_ok: true
+    reason: >
+      u_apb_pll_cdc carries the request level req_q from the s face (core_clk) into the m face (pll_ref_clk)
+      through cdc_sync u_req_sync.
+  - id: apb-pll-bridge-ack-sync
+    dest: '^u_apb_pll_cdc\.u_ack_sync\.sync_q\[0\]:D$'
+    same_domain_ok: true
+    reason: >
+      u_apb_pll_cdc carries the completion level ack_q from the m face (pll_ref_clk) into the s face (core_clk)
+      through cdc_sync u_ack_sync.
   # DFT Stage 1b (j41m.3): glitch-free test-clock switch handshake synchronisers. Latch-launched,
   # so cdc_snitch classes them `BAD magic` (see the comment at reset_domains / tck_i); `latch_launched`
   # lets the gate accept that class for these entries only.

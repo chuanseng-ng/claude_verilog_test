@@ -216,7 +216,7 @@ foreach {_fifo _wr_clk _rd_clk} $_cdc_fifo_dirs {
 }
 
 ###############################################################################
-# 12 / 12a. apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc): 4-phase RZ handshake, req_q is
+# 12 / 12a. apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc; u_apb_pll_cdc is in 12b): 4-phase RZ handshake, req_q is
 #     launched in the s (core_clk) domain and captured in the m (cpu_clk) domain, ack_q the
 #     reverse. 1.0x destination period (lower-rate control crossings, as in the ASAP7 file).
 #     The cmd_*/resp_* payload registers are covered by the section-10 fallback.
@@ -231,6 +231,22 @@ foreach {_br _grp} {u_apb_pll2_cdc apb_pll2 u_apb_dbg_cdc apb_dbg} {
 # The destination reset status of apb_cdc_bridge (u_m_alive_sync) has no data crossing. It is a
 # cdc_reset_sync whose async clear is the destination reset, so its cross-domain recovery and
 # removal are waived by section 10a. The budget of the old status synchroniser is gone with that instance.
+
+###############################################################################
+# 12b. apb_cdc_bridge u_apb_pll_cdc: s face = core_clk, m face = pll_ref_clk (the raw reference of u_pll_sub).
+#     The two faces are DISTINCT clock domains, by decision. In this netlist both are the clock core_clk, because
+#     pll_clkgen_stub passes its reference through. The budget therefore names one clock variable for each face, so
+#     that a clock of its own for either face changes two lines and not the budgets.
+#     req_q: s -> m, one m period (the reference period). ack_q: m -> s, one s period (the core_clk period).
+###############################################################################
+set _pll_s_clk core_clk
+set _pll_m_clk core_clk
+set _pll_s_period $clock_period
+set _pll_m_period $clock_period
+cdc_apply_sync_budget apb_pll_req "u_apb_pll_cdc*u_req_sync" $_pll_m_period $_pll_s_clk $_pll_m_clk \
+    "sec.12b u_apb_pll_cdc req_q level crossing (s face -> m face)"
+cdc_apply_sync_budget apb_pll_ack "u_apb_pll_cdc*u_ack_sync" $_pll_s_period $_pll_m_clk $_pll_s_clk \
+    "sec.12b u_apb_pll_cdc ack_q level crossing (m face -> s face)"
 
 ###############################################################################
 # 13. PMU / IRQ single-bit crossings into the cpu_clk domain (cdc_sync instances in soc_top):

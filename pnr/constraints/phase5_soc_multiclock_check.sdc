@@ -3,7 +3,7 @@
 # Scope: read by pnr/scripts/check_cdc_timing.tcl (make target check-cdc-timing-asap7-soc). No synthesis or P&R config reads it.
 # Contents: clocks sys_clk (clk_i) and cpu_clk (cpu_clk_i) with no clock group; reset false paths (section 4); Tcl procs such as
 #   cdc_require_match and cdc_apply_max_delay; the domain-wide fallback (section 10); the reset-pin waiver (section 10a);
-#   max-delay budgets on async_axi_fifo u_cpu_axi_cdc (11), apb_cdc_bridge u_apb_pll2_cdc (12) and u_apb_dbg_cdc (12a),
+#   max-delay budgets on async_axi_fifo u_cpu_axi_cdc (11), apb_cdc_bridge u_apb_pll2_cdc (12), u_apb_dbg_cdc (12a) and u_apb_pll_cdc (12b),
 #   and the PMU and IRQ synchronisers (13); the coverage gate (15).
 # Inputs: a routed netlist that contains the CDC modules. The sections match instances by name pattern.
 # User rules:
@@ -259,6 +259,30 @@ cdc_apply_max_delay $_dbg_ack_sync 1750 cpu_clk sys_clk \
 
 # cmd_*/resp_* payload (u_apb_dbg_cdc): unmatchable by name -- see
 # section 10's domain-wide fallback, which covers this crossing instead.
+
+###############################################################################
+# 12b. APB_PLL CDC bridge — apb_cdc_bridge (instance u_apb_pll_cdc)
+#     s face = core_clk, m face = pll_ref_clk (the raw reference of u_pll_sub). The two faces are DISTINCT clock domains,
+#     by decision. In this file both are sys_clk, because pll_clkgen_stub passes its reference through and the file has no
+#     generated clock for core_clk. So one clock variable and one period variable name each face. A clock of its own for
+#     either face changes these four lines and not the budgets.
+#     req_q: s -> m, one m period (the reference period). ack_q: m -> s, one s period (the core_clk period).
+#     Both faces run on one clock, so the proc selects the receiving flops by the fanout of the net. Check the max_delay
+#     value in the reports after an edit.
+set _pll_s_clk    sys_clk
+set _pll_m_clk    sys_clk
+set _pll_s_period 1750
+set _pll_m_period 1750
+set _pll_req_sync [get_nets -hierarchical -filter {name =~ *u_apb_pll_cdc*req_q*} -quiet]
+cdc_apply_max_delay $_pll_req_sync $_pll_m_period $_pll_s_clk $_pll_m_clk \
+    "sec.12b u_apb_pll_cdc.req_q level crossing (s face -> m face)"
+
+set _pll_ack_sync [get_nets -hierarchical -filter {name =~ *u_apb_pll_cdc*ack_q*} -quiet]
+cdc_apply_max_delay $_pll_ack_sync $_pll_s_period $_pll_m_clk $_pll_s_clk \
+    "sec.12b u_apb_pll_cdc.ack_q level crossing (m face -> s face)"
+
+# cmd_*/resp_* payload (u_apb_pll_cdc): both faces run on sys_clk here, so the section 10 fallback does not cover them.
+# The single-clock timing check of the payload registers applies.
 
 set _rst_sync_pins [get_nets pmu_cpu_rst_n -quiet]
 if {[cdc_require_match $_rst_sync_pins "sec.13 pmu_cpu_rst_n async-clear reset sync (false_path)"]} {
