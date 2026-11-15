@@ -164,6 +164,39 @@
    "errors": 0,
    "spef_bytes": 157721358,
    "spef_md5": "4306f2db82d94ea187427b6f6335ac28"
+  },
+  "freshnom_icc2b9_nom": {
+   "wall_s": 185.6,
+   "max_single_process_rss_kb": 60228,
+   "session_peak_rss_kb": 954684,
+   "rc": "0",
+   "nets_extracted": 40824,
+   "warnings": 23,
+   "errors": 0,
+   "spef_bytes": 109475027,
+   "spef_md5": "b9777746212918aa843f42faff626feb"
+  },
+  "freshnom_innovusb11_nom": {
+   "wall_s": 722.9,
+   "max_single_process_rss_kb": 60656,
+   "session_peak_rss_kb": 1167676,
+   "rc": "0",
+   "nets_extracted": 45947,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 176849272,
+   "spef_md5": "3f74c08f6a6be3104f4beb87d24aba50"
+  },
+  "freshnom_openroad_nom": {
+   "wall_s": 464.1,
+   "max_single_process_rss_kb": 61972,
+   "session_peak_rss_kb": 1144084,
+   "rc": "0",
+   "nets_extracted": 42196,
+   "warnings": 20,
+   "errors": 0,
+   "spef_bytes": 157727802,
+   "spef_md5": "e0b3cbb390991b248a7f6e54cd3afeff"
   }
  },
  "techgen": {
@@ -172,7 +205,16 @@
     "migrate rc=0 wall_s=2 session_peak_rss_kb=0"
    ],
    "qrcTechFile_bytes": 2006772,
-   "provenance": "nom RCGEN = Techgen cell-level models from the 2026-10-25/29 run (build/qrc/nom.run1_20261029_partial, Techgen -simulation_FS_off ... -2d_only),\nwhich completed the cell level (\"Cell level Techgen has successfully generated the technology file RCGEN\", CPU time 5.83 h, same ICT: cmp-identical to\ntech/ict/sky130A_nom.ict).  qrcTechFile = Techgen -migrate -rcgen RCGEN (the final unified-file step that run crashed on).\nA fresh re-run of the cell flow was started 2026-11-07 09:41 and stopped at 39 % (1 h 45 min, 2 CPUs) to free the host: build/qrc/nom.fresh_partial_20261107_39pct (resumable)."
+   "provenance": "nom RCGEN = Techgen cell-level models from the 2026-10-25/29 run (build/qrc/nom.run1_20261029_partial, Techgen -simulation_FS_off ... -2d_only),\nwhich completed the cell level (\"Cell level Techgen has successfully generated the technology file RCGEN\", CPU time 5.83 h, same ICT: cmp-identical to\ntech/ict/sky130A_nom.ict).  qrcTechFile = Techgen -migrate -rcgen RCGEN (the final unified-file step that run crashed on).\nA fresh re-run started 2026-11-07 09:41 was stopped at 39 % (build/qrc/nom.fresh_partial_20261107_39pct, not resumable in place).\nThe fresh nom run was completed on 2026-11-14 in build/qrc/nom.fresh (3 h 57 min); Quantus nom with it agrees to 0.06 % per net (quantus_crosscheck.md section 5). This directory is kept as the migrated reference."
+  },
+  "nom.fresh": {
+   "timing_lines": [
+    "plan rc=0 wall_s=36 session_peak_rss_kb=1652",
+    "parallel rc=0 wall_s=14236 session_peak_rss_kb=456280",
+    "migrate rc=0 wall_s=8 session_peak_rss_kb=0"
+   ],
+   "qrcTechFile_bytes": 2006756,
+   "provenance": "nom.fresh = a fresh Techgen cell-level run built exactly like min and max: scripts/run_techgen_cell.sh nom <this dir> (plan, parallel -autoconcat, migrate), 2 CPUs,\nstarted 2026-11-14 17:12:46 in a NEW directory (the 39 % partial of 2026-11-07 could not be resumed: its job scripts hardcode build/qrc/nom/.tech_scripts paths).\nICT cmp-identical to tech/ict/sky130A_nom.ict.  384 of 384 jobs, Techgen reports \"The number of models in the techfile equals to the number of models in the plan file\", 0 errors.\nbuild/qrc/nom (the qrcTechFile of the 2026-10 run + Techgen -migrate) is kept unchanged as the migrated reference."
   },
   "min": {
    "timing_lines": [
@@ -337,6 +379,146 @@
     "hold_wns_ns": -0.030318,
     "hold_tns_ns": -7.400744,
     "total_power_mW": 0.2
+   }
+  }
+ },
+ "pt_sensitivity_nom_tt_freshnom": {
+  "innovusb11": {
+   "starrc": {
+    "setup_wns_ns": 2.719475,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.541455,
+    "hold_tns_ns": -139.847487,
+    "hold_viol": 377,
+    "total_power_mW": 74.5,
+    "p2p_unannotated_nets": 0
+   },
+   "quantus_migrated_nom": {
+    "setup_wns_ns": 2.63256,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.571773,
+    "hold_tns_ns": -147.248231,
+    "hold_viol": 385,
+    "total_power_mW": 74.7,
+    "p2p_unannotated_nets": 0
+   },
+   "quantus_fresh_nom": {
+    "setup_wns_ns": 2.63256,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.571772,
+    "hold_tns_ns": -147.248199,
+    "hold_viol": 385,
+    "total_power_mW": 74.7,
+    "p2p_unannotated_nets": 0
+   },
+   "delta_fresh_vs_starrc": {
+    "setup_wns_ns": -0.086915,
+    "setup_tns_ns": 0.0,
+    "hold_wns_ns": -0.030317,
+    "hold_tns_ns": -7.400712,
+    "total_power_mW": 0.2
+   },
+   "delta_fresh_vs_migrated": {
+    "setup_wns_ns": 0.0,
+    "setup_tns_ns": 0.0,
+    "hold_wns_ns": 1e-06,
+    "hold_tns_ns": 3.2e-05,
+    "total_power_mW": 0.0
+   }
+  },
+  "icc2b9": {
+   "starrc": {
+    "setup_wns_ns": 4.218496,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.751041,
+    "hold_tns_ns": -457.039385,
+    "hold_viol": 673,
+    "total_power_mW": 69.3,
+    "p2p_unannotated_nets": 0
+   },
+   "quantus_migrated_nom": {
+    "setup_wns_ns": 4.325192,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.700214,
+    "hold_tns_ns": -436.614795,
+    "hold_viol": 665,
+    "total_power_mW": 68.9,
+    "p2p_unannotated_nets": 0
+   },
+   "quantus_fresh_nom": {
+    "setup_wns_ns": 4.325192,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -1.700214,
+    "hold_tns_ns": -436.614798,
+    "hold_viol": 665,
+    "total_power_mW": 68.9,
+    "p2p_unannotated_nets": 0
+   },
+   "delta_fresh_vs_starrc": {
+    "setup_wns_ns": 0.106696,
+    "setup_tns_ns": 0.0,
+    "hold_wns_ns": 0.050827,
+    "hold_tns_ns": 20.424587,
+    "total_power_mW": -0.4
+   },
+   "delta_fresh_vs_migrated": {
+    "setup_wns_ns": 0.0,
+    "setup_tns_ns": 0.0,
+    "hold_wns_ns": 0.0,
+    "hold_tns_ns": -3e-06,
+    "total_power_mW": 0.0
+   }
+  },
+  "openroad": {
+   "starrc": {
+    "setup_wns_ns": 3.172257,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -0.318574,
+    "hold_tns_ns": -3.513785,
+    "hold_viol": 51,
+    "total_power_mW": 93.10000000000001,
+    "p2p_unannotated_nets": 0
+   },
+   "quantus_migrated_nom": {
+    "setup_wns_ns": 3.190078,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -0.316376,
+    "hold_tns_ns": -2.705003,
+    "hold_viol": 42,
+    "total_power_mW": 93.10000000000001,
+    "p2p_unannotated_nets": 0
+   },
+   "quantus_fresh_nom": {
+    "setup_wns_ns": 3.190076,
+    "setup_tns_ns": 0.0,
+    "setup_viol": 0,
+    "hold_wns_ns": -0.316374,
+    "hold_tns_ns": -2.70498,
+    "hold_viol": 42,
+    "total_power_mW": 93.10000000000001,
+    "p2p_unannotated_nets": 0
+   },
+   "delta_fresh_vs_starrc": {
+    "setup_wns_ns": 0.017819,
+    "setup_tns_ns": 0.0,
+    "hold_wns_ns": 0.0022,
+    "hold_tns_ns": 0.808805,
+    "total_power_mW": 0.0
+   },
+   "delta_fresh_vs_migrated": {
+    "setup_wns_ns": -2e-06,
+    "setup_tns_ns": 0.0,
+    "hold_wns_ns": 2e-06,
+    "hold_tns_ns": 2.3e-05,
+    "total_power_mW": 0.0
    }
   }
  }

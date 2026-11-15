@@ -6,7 +6,7 @@ the PrimeTime judge read.  Per-net values come from starrc/scripts/spef_stats.py
 Percent error = (Quantus / StarRC - 1) * 100.  Population: nets in both SPEFs with StarRC total C > 1 fF (the calibration-gate population of
 reports/starrc_extraction_summary.md); R: the subset with R > 0 in both.  Reported: median signed error, median |error|, p95 |error|, share of nets
 outside +-10 %, Pearson r (log-log), design totals.  Gate label: INDICATIVE when median |error| > 10 % (plan calibration gate), and a TAIL flag
-when p95 |error| > 10 %.  Writes reports/quantus_vs_starrc.json (+ .md table).  Needs numpy: run with Calibre's bundled python3.
+when p95 |error| > 10 %.  Writes reports/quantus_vs_starrc.json (+ .md table).  QRUNS=<dir> (default runs) selects another Quantus run directory, e.g. runs_freshnom; CORR_TAG names the report. Needs numpy: run with Calibre's bundled python3.
 """
 import sys, os, json, importlib.util
 import numpy as np
@@ -42,7 +42,7 @@ def main():
     rows = []
     for arm in arms:
         for c in corners:
-            qp = os.path.join(Q, "runs/%s_%s/rv32i_cpu_top.%s.spef" % (arm, c, c))
+            qp = os.path.join(Q, "%s/%s_%s/rv32i_cpu_top.%s.spef" % (os.environ.get("QRUNS", "runs"), arm, c, c))
             sp = os.path.join(S, "runs/%s_%s/rv32i_cpu_top.%s.spef" % (arm, c, c))
             if not (os.path.isfile(qp) and os.path.isfile(sp)):
                 continue

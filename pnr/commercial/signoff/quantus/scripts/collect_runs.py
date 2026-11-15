@@ -27,10 +27,14 @@ def md5(p):
             h.update(b)
     return h.hexdigest()
 
-out = {"quantus_runs": {}, "techgen": {}, "pt_sensitivity_nom_tt": {}}
-for d in sorted(glob.glob(os.path.join(Q, "runs/*_*/"))):
+out = {"quantus_runs": {}, "techgen": {}, "pt_sensitivity_nom_tt": {}, "pt_sensitivity_nom_tt_freshnom": {}}
+# runs/ = qrcTechFile built by the 2026-10 Techgen run + `Techgen -migrate` (nom) and fresh Techgen runs (min, max);
+# runs_freshnom/ = nom re-extraction with the fresh nom qrcTechFile (build/qrc/nom.fresh, cleanup step 6, tag prefix "freshnom_")
+for d in sorted(glob.glob(os.path.join(Q, "runs/*_*/"))) + sorted(glob.glob(os.path.join(Q, "runs_freshnom/*_*/"))):
     tag = os.path.basename(d.rstrip("/"))
     c = tag.rsplit("_", 1)[1]
+    if "runs_freshnom" in d:
+        tag = "freshnom_" + tag
     spef = os.path.join(d, "rv32i_cpu_top.%s.spef" % c)
     if not os.path.isfile(spef) or not os.path.isfile(os.path.join(d, "time.txt")):
         continue
@@ -41,7 +45,7 @@ for d in sorted(glob.glob(os.path.join(Q, "runs/*_*/"))):
               "errors": int((re.search(r"Error messages:\s+(\d+)", log) or [0, 0])[1]),
               "spef_bytes": os.path.getsize(spef), "spef_md5": md5(spef)})
     out["quantus_runs"][tag] = r
-for c in ("nom", "min", "max"):
+for c in ("nom", "nom.fresh", "min", "max"):
     tm = os.path.join(SK, c, "techgen_cell.timing")
     if os.path.isfile(tm):
         out["techgen"][c] = {"timing_lines": open(tm).read().strip().split("\n"), "qrcTechFile_bytes": os.path.getsize(os.path.join(SK, c, "qrcTechFile")) if os.path.isfile(os.path.join(SK, c, "qrcTechFile")) else None,
@@ -58,6 +62,13 @@ def metrics(d):
             "hold_wns_ns": float(m["hold_wns"]), "hold_tns_ns": float(m["hold_tns"]), "hold_viol": int(m["hold_viol"]),
             "total_power_mW": float(pw.group(1)) * 1e3, "p2p_unannotated_nets": p2p_un}
 
+for arm in ("innovusb11", "icc2b9", "openroad"):
+    dq = os.path.join(PT, "runs_quantus_freshnom/%s_nom_tt" % arm); do = os.path.join(PT, "runs_quantus/%s_nom_tt" % arm); ds = os.path.join(PT, "runs/%s_nom_tt" % arm)
+    if all(os.path.isfile(os.path.join(x, "metrics.tsv")) for x in (dq, do, ds)):
+        mq, mo, ms = metrics(dq), metrics(do), metrics(ds)
+        out["pt_sensitivity_nom_tt_freshnom"][arm] = {"starrc": ms, "quantus_migrated_nom": mo, "quantus_fresh_nom": mq,
+            "delta_fresh_vs_starrc": {k: round(mq[k] - ms[k], 6) for k in mq if isinstance(mq[k], float)},
+            "delta_fresh_vs_migrated": {k: round(mq[k] - mo[k], 6) for k in mq if isinstance(mq[k], float)}}
 for arm in ("icc2b6", "innovusb6", "openroad", "icc2b9", "innovusb11"):
     dq = os.path.join(PT, "runs_quantus/%s_nom_tt" % arm); ds = os.path.join(PT, "runs/%s_nom_tt" % arm)
     if os.path.isfile(os.path.join(dq, "metrics.tsv")) and os.path.isfile(os.path.join(ds, "metrics.tsv")):

@@ -1377,6 +1377,11 @@ def quantus_crosscheck():
         corr_src += [(k, r, rep_i11) for k, r in json.loads(text(rep_i11))["results"].items()]
     else:
         warnings.append("quantus Innovus b11 correlation report not committed; omitted")
+    rep_fresh = f"{COM}/signoff/quantus/reports/quantus_vs_starrc_freshnom.json"  # cleanup step 6 (2026-11-14): nom re-extracted with the FRESH nom qrcTechFile, CORR_TAG=_freshnom
+    if tracked(rep_fresh):
+        corr_src += [(k + "_freshtech", r, rep_fresh) for k, r in json.loads(text(rep_fresh))["results"].items()]
+    else:
+        warnings.append("quantus fresh-nom correlation report not committed; omitted")
     for k, r, rep in corr_src:
         out["correlation"][k] = E(
             {
@@ -1410,6 +1415,11 @@ def quantus_crosscheck():
         out["pt_sensitivity_nom_tt"][arm] = E(
             r, "ns / mW", "signoff", runs,
             note="PrimeTime nom_tt, base SDC, same netlist; only the SPEF changes (StarRC vs Quantus); delta = Quantus - StarRC",
+        )
+    for arm, r in q.get("pt_sensitivity_nom_tt_freshnom", {}).items():
+        out["pt_sensitivity_nom_tt"][arm + "_freshtech"] = E(
+            r, "ns / mW", "signoff", runs,
+            note="PrimeTime nom_tt, base SDC, same netlist; Quantus SPEF from the migrated nom qrcTechFile vs the fresh nom qrcTechFile vs StarRC",
         )
     for c, r in q["techgen"].items():
         out["techgen"][c] = E(

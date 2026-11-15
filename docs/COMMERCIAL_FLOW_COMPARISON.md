@@ -608,8 +608,8 @@ Median total C and R are inside the plan's +-10 % gate for all three arms. The t
 (label: tail indicative). Ground C alone differs by 12 to 19 % median because the tools split ground and coupling differently; total C does not.
 **Judge sensitivity (PrimeTime nom_tt, base SDC, Quantus SPEF instead of StarRC SPEF, same netlist):** setup WNS +18 to +66 ps, hold WNS +2 to +43 ps,
 power at most 0.7 %, no verdict or ranking change. Quantus takes about 2.5 min and 1.0 to 1.2 GB per extraction.
-The nom qrcTechFile comes from the 2026-10 Techgen cell-level run plus `Techgen -migrate`. min and max are fresh `Techgen -cell` runs
-(`run_techgen_cell.sh`, 2 CPUs): 3 h 19 min / 440 MB and 3 h 17 min / 445 MB session RSS. Quantus extraction took 1 to 9 min and 1.0 to 1.25 GB per run (nine runs, 0 errors).
+All three qrcTechFiles are single `run_techgen_cell.sh` runs (`Techgen -cell` plan, parallel, migrate; 2 CPUs): nom 3 h 57 min / 456 MB (clean run on 2026-11-14), min 3 h 19 min / 440 MB and max 3 h 17 min / 445 MB session RSS.
+The Quantus runs of this section were made with the first nom qrcTechFile (2026-10 Techgen cell-level run plus `Techgen -migrate`); on 2026-11-14 the nom extraction was repeated with the fresh nom qrcTechFile on the three final arms (Innovus b11, ICC2 b9, OpenROAD B2), one at a time. Result: total C and R median and p95 are unchanged to the printed precision (Innovus b11 +2.09 % / 19.36 %, ICC2 b9 -2.57 % / 9.61 %, OpenROAD -2.33 % / 12.68 % for total C), the per-net total C differs by at most 0.058 % (R identically zero, ICC2 b9) and PrimeTime nom_tt setup and hold WNS move by less than 2 ps (Innovus b11 +2.633 ns setup, ICC2 b9 +4.325 ns, OpenROAD +3.190 ns, both qrcTechFiles), so none of the verdicts or the judge sensitivity above changes (`quantus/reports/quantus_vs_starrc_freshnom.{json,md}`, section 5 of `pnr/commercial/reports/quantus_crosscheck.md`). Quantus extraction took 1 to 12 min and 0.95 to 1.25 GB per run (nine b6-arm runs plus the three fresh-nom runs, 0 errors).
 
 ### 4.9 Generations b6 to b11 of the two commercial arms (generated from `comparison.json` by `make_gen_table.py`)
 

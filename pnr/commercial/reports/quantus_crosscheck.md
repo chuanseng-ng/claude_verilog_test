@@ -25,11 +25,12 @@ interpret the stack alike. It says nothing about silicon or a foundry deck.
 | `Techgen -migrate` over that `RCGEN` (the final step) | `qrcTechFile` 2.0 MB, rc 0 | 2 s (0.45 s `time -v`) | 22.8 MB |
 | **Fresh `Techgen -cell`, min, 2 CPUs, 2026-11-07 11:52** | `RCGEN` + `qrcTechFile` 2.0 MB, rc 0 | **3 h 19 min** (11,962 s; plan 4 s, migrate 2 s) | **440 MB** session peak |
 | **Fresh `Techgen -cell`, max, 2 CPUs, 2026-11-07 15:30** | `RCGEN` + `qrcTechFile` 2.0 MB, rc 0 | **3 h 17 min** (11,849 s; plan 4 s, migrate 3 s) | **445 MB** session peak |
-| Fresh `Techgen -cell` re-run of nom, 2 CPUs, 2026-11-07 09:41 | **stopped at 39 % after 1 h 45 min** to free the host (resumable, `build/qrc/nom.fresh_partial_20261107_39pct`); rate fell from 2 %/3 min to 1 %/6-9 min after 36 % | 1 h 45 min for 39 % (inferred total about 3.3 h, from the min/max runs: the rate falls after 36 %) | 455 MB session peak (sum over the process session, 20 s samples) |
+| Fresh `Techgen -cell` re-run of nom, 2 CPUs, 2026-11-07 09:41 | stopped at 39 % after 1 h 45 min to free the host (`build/qrc/nom.fresh_partial_20261107_39pct`); it could not be resumed in place because its job scripts hardcode `build/qrc/nom/.tech_scripts` paths | 1 h 45 min for 39 % | 455 MB session peak |
+| **Fresh `Techgen -cell` of nom, 2 CPUs, clean run in `build/qrc/nom.fresh`, 2026-11-14 17:12** | `RCGEN` + `qrcTechFile` 2,006,756 B, rc 0; 384 of 384 models, 0 errors | **3 h 57 min** (14,236 s; plan 36 s, migrate 8 s; Techgen's own CPU-time count 6.74 h) | **456 MB** session peak (278,720 kB largest single process, GNU time) |
 
-min and max are single fresh end-to-end `run_techgen_cell.sh` runs (`build/qrc/{min,max}/techgen_cell.timing`).
+min, max and (since 2026-11-14) `nom.fresh` are single fresh end-to-end `run_techgen_cell.sh` runs (`build/qrc/{min,max,nom.fresh}/techgen_cell.timing`).
 
-**The nom `qrcTechFile` used below is therefore the one from the 2026-10 `RCGEN` (same ICT: `cmp` identical to the current `sky130A_nom.ict`) plus the migrate step, not a single fresh end-to-end run.** `build/qrc/nom/PROVENANCE.txt` says so.
+**The nom results in sections 2 to 4 were extracted with the `qrcTechFile` from the 2026-10 `RCGEN` (same ICT: `cmp` identical to the current `sky130A_nom.ict`) plus the migrate step (`build/qrc/nom/PROVENANCE.txt`), not a single fresh end-to-end run. Section 5 repeats the nom extraction with the fresh `build/qrc/nom.fresh/qrcTechFile`, built the same way as min and max.**
 
 ## 2. Quantus run cost (2 CPUs requested, `safe_run.sh`)
 
@@ -113,7 +114,21 @@ PrimeTime took 8 min on the first ICC2 read of the Quantus SPEF (cold cache) and
 
 ## 6. Not closed
 
-- The nom Techgen figure is not a single fresh end-to-end run (section 1); min and max are. The fresh nom re-run (39 % done) is resumable but was not completed, since the min/max runs show it would take about 3.3 h and the nom `RCGEN` already used is from the same ICT.
+- The nom Techgen figure in sections 2 to 4 is not a single fresh end-to-end run (section 1); min and max are. The fresh nom run was completed on 2026-11-14 (3 h 57 min, section 5) and gives the same extraction.
 - Agreement is between two extractors reading one authored stack. There is still no calibration to silicon or a foundry deck.
 - The total-C tail (p95 above 10 % for Innovus b6 and OpenROAD) is reported, not diagnosed per net.
 - PrimeTime sensitivity was run at nom_tt only, as planned.
+
+## 5. Fresh nom Techgen run, Quantus nom re-extracted (cleanup step 6, 2026-11-14)
+
+`build/qrc/nom.fresh`: `run_techgen_cell.sh nom <dir>`, clean run (the 39 % partial could not be resumed, see section 1). Techgen log: 0 errors, "The number of models in the techfile equals to the number of models in the plan file", 384 of 384 models. The qrcTechFile is opaque (compressed), so there is no tool-free layer-list diff; what was checked instead: ICT `cmp`-identical, file size 2,006,756 B against 2,006,772 B for the migrated nom, the 150 model `net_ascii` field-solver files common to the 39 % partial and the fresh run are byte-identical (the `.rpt` fit-validation samples differ, they are sampled), and the real check below.
+Quantus nom on the three final arms, one at a time, same command files, only `QUANTUS_TECHDIR` changed (`signoff/quantus/scripts/chain_freshnom.sh`, runs in `runs_freshnom/`, not committed because of the SPEF size). 0 errors, 20 to 23 warnings (same as before), net counts unchanged.
+
+| Arm | Nets | Quantus wall (s) | Session RSS (GB) | Total C median / p95 (migrated nom -> fresh nom) | Total R median / p95 | Design C ratio |
+|---|---:|---:|---:|---|---|---|
+| Innovus b11 | 45,947 | 723 (migrated: 79) | 1.17 | +2.09 % / 19.36 % -> +2.09 % / 19.36 % | +1.35 % / 4.62 % -> unchanged | 1.0180 -> 1.0180 |
+| ICC2 b9 | 40,824 | 186 (1,704, loaded host) | 0.95 | -2.57 % / 9.61 % -> -2.57 % / 9.61 % | +1.51 % / 2.60 % -> unchanged | 0.9676 -> 0.9676 |
+| OpenROAD B2 | 42,196 | 464 (144) | 1.14 | -2.33 % / 12.68 % -> -2.33 % / 12.68 % | +1.60 % / 3.08 % -> unchanged | 0.9860 -> 0.9860 |
+
+Direct per-net comparison of the two Quantus SPEFs, ICC2 b9 (40,824 common nets): total R identical on every net; total C maximum relative difference 0.058 %, 99.9th percentile 0.0035 %, 21 nets above 0.01 %. So the migrated nom and the fresh nom qrcTechFile give the same extraction to within 0.06 % per net.
+PrimeTime nom_tt, base SDC, Quantus SPEF (fresh nom) against the migrated-nom Quantus SPEF: setup WNS identical to 2 ps or better (innovusb11 +2.633 / +2.633 ns, icc2b9 +4.325 / +4.325 ns, openroad +3.190 / +3.190 ns), hold WNS within 2 fs-scale rounding (-1.572 / -1.700 / -0.316 ns), hold violators 385 / 665 / 42 unchanged, power unchanged to 0.1 mW; 0 unannotated pin-to-pin nets. Against StarRC the deltas are therefore the same as in section 4: Innovus b11 setup -87 ps, hold -30 ps; ICC2 b9 setup +107 ps, hold +51 ps; OpenROAD setup +18 ps, hold +2 ps. No verdict or ranking changes.
