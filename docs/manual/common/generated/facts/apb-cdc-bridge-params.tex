@@ -14,7 +14,7 @@ Parameter & Type & Default & Legal values & Description\\
 \bottomrule
 \endlastfoot
 \code{ADDR_W} & \code{int unsigned} & \code{12} & 1 or more & Width of the byte address of both faces.\\
-\code{SYNC_STAGES_TO_S} & \code{int unsigned} & \code{2} & 2 or more & Ranks of each synchroniser that ends in the \code{s_clk_i} domain: the acknowledge level, the reset of the source side and the reset status of the destination.\\
-\code{SYNC_STAGES_TO_M} & \code{int unsigned} & \code{2} & 2 or more & Ranks of each synchroniser that ends in the \code{m_clk_i} domain: the request level and the reset of the destination side.\\
+\code{SYNC_STAGES_TO_S} & \code{int unsigned} & \code{2} & 2 or more & Ranks of each synchroniser that ends in the \code{s_clk_i} domain: the acknowledge level, the reset of the source side and the reset status of the destination. The delay of the status has one rank more.\\
+\code{SYNC_STAGES_TO_M} & \code{int unsigned} & \code{2} & 2 or more & Ranks of each synchroniser that ends in the \code{m_clk_i} domain: the request level, the reset of the destination side and the reset of the completion record.\\
 \end{longtable}
 }

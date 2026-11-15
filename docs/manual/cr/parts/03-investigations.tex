@@ -3114,3 +3114,57 @@ Mutation campaign of \src{tools/verif/mutate_pmu_iso_ack.py} on the new RTL, as 
 Correction of the mutation counts above, 2026-11-15, measured. The campaign was run again in full on the head of the branch of PR \#408 (commit 049e7ae3), Verilator 5.048 in the nix simulation shell, one run on one host. The script \src{tools/verif/mutate_pmu_iso_ack.py} has 40 mutants. Result: 40 mutants, 36 killed, 4 expected survivors, 0 unexplained survivors, 0 invalid. By suite: \code{pmu} 28 mutants, 27 killed, 1 expected survivor (\code{t06_counter_not_reset}); \code{soc_pmu_iso_ack} 10 mutants, 7 killed (\code{s01} to \code{s04}, \code{c01}, \code{c02}, \code{r01_cpu_gate_without_reset_term}), 3 expected survivors (\code{s05}, \code{s06}, \code{s07}); \code{soc_pmu_multiclock} 2 mutants, 2 killed (\code{q11_raw_clamp}, \code{q12_clamp_without_reset_term}). The figures of the comment of the PR, 39 mutants, 35 killed and 28, 7 and 2 killed per suite, were wrong: the figure 28 was the number of mutants of the suite \code{pmu} and not the number killed, and the totals were one too low. The four expected survivors and their reasons are unchanged, with one correction: \code{s06_ack_from_unregistered_clamp} is not covered by \code{check_registered_outputs.py}, as the script said until this correction. That check reads only the outputs of \code{pmu} and not \code{cpu_iso_clamp_q} in \code{soc_top}. Nothing checks that the source of the acknowledge synchroniser is a flop. The reason is glitch safety only, as in the Design Specification and in the Technical Manual. A new comment on the PR replaces the earlier table.
 
 \end{record}
+
+\section{APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})}\label{cr:defect:apb-cdc-bridge-reset-race}
+
+\begin{record}
+
+Date 2026-11-15. Issues GH \#374, \#376 and \#378, beads \bead{zftj.13}, \bead{zftj.14} and \bead{zftj.15}, PR \#410. Issue \#375 (no timeout when the destination clock stops) is not part of this change.
+
+\end{record}
+
+\begin{record}
+
+Root cause, one for the three issues. The destination kept its whole response state in flops that \code{m_rst_n_i} clears: \code{ack_q}, \code{resp_prdata_dq}, \code{resp_pslverr_dq} and the request synchroniser \code{u_req_sync}. The same reset was the only abort signal of the source, and that signal (\code{u_m_rst_status_sync}, a \code{cdc_sync} of the raw pin) was a sampled level. It had no order against \code{ack_s}, and a pulse between two edges of \code{s_clk_i} was not seen. Results: an error after a completed write (\#374, \code{test_b1_no_error_completion_after_completed_write}, 30 points), a repeated transfer after a short pulse (\#376, \code{test_b3_short_reset_pulse_makes_one_transfer}, 30 of 30 points), and an okay read with data 0 (\#378, \code{test_b5_read_never_completes_okay_with_wrong_data}, 33 points).
+
+\end{record}
+
+\begin{record}
+
+Decision of the owner, 2026-11-14: Candidate A of the design proposal. The completion record (\code{ack_q}, \code{resp_prdata_dq}, \code{resp_pslverr_dq}) and \code{u_req_sync} reset from the source reset only, through the new \code{u_comp_rst_sync}. The destination reset status is \code{u_m_alive_sync} (\code{cdc_reset_sync}, asynchronous clear from \code{m_rst_sync_n}) and then \code{u_m_alive_dly_sync} (\code{cdc_sync}, \code{SYNC_STAGES_TO_S}+1 ranks, reset value ``not alive''). The abort thus comes one edge after the acknowledge of a completed transfer. The new \code{armed_q} lets the destination start only a request that arrived after it saw \code{req_m} low. The state \code{D_ACK} is removed. The source also leaves \code{S_DROP} when the destination is in reset or the request was not forwarded, and a request that finds a stale \code{ack_s} completes locally with an error. A write that completed before a destination reset returns an okay response. Rejected: Candidate B (record kept, no status delay, no arm gate, no escape from \code{S_DROP}), which loses to one cycle of synchroniser skew and can run an abandoned request after its error. Also rejected: a gray-coded destination state, and an okay response after every destination reset.
+
+\end{record}
+
+\begin{record}
+
+Requirements. DS-CDC-103 goes from \code{SYNC_STAGES_TO_S}+2 back to \code{SYNC_STAGES_TO_S}+3. The bound of +2 came from \#377 and PR \#396, which matched the measured latency of the old RTL. The owner reversed it on purpose: the extra edge is the margin that lets a completed answer win against one cycle of skew. The measured count with the new RTL is 5 with \code{SYNC_STAGES_TO_S} of 2. DS-CDC-109 (minimum width of the destination reset) is retired, because the status no longer samples the pin. New: DS-CDC-117 (a completed transfer survives a destination reset), DS-CDC-118 (at most one transfer for a reset pulse of any width), DS-CDC-119 (no wait for an acknowledge after a destination reset), DS-CDC-120 (a stale acknowledge gives a local error). Changed: DS-CDC-100, DS-CDC-101, DS-CDC-104, DS-CDC-106, DS-CDC-110, DS-CDC-112 and DS-CDC-113. The local exception to DS-CDC-005 (a false ``not in reset'' status after a source reset) is gone.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured in the PR. \code{apb_cdc_bridge}: 42 tests, before 36. \code{test_b1_*}, \code{test_b3_*} and \code{test_b5_*} pass without \code{expect_fail}. Only \code{test_b2_stalled_destination_clock_completes_within_bound} (\#375) stays \code{expect_fail}. New suite \code{apb_cdc_bridge_skew} (settling-delay model on \code{u_ack_sync} and \code{u_m_alive_dly_sync}): 3 of 3 pass. \src{tb/tests/test_apb_cdc_bridge_reset_structure.py}: 7 pass. \code{soc_multiclock}, \code{soc_multiclock_reset}, \code{soc_pll_multiclock} and \code{soc_jtag}: 2, 14, 1 and 4 pass. The old ack-race test aligned on the fall of the acknowledge and was vacuous. It was rewritten. Not run: \code{soc_all_ci}, the SpyGlass flow of \code{dqc}, and timing on a routed netlist.
+
+\end{record}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule
+Mutant & Tests that fail \\
+\midrule
+\endhead
+\code{ack_q} cleared by the destination reset & 10 \\
+\code{u_req_sync} on the destination reset & 9 \\
+No \code{armed_q} gate & 17 \\
+One rank fewer in the status chain & 3, skew suite only \\
+No escape from \code{S_DROP} & 2 \\
+No check of a stale acknowledge & 1 \\
+Abort before the acknowledge & 3, skew suite only \\
+Status from the raw pin & not run, fails lint before simulation \\
+\bottomrule
+\end{longtable}
+
+\begin{record}
+
+Constraints. \src{pnr/constraints/phase5_soc_multiclock_check.sdc}: the matcher of the asynchronous pins also matches \code{m_alive_sync}, so these pins do not fall into the domain-wide maximum-delay fallback. \src{pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc}: the budget of the removed \code{u_m_rst_status_sync} is deleted, and section 10a already waives the new reset crossing. \src{tools/cdc/cdc_config.yml} and the signed ASAP7 constraint file are unchanged. The binding is proven by name-binding tests with negative controls only. The net \code{cpu_domain_rst_n} is an AND of reset-tree signals, and its term \code{cpu_core_rst_n} comes from the reset port and the PLL lock through a scan mux and not from a flop.
+
+\end{record}

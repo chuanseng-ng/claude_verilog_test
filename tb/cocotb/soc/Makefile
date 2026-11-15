@@ -831,7 +831,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint pmu_guard_neg async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan soc_scan_en_gate apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint mbist_ctrl mbist_ctrl_lint mbist_tap mbist_tap_lint mbist_soc_slice mbist_soc_slice_lint mbist_fi_equiv mbist_fi_equiv_lint mbist_fi_equiv_1k mbist_fi_equiv_1k_lint mbist_cpu_macro mbist_cpu_macro_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation soc_uart_boot soc_pmu_iso_ack
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint pmu_guard_neg async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan soc_scan_en_gate apb_cdc_bridge apb_cdc_bridge_lint apb_cdc_bridge_skew apb_cdc_bridge_skew_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint mbist_ctrl mbist_ctrl_lint mbist_tap mbist_tap_lint mbist_soc_slice mbist_soc_slice_lint mbist_fi_equiv mbist_fi_equiv_lint mbist_fi_equiv_1k mbist_fi_equiv_1k_lint mbist_cpu_macro mbist_cpu_macro_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation soc_uart_boot soc_pmu_iso_ack
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1241,6 +1241,23 @@ apb_cdc_bridge_lint:
 apb_cdc_bridge: $(call sp_lint,apb_cdc_bridge_lint)
 	$(MAKE) MODULE=test_apb_cdc_bridge TOPLEVEL=tb_apb_cdc_bridge \
 		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
+		$(BUILD_ARGS)
+
+# apb_cdc_bridge with the settling-delay injector on the ack and the delayed reset status.
+APB_CDC_BRIDGE_SKEW_SOURCES = \
+	$(RTL)/soc/cdc/cdc_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/apb_cdc_bridge.sv \
+	$(SOC_DIR)/tb_apb_cdc_bridge_skew.sv
+
+apb_cdc_bridge_skew_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-DEFPARAM \
+		--top-module tb_apb_cdc_bridge_skew \
+		$(APB_CDC_BRIDGE_SKEW_SOURCES)
+
+apb_cdc_bridge_skew: $(call sp_lint,apb_cdc_bridge_skew_lint)
+	$(MAKE) MODULE=test_apb_cdc_bridge_skew TOPLEVEL=tb_apb_cdc_bridge_skew \
+		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SKEW_SOURCES)" \
 		$(BUILD_ARGS)
 
 # cdc_sync RESET_VAL lint + sim.
@@ -1826,6 +1843,7 @@ SOC_CI_SUITES := \
     apb_interconnect \
     async_axi_fifo \
     apb_cdc_bridge \
+    apb_cdc_bridge_skew \
     cdc_reset_sync_scan \
     cdc_sync \
     cdc_gray_fifo \

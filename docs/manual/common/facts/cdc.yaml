@@ -120,23 +120,23 @@ modules:
         description: "Width of the byte address of both faces."
       SYNC_STAGES_TO_S:
         legal: "2 or more"
-        description: "Ranks of each synchroniser that ends in the `s_clk_i` domain: the acknowledge level, the reset of the source side and the reset status of the destination."
+        description: "Ranks of each synchroniser that ends in the `s_clk_i` domain: the acknowledge level, the reset of the source side and the reset status of the destination. The delay of the status has one rank more."
       SYNC_STAGES_TO_M:
         legal: "2 or more"
-        description: "Ranks of each synchroniser that ends in the `m_clk_i` domain: the request level and the reset of the destination side."
+        description: "Ranks of each synchroniser that ends in the `m_clk_i` domain: the request level, the reset of the destination side and the reset of the completion record."
     ports:
       scanmode_i:
         domain: quasi-static
-        description: "Scan mode. It goes to both internal reset synchronisers. Tie low without scan."
+        description: "Scan mode. It goes to the four internal reset synchronisers. Tie low without scan."
       scan_rst_ni:
         domain: async
-        description: "Active-low scan reset. It goes to both internal reset synchronisers. Tie high without scan."
+        description: "Active-low scan reset. It goes to the four internal reset synchronisers. Tie high without scan."
       s_clk_i:
         domain: clock
         description: "Clock of the source face."
       s_rst_n_i:
         domain: async
-        description: "Active-low reset of the source face. The bridge synchronises it inside. It also resets the destination side."
+        description: "Active-low reset of the source face. The bridge synchronises it inside. It also resets the destination side and the completion record."
       s_psel_i:
         domain: s_clk_i
         description: "APB select from the upstream master."
@@ -169,7 +169,7 @@ modules:
         description: "Clock of the destination face."
       m_rst_n_i:
         domain: async
-        description: "Active-low reset of the destination face. The bridge synchronises it inside. It also crosses into the `s_clk_i` domain as a status."
+        description: "Active-low reset of the destination face. The bridge synchronises it inside. After its synchroniser it clears the reset status in the `s_clk_i` domain without a clock. Drive it from a reset that cannot glitch."
       m_psel_o:
         domain: m_clk_i
         description: "APB select to the downstream slave. High in the SETUP and ACCESS phases."

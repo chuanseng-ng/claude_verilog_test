@@ -2759,6 +2759,10 @@ latch input is taken from the Liberty statetable
 (\texttt{SCE=\allowbreak{}H\ -\allowbreak{}>\ M0=\allowbreak{}H}
 regardless of \code{GATE}), not on the library cell itself.
 
+\begin{information}
+The next record names \code{u_m_rst_status_sync}. This synchroniser no longer exists. The APB bridge now has the synchroniser \code{u_m_alive_sync} and a delay stage \code{u_m_alive_dly_sync}. The record is unchanged.
+\end{information}
+
 \textbf{CDC budget check {[}M{]}}
 (\texttt{make\ -\allowbreak{}C\ pnr\ check-\allowbreak{}cdc-\allowbreak{}timing-\allowbreak{}sky130-\allowbreak{}soc},
 real SPEF): PASS at nom\_tt and max\_ss; 11 groups (10

@@ -185,7 +185,10 @@ proc cdc_reset_sync_async_pins {} {
     set _pins {}
     foreach _clk {sys_clk cpu_clk} {
         foreach _reg [all_registers -clock [get_clocks $_clk]] {
-            if {![string match "*rst_sync*" [get_full_name $_reg]]} {
+            set _rn [get_full_name $_reg]
+            # m_alive_sync is the apb_cdc_bridge destination-reset status chain. Its async clear is the
+            # destination reset after u_m_rst_sync, so it crosses from the m clock into the s clock.
+            if {![string match "*rst_sync*" $_rn] && ![string match "*m_alive_sync*" $_rn]} {
                 continue
             }
             foreach _pn {RESETN SETN} {

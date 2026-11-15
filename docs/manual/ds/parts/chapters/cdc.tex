@@ -199,12 +199,12 @@ The module \code{apb_cdc_bridge} carries one APB4 transfer at a time from a slav
 
 \begin{requirement}{DS-CDC-100}{Four-phase handshake}
 [verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_rz_four_phase_structural_proof}]
-Each forwarded transfer that the destination answers must use a return-to-zero handshake of four phases in this order: the request level \code{req_q} rises, the acknowledge level seen on the source side rises, \code{req_q} falls while the acknowledge is still high, and the acknowledge falls.
+Each forwarded transfer that the destination answers, and that no reset of the destination interrupts, must use a return-to-zero handshake of four phases in this order: the request level \code{req_q} rises, the acknowledge level seen on the source side rises, \code{req_q} falls while the acknowledge is still high, and the acknowledge falls.
 \end{requirement}
 
 \begin{requirement}{DS-CDC-101}{Only levels and status cross through synchronisers}
 [verify={review; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream}]
-Apart from the two reset synchronisers, only the levels \code{req_q} and \code{ack_q} and the reset status of the destination must cross through synchronisers. The command and the response must stay stable while the other side reads them.
+Apart from the three reset synchronisers, only the levels \code{req_q} and \code{ack_q} and the reset status of the destination must cross through synchronisers. The command and the response must stay stable while the other side reads them.
 \end{requirement}
 
 \begin{requirement}{DS-CDC-102}{Request while the destination is in reset}
@@ -214,19 +214,21 @@ A request that starts while the source side sees the destination in reset must c
 
 \begin{requirement}{DS-CDC-103}{Destination reset during a transfer}
 [verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b4_ds103_latency_bound}]
-When the destination enters reset before \code{m_pready_i} completes the access, a forwarded request must complete with \code{s_pready_o} and \code{s_pslverr_o} high within \code{SYNC_STAGES_TO_S}+2 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
+When the destination enters reset before \code{m_pready_i} completes the access, a forwarded request must complete with \code{s_pready_o} and \code{s_pslverr_o} high within \code{SYNC_STAGES_TO_S}+3 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
 \end{requirement}
 
+\begin{rationale}
+The bound has one edge more than the shortest path of the reset status. The status chain \code{u_m_alive_dly_sync} has \code{SYNC_STAGES_TO_S}+1 ranks, one rank more than the acknowledge synchroniser \code{u_ack_sync}. Thus the abort of a request comes one edge after the acknowledge of a transfer that completed before the reset. The answer wins also when one synchroniser takes one cycle more than its nominal latency, and not only by the priority of \code{ack_s} on a common edge (\reqref{DS-CDC-104}, \reqref{DS-CDC-117}). For this margin the bound goes back from \code{SYNC_STAGES_TO_S}+2 to \code{SYNC_STAGES_TO_S}+3. The Changes record has the history of the two bounds.
+\end{rationale}
+
 \begin{information}
-The test \code{test_b4_ds102_latency_bound} counts the rising edges of \code{s_clk_i} after the SETUP edge, with \code{m_rst_n_i} low and seen by the source. The test \code{test_b4_ds103_latency_bound} counts the rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls on a forwarded request that the destination never answers, with the fall at three offsets inside one period of \code{s_clk_i}. Both tests run the periods of \code{s_clk_i} and \code{m_clk_i} of 4 and 9 ns, 18 and 4 ns, 10 and 10 ns, and 7 and 11 ns, with \code{SYNC_STAGES_TO_S} of 2. The count of \reqref{DS-CDC-102} is 2 at every tested point. The count of \reqref{DS-CDC-103} is \code{SYNC_STAGES_TO_S}+2 at every tested point. The two tests cover the stated clock periods only.
+The test \code{test_b4_ds102_latency_bound} counts the rising edges of \code{s_clk_i} after the SETUP edge, with \code{m_rst_n_i} low and seen by the source. The test \code{test_b4_ds103_latency_bound} counts the rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls on a forwarded request that the destination never answers, with the fall at three offsets inside one period of \code{s_clk_i}. Both tests run the periods of \code{s_clk_i} and \code{m_clk_i} of 4 and 9 ns, 18 and 4 ns, 10 and 10 ns, and 7 and 11 ns, with \code{SYNC_STAGES_TO_S} of 2. Both tests pass. The largest count of \reqref{DS-CDC-103} in the run of the change set is 5 edges, which is \code{SYNC_STAGES_TO_S}+3. The two tests cover the stated clock periods only.
 
-An error from the bridge during a reset of the destination does not show that the destination made no transfer. The destination can finish the access, and then reset before the acknowledge reaches the source. The source then sees the reset status and returns an error, while a write has taken place. Software has to treat such an error as ``access state unknown''. The test \code{test_b1_no_error_completion_after_completed_write} measures this. It resets \code{m_rst_n_i} with the width that \reqref{DS-CDC-109} asks, a short time after \code{ack_q} rises on the destination side and before an edge of \code{s_clk_i} samples it. It asserts that an errored request has not written the destination, so it is marked \code{expect_fail}. At least one tested point returns an error for a write that completed on the \code{m_*} face. The test uses the clock periods 18 and 4 ns, 10 and 10 ns, 7 and 11 ns, and 4 and 9 ns. Its companion tests show that a reset before the destination access gives an error and no write, and that a reset after the source has captured the acknowledge gives an okay response and one write. The owner decides the RTL.
-
-A read can complete with an okay response and wrong data. The source copies \code{resp_prdata_dq} and \code{resp_pslverr_dq} at the edge of \code{s_clk_i} that sees \code{ack_s}. The acknowledge passes the synchroniser of \code{s_clk_i}, which the reset of the destination does not clear, but the reset of the destination clears both payload registers at once. If \code{m_rst_n_i} falls after the first rank has taken \code{ack_q} and before \code{ack_s} reads 1, the source copies data 0 and no error flag. The test \code{test_b5_read_never_completes_okay_with_wrong_data} measures this with a read of a known word. It uses the pulse width that \reqref{DS-CDC-109} asks, at three places between the two edges, at the four clock pairs of the test above. It asserts that a read that completes okay returns the data of the destination, so it is marked \code{expect_fail}. Every one of the 33 tested points in the window completes okay with data 0, while the destination has answered with the data. The companion test \code{test_b5_control_window_reached} proves that the stimulus reaches the window. The owner decides the RTL.
+An error from the bridge during a reset of the destination shows that the destination did not complete the access before the reset. A transfer that completed before the reset returns its real response (\reqref{DS-CDC-117}). A reset in the same cycle of \code{m_clk_i} as the completion gives one of the two results, and the slave is then also in reset. No simulation of the RTL can show which result the silicon gives.
 \end{information}
 
 \begin{requirement}{DS-CDC-104}{Answer wins over reset status}
-[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_ack_race_wins}]
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_ack_race_wins; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_completed_write_returns_okay; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_completed_read_returns_real_data}]
 When the answer of the destination and the reset status of the destination reach the source side on the same edge of \code{s_clk_i}, the bridge must return the answer.
 \end{requirement}
 
@@ -236,11 +238,11 @@ A reset of \code{s_rst_n_i} during a transfer must return the bridge to idle wit
 \end{requirement}
 
 \begin{requirement}{DS-CDC-106}{One transfer on the destination face}
-[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_write; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_read; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_pready_wait_states}]
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_write; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_single_read; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_no_lost_or_duplicated_stream; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_pready_wait_states; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b3_short_reset_pulse_makes_one_transfer}]
 Each forwarded request that no reset aborts must make exactly one APB transfer on the \code{m_*} face. The transfer must have a SETUP phase and then an ACCESS phase, and it must last until \code{m_pready_i} is high.
 \end{requirement}
 \begin{information}
-A pulse of \code{m_rst_n_i} that is shorter than \reqref{DS-CDC-109} asks can make the \code{m_*} face repeat a transfer. The measurement is in the information block of \reqref{DS-CDC-109}. The test \code{test_b3_control_compliant_pulse_makes_one_transfer} shows that a pulse that follows \reqref{DS-CDC-109} never repeated a transfer at the tested points. This test is not a reference of this rule, because the request that such a pulse meets can end with an error.
+A pulse of \code{m_rst_n_i} of any width does not make the \code{m_*} face repeat a transfer (\reqref{DS-CDC-118}). The test \code{test_b3_short_reset_pulse_makes_one_transfer} applies pulses shorter than one period of \code{s_clk_i}, after \code{ack_q} rises, and asserts one transfer for each request.
 \end{information}
 
 \begin{requirement}{DS-CDC-107}{Response unchanged}
@@ -253,18 +255,13 @@ The read data and the error flag that the destination returns must reach \code{s
 The bridge must work at any ratio of \code{s_clk_i} to \code{m_clk_i}.
 \end{requirement}
 
-\begin{requirement}{DS-CDC-109}{Reset width}
-[verify={review}]
-The user must hold \code{m_rst_n_i} low for more than one period of \code{s_clk_i}, so that \code{u_m_rst_status_sync} samples the reset.
+\begin{requirement}{DS-CDC-110}{Names that the checks match}
+[verify={check:pnr/constraints/phase5_soc_multiclock_check.sdc; check:pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_bridge_instances_and_raw_reset_use; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_constraint_files_match_existing_instances; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_asap7_async_pin_fallback_exclusion_covers_every_bridge_reset_sync}]
+These names must not change, because the check constraint files find them by name: the registers \code{req_q} and \code{ack_q}, the synchroniser instances \code{u_req_sync} and \code{u_ack_sync}, the reset synchroniser instances \code{u_s_rst_sync}, \code{u_m_rst_sync} and \code{u_comp_rst_sync}, and the status instance \code{u_m_alive_sync}.
 \end{requirement}
 \begin{information}
-The test \code{test_b3_short_reset_pulse_makes_one_transfer} measures a pulse that is shorter than one period of \code{s_clk_i}. The pulse starts after \code{ack_q} rises and ends before the next edge of \code{s_clk_i}, so no edge of \code{s_clk_i} samples it. It asserts that one request makes exactly one transfer on the \code{m_*} face (\reqref{DS-CDC-106}), so it is marked \code{expect_fail}. In the measured run every tested short-pulse point repeated the transfer: the reset clears the destination, the source still holds \code{req_q}, and the destination runs the same request again after the release. The test sweeps the position and the width of the pulse at the clock periods 18 and 4 ns, 10 and 10 ns, 7 and 11 ns, and 4 and 9 ns. The companion test \code{test_b3_control_short_pulse_window_reached} shows that the source never saw these pulses and completed each request once. The companion test \code{test_b3_control_compliant_pulse_makes_one_transfer} shows that a pulse of eight periods of the slower clock never repeated a transfer. This test measures the result of a pulse that follows this rule and does not verify the rule, because a rule for the user cannot be verified by a test. The owner decides the RTL.
+The ASAP7 check file matches \code{req_q}, \code{ack_q}, registers whose names contain \code{rst_sync}, and registers whose names contain \code{m_alive_sync}. The Sky130 check file matches \code{u_req_sync} and \code{u_ack_sync}. The structural test \src{tb/tests/test_apb_cdc_bridge_reset_structure.py} also requires the instance \code{u_m_alive_dly_sync}. The testbench reads \code{armed_q}, \code{m_rst_n_s}, \code{m_alive_fast_s}, \code{d_state_q}, \code{resp_prdata_dq} and \code{resp_pslverr_dq} by hierarchy. The destination state machine has no state \code{D_ACK}.
 \end{information}
-
-\begin{requirement}{DS-CDC-110}{Names of the handshake registers}
-[verify={check:pnr/constraints/phase5_soc_multiclock_check.sdc}]
-The registers \code{req_q} and \code{ack_q} must keep their names, because the check constraint file finds them by name.
-\end{requirement}
 
 \begin{requirement}{DS-CDC-111}{Use for configuration and debug only}
 [verify={review}]
@@ -273,11 +270,11 @@ The user must use the bridge only for configuration and debug access. The user m
 
 \begin{requirement}{DS-CDC-112}{Return pulse of the ready output}
 [verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_back_to_back; review}]
-\code{s_pready_o} must be high for one \code{s_clk_i} cycle at the end of a transfer, and only after the acknowledge level on the source side has returned to low. A new SETUP phase in the cycle after the pulse must start a new transfer.
+\code{s_pready_o} must be high for one \code{s_clk_i} cycle at the end of a transfer. For a forwarded request it must be high only after the acknowledge level on the source side has returned to low, or after the source sees the destination in reset (\reqref{DS-CDC-119}). A new SETUP phase in the cycle after the pulse must start a new transfer.
 \end{requirement}
 
 \begin{requirement}{DS-CDC-113}{No stray transfer after a destination reset}
-[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_back_to_back_resets_equal; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_back_to_back_resets_wide_ratio; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side}]
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_back_to_back_resets_equal; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_availability_back_to_back_resets_wide_ratio; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_mid_transaction_m_side; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_abandon_then_release_makes_no_transfer}]
 After a pulse of \code{m_rst_n_i}, the \code{m_*} face must make exactly one transfer for each later request and no transfer for a request that the reset aborted.
 \end{requirement}
 
@@ -296,12 +293,40 @@ With \code{scanmode_i} low and while \code{m_rst_n_i} is low, \code{m_psel_o} mu
 A completion that the bridge forces, because the destination is in reset, must return \code{s_prdata_o} equal to zero.
 \end{requirement}
 
-\begin{information}
-The source side of the bridge resets from \code{s_rst_n_i} alone. The destination side resets from \code{s_rst_n_i} and \code{m_rst_n_i} together. The status of \code{m_rst_n_i} also crosses into the \code{s_clk_i} domain. This status reads ``not in reset'' for up to \code{SYNC_STAGES_TO_S} cycles of \code{s_clk_i} after the source reset of the bridge releases, also when \code{m_rst_n_i} is low. This is a reviewed local exception to \reqref{DS-CDC-005}.
-\end{information}
+\begin{requirement}{DS-CDC-117}{Completed transfer survives a destination reset}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b1_no_error_completion_after_completed_write; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b5_read_never_completes_okay_with_wrong_data; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_keeps_completion_record_and_asserts_status_without_clock; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_completed_write_returns_okay; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_completed_read_returns_real_data}]
+When the destination completes the access before \code{m_rst_n_i} falls, the request must complete with the response of the destination. \code{s_pslverr_o} and, for a read, \code{s_prdata_o} must equal the values that the destination returned.
+\end{requirement}
 \begin{rationale}
-The exception is safe because the reset of the destination side does not depend on this status. It stays asserted for as long as \code{m_rst_n_i} is low. The bridge holds the request level at zero when the status catches up. The transfer then ends with an error and never hangs. The bound of the false reading is the same as the latency of a synchroniser.
+The completion record \code{ack_q}, \code{resp_prdata_dq} and \code{resp_pslverr_dq}, and the request synchroniser \code{u_req_sync}, reset only from \code{s_rst_n_i}, through \code{u_comp_rst_sync}. A reset of the destination thus cannot erase an answer that the source has not taken. An okay response for a write that completed before the reset is the wanted result. Software cannot learn of the reset from that access.
 \end{rationale}
+
+\begin{requirement}{DS-CDC-118}{At most one transfer for a destination reset pulse}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b3_short_reset_pulse_makes_one_transfer; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_pulse_widths_make_at_most_one_transfer; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_abandon_then_release_makes_no_transfer; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_short_pulses_make_one_transfer}]
+A pulse of \code{m_rst_n_i} of any width must cause at most one transfer on the \code{m_*} face for each request, and the source must complete each request once.
+\end{requirement}
+\begin{rationale}
+The reset status enters \code{u_m_alive_sync}, a \code{cdc_reset_sync} whose asynchronous clear is \code{m_rst_sync_n}. The status asserts without a clock, so the source sees every pulse. The register \code{armed_q} sets only while \code{req_m} is low. After a reset the destination thus does not start a request that it served or that the reset abandoned.
+\end{rationale}
+
+\begin{requirement}{DS-CDC-119}{No wait for an acknowledge after a destination reset}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_ends_drop_state_when_destination_clock_stops}]
+When the source waits for the acknowledge level to fall and sees the destination in reset, it must end the request without an edge of \code{m_clk_i}, within \code{SYNC_STAGES_TO_S}+3 rising edges of \code{s_clk_i} after \code{m_rst_n_i} falls.
+\end{requirement}
+\begin{rationale}
+\code{ack_q} keeps its value through a destination reset, and it falls only on an edge of \code{m_clk_i}. Without this rule the source waits in \code{S_DROP} while the destination clock is stopped, for example after a power-down of the CPU domain. The rule covers the case with a destination reset. A stopped destination clock without a reset still stops the source (\cref{tm:mod:apb-cdc-bridge}).
+\end{rationale}
+
+\begin{requirement}{DS-CDC-120}{Stale acknowledge gives a local error}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_stale_ack_completes_locally_with_error}]
+A request that starts while the acknowledge level on the source side is high must complete with \code{s_pready_o} and \code{s_pslverr_o} high after the second rising edge of \code{s_clk_i} that follows the SETUP edge. The request must not cause a transfer on the \code{m_*} face.
+\end{requirement}
+
+\begin{information}
+The source side of the bridge resets from \code{s_rst_n_i} alone. The destination state machine resets from \code{s_rst_n_i} and \code{m_rst_n_i} together. The completion record resets from \code{s_rst_n_i} alone. The reset status \code{m_rst_n_s} reads ``in reset'' during a reset of either side, and after the release until the release of the destination reset has crossed into the \code{s_clk_i} domain. A request in that time ends with an error (\reqref{DS-CDC-102}). The status has no false ``not in reset'' window, so the bridge has no exception to \reqref{DS-CDC-005}.
+
+The status clears flops of the \code{s_clk_i} domain without a clock. The header of the module asks that \code{m_rst_n_i} does not glitch. A pulse that is shorter than the minimum pulse width of the flops is a matter of the cell library and is not a rule of the bridge.
+\end{information}
 
 \section{\texttt{async\_axi\_fifo}}\label{ds:mod:async-axi-fifo}
 The module \code{async_axi_fifo} carries the five channels of an AXI4 bus between the CPU clock and the fabric clock. It has no transaction identifier on either face. \Cref{tm:mod:async-axi-fifo} describes it.
@@ -389,7 +414,14 @@ Each subsection gives the decision, the alternatives that the team rejected, and
 
 \textbf{Alternatives rejected.} A one-sided reset of the AXI bridge would leave the bridge half flushed and could put invented beats into the domain that keeps running. For the APB bridge, a source side that follows the destination reset can wait for ever for a destination that cannot answer. The APB tree above the bridge then hangs.
 
-\textbf{Consequence for the user.} The AXI bridge needs the common reset root of \reqref{DS-CDC-153}. The APB bridge ends a transfer with an error when the destination is in reset (\reqref{DS-CDC-102}, \reqref{DS-CDC-103}). It gives no response when the source resets (\reqref{DS-CDC-105}).
+\textbf{Consequence for the user.} The AXI bridge needs the common reset root of \reqref{DS-CDC-153}. The APB bridge ends a transfer with an error when the destination is in reset before it completes the access (\reqref{DS-CDC-102}, \reqref{DS-CDC-103}). A transfer that completed before the reset returns its real response (\reqref{DS-CDC-117}). The bridge gives no response when the source resets (\reqref{DS-CDC-105}).
+
+\subsection{Completion record outside the destination reset}\label{ds:ch:mod-cdc-primitives:dec-comp-record}
+\textbf{Decision.} The completion record of the APB bridge and its request synchroniser reset from the source reset only. The source sees the destination reset through a reset synchroniser that asserts without a clock, followed by a delay of \code{SYNC_STAGES_TO_S}+1 ranks. The destination starts only a request that arrived after it saw the request level low.
+
+\textbf{Alternatives rejected.} A completion record without the delay of the status keeps the bound of \code{SYNC_STAGES_TO_S}+2, but the answer then wins only by priority on a common edge, and one cycle of synchroniser skew lets the abort win. A gray-coded destination state that crosses as one value needs a change of two bits on a reset without an answer. A bridge that always gives an okay response after a destination reset hides lost accesses. The Changes record has the analysis.
+
+\textbf{Consequence for the user.} An error response shows that the destination did not complete the access. The error bound of a destination reset is \code{SYNC_STAGES_TO_S}+3 edges (\reqref{DS-CDC-103}). The bridge has no rule for a minimum width of the destination reset.
 
 \subsection{Flop-array storage with a combinational read}\label{ds:ch:mod-cdc-primitives:dec-storage}
 \textbf{Decision.} The FIFO stores entries in an array of flops. The read data comes from the array without an output register.
@@ -415,6 +447,6 @@ Each subsection gives the decision, the alternatives that the team rejected, and
 \section{Requirements and verification}\label{ds:ch:mod-cdc-primitives:map}
 \Cref{tab:ds:req:cdc-map} lists each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review.
 
-Some information blocks name a test that is marked \code{expect_fail}. Such a test asserts the specified behaviour and is expected to fail on the present RTL, until the owner decides the RTL. It is not a verification reference of a rule.
+A test that is marked \code{expect_fail} asserts the specified behaviour and is expected to fail on the present RTL, until the owner decides the RTL. Such a test is not a verification reference of a rule. \Cref{tm:mod:apb-cdc-bridge} names the one test of this kind for the APB bridge.
 
 \input{generated/requirements-cdc}

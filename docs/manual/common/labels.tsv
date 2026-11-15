@@ -152,6 +152,7 @@ cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	1984	Archived
 cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	2640	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
+cr:defect:apb-cdc-bridge-reset-race	docs/manual/cr/parts/03-investigations.tex	3118	APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
 cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
 cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	306	Controls (MEASURED unless marked)
@@ -1177,16 +1178,17 @@ ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	149
 ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	11957	Memory map
 ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	11390	Mixed-signal PLL
 ds:ch:mod-cdc-primitives	docs/manual/ds/parts/chapters/cdc.tex	3	Clock-domain crossing
-ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	401	No bypass at a clock ratio of 1:1
-ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	373	FIFO with gray pointers and registered flags
-ds:ch:mod-cdc-primitives:dec-reset	docs/manual/ds/parts/chapters/cdc.tex	387	Reset topology
-ds:ch:mod-cdc-primitives:dec-rz	docs/manual/ds/parts/chapters/cdc.tex	380	Four-phase handshake in the APB bridge
-ds:ch:mod-cdc-primitives:dec-sdc	docs/manual/ds/parts/chapters/cdc.tex	408	A separate constraint file for the crossing budgets
-ds:ch:mod-cdc-primitives:dec-storage	docs/manual/ds/parts/chapters/cdc.tex	394	Flop-array storage with a combinational read
-ds:ch:mod-cdc-primitives:decisions	docs/manual/ds/parts/chapters/cdc.tex	370	Architecture decisions
+ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	433	No bypass at a clock ratio of 1:1
+ds:ch:mod-cdc-primitives:dec-comp-record	docs/manual/ds/parts/chapters/cdc.tex	419	Completion record outside the destination reset
+ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	398	FIFO with gray pointers and registered flags
+ds:ch:mod-cdc-primitives:dec-reset	docs/manual/ds/parts/chapters/cdc.tex	412	Reset topology
+ds:ch:mod-cdc-primitives:dec-rz	docs/manual/ds/parts/chapters/cdc.tex	405	Four-phase handshake in the APB bridge
+ds:ch:mod-cdc-primitives:dec-sdc	docs/manual/ds/parts/chapters/cdc.tex	440	A separate constraint file for the crossing budgets
+ds:ch:mod-cdc-primitives:dec-storage	docs/manual/ds/parts/chapters/cdc.tex	426	Flop-array storage with a combinational read
+ds:ch:mod-cdc-primitives:decisions	docs/manual/ds/parts/chapters/cdc.tex	395	Architecture decisions
 ds:ch:mod-cdc-primitives:definitions	docs/manual/ds/parts/chapters/cdc.tex	10	Definitions
 ds:ch:mod-cdc-primitives:family	docs/manual/ds/parts/chapters/cdc.tex	24	Rules for all crossings
-ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	415	Requirements and verification
+ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	447	Requirements and verification
 ds:ch:mod-cdc-primitives:scope	docs/manual/ds/parts/chapters/cdc.tex	5	Scope
 ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
 ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3584	Crypto accelerator
@@ -1941,7 +1943,7 @@ ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.t
 ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	3589	\texttt{periph/aes128\_core.sv}
 ds:mod:apb-cdc-bridge	docs/manual/ds/parts/chapters/cdc.tex	197	\texttt{apb\_cdc\_bridge}
 ds:mod:apb4-register-bank	docs/manual/ds/parts/03-module-contracts.tex	561	\texttt{soc/apb4\_register\_bank.sv}
-ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	306	\texttt{async\_axi\_fifo}
+ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	331	\texttt{async\_axi\_fifo}
 ds:mod:axi-lite-interconnect	docs/manual/ds/parts/03-module-contracts.tex	598	\texttt{soc/axi\_lite\_interconnect.sv}
 ds:mod:axi-lite-register-bank	docs/manual/ds/parts/03-module-contracts.tex	631	\texttt{soc/axi\_lite\_register\_bank.sv}
 ds:mod:cdc-gray-fifo	docs/manual/ds/parts/chapters/cdc.tex	135	\texttt{cdc\_gray\_fifo}
@@ -2037,29 +2039,32 @@ ds:req:cdc-100	docs/manual/ds/parts/chapters/cdc.tex	200	DS-CDC-100 Four-phase h
 ds:req:cdc-101	docs/manual/ds/parts/chapters/cdc.tex	205	DS-CDC-101 Only levels and status cross through synchronisers
 ds:req:cdc-102	docs/manual/ds/parts/chapters/cdc.tex	210	DS-CDC-102 Request while the destination is in reset
 ds:req:cdc-103	docs/manual/ds/parts/chapters/cdc.tex	215	DS-CDC-103 Destination reset during a transfer
-ds:req:cdc-104	docs/manual/ds/parts/chapters/cdc.tex	228	DS-CDC-104 Answer wins over reset status
-ds:req:cdc-105	docs/manual/ds/parts/chapters/cdc.tex	233	DS-CDC-105 Source reset during a transfer
-ds:req:cdc-106	docs/manual/ds/parts/chapters/cdc.tex	238	DS-CDC-106 One transfer on the destination face
-ds:req:cdc-107	docs/manual/ds/parts/chapters/cdc.tex	246	DS-CDC-107 Response unchanged
-ds:req:cdc-108	docs/manual/ds/parts/chapters/cdc.tex	251	DS-CDC-108 Any clock ratio
-ds:req:cdc-109	docs/manual/ds/parts/chapters/cdc.tex	256	DS-CDC-109 Reset width
-ds:req:cdc-110	docs/manual/ds/parts/chapters/cdc.tex	264	DS-CDC-110 Names of the handshake registers
-ds:req:cdc-111	docs/manual/ds/parts/chapters/cdc.tex	269	DS-CDC-111 Use for configuration and debug only
-ds:req:cdc-112	docs/manual/ds/parts/chapters/cdc.tex	274	DS-CDC-112 Return pulse of the ready output
-ds:req:cdc-113	docs/manual/ds/parts/chapters/cdc.tex	279	DS-CDC-113 No stray transfer after a destination reset
-ds:req:cdc-114	docs/manual/ds/parts/chapters/cdc.tex	284	DS-CDC-114 Quiet while the source reset is low
-ds:req:cdc-115	docs/manual/ds/parts/chapters/cdc.tex	289	DS-CDC-115 No destination select while the destination reset is low
-ds:req:cdc-116	docs/manual/ds/parts/chapters/cdc.tex	294	DS-CDC-116 Read data of a forced completion
-ds:req:cdc-150	docs/manual/ds/parts/chapters/cdc.tex	309	DS-CDC-150 One FIFO for each channel
-ds:req:cdc-151	docs/manual/ds/parts/chapters/cdc.tex	314	DS-CDC-151 Payload unchanged and in order
-ds:req:cdc-152	docs/manual/ds/parts/chapters/cdc.tex	319	DS-CDC-152 A reset on one face resets both
-ds:req:cdc-153	docs/manual/ds/parts/chapters/cdc.tex	324	DS-CDC-153 Reset is a hard flush
-ds:req:cdc-154	docs/manual/ds/parts/chapters/cdc.tex	333	DS-CDC-154 Quiet outputs during either reset
-ds:req:cdc-155	docs/manual/ds/parts/chapters/cdc.tex	338	DS-CDC-155 Any clock ratio without a bypass
-ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	343	DS-CDC-156 No deadlock when channels are full
-ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	348	DS-CDC-157 No combinational path between the faces
-ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	356	DS-CDC-158 Exact depth
-ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	361	DS-CDC-159 Valid is not withdrawn
+ds:req:cdc-104	docs/manual/ds/parts/chapters/cdc.tex	230	DS-CDC-104 Answer wins over reset status
+ds:req:cdc-105	docs/manual/ds/parts/chapters/cdc.tex	235	DS-CDC-105 Source reset during a transfer
+ds:req:cdc-106	docs/manual/ds/parts/chapters/cdc.tex	240	DS-CDC-106 One transfer on the destination face
+ds:req:cdc-107	docs/manual/ds/parts/chapters/cdc.tex	248	DS-CDC-107 Response unchanged
+ds:req:cdc-108	docs/manual/ds/parts/chapters/cdc.tex	253	DS-CDC-108 Any clock ratio
+ds:req:cdc-110	docs/manual/ds/parts/chapters/cdc.tex	258	DS-CDC-110 Names that the checks match
+ds:req:cdc-111	docs/manual/ds/parts/chapters/cdc.tex	266	DS-CDC-111 Use for configuration and debug only
+ds:req:cdc-112	docs/manual/ds/parts/chapters/cdc.tex	271	DS-CDC-112 Return pulse of the ready output
+ds:req:cdc-113	docs/manual/ds/parts/chapters/cdc.tex	276	DS-CDC-113 No stray transfer after a destination reset
+ds:req:cdc-114	docs/manual/ds/parts/chapters/cdc.tex	281	DS-CDC-114 Quiet while the source reset is low
+ds:req:cdc-115	docs/manual/ds/parts/chapters/cdc.tex	286	DS-CDC-115 No destination select while the destination reset is low
+ds:req:cdc-116	docs/manual/ds/parts/chapters/cdc.tex	291	DS-CDC-116 Read data of a forced completion
+ds:req:cdc-117	docs/manual/ds/parts/chapters/cdc.tex	296	DS-CDC-117 Completed transfer survives a destination reset
+ds:req:cdc-118	docs/manual/ds/parts/chapters/cdc.tex	304	DS-CDC-118 At most one transfer for a destination reset pulse
+ds:req:cdc-119	docs/manual/ds/parts/chapters/cdc.tex	312	DS-CDC-119 No wait for an acknowledge after a destination reset
+ds:req:cdc-120	docs/manual/ds/parts/chapters/cdc.tex	320	DS-CDC-120 Stale acknowledge gives a local error
+ds:req:cdc-150	docs/manual/ds/parts/chapters/cdc.tex	334	DS-CDC-150 One FIFO for each channel
+ds:req:cdc-151	docs/manual/ds/parts/chapters/cdc.tex	339	DS-CDC-151 Payload unchanged and in order
+ds:req:cdc-152	docs/manual/ds/parts/chapters/cdc.tex	344	DS-CDC-152 A reset on one face resets both
+ds:req:cdc-153	docs/manual/ds/parts/chapters/cdc.tex	349	DS-CDC-153 Reset is a hard flush
+ds:req:cdc-154	docs/manual/ds/parts/chapters/cdc.tex	358	DS-CDC-154 Quiet outputs during either reset
+ds:req:cdc-155	docs/manual/ds/parts/chapters/cdc.tex	363	DS-CDC-155 Any clock ratio without a bypass
+ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	368	DS-CDC-156 No deadlock when channels are full
+ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	373	DS-CDC-157 No combinational path between the faces
+ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	381	DS-CDC-158 Exact depth
+ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	386	DS-CDC-159 Valid is not withdrawn
 ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6663	DS-EXAMPLE-001 Example of a requirement
 ds:req:pmu-001	docs/manual/ds/parts/chapters/power.tex	36	DS-PMU-001 CTRL mode field
 ds:req:pmu-002	docs/manual/ds/parts/chapters/power.tex	41	DS-PMU-002 STATUS fields
@@ -2143,11 +2148,11 @@ ds:req:pwr-084	docs/manual/ds/parts/chapters/power-intent.tex	259	DS-PWR-084 For
 fig:tm:ch:mod-cdc-primitives:soc	docs/manual/tm/parts/chapters/cdc.tex	34	Clock-domain crossing
 fig:tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	61	Power management
 fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	427	Functional description
-fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	461	Functional description
-fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	513	Functional description
+fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	459	Functional description
+fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	515	Functional description
 fig:tm:mod:apb-cdc-bridge:sfsm	docs/manual/tm/parts/chapters/cdc.tex	444	Functional description
-fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	482	Functional description
-fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	597	Functional description
+fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	480	Functional description
+fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	609	Functional description
 fig:tm:mod:cdc-gray-fifo:block	docs/manual/tm/parts/chapters/cdc.tex	304	Functional description
 fig:tm:mod:cdc-gray-fifo:ring	docs/manual/tm/parts/chapters/cdc.tex	346	Functional description
 fig:tm:mod:cdc-gray-fifo:timing	docs/manual/tm/parts/chapters/cdc.tex	362	Functional description
@@ -2178,7 +2183,7 @@ tab:tm:ch:tool-defects-and-caveats:caveats	docs/manual/tm/parts/06-tool-defects-
 tab:tm:ch:tool-defects-and-caveats:defects	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	55	Summary of the tool defects
 tab:tm:mod:apb-cdc-bridge:params	docs/manual/common/generated/facts/apb-cdc-bridge-params.tex	4	Parameters of \code{apb_cdc_bridge}
 tab:tm:mod:apb-cdc-bridge:signals	docs/manual/common/generated/facts/apb-cdc-bridge-signals.tex	4	Signals of \code{apb_cdc_bridge}
-tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	604	Functional description
+tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	616	Functional description
 tab:tm:mod:async-axi-fifo:params	docs/manual/common/generated/facts/async-axi-fifo-params.tex	4	Parameters of \code{async_axi_fifo}
 tab:tm:mod:async-axi-fifo:signals	docs/manual/common/generated/facts/async-axi-fifo-signals.tex	4	Signals of \code{async_axi_fifo}
 tab:tm:mod:cdc-gray-fifo:d2full	docs/manual/tm/parts/chapters/cdc.tex	319	Functional description
@@ -2226,7 +2231,7 @@ tm:caveat:sky130-cpu-macro-sv2v	docs/manual/tm/parts/06-tool-defects-and-standin
 tm:caveat:sky130-single-sram-corner	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	221	Sky130 timing with one SRAM corner model
 tm:caveat:synlig-macro-views	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	83	Synlig macro views of ASAP7
 tm:ch:about	docs/manual/tm/parts/00-about.tex	5	About this book
-tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11908	Analog PLL
+tm:ch:analog-pll	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11912	Analog PLL
 tm:ch:asap7-flow	docs/manual/tm/parts/02-physical-design.tex	5347	ASAP7 flow
 tm:ch:cdc-and-lint-checks	docs/manual/tm/parts/03-verification-infrastructure.tex	13281	CDC and lint checks
 tm:ch:commercial-flow-comparison	docs/manual/tm/parts/02-physical-design.tex	5355	Commercial flow comparison
@@ -2247,12 +2252,12 @@ tm:ch:dft-architecture:14-alternatives-not-exercised	docs/manual/tm/parts/04-dft
 tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2061	\texorpdfstring{Stage 1a implementation record (bead \code{j41m.2}): scan-ready fabric RTL}{Stage 1a implementation record (bead ): scan-ready fabric RTL}
 tm:ch:dft-architecture:141-ports-added-to-soc-top-and-the-internal-seam	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2070	\texorpdfstring{Ports added to \code{soc_top} and the internal seam}{Ports added to and the internal seam}
 tm:ch:dft-architecture:1410-cpu-macro-scantest-boundary-sky130-half-bead-j41m4-rtl-step-only	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2476	\texorpdfstring{CPU macro scan/test boundary, Sky130 half (bead \code{j41m.4}, RTL step only)}{CPU macro scan/test boundary, Sky130 half (bead , RTL step only)}
-tm:ch:dft-architecture:1410-crypto-scan-wipe-hardware-zeroize-on-scan-entry-and-exit-bead-j41m6-2026-10-17	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4512	\texorpdfstring{Crypto scan wipe: hardware zeroize on scan entry and exit (bead \code{j41m.6}, 2026-10-17)}{Crypto scan wipe: hardware zeroize on scan entry and exit (bead , 2026-10-17)}
+tm:ch:dft-architecture:1410-crypto-scan-wipe-hardware-zeroize-on-scan-entry-and-exit-bead-j41m6-2026-10-17	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4516	\texorpdfstring{Crypto scan wipe: hardware zeroize on scan entry and exit (bead \code{j41m.6}, 2026-10-17)}{Crypto scan wipe: hardware zeroize on scan entry and exit (bead , 2026-10-17)}
 tm:ch:dft-architecture:1411-pd-re-harden-for-the-cpu-macro-scan-boundary-and-the-cpu-clk-i-sdc-beads-j41m4-pd-step-j41m5-2026-10-16	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2633	\texorpdfstring{PD re-harden for the CPU macro scan boundary and the \code{cpu_clk_i} SDC (beads \code{j41m.4} PD step + \code{j41m.5}, 2026-10-16)}{PD re-harden for the CPU macro scan boundary and the SDC (beads PD step + , 2026-10-16)}
-tm:ch:dft-architecture:1412-stage-2-scan-insertion-method-port-reuse-cpu-macro-result-bead-j41m8-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2784	\texorpdfstring{Stage 2 scan insertion: method, port reuse, CPU macro result (bead \code{j41m.8}, 2026-10-26)}{Stage 2 scan insertion: method, port reuse, CPU macro result (bead , 2026-10-26)}
-tm:ch:dft-architecture:1413-stage-2-soc-harden-with-scan-run-2026-10-26-09-59-03-vs-run-2026-10-25-08-28-45-bead-j41m8-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2859	\texorpdfstring{Stage 2 SoC harden with scan: \code{RUN_2026-10-26_09-59-03} vs \code{RUN_2026-10-25_08-28-45} (bead \code{j41m.8}, 2026-10-26)}{Stage 2 SoC harden with scan: vs (bead , 2026-10-26)}
-tm:ch:dft-architecture:1414-scan-en-is-withheld-until-the-crypto-scan-entry-wipe-is-applied-bead-j41m17-user-decision-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3050	\texorpdfstring{\code{scan_en} is withheld until the crypto scan-entry wipe is applied (bead \code{j41m.17}, user decision 2026-10-26)}{is withheld until the crypto scan-entry wipe is applied (bead , user decision 2026-10-26)}
-tm:ch:dft-architecture:14141-re-harden-with-the-crypto-scan-en-withhold-and-scan-out-o-gating-run-2026-10-27-05-40-27-vs-run-2026-10-26-09-59-03-bead-j41m17-2026-10-27	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3250	\texorpdfstring{Re-harden with the crypto \code{scan_en} withhold and \code{scan_out_o} gating: \code{RUN_2026-10-27_05-40-27} vs \code{RUN_2026-10-26_09-59-03} (bead \code{j41m.17}, 2026-10-27)}{Re-harden with the crypto withhold and gating: vs (bead , 2026-10-27)}
+tm:ch:dft-architecture:1412-stage-2-scan-insertion-method-port-reuse-cpu-macro-result-bead-j41m8-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2788	\texorpdfstring{Stage 2 scan insertion: method, port reuse, CPU macro result (bead \code{j41m.8}, 2026-10-26)}{Stage 2 scan insertion: method, port reuse, CPU macro result (bead , 2026-10-26)}
+tm:ch:dft-architecture:1413-stage-2-soc-harden-with-scan-run-2026-10-26-09-59-03-vs-run-2026-10-25-08-28-45-bead-j41m8-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2863	\texorpdfstring{Stage 2 SoC harden with scan: \code{RUN_2026-10-26_09-59-03} vs \code{RUN_2026-10-25_08-28-45} (bead \code{j41m.8}, 2026-10-26)}{Stage 2 SoC harden with scan: vs (bead , 2026-10-26)}
+tm:ch:dft-architecture:1414-scan-en-is-withheld-until-the-crypto-scan-entry-wipe-is-applied-bead-j41m17-user-decision-2026-10-26	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3054	\texorpdfstring{\code{scan_en} is withheld until the crypto scan-entry wipe is applied (bead \code{j41m.17}, user decision 2026-10-26)}{is withheld until the crypto scan-entry wipe is applied (bead , user decision 2026-10-26)}
+tm:ch:dft-architecture:14141-re-harden-with-the-crypto-scan-en-withhold-and-scan-out-o-gating-run-2026-10-27-05-40-27-vs-run-2026-10-26-09-59-03-bead-j41m17-2026-10-27	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3254	\texorpdfstring{Re-harden with the crypto \code{scan_en} withhold and \code{scan_out_o} gating: \code{RUN_2026-10-27_05-40-27} vs \code{RUN_2026-10-26_09-59-03} (bead \code{j41m.17}, 2026-10-27)}{Re-harden with the crypto withhold and gating: vs (bead , 2026-10-27)}
 tm:ch:dft-architecture:142-what-each-scope-item-became	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2136	What each scope item became
 tm:ch:dft-architecture:143-findings-the-mask-does-not-close	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2200	Findings the mask does not close
 tm:ch:dft-architecture:144-scan-port-contract-for-stage-2-insertion-a-the-openroad-behaviour-is-untested	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2232	Scan port contract for Stage 2 insertion {[}A: the OpenROAD behaviour is untested{]}
@@ -2262,44 +2267,44 @@ tm:ch:dft-architecture:147-checks-added	docs/manual/tm/parts/04-dft-fpga-hls-and
 tm:ch:dft-architecture:148-stage-1a-done-not-done	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2340	Stage 1a done / not done
 tm:ch:dft-architecture:149-gap-closure-results-2026-10-10-after-the-implementing-agent-ran-out-of-turns	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	2382	Gap-closure results (2026-10-10, after the implementing agent ran out of turns)
 tm:ch:dft-architecture:15-slotting-into-librelane-as-a-project-local-plugin	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	358	Slotting into LibreLane as a project-local plugin
-tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3668	\texorpdfstring{Stage 1b specification and implementation record (bead \code{j41m.3}): JTAG TAP}{Stage 1b specification and implementation record (bead ): JTAG TAP}
-tm:ch:dft-architecture:151-modules-and-ports	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3679	Modules and ports
-tm:ch:dft-architecture:152-tap-rules-ieee-11491-where-implemented	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3719	TAP rules (IEEE 1149.1 where implemented)
-tm:ch:dft-architecture:153-instruction-map-private-codes-frozen-by-user-decision-2026-10-11-q-op-do-not-renumber	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3770	Instruction map (private codes; FROZEN by user decision 2026-10-11, Q-OP: do not renumber)
-tm:ch:dft-architecture:154-what-the-tap-drives-and-how-it-combines-with-the-1a-pins	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3825	What the TAP drives, and how it combines with the 1a pins
-tm:ch:dft-architecture:155-clockreset-treatment-and-the-declared-crossings	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3886	\texorpdfstring{Clock/\allowbreak{}reset treatment and the declared crossings}{Clock/reset treatment and the declared crossings}
-tm:ch:dft-architecture:156-documented-deviations-from-ieee-11491-and-from-section-9	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4089	Documented deviations from IEEE 1149.1 and from section 9
-tm:ch:dft-architecture:157-tests-and-checks-required-of-this-stage	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4127	Tests and checks required of this stage
-tm:ch:dft-architecture:158-implementation-record-2026-10-11-pr-270	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4140	Implementation record (2026-10-11, PR \#270)
-tm:ch:dft-architecture:159-q-clk-change-record-2026-10-11-glitch-free-test-clock-switch-supersedes-the-plain-mux-statements-above	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4263	Q-CLK change record (2026-10-11): glitch-free test-clock switch, supersedes the "plain mux" statements above
-tm:ch:dft-architecture:1591-user-decisions-of-2026-10-12-and-the-tester-contract-stated-plainly	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4335	User decisions of 2026-10-12 and the tester contract (stated plainly)
-tm:ch:dft-architecture:1592-cdc-snitch-bad-magic-on-the-two-handshake-synchronisers-investigation-2026-10-12	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4367	\texorpdfstring{cdc\_\allowbreak{}snitch \texttt{BAD\ magic} on the two handshake synchronisers: investigation (2026-10-12)}{cdc\_snitch on the two handshake synchronisers: investigation (2026-10-12)}
-tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4636	\texorpdfstring{Stage 4 specification (beads \code{j41m.14} MBIST, \code{j41m.10} control-word crossing)}{Stage 4 specification (beads MBIST, control-word crossing)}
-tm:ch:dft-architecture:160-user-decisions-of-2026-10-17-and-what-this-stage-lands	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4646	User decisions of 2026-10-17 and what this stage lands
-tm:ch:dft-architecture:161-memory-inventory-reconciled-with-the-beads-x12-r-re-checked-2026-10-17	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4692	Memory inventory, reconciled with the bead\textquotesingle s "x12" {[}R, re-checked 2026-10-17{]}
-tm:ch:dft-architecture:1610-implementation-record-2026-10-18-pr-306	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5420	Implementation record (2026-10-18, PR \#306)
-tm:ch:dft-architecture:1611-cpu-macro-cache-collars-rtl-step-bead-c54a-2026-10-18-pr-313	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5469	\texorpdfstring{CPU-macro cache collars: RTL step (bead \code{c54a}, 2026-10-18, PR \#313)}{CPU-macro cache collars: RTL step (bead , 2026-10-18, PR \#313)}
-tm:ch:dft-architecture:1612-cpu-macro-collar-local-compare-bead-c54a-2026-10-23	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5616	\texorpdfstring{CPU-macro collar-local compare (bead \code{c54a}, 2026-10-23)}{CPU-macro collar-local compare (bead , 2026-10-23)}
-tm:ch:dft-architecture:1613-parallel-evaluation-of-siemens-tessent-memorybist-pointer	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5730	Parallel evaluation of Siemens Tessent MemoryBIST (pointer)
-tm:ch:dft-architecture:162-algorithms-encoding-and-architecture-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4757	Algorithms, encoding and architecture decision
-tm:ch:dft-architecture:163-smarchchkb-family-evaluation-decision-d1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4907	SMarchCHKB-family evaluation (decision D1)
-tm:ch:dft-architecture:164-controller-and-collar-interfaces	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4947	Controller and collar interfaces
-tm:ch:dft-architecture:165-tap-registers-control-word-crossing-j41m10-folded-in	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4998	TAP registers, control word, crossing (j41m.10 folded in)
-tm:ch:dft-architecture:166-clocking-scan-mode-pmu	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5199	\texorpdfstring{Clocking, scan\_\allowbreak{}mode, PMU}{Clocking, scan\_mode, PMU}
-tm:ch:dft-architecture:167-cpu-macro-cache-collars-design-proposal-re-harden-need	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5243	CPU-macro cache collars: design, proposal, re-harden need
-tm:ch:dft-architecture:168-verification-required-of-this-stage-non-negotiable-per-the-bead	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5323	Verification required of this stage (non-negotiable per the bead)
-tm:ch:dft-architecture:169-area-m-2026-10-18	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5358	Area {[}M, 2026-10-18{]}
-tm:ch:dft-architecture:17-tessent-scan-atpg-evaluation-pointer	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5741	Tessent scan + ATPG evaluation (pointer)
-tm:ch:dft-architecture:18-stage-3-atpg-tool-spike-record-bead-j41m15-2026-10-28	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5753	\texorpdfstring{Stage 3 ATPG tool spike record (bead \code{j41m.15}, 2026-10-28)}{Stage 3 ATPG tool spike record (bead , 2026-10-28)}
-tm:ch:dft-architecture:181-what-quaigh-006-does-step-0-r-quaigh-006srcatpgrs-simfaultrs-equivrs-cmdrs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5786	\texorpdfstring{What Quaigh 0.0.6 does (Step 0) {[}R: \code{quaigh-0.0.6/src/atpg.rs}, \code{sim/fault.rs}, \code{equiv.rs}, \code{cmd.rs}{]}}{What Quaigh 0.0.6 does (Step 0) {[}R: , , , {]}}
-tm:ch:dft-architecture:182-method-rm	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5842	Method {[}R/M{]}
-tm:ch:dft-architecture:183-ladder-m-each-metricsjson-and-qreportjson-under-nobackupclaude-sim-buildj41m15rung	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5908	\texorpdfstring{Ladder {[}M: each \code{metrics.json} and \code{q/report.json} under \code{/nobackup/claude_sim_build/j41m15/<rung>/}{]}}{Ladder {[}M: each and under {]}}
-tm:ch:dft-architecture:184-exclusion-manifest-m-fabricexclusionsjson-hold-mask-1028json	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5999	\texorpdfstring{Exclusion manifest {[}M \code{fabric/exclusions.json}, \code{hold_mask_1028.json}{]}}{Exclusion manifest {[}M , {]}}
-tm:ch:dft-architecture:185-sanity-checks	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6075	Sanity checks
-tm:ch:dft-architecture:186-delta-against-tessent-9417-test-9325-fault-tessent-atpg-flowmd-42-43-a	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6161	\texorpdfstring{Delta against Tessent (94.17 \% test / 93.25 \% fault, \code{TESSENT_ATPG_FLOW.md} (\cref{tm:flow:tessent-atpg}) 4.2, 4.3) {[}A{]}}{Delta against Tessent (94.17 \% test / 93.25 \% fault, 4.2, 4.3) {[}A{]}}
-tm:ch:dft-architecture:187-limits-and-what-was-not-done-a-unless-noted	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6230	Limits and what was not done {[}A unless noted{]}
-tm:ch:dft-architecture:188-proposed-restated-target-not-adopted-the-owner-decides	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6282	Proposed restated target (NOT adopted: the owner decides)
-tm:ch:dft-architecture:189-patched-quaigh-fabric-result-bead-j41m18-2026-10-29	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6328	\texorpdfstring{Patched Quaigh: fabric result (bead \code{j41m.18}, 2026-10-29)}{Patched Quaigh: fabric result (bead , 2026-10-29)}
+tm:ch:dft-architecture:15-stage-1b-specification-and-implementation-record-bead-j41m3-jtag-tap	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3672	\texorpdfstring{Stage 1b specification and implementation record (bead \code{j41m.3}): JTAG TAP}{Stage 1b specification and implementation record (bead ): JTAG TAP}
+tm:ch:dft-architecture:151-modules-and-ports	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3683	Modules and ports
+tm:ch:dft-architecture:152-tap-rules-ieee-11491-where-implemented	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3723	TAP rules (IEEE 1149.1 where implemented)
+tm:ch:dft-architecture:153-instruction-map-private-codes-frozen-by-user-decision-2026-10-11-q-op-do-not-renumber	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3774	Instruction map (private codes; FROZEN by user decision 2026-10-11, Q-OP: do not renumber)
+tm:ch:dft-architecture:154-what-the-tap-drives-and-how-it-combines-with-the-1a-pins	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3829	What the TAP drives, and how it combines with the 1a pins
+tm:ch:dft-architecture:155-clockreset-treatment-and-the-declared-crossings	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	3890	\texorpdfstring{Clock/\allowbreak{}reset treatment and the declared crossings}{Clock/reset treatment and the declared crossings}
+tm:ch:dft-architecture:156-documented-deviations-from-ieee-11491-and-from-section-9	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4093	Documented deviations from IEEE 1149.1 and from section 9
+tm:ch:dft-architecture:157-tests-and-checks-required-of-this-stage	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4131	Tests and checks required of this stage
+tm:ch:dft-architecture:158-implementation-record-2026-10-11-pr-270	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4144	Implementation record (2026-10-11, PR \#270)
+tm:ch:dft-architecture:159-q-clk-change-record-2026-10-11-glitch-free-test-clock-switch-supersedes-the-plain-mux-statements-above	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4267	Q-CLK change record (2026-10-11): glitch-free test-clock switch, supersedes the "plain mux" statements above
+tm:ch:dft-architecture:1591-user-decisions-of-2026-10-12-and-the-tester-contract-stated-plainly	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4339	User decisions of 2026-10-12 and the tester contract (stated plainly)
+tm:ch:dft-architecture:1592-cdc-snitch-bad-magic-on-the-two-handshake-synchronisers-investigation-2026-10-12	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4371	\texorpdfstring{cdc\_\allowbreak{}snitch \texttt{BAD\ magic} on the two handshake synchronisers: investigation (2026-10-12)}{cdc\_snitch on the two handshake synchronisers: investigation (2026-10-12)}
+tm:ch:dft-architecture:16-stage-4-specification-beads-j41m14-mbist-j41m10-control-word-crossing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4640	\texorpdfstring{Stage 4 specification (beads \code{j41m.14} MBIST, \code{j41m.10} control-word crossing)}{Stage 4 specification (beads MBIST, control-word crossing)}
+tm:ch:dft-architecture:160-user-decisions-of-2026-10-17-and-what-this-stage-lands	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4650	User decisions of 2026-10-17 and what this stage lands
+tm:ch:dft-architecture:161-memory-inventory-reconciled-with-the-beads-x12-r-re-checked-2026-10-17	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4696	Memory inventory, reconciled with the bead\textquotesingle s "x12" {[}R, re-checked 2026-10-17{]}
+tm:ch:dft-architecture:1610-implementation-record-2026-10-18-pr-306	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5424	Implementation record (2026-10-18, PR \#306)
+tm:ch:dft-architecture:1611-cpu-macro-cache-collars-rtl-step-bead-c54a-2026-10-18-pr-313	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5473	\texorpdfstring{CPU-macro cache collars: RTL step (bead \code{c54a}, 2026-10-18, PR \#313)}{CPU-macro cache collars: RTL step (bead , 2026-10-18, PR \#313)}
+tm:ch:dft-architecture:1612-cpu-macro-collar-local-compare-bead-c54a-2026-10-23	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5620	\texorpdfstring{CPU-macro collar-local compare (bead \code{c54a}, 2026-10-23)}{CPU-macro collar-local compare (bead , 2026-10-23)}
+tm:ch:dft-architecture:1613-parallel-evaluation-of-siemens-tessent-memorybist-pointer	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5734	Parallel evaluation of Siemens Tessent MemoryBIST (pointer)
+tm:ch:dft-architecture:162-algorithms-encoding-and-architecture-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4761	Algorithms, encoding and architecture decision
+tm:ch:dft-architecture:163-smarchchkb-family-evaluation-decision-d1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4911	SMarchCHKB-family evaluation (decision D1)
+tm:ch:dft-architecture:164-controller-and-collar-interfaces	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	4951	Controller and collar interfaces
+tm:ch:dft-architecture:165-tap-registers-control-word-crossing-j41m10-folded-in	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5002	TAP registers, control word, crossing (j41m.10 folded in)
+tm:ch:dft-architecture:166-clocking-scan-mode-pmu	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5203	\texorpdfstring{Clocking, scan\_\allowbreak{}mode, PMU}{Clocking, scan\_mode, PMU}
+tm:ch:dft-architecture:167-cpu-macro-cache-collars-design-proposal-re-harden-need	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5247	CPU-macro cache collars: design, proposal, re-harden need
+tm:ch:dft-architecture:168-verification-required-of-this-stage-non-negotiable-per-the-bead	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5327	Verification required of this stage (non-negotiable per the bead)
+tm:ch:dft-architecture:169-area-m-2026-10-18	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5362	Area {[}M, 2026-10-18{]}
+tm:ch:dft-architecture:17-tessent-scan-atpg-evaluation-pointer	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5745	Tessent scan + ATPG evaluation (pointer)
+tm:ch:dft-architecture:18-stage-3-atpg-tool-spike-record-bead-j41m15-2026-10-28	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5757	\texorpdfstring{Stage 3 ATPG tool spike record (bead \code{j41m.15}, 2026-10-28)}{Stage 3 ATPG tool spike record (bead , 2026-10-28)}
+tm:ch:dft-architecture:181-what-quaigh-006-does-step-0-r-quaigh-006srcatpgrs-simfaultrs-equivrs-cmdrs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5790	\texorpdfstring{What Quaigh 0.0.6 does (Step 0) {[}R: \code{quaigh-0.0.6/src/atpg.rs}, \code{sim/fault.rs}, \code{equiv.rs}, \code{cmd.rs}{]}}{What Quaigh 0.0.6 does (Step 0) {[}R: , , , {]}}
+tm:ch:dft-architecture:182-method-rm	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5846	Method {[}R/M{]}
+tm:ch:dft-architecture:183-ladder-m-each-metricsjson-and-qreportjson-under-nobackupclaude-sim-buildj41m15rung	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	5912	\texorpdfstring{Ladder {[}M: each \code{metrics.json} and \code{q/report.json} under \code{/nobackup/claude_sim_build/j41m15/<rung>/}{]}}{Ladder {[}M: each and under {]}}
+tm:ch:dft-architecture:184-exclusion-manifest-m-fabricexclusionsjson-hold-mask-1028json	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6003	\texorpdfstring{Exclusion manifest {[}M \code{fabric/exclusions.json}, \code{hold_mask_1028.json}{]}}{Exclusion manifest {[}M , {]}}
+tm:ch:dft-architecture:185-sanity-checks	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6079	Sanity checks
+tm:ch:dft-architecture:186-delta-against-tessent-9417-test-9325-fault-tessent-atpg-flowmd-42-43-a	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6165	\texorpdfstring{Delta against Tessent (94.17 \% test / 93.25 \% fault, \code{TESSENT_ATPG_FLOW.md} (\cref{tm:flow:tessent-atpg}) 4.2, 4.3) {[}A{]}}{Delta against Tessent (94.17 \% test / 93.25 \% fault, 4.2, 4.3) {[}A{]}}
+tm:ch:dft-architecture:187-limits-and-what-was-not-done-a-unless-noted	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6234	Limits and what was not done {[}A unless noted{]}
+tm:ch:dft-architecture:188-proposed-restated-target-not-adopted-the-owner-decides	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6286	Proposed restated target (NOT adopted: the owner decides)
+tm:ch:dft-architecture:189-patched-quaigh-fabric-result-bead-j41m18-2026-10-29	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6332	\texorpdfstring{Patched Quaigh: fabric result (bead \code{j41m.18}, 2026-10-29)}{Patched Quaigh: fabric result (bead , 2026-10-29)}
 tm:ch:dft-architecture:1a-summary	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	101	1a. Summary
 tm:ch:dft-architecture:2-atpg-tool-coverage-target-pattern-export	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	447	ATPG tool, coverage target, pattern export
 tm:ch:dft-architecture:21-coverage-goal-decision-8-a-goal-not-a-commitment-a	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	450	Coverage goal (decision 8: a GOAL, not a commitment) {[}A{]}
@@ -2331,9 +2336,9 @@ tm:ch:dft-architecture:94-the-taps-own-flops	docs/manual/tm/parts/04-dft-fpga-hl
 tm:ch:dft-architecture:95-raw-ports-on-the-core-macro-decisions-6-and-7	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1676	Raw ports on the core macro (decisions 6 and 7)
 tm:ch:dft-architecture:96-throughput-and-at-speed-with-parallel-ports-decision-7-a-unless-noted	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1709	Throughput and at-speed with parallel ports (decision 7) {[}A unless noted{]}
 tm:ch:flow-overview	docs/manual/tm/parts/02-physical-design.tex	3	Flow overview
-tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7882	FPGA prototyping
+tm:ch:fpga-prototyping	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7886	FPGA prototyping
 tm:ch:freepdk45-flow	docs/manual/tm/parts/02-physical-design.tex	5351	FreePDK45 flow
-tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10050	High-level synthesis
+tm:ch:high-level-synthesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10054	High-level synthesis
 tm:ch:mod-cdc-primitives	docs/manual/tm/parts/chapters/cdc.tex	3	Clock-domain crossing
 tm:ch:mod-cdc-primitives:constraints	docs/manual/tm/parts/chapters/cdc.tex	72	Timing constraints and CDC checks
 tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	37	Instances in the design
@@ -2357,7 +2362,7 @@ tm:ch:proprietary-simulators	docs/manual/tm/parts/03-verification-infrastructure
 tm:ch:sky130-flow	docs/manual/tm/parts/02-physical-design.tex	4410	Sky130 flow
 tm:ch:standing-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	79	Standing caveats
 tm:ch:synthesis-undefined-value-gate	docs/manual/tm/parts/03-verification-infrastructure.tex	13484	Synthesis undefined-value gate
-tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6527	Tessent flows
+tm:ch:tessent-flows	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6531	Tessent flows
 tm:ch:test-benches-and-suites	docs/manual/tm/parts/03-verification-infrastructure.tex	3	Test benches and suites
 tm:ch:tool-defects	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	334	Tool defects
 tm:ch:tool-defects-and-caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	3	Tool defects and caveats
@@ -2388,76 +2393,76 @@ tm:dec:agent-improvement-proposal:priority	docs/manual/tm/parts/05-decisions.tex
 tm:dec:agent-improvement-proposal:proposed-changes	docs/manual/tm/parts/05-decisions.tex	1784	Proposed changes
 tm:dec:agent-improvement-proposal:the-finding-that-matters-most	docs/manual/tm/parts/05-decisions.tex	1687	The finding that matters most
 tm:dec:agent-improvement-proposal:what-happened	docs/manual/tm/parts/05-decisions.tex	1644	What happened
-tm:dec:cpp-to-rtl-hls-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10061	C++ → SystemVerilog (HLS) Flow Evaluation \& RTL-Generation Approach Decision
-tm:dec:cpp-to-rtl-hls-evaluation:1-memory-coalescer-equivalent-with-a-6-control-path-latency-penalty	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10485	\texorpdfstring{\code{memory_coalescer} --- equivalent, with a 6× control-path latency penalty}{--- equivalent, with a 6× control-path latency penalty}
-tm:dec:cpp-to-rtl-hls-evaluation:2-rv32i-hazard-unit-the-control-pole-substituted-and-doubly-negative	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10511	\texorpdfstring{\code{rv32i_hazard_unit} --- the control pole, substituted and doubly negative}{--- the control pole, substituted and doubly negative}
-tm:dec:cpp-to-rtl-hls-evaluation:3-rv32i-cache-arbiter-outside-the-expressible-domain	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10554	\texorpdfstring{\code{rv32i_cache_arbiter} --- outside the expressible domain}{--- outside the expressible domain}
-tm:dec:cpp-to-rtl-hls-evaluation:backlog-item-empirical-confirmation-pilot	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10262	Backlog item --- Empirical confirmation pilot
-tm:dec:cpp-to-rtl-hls-evaluation:baseline-fsm-arm-valu-hls-use-synligtrue-warning-resolved-2026-09-18-confirmed-corrupt	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11582	\texorpdfstring{Baseline FSM arm (\code{valu_hls}, \code{USE_SYNLIG:true}) --- \warn{} RESOLVED 2026-09-18: \textbf{CONFIRMED CORRUPT}}{Baseline FSM arm (, ) --- RESOLVED 2026-09-18: CONFIRMED CORRUPT}
-tm:dec:cpp-to-rtl-hls-evaluation:bug-1-found-and-fixed-synth-share-resources-left-enabled	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11056	\texorpdfstring{Bug 1 (found and fixed): \code{SYNTH_SHARE_RESOURCES} left enabled}{Bug 1 (found and fixed): left enabled}
-tm:dec:cpp-to-rtl-hls-evaluation:bug-2-found-not-fixed-the-post-fix-netlist-still-discards-most-of-rs2-i	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11083	\texorpdfstring{Bug 2 (found, NOT fixed): the post-fix netlist still discards most of \code{rs2_i}}{Bug 2 (found, NOT fixed): the post-fix netlist still discards most of }
-tm:dec:cpp-to-rtl-hls-evaluation:comparison-table-rtl-and-hls-only-comb-excluded-per-above	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11153	\texorpdfstring{Comparison table (\code{rtl} and \code{hls} only --- \code{comb} excluded per above)}{Comparison table ( and only --- excluded per above)}
-tm:dec:cpp-to-rtl-hls-evaluation:corrected-comb-metrics-run-2026-09-15-15-06-29-use-synligfalse-sv2v	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11451	\texorpdfstring{Corrected comb metrics (\code{RUN_2026-09-15_15-06-29}, \code{USE_SYNLIG:false} + sv2v)}{Corrected comb metrics (, + sv2v)}
-tm:dec:cpp-to-rtl-hls-evaluation:cpugpu-hand-rtl-exposure-verdict-not-exposed-to-this-specific-construct	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11746	CPU/GPU hand-RTL exposure verdict: NOT exposed to this specific construct
-tm:dec:cpp-to-rtl-hls-evaluation:effect-on-the-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10827	Effect on the recommendation
-tm:dec:cpp-to-rtl-hls-evaluation:effect-on-the-recommendation-1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10991	Effect on the recommendation
-tm:dec:cpp-to-rtl-hls-evaluation:gh-119-egt-follow-up-the-combinational-candidate-ppa-attempt-is-invalid-2026-09-15	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11029	\texorpdfstring{GH \#119 \code{egt} follow-up --- the combinational-candidate PPA attempt is INVALID (2026-09-15)}{GH \#119 follow-up --- the combinational-candidate PPA attempt is INVALID (2026-09-15)}
-tm:dec:cpp-to-rtl-hls-evaluation:gh-119-gcd-follow-up-comb-candidate-root-caused-synlig-and-fixed-2026-09-15	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11305	\texorpdfstring{GH \#119 \code{gcd} follow-up --- comb candidate root-caused (Synlig) and fixed (2026-09-15)}{GH \#119 follow-up --- comb candidate root-caused (Synlig) and fixed (2026-09-15)}
-tm:dec:cpp-to-rtl-hls-evaluation:method	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10654	Method
-tm:dec:cpp-to-rtl-hls-evaluation:method-the-reference-rtl-body-was-withheld	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10432	Method: the reference RTL body was withheld
-tm:dec:cpp-to-rtl-hls-evaluation:original-superseded-verdict-inconclusive-not-re-fixed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11716	Original (superseded) verdict: INCONCLUSIVE, not re-fixed
-tm:dec:cpp-to-rtl-hls-evaluation:part-1-available-open-source-chls-systemverilog-tools	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10111	Part 1 --- Available open-source C++/HLS → (System)Verilog tools
-tm:dec:cpp-to-rtl-hls-evaluation:part-2-why-not-for-this-projects-core-quality-ppa-timing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10180	Part 2 --- Why not for this project\textquotesingle s core (quality / PPA / timing)
-tm:dec:cpp-to-rtl-hls-evaluation:recommended-approach-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10074	Recommended Approach (decision)
-tm:dec:cpp-to-rtl-hls-evaluation:references	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10225	References
-tm:dec:cpp-to-rtl-hls-evaluation:result-1-the-coalescer-hls-won-on-speed-and-that-was-not-the-hypothesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10724	\texorpdfstring{Result 1 --- the coalescer: HLS \emph{won} on speed, and that was not the hypothesis}{Result 1 --- the coalescer: HLS won on speed, and that was not the hypothesis}
-tm:dec:cpp-to-rtl-hls-evaluation:result-2-the-hazard-unit-regression-on-every-axis-that-matters	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10759	Result 2 --- the hazard unit: regression on every axis that matters
-tm:dec:cpp-to-rtl-hls-evaluation:result-3-netlist-quality-undriven-wires-only-in-the-hls-arms	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10783	Result 3 --- netlist quality: undriven wires, only in the HLS arms
-tm:dec:cpp-to-rtl-hls-evaluation:results	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10443	Results
-tm:dec:cpp-to-rtl-hls-evaluation:setup	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11043	Setup
-tm:dec:cpp-to-rtl-hls-evaluation:stage-1-results-the-pilot-was-run-2026-09-07	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10394	Stage 1 results --- the pilot was run (2026-09-07)
-tm:dec:cpp-to-rtl-hls-evaluation:stage-2-results-the-ppa-table-2026-09-07	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10645	Stage 2 results --- the PPA table (2026-09-07)
-tm:dec:cpp-to-rtl-hls-evaluation:stage-2-what-it-may-and-may-not-claim	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10620	Stage 2 --- what it may and may not claim
-tm:dec:cpp-to-rtl-hls-evaluation:stage-3-results-the-datapath-pole-2026-09-07-bead-gg8	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10858	\texorpdfstring{Stage 3 results --- the datapath pole (2026-09-07, bead \code{gg8})}{Stage 3 results --- the datapath pole (2026-09-07, bead )}
-tm:dec:cpp-to-rtl-hls-evaluation:the-fsm-is-structural-not-an-authoring-or-clock-artifact	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10968	The FSM is structural, not an authoring or clock artifact
-tm:dec:cpp-to-rtl-hls-evaluation:the-table	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10666	The table
-tm:dec:cpp-to-rtl-hls-evaluation:the-table-1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10874	The table
-tm:dec:cpp-to-rtl-hls-evaluation:two-caveats-both-cutting-in-the-hls-arms-favour	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10919	Two caveats, both cutting in the HLS arm\textquotesingle s favour
-tm:dec:cpp-to-rtl-hls-evaluation:verdict	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11278	Verdict
-tm:dec:cpp-to-rtl-hls-evaluation:verification	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11014	Verification
-tm:dec:cpp-to-rtl-hls-evaluation:what-must-not-be-read-into-this-table	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10808	What must not be read into this table
-tm:dec:cpp-to-rtl-hls-evaluation:what-this-does-to-the-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10577	What this does to the recommendation
-tm:dec:cpp-to-rtl-hls-evaluation:what-was-pinned	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10406	What was pinned
-tm:dec:cpp-to-rtl-hls-evaluation:worst-arc-decomposition-comb-mandatory-per-the	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11531	\texorpdfstring{Worst-arc decomposition (\code{comb}, mandatory per the}{Worst-arc decomposition (, mandatory per the}
-tm:dec:cpp-to-rtl-hls-evaluation:worst-arc-decomposition-mandatory-before-quoting-any-fmax-ratio-per-the	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11228	Worst-arc decomposition (mandatory before quoting any fmax ratio, per the
-tm:dec:fpga-board-selection	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7893	\texorpdfstring{FPGA board selection (bead \code{hlrm}, GH \#245)}{FPGA board selection (bead , GH \#245)}
-tm:dec:fpga-board-selection:1-how-much-fpga-the-design-needs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7903	How much FPGA the design needs
-tm:dec:fpga-board-selection:2-candidates-with-singapore-price-and-stock	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7972	Candidates, with Singapore price and stock
-tm:dec:fpga-board-selection:3-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8028	Recommendation
-tm:dec:fpga-board-selection:4-second-clock-source-add-on	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8058	Second clock source (add-on)
-tm:dec:fpga-board-selection:5-clock-speed-sanity-check-tool-availability-checked-2026-10-14	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8125	Clock-speed sanity check: tool availability (checked 2026-10-14)
-tm:dec:fpga-board-selection:measured-artix-7-xc7a200t-vivado-20261	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8400	Measured: Artix-7 XC7A200T (Vivado 2026.1)
-tm:dec:fpga-board-selection:measured-ecp5-lower-bound-2026-10-14-cpu-only-build-post-place-and-route	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8183	Measured: ECP5 lower bound (2026-10-14, CPU-only build, post place-and-route)
-tm:dec:fpga-board-selection:measured-kintex-7-xc7k325t-2-vivado-20261-the-genesys-2-part-bead-hlrm1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8868	\texorpdfstring{Measured: Kintex-7 XC7K325T-2 (Vivado 2026.1), the Genesys 2 part (bead \code{hlrm.1})}{Measured: Kintex-7 XC7K325T-2 (Vivado 2026.1), the Genesys 2 part (bead )}
-tm:dec:fpga-board-selection:sources	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9176	Sources
-tm:dec:fpga-stage0-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9236	\texorpdfstring{FPGA Stage 0 evaluation (bead \code{hlrm}, GH \#245, PR \#279)}{FPGA Stage 0 evaluation (bead , GH \#245, PR \#279)}
-tm:dec:fpga-stage0-evaluation:1-method	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9244	Method
-tm:dec:fpga-stage0-evaluation:10-what-was-not-verified	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10030	What was NOT verified
-tm:dec:fpga-stage0-evaluation:2-results	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9336	Results
-tm:dec:fpga-stage0-evaluation:21-resource-table-measured-yosys-062-stat-json-flatten-no-pr	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9340	\texorpdfstring{Resource table (measured: yosys 0.62 \code{stat} / JSON, \code{-flatten}, no P\&R)}{Resource table (measured: yosys 0.62 / JSON, , no P\&R)}
-tm:dec:fpga-stage0-evaluation:22-which-memories-inferred-block-ram-measured-mapping-memory-lines-in-the-logs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9399	\texorpdfstring{Which memories inferred block RAM (measured: \texttt{mapping\ memory\ .\allowbreak{}.\allowbreak{}.\allowbreak{}} lines in the logs)}{Which memories inferred block RAM (measured: lines in the logs)}
-tm:dec:fpga-stage0-evaluation:23-blackboxes-undefined-modules	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9457	Blackboxes / undefined modules
-tm:dec:fpga-stage0-evaluation:24-latches-measured-latch-inferred-lines	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9468	\texorpdfstring{Latches (measured: \texttt{Latch\ inferred} lines)}{Latches (measured: lines)}
-tm:dec:fpga-stage0-evaluation:25-fmax-not-measured-ecp5-lower-bound-measured-later	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9482	fmax: NOT MEASURED (ECP5 lower bound measured later)
-tm:dec:fpga-stage0-evaluation:3-the-fpga-arms-what-was-written-by-whom-what-each-infers	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9539	The FPGA arms (what was written, by whom, what each infers)
-tm:dec:fpga-stage0-evaluation:4-non-fpga-identity-proof	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9607	Non-FPGA identity proof
-tm:dec:fpga-stage0-evaluation:5-regression-with-the-fpga-define	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9670	Regression with the FPGA define
-tm:dec:fpga-stage0-evaluation:6-clock-gating-no-arm-written-decision-needed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9766	Clock gating: no arm written (decision needed)
-tm:dec:fpga-stage0-evaluation:7-what-does-not-map-to-an-fpga-or-maps-only-conditionally	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9821	What does not map to an FPGA (or maps only conditionally)
-tm:dec:fpga-stage0-evaluation:8-device-class-sizing-inference-from-vendor-datasheet-figures-as-i-remember-them-verify-before-buying	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9879	Device-class sizing (INFERENCE from vendor datasheet figures as I remember them; verify before buying)
-tm:dec:fpga-stage0-evaluation:9-board-options-and-go-no-go-options-for-the-user-not-a-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9941	Board options and go / no-go (options for the user, not a decision)
-tm:dec:fpga-stage0-evaluation:open-human-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9996	Open human decisions
-tm:dec:fpga-stage0-evaluation:tool-versions-and-where-they-came-from	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9290	Tool versions and where they came from
+tm:dec:cpp-to-rtl-hls-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10065	C++ → SystemVerilog (HLS) Flow Evaluation \& RTL-Generation Approach Decision
+tm:dec:cpp-to-rtl-hls-evaluation:1-memory-coalescer-equivalent-with-a-6-control-path-latency-penalty	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10489	\texorpdfstring{\code{memory_coalescer} --- equivalent, with a 6× control-path latency penalty}{--- equivalent, with a 6× control-path latency penalty}
+tm:dec:cpp-to-rtl-hls-evaluation:2-rv32i-hazard-unit-the-control-pole-substituted-and-doubly-negative	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10515	\texorpdfstring{\code{rv32i_hazard_unit} --- the control pole, substituted and doubly negative}{--- the control pole, substituted and doubly negative}
+tm:dec:cpp-to-rtl-hls-evaluation:3-rv32i-cache-arbiter-outside-the-expressible-domain	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10558	\texorpdfstring{\code{rv32i_cache_arbiter} --- outside the expressible domain}{--- outside the expressible domain}
+tm:dec:cpp-to-rtl-hls-evaluation:backlog-item-empirical-confirmation-pilot	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10266	Backlog item --- Empirical confirmation pilot
+tm:dec:cpp-to-rtl-hls-evaluation:baseline-fsm-arm-valu-hls-use-synligtrue-warning-resolved-2026-09-18-confirmed-corrupt	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11586	\texorpdfstring{Baseline FSM arm (\code{valu_hls}, \code{USE_SYNLIG:true}) --- \warn{} RESOLVED 2026-09-18: \textbf{CONFIRMED CORRUPT}}{Baseline FSM arm (, ) --- RESOLVED 2026-09-18: CONFIRMED CORRUPT}
+tm:dec:cpp-to-rtl-hls-evaluation:bug-1-found-and-fixed-synth-share-resources-left-enabled	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11060	\texorpdfstring{Bug 1 (found and fixed): \code{SYNTH_SHARE_RESOURCES} left enabled}{Bug 1 (found and fixed): left enabled}
+tm:dec:cpp-to-rtl-hls-evaluation:bug-2-found-not-fixed-the-post-fix-netlist-still-discards-most-of-rs2-i	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11087	\texorpdfstring{Bug 2 (found, NOT fixed): the post-fix netlist still discards most of \code{rs2_i}}{Bug 2 (found, NOT fixed): the post-fix netlist still discards most of }
+tm:dec:cpp-to-rtl-hls-evaluation:comparison-table-rtl-and-hls-only-comb-excluded-per-above	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11157	\texorpdfstring{Comparison table (\code{rtl} and \code{hls} only --- \code{comb} excluded per above)}{Comparison table ( and only --- excluded per above)}
+tm:dec:cpp-to-rtl-hls-evaluation:corrected-comb-metrics-run-2026-09-15-15-06-29-use-synligfalse-sv2v	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11455	\texorpdfstring{Corrected comb metrics (\code{RUN_2026-09-15_15-06-29}, \code{USE_SYNLIG:false} + sv2v)}{Corrected comb metrics (, + sv2v)}
+tm:dec:cpp-to-rtl-hls-evaluation:cpugpu-hand-rtl-exposure-verdict-not-exposed-to-this-specific-construct	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11750	CPU/GPU hand-RTL exposure verdict: NOT exposed to this specific construct
+tm:dec:cpp-to-rtl-hls-evaluation:effect-on-the-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10831	Effect on the recommendation
+tm:dec:cpp-to-rtl-hls-evaluation:effect-on-the-recommendation-1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10995	Effect on the recommendation
+tm:dec:cpp-to-rtl-hls-evaluation:gh-119-egt-follow-up-the-combinational-candidate-ppa-attempt-is-invalid-2026-09-15	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11033	\texorpdfstring{GH \#119 \code{egt} follow-up --- the combinational-candidate PPA attempt is INVALID (2026-09-15)}{GH \#119 follow-up --- the combinational-candidate PPA attempt is INVALID (2026-09-15)}
+tm:dec:cpp-to-rtl-hls-evaluation:gh-119-gcd-follow-up-comb-candidate-root-caused-synlig-and-fixed-2026-09-15	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11309	\texorpdfstring{GH \#119 \code{gcd} follow-up --- comb candidate root-caused (Synlig) and fixed (2026-09-15)}{GH \#119 follow-up --- comb candidate root-caused (Synlig) and fixed (2026-09-15)}
+tm:dec:cpp-to-rtl-hls-evaluation:method	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10658	Method
+tm:dec:cpp-to-rtl-hls-evaluation:method-the-reference-rtl-body-was-withheld	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10436	Method: the reference RTL body was withheld
+tm:dec:cpp-to-rtl-hls-evaluation:original-superseded-verdict-inconclusive-not-re-fixed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11720	Original (superseded) verdict: INCONCLUSIVE, not re-fixed
+tm:dec:cpp-to-rtl-hls-evaluation:part-1-available-open-source-chls-systemverilog-tools	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10115	Part 1 --- Available open-source C++/HLS → (System)Verilog tools
+tm:dec:cpp-to-rtl-hls-evaluation:part-2-why-not-for-this-projects-core-quality-ppa-timing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10184	Part 2 --- Why not for this project\textquotesingle s core (quality / PPA / timing)
+tm:dec:cpp-to-rtl-hls-evaluation:recommended-approach-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10078	Recommended Approach (decision)
+tm:dec:cpp-to-rtl-hls-evaluation:references	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10229	References
+tm:dec:cpp-to-rtl-hls-evaluation:result-1-the-coalescer-hls-won-on-speed-and-that-was-not-the-hypothesis	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10728	\texorpdfstring{Result 1 --- the coalescer: HLS \emph{won} on speed, and that was not the hypothesis}{Result 1 --- the coalescer: HLS won on speed, and that was not the hypothesis}
+tm:dec:cpp-to-rtl-hls-evaluation:result-2-the-hazard-unit-regression-on-every-axis-that-matters	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10763	Result 2 --- the hazard unit: regression on every axis that matters
+tm:dec:cpp-to-rtl-hls-evaluation:result-3-netlist-quality-undriven-wires-only-in-the-hls-arms	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10787	Result 3 --- netlist quality: undriven wires, only in the HLS arms
+tm:dec:cpp-to-rtl-hls-evaluation:results	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10447	Results
+tm:dec:cpp-to-rtl-hls-evaluation:setup	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11047	Setup
+tm:dec:cpp-to-rtl-hls-evaluation:stage-1-results-the-pilot-was-run-2026-09-07	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10398	Stage 1 results --- the pilot was run (2026-09-07)
+tm:dec:cpp-to-rtl-hls-evaluation:stage-2-results-the-ppa-table-2026-09-07	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10649	Stage 2 results --- the PPA table (2026-09-07)
+tm:dec:cpp-to-rtl-hls-evaluation:stage-2-what-it-may-and-may-not-claim	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10624	Stage 2 --- what it may and may not claim
+tm:dec:cpp-to-rtl-hls-evaluation:stage-3-results-the-datapath-pole-2026-09-07-bead-gg8	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10862	\texorpdfstring{Stage 3 results --- the datapath pole (2026-09-07, bead \code{gg8})}{Stage 3 results --- the datapath pole (2026-09-07, bead )}
+tm:dec:cpp-to-rtl-hls-evaluation:the-fsm-is-structural-not-an-authoring-or-clock-artifact	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10972	The FSM is structural, not an authoring or clock artifact
+tm:dec:cpp-to-rtl-hls-evaluation:the-table	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10670	The table
+tm:dec:cpp-to-rtl-hls-evaluation:the-table-1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10878	The table
+tm:dec:cpp-to-rtl-hls-evaluation:two-caveats-both-cutting-in-the-hls-arms-favour	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10923	Two caveats, both cutting in the HLS arm\textquotesingle s favour
+tm:dec:cpp-to-rtl-hls-evaluation:verdict	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11282	Verdict
+tm:dec:cpp-to-rtl-hls-evaluation:verification	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11018	Verification
+tm:dec:cpp-to-rtl-hls-evaluation:what-must-not-be-read-into-this-table	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10812	What must not be read into this table
+tm:dec:cpp-to-rtl-hls-evaluation:what-this-does-to-the-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10581	What this does to the recommendation
+tm:dec:cpp-to-rtl-hls-evaluation:what-was-pinned	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10410	What was pinned
+tm:dec:cpp-to-rtl-hls-evaluation:worst-arc-decomposition-comb-mandatory-per-the	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11535	\texorpdfstring{Worst-arc decomposition (\code{comb}, mandatory per the}{Worst-arc decomposition (, mandatory per the}
+tm:dec:cpp-to-rtl-hls-evaluation:worst-arc-decomposition-mandatory-before-quoting-any-fmax-ratio-per-the	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	11232	Worst-arc decomposition (mandatory before quoting any fmax ratio, per the
+tm:dec:fpga-board-selection	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7897	\texorpdfstring{FPGA board selection (bead \code{hlrm}, GH \#245)}{FPGA board selection (bead , GH \#245)}
+tm:dec:fpga-board-selection:1-how-much-fpga-the-design-needs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7907	How much FPGA the design needs
+tm:dec:fpga-board-selection:2-candidates-with-singapore-price-and-stock	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7976	Candidates, with Singapore price and stock
+tm:dec:fpga-board-selection:3-recommendation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8032	Recommendation
+tm:dec:fpga-board-selection:4-second-clock-source-add-on	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8062	Second clock source (add-on)
+tm:dec:fpga-board-selection:5-clock-speed-sanity-check-tool-availability-checked-2026-10-14	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8129	Clock-speed sanity check: tool availability (checked 2026-10-14)
+tm:dec:fpga-board-selection:measured-artix-7-xc7a200t-vivado-20261	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8404	Measured: Artix-7 XC7A200T (Vivado 2026.1)
+tm:dec:fpga-board-selection:measured-ecp5-lower-bound-2026-10-14-cpu-only-build-post-place-and-route	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8187	Measured: ECP5 lower bound (2026-10-14, CPU-only build, post place-and-route)
+tm:dec:fpga-board-selection:measured-kintex-7-xc7k325t-2-vivado-20261-the-genesys-2-part-bead-hlrm1	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	8872	\texorpdfstring{Measured: Kintex-7 XC7K325T-2 (Vivado 2026.1), the Genesys 2 part (bead \code{hlrm.1})}{Measured: Kintex-7 XC7K325T-2 (Vivado 2026.1), the Genesys 2 part (bead )}
+tm:dec:fpga-board-selection:sources	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9180	Sources
+tm:dec:fpga-stage0-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9240	\texorpdfstring{FPGA Stage 0 evaluation (bead \code{hlrm}, GH \#245, PR \#279)}{FPGA Stage 0 evaluation (bead , GH \#245, PR \#279)}
+tm:dec:fpga-stage0-evaluation:1-method	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9248	Method
+tm:dec:fpga-stage0-evaluation:10-what-was-not-verified	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10034	What was NOT verified
+tm:dec:fpga-stage0-evaluation:2-results	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9340	Results
+tm:dec:fpga-stage0-evaluation:21-resource-table-measured-yosys-062-stat-json-flatten-no-pr	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9344	\texorpdfstring{Resource table (measured: yosys 0.62 \code{stat} / JSON, \code{-flatten}, no P\&R)}{Resource table (measured: yosys 0.62 / JSON, , no P\&R)}
+tm:dec:fpga-stage0-evaluation:22-which-memories-inferred-block-ram-measured-mapping-memory-lines-in-the-logs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9403	\texorpdfstring{Which memories inferred block RAM (measured: \texttt{mapping\ memory\ .\allowbreak{}.\allowbreak{}.\allowbreak{}} lines in the logs)}{Which memories inferred block RAM (measured: lines in the logs)}
+tm:dec:fpga-stage0-evaluation:23-blackboxes-undefined-modules	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9461	Blackboxes / undefined modules
+tm:dec:fpga-stage0-evaluation:24-latches-measured-latch-inferred-lines	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9472	\texorpdfstring{Latches (measured: \texttt{Latch\ inferred} lines)}{Latches (measured: lines)}
+tm:dec:fpga-stage0-evaluation:25-fmax-not-measured-ecp5-lower-bound-measured-later	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9486	fmax: NOT MEASURED (ECP5 lower bound measured later)
+tm:dec:fpga-stage0-evaluation:3-the-fpga-arms-what-was-written-by-whom-what-each-infers	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9543	The FPGA arms (what was written, by whom, what each infers)
+tm:dec:fpga-stage0-evaluation:4-non-fpga-identity-proof	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9611	Non-FPGA identity proof
+tm:dec:fpga-stage0-evaluation:5-regression-with-the-fpga-define	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9674	Regression with the FPGA define
+tm:dec:fpga-stage0-evaluation:6-clock-gating-no-arm-written-decision-needed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9770	Clock gating: no arm written (decision needed)
+tm:dec:fpga-stage0-evaluation:7-what-does-not-map-to-an-fpga-or-maps-only-conditionally	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9825	What does not map to an FPGA (or maps only conditionally)
+tm:dec:fpga-stage0-evaluation:8-device-class-sizing-inference-from-vendor-datasheet-figures-as-i-remember-them-verify-before-buying	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9883	Device-class sizing (INFERENCE from vendor datasheet figures as I remember them; verify before buying)
+tm:dec:fpga-stage0-evaluation:9-board-options-and-go-no-go-options-for-the-user-not-a-decision	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9945	Board options and go / no-go (options for the user, not a decision)
+tm:dec:fpga-stage0-evaluation:open-human-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	10000	Open human decisions
+tm:dec:fpga-stage0-evaluation:tool-versions-and-where-they-came-from	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	9294	Tool versions and where they came from
 tm:dec:m10-l2	docs/manual/tm/parts/05-decisions.tex	224	Phase 5 M10 --- L2 Cache Decision Analysis
 tm:dec:m10-l2:1-what-was-measured	docs/manual/tm/parts/05-decisions.tex	240	What was measured
 tm:dec:m10-l2:10-final-decision-2026-06-21-no-go-on-l2-and-2-way-keep-direct-mapped	docs/manual/tm/parts/05-decisions.tex	757	Final Decision (2026-06-21) --- NO-GO on L2 and 2-way; keep direct-mapped
@@ -2490,24 +2495,24 @@ tm:dec:peripheral-bus:alternative-considered-keep-all-axi4-lite	docs/manual/tm/p
 tm:dec:peripheral-bus:the-4-simple-peripherals-are-apb-equivalent	docs/manual/tm/parts/05-decisions.tex	910	The 4 simple peripherals are APB-equivalent
 tm:dec:peripheral-bus:the-ring-carries-two-different-classes-of-slave	docs/manual/tm/parts/05-decisions.tex	877	The ring carries two different classes of slave
 tm:dec:peripheral-bus:which-axi4-lite-features-are-genuinely-used	docs/manual/tm/parts/05-decisions.tex	921	Which AXI4-Lite features are genuinely used
-tm:dec:tessent-mbist-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7102	Siemens Tessent MemoryBIST vs the in-house MBIST (parallel evaluation)
-tm:dec:tessent-mbist-evaluation:1-what-was-built	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7120	What was built
-tm:dec:tessent-mbist-evaluation:10-reproducing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7868	Reproducing
-tm:dec:tessent-mbist-evaluation:2-memory-library-what-is-in-the-tcd-and-what-was-assumed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7193	Memory library: what is in the TCD and what was assumed
-tm:dec:tessent-mbist-evaluation:3-comparison-tessent-vs-in-house	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7265	Comparison, Tessent vs in-house
-tm:dec:tessent-mbist-evaluation:4-rules-violations-and-warnings-triaged	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7389	Rules, violations and warnings triaged
-tm:dec:tessent-mbist-evaluation:5-simulation-and-fault-injection-results-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7470	Simulation and fault-injection results {[}M{]}
-tm:dec:tessent-mbist-evaluation:51-fault-free-simulation-on-vcs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7472	Fault-free simulation on VCS
-tm:dec:tessent-mbist-evaluation:52-fault-injection	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7513	Fault injection
-tm:dec:tessent-mbist-evaluation:53-retention	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7636	Retention
-tm:dec:tessent-mbist-evaluation:6-area	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7671	Area
-tm:dec:tessent-mbist-evaluation:61-method-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7673	Method {[}M{]}
-tm:dec:tessent-mbist-evaluation:62-results-um2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7688	Results (um2)
-tm:dec:tessent-mbist-evaluation:7-integration-findings	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7763	Integration findings
-tm:dec:tessent-mbist-evaluation:71-soc-top-as-the-tessent-target	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7766	\texorpdfstring{\code{soc_top} as the Tessent target}{as the Tessent target}
-tm:dec:tessent-mbist-evaluation:72-access-to-the-existing-tap	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7789	Access to the existing TAP
-tm:dec:tessent-mbist-evaluation:8-not-done-and-limits	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7801	Not done, and limits
-tm:dec:tessent-mbist-evaluation:9-recommendation-the-decision-is-the-users	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7830	Recommendation (the decision is the user\textquotesingle s)
+tm:dec:tessent-mbist-evaluation	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7106	Siemens Tessent MemoryBIST vs the in-house MBIST (parallel evaluation)
+tm:dec:tessent-mbist-evaluation:1-what-was-built	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7124	What was built
+tm:dec:tessent-mbist-evaluation:10-reproducing	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7872	Reproducing
+tm:dec:tessent-mbist-evaluation:2-memory-library-what-is-in-the-tcd-and-what-was-assumed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7197	Memory library: what is in the TCD and what was assumed
+tm:dec:tessent-mbist-evaluation:3-comparison-tessent-vs-in-house	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7269	Comparison, Tessent vs in-house
+tm:dec:tessent-mbist-evaluation:4-rules-violations-and-warnings-triaged	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7393	Rules, violations and warnings triaged
+tm:dec:tessent-mbist-evaluation:5-simulation-and-fault-injection-results-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7474	Simulation and fault-injection results {[}M{]}
+tm:dec:tessent-mbist-evaluation:51-fault-free-simulation-on-vcs	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7476	Fault-free simulation on VCS
+tm:dec:tessent-mbist-evaluation:52-fault-injection	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7517	Fault injection
+tm:dec:tessent-mbist-evaluation:53-retention	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7640	Retention
+tm:dec:tessent-mbist-evaluation:6-area	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7675	Area
+tm:dec:tessent-mbist-evaluation:61-method-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7677	Method {[}M{]}
+tm:dec:tessent-mbist-evaluation:62-results-um2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7692	Results (um2)
+tm:dec:tessent-mbist-evaluation:7-integration-findings	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7767	Integration findings
+tm:dec:tessent-mbist-evaluation:71-soc-top-as-the-tessent-target	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7770	\texorpdfstring{\code{soc_top} as the Tessent target}{as the Tessent target}
+tm:dec:tessent-mbist-evaluation:72-access-to-the-existing-tap	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7793	Access to the existing TAP
+tm:dec:tessent-mbist-evaluation:8-not-done-and-limits	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7805	Not done, and limits
+tm:dec:tessent-mbist-evaluation:9-recommendation-the-decision-is-the-users	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7834	Recommendation (the decision is the user\textquotesingle s)
 tm:dec:xezim	docs/manual/tm/parts/05-decisions.tex	1051	\texorpdfstring{Xezim evaluation: secondary compile + simulation tool (bead \code{qd9l})}{Xezim evaluation: secondary compile + simulation tool (bead )}
 tm:dec:xezim:1-method	docs/manual/tm/parts/05-decisions.tex	1069	Method
 tm:dec:xezim:10-what-was-not-verified	docs/manual/tm/parts/05-decisions.tex	1599	What was NOT verified
@@ -2644,23 +2649,23 @@ tm:flow:synth-undef-gate:report	docs/manual/tm/parts/03-verification-infrastruct
 tm:flow:synth-undef-gate:sv2v-function-temporaries-on-the-soc-bead-j1b7	docs/manual/tm/parts/03-verification-infrastructure.tex	13612	\texorpdfstring{sv2v function temporaries on the SoC (bead \code{j1b7})}{sv2v function temporaries on the SoC (bead )}
 tm:flow:synth-undef-gate:the-rule-func-temp-dead-init	docs/manual/tm/parts/03-verification-infrastructure.tex	13646	\texorpdfstring{The rule \code{func-temp-dead-init}}{The rule }
 tm:flow:synth-undef-gate:what-the-gate-does-not-cover	docs/manual/tm/parts/03-verification-infrastructure.tex	13870	What the gate does not cover
-tm:flow:tessent-atpg	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6534	Tessent scan insertion + ATPG evaluation flow (Sky130 SoC fabric)
-tm:flow:tessent-atpg:1-how-to-run	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6549	How to run
-tm:flow:tessent-atpg:2-flow-and-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6578	Flow and decisions
-tm:flow:tessent-atpg:3-cell-library-liberty-import-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6652	Cell library (Liberty import) {[}M{]}
-tm:flow:tessent-atpg:4-results-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6702	Results {[}M{]}
-tm:flow:tessent-atpg:41-scan-insertion-and-drc	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6704	Scan insertion and DRC
-tm:flow:tessent-atpg:42-coverage-and-patterns	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6768	Coverage and patterns
-tm:flow:tessent-atpg:43-where-the-stuck-at-coverage-goes-583-not-detected	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6822	Where the stuck-at coverage goes (5.83 \% not detected)
-tm:flow:tessent-atpg:5-pattern-verification-vcs-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6881	Pattern verification (VCS) {[}M{]}
-tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6924	\texorpdfstring{Runtime and memory {[}M \code{reports/runtime.txt}{]}}{Runtime and memory {[}M {]}}
-tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6931	Testability findings (proposals; no RTL changed)
-tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6991	Notes on tooling (for the next person)
-tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7039	Gap list toward real Stage 2
+tm:flow:tessent-atpg	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6538	Tessent scan insertion + ATPG evaluation flow (Sky130 SoC fabric)
+tm:flow:tessent-atpg:1-how-to-run	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6553	How to run
+tm:flow:tessent-atpg:2-flow-and-decisions	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6582	Flow and decisions
+tm:flow:tessent-atpg:3-cell-library-liberty-import-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6656	Cell library (Liberty import) {[}M{]}
+tm:flow:tessent-atpg:4-results-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6706	Results {[}M{]}
+tm:flow:tessent-atpg:41-scan-insertion-and-drc	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6708	Scan insertion and DRC
+tm:flow:tessent-atpg:42-coverage-and-patterns	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6772	Coverage and patterns
+tm:flow:tessent-atpg:43-where-the-stuck-at-coverage-goes-583-not-detected	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6826	Where the stuck-at coverage goes (5.83 \% not detected)
+tm:flow:tessent-atpg:5-pattern-verification-vcs-m	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6885	Pattern verification (VCS) {[}M{]}
+tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6928	\texorpdfstring{Runtime and memory {[}M \code{reports/runtime.txt}{]}}{Runtime and memory {[}M {]}}
+tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6935	Testability findings (proposals; no RTL changed)
+tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6995	Notes on tooling (for the next person)
+tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7043	Gap list toward real Stage 2
 tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1564	\texttt{periph/aes128\_core.sv}
 tm:mod:apb-cdc-bridge	docs/manual/tm/parts/chapters/cdc.tex	397	\texttt{apb\_cdc\_bridge}
 tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	448	\texttt{soc/apb\_interconnect.sv}
-tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	564	\texttt{async\_axi\_fifo}
+tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	576	\texttt{async\_axi\_fifo}
 tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	474	\texttt{soc/axi4\_crossbar.sv}
 tm:mod:cdc-gray-fifo	docs/manual/tm/parts/chapters/cdc.tex	268	\texttt{cdc\_gray\_fifo}
 tm:mod:cdc-reset-sync	docs/manual/tm/parts/chapters/cdc.tex	175	\texttt{cdc\_reset\_sync}
@@ -3101,11 +3106,11 @@ tm:suite:trng-lfsr-model	docs/manual/tm/parts/03-verification-infrastructure.tex
 um:ch:about	docs/manual/um/parts/00-about.tex	5	About this book
 um:ch:build-and-run-commands	docs/manual/um/parts/01-chapters.tex	98	Build and run commands
 um:ch:cdc-integration	docs/manual/um/parts/02-integration.tex	3	Clock-domain crossing integration
-um:ch:cdc-integration:checklist	docs/manual/um/parts/02-integration.tex	179	Checklist
+um:ch:cdc-integration:checklist	docs/manual/um/parts/02-integration.tex	178	Checklist
 um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	7	Choose the block
-um:ch:cdc-integration:constrain	docs/manual/um/parts/02-integration.tex	137	Constrain the crossings
+um:ch:cdc-integration:constrain	docs/manual/um/parts/02-integration.tex	136	Constrain the crossings
 um:ch:cdc-integration:instantiate	docs/manual/um/parts/02-integration.tex	30	Instantiate a block
-um:ch:cdc-integration:verify	docs/manual/um/parts/02-integration.tex	150	Verify the crossings
+um:ch:cdc-integration:verify	docs/manual/um/parts/02-integration.tex	149	Verify the crossings
 um:ch:coding-guidelines	docs/manual/um/parts/01-chapters.tex	475	Coding guidelines
 um:ch:continuous-integration	docs/manual/um/parts/01-chapters.tex	2693	Continuous integration
 um:ch:debug-interface	docs/manual/um/parts/01-chapters.tex	428	Debug interface
@@ -3113,15 +3118,15 @@ um:ch:documentation-system	docs/manual/um/parts/01-chapters.tex	6459	Documentati
 um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
 um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6455	Issue tracking
 um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2239	Local quality checks
-um:ch:power-integration	docs/manual/um/parts/02-integration.tex	197	Power management integration
-um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	348	Checklist
-um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	229	Clocks and resets
-um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	215	Power the CPU down
-um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	241	Integrate a clock gate
-um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	204	Power the GPU down and up
-um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	201	Register map
-um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	257	Keep the power intent in step
-um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	328	Verify
+um:ch:power-integration	docs/manual/um/parts/02-integration.tex	196	Power management integration
+um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	347	Checklist
+um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	228	Clocks and resets
+um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	214	Power the CPU down
+um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	240	Integrate a clock gate
+um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	203	Power the GPU down and up
+um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	200	Register map
+um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	256	Keep the power intent in step
+um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	327	Verify
 um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6782	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	39	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	361	Supported instructions
