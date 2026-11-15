@@ -34,7 +34,8 @@ module apb_cdc_bridge #(
     parameter int unsigned SYNC_STAGES_TO_S = 2,    // stages synchronising INTO the s_* domain (ack, s reset, m_rst_n_i status)
     parameter int unsigned SYNC_STAGES_TO_M = 2     // stages synchronising INTO the m_* domain (req, m reset)
 ) (
-    // DFT scan bypass. scanmode_i and scan_rst_ni go to both internal cdc_reset_sync instances. Connect them at every instance.
+    // DFT scan bypass. scanmode_i and scan_rst_ni go to the four internal cdc_reset_sync instances (u_s_rst_sync,
+    // u_m_rst_sync, u_comp_rst_sync, u_m_alive_sync). Connect them at every instance.
     input  logic               scanmode_i,
     input  logic               scan_rst_ni,
 
