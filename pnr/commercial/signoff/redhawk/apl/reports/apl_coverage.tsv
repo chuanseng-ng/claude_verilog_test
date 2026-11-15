@@ -1,0 +1,5 @@
+arm	leaf_cells	in_set_cells	instance_share_pct	total_mW	in_set_mW	power_share_pct
+icc2b9	40334	21317	52.9	40.344	22.986	57.0
+icc2b12	40334	21317	52.9	40.344	22.986	57.0
+innovusb11	45184	20124	44.5	45.569	20.195	44.3
+openroad	42578	17940	42.1	64.030	21.512	33.6

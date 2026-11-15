@@ -1,0 +1,4 @@
+cell	hspice_ac_1MHz_fF	apl_esc_VPWR_fF	apl_esc_VGND_fF	spice_W_L_estimate_fF	note
+sky130_fd_sc_hd__decap_4	11.77	27.78	26.23	12.55	HSPICE X-2025.06 .ac 1 MHz, TT, 25 C, VPWR=1.8 V DC + 1 V AC, VGND=VNB=0, VPB tied to VPWR (this session, models converted by mk_hspice_models.py)
+sky130_fd_sc_hd__decap_8	31.73	73.30	69.97	34.55	same
+sky130_fd_sc_hd__decap_12	51.70	55.09	67.70	56.55	same; the ef_sc_hd decap_12 has the same two devices and gave the same HSPICE value

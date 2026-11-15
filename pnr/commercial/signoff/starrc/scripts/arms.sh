@@ -16,6 +16,7 @@ arm_def() {
     innovusb8draft) echo pnr/commercial/impl/innovus/runs/b8_innovus/out_draft/rv32i_cpu_top.def ;;   # b8 draft finish
     icc2b8) echo pnr/commercial/impl/icc2/runs/b8_icc2/out/rv32i_cpu_top.def ;;
     icc2b9) echo pnr/commercial/impl/icc2/runs/b9_icc2/out/rv32i_cpu_top.def ;;   # b9 = b8 + ECO round 3
+    icc2b12) echo pnr/commercial/impl/icc2/runs/b12_icc2/out/rv32i_cpu_top.def ;;   # b12 = b9 layout + decap-first fill (step 8)
     innovusb8) echo pnr/commercial/impl/innovus/runs/b8_innovus/out/rv32i_cpu_top.def ;;
     innovusb9) echo pnr/commercial/impl/innovus/runs/b9_innovus/out/rv32i_cpu_top.def ;;   # b6: DC v2 MCMM netlist, ICC2 MCMM flow
     innovusb10) echo pnr/commercial/impl/innovus/runs/b10_innovus/out/rv32i_cpu_top.def ;;   # b10 = b9 + max-transition root-cause ECO

@@ -212,6 +212,18 @@ lec-icc2-b9-negctl:
 	$(MAKE) lec-icc2-negctl $(B9)
 lec-icc2-b9: lec-icc2-b9-real lec-icc2-b9-negctl
 
+# ---------------- B12 (= b9 layout + decap-first fill, step 8 decap ECO): same recipe as b9; outputs tagged b12_* ----------------
+#   make lec-icc2-b12
+B12 := MUTSCRIPT=mk_mutant_b6.py DCTAG=b3c_dc_mcmm ICC2RUN=b12_icc2 PFX=b12 MUTP=$(HERE)/runs/mutant_b12_icc2 STRIPNL=$(HERE)/runs/b12_icc2_nodiode.nl.v STRIPFLAGS=--allow-internal-nets
+.PHONY: lec-icc2-b12 lec-icc2-b12-real lec-icc2-b12-negctl
+lec-icc2-b12-real:
+	-$(MAKE) lec-icc2-dc $(B12) TAG=b12_icc2_vs_dc
+	-$(MAKE) lec-icc2-rtl $(B12) TAG=b12_icc2_vs_rtl_svf
+	-$(MAKE) lec-icc2-nodiode $(B12)
+lec-icc2-b12-negctl:
+	$(MAKE) lec-icc2-negctl $(B12)
+lec-icc2-b12: lec-icc2-b12-real lec-icc2-b12-negctl
+
 # RUNFM2 with the OpenROAD-specific script (scripts/fm_lec_openroad.tcl); fm_lec_icc2.tcl stays the ICC2 script
 define RUNFMOR
 	@$(PE); $(SAFE); mkdir -p $(RUN); cd $(RUN); \

@@ -1,0 +1,255 @@
+{
+ "arm": "innovusb11",
+ "run": "rh-apl-dynamic-nodecap",
+ "populations": {
+  "logic": {
+   "n": 44410,
+   "worst_avgTW_mV": 369.29999999999995,
+   "worst_avgTW_at": [
+    1996.4,
+    137.36,
+    "u_core/CTS_ccl_a_buf_00161"
+   ],
+   "mean_avgTW_mV": 43.301051564962364,
+   "worst_minTW_mV": 387.2,
+   "worst_minWC_mV": 387.29999999999995,
+   "worst_minWC_at": [
+    1988.58,
+    85.68,
+    "u_core/CTS_ccl_a_buf_00091"
+   ],
+   "mean_minWC_mV": 160.0103152443134,
+   "frac_inst_avgTW_gt_5pct": 0.0785633866246341,
+   "frac_inst_avgTW_gt_10pct": 0.0160099076784508
+  },
+  "sram": {
+   "n": 10,
+   "worst_avgTW_mV": 296.5,
+   "worst_avgTW_at": [
+    1599.45,
+    218.75,
+    "u_core/u_icache_gen_data_sram[1].u_data_sram"
+   ],
+   "mean_avgTW_mV": 235.26000000000002,
+   "worst_minTW_mV": 399.0,
+   "worst_minWC_mV": 399.0,
+   "worst_minWC_at": [
+    2279.23,
+    218.75,
+    "u_core/u_icache_gen_data_sram[2].u_data_sram"
+   ],
+   "mean_minWC_mV": 298.99,
+   "frac_inst_avgTW_gt_5pct": 1.0,
+   "frac_inst_avgTW_gt_10pct": 0.8
+  },
+  "fill_tap": null,
+  "logic+sram": {
+   "n": 44420,
+   "worst_avgTW_mV": 369.29999999999995,
+   "worst_avgTW_at": [
+    1996.4,
+    137.36,
+    "u_core/CTS_ccl_a_buf_00161"
+   ],
+   "mean_avgTW_mV": 43.344266096352506,
+   "worst_minTW_mV": 399.0,
+   "worst_minWC_mV": 399.0,
+   "worst_minWC_at": [
+    2279.23,
+    218.75,
+    "u_core/u_icache_gen_data_sram[2].u_data_sram"
+   ],
+   "mean_minWC_mV": 160.04160288158394,
+   "frac_inst_avgTW_gt_5pct": 0.07877082395317425,
+   "frac_inst_avgTW_gt_10pct": 0.016186402521386763
+  }
+ },
+ "hotspot_tiles_200um": [
+  {
+   "x_um": [
+    600.0,
+    800.0
+   ],
+   "y_um": [
+    200.0,
+    400.0
+   ],
+   "mean_avgTW_mV": 159.96764705882362,
+   "n_inst": 136
+  },
+  {
+   "x_um": [
+    2800.0,
+    3000.0
+   ],
+   "y_um": [
+    400.0,
+    600.0
+   ],
+   "mean_avgTW_mV": 147.48045112781958,
+   "n_inst": 133
+  },
+  {
+   "x_um": [
+    3000.0,
+    3200.0
+   ],
+   "y_um": [
+    400.0,
+    600.0
+   ],
+   "mean_avgTW_mV": 128.1777777777778,
+   "n_inst": 54
+  },
+  {
+   "x_um": [
+    3200.0,
+    3400.0
+   ],
+   "y_um": [
+    400.0,
+    600.0
+   ],
+   "mean_avgTW_mV": 127.17346938775518,
+   "n_inst": 49
+  },
+  {
+   "x_um": [
+    2200.0,
+    2400.0
+   ],
+   "y_um": [
+    400.0,
+    600.0
+   ],
+   "mean_avgTW_mV": 102.94834123222755,
+   "n_inst": 211
+  }
+ ],
+ "top5_inst_avgTW": [
+  {
+   "inst": "u_core/CTS_ccl_a_buf_00161",
+   "x": 1996.4,
+   "y": 137.36,
+   "drop_mV": 369.29999999999995
+  },
+  {
+   "inst": "u_core/u_dcache_gen_data_sram[2].u_data_collar_g_cmp.fail0_n_q_reg",
+   "x": 1956.84,
+   "y": 82.96,
+   "drop_mV": 365.9000000000001
+  },
+  {
+   "inst": "u_core/u_icache_gen_data_sram[3].u_data_collar_g_cmp.fail0_n_q_reg",
+   "x": 1952.24,
+   "y": 66.64,
+   "drop_mV": 365.9000000000001
+  },
+  {
+   "inst": "u_core/u_dcache_gen_data_sram[3].u_data_collar_g_cmp.fail0_n_q_reg",
+   "x": 1951.32,
+   "y": 55.76,
+   "drop_mV": 364.8
+  },
+  {
+   "inst": "u_core/FE_PDC798_FE_OFN382_TIE_LTIE_LONET",
+   "x": 1845.98,
+   "y": 42.16,
+   "drop_mV": 364.8
+  }
+ ],
+ "sram_macros": [
+  {
+   "name": "u_core/u_icache_gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 296.5,
+   "minWC_mV": 369.8000000000001
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[2].u_data_sram",
+   "avgTW_mV": 292.8999999999999,
+   "minWC_mV": 399.0
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[3].u_data_sram",
+   "avgTW_mV": 281.3000000000001,
+   "minWC_mV": 360.9
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[0].u_data_sram",
+   "avgTW_mV": 257.0000000000001,
+   "minWC_mV": 304.3
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[2].u_data_sram",
+   "avgTW_mV": 249.2000000000001,
+   "minWC_mV": 304.9
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 241.70000000000002,
+   "minWC_mV": 286.00000000000006
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[3].u_data_sram",
+   "avgTW_mV": 230.09999999999997,
+   "minWC_mV": 294.00000000000006
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[0].u_data_sram",
+   "avgTW_mV": 217.20000000000005,
+   "minWC_mV": 280.1
+  },
+  {
+   "name": "u_core/u_dcache_u_tag_sram",
+   "avgTW_mV": 144.2000000000001,
+   "minWC_mV": 208.40000000000015
+  },
+  {
+   "name": "u_core/u_icache_u_tag_sram",
+   "avgTW_mV": 142.50000000000006,
+   "minWC_mV": 182.5000000000001
+  }
+ ],
+ "log_worst_block": [
+  "---------------------------------------------------",
+  "WIRE  200.20mV  VPWR  1.800  (2044.970,146.030) met4",
+  "WIRE  203.50mV  VGND  0.000  (2041.570,218.750) met4",
+  "avgTW 369.28mV  VPWR  1.800  (1996.400,137.360) u_core/CTS_ccl_a_buf_00161",
+  "maxTW 317.41mV  VPWR  1.800  (1956.840,82.960) u_core/u_dcache_gen_data_sram[2].u_data_collar_g_cmp.fail0_n_q_reg",
+  "minTW 399.01mV  VPWR  1.800  (2279.230,218.750) u_core/u_icache_gen_data_sram[2].u_data_sram",
+  "minWC 399.01mV  VPWR  1.800  (2279.230,218.750) u_core/u_icache_gen_data_sram[2].u_data_sram"
+ ],
+ "rh_total_power_mW": 74.484,
+ "presim_ps": 3500,
+ "decap_instances_in_dynamic": 357448,
+ "em_by_mode": {
+  "AVG": {
+   "file_mode": "AVG",
+   "entries_ge_50pct": 0,
+   "max_ratio_pct": 0.0,
+   "violations_ge_100pct": 0,
+   "violations_by_layer": {},
+   "worst_wire_ratio_line": "WIRE 7.10% VPWR 1.34mA (3220.920,432.480) met1"
+  },
+  "RMS": {
+   "file_mode": "RMS",
+   "entries_ge_50pct": 0,
+   "max_ratio_pct": 0.0,
+   "violations_ge_100pct": 0,
+   "violations_by_layer": {},
+   "worst_wire_ratio_line": "WIRE 31.90% VPWR 5.03mA (574.150,918.722) met4"
+  },
+  "PEAK": {
+   "file_mode": "PEAK",
+   "entries_ge_50pct": 4422,
+   "max_ratio_pct": 288.404,
+   "violations_ge_100pct": 587,
+   "violations_by_layer": {
+    "met4": 465,
+    "met5": 14,
+    "met1": 108
+   },
+   "worst_wire_ratio_line": "WIRE 288.40% VPWR 5.03mA (574.150,918.722) met4"
+  }
+ }
+}

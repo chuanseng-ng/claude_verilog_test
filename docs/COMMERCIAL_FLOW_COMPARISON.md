@@ -56,8 +56,8 @@ PDN pitch, max layer met4 and the CTS cell set. All three P&R flows are judged b
 | **signoff** Netgen LVS (GDS) | 0 errors (LibreLane) | match uniquely | nets/devices equal; top pin match fails (3 `assign` pairs) |
 | **signoff** LEC (post-route vs RTL, 4 neg. controls) | **EQUIVALENT** by chain: RTL==sv2v (Formality 6,302 / 0), sv2v==final (Yosys `equiv_induct` 6,156 / 0); Formality 6/6 and Yosys 4/4 controls caught; Formality/Conformal fail on the Yosys leg (unresolved), `reports/lec_openroad.md` | Formality 4/4, 4/4 caught | Conformal 4/4, 4/4 caught |
 | **signoff** Magic DRC outside SRAM (all `nwell.4`, LEF-abstract artefact, waiver PROPOSED, caveat 6) | 3,626 | **3,035** (+592 straddle) | 4,226 (+737 straddle) |
-| **signoff** RedHawk static worst VDD+VSS (mV) | 24.7 | 23.9 | **18.0** |
-| **signoff** RedHawk dynamic worst avgTW (mV) | **79.1** | 192.6 | 163.2 |
+| **signoff** RedHawk static worst VDD+VSS (mV) (step 8: ICC2 b9, Innovus b11) | 25.5 | 22.5 | **18.3** |
+| **signoff** RedHawk dynamic worst avgTW (mV) (step 8; ICC2 decap-filled b12: 111.7, section 4.10) | **93.7** | 239.8 | 112.8 |
 | **derived** P&R wall (s) / peak RSS (GB) | 3,249 / not recorded | 4,206 / 4.07 | 3,365 / 7.11 |
 
 What the numbers say:
@@ -87,10 +87,13 @@ What the numbers say:
    LibreLane's LVS. Deck antenna is 1 (ICC2), 2 (Innovus) and 116 (OpenROAD, whose LibreLane
    repair left those). The open sign-off deck is clean, but the Magic `nwell.4` items outside the
    SRAMs are a root-caused LEF-abstract artefact with a PROPOSED waiver, not waived (caveat 6).
-5. **IR is grid-healthy everywhere but decap-sensitive.** Static drop is 18 to 25 mV
-   (VDD+VSS, 1.0 to 1.4 %) on every arm. Dynamic worst-case drop ranks OpenROAD < Innovus < ICC2.
-   That ranking follows the estimated decap (ICC2 has 4,210 decap cells against roughly 300k on the
-   others). It is not a statement about the grid.
+5. **IR is grid-healthy everywhere; dynamic drop is decap- and package-sensitive (step 8 re-run, 2026-11-15, indicative).**
+   Static drop is 18.3 to 25.5 mV (VDD+VSS, 1.0 to 1.4 %) on the final arms. Dynamic worst instance drop (avgTW, APL for the
+   decap cells and the 12 most-used std cells, ASSUMED package model, section 4.10): OpenROAD B2 93.7 mV (5.2 %), Innovus b11
+   112.8 mV (6.3 %), ICC2 b9 239.8 mV (13.3 %). ICC2 b9 has 4,210 decap cells against 307,531 (OpenROAD) and 357,103 (Innovus). An
+   ICC2 layout with the same cells and routing and 294,659 decap cells (b12, decap-first fill) gives 111.7 mV (6.2 %), so the ICC2
+   gap is the missing decap, not the grid. None of the arms is below 5 % on the assumed package; the number is a stress under an
+   assumed supply impedance, not a verdict (caveat 5).
 
 6. **Update 2026-11-13 (b7, b8, b9; section 4.9).** The table above is still b6. Three further generations were built and judged: b7 (ECO pass: ICC2 ff hold, deck antenna, dcache dout0 buffers), b8 (I-cache SRAMs
    flipped so every dout0 pin faces the channel, plus the b7 ECO set) and b9 (ICC2: two input-port diodes moved, one antenna diode moved, 24 CTS clock sinks re-hooked, 3 hold buffers; Innovus: one post-route `optDesign` re-time of the APB read path).
@@ -131,9 +134,14 @@ What the numbers say:
    setup or hold item on the fixed-latency iolat rows and on the Innovus own row carries that
    modelling error. The shared SDC has no I/O latency at all, which is why all arms show I/O hold
    failures under it.
-5. **IR is indicative.** The RedHawk tech is authored and uncorrelated. Cell currents are RedHawk
-   defaults (no APL). Decap capacitance is estimated from spice W/L. The supply is an ideal edge
-   feed (met5 stripe ends, no package). Power is PrimePower vectorless at 0.1 / 0.5.
+5. **IR is indicative.** The RedHawk tech is authored and uncorrelated. Step 8 (2026-11-15) replaced the RedHawk
+   defaults with Ansys APL data for the decap cells and the 12 most-used std cells (instance share 42 to 53 % of the non-SRAM
+   leaf cells, power share 34 to 57 %; the other cells keep the Liberty-derived defaults and the 10 SRAM macros stay constant
+   sinks at their PrimePower power). The APL decap capacitance is 1.07 to 2.4 times an independent HSPICE small-signal check and
+   its ESR is a 1 ohm floor (the sky130 BSIM4 cards carry no channel or gate resistance), so decap is not validated. The supply
+   is an ideal met5 stripe-end feed plus an ASSUMED generic package model (RedHawk manual simple-package example values, not a
+   real package). Power is PrimePower vectorless at 0.1 / 0.5. Details and the sensitivity runs: section 4.10 and
+   `signoff/redhawk/apl/reports/apl_characterization.md`.
 6. **Sign-off Magic DRC loads the std cells from the layout GDS (user decision 2026-11-08); the LEF-abstract mode is history.**
    The earlier sign-off mode read the std cells as PDK LEF abstracts, which carry the n-well but no tap contact (`nsc`), so
    every n-well strip outside the SRAMs was reported as `nwell.4` (OpenROAD 3,626; ICC2 b6 3,035 + 592 straddling; Innovus b6
@@ -202,7 +210,7 @@ What the numbers say:
 ## 4. Final arms: judge results per corner
 
 > **Generation note (2026-11-13).** Sections 4.1 to 4.7 print the **final** arms: OpenROAD B2, **ICC2 b9** and **Innovus b11**, regenerated once from `comparison.json` by `compare/make_final_tables.py` (the marked `FINAL-TABLE` blocks; `update_doc_tables.py` refreshes them).
-> The earlier b6 tables are in git history and, per corner, in `comparison.json` (`judge.icc2_b6`, `judge.innovus_b6`). The explanatory prose of 4.2d and 4.2e quotes the b6 generation (measured then) and says so; RedHawk rows of the commercial arms were not re-run for the final generation (marked `*`, item 18).
+> The earlier b6 tables are in git history and, per corner, in `comparison.json` (`judge.icc2_b6`, `judge.innovus_b6`). The explanatory prose of 4.2d and 4.2e quotes the b6 generation (measured then) and says so; RedHawk rows were re-run for the final generation in step 8 (section 4.10).
 
 Each cell is `setup WNS / TNS / violators ; hold WNS / TNS / violators` (ns). Violators are
 violating endpoints. Source: `judge.<arm>.<variant>.corners.<corner>` in the JSON, which points to
@@ -481,7 +489,7 @@ Summary over the 9 corners (violators, I/O / reg-to-reg): see the last two rows 
 - At the three tt corners the budgets add 0.8 to 1.5 ns of setup WNS on OpenROAD B2 (nom_tt +2.002 -> +3.398) and Innovus b11 (+3.389 -> +4.418); no tt or ff corner had a violator before.
 
 **Limits.** (1) Lower bound: no SoC wire (no SoC SPEF on this host), so the budgets are optimistic and every improvement above is an upper bound on what a routed SoC would show. (2) K = 2.0 is an assumption. (3) At ss the lower-bound arrival already
-exceeds the 2.0 ns AXI delay (capped, see above). (4) Only the final arms were run; no RedHawk, no own-SDC per-view run.
+exceeds the 2.0 ns AXI delay (capped, see above). (4) Only the final arms were run; no own-SDC per-view run (RedHawk: section 4.10).
 
 **When real SoC arrivals exist** (a routed SoC run with a SoC SPEF, timed launch edge to macro pin), only `signoff/pt/iolat_pv/iobud_soc.tsv` has to be replaced (and the 27-run chain
 `signoff/chain_soc_budget.sh` re-run); the SDC, its md5 and the scripts do not change.
@@ -557,14 +565,13 @@ the shared or iolat SDC instead of each tool's own SDC, and SI off. Section 5 of
 | Magic straddle / outside (all `nwell.4`; LEF-abstract artefact, 0 n-well regions without tap contact in the real GDS) | 0 / 3,626 | 0 / 0 | 0 / 0 |
 | LEC post-route | EQUIVALENT (RTL==sv2v by Formality; sv2v==final netlist by Yosys equiv_induct): Formality RTL==sv2v SUCCEEDED; Formality final==Yosys netlist SUCCEEDED; Yosys equiv_induct sv2v vs Yosys netlist EQUIVALENT, sv2v vs final netlist EQUIVALENT; Formality sv2v/Yosys-netlist compare FAILED; Conformal RTL vs Yosys netlist NOT_EQUIVALENT; negative controls caught: Formality 6/6, Yosys 4/4 | 4/4 equivalent; 4/4 negative controls caught | 4/4 equivalent; 4/4 negative controls caught |
 | LEC synthesis netlist vs RTL | not run | b4a2_dc_v2_vs_rtl: SUCCEEDED (6,233 / 0) | b4b_genus_vs_rtl: EQUIVALENT (1,076 points) |
-| RedHawk static VPWR / VGND worst (mV) | 12.4 / 12.3 | 12.1* / 11.8* | 9.0* / 9.0* |
-| RedHawk static EM violations | 0 | 0* | 0* |
-| RedHawk dynamic worst avgTW / minWC / mean avgTW (mV) | 79.1 / 123.8 / 40.7 | 192.6* / 208.0* / 59.9* | 163.2* / 171.8* / 22.1* |
-| RedHawk dynamic, instances above 5 % VDD | 0.00% | 19.89%* | 0.04%* |
-| RedHawk dynamic with no decap, worst avgTW (mV) | 209.7 | 193.4* | 248.6* |
-| decap instances seen by RedHawk | 307,531 | 4,210* | 357,658* |
-
-\* b6 value of the same tool: RedHawk was not re-run on the final generation (section 7 item 8, pending).
+| RedHawk static VPWR / VGND worst (mV) | 12.8 / 12.7 | 10.9 / 11.6 | 9.3 / 9.0 |
+| RedHawk static EM violations | 0 | 0 | 0 |
+| RedHawk dynamic worst avgTW / minWC / mean avgTW (mV) | 93.7 / 122.3 / 40.1 | 239.8 / 261.6 / 59.6 | 112.8 / 127.1 / 23.9 |
+| RedHawk dynamic, instances above 5 % VDD | 0.01% | 28.83% | 0.20% |
+| RedHawk dynamic with no decap, worst avgTW (mV) | 192.3 | 245.7 | 369.3 |
+| RedHawk dynamic, APL std cells + W/L-estimated decap, worst avgTW (mV) | 95.5 | 239.6 | 135.8 |
+| decap instances in the DEF (all decap_N cells, incl. endcaps) | 307,531 | 4,210 | 357,103 |
 <!-- /FINAL-TABLE -->
 
 ### 4.7 Run cost (derived from `/usr/bin/time` and LibreLane `runtime.txt`)
@@ -811,7 +818,7 @@ max-tran +4 to +10 at four corners), so the rule is not met and b8 is not adopte
 Cleared against b8 (and now not worse than b6): non-dout0 max-cap pins 2 -> 0, native `check_routes` 1 -> 0 (hard 0, soft 0), max-tran nom_tt 9 -> 2 (b6 4), max_ss 722 -> 696 (b6 1073), max-fanout 177 -> 153 (b6 164), KLayout 0, deck antenna 0, LVS match, LEC 4/4 + 4/4 negative controls caught, ff hold +0.011 ns (b6 -0.027 at the per-view SDC), dout0 max-cap 0.
 Still worse than b6: (a) the fixed-latency hold rows (base / own / iolat SDC) are the caveat 4 I/O-latency artefact, not a layout measure; (b) shared-SDC nom_ss setup violators 12 -> 15; (c) per-view iolat setup margin at nom_ss / min_ss +0.417 / +0.715 -> +0.299 / +0.499 ns (all MET; the limiting path is an internal `pc -> csr mepc` reg-to-reg path, placement-driven, not a buffer path).
 (b) and (c) are not buffer cost, so the rule is not met. Whether a MET margin shift of 0.12 to 0.2 ns at ss justifies adopting b9 is a user decision (item 15); no waiver is implied. Innovus b8 keeps its own regressions (items 13, 15) and has no b9.
-Because b9 is not adopted, the Quantus cross-check, RedHawk and the Innovus own-SDC per-view latency were not re-run (item 18).
+Because b9 is not adopted, the Quantus cross-check and the Innovus own-SDC per-view latency were not re-run (item 18); RedHawk was run on the final arms in step 8 (section 4.10).
 
 **Adoption decisions of 2026-11-13 (step 4, after the user decisions of 2026-11-09).** The 2026-11-09 round-3 text above is history; the final arms are now set per tool (`FINAL_GEN_ICC2 = "b9"`, `FINAL_GEN_INN = "b6"` in `compare.py`).
 The user decisions recorded here are the only waivers or acceptances; nothing else is implied:
@@ -895,7 +902,7 @@ The remaining 13 pins at nom_ss are classes b11 deliberately does not touch: 6 `
 Max-transition pins at the nine corners (b6 / b10 / b11): nom_tt 7 / 7 / 7, **nom_ss 14 / 28 / 13**, nom_ff 4 / 2 / 2, min_tt 5 / 3 / 3, **min_ss 11 / 16 / 11**, min_ff 4 / 0 / 0, max_tt 10 / 8 / 8, **max_ss 29 / 30 / 15**, max_ff 8 / 4 / 4; Innovus-native max-tran count 41 / 15 / 13. **The measurement equals the estimate at every corner.**
 Rule check (`regress_check.py innovus b11`, 26 worse, 115 better, 175 equal): every ss corner is at or below b6; the 26 worse rows are the 25 setup / hold slack decreases of the flip that the user accepted on 2026-11-13 (7 setup rows down 5 to 23 ps, 18 hold rows down 3 to 27 ps; identical to b9 and b10 to within 1 ps) and the 24 native `verify_drc` items (LEF-abstract pessimism, 24 of 24 evidenced, written justification of 2026-11-09, item 13). `regress_check.py innovus b11 b10`: **0 worse**, 4 better.
 Disclosed exception to "all MET": of the 18 hold rows, one is not MET: own-SDC min_ff hold -0.0068 ns (b6) -> -0.0097 ns (b9, b10, b11), one violator in both generations, one I/O endpoint under the fixed-latency SDC (caveat 4; per-view iolat hold is clean at all nine corners). It is listed here, it is not a waiver, and it can be reversed by setting `FINAL_GEN_INN` back to `"b6"` and re-running `compare.py`.
-Per-view iolat judge (4.2b), Innovus b11: setup 96 violators at the three ss corners (b6 891; identical to b9 / b10), hold clean at all nine corners (+0.175 ns); own SDC: setup clean at nine corners (+0.026 ns), hold 1 violator (above). Quantus cross-check on the b11 DEF is in section 4.8. P&R wall 7,518 s (derived sum of the stages of the chain, including the b8 to b10 ancestry), peak RSS 7.12 GB. RedHawk and the Innovus own-SDC per-view latency are not re-run (item 18).
+Per-view iolat judge (4.2b), Innovus b11: setup 96 violators at the three ss corners (b6 891; identical to b9 / b10), hold clean at all nine corners (+0.175 ns); own SDC: setup clean at nine corners (+0.026 ns), hold 1 violator (above). Quantus cross-check on the b11 DEF is in section 4.8. P&R wall 7,518 s (derived sum of the stages of the chain, including the b8 to b10 ancestry), peak RSS 7.12 GB. The Innovus own-SDC per-view latency is not re-run (item 18); RedHawk was re-run in step 8 (section 4.10).
 
 *Innovus b11 vs b6*
 
@@ -917,6 +924,52 @@ Per-view iolat judge (4.2b), Innovus b11: setup 96 violators at the three ss cor
 ### innovus_b11 vs innovus_b10: 0 worse, 4 better, 312 equal (WNS tolerance 2 ps)
 
 <!-- /GEN-REGRESS -->
+
+### 4.10 RedHawk re-run with APL and an assumed package model; ICC2 decap ECO (step 8, 2026-11-15)
+
+**Indicative.** Everything here rests on an authored, uncorrelated RedHawk tech, an ideal met5 stripe-end feed plus an ASSUMED package, and partial APL. Scope was set by the user on 2026-11-08 ("partial APL, assumed package, ICC2 decap ECO, justify the rest"). Method, scripts and the caveats of the APL data are in `signoff/redhawk/apl/reports/apl_characterization.md`.
+
+**(a) What ran (all on the host rules: one licensed job at a time, 2 threads).**
+- **APL** (Ansys `apldi`, internal NSPICE, TT 25 C 1.8 V, models converted to HSPICE syntax from the open_pdks ngspice cards without changing a value): the 6 decap cells (`decap_3/4/6/8/12`, `ef decap_12`) and the 12 functional std cells with the highest pooled instance count over the three final arms (`dfxtp_1 buf_2 dlygate4sd3_1 nand2_1 dfxtp_2 inv_2 clkbuf_1 a22o_1 nor2_1 o21ai_1 clkbuf_4 buf_4`, 46.5 % of the pooled functional instances; 42 to 53 % of each arm's non-SRAM leaf cells, 34 to 57 % of its non-SRAM power). Wall / peak RSS: decap 1:05 / 416 MB, library-cell capacitance 2:28 / 416 MB, switching current 15:37 / 420 MB, ef-cell fix 0:23 / 415 MB. The `ef decap_12` cell first came out at 10.2 nF with 43 mA leakage (its bulk pins unknown to APL) and was re-characterised with a pin declaration; the bad result is kept and not used.
+- **Package model, ASSUMED**: the simple-package example of the RedHawk manual on all 72 supply connections (pad 0.01 ohm 0.5 pF; wirebond 0.245 ohm 1,420 pH 5 pF; package 0.001 ohm 10 pH 10 pF). It is not a real package.
+- **RedHawk** static, vectorless dynamic (AVG / RMS / PEAK EM), dynamic without decap, and dynamic with APL std cells plus the old W/L-estimated decap, on ICC2 b9, ICC2 b12, Innovus b11 and OpenROAD B2 (inputs identical to the b6 runs except the three changes above; power from the same PrimePower variant B). Wall per run 0:49 to 6:12, peak RSS 1.0 to 1.4 GB.
+
+**(b) Old (b6 generation, defaults + W/L decap estimate + ideal feed) against new.**
+
+| | ICC2 b6 (old) | ICC2 b9 (new) | ICC2 b12 decap-filled (new) | Innovus b6 (old) | Innovus b11 (new) | OpenROAD B2 (old) | OpenROAD B2 (new) |
+|---|---|---|---|---|---|---|---|
+| RedHawk total power (mW) | 70.76 | 69.26 | 69.26 | 76.22 | 74.48 | 93.13 | 93.13 |
+| static VPWR drop / VGND bounce worst (mV) | 12.1 / 11.8 | 10.9 / 11.6 | 10.9 / 11.6 | 9.0 / 9.0 | 9.3 / 9.0 | 12.4 / 12.3 | 12.8 / 12.7 |
+| static VPWR+VGND worst (mV / %) | 23.9 / 1.33% | 22.5 / 1.25% | 22.5 / 1.25% | 18.0 / 1.00% | 18.3 / 1.02% | 24.7 / 1.37% | 25.5 / 1.42% |
+| static EM violations (metal / via) | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| dynamic worst avgTW (mV / %) | 192.6 / 10.7% | 239.8 / 13.3% | 111.7 / 6.2% | 163.2 / 9.1% | 112.8 / 6.3% | 79.1 / 4.4% | 93.7 / 5.2% |
+| dynamic worst minWC (mV) | 208.0 | 261.6 | 120.4 | 171.8 | 127.1 | 123.8 | 122.3 |
+| dynamic mean avgTW (mV) | 59.9 | 59.6 | 30.8 | 22.1 | 23.9 | 40.7 | 40.1 |
+| dynamic instances above 5 % / 10 % of VDD | 19.89% / 0.01% | 28.83% / 0.21% | 0.06% / 0.00% | 0.04% / 0.00% | 0.20% / 0.00% | 0.00% / 0.00% | 0.01% / 0.00% |
+| dynamic worst SRAM macro avgTW (mV) | 113.4 | 229.9 | 107.3 | 71.8 | 100.0 | 53.2 | 67.0 |
+| dynamic EM AVG / RMS: worst ratio (%) | 7.15 / 27.64 | 6.61 / 21.19 | 6.70 / 19.81 | 8.56 / 22.82 | 7.10 / 26.84 | 9.01 / 26.28 | 7.93 / 24.74 |
+| dynamic EM PEAK segments >= 100 % (not judged) | 658 | 247 | 177 | 384 | 309 | 451 | 124 |
+| no decap: worst avgTW / mean (mV) | 193.4 / 59.6 | 245.7 / 59.2 | 245.7 / 59.4 | 248.6 / 42.5 | 369.3 / 43.3 | 209.7 / 56.8 | 192.3 / 63.6 |
+| APL std cells + W/L-ESTIMATED decap: worst avgTW / mean (mV) | n/a | 239.6 / 60.2 | 102.7 / 26.9 | n/a | 135.8 / 20.8 | n/a | 95.5 / 38.9 |
+
+Reading it:
+1. **Static** is unchanged in kind: 18 to 26 mV (1.0 to 1.4 %), no static EM violation, on every arm. The small shifts are the assumed package resistance and the newer layouts.
+2. **Dynamic worst instance** moved against the b6 numbers in both directions: ICC2 b9 192.6 to 239.8 mV, Innovus 163.2 (b6) to 112.8 (b11), OpenROAD 79.1 to 93.7. Three things changed at once (APL currents and capacitances, the assumed package inductance, the final layouts), so the per-arm change is not attributed to one of them.
+3. **Decap sets the ICC2 result.** ICC2 b9 has 4,210 decap cells and 239.8 mV; the decap-filled ICC2 b12 (same cells and routing, 294,659 decap cells) gives 111.7 mV worst and 30.8 mV mean (59.6 for b9), 6.2 % of VDD, comparable to Innovus b11 (112.8 / 23.9) and OpenROAD (93.7 / 40.1). The no-decap row shows the same for every arm (192 to 369 mV): without decap and with the assumed package no arm is close to 5 %.
+4. **The decap model is not what decides the ranking, but it moves the numbers by up to 20 %**: replacing the APL decap by the old W/L estimate (APL std cells, same package) changes the worst avgTW by about 0 % (ICC2 b9), +20 % (Innovus b11, 112.8 to 135.8 mV), +2 % (OpenROAD) and -8 % (ICC2 b12, 111.7 to 102.7 mV).
+5. **Dynamic EM**: AVG and RMS modes are clean on every arm (worst 6.6 to 9.0 % and 19.8 to 27.6 % of the DC limit). PEAK mode (124 to 658 segments above the limit) compares peak current with a DC limit and is an artefact; it is not judged.
+
+**(c) What the APL data do and do not show.** APL ran clean on all 18 cells (`aplchk`: no failure; RedHawk import: no P/G mismatch). Two results are flagged, not fixed: the APL decap capacitance is 1.07 to 2.4 times an independent HSPICE small-signal value (decap_4 27.8 against 11.8 fF) and its ESR is a 1 ohm floor, because the sky130 BSIM4 cards have no channel or gate resistance. The first means the APL decap may over-state the capacitance; the estimated-decap row brackets it. The 10 SRAM macros (about 41 % of ICC2 power) have no current profile and stay constant sinks.
+
+**(d) ICC2 decap ECO, generation b12 (a copy of the b9 database; b9 untouched).** The finish stage was re-run from the b9 pre-fill label (`06g_eco`) with decap cells placed before fill: 297,403 decap cells were inserted, 6,954 of them overlapped router li1 pin-access stubs (the short class recorded in `06_finish.tcl`) and were removed, the second check pass found none, then `fill_*` closed the gaps (0 removals). Result: `decap_3/4/6/8/12` = 12,369 / 7,463 / 46,484 / 23,120 / 205,223 = **294,659 decap cells** (b9: 4,210; OpenROAD 307,531; Innovus 357,103) and 74,294 fill cells (b9 about 525k). All non-fill, non-decap cells are identical to b9 (the cell counts differ only in fill and decap). Native ICC2 timing is unchanged (ff hold +0.0110 ns, ss setup +0.0190 ns).
+**Verification and adoption verdict for b12: not yet recorded in this text (the re-verification chain was still running when this section was written); see the end of this section when it is filled in. FINAL_GEN_ICC2 stays b9 until the section 4.9 rule is met.**
+
+**(e) Why full APL (every library cell) was not run.** User decision 2026-11-08 (option "Partial + justify rest"), written down here and not a waiver:
+- The measured cost was not prohibitive: the switching-current run took 15:37 wall for 12 cells at 2 threads, about 1.3 min per cell. Linear extrapolation (INFERRED, not run) gives about 5 h for the 228 cells the ICC2 netlist references and about 9 h for the 414-cell library. The vendor manual quotes days for a 2,000-cell library on a ten-machine farm. So the reason for stopping at 12 cells is not time.
+- The result is not limited by the std-cell coverage. The runs above show what decides the dynamic number: the decap content of the layout (ICC2 b9 against b12: 240 against 112 mV) and the assumed package, both of which are larger than the effect of the cells added by a fuller APL. The 12 cells already cover 42 to 53 % of the non-SRAM instances and 34 to 57 % of their power; the remaining cells keep the Liberty-derived defaults on every arm, the same way for all three flows, so the comparison stays like for like.
+- Three larger gaps stay open whatever APL covers and would have to be closed first for the number to mean more: the 10 SRAM macros (about 41 % of the ICC2 power) carry no current profile (needs `sim2iprof` / ACE on the SRAM SPICE, which is the host-blocked item `o1i`); the RedHawk tech is authored and not correlated (item 7); the supply is an assumed package and an ideal edge feed, not the parent SoC grid.
+- The APL decap capacitance itself is not validated (section (c)), so more APL data would sit on top of a value that disagrees with the independent check.
+- **Reopen if** a real package model or the parent SoC grid exists, the SRAM current profiles exist, or IR drop becomes a sign-off gate for this macro; the scripts (`apl/scripts/run_apl_all.sh` with a longer `cell_list`) extend directly.
 
 ## 5. History arms (earlier commercial iterations, judge on the same chain)
 
@@ -976,9 +1029,7 @@ corner. (c) b5j is identical to b5h in all 27 judge runs: the tap ECO changed no
 - **LEC.** Both tools caught every mutant. Formality needs the SVF for DC netlists. Conformal's
   `swap` mutant anchor had to follow an optimiser resize (`a211o_[12]`). Antenna diodes appear as
   unmatched or unreachable points, so a diode-stripped compare is run alongside.
-- **RedHawk.** It does not read the Sky130 decap cells' capacitance, so decap had to be declared
-  from spice W/L. The decap estimate, not the grid, sets the dynamic ranking. PEAK-mode EM against
-  a DC limit is an artefact and is not judged.
+- **RedHawk.** It does not read the Sky130 decap cells' capacitance, so the first runs declared decap from spice W/L; the decap estimate, not the grid, set the dynamic ranking. Step 8 replaced that with APL: it needs the models rewritten for HSPICE (braces, subckt parameters, unit scaling, AGAUSS), `LEF_FILES` left out of the APL config (the Liberty and LEF VPB/VNB pins otherwise become separate supply domains), and a pin declaration for any decap cell the hd Liberty does not list (the `ef` cell came out as 10 nF with 43 mA leakage without it). The APL decap value was 1.07 to 2.4 times an independent HSPICE AC check and its ESR a 1 ohm floor, so cross-check any APL decap against a small-signal run before using it. PEAK-mode EM against a DC limit is an artefact and is not judged.
 
 ## 7. Open items and follow-ups
 
@@ -1046,8 +1097,7 @@ Beads are not available on this host, so the follow-ups are tracked here.
    decision**: it would move every arm by the same factor and cannot add silicon accuracy.
 
    **Reopen if** a foundry-qualified sky130 extraction deck or silicon measurements become available.
-8. **RedHawk** needs characterised decap and APL, a package model, and a decap ECO on ICC2 before
-   any dynamic IR verdict.
+8. **RedHawk (partial scope, DONE 2026-11-15, user decision 2026-11-08).** APL for the decap cells and the 12 most-used std cells, an ASSUMED generic package model, an ICC2 decap ECO (b12, 294,659 decap cells) and a re-run of static, dynamic, no-decap and estimated-decap on ICC2 b9, ICC2 b12, Innovus b11 and OpenROAD B2: section 4.10 and `signoff/redhawk/apl/reports/apl_characterization.md`. Full APL was not run (written justification in 4.10 (e), not a waiver). Still open and flagged there: APL decap capacitance 1.07 to 2.4 times an HSPICE check and ESR a 1 ohm floor, SRAM macros without current profile, a real package or the parent SoC grid.
 9. **Single-variable P&R comparison** (and the OpenROAD fixes for items 4 to 6: the flipped floorplan `macro_placement_flipic.cfg`, dout0 buffers, the 116 deck-antenna nets; and the OpenROAD B2 std-cell-GDS Magic run, which is NOT RUN, item 16): run all three P&R tools on one netlist (for example the DC v2
    or Genus netlist through OpenROAD) to separate synthesis from P&R.
 10. **OpenROAD peak RSS** is not recorded. Wrap the LibreLane run in `/usr/bin/time -v` next time.
@@ -1069,7 +1119,7 @@ Beads are not available on this host, so the follow-ups are tracked here.
 17. **Innovus `verifyConnectivity -type all` "hang": not reproducible, diagnosed (2026-11-09).** See caveat 8: the slow call in the b7 log is `verify_connectivity -type special` (27 min once, under load), `-type all` is 4 to 14 s on every saved database (b6, b7, b8) and on a re-run of the original `06m_finish` on a private copy of the b8 database (VC 10 s, special 6 s).
     Probe `impl/innovus/scripts/b9_vc_probe.tcl`. The b7 slowness was not reproduced on the b7 database either (4 s), so it was host or session load, not the database. The b8 skip was unnecessary; no Innovus layout changes.
     Update 2026-11-12: Innovus b9 ran `-type all` enabled; it took 33 min (not a hang, no skip) and ended at the 100000-error limit on the VNB bulk pins as in b6 (caveat 8).
-18. **Not re-run for b7 to b11**: RedHawk static / dynamic IR (ICC2 b9 moves 3 diodes, re-hooks 24 clock sinks and adds 3 buffers; Innovus b9 to b11 resize and add 13 + 3 instances; the PG grid is unchanged on both). With ICC2 b9 and Innovus b11 now the final arms, the RedHawk run on both layouts is open and is the plan's step 8 (the user deferred it on 2026-11-09: not now); the RedHawk rows of section 4.6 print the b6 values marked `*`. The Quantus cross-check **was** run for ICC2 b9 and for Innovus b11 (section 4.8). The Innovus own-SDC per-view latency (a PrimeTime run with the Innovus own SDC and each view's measured clk_io latency) is not done for any Innovus generation (item 3); the per-view **iolat** SDC (4.2b) is done for every arm including Innovus b11.
+18. **RedHawk on the final arms (DONE 2026-11-15, step 8; was "not re-run for b7 to b11")**: static, dynamic, no-decap and estimated-decap runs on ICC2 b9, Innovus b11 and OpenROAD B2 (plus ICC2 b12), section 4.10; the RedHawk rows of section 4.6 now print those values (no `*`). The Quantus cross-check **was** run for ICC2 b9 and for Innovus b11 (section 4.8). The Innovus own-SDC per-view latency (a PrimeTime run with the Innovus own SDC and each view's measured clk_io latency) is not done for any Innovus generation (item 3); the per-view **iolat** SDC (4.2b) is done for every arm including Innovus b11.
 
 ## 8. Files
 

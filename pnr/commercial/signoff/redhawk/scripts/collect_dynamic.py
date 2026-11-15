@@ -80,7 +80,7 @@ out["em_by_mode"] = em
 for md, key in (("PEAK", "PEAK"), ("AVG", "DC"), ("RMS", "RMS")):
     m = re.search(r"Worst %s EM:\s*\n-+\nType[^\n]*\n-+\n(WIRE[^\n]*)" % key, lg)
     if md in em and m: em[md]["worst_wire_ratio_line"] = " ".join(m.group(1).split()[:6])
-json.dump(out, open(os.path.join(d, "..", "..", "dynamic_summary.json" if sub == "rh-dynamic" else "dynamic_nodecap_summary.json"), "w"), indent=1)
+json.dump(out, open(os.path.join(d, "..", "..", ("apl_" if sub.startswith("rh-apl-") else "") + ("dynamic_summary.json" if sub in ("rh-dynamic", "rh-apl-dynamic") else "dynamic_estdecap_summary.json" if sub == "rh-apl-dynamic-estdecap" else "dynamic_nodecap_summary.json")), "w"), indent=1)   # rh-apl-* = step 8 re-run
 for k, s in out["populations"].items():
     if s: print("%-10s n=%-7d avgTW worst %.1f mV (%.2f%%) mean %.1f | minTW worst %.1f | minWC worst %.1f mV (%.2f%%) mean %.1f | >5%%: %.3f >10%%: %.3f" % (k, s["n"], s["worst_avgTW_mV"], s["worst_avgTW_mV"]/18, s["mean_avgTW_mV"], s["worst_minTW_mV"], s["worst_minWC_mV"], s["worst_minWC_mV"]/18, s["mean_minWC_mV"], s["frac_inst_avgTW_gt_5pct"], s["frac_inst_avgTW_gt_10pct"]))
 print("log worst:", out["log_worst_block"]); print("EM dyn:", em)

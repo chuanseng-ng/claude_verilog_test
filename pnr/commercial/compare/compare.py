@@ -60,6 +60,7 @@ _R6 = _role("icc2", "b6")
 _R7 = _role("icc2", "b7")
 _R8 = _role("icc2", "b8")
 _R9 = _role("icc2", "b9")
+_R12 = _role("icc2", "b12")  # b12 = b9 layout + decap-first fill (step 8 decap ECO; adoption by the section 4.9 rule, regress_check.py icc2 b12 b9)
 _R6_INN = _role("innovus", "b6")
 _R7_INN = _role("innovus", "b7")
 _R8_INN = _role("innovus", "b8")
@@ -117,6 +118,13 @@ ARMS = {
         role=_R9,
         synthesis="DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
         pnr="ICC2 X-2025.06-SP1, b8 + ECO round 3: 2 port diodes moved next to the loads, 1 antenna diode moved (no cells added)",
+    ),
+    "icc2_b12": dict(
+        pt="icc2b12",
+        name="ICC2 b12",
+        role=_R12,
+        synthesis="DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
+        pnr="ICC2 X-2025.06-SP1, b9 layout (label 06g_eco) + decap-first fill: 294,659 decap cells (fd decap_3/4/6/8/12) placed before fill_*, decaps over router li1 stubs removed (6,954)",
     ),
     "innovus_b8": dict(
         pt="innovusb8",
@@ -200,6 +208,7 @@ SDC_FILES = {
     "own:icc2_b7": f"{COM}/constraints/sky130_cpu_icc2_b7_own_pt.sdc",
     "own:icc2_b8": f"{COM}/constraints/sky130_cpu_icc2_b8_own_pt.sdc",
     "own:icc2_b9": f"{COM}/constraints/sky130_cpu_icc2_b9_own_pt.sdc",
+    "own:icc2_b12": f"{COM}/constraints/sky130_cpu_icc2_b12_own_pt.sdc",
     "own:innovus_b8": f"{COM}/constraints/sky130_cpu_innovus_b8_own_pt.sdc",
     "own:innovus_b9": f"{COM}/constraints/sky130_cpu_innovus_b9_own_pt.sdc",
     "own:innovus_b10": f"{COM}/constraints/sky130_cpu_innovus_b10_own_pt.sdc",
@@ -696,9 +705,11 @@ def redhawk(arm: str):
     S, D, N = (json.loads(text(x)) for x in (s, dy, nd))
     al = S["populations"]["all"]
     ls = D["populations"]["logic+sram"]
-    note = "indicative: default currents, estimated decap, ideal met5 edge feed, uncorrelated tech"
+    note = "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
+    es = f"{d}/{arm}_dynamic_estdecap_summary.json"
+    cc = f"{COM}/signoff/redhawk/apl/reports/cell_counts_{arm}.txt"
     return {
-        "ir_static_vpwr_drop_mV": E(al["worst_vpwr_drop_mV"], "mV", "signoff", s, note=note),
+        "ir_static_vpwr_drop_mV": E(round(al["worst_vpwr_drop_mV"], 1), "mV", "signoff", s, note=note),
         "ir_static_vgnd_bounce_mV": E(round(al["worst_vgnd_bounce_mV"], 1), "mV", "signoff", s),
         "ir_static_worst_total_mV": E(al["worst_total_mV"], "mV", "signoff", s),
         "ir_static_em_violations": E(
@@ -720,6 +731,28 @@ def redhawk(arm: str):
             round(N["populations"]["logic+sram"]["worst_avgTW_mV"], 1), "mV", "signoff", nd
         ),
         "ir_power_fed_mW": E(S["rh_total_power_mW"], "mW", "signoff", s),
+        **(
+            {
+                "ir_decap_cells_def": E(
+                    sum(int(l.split()[1]) for l in text(cc).splitlines() if "decap" in l.split()[0]),
+                    "count",
+                    "derived",
+                    cc,
+                    rule="sum of sky130_*decap_* instances in the final DEF / final cell count (endcaps incl.)",
+                )
+            }
+            if tracked(cc)
+            else {}
+        ),
+        **(
+            {
+                "ir_dynamic_estdecap_worst_avgTW_mV": E(
+                    round(json.loads(text(es))["populations"]["logic+sram"]["worst_avgTW_mV"], 1), "mV", "signoff", es
+                )
+            }
+            if tracked(es)
+            else {}
+        ),
     }
 
 
@@ -967,6 +1000,8 @@ def icc2_arm(b="b6"):
         stage_srcs = [(f"{SNAP}/icc2_b6", "b6_0*.time", ("b6_07", "b6_08")), (d, "b7_0*.time", ())]
     elif b == "b8":
         stage_srcs = [(d, "b8_0*.time", ())]
+    elif b == "b12":  # b8 stages 01..06b + the b9 ECO stages (06c..06g) + the b12 finish / write stages (the b9 finish / write are NOT part of the b12 lineage)
+        stage_srcs = [(f"{SNAP}/icc2_b8", "b8_0*.time", ("b8_07", "b8_08")), (f"{SNAP}/icc2_b9", "b9_06*.time", ()), (d, "b12_0*.time", ())]
     else:
         stage_srcs = [(f"{SNAP}/icc2_b8", "b8_0*.time", ("b8_07", "b8_08")), (d, f"{b}_0*.time", ())]
     for sd, pat, skip in stage_srcs:
@@ -1009,6 +1044,10 @@ def icc2_b8():
 
 def icc2_b9():
     return icc2_arm("b9")
+
+
+def icc2_b12():
+    return icc2_arm("b12")
 
 
 def innovus_arm(b="b6"):
@@ -1281,6 +1320,7 @@ def synthesis():
         ("innovus_b7", "genus_v1"),
         ("icc2_b8", "dc_v2"),
         ("icc2_b9", "dc_v2"),
+        ("icc2_b12", "dc_v2"),
         ("innovus_b8", "genus_v1"),
         ("innovus_b9", "genus_v1"),
         ("innovus_b10", "genus_v1"),
@@ -1317,7 +1357,7 @@ def synthesis():
     fm = f"{COM}/signoff/lec/formality/reports/b4a2_dc_v2_vs_rtl/fm_log.txt"
     out["icc2_b6"]["synth_lec"] = lec_formality("b4a2")
     out["innovus_b6"]["synth_lec"] = lec_conformal("b4b_genus")
-    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("icc2_b9", "icc2_b6"), ("innovus_b8", "innovus_b6"), ("innovus_b9", "innovus_b6"), ("innovus_b10", "innovus_b6"), ("innovus_b11", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
+    for b7, b6 in (("icc2_b7", "icc2_b6"), ("innovus_b7", "innovus_b6"), ("icc2_b8", "icc2_b6"), ("icc2_b9", "icc2_b6"), ("icc2_b12", "icc2_b6"), ("innovus_b8", "innovus_b6"), ("innovus_b9", "innovus_b6"), ("innovus_b10", "innovus_b6"), ("innovus_b11", "innovus_b6")):  # b7/b8 share the b6 netlist synthesis (the ECO starts after synthesis)
         for k in ("synth_runtime", "synth_peak_rss", "synth_lec"):
             out[b7][k] = out[b6][k]
     _ = fm
@@ -1551,6 +1591,8 @@ def build():
         natives["icc2_b8"] = icc2_b8()
     if p(f"{SNAP}/icc2_b9").is_dir():
         natives["icc2_b9"] = icc2_b9()
+    if p(f"{SNAP}/icc2_b12").is_dir():
+        natives["icc2_b12"] = icc2_b12()
     if p(f"{SNAP}/innovus_b8").is_dir():
         natives["innovus_b8"] = innovus_b8()
     if p(f"{SNAP}/innovus_b9").is_dir():

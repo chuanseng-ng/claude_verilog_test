@@ -82,7 +82,7 @@ if emf:
                         "worst_wire": ww.group(1).split()[:6] if ww else None, "worst_via": ww.group(2).split()[:6] if ww else None}
 else:
     out["em_static"] = None
-json.dump(out, open(os.path.join(d, "..", "..", "static_summary.json"), "w"), indent=1)
+json.dump(out, open(os.path.join(d, "..", "..", "apl_static_summary.json" if sub.startswith("rh-apl-") else "static_summary.json"), "w"), indent=1)   # rh-apl-* = step 8 re-run (APL + assumed package); b6-era names unchanged
 for k in ("all", "logic", "sram", "fill_tap"):
     s = out["populations"].get(k)
     if s: print("%-9s n=%-7d VPWR drop worst %.2f mV avg %.2f | VGND bounce worst %.2f avg %.2f | total worst %.2f mV (%.2f%%) avg %.2f mV" % (

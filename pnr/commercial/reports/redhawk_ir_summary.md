@@ -1,5 +1,8 @@
 # RedHawk static and vectorless dynamic IR, three flows, Sky130 `rv32i_cpu_top` (phase B7)
 
+> **SUPERSEDED for the final arms (step 8, 2026-11-15).** This file documents the b6-generation runs (RedHawk-default cell models, spice W/L decap estimate, ideal feed). The re-run on ICC2 b9 / b12, Innovus b11 and OpenROAD B2 with APL (decap cells and 12 std cells) and an ASSUMED package model is in `docs/COMMERCIAL_FLOW_COMPARISON.md` section 4.10 and `pnr/commercial/signoff/redhawk/apl/reports/apl_characterization.md`; per-arm JSON in `signoff/redhawk/reports/<arm>_*_summary.json` (the b6-era OpenROAD files are `openroad_b6model_*`). Everything below is kept as the old-model baseline.
+
+
 **Every figure here is indicative.** The RedHawk tech file is authored from the public Sky130 stack (ITF, uncorrelated), cell current models are RedHawk defaults (no APL characterised), decap capacitance is an estimate from the cell spice, and the supply is an assumed edge feed. Read the static numbers as "the grid is not the problem" and the dynamic numbers as a comparison under one stated model, not as a signoff verdict.
 
 Tool: Ansys RedHawk 2025 R2.2 (`redhawk -b`), power and STA windows from PrimeTime/PrimePower X-2025.06. Scripts in `pnr/commercial/signoff/redhawk/scripts/`, run dirs `signoff/redhawk/runs/<arm>/` (gitignored), compact JSON per arm in `signoff/redhawk/reports/`.

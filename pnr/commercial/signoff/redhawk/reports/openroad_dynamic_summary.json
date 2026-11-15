@@ -1,66 +1,66 @@
 {
  "arm": "openroad",
- "run": "rh-dynamic",
+ "run": "rh-apl-dynamic",
  "populations": {
   "logic": {
-   "n": 58224,
-   "worst_avgTW_mV": 79.09999999999995,
+   "n": 42357,
+   "worst_avgTW_mV": 93.70000000000012,
    "worst_avgTW_at": [
-    1317.44,
-    36.72,
-    "ANTENNA_u_core.u_icache.gen_data_sram[1].u_data_sram_dout0[0]"
+    1342.28,
+    651.44,
+    "wire2000"
    ],
-   "mean_avgTW_mV": 40.750396743608626,
-   "worst_minTW_mV": 85.50000000000013,
-   "worst_minWC_mV": 123.80000000000013,
+   "mean_avgTW_mV": 40.07955473711502,
+   "worst_minTW_mV": 98.00000000000009,
+   "worst_minWC_mV": 122.30000000000007,
    "worst_minWC_at": [
     1855.64,
     246.16,
     "hold68"
    ],
-   "mean_minWC_mV": 54.93448234405093,
-   "frac_inst_avgTW_gt_5pct": 0.0,
+   "mean_minWC_mV": 49.625004131548906,
+   "frac_inst_avgTW_gt_5pct": 7.082654578936186e-05,
    "frac_inst_avgTW_gt_10pct": 0.0
   },
   "sram": {
    "n": 10,
-   "worst_avgTW_mV": 53.20000000000014,
+   "worst_avgTW_mV": 66.99999999999994,
    "worst_avgTW_at": [
     2279.23,
     218.75,
     "u_core.u_icache.gen_data_sram[2].u_data_sram"
    ],
-   "mean_avgTW_mV": 34.270000000000024,
-   "worst_minTW_mV": 81.50000000000013,
-   "worst_minWC_mV": 94.99999999999997,
+   "mean_avgTW_mV": 46.22000000000004,
+   "worst_minTW_mV": 92.7,
+   "worst_minWC_mV": 94.30000000000005,
    "worst_minWC_at": [
     1599.45,
     718.75,
     "u_core.u_dcache.gen_data_sram[1].u_data_sram"
    ],
-   "mean_minWC_mV": 58.29000000000004,
+   "mean_minWC_mV": 66.40000000000006,
    "frac_inst_avgTW_gt_5pct": 0.0,
    "frac_inst_avgTW_gt_10pct": 0.0
   },
   "fill_tap": null,
   "logic+sram": {
-   "n": 58234,
-   "worst_avgTW_mV": 79.09999999999995,
+   "n": 42367,
+   "worst_avgTW_mV": 93.70000000000012,
    "worst_avgTW_at": [
-    1317.44,
-    36.72,
-    "ANTENNA_u_core.u_icache.gen_data_sram[1].u_data_sram_dout0[0]"
+    1342.28,
+    651.44,
+    "wire2000"
    ],
-   "mean_avgTW_mV": 40.74928392347887,
-   "worst_minTW_mV": 85.50000000000013,
-   "worst_minWC_mV": 123.80000000000013,
+   "mean_avgTW_mV": 40.08100408336633,
+   "worst_minTW_mV": 98.00000000000009,
+   "worst_minWC_mV": 122.30000000000007,
    "worst_minWC_at": [
     1855.64,
     246.16,
     "hold68"
    ],
-   "mean_minWC_mV": 54.935058556857186,
-   "frac_inst_avgTW_gt_5pct": 0.0,
+   "mean_minWC_mV": 49.628963580145346,
+   "frac_inst_avgTW_gt_5pct": 7.08098284041825e-05,
    "frac_inst_avgTW_gt_10pct": 0.0
   }
  },
@@ -74,20 +74,20 @@
     0.0,
     200.0
    ],
-   "mean_avgTW_mV": 51.98811881188124,
-   "n_inst": 202
+   "mean_avgTW_mV": 54.548421052631596,
+   "n_inst": 95
   },
   {
    "x_um": [
-    1800.0,
-    2000.0
+    1400.0,
+    1600.0
    ],
    "y_um": [
-    1000.0,
-    1200.0
+    400.0,
+    600.0
    ],
-   "mean_avgTW_mV": 49.39801381692573,
-   "n_inst": 1158
+   "mean_avgTW_mV": 50.90635593220346,
+   "n_inst": 236
   },
   {
    "x_um": [
@@ -95,11 +95,11 @@
     2200.0
    ],
    "y_um": [
-    1000.0,
-    1200.0
+    0.0,
+    200.0
    ],
-   "mean_avgTW_mV": 49.19756975697576,
-   "n_inst": 1111
+   "mean_avgTW_mV": 47.6480446927375,
+   "n_inst": 179
   },
   {
    "x_um": [
@@ -107,11 +107,11 @@
     2000.0
    ],
    "y_um": [
-    0.0,
-    200.0
+    600.0,
+    800.0
    ],
-   "mean_avgTW_mV": 49.17430939226518,
-   "n_inst": 724
+   "mean_avgTW_mV": 46.59847494553377,
+   "n_inst": 459
   },
   {
    "x_um": [
@@ -122,106 +122,106 @@
     1200.0,
     1400.0
    ],
-   "mean_avgTW_mV": 48.315384615384495,
-   "n_inst": 1144
+   "mean_avgTW_mV": 46.462117903930455,
+   "n_inst": 916
   }
  ],
  "top5_inst_avgTW": [
   {
-   "inst": "ANTENNA_u_core.u_icache.gen_data_sram[1].u_data_sram_dout0[0]",
-   "x": 1317.44,
-   "y": 36.72,
-   "drop_mV": 79.09999999999995
+   "inst": "wire2000",
+   "x": 1342.28,
+   "y": 651.44,
+   "drop_mV": 93.70000000000012
   },
   {
-   "inst": "ANTENNA_wire2615_A",
-   "x": 1336.76,
-   "y": 47.6,
-   "drop_mV": 78.99999999999996
+   "inst": "fanout4271",
+   "x": 1269.6,
+   "y": 643.28,
+   "drop_mV": 90.8
   },
   {
-   "inst": "u_core.u_dcache.gen_data_sram[0].u_data_sram_4488",
-   "x": 1172.77,
-   "y": 597.04,
-   "drop_mV": 78.89999999999998
+   "inst": "fanout4299",
+   "x": 1932.0,
+   "y": 675.92,
+   "drop_mV": 90.50000000000003
   },
   {
-   "inst": "ANTENNA__25240__A1",
-   "x": 1990.88,
-   "y": 330.48,
-   "drop_mV": 78.30000000000004
+   "inst": "fanout4270",
+   "x": 1270.06,
+   "y": 667.76,
+   "drop_mV": 89.8000000000001
   },
   {
-   "inst": "ANTENNA_wire2638_A",
-   "x": 1331.24,
-   "y": 47.6,
-   "drop_mV": 78.20000000000005
+   "inst": "fanout4304",
+   "x": 1955.0,
+   "y": 730.32,
+   "drop_mV": 89.8000000000001
   }
  ],
  "sram_macros": [
   {
    "name": "u_core.u_icache.gen_data_sram[2].u_data_sram",
-   "avgTW_mV": 53.20000000000014,
-   "minWC_mV": 76.20000000000005
-  },
-  {
-   "name": "u_core.u_icache.gen_data_sram[1].u_data_sram",
-   "avgTW_mV": 51.5000000000001,
-   "minWC_mV": 89.8000000000001
+   "avgTW_mV": 66.99999999999994,
+   "minWC_mV": 73.80000000000008
   },
   {
    "name": "u_core.u_dcache.gen_data_sram[2].u_data_sram",
-   "avgTW_mV": 44.89999999999994,
-   "minWC_mV": 74.40000000000002
+   "avgTW_mV": 61.70000000000009,
+   "minWC_mV": 92.7
+  },
+  {
+   "name": "u_core.u_icache.gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 60.5,
+   "minWC_mV": 88.00000000000009
   },
   {
    "name": "u_core.u_dcache.gen_data_sram[0].u_data_sram",
-   "avgTW_mV": 40.899999999999935,
-   "minWC_mV": 75.8000000000001
-  },
-  {
-   "name": "u_core.u_dcache.gen_data_sram[1].u_data_sram",
-   "avgTW_mV": 38.49999999999998,
-   "minWC_mV": 94.99999999999997
+   "avgTW_mV": 52.400000000000006,
+   "minWC_mV": 81.30000000000015
   },
   {
    "name": "u_core.u_icache.gen_data_sram[0].u_data_sram",
-   "avgTW_mV": 35.20000000000012,
-   "minWC_mV": 48.4
+   "avgTW_mV": 49.000000000000156,
+   "minWC_mV": 55.40000000000012
   },
   {
    "name": "u_core.u_dcache.gen_data_sram[3].u_data_sram",
-   "avgTW_mV": 32.599999999999966,
-   "minWC_mV": 57.10000000000015
+   "avgTW_mV": 42.20000000000002,
+   "minWC_mV": 58.5
+  },
+  {
+   "name": "u_core.u_dcache.gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 40.49999999999998,
+   "minWC_mV": 94.30000000000005
   },
   {
    "name": "u_core.u_icache.gen_data_sram[3].u_data_sram",
-   "avgTW_mV": 30.100000000000016,
-   "minWC_mV": 38.3
+   "avgTW_mV": 37.00000000000014,
+   "minWC_mV": 45.5000000000001
   },
   {
    "name": "u_core.u_dcache.u_tag_sram",
-   "avgTW_mV": 10.199999999999987,
-   "minWC_mV": 20.499999999999964
+   "avgTW_mV": 31.400000000000095,
+   "minWC_mV": 50.89999999999995
   },
   {
    "name": "u_core.u_icache.u_tag_sram",
-   "avgTW_mV": 5.600000000000049,
-   "minWC_mV": 7.400000000000073
+   "avgTW_mV": 20.499999999999964,
+   "minWC_mV": 23.600000000000065
   }
  ],
  "log_worst_block": [
   "---------------------------------------------------",
-  "WIRE   63.00mV  VPWR  1.800  (1855.640,247.520) met1",
-  "WIRE   60.80mV  VGND  0.000  (1855.640,244.800) met1",
-  "avgTW  79.09mV  VPWR  1.800  (1317.440,36.720) ANTENNA_u_core.u_icache.gen_data_sram[1].u_data_sram_dout0[0]",
-  "maxTW  73.22mV  VPWR  1.800  (1345.500,47.600) wire2615",
-  "minTW  85.50mV  VPWR  1.800  (2023.080,23.120) input82",
-  "minWC 123.82mV  VPWR  1.800  (1855.640,246.160) hold68"
+  "WIRE   62.10mV  VPWR  1.800  (1855.640,247.520) met1",
+  "WIRE   60.30mV  VGND  0.000  (1854.720,244.800) met1",
+  "avgTW  93.72mV  VPWR  1.800  (1342.280,651.440) wire2000",
+  "maxTW  90.31mV  VPWR  1.800  (1342.280,651.440) wire2000",
+  "minTW  97.97mV  VPWR  1.800  (1991.340,656.880) clkload342",
+  "minWC 122.28mV  VPWR  1.800  (1855.640,246.160) hold68"
  ],
- "rh_total_power_mW": 93.131,
- "presim_ps": 3500,
- "decap_instances_in_dynamic": 307531,
+ "rh_total_power_mW": 93.132,
+ "presim_ps": 6000,
+ "decap_instances_in_dynamic": 371838,
  "em_by_mode": {
   "AVG": {
    "file_mode": "AVG",
@@ -229,7 +229,7 @@
    "max_ratio_pct": 0.0,
    "violations_ge_100pct": 0,
    "violations_by_layer": {},
-   "worst_wire_ratio_line": "WIRE 9.01% VGND 21.36mA (3545.040,1246.560) met5"
+   "worst_wire_ratio_line": "WIRE 7.93% VGND 21.36mA (3545.040,1246.560) met5"
   },
   "RMS": {
    "file_mode": "RMS",
@@ -237,17 +237,17 @@
    "max_ratio_pct": 0.0,
    "violations_ge_100pct": 0,
    "violations_by_layer": {},
-   "worst_wire_ratio_line": "WIRE 26.28% VGND 1.34mA (1346.650,489.600) met1"
+   "worst_wire_ratio_line": "WIRE 24.74% VPWR 1.34mA (652.740,622.880) met1"
   },
   "PEAK": {
    "file_mode": "PEAK",
-   "entries_ge_50pct": 5483,
-   "max_ratio_pct": 151.742,
-   "violations_ge_100pct": 451,
+   "entries_ge_50pct": 1688,
+   "max_ratio_pct": 138.332,
+   "violations_ge_100pct": 124,
    "violations_by_layer": {
-    "met1": 451
+    "met1": 124
    },
-   "worst_wire_ratio_line": "WIRE 151.74% VGND 1.34mA (1347.110,489.600) met1"
+   "worst_wire_ratio_line": "WIRE 138.33% VPWR 1.34mA (652.740,622.880) met1"
   }
  }
 }

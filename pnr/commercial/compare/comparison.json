@@ -6546,20 +6546,20 @@
      "rule": "derived from lec_runs and lec_yosys_runs; closed only if RTL==sv2v, final==Yosys, Yosys end-to-end EQUIVALENT and >=4 Yosys mutants all NOT_PROVEN"
     },
     "ir_static_vpwr_drop_mV": {
-     "value": 12.4,
+     "value": 12.8,
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_static_summary.json",
-     "note": "indicative: default currents, estimated decap, ideal met5 edge feed, uncorrelated tech"
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
     },
     "ir_static_vgnd_bounce_mV": {
-     "value": 12.3,
+     "value": 12.7,
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_static_summary.json"
     },
     "ir_static_worst_total_mV": {
-     "value": 24.7,
+     "value": 25.500000000000004,
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_static_summary.json"
@@ -6571,47 +6571,60 @@
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_static_summary.json"
     },
     "ir_dynamic_worst_avgTW_mV": {
-     "value": 79.1,
+     "value": 93.7,
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_dynamic_summary.json",
-     "note": "indicative: default currents, estimated decap, ideal met5 edge feed, uncorrelated tech"
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
     },
     "ir_dynamic_worst_minWC_mV": {
-     "value": 123.8,
+     "value": 122.3,
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_dynamic_summary.json"
     },
     "ir_dynamic_mean_avgTW_mV": {
-     "value": 40.7,
+     "value": 40.1,
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_dynamic_summary.json"
     },
     "ir_dynamic_frac_gt5pct": {
-     "value": 0.0,
+     "value": 0.0001,
      "unit": "fraction",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_dynamic_summary.json"
     },
     "ir_dynamic_decap_instances": {
-     "value": 307531,
+     "value": 371838,
      "unit": "count",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_dynamic_summary.json"
     },
     "ir_dynamic_nodecap_worst_avgTW_mV": {
-     "value": 209.7,
+     "value": 192.3,
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_dynamic_nodecap_summary.json"
     },
     "ir_power_fed_mW": {
-     "value": 93.131,
+     "value": 93.132,
      "unit": "mW",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/openroad_static_summary.json"
+    },
+    "ir_decap_cells_def": {
+     "value": 307531,
+     "unit": "count",
+     "label": "derived",
+     "source": "pnr/commercial/signoff/redhawk/apl/reports/cell_counts_openroad.txt",
+     "rule": "sum of sky130_*decap_* instances in the final DEF / final cell count (endcaps incl.)"
+    },
+    "ir_dynamic_estdecap_worst_avgTW_mV": {
+     "value": 95.5,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/openroad_dynamic_estdecap_summary.json"
     },
     "derived_util_stdcell": {
      "value": 0.1088,
@@ -7400,7 +7413,7 @@
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/icc2b6_static_summary.json",
-     "note": "indicative: default currents, estimated decap, ideal met5 edge feed, uncorrelated tech"
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
     },
     "ir_static_vgnd_bounce_mV": {
      "value": 11.8,
@@ -7425,7 +7438,7 @@
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/icc2b6_dynamic_summary.json",
-     "note": "indicative: default currents, estimated decap, ideal met5 edge feed, uncorrelated tech"
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
     },
     "ir_dynamic_worst_minWC_mV": {
      "value": 208.0,
@@ -8271,7 +8284,7 @@
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/innovusb6_static_summary.json",
-     "note": "indicative: default currents, estimated decap, ideal met5 edge feed, uncorrelated tech"
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
     },
     "ir_static_vgnd_bounce_mV": {
      "value": 9.0,
@@ -8296,7 +8309,7 @@
      "unit": "mV",
      "label": "signoff",
      "source": "pnr/commercial/signoff/redhawk/reports/innovusb6_dynamic_summary.json",
-     "note": "indicative: default currents, estimated decap, ideal met5 edge feed, uncorrelated tech"
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
     },
     "ir_dynamic_worst_minWC_mV": {
      "value": 171.8,
@@ -10751,6 +10764,87 @@
      ],
      "rule": "count of per-run verdicts"
     },
+    "ir_static_vpwr_drop_mV": {
+     "value": 10.9,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_static_summary.json",
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
+    },
+    "ir_static_vgnd_bounce_mV": {
+     "value": 11.6,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_static_summary.json"
+    },
+    "ir_static_worst_total_mV": {
+     "value": 22.5,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_static_summary.json"
+    },
+    "ir_static_em_violations": {
+     "value": 0,
+     "unit": "count",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_static_summary.json"
+    },
+    "ir_dynamic_worst_avgTW_mV": {
+     "value": 239.8,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_dynamic_summary.json",
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
+    },
+    "ir_dynamic_worst_minWC_mV": {
+     "value": 261.6,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_dynamic_summary.json"
+    },
+    "ir_dynamic_mean_avgTW_mV": {
+     "value": 59.6,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_dynamic_summary.json"
+    },
+    "ir_dynamic_frac_gt5pct": {
+     "value": 0.2883,
+     "unit": "fraction",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_dynamic_summary.json"
+    },
+    "ir_dynamic_decap_instances": {
+     "value": 4907,
+     "unit": "count",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_dynamic_summary.json"
+    },
+    "ir_dynamic_nodecap_worst_avgTW_mV": {
+     "value": 245.7,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_dynamic_nodecap_summary.json"
+    },
+    "ir_power_fed_mW": {
+     "value": 69.26,
+     "unit": "mW",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_static_summary.json"
+    },
+    "ir_decap_cells_def": {
+     "value": 4210,
+     "unit": "count",
+     "label": "derived",
+     "source": "pnr/commercial/signoff/redhawk/apl/reports/cell_counts_icc2b9.txt",
+     "rule": "sum of sky130_*decap_* instances in the final DEF / final cell count (endcaps incl.)"
+    },
+    "ir_dynamic_estdecap_worst_avgTW_mV": {
+     "value": 239.6,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/icc2b9_dynamic_estdecap_summary.json"
+    },
     "derived_util_stdcell": {
      "value": 0.0799,
      "unit": "fraction",
@@ -10763,6 +10857,69 @@
      "rule": "census logical area / (OpenROAD core area - SRAM macro area); same denominator for all arms"
     }
    },
+   "synthesis_metrics": {
+    "netlist": "dc_v2",
+    "synth_leaf_cells": {
+     "value": 35644,
+     "unit": "count",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step2_dc_v2_probe_metrics.tsv",
+     "note": "incl. 10 SRAM"
+    },
+    "synth_zero_wire_setup_wns_tt": {
+     "value": 5.325428,
+     "unit": "ns",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step2_dc_v2_probe_metrics.tsv",
+     "note": "PrimeTime, ideal clock, no parasitics, shared SDC"
+    },
+    "synth_zero_wire_setup_wns_ss": {
+     "value": 1.162616,
+     "unit": "ns",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step2_dc_v2_probe_metrics.tsv"
+    },
+    "synth_zero_wire_setup_viol_ss": {
+     "value": 0,
+     "unit": "count",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step2_dc_v2_probe_metrics.tsv"
+    },
+    "synth_runtime": {
+     "value": 333.6,
+     "unit": "s",
+     "label": "native",
+     "source": "pnr/commercial/reports/dc_synth_v2_summary.md",
+     "kind": "prose",
+     "locator": "Caveats: DC 'Overall Compile Wall Clock Time' (host contended)"
+    },
+    "synth_peak_rss": {
+     "value": 1.55,
+     "unit": "GB",
+     "label": "native",
+     "source": "pnr/commercial/reports/dc_synth_v2_summary.md",
+     "kind": "prose",
+     "locator": "Caveats: Peak RSS"
+    },
+    "synth_lec": {
+     "b4a2_dc_v2_vs_rtl": {
+      "value": "SUCCEEDED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/b4a2_dc_v2_vs_rtl/fm_log.txt",
+      "passing": 6233,
+      "failing": 0
+     }
+    }
+   }
+  },
+  "icc2_b12": {
+   "pt": "icc2b12",
+   "name": "ICC2 b12",
+   "role": "history",
+   "synthesis": "DC-NXT v2 (MCMM ss/tt/ff, compile_ultra -spg)",
+   "pnr": "ICC2 X-2025.06-SP1, b9 layout (label 06g_eco) + decap-first fill: 294,659 decap cells (fd decap_3/4/6/8/12) placed before fill_*, decaps over router li1 stubs removed (6,954)",
+   "metrics": {},
    "synthesis_metrics": {
     "netlist": "dc_v2",
     "synth_leaf_cells": {
@@ -13146,6 +13303,87 @@
       "pnr/commercial/signoff/lec/conformal/reports/b11m_negctl_rtl_swap/lec_log.txt"
      ],
      "rule": "count of per-run verdicts"
+    },
+    "ir_static_vpwr_drop_mV": {
+     "value": 9.3,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_static_summary.json",
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
+    },
+    "ir_static_vgnd_bounce_mV": {
+     "value": 9.0,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_static_summary.json"
+    },
+    "ir_static_worst_total_mV": {
+     "value": 18.299999999999997,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_static_summary.json"
+    },
+    "ir_static_em_violations": {
+     "value": 0,
+     "unit": "count",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_static_summary.json"
+    },
+    "ir_dynamic_worst_avgTW_mV": {
+     "value": 112.8,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_dynamic_summary.json",
+     "note": "indicative (step 8, 2026-11-15): APL for the decap cells and the 12 most-used std cells (other cells RedHawk defaults), ASSUMED generic package model, ideal met5 stripe-end sources, uncorrelated authored tech; SRAM = constant sink"
+    },
+    "ir_dynamic_worst_minWC_mV": {
+     "value": 127.1,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_dynamic_summary.json"
+    },
+    "ir_dynamic_mean_avgTW_mV": {
+     "value": 23.9,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_dynamic_summary.json"
+    },
+    "ir_dynamic_frac_gt5pct": {
+     "value": 0.002,
+     "unit": "fraction",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_dynamic_summary.json"
+    },
+    "ir_dynamic_decap_instances": {
+     "value": 357448,
+     "unit": "count",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_dynamic_summary.json"
+    },
+    "ir_dynamic_nodecap_worst_avgTW_mV": {
+     "value": 369.3,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_dynamic_nodecap_summary.json"
+    },
+    "ir_power_fed_mW": {
+     "value": 74.484,
+     "unit": "mW",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_static_summary.json"
+    },
+    "ir_decap_cells_def": {
+     "value": 357103,
+     "unit": "count",
+     "label": "derived",
+     "source": "pnr/commercial/signoff/redhawk/apl/reports/cell_counts_innovusb11.txt",
+     "rule": "sum of sky130_*decap_* instances in the final DEF / final cell count (endcaps incl.)"
+    },
+    "ir_dynamic_estdecap_worst_avgTW_mV": {
+     "value": 135.8,
+     "unit": "mV",
+     "label": "signoff",
+     "source": "pnr/commercial/signoff/redhawk/reports/innovusb11_dynamic_estdecap_summary.json"
     },
     "derived_util_stdcell": {
      "value": 0.1079,
@@ -29823,6 +30061,10 @@
     },
     "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
    }
+  },
+  "icc2_b12": {
+   "drv_nom_tt_base": null,
+   "drv_all_corners_base": null
   },
   "innovus_b8": {
    "own": {

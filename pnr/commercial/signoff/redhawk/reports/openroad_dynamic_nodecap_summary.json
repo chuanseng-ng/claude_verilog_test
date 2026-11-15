@@ -1,67 +1,67 @@
 {
  "arm": "openroad",
- "run": "rh-dynamic-nodecap",
+ "run": "rh-apl-dynamic-nodecap",
  "populations": {
   "logic": {
    "n": 42357,
-   "worst_avgTW_mV": 209.7,
+   "worst_avgTW_mV": 192.30000000000013,
    "worst_avgTW_at": [
-    1892.9,
-    1396.72,
-    "clkload474"
+    2209.84,
+    1502.8,
+    "_53961_"
    ],
-   "mean_avgTW_mV": 56.76686970276407,
-   "worst_minTW_mV": 212.50000000000014,
-   "worst_minWC_mV": 219.89999999999998,
+   "mean_avgTW_mV": 63.60649951602013,
+   "worst_minTW_mV": 199.99999999999994,
+   "worst_minWC_mV": 212.19999999999993,
    "worst_minWC_at": [
-    1968.11,
-    1326.0,
-    "_46532_"
+    1855.64,
+    246.16,
+    "hold68"
    ],
-   "mean_minWC_mV": 169.01714710674113,
-   "frac_inst_avgTW_gt_5pct": 0.1652383313265812,
-   "frac_inst_avgTW_gt_10pct": 0.003871851169818448
+   "mean_minWC_mV": 174.16240999126214,
+   "frac_inst_avgTW_gt_5pct": 0.25466864980994874,
+   "frac_inst_avgTW_gt_10pct": 0.014920792312958897
   },
   "sram": {
    "n": 10,
-   "worst_avgTW_mV": 96.89999999999999,
+   "worst_avgTW_mV": 130.70000000000005,
    "worst_avgTW_at": [
     2279.23,
     218.75,
     "u_core.u_icache.gen_data_sram[2].u_data_sram"
    ],
-   "mean_avgTW_mV": 61.190000000000005,
-   "worst_minTW_mV": 142.50000000000006,
-   "worst_minWC_mV": 162.80000000000007,
+   "mean_avgTW_mV": 94.50000000000003,
+   "worst_minTW_mV": 193.20000000000005,
+   "worst_minWC_mV": 193.20000000000005,
    "worst_minWC_at": [
     1599.45,
-    718.75,
-    "u_core.u_dcache.gen_data_sram[1].u_data_sram"
+    218.75,
+    "u_core.u_icache.gen_data_sram[1].u_data_sram"
    ],
-   "mean_minWC_mV": 104.24000000000007,
-   "frac_inst_avgTW_gt_5pct": 0.2,
+   "mean_minWC_mV": 141.97000000000003,
+   "frac_inst_avgTW_gt_5pct": 0.7,
    "frac_inst_avgTW_gt_10pct": 0.0
   },
   "fill_tap": null,
   "logic+sram": {
    "n": 42367,
-   "worst_avgTW_mV": 209.7,
+   "worst_avgTW_mV": 192.30000000000013,
    "worst_avgTW_at": [
-    1892.9,
-    1396.72,
-    "clkload474"
+    2209.84,
+    1502.8,
+    "_53961_"
    ],
-   "mean_avgTW_mV": 56.76791370642193,
-   "worst_minTW_mV": 212.50000000000014,
-   "worst_minWC_mV": 219.89999999999998,
+   "mean_avgTW_mV": 63.61379139424705,
+   "worst_minTW_mV": 199.99999999999994,
+   "worst_minWC_mV": 212.19999999999993,
    "worst_minWC_at": [
-    1968.11,
-    1326.0,
-    "_46532_"
+    1855.64,
+    246.16,
+    "hold68"
    ],
-   "mean_minWC_mV": 169.00185757783734,
-   "frac_inst_avgTW_gt_5pct": 0.16524653621922722,
-   "frac_inst_avgTW_gt_10pct": 0.00387093728609531
+   "mean_minWC_mV": 174.15481152783747,
+   "frac_inst_avgTW_gt_5pct": 0.25477376259824863,
+   "frac_inst_avgTW_gt_10pct": 0.01491727051714778
   }
  },
  "hotspot_tiles_200um": [
@@ -74,8 +74,32 @@
     800.0,
     1000.0
    ],
-   "mean_avgTW_mV": 88.04754098360664,
+   "mean_avgTW_mV": 111.19234972677606,
    "n_inst": 183
+  },
+  {
+   "x_um": [
+    2400.0,
+    2600.0
+   ],
+   "y_um": [
+    1000.0,
+    1200.0
+   ],
+   "mean_avgTW_mV": 103.93348623853224,
+   "n_inst": 872
+  },
+  {
+   "x_um": [
+    400.0,
+    600.0
+   ],
+   "y_um": [
+    400.0,
+    600.0
+   ],
+   "mean_avgTW_mV": 99.14687500000005,
+   "n_inst": 32
   },
   {
    "x_um": [
@@ -86,7 +110,7 @@
     800.0,
     1000.0
    ],
-   "mean_avgTW_mV": 84.10079051383399,
+   "mean_avgTW_mV": 99.09209486166003,
    "n_inst": 253
   },
   {
@@ -98,126 +122,102 @@
     1400.0,
     1600.0
    ],
-   "mean_avgTW_mV": 83.82156862745107,
+   "mean_avgTW_mV": 94.08300653594775,
    "n_inst": 153
-  },
-  {
-   "x_um": [
-    2400.0,
-    2600.0
-   ],
-   "y_um": [
-    1000.0,
-    1200.0
-   ],
-   "mean_avgTW_mV": 83.12316513761473,
-   "n_inst": 872
-  },
-  {
-   "x_um": [
-    1400.0,
-    1600.0
-   ],
-   "y_um": [
-    1600.0,
-    1800.0
-   ],
-   "mean_avgTW_mV": 75.61057401812695,
-   "n_inst": 331
   }
  ],
  "top5_inst_avgTW": [
   {
-   "inst": "clkload474",
-   "x": 1892.9,
-   "y": 1396.72,
-   "drop_mV": 209.7
+   "inst": "_53961_",
+   "x": 2209.84,
+   "y": 1502.8,
+   "drop_mV": 192.30000000000013
   },
   {
-   "inst": "clkload485",
-   "x": 1898.42,
-   "y": 1510.96,
-   "drop_mV": 205.99999999999997
+   "inst": "_49672_",
+   "x": 1789.86,
+   "y": 1399.44,
+   "drop_mV": 192.20000000000016
   },
   {
-   "inst": "clkload495",
-   "x": 2009.97,
-   "y": 1761.2,
-   "drop_mV": 205.10000000000005
+   "inst": "_24640_",
+   "x": 1733.51,
+   "y": 1277.04,
+   "drop_mV": 192.20000000000016
   },
   {
-   "inst": "clkload481",
-   "x": 2047.69,
-   "y": 1475.6,
-   "drop_mV": 205.00000000000006
+   "inst": "_49946_",
+   "x": 1776.98,
+   "y": 1304.24,
+   "drop_mV": 192.09999999999994
   },
   {
-   "inst": "clkload483",
-   "x": 1827.35,
-   "y": 1516.4,
-   "drop_mV": 204.7000000000001
+   "inst": "fanout4404",
+   "x": 2007.9,
+   "y": 1442.96,
+   "drop_mV": 191.99999999999994
   }
  ],
  "sram_macros": [
   {
    "name": "u_core.u_icache.gen_data_sram[2].u_data_sram",
-   "avgTW_mV": 96.89999999999999,
-   "minWC_mV": 144.3000000000001
-  },
-  {
-   "name": "u_core.u_icache.gen_data_sram[1].u_data_sram",
-   "avgTW_mV": 91.60000000000012,
-   "minWC_mV": 156.80000000000004
+   "avgTW_mV": 130.70000000000005,
+   "minWC_mV": 175.79999999999995
   },
   {
    "name": "u_core.u_dcache.gen_data_sram[2].u_data_sram",
-   "avgTW_mV": 86.30000000000004,
-   "minWC_mV": 145.90000000000015
+   "avgTW_mV": 130.0000000000001,
+   "minWC_mV": 191.99999999999994
+  },
+  {
+   "name": "u_core.u_icache.gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 125.49999999999994,
+   "minWC_mV": 193.20000000000005
   },
   {
    "name": "u_core.u_dcache.gen_data_sram[0].u_data_sram",
-   "avgTW_mV": 64.79999999999997,
-   "minWC_mV": 119.09999999999998
-  },
-  {
-   "name": "u_core.u_dcache.gen_data_sram[1].u_data_sram",
-   "avgTW_mV": 62.99999999999994,
-   "minWC_mV": 162.80000000000007
-  },
-  {
-   "name": "u_core.u_icache.gen_data_sram[0].u_data_sram",
-   "avgTW_mV": 62.59999999999999,
-   "minWC_mV": 88.7
+   "avgTW_mV": 98.00000000000009,
+   "minWC_mV": 149.10000000000002
   },
   {
    "name": "u_core.u_dcache.gen_data_sram[3].u_data_sram",
-   "avgTW_mV": 62.00000000000006,
-   "minWC_mV": 104.00000000000009
+   "avgTW_mV": 96.99999999999997,
+   "minWC_mV": 140.1000000000001
+  },
+  {
+   "name": "u_core.u_icache.gen_data_sram[0].u_data_sram",
+   "avgTW_mV": 92.30000000000005,
+   "minWC_mV": 120.70000000000003
   },
   {
    "name": "u_core.u_icache.gen_data_sram[3].u_data_sram",
-   "avgTW_mV": 60.99999999999994,
-   "minWC_mV": 83.8000000000001
+   "avgTW_mV": 90.60000000000001,
+   "minWC_mV": 117.09999999999998
+  },
+  {
+   "name": "u_core.u_dcache.gen_data_sram[1].u_data_sram",
+   "avgTW_mV": 86.30000000000004,
+   "minWC_mV": 190.5000000000001
   },
   {
    "name": "u_core.u_dcache.u_tag_sram",
-   "avgTW_mV": 14.100000000000001,
-   "minWC_mV": 25.700000000000056
+   "avgTW_mV": 52.200000000000024,
+   "minWC_mV": 89.70000000000012
   },
   {
    "name": "u_core.u_icache.u_tag_sram",
-   "avgTW_mV": 9.600000000000053,
-   "minWC_mV": 11.300000000000088
+   "avgTW_mV": 42.39999999999999,
+   "minWC_mV": 51.5000000000001
   }
  ],
  "log_worst_block": [
   "---------------------------------------------------",
-  "WIRE  116.50mV  VPWR  1.800  (1961.210,1324.640) met1",
-  "WIRE  103.80mV  VGND  0.000  (1968.110,1327.360) met1",
-  "avgTW 209.65mV  VPWR  1.800  (1892.900,1396.720) clkload474",
-  "maxTW 180.64mV  VPWR  1.800  (1566.760,1459.280) _54100_",
-  "minTW 212.47mV  VPWR  1.800  (2022.620,1328.720) clkbuf_leaf_332_clk_i",
-  "minWC 219.91mV  VPWR  1.800  (1968.110,1326.000) _46532_"
+  "WIRE  112.80mV  VPWR  1.800  (1961.210,1324.640) met1",
+  "WIRE  111.10mV  VGND  0.000  (1837.110,718.750) met4",
+  "avgTW 192.26mV  VPWR  1.800  (2209.840,1502.800) _53961_",
+  "maxTW 189.61mV  VPWR  1.800  (1776.980,1304.240) _49946_",
+  "minTW 200.04mV  VPWR  1.800  (1991.340,656.880) clkload342",
+  "minWC 212.23mV  VPWR  1.800  (1855.640,246.160) hold68"
  ],
  "rh_total_power_mW": 93.132,
  "presim_ps": 3500,
@@ -229,7 +229,7 @@
    "max_ratio_pct": 0.0,
    "violations_ge_100pct": 0,
    "violations_by_layer": {},
-   "worst_wire_ratio_line": "WIRE 8.68% VGND 21.36mA (3545.040,1246.560) met5"
+   "worst_wire_ratio_line": "WIRE 7.70% VGND 21.36mA (3545.040,1246.560) met5"
   },
   "RMS": {
    "file_mode": "RMS",
@@ -241,11 +241,12 @@
   },
   "PEAK": {
    "file_mode": "PEAK",
-   "entries_ge_50pct": 2058,
+   "entries_ge_50pct": 1861,
    "max_ratio_pct": 139.656,
-   "violations_ge_100pct": 146,
+   "violations_ge_100pct": 167,
    "violations_by_layer": {
-    "met1": 146
+    "met1": 149,
+    "met4": 18
    },
    "worst_wire_ratio_line": "WIRE 139.66% VGND 1.34mA (645.040,620.160) met1"
   }

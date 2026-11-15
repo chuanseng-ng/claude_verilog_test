@@ -1,0 +1,266 @@
+{
+ "arm": "innovusb11",
+ "run": "rh-apl-static",
+ "vdd_V": 1.8,
+ "populations": {
+  "all": {
+   "n": 469950,
+   "worst_vpwr_drop_mV": 9.299999999999999,
+   "worst_vpwr_at": [
+    1597.58,
+    515.44,
+    "FE_OFC14393_debug_rs1_data_o_26"
+   ],
+   "worst_vgnd_bounce_mV": 9.0,
+   "worst_vgnd_at": [
+    1663.36,
+    518.16,
+    "FE_OFC14404_debug_rs1_data_o_7"
+   ],
+   "worst_total_mV": 18.299999999999997,
+   "worst_total_at": [
+    1597.58,
+    515.44,
+    "FE_OFC14393_debug_rs1_data_o_26"
+   ],
+   "avg_vpwr_drop_mV": 5.379882540699923,
+   "avg_vgnd_bounce_mV": 5.374103202471429,
+   "avg_total_mV": 10.753985743171828
+  },
+  "sram": {
+   "n": 10,
+   "worst_vpwr_drop_mV": 8.9,
+   "worst_vpwr_at": [
+    1599.45,
+    218.75,
+    "u_core/u_icache_gen_data_sram[1].u_data_sram"
+   ],
+   "worst_vgnd_bounce_mV": 8.9,
+   "worst_vgnd_at": [
+    1599.45,
+    218.75,
+    "u_core/u_icache_gen_data_sram[1].u_data_sram"
+   ],
+   "worst_total_mV": 17.8,
+   "worst_total_at": [
+    1599.45,
+    218.75,
+    "u_core/u_icache_gen_data_sram[1].u_data_sram"
+   ],
+   "avg_vpwr_drop_mV": 7.29,
+   "avg_vgnd_bounce_mV": 7.330000000000001,
+   "avg_total_mV": 14.62
+  },
+  "logic": {
+   "n": 45396,
+   "worst_vpwr_drop_mV": 9.299999999999999,
+   "worst_vpwr_at": [
+    1597.58,
+    515.44,
+    "FE_OFC14393_debug_rs1_data_o_26"
+   ],
+   "worst_vgnd_bounce_mV": 9.0,
+   "worst_vgnd_at": [
+    1663.36,
+    518.16,
+    "FE_OFC14404_debug_rs1_data_o_7"
+   ],
+   "worst_total_mV": 18.299999999999997,
+   "worst_total_at": [
+    1597.58,
+    515.44,
+    "FE_OFC14393_debug_rs1_data_o_26"
+   ],
+   "avg_vpwr_drop_mV": 6.260181513790017,
+   "avg_vgnd_bounce_mV": 6.2559366464007935,
+   "avg_total_mV": 12.5161181601907
+  },
+  "fill_tap": {
+   "n": 424544,
+   "worst_vpwr_drop_mV": 9.299999999999999,
+   "worst_vpwr_at": [
+    1604.71,
+    512.72,
+    "TAP_11946"
+   ],
+   "worst_vgnd_bounce_mV": 9.0,
+   "worst_vgnd_at": [
+    2038.49,
+    85.68,
+    "ENDCAP_272"
+   ],
+   "worst_total_mV": 18.299999999999997,
+   "worst_total_at": [
+    1604.71,
+    512.72,
+    "TAP_11946"
+   ],
+   "avg_vpwr_drop_mV": 5.285708195150404,
+   "avg_vgnd_bounce_mV": 5.279763699408375,
+   "avg_total_mV": 10.565471894558485
+  }
+ },
+ "hotspot_tiles_200um": [
+  {
+   "x_um": [
+    2000.0,
+    2200.0
+   ],
+   "y_um": [
+    0.0,
+    200.0
+   ],
+   "mean_total_mV": 17.618518518518524,
+   "n_inst": 81
+  },
+  {
+   "x_um": [
+    1800.0,
+    2000.0
+   ],
+   "y_um": [
+    0.0,
+    200.0
+   ],
+   "mean_total_mV": 17.574482758620643,
+   "n_inst": 290
+  },
+  {
+   "x_um": [
+    1600.0,
+    1800.0
+   ],
+   "y_um": [
+    400.0,
+    600.0
+   ],
+   "mean_total_mV": 17.530651340996172,
+   "n_inst": 261
+  },
+  {
+   "x_um": [
+    1800.0,
+    2000.0
+   ],
+   "y_um": [
+    200.0,
+    400.0
+   ],
+   "mean_total_mV": 17.423529411764708,
+   "n_inst": 306
+  },
+  {
+   "x_um": [
+    2000.0,
+    2200.0
+   ],
+   "y_um": [
+    200.0,
+    400.0
+   ],
+   "mean_total_mV": 17.413924050632925,
+   "n_inst": 79
+  }
+ ],
+ "sram_macros": [
+  {
+   "name": "u_core/u_icache_gen_data_sram[1].u_data_sram",
+   "vdd_drop_mV": 8.9,
+   "gnd_bounce_mV": 8.9,
+   "x": 1599.45,
+   "y": 218.75
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[2].u_data_sram",
+   "vdd_drop_mV": 8.6,
+   "gnd_bounce_mV": 8.7,
+   "x": 2279.23,
+   "y": 218.75
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[1].u_data_sram",
+   "vdd_drop_mV": 8.5,
+   "gnd_bounce_mV": 8.6,
+   "x": 1599.45,
+   "y": 718.75
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[2].u_data_sram",
+   "vdd_drop_mV": 8.3,
+   "gnd_bounce_mV": 8.4,
+   "x": 2279.23,
+   "y": 718.75
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[0].u_data_sram",
+   "vdd_drop_mV": 8.3,
+   "gnd_bounce_mV": 8.3,
+   "x": 919.67,
+   "y": 218.75
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[0].u_data_sram",
+   "vdd_drop_mV": 8.0,
+   "gnd_bounce_mV": 8.0,
+   "x": 919.67,
+   "y": 718.75
+  },
+  {
+   "name": "u_core/u_icache_gen_data_sram[3].u_data_sram",
+   "vdd_drop_mV": 6.0,
+   "gnd_bounce_mV": 6.0,
+   "x": 2959.01,
+   "y": 218.75
+  },
+  {
+   "name": "u_core/u_dcache_gen_data_sram[3].u_data_sram",
+   "vdd_drop_mV": 5.8,
+   "gnd_bounce_mV": 5.8,
+   "x": 2959.01,
+   "y": 718.75
+  },
+  {
+   "name": "u_core/u_icache_u_tag_sram",
+   "vdd_drop_mV": 5.3,
+   "gnd_bounce_mV": 5.4,
+   "x": 339.89,
+   "y": 218.75
+  },
+  {
+   "name": "u_core/u_dcache_u_tag_sram",
+   "vdd_drop_mV": 5.2,
+   "gnd_bounce_mV": 5.2,
+   "x": 339.89,
+   "y": 718.75
+  }
+ ],
+ "pad_current_mA": {
+  "vdd_sum": 41.3789,
+  "vss_sum": -41.379099999999994,
+  "n": 72,
+  "max": 1.5223
+ },
+ "rh_total_power_mW": 74.484,
+ "em_static": {
+  "file": "rv32i_cpu_top.em.worst",
+  "entries_ge_50pct": 0,
+  "metal_violations": 0,
+  "via_violations": 0,
+  "worst_wire": [
+   "WIRE",
+   "7.13%",
+   "VPWR",
+   "21.36mA",
+   "(22.240,1546.030)",
+   "met5"
+  ],
+  "worst_via": [
+   "VIA",
+   "5.56%",
+   "VPWR",
+   "2.49mA",
+   "(2044.970,911.870)",
+   "M4M5_PR_3"
+  ]
+ }
+}

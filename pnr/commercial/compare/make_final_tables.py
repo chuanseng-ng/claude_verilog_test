@@ -164,7 +164,8 @@ def physical():
         ("RedHawk dynamic worst avgTW / minWC / mean avgTW (mV)", lambda a: " / ".join(red(a, k, "{}") for k in ("ir_dynamic_worst_avgTW_mV", "ir_dynamic_worst_minWC_mV", "ir_dynamic_mean_avgTW_mV"))),
         ("RedHawk dynamic, instances above 5 % VDD", lambda a: red(a, "ir_dynamic_frac_gt5pct", "{:.2%}")),
         ("RedHawk dynamic with no decap, worst avgTW (mV)", lambda a: red(a, "ir_dynamic_nodecap_worst_avgTW_mV", "{}")),
-        ("decap instances seen by RedHawk", lambda a: red(a, "ir_dynamic_decap_instances", "{:,}")),
+        ("RedHawk dynamic, APL std cells + W/L-estimated decap, worst avgTW (mV)", lambda a: red(a, "ir_dynamic_estdecap_worst_avgTW_mV", "{}")),
+        ("decap instances in the DEF (all decap_N cells, incl. endcaps)", lambda a: red(a, "ir_decap_cells_def", "{:,}")),
     ]
     t = ["| | " + " | ".join(nm(a) for a in ARMS) + " |", "|---|" + "---|" * len(ARMS)]
     for lab, f in rows:
