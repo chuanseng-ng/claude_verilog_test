@@ -2,7 +2,10 @@
 """Independent re-grade of Quaigh patterns by simulation (bead j41m.15, sanity check 2).
 
 usage: regrade.py CUT.blif PATTERNS.test --out report.json [--samples 200] [--undetected 50] [--seed 7]
-                  [--quaigh PATH] [--no-quaigh-sim]
+                  [--quaigh PATH] [--no-quaigh-sim] [--sites cut_sites.txt]
+
+--sites (bead j41m.20): sample only the listed nets (the cell-pin buffers of `mk_cut.py --cellpin`), so the sample is drawn
+from the same fault universe `quaigh --fault-sites` grades.
 
 For a random sample of single stuck-at faults on gate-output nets of the BLIF cut it decides, TWICE and independently,
 whether the pattern file detects the fault (some output differs from the good circuit on some pattern):
@@ -227,13 +230,20 @@ def quaigh_equiv(quaigh: str, a: Path, b: Path) -> bool:
 
 
 def regrade(blif: Path, patterns: Path, quaigh: Optional[str], samples: int, n_undet: int, seed: int,
-            tmp: Path) -> dict:
+            tmp: Path, sites: Optional[List[str]] = None) -> dict:
     text = to_comb_blif(Path(blif).read_text())
     sim = Sim(text)
     pats = read_patterns(patterns)
     sim.load(pats)
     rng = random.Random(seed)
-    pool = [(n, v) for n in sim.order for v in (0, 1)]
+    population = sim.order
+    if sites is not None:
+        known = set(sim.order)
+        missing = [n for n in sites if n not in known]
+        if missing:
+            raise SystemExit(f"{len(missing)} fault sites are not gate outputs of the cut, e.g. {missing[:3]}")
+        population = list(sites)
+    pool = [(n, v) for n in population for v in (0, 1)]
     rng.shuffle(pool)
     det, undet = [], []
     for net, v in pool:
@@ -273,7 +283,7 @@ def regrade(blif: Path, patterns: Path, quaigh: Optional[str], samples: int, n_u
     zero = ["0" * len(sim.inputs)]
     s0 = Sim(text)
     s0.load(zero)
-    probe = [(n, rng.randint(0, 1)) for n in rng.sample(sim.order, min(300, len(sim.order)))]
+    probe = [(n, rng.randint(0, 1)) for n in rng.sample(population, min(300, len(population)))]
     real_hits = sum(sim.detect(n, v) is not None for n, v in probe)
     zero_hits = sum(s0.detect(n, v) is not None for n, v in probe)
     rep["control_all_zero"] = {"probe_faults": len(probe), "detected_by_quaigh_patterns": real_hits,
@@ -293,10 +303,13 @@ def main(argv=None) -> int:
     ap.add_argument("--quaigh", default="/nobackup/claude_sim_build/j41m15/bin/quaigh")
     ap.add_argument("--no-quaigh-sim", action="store_true")
     ap.add_argument("--dump-faults", help="write the sampled faults with this simulator's verdict (input of regrade_vl.py)")
+    ap.add_argument("--sites", help="sample only these nets (one per line; the cell-pin sites of mk_cut.py --cellpin)")
+    ap.add_argument("--tmp-root", default="/nobackup/claude_sim_build/j41m15")
     a = ap.parse_args(argv)
-    with tempfile.TemporaryDirectory(dir="/nobackup/claude_sim_build/j41m15") as td:
+    sites = Path(a.sites).read_text().split() if a.sites else None
+    with tempfile.TemporaryDirectory(dir=a.tmp_root) as td:
         rep = regrade(Path(a.blif), Path(a.patterns), None if a.no_quaigh_sim else a.quaigh, a.samples, a.undetected,
-                      a.seed, Path(td))
+                      a.seed, Path(td), sites)
     Path(a.out).write_text(json.dumps(rep, indent=1))
     if a.dump_faults:
         Path(a.dump_faults).write_text(json.dumps(rep["faults"]))

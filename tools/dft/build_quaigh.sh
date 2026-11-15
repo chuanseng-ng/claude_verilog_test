@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # build_quaigh.sh [patched]
 #   (no arg)  stock quaigh 0.0.6 from crates.io into /nobackup/claude_sim_build/dft_stage0/qg/root (DFT Stage 0 / j41m.15)
-#   patched   quaigh 0.0.6+cvt1: the same crate source with tools/dft/atpg/quaigh/*.patch applied (bead j41m.18: sparse
-#             pattern-detection rows, so the fabric cut fits the 12 GB box), into /nobackup/claude_sim_build/j41m18/qroot.
+#   patched   quaigh 0.0.6+cvtN: the same crate source with tools/dft/atpg/quaigh/*.patch applied in order, into $PW/qroot.
+#             0001 (bead j41m.18, +cvt1): sparse pattern-detection rows, so the fabric cut fits the 12 GB box.
+#             0002 (bead j41m.20, +cvt2): `--fault-sites FILE` on atpg / atpg-report (cell-pin fault list).
+#             PW defaults to /nobackup/claude_sim_build/j41m20 (the +cvt1 build of j41m.18 lives in .../j41m18/qroot).
 #             Needs the stock build first (it fills the cargo registry the source is copied from).
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
@@ -20,7 +22,7 @@ if [ "${1:-}" != patched ]; then
   exit 0
 fi
 
-PW=/nobackup/claude_sim_build/j41m18
+PW=${PW:-/nobackup/claude_sim_build/j41m20}
 src=$(ls -d "$CARGO_HOME"/registry/src/*/quaigh-0.0.6 | head -1)
 [ -d "$src" ] || { echo "quaigh-0.0.6 source not in $CARGO_HOME/registry: run the stock build first" >&2; exit 1; }
 mkdir -p "$PW/src"
