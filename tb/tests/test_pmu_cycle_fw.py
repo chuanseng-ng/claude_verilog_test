@@ -47,9 +47,7 @@ def _run(status_value):
 
 def _accesses(trace):
     return [
-        (r["mem_addr"], r["mem_write"], r["mem_data"])
-        for r in trace
-        if r["mem_addr"] is not None
+        (r["mem_addr"], r["mem_write"], r["mem_data"]) for r in trace if r["mem_addr"] is not None
     ]
 
 
@@ -58,7 +56,7 @@ def _after_request(trace):
     acc = _accesses(trace)
     start = [i for i, a in enumerate(acc) if a[0] == DMA_CTRL_ADDR and a[2] == 1]
     assert len(start) == 1, f"expected one DMA start store, got {len(start)}"
-    return acc[start[0] + 1:]
+    return acc[start[0] + 1 :]
 
 
 def test_no_bus_access_between_the_request_and_the_wake_up():
@@ -68,7 +66,8 @@ def test_no_bus_access_between_the_request_and_the_wake_up():
     after = _after_request(trace)
     assert after, "the firmware has no access after the request"
     assert after[0][:2] == (PMU_STATUS_ADDR, False), (
-        f"first access after the request is {after[0]}, not the read of PMU STATUS")
+        f"first access after the request is {after[0]}, not the read of PMU STATUS"
+    )
 
 
 def test_request_and_wait_loop_share_one_instruction_cache_line():
@@ -78,7 +77,8 @@ def test_request_and_wait_loop_share_one_instruction_cache_line():
     start_pc = next(r["pc"] for r in trace if r["mem_addr"] == DMA_CTRL_ADDR and r["mem_data"] == 1)
     loop_pcs = {r["pc"] for r in trace if r["pc"] >= start_pc and r["pc"] < labels["POST"]}
     assert {pc >> 4 for pc in loop_pcs | {start_pc}} == {start_pc >> 4}, (
-        f"start store 0x{start_pc:08x} and wait loop {sorted(map(hex, loop_pcs))} cross a line")
+        f"start store 0x{start_pc:08x} and wait loop {sorted(map(hex, loop_pcs))} cross a line"
+    )
     assert labels["LOOP"] in loop_pcs
 
 
