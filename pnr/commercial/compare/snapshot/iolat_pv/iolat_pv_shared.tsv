@@ -9,6 +9,7 @@ innovusb7	nom	tt	2.6197	2.6320
 icc2b8	nom	tt	2.6197	2.6320
 innovusb8	nom	tt	2.6197	2.6320
 icc2b9	nom	tt	2.6197	2.6320
+icc2b12	nom	tt	2.6197	2.6320
 innovusb9	nom	tt	2.6197	2.6320
 innovusb10	nom	tt	2.6197	2.6320
 innovusb11	nom	tt	2.6197	2.6320
@@ -20,6 +21,7 @@ innovusb7	nom	ss	4.4406	4.4587
 icc2b8	nom	ss	4.4406	4.4587
 innovusb8	nom	ss	4.4406	4.4587
 icc2b9	nom	ss	4.4406	4.4587
+icc2b12	nom	ss	4.4406	4.4587
 innovusb9	nom	ss	4.4406	4.4587
 innovusb10	nom	ss	4.4406	4.4587
 innovusb11	nom	ss	4.4406	4.4587
@@ -31,6 +33,7 @@ innovusb7	nom	ff	1.8417	1.8458
 icc2b8	nom	ff	1.8417	1.8458
 innovusb8	nom	ff	1.8417	1.8458
 icc2b9	nom	ff	1.8417	1.8458
+icc2b12	nom	ff	1.8417	1.8458
 innovusb9	nom	ff	1.8417	1.8458
 innovusb10	nom	ff	1.8417	1.8458
 innovusb11	nom	ff	1.8417	1.8458
@@ -42,6 +45,7 @@ innovusb7	min	tt	2.4639	2.4717
 icc2b8	min	tt	2.4639	2.4717
 innovusb8	min	tt	2.4639	2.4717
 icc2b9	min	tt	2.4639	2.4717
+icc2b12	min	tt	2.4639	2.4717
 innovusb9	min	tt	2.4639	2.4717
 innovusb10	min	tt	2.4639	2.4717
 innovusb11	min	tt	2.4639	2.4717
@@ -53,6 +57,7 @@ innovusb7	min	ss	4.2041	4.2148
 icc2b8	min	ss	4.2041	4.2148
 innovusb8	min	ss	4.2041	4.2148
 icc2b9	min	ss	4.2041	4.2148
+icc2b12	min	ss	4.2041	4.2148
 innovusb9	min	ss	4.2041	4.2148
 innovusb10	min	ss	4.2041	4.2148
 innovusb11	min	ss	4.2041	4.2148
@@ -64,6 +69,7 @@ innovusb7	min	ff	1.7223	1.7258
 icc2b8	min	ff	1.7223	1.7258
 innovusb8	min	ff	1.7223	1.7258
 icc2b9	min	ff	1.7223	1.7258
+icc2b12	min	ff	1.7223	1.7258
 innovusb9	min	ff	1.7223	1.7258
 innovusb10	min	ff	1.7223	1.7258
 innovusb11	min	ff	1.7223	1.7258
@@ -75,6 +81,7 @@ innovusb7	max	tt	2.8239	2.8467
 icc2b8	max	tt	2.8239	2.8467
 innovusb8	max	tt	2.8239	2.8467
 icc2b9	max	tt	2.8239	2.8467
+icc2b12	max	tt	2.8239	2.8467
 innovusb9	max	tt	2.8239	2.8467
 innovusb10	max	tt	2.8239	2.8467
 innovusb11	max	tt	2.8239	2.8467
@@ -86,6 +93,7 @@ innovusb7	max	ss	4.7459	4.7781
 icc2b8	max	ss	4.7459	4.7781
 innovusb8	max	ss	4.7459	4.7781
 icc2b9	max	ss	4.7459	4.7781
+icc2b12	max	ss	4.7459	4.7781
 innovusb9	max	ss	4.7459	4.7781
 innovusb10	max	ss	4.7459	4.7781
 innovusb11	max	ss	4.7459	4.7781
@@ -97,6 +105,7 @@ innovusb7	max	ff	2.0003	2.0066
 icc2b8	max	ff	2.0003	2.0066
 innovusb8	max	ff	2.0003	2.0066
 icc2b9	max	ff	2.0003	2.0066
+icc2b12	max	ff	2.0003	2.0066
 innovusb9	max	ff	2.0003	2.0066
 innovusb10	max	ff	2.0003	2.0066
 innovusb11	max	ff	2.0003	2.0066
