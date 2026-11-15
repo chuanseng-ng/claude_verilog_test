@@ -404,7 +404,7 @@ jobs:
       # The final job fails when the summed pass count of the shards is below PASS_FLOOR. cocotb.yml holds the
       # same value. Change it when a pull request adds or removes tests. The derivation of the current value
       # is in the book. Doc: cr:flow:ci-soc-coverage
-      PASS_FLOOR: '896'
+      PASS_FLOOR: '913'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`). The floor uses the CI log-grep formula (`passed$`):
       # an expect_fail test prints "passed: failed as expected" and is not counted.
       # CPU_PASS_FLOOR is the floor of the CPU/cache/GPU pass count. Change it when you add or remove tests there.

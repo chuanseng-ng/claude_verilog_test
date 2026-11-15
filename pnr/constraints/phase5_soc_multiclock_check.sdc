@@ -283,9 +283,9 @@ set _timer_irq_src [get_nets timer_irq -quiet]
 cdc_apply_max_delay $_timer_irq_src 780 sys_clk cpu_clk \
     "sec.13 timer_irq (source of u_timer_irq_sync) single-bit CDC crossing"
 
-set _iso_ack_src [get_nets pmu_cpu_iso_en_sync -quiet]
+set _iso_ack_src [get_nets cpu_iso_clamp_q -quiet]
 cdc_apply_max_delay $_iso_ack_src 1750 cpu_clk sys_clk \
-    "sec.13a pmu_cpu_iso_en_sync (source of u_cpu_iso_ack_sync) single-bit CDC crossing (cpu_clk -> sys_clk)"
+    "sec.13a cpu_iso_clamp_q (source of u_cpu_iso_ack_sync) single-bit CDC crossing (cpu_clk -> sys_clk)"
 
 ###############################################################################
 # 15. CDC exception coverage gate. It stops the read with an error if a section 11-13 exception matched an empty collection.

@@ -8074,6 +8074,10 @@ Clock topology (2-domain SoC, sv2v synthesis, GH #92/#93):
 
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
 
+\begin{information}
+Part of the text below names \code{pmu\_cpu\_iso\_en\_sync} as the source of the acknowledge synchroniser \code{u\_cpu\_iso\_ack\_sync}. That was the source before the change of the PMU order. The source is now the flop \code{cpu\_iso\_clamp\_q}, which registers the clamp \code{cpu\_iso\_clamp}. The present file binds the budget of the return crossing to \code{cpu\_iso\_clamp\_q}. \Cref{tm:ch:mod-power-management} describes the present design.
+\end{information}
+
 \begin{relocated}{pnr/constraints/phase5_soc_multiclock_check.sdc}
 
 \subsection*{Header comment}
@@ -8554,6 +8558,10 @@ sky130_soc.sdc — Timing constraints for SoC Stage 2 (Sky130A, 40 MHz)
 \section{\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}}\label{tm:pd:sky130-soc-cdc-check-sdc}
 
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{information}
+Part of the text below names \code{pmu\_cpu\_iso\_en\_sync} as the source of the acknowledge synchroniser \code{u\_cpu\_iso\_ack\_sync}. That was the source before the change of the PMU order. The source is now the flop \code{cpu\_iso\_clamp\_q}, which registers the clamp \code{cpu\_iso\_clamp}. The present file budgets \code{u\_cpu\_iso\_ack\_sync} by its instance and does not name the source net. \Cref{tm:ch:mod-power-management} describes the present design.
+\end{information}
 
 \begin{relocated}{pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc}
 
@@ -9621,6 +9629,10 @@ skip the shell redirect.)
 \section{\texttt{scripts/check\_cdc\_timing.tcl}}\label{tm:pd:scripts-check-cdc-timing-tcl}
 
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
+
+\begin{information}
+Part of the text below names \code{pmu\_cpu\_iso\_en\_sync} as the source of the acknowledge synchroniser \code{u\_cpu\_iso\_ack\_sync}. That was the source before the change of the PMU order. The source is now the flop \code{cpu\_iso\_clamp\_q}, which registers the clamp \code{cpu\_iso\_clamp}. The present script reports the return crossing through \code{cpu\_iso\_clamp\_q}. \Cref{tm:ch:mod-power-management} describes the present design.
+\end{information}
 
 \begin{relocated}{pnr/scripts/check_cdc_timing.tcl}
 

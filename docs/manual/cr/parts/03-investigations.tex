@@ -3075,3 +3075,42 @@ Mutant group & Tests that fail \\
 \code{r01} & 2 of 13 \\
 \bottomrule
 \end{longtable}
+
+
+\section{PMU order: clock stop before the clamp (\code{zftj})}\label{cr:defect:pmu-iso-order}
+
+\begin{record}
+
+Date 2026-11-14 to 2026-11-15. Beads \bead{zftj.7}, \bead{zftj.8} and \bead{zftj.10}. GH \#379, \#380, \#382 and \#386, fixed by PR \#408. The tests of PR \#388 confirmed the three defects of the PMU in CI before the change. \#379: after a timed-out power-up the acknowledge stayed high, and the next power-down left \code{DOM_PD_ISO} after one cycle with no handshake, and \code{STATUS} bit 3 was cleared at the start of that power-down. \#380: \code{cpu_gated_clk} had edges while the ISO\_CPU clamp was active, 4 in the power-down and 2 in the power-up at 1:1. \#382: a reset of the PMU in \code{DOM_OFF} released the reset, the clamp and the clock enable on one CPU clock edge. \#386: \code{ADDR_W} had no lower bound.
+
+\end{record}
+
+\begin{record}
+
+Owner decisions of 2026-11-14. Option A of the design proposal for both domains: the power-down is save, clock stop, isolation with a wait for the acknowledge, reset; the power-up is reset release, restore, release of the isolation with a wait for the release, clock start. The CPU clamp control becomes \code{cpu_iso_clamp}, the clamp request \code{pmu_cpu_iso_en_sync} ANDed with the inverse of \code{cpu_gated_clk_en}, and its flop copy \code{cpu_iso_clamp_q} is the source of the acknowledge. Both waits accept only a fresh acknowledge (\code{ack_low_seen_q} for the power-down, the mirror \code{ack_high_seen_q} for the power-up). \code{STATUS} bit 3 becomes sticky, and a new write-1-to-clear register \code{STATUS_CLR} at 0x00C clears it. A guard rejects \code{ADDR_W} below 4, and the target \code{pmu_guard_neg} tests it and the guard of \code{ISO_ACK_TIMEOUT}. For \#382 the decision is to accept the behaviour and document it. The old rule DS-PMU-100, clamp before reset and clock stop, is rewritten. Option B, a second acknowledge for a stopped clock, was rejected.
+
+\end{record}
+
+\begin{record}
+
+Correction. Earlier text in the books and in source comments called the place of the clock stop between the isolation and the reset an order of the power intent (UPF-mandated). The power intent \src{pnr/constraints/phase5_soc.upf} orders only save, isolate, reset and switch off, and switch on, reset release, restore and release isolation. It does not mention the clock gate. The place of the clock stop was a choice of \code{pmu.sv}. The record of the multi-clock work in the status history keeps the old words, and this record corrects them.
+
+\end{record}
+
+\begin{record}
+
+Results in CI on the branch of PR \#408, period of \code{clk_i} 7 ns, measured. Suites: \code{pmu} 35 of 35, \code{soc_pmu_iso_ack} 13 of 13, \code{soc_pmu_multiclock} 12 of 12, \code{soc_integration} 9 of 9. The tests \code{test_p1_power_down_after_timed_out_power_up_needs_fresh_ack} and \code{test_p2_no_cpu_handshake_while_clamp_active} lost the mark \code{expect_fail} and pass. The two \code{test_p4_*} tests of a reset of the PMU in \code{DOM_OFF} stay \code{expect_fail} as evidence of the accepted limit. The sweep of \code{test_soc_pmu_multiclock} found no gated edge with the clamp active at the CPU clock periods 7, 3, 21 and 56 ns, at 13, 14, 10 and 8 offsets. The raw clamp request also overlapped no gated edge in the sweep, so only the injection tests discriminate the qualifier. A request forced with the gate open overlapped 8 to 11 gated edges at 7 ns and 3 ns as a raw request and none as a qualified clamp. Length of the waits \code{DOM_PD_ISO} and \code{DOM_PU_ISO}: 6 and 6 cycles at 1:1, 11 and 12 at 21 ns, 23 and 24 at 56 ns, 4 and 4 at 3 ns. Release monitor after a sequenced power-up, CPU edges of the clamp release, the reset release, the clock enable and the first gated edge: 9, 7, 15, 16 at 7 ns; 12, 8, 22, 23 at 3 ns; 6, 5, 10, 11 at 21 ns; 5, 5, 8, 9 at 56 ns. After a reset of the PMU in \code{DOM_OFF} the three releases share one edge at each period, and the first gated edge is one edge later.
+
+\end{record}
+
+\begin{record}
+
+Mutation campaign of \src{tools/verif/mutate_pmu_iso_ack.py} on the new RTL, as reported in the comment of PR \#408: 39 mutants, 35 killed, 4 expected survivors, 0 unexplained survivors, 0 invalid. Expected survivors: \code{t06_counter_not_reset} (equivalent, the state is reset), \code{s05_ack_after_cpu_gating} (reset domain of the acknowledge synchroniser, structure only), \code{s06_ack_from_unregistered_clamp} (one cycle less latency, the glitch safety is structural) and \code{s07_ack_means_request_seen} (equivalent in a sequenced cycle, because the gate is already closed when the request arrives). The new mutants \code{q11_raw_clamp} and \code{q12_clamp_without_reset_term} are killed only by the injection tests. The mutant \code{r01_cpu_gate_without_reset_term} is killed only by \code{test_cpu_clock_never_ticks_while_forced_pmu_reset_and_clock_enabled} (1 of 13 tests fail). The sequenced test no longer kills it, because the clock now stops before the reset. Count note: the mutant table of the script has 40 entries, and the per-suite counts of the comment (28, 7 and 2 killed) add up to 37. This record keeps the totals of the comment and does not resolve the difference.
+
+\end{record}
+
+\begin{record}
+
+Correction of the mutation counts above, 2026-11-15, measured. The campaign was run again in full on the head of the branch of PR \#408 (commit 049e7ae3), Verilator 5.048 in the nix simulation shell, one run on one host. The script \src{tools/verif/mutate_pmu_iso_ack.py} has 40 mutants. Result: 40 mutants, 36 killed, 4 expected survivors, 0 unexplained survivors, 0 invalid. By suite: \code{pmu} 28 mutants, 27 killed, 1 expected survivor (\code{t06_counter_not_reset}); \code{soc_pmu_iso_ack} 10 mutants, 7 killed (\code{s01} to \code{s04}, \code{c01}, \code{c02}, \code{r01_cpu_gate_without_reset_term}), 3 expected survivors (\code{s05}, \code{s06}, \code{s07}); \code{soc_pmu_multiclock} 2 mutants, 2 killed (\code{q11_raw_clamp}, \code{q12_clamp_without_reset_term}). The figures of the comment of the PR, 39 mutants, 35 killed and 28, 7 and 2 killed per suite, were wrong: the figure 28 was the number of mutants of the suite \code{pmu} and not the number killed, and the totals were one too low. The four expected survivors and their reasons are unchanged, with one correction: \code{s06_ack_from_unregistered_clamp} is not covered by \code{check_registered_outputs.py}, as the script said until this correction. That check reads only the outputs of \code{pmu} and not \code{cpu_iso_clamp_q} in \code{soc_top}. Nothing checks that the source of the acknowledge synchroniser is a flop. The reason is glitch safety only, as in the Design Specification and in the Technical Manual. A new comment on the PR replaces the earlier table.
+
+\end{record}

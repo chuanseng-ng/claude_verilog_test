@@ -339,7 +339,7 @@ cdc_report_through \
     $REPORTS_DIR/cdc_pmu_irq.rpt
 
 cdc_report_through \
-    [get_nets -hierarchical -filter {name == pmu_cpu_iso_en_sync} -quiet] \
+    [get_nets -hierarchical -filter {name == cpu_iso_clamp_q} -quiet] \
     "check_cdc_timing.tcl PMU iso-ack return crossing report query (cpu_clk -> sys_clk)" \
     $REPORTS_DIR/cdc_pmu_iso_ack.rpt
 

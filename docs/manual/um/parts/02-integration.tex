@@ -199,7 +199,7 @@ Tick each line before the review.
 This chapter gives the tasks for the PMU, the clock gates and the power wiring. The rules are in \cref{ds:ch:mod-power-management}. The description of each block is in \cref{tm:ch:mod-power-management}.
 
 \section{Register map}\label{um:ch:power-integration:registers}
-The registers of the PMU are in the APB slot at 0x2000\_8000. \code{CTRL} is at 0x00, \code{STATUS} is at 0x04 and \code{DOMAIN_EN} is at 0x08. \Cref{tab:tm:mod:pmu:regmap} lists the fields. The mode is in \code{CTRL[1:0]}: 00 NORMAL, 01 CPU\_OFF, 10 GPU\_OFF and 11 IDLE.
+The registers of the PMU are in the APB slot at 0x2000\_8000. \code{CTRL} is at 0x00, \code{STATUS} is at 0x04, \code{DOMAIN_EN} is at 0x08 and \code{STATUS_CLR} is at 0x0C. \Cref{tab:tm:mod:pmu:regmap} lists the fields. The mode is in \code{CTRL[1:0]}: 00 NORMAL, 01 CPU\_OFF, 10 GPU\_OFF and 11 IDLE.
 
 \section{Power the GPU down and up}\label{um:ch:power-integration:gpu}
 The firmware of the integration test \src{tb/cocotb/soc/integ_fw/gen_integ_hex.py} does this in its image \code{gpu_iso}.
@@ -216,12 +216,14 @@ The firmware of the integration test \src{tb/cocotb/soc/integ_fw/gen_integ_hex.p
 A CPU power-down needs a plan for the wake-up. Nothing inside the CPU domain can request a power-up. Do not rely on the state of the CPU after the power cycle. The simulation keeps it, and this is not a guarantee.
 
 \begin{procedure}
-  \item Stop the AXI traffic of the CPU and flush the data cache. The PMU has no drain step. While the clamp is active and the clock still runs, a bus handshake of the CPU does not reach the fabric. A test measured this with firmware that reads \code{STATUS} in a loop: a handshake fell in such an edge at some tested point. With firmware that stops its traffic first, no handshake was lost. The test of the first case is marked \code{expect_fail} until the owner decides the RTL.
+  \item Stop the AXI traffic of the CPU and flush the data cache (\reqref{DS-PMU-182}). The PMU has no drain step, so it does not wait for the end of a transfer. The PMU stops the CPU clock before it raises the clamp. Thus no handshake is lost in a clamped edge. But a transfer in flight when the clock stops stays open. With a real power switch it can hold the fabric. The test \code{test_p2_control_quiet_firmware_loses_no_handshake} runs firmware that obeys this step. It runs only register instructions before the request.
   \item Make sure that no debug access into the CPU domain is in flight. An access in flight at the power-down ends with an error response, and it can have completed in the CPU domain. While the CPU domain is off, each debug access ends with an error response.
   \item Arrange the wake-up before the power-down. Program another master, for example the DMA engine, to write the mode NORMAL into \code{CTRL} after the power-down. Without a wake-up write, only a reset of \code{rst_n_i} and \code{cpu_rst_n_i} together returns the CPU domain. No test wakes the CPU domain by a bus write.
   \item Request the mode CPU\_OFF. The reference firmware \src{tb/cocotb/soc/pmu_cycle_fw/gen_pmu_cycle_hex.py} does not store to \code{CTRL} itself. It programs the DMA engine to copy the mode CPU\_OFF into \code{CTRL}, so that its own store is not in flight when its clock stops. A store of the CPU to \code{CTRL} is not tested.
-  \item After the wake-up, read \code{STATUS} bit 3. A value of 1 means that a wait for the clamp timed out, and the order of the clamp and the reset is not guaranteed for that power cycle. After a power-up whose wait timed out, the next power-down does not wait for the clamp, and bit 3 does not show it. A test of the PMU alone measured this. The test is marked \code{expect_fail} until the owner decides the RTL.
+  \item After the wake-up, read \code{STATUS} bit 3. A value of 1 means that a wait for the clamp timed out, and the order of the clamp and the reset is not guaranteed for that power cycle. The clock of the CPU does not run while the clamp is active, also after a timeout.
+  \item If bit 3 is 1, record the fault. Then write 0x1 to \code{STATUS_CLR} (address 0x2000\_800C) to clear the bit (\reqref{DS-PMU-187}). The PMU does not clear the bit itself. A power-down or a power-up does not clear it. If you do not clear it, a later timeout is not visible.
 \end{procedure}
+Expect a longer wake-up than before. The CPU clock starts only after the release of the clamp is seen. This adds about 3R+5 cycles of \code{clk_i} to the power-up. R is the ratio of the clock periods. This value is an estimate. Do not poll \code{STATUS} with a short fixed bound.
 The reference firmware is a test of the model. It does not stop its traffic: its loop flushes the data cache in each pass. The tests wake the CPU domain by a deposit into the storage flop of \code{CTRL}. Use a write from another master in a real system.
 
 \section{Clocks and resets}\label{um:ch:power-integration:clocks}
@@ -234,7 +236,7 @@ Take these points into account.
   \item Assert \code{cpu_rst_n_i} each time that you assert \code{rst_n_i} (\reqref{DS-PMU-186}). A reset of \code{rst_n_i} alone flushes the CPU bus bridge and does not reset the CPU.
   \item In scan mode the PMU is not overridden, and the clamps do not depend on the scan mode. Before a scan, write the mode NORMAL and wait until bits 2 to 0 of \code{STATUS} read 0b011, so that no clamp is active during the scan.
 \end{itemize}
-Set \code{ISO_ACK_TIMEOUT} above the longest round trip of the acknowledge. The header of the module estimates it as 3R+3 cycles of \code{clk_i}, where R is the ratio of the clock periods. The default is 255. The value is an estimate and no test measures it. \code{soc_top} does not set \code{ISO_ACK_TIMEOUT}, so \code{u_pmu} has the default. To change it, add it to the parameter list of \code{u_pmu} in \code{soc_top}.
+Set \code{ISO_ACK_TIMEOUT} above the longest round trip of the acknowledge. The header of the module estimates it as about 4R+4 cycles of \code{clk_i}, where R is the ratio of the clock periods. The default is 255, which covers a ratio up to about 60 by this estimate. The value is an estimate. The tests log waits of 6 cycles at 1:1 and 23 cycles at a CPU clock 8 times slower. \code{soc_top} does not set \code{ISO_ACK_TIMEOUT}, so \code{u_pmu} has the default. To change it, add it to the parameter list of \code{u_pmu} in \code{soc_top}.
 
 \section{Integrate a clock gate}\label{um:ch:power-integration:gate}
 \begin{procedure}
@@ -341,13 +343,15 @@ Run the simulation targets through the Nix shell.
 \end{center}
 Each target prints a line with the number of tests, passes and failures. \Cref{tm:suite:soc-test-pmu}, \cref{tm:suite:soc-test-soc-pmu-iso-ack} and \cref{tm:suite:soc-test-soc-pmu-multiclock} describe the suites.
 
-To check that the ten sequencing outputs are flop outputs, run \code{python -m pytest tb/tests/test_pmu_registered_outputs.py}. It needs \code{yosys} and \code{sv2v}. Without \code{yosys} or \code{sv2v}, pytest skips the tests and reports no failure. A skip means that the check did not run. To check the iso-ack handshake against mutants, run \code{python3 tools/verif/mutate_pmu_iso_ack.py} inside the simulation shell. The last line starts with \code{KILLED} and names the survivors. Two mutants are expected survivors. A survivor that is not expected means that the suite does not check the changed behaviour. No result of a campaign is recorded in the repository.
+To check that the ten sequencing outputs are flop outputs, run \code{python -m pytest tb/tests/test_pmu_registered_outputs.py}. It needs \code{yosys} and \code{sv2v}. Without \code{yosys} or \code{sv2v}, pytest skips the tests and reports no failure. A skip means that the check did not run. To check the iso-ack handshake, the edge qualifiers, \code{STATUS_CLR} and the clamp qualifier against mutants, run \code{python3 tools/verif/mutate_pmu_iso_ack.py} inside the simulation shell. The last line starts with \code{KILLED} and names the survivors. Four mutants are expected survivors. A survivor that is not expected means that the suite does not check the changed behaviour. The Changes record has the results of the campaigns (\cref{cr:defect:pmu-iso-order}).
 
 \section{Checklist}\label{um:ch:power-integration:checklist}
 Tick each line before the review.
 \begin{itemize}
   \item[$\square$] The PMU runs on \code{core_clk} and \code{core_rst_n} and is not gated.
-  \item[$\square$] \code{cpu_iso_ack_i} comes from the clamp control of the CPU domain, synchronised into \code{core_clk}.
+  \item[$\square$] The ISO\_CPU clamp uses \code{cpu_iso_clamp}, the clamp request qualified by the closed CPU clock gate.
+  \item[$\square$] \code{cpu_iso_ack_i} comes from the flop \code{cpu_iso_clamp_q}, synchronised into \code{core_clk}.
+  \item[$\square$] Firmware writes \code{STATUS_CLR} after it handles a timeout that \code{STATUS} bit 3 shows.
   \item[$\square$] \code{ISO_ACK_TIMEOUT} is above the longest round trip of the acknowledge.
   \item[$\square$] Firmware polls bits 2 to 0 of \code{STATUS} for the settled value after a write to \code{CTRL}.
   \item[$\square$] Firmware sets up the GPU again after each GPU power-up.

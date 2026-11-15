@@ -9684,7 +9684,10 @@ with \code{u_cpu_pmu_rst_sync} as the \code{cdc_reset_sync} precedent.
 OFF, so an emergency request would need a new priority path through a
 verified FSM for no benefit --- and \code{pmu.sv} is precisely where
 bead \bead{2k8} was deliberately \emph{not} fixed, because its
-sequencing order is UPF-mandated.
+sequencing order was read as UPF-mandated. That reading was not correct:
+the UPF orders only save, isolation, reset and supply removal, and the
+place of the clock stop is a choice of \code{pmu.sv}
+(\cref{ds:ch:mod-power-management:dec-order}).
 
 \warn{} \textbf{Documented limitation.} The WDT is clocked from
 \code{core_clk} through its prescaler. No independent always-on

@@ -102,7 +102,7 @@ Each isolation strategy must have the clamp value 0 and the isolation sense high
 
 \begin{requirement}{DS-PWR-022}{Control net of a strategy}
 [verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_nonexistent_isolation_net_fails; test:tb/tests/test_check_upf.py::test_rtl_clamp_net_change_fails; test:tb/tests/test_check_upf.py::test_unresolved_net_in_facts_fails}]
-The control net of \code{ISO_CPU} must be \code{pmu_cpu_iso_en_sync}, and the control net of \code{ISO_GPU} must be \code{pmu_gpu_iso_en}. Each of the two nets must exist in \code{soc_top} and must be the control net of the clamps that its strategy names.
+The control net of \code{ISO_CPU} must be \code{cpu_iso_clamp}, and the control net of \code{ISO_GPU} must be \code{pmu_gpu_iso_en}. Each of the two nets must exist in \code{soc_top} and must be the control net of the clamps that its strategy names.
 \end{requirement}
 
 \begin{requirement}{DS-PWR-023}{Location of the clamps}

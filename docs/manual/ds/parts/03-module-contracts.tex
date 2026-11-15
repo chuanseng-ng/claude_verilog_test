@@ -801,6 +801,10 @@ APB migration PR-7 topology (GH #92: +PLL2 slot, dual-PLL clock seam):
 
 This section holds contract text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
 
+\begin{information}
+Parts of the text below describe the earlier order of the PMU, in which the isolation came before the clock stop, and the clamp control \code{pmu_cpu_iso_en_sync}. Some lines call that order an order of the power intent. The power intent orders only the save, the isolation, the reset and the supply removal. The place of the clock stop is a choice of the PMU design. The PMU now stops the clock before the isolation, and the clamp control is \code{cpu_iso_clamp}. \Cref{ds:ch:mod-power-management} states the rules that apply.
+\end{information}
+
 \begin{relocated}{rtl/soc/soc_top.sv}
 
 \subsection*{Header}

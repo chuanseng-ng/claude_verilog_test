@@ -403,7 +403,7 @@ module soc_top
         .q_o     (pmu_cpu_clk_dis_sync)
     );
 
-    // pmu_cpu_iso_en: clamps the CPU->fabric AXI handshake at the
+    // pmu_cpu_iso_en_sync is the PMU clamp request. cpu_iso_clamp, below, clamps the CPU->fabric AXI handshake at the
     // async_axi_fifo s_* (CPU-domain) face — see clamp-scope note below.
     // Clocked/reset the same way as u_cpu_clk_dis_sync, for the same reason
     // (this clamp gates signals that feed u_cpu_axi_cdc's s_* inputs, which
@@ -420,20 +420,6 @@ module soc_top
         .q_o     (pmu_cpu_iso_en_sync)
     );
 
-    // Isolation-ack handshake.
-    // u_cpu_iso_ack_sync returns pmu_cpu_iso_en_sync to core_clk as pmu_cpu_iso_ack. The PMU waits for it in DOM_PD_ISO and DOM_PU_ISO.
-    // The source flop uses cpu_core_clk, never cpu_gated_clk. If cpu_core_rst_n is low, ISO_ACK_TIMEOUT bounds the wait.
-    logic pmu_cpu_iso_ack;
-    cdc_sync #(
-        .WIDTH  (1),
-        .STAGES (SYNC_STAGES_FROM_CPU)
-    ) u_cpu_iso_ack_sync (
-        .clk_i   (core_clk),
-        .rst_n_i (core_rst_n),
-        .d_i     (pmu_cpu_iso_en_sync),
-        .q_o     (pmu_cpu_iso_ack)
-    );
-
     // pmu_cpu_rst_n: synchronised into the cpu_core_clk domain with
     // cdc_reset_sync (async-assert / sync-deassert) — this is exactly the
     // "per-domain PMU reset" reuse. See ds:mod:cdc-reset-sync.
@@ -447,6 +433,36 @@ module soc_top
         .scanmode_i  (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
         .rst_n_o     (pmu_cpu_rst_n_cpu_sync)
+    );
+
+    // cpu_gated_clk_en is the functional enable of u_cpu_cg. It is a same-clock AND of two flops, so it is glitch-free.
+    // cpu_iso_clamp is the ISO_CPU clamp control. It is the synchronised PMU request qualified by the closed clock gate,
+    // so the clamp is never active while the gate is open, whatever the synchroniser skew or the clock ratio.
+    logic cpu_gated_clk_en;
+    logic cpu_iso_clamp;
+    assign cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync;
+    assign cpu_iso_clamp    = pmu_cpu_iso_en_sync & ~cpu_gated_clk_en;
+
+    // Isolation-ack handshake.
+    // u_cpu_iso_ack_sync returns cpu_iso_clamp_q to core_clk as pmu_cpu_iso_ack. The ack means the clamp is active and the
+    // clock gate is closed. The PMU waits for it in DOM_PD_ISO and DOM_PU_ISO.
+    // cpu_iso_clamp_q is a flop, so no glitch reaches the synchroniser. It uses cpu_core_clk, never cpu_gated_clk.
+    // If cpu_core_rst_n is low, ISO_ACK_TIMEOUT bounds the wait.
+    logic cpu_iso_clamp_q;
+    always_ff @(posedge cpu_core_clk) begin
+        if (!cpu_core_rst_n) cpu_iso_clamp_q <= 1'b0;
+        else                 cpu_iso_clamp_q <= cpu_iso_clamp;
+    end
+
+    logic pmu_cpu_iso_ack;
+    cdc_sync #(
+        .WIDTH  (1),
+        .STAGES (SYNC_STAGES_FROM_CPU)
+    ) u_cpu_iso_ack_sync (
+        .clk_i   (core_clk),
+        .rst_n_i (core_rst_n),
+        .d_i     (cpu_iso_clamp_q),
+        .q_o     (pmu_cpu_iso_ack)
     );
 
     // =========================================================================
@@ -545,7 +561,7 @@ module soc_top
 
     // ISO_CPU and ISO_GPU clamp the master-side request and accept handshakes and the domain outputs.
     // Payload bits are not clamped. The valid signal qualifies them. Slave-side responses of u_gpu and the CPU debug port are not clamped.
-    // The ISO_CPU clamp is at the s face of u_cpu_axi_cdc, qualified by pmu_cpu_iso_en_sync. ISO_GPU stays on core_clk.
+    // The ISO_CPU clamp is at the s face of u_cpu_axi_cdc, qualified by cpu_iso_clamp. ISO_GPU stays on core_clk.
     logic cpu_axi_awvalid_raw, cpu_axi_wvalid_raw, cpu_axi_arvalid_raw;
     logic cpu_axi_bready_raw, cpu_axi_rready_raw;
     logic cpu_commit_valid_raw;
@@ -818,13 +834,13 @@ module soc_top
 
     // ISO_CPU functional-isolation clamp (`-location parent`, clamp_value 0):
     // forces the CPU->fabric handshake + commit observability to 0 while
-    // pmu_cpu_iso_en_sync is asserted. See clamp-scope note above u_cpu.
-    assign cpu_bridge_s_awvalid = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_awvalid_raw;
-    assign cpu_bridge_s_wvalid  = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_wvalid_raw;
-    assign cpu_bridge_s_arvalid = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_arvalid_raw;
-    assign cpu_bridge_s_bready  = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_bready_raw;
-    assign cpu_bridge_s_rready  = pmu_cpu_iso_en_sync ? 1'b0 : cpu_axi_rready_raw;
-    assign commit_valid_o       = pmu_cpu_iso_en_sync ? 1'b0 : cpu_commit_valid_raw;
+    // cpu_iso_clamp is asserted. See clamp-scope note above u_cpu.
+    assign cpu_bridge_s_awvalid = cpu_iso_clamp ? 1'b0 : cpu_axi_awvalid_raw;
+    assign cpu_bridge_s_wvalid  = cpu_iso_clamp ? 1'b0 : cpu_axi_wvalid_raw;
+    assign cpu_bridge_s_arvalid = cpu_iso_clamp ? 1'b0 : cpu_axi_arvalid_raw;
+    assign cpu_bridge_s_bready  = cpu_iso_clamp ? 1'b0 : cpu_axi_bready_raw;
+    assign cpu_bridge_s_rready  = cpu_iso_clamp ? 1'b0 : cpu_axi_rready_raw;
+    assign commit_valid_o       = cpu_iso_clamp ? 1'b0 : cpu_commit_valid_raw;
 
     // =========================================================================
     // u_cpu_axi_cdc is the one CDC boundary between cpu_gated_clk and core_clk. Its reset is a hard flush.
@@ -1864,9 +1880,7 @@ module soc_top
     // u_cpu_cg and u_gpu_cg are clock gates that the PMU clk_en enables. At the reset default they are transparent.
     // u_cpu_cg runs on cpu_core_clk. Its enable is ~pmu_cpu_clk_dis_sync ANDed with pmu_cpu_rst_n_cpu_sync.
     // u_gpu_cg stays on core_clk with pmu_gpu_clk_en.
-    // cpu_gated_clk_en is a same-clock AND of two flops, so the ICG enable is glitch-free.
-    logic cpu_gated_clk_en;
-    assign cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync;
+    // cpu_gated_clk_en is declared with the CPU-domain synchronisers above.
 
     // dft_test_en forces both gates open in test mode. With MBIST_CPU=1 the CPU MBIST run also forces u_cpu_cg open.
     // cpu_gated_clk is a CTS root. u_gpu_cg stays behavioural.

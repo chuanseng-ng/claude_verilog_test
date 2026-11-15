@@ -106,8 +106,8 @@ cycle to occur, which only a firmware-initiated `MODE_CPU_OFF`/`MODE_NORMAL` doe
 structure is proven in the netlist; a glitch is not demonstrated (zero-delay simulation cannot show it and there is no board). The
 identical RTL is in the ASIC, so this also applies to the Sky130/ASAP7 flows, where it is invisible to the SDC exceptions.
 Fix request (RTL, not done here): register `clk_en_w` / `iso_en_w` / `rst_n_w` in the PMU's own clock domain (or encode `dom_state_q`
-one-hot / gray so every transition flips one bit and the decode of an unchanging output is hazard-free), keeping the UPF-mandated
-sequence order unchanged; the cdc_sync stages are already there. A registered output delays each action by one cycle, which the
+one-hot / gray so every transition flips one bit and the decode of an unchanging output is hazard-free), keeping the sequence
+order unchanged; the cdc_sync stages are already there. A registered output delays each action by one cycle, which the
 `pmu` and `soc_top` ordering tests must re-check. When fixed, `vivado_cdc_gate.py --strict` must pass and `RTL_OPEN` in `tools/fpga/vivado_cdc_gate.py`
 is emptied.
 `NV_CDC_WAIVE_RTL_OPEN=1` (for `build.tcl`) applies a clearly labelled TEMPORARY waiver for these three rows, only to demonstrate the
