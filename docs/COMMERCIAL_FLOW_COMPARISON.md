@@ -109,6 +109,8 @@ What the numbers say:
    OpenRCX does not. 45 to 54 % of nets fall outside +-10 %. The R median is 0.958 to 0.987 (JSON
    `extraction_calibration`). The tuned ITF has **no correlation to silicon or to a foundry deck**.
    The TLU+, captbl and RedHawk tech files derived from it carry the same limitation.
+   This is closed by justification, not by calibration (section 7, item 7): no foundry deck or silicon
+   data exists for this design, and the Quantus cross-check (section 4.8) tests engine agreement only.
 2. **The SRAM Liberty is TT 1.8 V 25 C at every corner (bead `o1i`).** The ss and ff runs time the
    10 SRAMs with a TT model. The cache `*_dout_r` and tag paths are therefore optimistic at ss and
    at ff hold, in P&R and in the judge alike.
@@ -1020,9 +1022,30 @@ Beads are not available on this host, so the follow-ups are tracked here.
    The flip of the five I-cache SRAMs (user decision 2026-11-08, shared floorplan `macro_placement_flipic.cfg`) is b8 and **clears the dout0 max-cap pins at all 9 corners on both arms**
    (163 / 161 -> 0): after the flip only 3 (ICC2) and 1 (Innovus) pins were left to buffer, the buffers land next to the pins in the channel, and the measured cost is in section 4.9. **Status:
    target met in b8, b8 not adopted** (section 4.9 decision); b6 stays final with 159 / 160 violating pins. Next: item 12.
-7. **Extraction calibration to silicon or a foundry deck** does not exist. Optionally recalibrate
-   the corner multipliers on design total C (0.8988 / 1.0933) rather than on wire slope. The Quantus
-   cross-check is done at nom, min and max (section 4.8).
+7. **Extraction calibration: closed by justification (user decision 2026-11-08, "justify only").**
+   Calibrating to silicon or to a foundry deck is not possible on this project:
+   - SkyWater ships no StarRC nxtgrd/ITF and no Quantus qrcTech/ICT for sky130A.
+   - No sky130 silicon of this design exists to correlate against.
+
+   The judge extraction therefore stays labelled **indicative, calibrated to OpenRCX**. That label covers:
+   - the authored ITF, plus the TLU+, captbl and RedHawk tech files derived from it;
+   - every StarRC-based timing, power and IR number in this document.
+
+   What was done instead:
+   - **StarRC vs OpenRCX** (the OpenROAD flow's own deck): design total C within 0.7 % at nom, +1.6 % at min and
+     +1.6 % at max. The per-net total-C median is 1.078 / 1.104 / 1.091 (caveat 1).
+   - **StarRC vs Quantus**, built from the same authored ICT (section 4.8): the per-net total-C median is -3.1 to
+     +2.1 % on every arm (b6 arms, ICC2 b9, Innovus b11) at nom, min and max. Replacing the StarRC SPEF with the
+     Quantus one changes no verdict or ranking. On the final arms at nom_tt, setup WNS moves -87 ps (Innovus b11),
+     +107 ps (ICC2 b9) and +18 ps (OpenROAD B2); the b6 arms moved +18 to +66 ps. Power moves at most 0.7 %.
+   - A fresh nom qrcTechFile (clean Techgen run, 2026-11-14) gives the same Quantus result on the three final arms:
+     per-net total C within 0.058 % and PrimeTime WNS within 2 ps of the first nom techfile.
+   - These cross-checks test engine agreement on one authored stack. None of them tests the stack against silicon.
+
+   The optional recalibration of the min/max multipliers on design total C (0.8988 / 1.0933) was **not done, by
+   decision**: it would move every arm by the same factor and cannot add silicon accuracy.
+
+   **Reopen if** a foundry-qualified sky130 extraction deck or silicon measurements become available.
 8. **RedHawk** needs characterised decap and APL, a package model, and a decap ECO on ICC2 before
    any dynamic IR verdict.
 9. **Single-variable P&R comparison** (and the OpenROAD fixes for items 4 to 6: the flipped floorplan `macro_placement_flipic.cfg`, dout0 buffers, the 116 deck-antenna nets; and the OpenROAD B2 std-cell-GDS Magic run, which is NOT RUN, item 16): run all three P&R tools on one netlist (for example the DC v2
