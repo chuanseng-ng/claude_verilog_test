@@ -56,6 +56,7 @@ def _role(tool, gen):
     return "final" if (FINAL_GEN_ICC2 if tool == "icc2" else FINAL_GEN_INN) == gen else "history"
 
 
+_ROR_B3 = "history"  # OpenROAD B3: adopted only by the section 4.9 rule (regress_check.py openroad b3 b2); set "final" (and openroad_b2 to "history") on adoption
 _R6 = _role("icc2", "b6")
 _R7 = _role("icc2", "b7")
 _R8 = _role("icc2", "b8")
@@ -76,6 +77,13 @@ ARMS = {
         role="final",
         synthesis="Yosys/ABC (LibreLane, SYNTH_STRATEGY DELAY 3)",
         pnr="LibreLane 2.4.13 + OpenROAD edf00dff (container)",
+    ),
+    "openroad_b3": dict(
+        pt="openroadb3",
+        name="OpenROAD/LibreLane B3",
+        role=_ROR_B3,
+        synthesis="Yosys/ABC (LibreLane, SYNTH_STRATEGY DELAY 3), byte-identical netlist to B2",
+        pnr="LibreLane 2.4.13 + OpenROAD edf00dff (container), B2 flow + flipped I-cache floorplan + 266 dout0 driver buffers + GRT antenna iterations 20 / margin 50, no Magic DRC",
     ),
     "icc2_b6": dict(
         pt="icc2b6",
@@ -757,8 +765,10 @@ def redhawk(arm: str):
 
 
 # ----------------------------------------------------------------------------- arms
-def openroad():
-    mj = f"{SNAP}/openroad/metrics.json"
+def openroad(gen="b2"):
+    b3 = gen == "b3"
+    sd = "openroad_b3" if b3 else "openroad"
+    mj = f"{SNAP}/{sd}/metrics.json"
     m = json.loads(text(mj))
     c = "__corner:nom_tt_025C_1v80"
     n = lambda k, u, **kw: E(m[k], u, "native", mj, key=k, **kw)  # noqa: E731
@@ -814,16 +824,18 @@ def openroad():
             note="Netgen LVS inside LibreLane (DEF/LEF-mode Magic extraction)",
         ),
     }
-    fg = f"{COM}/signoff/drclvs/reports/openroad_magic_drc_real_stdgds_by_rule.tsv"
-    fl = f"{COM}/signoff/drclvs/reports/openroad_magic_drc_by_rule.tsv"
+    fg = f"{COM}/signoff/drclvs/reports/{sd}_magic_drc_real_stdgds_by_rule.tsv"
+    fl = f"{COM}/signoff/drclvs/reports/{sd}_magic_drc_by_rule.tsv"
     if tracked(fg):
         out.update(magic(fg))
-        out.update(magic(fl, "magic_lef_"))
-    else:
+        if tracked(fl):
+            out.update(magic(fl, "magic_lef_"))
+    elif tracked(fl):
         out.update(magic(fl))
-    out.update(nwell4_nsc("openroad"))
-    out["census"] = census(f"{SNAP}/openroad/cellcount.txt")
-    rt = f"{SNAP}/openroad/step_runtime.tsv"
+    if not b3:
+        out.update(nwell4_nsc("openroad"))
+    out["census"] = census(f"{SNAP}/{sd}/cellcount.txt")
+    rt = f"{SNAP}/{sd}/step_runtime.tsv"
     rows = [line.split("\t") for line in text(rt).splitlines()[1:]]
     pnr_steps = [r for r in rows if int(r[0].split("-")[0]) >= 13]
     out["runtime_pnr_s"] = E(
@@ -849,7 +861,20 @@ def openroad():
         rt,
         rule="sum of all LibreLane step runtimes (incl. synthesis and sign-off)",
     )
-    out["peak_rss"] = E(None, "GB", "native", rt, note="not recorded by LibreLane for this run")
+    if b3:
+        rp = f"{SNAP}/{sd}/rss_peak.txt"
+        ru = json.loads(text(f"{SNAP}/{sd}/rusage.txt"))
+        out["peak_rss"] = E(
+            round(ru["ru_maxrss_kB_largest_single_process"] / 1048576, 2),
+            "GiB",
+            "native",
+            f"{SNAP}/{sd}/rusage.txt",
+            note="largest single process of the flow (in-container getrusage RUSAGE_CHILDREN); summed container RSS peak from the 15 s sampler: "
+            + re.search(r"peak_sum_rss_kB (\d+)", text(rp)).group(1)
+            + " kB (rss_peak.txt)",
+        )
+    else:
+        out["peak_rss"] = E(None, "GB", "native", rt, note="not recorded by LibreLane for this run")
     out["synth_runtime_s"] = E(
         round(sum(hms(r[1]) for r in rows if r[0].endswith("yosys-synthesis"))),
         "s",
@@ -857,6 +882,47 @@ def openroad():
         rt,
         rule="06-yosys-synthesis runtime.txt",
     )
+    if b3:
+        fm = lec_formality("orb3")
+        ye = {}
+        yb = f"{COM}/signoff/lec/yosys/reports"
+        for d in sorted(p(yb).glob("ob3_e[0-9]*")):
+            f = f"{yb}/{d.name}/equiv_after_induct.txt"
+            if not p(f).is_file():
+                continue
+            t_ = text(f)
+            m = re.search(r"Of those cells (\d+) are proven and (\d+) are unproven", t_)
+            tot = re.search(r"Found (\d+) \$equiv cells", t_)
+            ye[d.name] = E(
+                ("EQUIVALENT" if m and m.group(2) == "0" else "NOT_PROVEN") if m else None,
+                "verdict",
+                "signoff",
+                f,
+                proven=int(m.group(1)) if m else None,
+                unproven=int(m.group(2)) if m else None,
+                equiv_cells=int(tot.group(1)) if tot else None,
+            )
+        out["lec_yosys_runs"] = ye
+        out["lec_runs"] = dict(fm)
+        ctl = [k for k in fm if "negctl" in k]
+        caught = [k for k in ctl if fm[k]["value"] == "FAILED"]
+        yneg = [k for k in ye if "_neg_" in k]
+        ycaught = [k for k in yneg if ye[k]["value"] == "NOT_PROVEN"]
+        yfinal = (ye.get("ob3_e5_final") or {}).get("value")
+        fsyn = (fm.get("orb3_nodiode_vs_syn") or {}).get("value")
+        closed = fsyn == "SUCCEEDED" and yfinal == "EQUIVALENT" and ctl and len(caught) == len(ctl) and yneg and len(ycaught) == len(yneg)
+        out["lec"] = E(
+            ("EQUIVALENT (final == Yosys netlist by Formality; sv2v == final netlist by Yosys equiv_induct; RTL == sv2v and sv2v == Yosys netlist carried from B2: byte-identical Yosys netlist)" if closed else "NOT CLOSED")
+            + f": Formality final(no diode)==Yosys netlist {fsyn}; Formality final(with diodes)==Yosys netlist {(fm.get('orb3_phys_vs_syn') or {}).get('value')};"
+            f" Yosys equiv_induct sv2v vs final netlist {yfinal};"
+            f" negative controls caught: Formality {len(caught)}/{len(ctl)}, Yosys {len(ycaught)}/{len(yneg)}",
+            "verdict",
+            "derived",
+            sorted({x["source"] for x in {**fm, **ye}.values() if isinstance(x["source"], str)}),
+            rule="derived from lec_runs and lec_yosys_runs; the two hops that do not depend on the layout are NOT re-run (md5 of the B3 Yosys netlist == B2's, recorded in the doc)",
+        )
+        out.update(redhawk("openroad_b3"))
+        return out
     fm = lec_formality("or")
     cf = lec_conformal("or_cf")
     ye = {}
@@ -1314,6 +1380,7 @@ def synthesis():
     out = {}
     for arm, key in (
         ("openroad_b2", "yosys"),
+        ("openroad_b3", "yosys"),
         ("icc2_b6", "dc_v2"),
         ("innovus_b6", "genus_v1"),
         ("icc2_b7", "dc_v2"),
@@ -1583,6 +1650,8 @@ def build():
     }
     syn = synthesis()
     natives = {"openroad_b2": openroad(), "icc2_b6": icc2_b6(), "innovus_b6": innovus_b6()}
+    if p(f"{SNAP}/openroad_b3").is_dir():
+        natives["openroad_b3"] = openroad("b3")
     if p(f"{SNAP}/icc2_b7").is_dir():
         natives["icc2_b7"] = icc2_b7()
     if p(f"{SNAP}/innovus_b7").is_dir():

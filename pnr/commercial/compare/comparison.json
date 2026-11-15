@@ -442,6 +442,296 @@
      }
     }
    },
+   "openroad_b3": {
+    "nom_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_nom_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 2.2232,
+      "all_median": 2.5984,
+      "all_mean": 2.5952,
+      "all_max": 2.7315,
+      "flop_n": 5299,
+      "flop_min": 2.2232,
+      "flop_median": 2.599,
+      "flop_mean": 2.5959,
+      "flop_max": 2.7315,
+      "sram_n": 20,
+      "sram_min": 2.2666,
+      "sram_median": 2.4013,
+      "sram_mean": 2.4144,
+      "sram_max": 2.5776,
+      "in_capture_n": 1436,
+      "in_capture_min": 2.3117,
+      "in_capture_median": 2.5691,
+      "in_capture_mean": 2.5739,
+      "in_capture_max": 2.7118,
+      "out_launch_n": 601,
+      "out_launch_min": 2.334,
+      "out_launch_median": 2.5591,
+      "out_launch_mean": 2.5701,
+      "out_launch_max": 2.6959
+     }
+    },
+    "nom_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_nom_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 3.7959,
+      "all_median": 4.4796,
+      "all_mean": 4.4747,
+      "all_max": 4.7149,
+      "flop_n": 5299,
+      "flop_min": 3.7959,
+      "flop_median": 4.4805,
+      "flop_mean": 4.4761,
+      "flop_max": 4.7149,
+      "sram_n": 20,
+      "sram_min": 3.8815,
+      "sram_median": 4.0834,
+      "sram_mean": 4.1038,
+      "sram_max": 4.4197,
+      "in_capture_n": 1436,
+      "in_capture_min": 3.961,
+      "in_capture_median": 4.42,
+      "in_capture_mean": 4.4291,
+      "in_capture_max": 4.626,
+      "out_launch_n": 601,
+      "out_launch_min": 4.0,
+      "out_launch_median": 4.4008,
+      "out_launch_mean": 4.4176,
+      "out_launch_max": 4.6377
+     }
+    },
+    "nom_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_nom_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 1.5604,
+      "all_median": 1.7889,
+      "all_mean": 1.7857,
+      "all_max": 1.8838,
+      "flop_n": 5299,
+      "flop_min": 1.5865,
+      "flop_median": 1.7891,
+      "flop_mean": 1.7862,
+      "flop_max": 1.8838,
+      "sram_n": 20,
+      "sram_min": 1.5604,
+      "sram_median": 1.6599,
+      "sram_mean": 1.6669,
+      "sram_max": 1.7784,
+      "in_capture_n": 1436,
+      "in_capture_min": 1.6069,
+      "in_capture_median": 1.7707,
+      "in_capture_mean": 1.774,
+      "in_capture_max": 1.873,
+      "out_launch_n": 601,
+      "out_launch_min": 1.6194,
+      "out_launch_median": 1.7649,
+      "out_launch_mean": 1.773,
+      "out_launch_max": 1.8582
+     }
+    },
+    "min_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_min_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 2.1193,
+      "all_median": 2.4627,
+      "all_mean": 2.4588,
+      "all_max": 2.5816,
+      "flop_n": 5299,
+      "flop_min": 2.1193,
+      "flop_median": 2.4628,
+      "flop_mean": 2.4595,
+      "flop_max": 2.5816,
+      "sram_n": 20,
+      "sram_min": 2.1434,
+      "sram_median": 2.2616,
+      "sram_mean": 2.2753,
+      "sram_max": 2.4311,
+      "in_capture_n": 1436,
+      "in_capture_min": 2.181,
+      "in_capture_median": 2.4315,
+      "in_capture_mean": 2.4365,
+      "in_capture_max": 2.5537,
+      "out_launch_n": 601,
+      "out_launch_min": 2.2042,
+      "out_launch_median": 2.4245,
+      "out_launch_mean": 2.4331,
+      "out_launch_max": 2.5497
+     }
+    },
+    "min_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_min_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 3.6416,
+      "all_median": 4.2597,
+      "all_mean": 4.2578,
+      "all_max": 4.4836,
+      "flop_n": 5299,
+      "flop_min": 3.6416,
+      "flop_median": 4.2599,
+      "flop_mean": 4.2592,
+      "flop_max": 4.4836,
+      "sram_n": 20,
+      "sram_min": 3.6887,
+      "sram_median": 3.8718,
+      "sram_mean": 3.8927,
+      "sram_max": 4.1875,
+      "in_capture_n": 1436,
+      "in_capture_min": 3.7528,
+      "in_capture_median": 4.1996,
+      "in_capture_mean": 4.211,
+      "in_capture_max": 4.4075,
+      "out_launch_n": 601,
+      "out_launch_min": 3.7971,
+      "out_launch_median": 4.1906,
+      "out_launch_mean": 4.2025,
+      "out_launch_max": 4.4185
+     }
+    },
+    "min_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_min_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 1.4721,
+      "all_median": 1.6896,
+      "all_mean": 1.6885,
+      "all_max": 1.7767,
+      "flop_n": 5299,
+      "flop_min": 1.4991,
+      "flop_median": 1.6898,
+      "flop_mean": 1.689,
+      "flop_max": 1.7767,
+      "sram_n": 20,
+      "sram_min": 1.4721,
+      "sram_median": 1.5585,
+      "sram_mean": 1.5667,
+      "sram_max": 1.6737,
+      "in_capture_n": 1436,
+      "in_capture_min": 1.509,
+      "in_capture_median": 1.6717,
+      "in_capture_mean": 1.6751,
+      "in_capture_max": 1.7584,
+      "out_launch_n": 601,
+      "out_launch_min": 1.5244,
+      "out_launch_median": 1.6648,
+      "out_launch_mean": 1.6733,
+      "out_launch_max": 1.7533
+     }
+    },
+    "max_tt": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_max_tt/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 2.3741,
+      "all_median": 2.7836,
+      "all_mean": 2.7796,
+      "all_max": 2.9428,
+      "flop_n": 5299,
+      "flop_min": 2.3741,
+      "flop_median": 2.7837,
+      "flop_mean": 2.7803,
+      "flop_max": 2.9428,
+      "sram_n": 20,
+      "sram_min": 2.4305,
+      "sram_median": 2.5908,
+      "sram_mean": 2.6015,
+      "sram_max": 2.7698,
+      "in_capture_n": 1436,
+      "in_capture_min": 2.491,
+      "in_capture_median": 2.754,
+      "in_capture_mean": 2.7608,
+      "in_capture_max": 2.9352,
+      "out_launch_n": 601,
+      "out_launch_min": 2.5054,
+      "out_launch_median": 2.745,
+      "out_launch_mean": 2.7572,
+      "out_launch_max": 2.9105
+     }
+    },
+    "max_ss": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_max_ss/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 4.0029,
+      "all_median": 4.7655,
+      "all_mean": 4.7611,
+      "all_max": 5.0289,
+      "flop_n": 5299,
+      "flop_min": 4.0029,
+      "flop_median": 4.766,
+      "flop_mean": 4.7626,
+      "flop_max": 5.0289,
+      "sram_n": 20,
+      "sram_min": 4.1257,
+      "sram_median": 4.3604,
+      "sram_mean": 4.3774,
+      "sram_max": 4.7211,
+      "in_capture_n": 1436,
+      "in_capture_min": 4.2253,
+      "in_capture_median": 4.7024,
+      "in_capture_mean": 4.7142,
+      "in_capture_max": 4.9304,
+      "out_launch_n": 601,
+      "out_launch_min": 4.2662,
+      "out_launch_median": 4.681,
+      "out_launch_mean": 4.6997,
+      "out_launch_max": 4.9375
+     }
+    },
+    "max_ff": {
+     "label": "judge",
+     "source": "pnr/commercial/compare/snapshot/clklat/openroadb3_max_ff/clk_latency.tsv",
+     "unit": "ns (network latency = rising-edge arrival - 1.0 ns source latency; n = register clock pins)",
+     "values": {
+      "all_n": 5319,
+      "all_min": 1.6807,
+      "all_median": 1.9243,
+      "all_mean": 1.9215,
+      "all_max": 2.0426,
+      "flop_n": 5299,
+      "flop_min": 1.7139,
+      "flop_median": 1.9244,
+      "flop_mean": 1.9219,
+      "flop_max": 2.0426,
+      "sram_n": 20,
+      "sram_min": 1.6807,
+      "sram_median": 1.802,
+      "sram_mean": 1.8055,
+      "sram_max": 1.9233,
+      "in_capture_n": 1436,
+      "in_capture_min": 1.7415,
+      "in_capture_median": 1.9075,
+      "in_capture_mean": 1.9116,
+      "in_capture_max": 2.0386,
+      "out_launch_n": 601,
+      "out_launch_min": 1.7498,
+      "out_launch_median": 1.9035,
+      "out_launch_mean": 1.9108,
+      "out_launch_max": 2.0155
+     }
+    }
+   },
    "icc2_b6": {
     "nom_tt": {
      "label": "judge",
@@ -4096,6 +4386,44 @@
        "early_ns": 2.0599,
        "late_ns": 2.0703
       }
+     },
+     "openroadb3": {
+      "nom_tt": {
+       "early_ns": 2.5941,
+       "late_ns": 2.5952
+      },
+      "nom_ss": {
+       "early_ns": 4.4747,
+       "late_ns": 4.4747
+      },
+      "nom_ff": {
+       "early_ns": 1.7842,
+       "late_ns": 1.7857
+      },
+      "min_tt": {
+       "early_ns": 2.4588,
+       "late_ns": 2.4588
+      },
+      "min_ss": {
+       "early_ns": 4.2578,
+       "late_ns": 4.2578
+      },
+      "min_ff": {
+       "early_ns": 1.688,
+       "late_ns": 1.6885
+      },
+      "max_tt": {
+       "early_ns": 2.7737,
+       "late_ns": 2.7796
+      },
+      "max_ss": {
+       "early_ns": 4.7605,
+       "late_ns": 4.7611
+      },
+      "max_ff": {
+       "early_ns": 1.9159,
+       "late_ns": 1.9215
+      }
      }
     },
     "rule": "arm: each arm's own mean register-clock-pin latency; shared: mean of the three arms per corner"
@@ -4526,6 +4854,44 @@
       }
      },
      "innovusb11": {
+      "nom_tt": {
+       "early_ns": 2.6197,
+       "late_ns": 2.632
+      },
+      "nom_ss": {
+       "early_ns": 4.4406,
+       "late_ns": 4.4587
+      },
+      "nom_ff": {
+       "early_ns": 1.8417,
+       "late_ns": 1.8458
+      },
+      "min_tt": {
+       "early_ns": 2.4639,
+       "late_ns": 2.4717
+      },
+      "min_ss": {
+       "early_ns": 4.2041,
+       "late_ns": 4.2148
+      },
+      "min_ff": {
+       "early_ns": 1.7223,
+       "late_ns": 1.7258
+      },
+      "max_tt": {
+       "early_ns": 2.8239,
+       "late_ns": 2.8467
+      },
+      "max_ss": {
+       "early_ns": 4.7459,
+       "late_ns": 4.7781
+      },
+      "max_ff": {
+       "early_ns": 2.0003,
+       "late_ns": 2.0066
+      }
+     },
+     "openroadb3": {
       "nom_tt": {
        "early_ns": 2.6197,
        "late_ns": 2.632
@@ -7005,6 +7371,373 @@
      "label": "derived",
      "source": [
       "pnr/commercial/compare/snapshot/openroad/cellcount.txt",
+      "pnr/commercial/compare/snapshot/cell_area.tsv",
+      "pnr/commercial/compare/snapshot/openroad/metrics.json"
+     ],
+     "rule": "census logical area / (OpenROAD core area - SRAM macro area); same denominator for all arms"
+    }
+   },
+   "synthesis_metrics": {
+    "netlist": "yosys",
+    "synth_leaf_cells": {
+     "value": 30369,
+     "unit": "count",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv",
+     "note": "incl. 10 SRAM"
+    },
+    "synth_zero_wire_setup_wns_tt": {
+     "value": 4.759313,
+     "unit": "ns",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv",
+     "note": "PrimeTime, ideal clock, no parasitics, shared SDC"
+    },
+    "synth_zero_wire_setup_wns_ss": {
+     "value": -1.918641,
+     "unit": "ns",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv"
+    },
+    "synth_zero_wire_setup_viol_ss": {
+     "value": 152,
+     "unit": "count",
+     "label": "judge",
+     "source": "pnr/commercial/syn/ss_probe/reports/step1_probe_metrics.tsv"
+    }
+   }
+  },
+  "openroad_b3": {
+   "pt": "openroadb3",
+   "name": "OpenROAD/LibreLane B3",
+   "role": "history",
+   "synthesis": "Yosys/ABC (LibreLane, SYNTH_STRATEGY DELAY 3), byte-identical netlist to B2",
+   "pnr": "LibreLane 2.4.13 + OpenROAD edf00dff (container), B2 flow + flipped I-cache floorplan + 266 dout0 driver buffers + GRT antenna iterations 20 / margin 50, no Magic DRC",
+   "metrics": {
+    "native_setup_wns_nom_tt": {
+     "value": 3.1820795787902543,
+     "unit": "ns",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__setup__ws__corner:nom_tt_025C_1v80"
+    },
+    "native_hold_wns_nom_tt": {
+     "value": -0.16449020389135402,
+     "unit": "ns",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__hold__ws__corner:nom_tt_025C_1v80"
+    },
+    "native_hold_viol_nom_tt": {
+     "value": 8,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__hold_vio__count__corner:nom_tt_025C_1v80"
+    },
+    "native_setup_ws_all_corners": {
+     "value": -5.4677099950828225,
+     "unit": "ns",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__setup__ws",
+     "note": "OpenSTA + OpenRCX, 9 corners"
+    },
+    "native_setup_viol_all_corners": {
+     "value": 2967,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__setup_vio__count"
+    },
+    "native_setup_r2r_viol_all_corners": {
+     "value": 2821,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__setup_r2r_vio__count"
+    },
+    "native_hold_ws_all_corners": {
+     "value": -0.6880300968147811,
+     "unit": "ns",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__hold__ws"
+    },
+    "native_hold_viol_all_corners": {
+     "value": 245,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__hold_vio__count"
+    },
+    "native_hold_r2r_viol_all_corners": {
+     "value": 0,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "timing__hold_r2r_vio__count"
+    },
+    "native_max_slew_viol_nom_tt": {
+     "value": 3794,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "design__max_slew_violation__count__corner:nom_tt_025C_1v80"
+    },
+    "native_max_cap_viol_nom_tt": {
+     "value": 28,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "design__max_cap_violation__count__corner:nom_tt_025C_1v80"
+    },
+    "native_max_fanout_viol_nom_tt": {
+     "value": 3651,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "design__max_fanout_violation__count__corner:nom_tt_025C_1v80"
+    },
+    "native_power_mW": {
+     "value": 102.57,
+     "unit": "mW",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "power__total"
+    },
+    "native_route_drc": {
+     "value": 0,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "route__drc_errors"
+    },
+    "native_wirelength_um": {
+     "value": 5479658,
+     "unit": "um",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "route__wirelength"
+    },
+    "native_vias": {
+     "value": 519644,
+     "unit": "count",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "route__vias"
+    },
+    "native_stdcell_area_um2": {
+     "value": 711081,
+     "unit": "um2",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "design__instance__area__stdcell",
+     "note": "OpenROAD definition (includes tap/decap/diode cells, not fill)"
+    },
+    "native_util": {
+     "value": 0.418616,
+     "unit": "fraction",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "design__instance__utilization",
+     "note": "(stdcell + macro) / core"
+    },
+    "native_util_stdcell": {
+     "value": 0.163568,
+     "unit": "fraction",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "design__instance__utilization__stdcell"
+    },
+    "native_ir_drop_worst_V": {
+     "value": 0.00122,
+     "unit": "V",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "ir__drop__worst",
+     "note": "OpenROAD PSM, nom_tt"
+    },
+    "antenna_deck_nets": {
+     "value": 92,
+     "unit": "nets",
+     "label": "signoff",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "antenna__violating__nets",
+     "note": "OpenROAD check_antennas"
+    },
+    "antenna_deck_pins": {
+     "value": 94,
+     "unit": "pins",
+     "label": "signoff",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json"
+    },
+    "klayout_drc": {
+     "value": 0,
+     "unit": "items",
+     "label": "signoff",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "klayout__drc_error__count"
+    },
+    "lvs_errors": {
+     "value": 0,
+     "unit": "count",
+     "label": "signoff",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/metrics.json",
+     "key": "design__lvs_error__count",
+     "note": "Netgen LVS inside LibreLane (DEF/LEF-mode Magic extraction)"
+    },
+    "census": {
+     "label": "derived",
+     "unit": "count / um2",
+     "source": [
+      "pnr/commercial/compare/snapshot/openroad_b3/cellcount.txt",
+      "pnr/commercial/compare/snapshot/cell_area.tsv"
+     ],
+     "values": {
+      "logical_cells": 42749,
+      "flops": 5299,
+      "buffers": 16351,
+      "inverters": 945,
+      "diodes": 64863,
+      "physical_cells": 450758,
+      "sram_macros": 10,
+      "logical_area_um2": 474144.7,
+      "buffer_area_um2": 157931.5,
+      "unknown_area_cells": 0
+     },
+     "rule": "one rule for every arm: logical = all std cells except tap/fill/decap/diode/SRAM; flops = df*/edf*/sdf*/dl[xr]*; buffers = buf/bufbuf/clkbuf/clkdlybuf/dlygate/dlymetal; inverters = inv/clkinv/bufinv; area = count x LEF SIZE (diodes excluded)"
+    },
+    "runtime_pnr_s": {
+     "value": 4647,
+     "unit": "s",
+     "label": "derived",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/step_runtime.tsv",
+     "rule": "sum of LibreLane step runtimes 13-floorplan .. 74, excluding Magic/KLayout DRC, Magic extraction and Netgen LVS"
+    },
+    "runtime_total_flow_s": {
+     "value": 6205,
+     "unit": "s",
+     "label": "derived",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/step_runtime.tsv",
+     "rule": "sum of all LibreLane step runtimes (incl. synthesis and sign-off)"
+    },
+    "peak_rss": {
+     "value": 6.69,
+     "unit": "GiB",
+     "label": "native",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/rusage.txt",
+     "note": "largest single process of the flow (in-container getrusage RUSAGE_CHILDREN); summed container RSS peak from the 15 s sampler: 7078640 kB (rss_peak.txt)"
+    },
+    "synth_runtime_s": {
+     "value": 114,
+     "unit": "s",
+     "label": "derived",
+     "source": "pnr/commercial/compare/snapshot/openroad_b3/step_runtime.tsv",
+     "rule": "06-yosys-synthesis runtime.txt"
+    },
+    "lec_yosys_runs": {
+     "ob3_e5_final": {
+      "value": "EQUIVALENT",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/ob3_e5_final/equiv_after_induct.txt",
+      "proven": 6156,
+      "unproven": 0,
+      "equiv_cells": 6156
+     },
+     "ob3_e6_neg_fwdb_inv": {
+      "value": "NOT_PROVEN",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/ob3_e6_neg_fwdb_inv/equiv_after_induct.txt",
+      "proven": 3,
+      "unproven": 6153,
+      "equiv_cells": 6156
+     },
+     "ob3_e7_neg_swap": {
+      "value": "NOT_PROVEN",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/yosys/reports/ob3_e7_neg_swap/equiv_after_induct.txt",
+      "proven": 5810,
+      "unproven": 346,
+      "equiv_cells": 6156
+     }
+    },
+    "lec_runs": {
+     "orb3_negctl_rtl_fwdb_inv": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_rtl_fwdb_inv/fm_log.txt",
+      "passing": 1406,
+      "failing": 3659
+     },
+     "orb3_negctl_rtl_swap": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_rtl_swap/fm_log.txt",
+      "passing": 1376,
+      "failing": 3783
+     },
+     "orb3_negctl_syn_fwdb_inv": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_syn_fwdb_inv/fm_log.txt",
+      "passing": 6244,
+      "failing": 1
+     },
+     "orb3_negctl_syn_swap": {
+      "value": "FAILED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_syn_swap/fm_log.txt",
+      "passing": 5937,
+      "failing": 308
+     },
+     "orb3_nodiode_vs_syn": {
+      "value": "SUCCEEDED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/orb3_nodiode_vs_syn/fm_log.txt",
+      "passing": 6248,
+      "failing": 0
+     },
+     "orb3_phys_vs_syn": {
+      "value": "SUCCEEDED",
+      "unit": "verdict",
+      "label": "signoff",
+      "source": "pnr/commercial/signoff/lec/formality/reports/orb3_phys_vs_syn/fm_log.txt",
+      "passing": 6248,
+      "failing": 0
+     }
+    },
+    "lec": {
+     "value": "EQUIVALENT (final == Yosys netlist by Formality; sv2v == final netlist by Yosys equiv_induct; RTL == sv2v and sv2v == Yosys netlist carried from B2: byte-identical Yosys netlist): Formality final(no diode)==Yosys netlist SUCCEEDED; Formality final(with diodes)==Yosys netlist SUCCEEDED; Yosys equiv_induct sv2v vs final netlist EQUIVALENT; negative controls caught: Formality 4/4, Yosys 2/2",
+     "unit": "verdict",
+     "label": "derived",
+     "source": [
+      "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_rtl_fwdb_inv/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_rtl_swap/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_syn_fwdb_inv/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/orb3_negctl_syn_swap/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/orb3_nodiode_vs_syn/fm_log.txt",
+      "pnr/commercial/signoff/lec/formality/reports/orb3_phys_vs_syn/fm_log.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/ob3_e5_final/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/ob3_e6_neg_fwdb_inv/equiv_after_induct.txt",
+      "pnr/commercial/signoff/lec/yosys/reports/ob3_e7_neg_swap/equiv_after_induct.txt"
+     ],
+     "rule": "derived from lec_runs and lec_yosys_runs; the two hops that do not depend on the layout are NOT re-run (md5 of the B3 Yosys netlist == B2's, recorded in the doc)"
+    },
+    "derived_util_stdcell": {
+     "value": 0.1091,
+     "unit": "fraction",
+     "label": "derived",
+     "source": [
+      "pnr/commercial/compare/snapshot/openroad_b3/cellcount.txt",
       "pnr/commercial/compare/snapshot/cell_area.tsv",
       "pnr/commercial/compare/snapshot/openroad/metrics.json"
      ],
@@ -17349,6 +18082,2122 @@
     "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
    }
   },
+  "openroad_b3": {
+   "base": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.199895,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.040977,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "apb_penable_i",
+       "hold_worst_end": "_52532_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.886063,
+       "setup_tns": -1699.125754,
+       "setup_viol": 1042,
+       "hold_wns": -0.168364,
+       "hold_tns": -0.286141,
+       "hold_viol": 3,
+       "r2rx_setup_wns": -4.886063,
+       "r2rx_setup_tns": -1683.232591,
+       "r2rx_setup_viol": 996,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "apb_penable_i",
+       "hold_worst_end": "_52532_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1042,
+         "viol_r2r": 995,
+         "viol_io": 47,
+         "wns_r2r": -4.8861,
+         "wns_io": -1.467
+        },
+        "hold": {
+         "viol_total": 3,
+         "viol_r2r": 0,
+         "viol_io": 3,
+         "wns_r2r": 0.0,
+         "wns_io": -0.1684
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.965768,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.149705,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "axi_rdata_i[0]",
+       "hold_worst_end": "_52582_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.352532,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.151069,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "apb_penable_i",
+       "hold_worst_end": "_52532_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.130098,
+       "setup_tns": -1175.571075,
+       "setup_viol": 951,
+       "hold_wns": -0.012664,
+       "hold_tns": -0.012664,
+       "hold_viol": 1,
+       "r2rx_setup_wns": -4.130098,
+       "r2rx_setup_tns": -1167.191301,
+       "r2rx_setup_viol": 934,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "apb_penable_i",
+       "hold_worst_end": "_52532_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 951,
+         "viol_r2r": 934,
+         "viol_io": 17,
+         "wns_r2r": -4.1301,
+         "wns_io": -1.1333
+        },
+        "hold": {
+         "viol_total": 1,
+         "viol_r2r": 0,
+         "viol_io": 1,
+         "wns_r2r": 0.0,
+         "wns_io": -0.0127
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.092409,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.224538,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "axi_rdata_i[30]",
+       "hold_worst_end": "_52580_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.653101,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": -0.099333,
+       "hold_tns": -0.118077,
+       "hold_viol": 2,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "apb_penable_i",
+       "hold_worst_end": "_52532_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "hold": {
+         "viol_total": 2,
+         "viol_r2r": 0,
+         "viol_io": 2,
+         "wns_r2r": 0.0,
+         "wns_io": -0.0993
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.916771,
+       "setup_tns": -2513.581465,
+       "setup_viol": 1344,
+       "hold_wns": -0.364187,
+       "hold_tns": -1.756383,
+       "hold_viol": 17,
+       "r2rx_setup_wns": -5.916771,
+       "r2rx_setup_tns": -2458.576729,
+       "r2rx_setup_viol": 1246,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "apb_penable_i",
+       "hold_worst_end": "_52532_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1344,
+         "viol_r2r": 1246,
+         "viol_io": 98,
+         "wns_r2r": -5.9168,
+         "wns_io": -2.1778
+        },
+        "hold": {
+         "viol_total": 17,
+         "viol_r2r": 0,
+         "viol_io": 17,
+         "wns_r2r": 0.0,
+         "wns_io": -0.3642
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.786593,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.004838,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "axi_rdata_i[0]",
+       "hold_worst_end": "_52582_/D",
+       "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+       "sdc_variant": "base",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/base/openroadb3_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -5.916771,
+      "hold_wns_worst": -0.364187,
+      "setup_tns_sum": -5388.278,
+      "hold_tns_sum": -2.173,
+      "setup_viol_sum": 3337,
+      "hold_viol_sum": 23,
+      "r2r_setup_viol_sum": 3176,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 5,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant base; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 92.7,
+      "clock_network_mW": 42.6,
+      "register_mW": 2.949,
+      "combinational_mW": 18.3,
+      "memory_mW": 28.9
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "iolat": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.266609,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.623201,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.886063,
+       "setup_tns": -1747.2776,
+       "setup_viol": 1030,
+       "hold_wns": 1.433854,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.886063,
+       "r2rx_setup_tns": -1683.232591,
+       "r2rx_setup_viol": 996,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1030,
+         "viol_r2r": 995,
+         "viol_io": 35,
+         "wns_r2r": -4.8861,
+         "wns_io": -3.0595
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.965768,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335922,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.32647,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.619903,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.130098,
+       "setup_tns": -1227.04981,
+       "setup_viol": 969,
+       "hold_wns": 1.402668,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.130098,
+       "r2rx_setup_tns": -1167.191301,
+       "r2rx_setup_viol": 934,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 969,
+         "viol_r2r": 934,
+         "viol_io": 35,
+         "wns_r2r": -4.1301,
+         "wns_io": -2.9113
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.092409,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335599,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.174403,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.625288,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.916771,
+       "setup_tns": -2528.80531,
+       "setup_viol": 1281,
+       "hold_wns": 1.413813,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -5.916771,
+       "r2rx_setup_tns": -2458.576729,
+       "r2rx_setup_viol": 1246,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "apb_penable_i",
+       "hold_worst_end": "_52532_/D",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1281,
+         "viol_r2r": 1244,
+         "viol_io": 37,
+         "wns_r2r": -5.9168,
+         "wns_io": -3.2607
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.786593,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.338726,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "e90bdba8b93f8f4e985c5fbaa6d4ab90",
+       "sdc_variant": "iolat",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -5.916771,
+      "hold_wns_worst": 0.335599,
+      "setup_tns_sum": -5503.133,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 3280,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 3176,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat/openroadb3_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 92.7,
+      "clock_network_mW": 42.6,
+      "register_mW": 2.949,
+      "combinational_mW": 18.3,
+      "memory_mW": 28.9
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "iolat_pv": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.449409,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.623201,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.756172,
+       "setup_tns": -2608.88809,
+       "setup_viol": 1714,
+       "hold_wns": 1.433854,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.886063,
+       "r2rx_setup_tns": -1683.232591,
+       "r2rx_setup_viol": 996,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1714,
+         "viol_r2r": 902,
+         "viol_io": 812,
+         "wns_r2r": -4.8861,
+         "wns_io": -5.7562
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.965768,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335922,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.645669,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.619903,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.391071,
+       "setup_tns": -1873.028633,
+       "setup_viol": 1604,
+       "hold_wns": 1.402668,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.130098,
+       "r2rx_setup_tns": -1167.191301,
+       "r2rx_setup_viol": 934,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1604,
+         "viol_r2r": 827,
+         "viol_io": 777,
+         "wns_r2r": -4.1301,
+         "wns_io": -5.3911
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.092409,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335599,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.172803,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.625288,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -6.243816,
+       "setup_tns": -3682.249385,
+       "setup_viol": 1927,
+       "hold_wns": 1.460287,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -5.916771,
+       "r2rx_setup_tns": -2458.576729,
+       "r2rx_setup_viol": 1246,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1927,
+         "viol_r2r": 1093,
+         "viol_io": 834,
+         "wns_r2r": -5.9168,
+         "wns_io": -6.2438
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.786593,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.338726,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -6.243816,
+      "hold_wns_worst": 0.335599,
+      "setup_tns_sum": -8164.166,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 5245,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 3176,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pv; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pv/openroadb3_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 92.7,
+      "clock_network_mW": 42.6,
+      "register_mW": 2.949,
+      "combinational_mW": 18.3,
+      "memory_mW": 28.9
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "iolat_pvs": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.412609,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.623201,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.740171,
+       "setup_tns": -2595.901069,
+       "setup_viol": 1712,
+       "hold_wns": 1.433854,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.886063,
+       "r2rx_setup_tns": -1683.232591,
+       "r2rx_setup_viol": 996,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1712,
+         "viol_r2r": 902,
+         "viol_io": 810,
+         "wns_r2r": -4.8861,
+         "wns_io": -5.7402
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.965768,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335922,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.63277,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.619903,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.348072,
+       "setup_tns": -1840.201589,
+       "setup_viol": 1581,
+       "hold_wns": 1.402668,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.130098,
+       "r2rx_setup_tns": -1167.191301,
+       "r2rx_setup_viol": 934,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1581,
+         "viol_r2r": 827,
+         "viol_io": 754,
+         "wns_r2r": -4.1301,
+         "wns_io": -5.3481
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.092409,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335599,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 1.105703,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.625288,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -6.260817,
+       "setup_tns": -3696.438203,
+       "setup_viol": 1928,
+       "hold_wns": 1.460287,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -5.916771,
+       "r2rx_setup_tns": -2458.576729,
+       "r2rx_setup_viol": 1246,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "apb_paddr_i[4]",
+       "setup_worst_end": "_49276_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1928,
+         "viol_r2r": 1093,
+         "viol_io": 835,
+         "wns_r2r": -5.9168,
+         "wns_io": -6.2608
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.786593,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.338726,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "57e67934c24b53f40489ad30eeb3c1cf",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -6.260817,
+      "hold_wns_worst": 0.335599,
+      "setup_tns_sum": -8132.541,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 5221,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 3176,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant iolat_pvs; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/iolat_pvs/openroadb3_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 92.7,
+      "clock_network_mW": 42.6,
+      "register_mW": 2.949,
+      "combinational_mW": 18.3,
+      "memory_mW": 28.9
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "soc_budget": {
+    "corners": {
+     "nom_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.199895,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.623201,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.886063,
+       "setup_tns": -2279.656203,
+       "setup_viol": 1666,
+       "hold_wns": 1.433854,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.886063,
+       "r2rx_setup_tns": -1683.232591,
+       "r2rx_setup_viol": 996,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1666,
+         "viol_r2r": 976,
+         "viol_io": 690,
+         "wns_r2r": -4.8861,
+         "wns_io": -4.0562
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "nom_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.965768,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335922,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "nom"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.352532,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.619903,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -4.130098,
+       "setup_tns": -1545.950751,
+       "setup_viol": 1518,
+       "hold_wns": 1.402668,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -4.130098,
+       "r2rx_setup_tns": -1167.191301,
+       "r2rx_setup_viol": 934,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1518,
+         "viol_r2r": 920,
+         "viol_io": 598,
+         "wns_r2r": -4.1301,
+         "wns_io": -3.6911
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "min_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 4.092409,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.335599,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "min"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_tt": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_tt/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 2.653101,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.625288,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_tt/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ss": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_ss/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": -5.916771,
+       "setup_tns": -3358.152274,
+       "setup_viol": 1925,
+       "hold_wns": 1.460287,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": -5.916771,
+       "r2rx_setup_tns": -2458.576729,
+       "r2rx_setup_viol": 1246,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "_53923_/CLK",
+       "setup_worst_end": "_53323_/D",
+       "hold_worst_start": "_52741_/CLK",
+       "hold_worst_end": "u_core.u_icache.gen_data_sram[1].u_data_sram/din0[15]",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_ss/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": {
+         "viol_total": 1925,
+         "viol_r2r": 1160,
+         "viol_io": 765,
+         "wns_r2r": -5.9168,
+         "wns_io": -4.5438
+        }
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     },
+     "max_ff": {
+      "label": "judge",
+      "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_ff/metrics.tsv",
+      "unit": "ns / count",
+      "values": {
+       "setup_wns": 3.786593,
+       "setup_tns": 0.0,
+       "setup_viol": 0,
+       "hold_wns": 0.338726,
+       "hold_tns": 0.0,
+       "hold_viol": 0,
+       "r2rx_setup_wns": null,
+       "r2rx_setup_tns": 0.0,
+       "r2rx_setup_viol": 0,
+       "r2rx_hold_wns": null,
+       "r2rx_hold_tns": 0.0,
+       "r2rx_hold_viol": 0,
+       "setup_worst_start": "u_core.u_dcache.gen_data_sram[0].u_data_sram/clk0",
+       "setup_worst_end": "_52388_/D",
+       "hold_worst_start": "_53179_/CLK",
+       "hold_worst_end": "_54172_/D",
+       "sdc_md5": "fdbefe240bf1654eca46e82615ecf75b",
+       "sdc_variant": "own",
+       "leaf_cells": 107622,
+       "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+       "rc_corner": "max"
+      },
+      "io_split": {
+       "label": "judge",
+       "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_ff/global_timing.txt",
+       "unit": "ns / count",
+       "values": {
+        "setup": null,
+        "hold": null
+       },
+       "note": "report_global_timing: missing kind = no violations"
+      }
+     }
+    },
+    "summary": {
+     "label": "derived",
+     "unit": "ns / count",
+     "source": [
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_min_ff/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_tt/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_ss/metrics.tsv",
+      "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_max_ff/metrics.tsv"
+     ],
+     "values": {
+      "setup_wns_worst": -5.916771,
+      "hold_wns_worst": 0.335599,
+      "setup_tns_sum": -7183.759,
+      "hold_tns_sum": 0.0,
+      "setup_viol_sum": 5109,
+      "hold_viol_sum": 0,
+      "r2r_setup_viol_sum": 3176,
+      "r2r_hold_viol_sum": 0,
+      "corners_setup_clean": 6,
+      "corners_hold_clean": 9,
+      "corners_r2r_clean": 6
+     },
+     "rule": "min / sum / count over the 9 judge corners, SDC variant soc_budget; viol = violating endpoints"
+    },
+    "power": {
+     "label": "judge",
+     "unit": "mW",
+     "source": "pnr/commercial/compare/snapshot/pt/soc_budget/openroadb3_nom_tt/power_B.txt",
+     "values": {
+      "total_mW": 92.7,
+      "clock_network_mW": 42.6,
+      "register_mW": 2.949,
+      "combinational_mW": 18.3,
+      "memory_mW": 28.9
+     },
+     "note": "PrimePower vectorless variant B (0.1 toggle / 0.5 static prob on inputs and register outputs), nom_tt"
+    }
+   },
+   "drv_nom_tt_base": {
+    "label": "judge",
+    "unit": "violating pins",
+    "source": "pnr/commercial/compare/snapshot/pt/base/openroadb3_nom_tt/constraint_drv.txt",
+    "values": {
+     "max_transition": 3975,
+     "max_capacitance": 27,
+     "max_fanout": 3651
+    },
+    "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
+   },
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 26,
+      "max_cap_other": 1,
+      "max_tran": 3977,
+      "max_fanout": 3651
+     },
+     "nom_ss": {
+      "max_cap_dout0": 26,
+      "max_cap_other": 10,
+      "max_tran": 52557,
+      "max_fanout": 3651
+     },
+     "nom_ff": {
+      "max_cap_dout0": 26,
+      "max_cap_other": 0,
+      "max_tran": 1606,
+      "max_fanout": 3651
+     },
+     "min_tt": {
+      "max_cap_dout0": 24,
+      "max_cap_other": 1,
+      "max_tran": 2672,
+      "max_fanout": 3651
+     },
+     "min_ss": {
+      "max_cap_dout0": 24,
+      "max_cap_other": 6,
+      "max_tran": 37199,
+      "max_fanout": 3651
+     },
+     "min_ff": {
+      "max_cap_dout0": 24,
+      "max_cap_other": 0,
+      "max_tran": 1071,
+      "max_fanout": 3651
+     },
+     "max_tt": {
+      "max_cap_dout0": 28,
+      "max_cap_other": 2,
+      "max_tran": 6699,
+      "max_fanout": 3651
+     },
+     "max_ss": {
+      "max_cap_dout0": 28,
+      "max_cap_other": 11,
+      "max_tran": 72029,
+      "max_fanout": 3651
+     },
+     "max_ff": {
+      "max_cap_dout0": 28,
+      "max_cap_other": 0,
+      "max_tran": 2546,
+      "max_fanout": 3651
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
+  },
   "icc2_b6": {
    "own": {
     "corners": {
@@ -23875,7 +26724,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 4,
+      "max_fanout": 164
+     },
+     "nom_ss": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 35,
+      "max_fanout": 164
+     },
+     "nom_ff": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 164
+     },
+     "min_tt": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 164
+     },
+     "min_ss": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 16,
+      "max_fanout": 164
+     },
+     "min_ff": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 164
+     },
+     "max_tt": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 79,
+      "max_fanout": 164
+     },
+     "max_ss": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 1083,
+      "max_fanout": 164
+     },
+     "max_ff": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 1,
+      "max_fanout": 164
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "innovus_b7": {
    "own": {
@@ -25981,7 +28891,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 160,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 209
+     },
+     "nom_ss": {
+      "max_cap_dout0": 160,
+      "max_cap_other": 0,
+      "max_tran": 14,
+      "max_fanout": 209
+     },
+     "nom_ff": {
+      "max_cap_dout0": 160,
+      "max_cap_other": 0,
+      "max_tran": 4,
+      "max_fanout": 209
+     },
+     "min_tt": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 5,
+      "max_fanout": 209
+     },
+     "min_ss": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 11,
+      "max_fanout": 209
+     },
+     "min_ff": {
+      "max_cap_dout0": 159,
+      "max_cap_other": 0,
+      "max_tran": 4,
+      "max_fanout": 209
+     },
+     "max_tt": {
+      "max_cap_dout0": 160,
+      "max_cap_other": 0,
+      "max_tran": 10,
+      "max_fanout": 209
+     },
+     "max_ss": {
+      "max_cap_dout0": 160,
+      "max_cap_other": 0,
+      "max_tran": 29,
+      "max_fanout": 209
+     },
+     "max_ff": {
+      "max_cap_dout0": 160,
+      "max_cap_other": 0,
+      "max_tran": 8,
+      "max_fanout": 209
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "icc2_b8": {
    "own": {
@@ -28109,7 +31080,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 1,
+      "max_tran": 9,
+      "max_fanout": 177
+     },
+     "nom_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 2,
+      "max_tran": 23,
+      "max_fanout": 177
+     },
+     "nom_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 177
+     },
+     "min_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 177
+     },
+     "min_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 1,
+      "max_tran": 19,
+      "max_fanout": 177
+     },
+     "min_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 177
+     },
+     "max_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 1,
+      "max_tran": 66,
+      "max_fanout": 177
+     },
+     "max_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 2,
+      "max_tran": 722,
+      "max_fanout": 177
+     },
+     "max_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 177
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "icc2_b9": {
    "own": {
@@ -30625,7 +33657,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 2,
+      "max_fanout": 153
+     },
+     "nom_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 16,
+      "max_fanout": 153
+     },
+     "nom_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 153
+     },
+     "min_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 153
+     },
+     "min_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 12,
+      "max_fanout": 153
+     },
+     "min_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 153
+     },
+     "max_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 59,
+      "max_fanout": 153
+     },
+     "max_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 696,
+      "max_fanout": 153
+     },
+     "max_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 153
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "icc2_b12": {
    "own": {
@@ -34903,7 +37996,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 204
+     },
+     "nom_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 24,
+      "max_fanout": 204
+     },
+     "nom_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 2,
+      "max_fanout": 204
+     },
+     "min_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 3,
+      "max_fanout": 204
+     },
+     "min_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 11,
+      "max_fanout": 204
+     },
+     "min_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 204
+     },
+     "max_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 21,
+      "max_fanout": 204
+     },
+     "max_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 33,
+      "max_fanout": 204
+     },
+     "max_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 17,
+      "max_fanout": 204
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "innovus_b9": {
    "own": {
@@ -36980,7 +40134,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 204
+     },
+     "nom_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 24,
+      "max_fanout": 204
+     },
+     "nom_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 2,
+      "max_fanout": 204
+     },
+     "min_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 3,
+      "max_fanout": 204
+     },
+     "min_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 11,
+      "max_fanout": 204
+     },
+     "min_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 204
+     },
+     "max_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 21,
+      "max_fanout": 204
+     },
+     "max_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 32,
+      "max_fanout": 204
+     },
+     "max_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 17,
+      "max_fanout": 204
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "innovus_b10": {
    "own": {
@@ -39057,7 +42272,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 204
+     },
+     "nom_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 28,
+      "max_fanout": 204
+     },
+     "nom_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 2,
+      "max_fanout": 204
+     },
+     "min_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 3,
+      "max_fanout": 204
+     },
+     "min_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 16,
+      "max_fanout": 204
+     },
+     "min_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 204
+     },
+     "max_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 8,
+      "max_fanout": 204
+     },
+     "max_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 30,
+      "max_fanout": 204
+     },
+     "max_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 4,
+      "max_fanout": 204
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "innovus_b11": {
    "own": {
@@ -41537,7 +44813,68 @@
     },
     "note": "PrimeTime report_constraint -all_violators, nom_tt, base SDC"
    },
-   "drv_all_corners_base": null
+   "drv_all_corners_base": {
+    "label": "judge",
+    "unit": "pins",
+    "source": "pnr/commercial/compare/snapshot/drv_counts.tsv",
+    "values": {
+     "nom_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 7,
+      "max_fanout": 204
+     },
+     "nom_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 13,
+      "max_fanout": 204
+     },
+     "nom_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 2,
+      "max_fanout": 204
+     },
+     "min_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 3,
+      "max_fanout": 204
+     },
+     "min_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 11,
+      "max_fanout": 204
+     },
+     "min_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 0,
+      "max_fanout": 204
+     },
+     "max_tt": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 8,
+      "max_fanout": 204
+     },
+     "max_ss": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 15,
+      "max_fanout": 204
+     },
+     "max_ff": {
+      "max_cap_dout0": 0,
+      "max_cap_other": 0,
+      "max_tran": 4,
+      "max_fanout": 204
+     }
+    },
+    "note": "PrimeTime report_constraint -all_violators on the base SDC; dout0 = the SRAM dout0 pins (max_capacitance 0.02756 pF, the top of the characterised load table)"
+   }
   },
   "icc2_b5e": {
    "base": {

@@ -1,0 +1,28 @@
+Command exited with non-zero status 2
+	Command being timed: "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/drclvs/scripts/guard_run.sh /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/openroad/runs_b3/flow.stdout b3_openroad_ctr podman run --rm --name b3_openroad_ctr -v /home/RD/ryan:/home/RD/ryan -v /home/RD/ryan/pdk:/home/RD/ryan/pdk -e PDK_ROOT=/home/RD/ryan/pdk -e PDK=sky130A -e STD_CELL_LIBRARY=sky130_fd_sc_hd -e PYTHONPATH=/home/RD/ryan/tools/librelane-3562a8d:/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/plugins:/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/plugin_b3 -w /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu ghcr.io/librelane/librelane:2.4.13 python3 -c import resource,subprocess,sys,json
+rc=subprocess.call(sys.argv[1:])
+r=resource.getrusage(resource.RUSAGE_CHILDREN)
+open("/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/openroad/runs_b3/rusage.txt","w").write(json.dumps({"rc":rc,"ru_maxrss_kB_largest_single_process":r.ru_maxrss,"utime_s":r.ru_utime,"stime_s":r.ru_stime})+"\n")
+sys.exit(rc) python3 -m librelane --pdk-root /home/RD/ryan/pdk --pdk sky130A --run-tag b3_openroad -j 2 /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/config_b3.json"
+	User time (seconds): 24.37
+	System time (seconds): 114.11
+	Percent of CPU this job got: 2%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:45:48
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 67064
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 17
+	Minor (reclaiming a frame) page faults: 1108732
+	Voluntary context switches: 434071
+	Involuntary context switches: 1068
+	Swaps: 0
+	File system inputs: 4160
+	File system outputs: 16568
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 2

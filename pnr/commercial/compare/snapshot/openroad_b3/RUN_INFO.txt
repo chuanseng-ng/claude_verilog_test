@@ -1,0 +1,5 @@
+b3_openroad
+run_dir: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/runs/b3_openroad  (gitignored)
+config:  /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/config_b3.json (CLI: -j 2; flow CVTClassicB3 = Classic + CVT.InsertDout0Buffers after detailed placement)
+flow:    LibreLane 3562a8d (2.4.13-2-g3562a8d) + pnr/librelane_patches/librelane_live_state_2026-09-26.diff + plugin pnr/sky130/cpu/plugin_b3, in container ghcr.io/librelane/librelane:2.4.13 (OpenROAD edf00dff)
+last step: 74-misc-reportmanufacturability

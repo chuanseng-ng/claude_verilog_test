@@ -4,6 +4,7 @@
 arm_def() {
   case "$1" in
     openroad) echo pnr/commercial/runs/openroad/rv32i_cpu_top.def ;;
+    openroadb3) echo pnr/commercial/runs/openroad_b3/rv32i_cpu_top.def ;;   # OpenROAD generation B3 (step 9)
     icc2)     echo pnr/commercial/impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.def ;;
     innovus)  echo pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.def ;;   # b5c reroute (b5b superseded, not extracted for results)
     innovusb5h) echo pnr/commercial/impl/innovus/runs/b5h_innovus/out/rv32i_cpu_top.def ;;   # b5h: capTable + symmetric clk_io latency (arm name has no '_': the Makefile pattern splits on it)

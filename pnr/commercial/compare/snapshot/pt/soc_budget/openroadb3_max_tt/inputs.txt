@@ -1,0 +1,7 @@
+spef_src=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/openroadb3_max/rv32i_cpu_top.max.spef
+spef_md5=33d68bf87d6ee2a436d99fe23a1f22ce
+netlist_src=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad_b3/rv32i_cpu_top.nl.v
+netlist_md5=ebe3d4b817d5e92d3be96f239d30b2e6
+sdc_md5=fdbefe240bf1654eca46e82615ecf75b
+scripts_md5=c2988528d74ba5fc12a38fc11043d54b
+power=0

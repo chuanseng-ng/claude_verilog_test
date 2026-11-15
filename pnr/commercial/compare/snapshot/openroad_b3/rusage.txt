@@ -1,0 +1,1 @@
+{"rc": 2, "ru_maxrss_kB_largest_single_process": 7013908, "utime_s": 8182.502953, "stime_s": 456.610923}

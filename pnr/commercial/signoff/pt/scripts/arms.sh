@@ -11,6 +11,7 @@ STARRC=${PT_STARRC_DIR:-pnr/commercial/signoff/starrc/runs}
 arm_netlist() {
   case "$1" in
     openroad|openroad_rcx) echo pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v ;;
+    openroadb3) echo pnr/commercial/runs/openroad_b3/rv32i_cpu_top.nl.v ;;   # OpenROAD generation B3 (step 9): flipped I-cache floorplan + dout0 buffers + antenna knobs
     icc2)    echo pnr/commercial/impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.nl.v ;;
     innovus) echo pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.nl.v ;;
     innovusb5h) echo pnr/commercial/impl/innovus/runs/b5h_innovus/out/rv32i_cpu_top.nl.v ;;
@@ -36,7 +37,7 @@ arm_netlist() {
 }
 arm_spef() {
   case "$1" in
-    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|icc2b12|innovusb9|innovusb10|innovusb11) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
+    openroad|openroadb3|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|icc2b12|innovusb9|innovusb10|innovusb11) echo $STARRC/$1_$2/rv32i_cpu_top.$2.spef ;;
     openroad_rcx)          echo pnr/commercial/runs/openroad/rv32i_cpu_top.$2.spef ;;
     *) echo "unknown arm $1" >&2; return 1 ;;
   esac
@@ -45,7 +46,7 @@ arm_spef() {
 arm_spef_marker() {
   [ -n "${PT_NO_MARKER:-}" ] && { echo ""; return; }   # non-StarRC SPEF set (e.g. Quantus, PT_STARRC_DIR=.../quantus/runs): no star/.starrc_complete exists
   case "$1" in
-    openroad|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|icc2b12|innovusb9|innovusb10|innovusb11) echo $STARRC/$1_$2/star/.starrc_complete ;;
+    openroad|openroadb3|icc2|innovus|innovusb5h|innovusb5j|innovusb5k|innovusb6|icc2b5i|icc2b5m|icc2b6|icc2b7|innovusb7|icc2b8pre|innovusb8draft|icc2b8|innovusb8|icc2b9|icc2b12|innovusb9|innovusb10|innovusb11) echo $STARRC/$1_$2/star/.starrc_complete ;;
     *) echo "" ;;
   esac
 }

@@ -41,7 +41,7 @@ PT_DIRS = {
     "soc_budget": "runs_iolat_pv_soc",
 }
 PV_VARIANTS = ("iolat_pv", "iolat_pvs")
-PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9", "icc2b12", "innovusb9", "innovusb10", "innovusb11"]
+PV_ARMS = ["openroad", "icc2b6", "innovusb6", "icc2b7", "innovusb7", "icc2b8", "innovusb8", "icc2b9", "icc2b12", "innovusb9", "innovusb10", "innovusb11", "openroadb3"]
 PT_ARMS = [
     "openroad",
     "icc2b6",
@@ -55,6 +55,7 @@ PT_ARMS = [
     "innovusb9",
     "innovusb10",
     "innovusb11",
+    "openroadb3",
     "icc2",
     "icc2b5i",
     "icc2b5m",
@@ -338,6 +339,85 @@ def add_b7() -> None:
     print(f"{len(manifest)} {'/'.join(tags)} files merged into {rel(mf)}")
 
 
+def openroad_b3() -> None:
+    """OpenROAD generation B3 (step 9): native files of runs/openroad_b3 + LibreLane per-step runtimes, LEC reports (orb3_* Formality, ob3_e* Yosys), peak-RSS evidence."""
+    src = COM / "runs/openroad_b3"
+    dst = SNAP / "openroad_b3"
+    copy(src / "metrics.json", dst / "metrics.json")
+    copy(src / "RUN_INFO.txt", dst / "RUN_INFO.txt")
+    nl = src / "rv32i_cpu_top.nl.v"
+    cnt: Counter[str] = Counter()
+    pat = re.compile(r"^\s*(sky130_[A-Za-z0-9_]+)\s+\S+\s*\(")
+    with open(nl) as f:
+        for line in f:
+            m = pat.match(line)
+            if m:
+                cnt[m.group(1)] += 1
+    derived(dst / "cellcount.txt", f"{rel(nl)} sha256={sha(nl)} (instance count per master)", "".join(f"{k} {v}\n" for k, v in sorted(cnt.items())))
+    run = REPO / "pnr/sky130/cpu/runs/b3_openroad"
+    rows = [f"{s.name}\t{(s / 'runtime.txt').read_text().strip()}\n" for s in sorted(p for p in run.iterdir() if p.is_dir() and (p / "runtime.txt").is_file())]
+    derived(dst / "step_runtime.tsv", f"{rel(run)}/*/runtime.txt (LibreLane per-step runtime)", "step\truntime_hms\n" + "".join(rows))
+    rb = COM / "impl/openroad/runs_b3"
+    for f in ("rusage.txt", "time_v.txt"):
+        copy(rb / f, dst / f)
+    samples = [l.split("\t") for l in (rb / "rss_samples.tsv").read_text().splitlines()[1:]]
+    derived(dst / "rss_peak.txt", f"{rel(rb)}/rss_samples.tsv (15 s sampler of the container cgroup)",
+            f"samples {len(samples)}\npeak_sum_rss_kB {max(int(s[1]) for s in samples)}\npeak_single_process_rss_kB {max(int(s[2]) for s in samples)}\n")
+    fr = COM / "signoff/lec/formality"
+    for d in sorted((fr / "runs").glob("orb3_*")):
+        if d.is_dir() and (d / "fm.log").is_file():
+            copy(d / "fm.log", fr / "reports" / d.name / "fm_log.txt")
+            copy(d / "time.txt", fr / "reports" / d.name / "time.txt", required=False)
+            for f in ("unmatched_points.txt", "failing_points.txt"):
+                if (d / f).is_file() and (d / f).stat().st_size < 1_500_000:
+                    copy(d / f, fr / "reports" / d.name / f, required=False)
+    yr = COM / "signoff/lec/yosys"
+    for d in sorted((yr / "runs").glob("ob3_e[0-9]*")):
+        if not (d / "equiv_after_induct.txt").is_file():
+            continue
+        for f in ("equiv_after_make.txt", "equiv_after_struct.txt", "equiv_after_induct.txt", "equiv1.ys", "equiv3.ys", "prove.log"):
+            if (d / f).is_file() and (d / f).stat().st_size < 1_500_000:
+                copy(d / f, yr / "reports" / d.name / f, required=False)
+
+
+def add_ob3() -> None:
+    """Add ONLY the OpenROAD B3 parts (PT runs of arm openroadb3, clklat, per-view tables, native files, LEC, DRV counts) and merge their MANIFEST rows."""
+    arm = "openroadb3"
+    for var, d in PT_DIRS.items():
+        for c in CORNERS:
+            src = COM / "signoff/pt" / d / f"{arm}_{c}"
+            if not (src / "metrics.tsv").is_file():
+                continue
+            dst = SNAP / "pt" / var / f"{arm}_{c}"
+            for f in ("metrics.tsv", "inputs.txt", "global_timing.txt"):
+                copy(src / f, dst / f)
+            if var in PV_VARIANTS:
+                copy(src / "iolat_pv.txt", dst / "iolat_pv.txt")
+                copy(src / "io_viol_summary.tsv", dst / "io_viol_summary.tsv", required=False)
+                copy(src / "io_viol.tsv", dst / "io_viol.tsv", required=False)
+            if var == "soc_budget":
+                copy(src / "iolat_pv_soc.txt", dst / "iolat_pv_soc.txt")
+            if c == "nom_tt":
+                copy(src / "power_B.txt", dst / "power_B.txt", required=False)
+                copy(src / "time.txt", dst / "time.txt", required=False)
+                if var == "base":
+                    copy(src / "constraint_drv.txt", dst / "constraint_drv.txt", required=False)
+    for c in CORNERS:
+        src = COM / "signoff/pt/runs_clklat" / f"{arm}_{c}"
+        if (src / "clk_latency.tsv").is_file():
+            for f in ("clk_latency.tsv", "inputs.txt", "annot_clock.txt"):
+                copy(src / f, SNAP / "clklat" / f"{arm}_{c}" / f)
+    for f in sorted((COM / "signoff/pt/iolat_pv").glob("*.tsv")):
+        copy(f, SNAP / "iolat_pv" / f.name)
+    openroad_b3()
+    drv_counts()
+    mf = SNAP / "MANIFEST.tsv"
+    new = {r[0] for r in manifest}
+    keep = [l for l in mf.read_text().splitlines(True) if l.split("\t")[0] not in new]
+    mf.write_text("".join(keep) + "".join("\t".join(map(str, r)) + "\n" for r in manifest))
+    print(f"{len(manifest)} openroad_b3 files merged into {rel(mf)}")
+
+
 def lec() -> None:
     cr = COM / "signoff/lec/conformal"
     for d in sorted((cr / "runs").glob("b4m_*")):
@@ -463,6 +543,9 @@ def merge_soc() -> None:
 def main() -> None:
     if "--only-soc" in sys.argv:
         merge_soc()
+        return
+    if "--add-ob3" in sys.argv:
+        add_ob3()
         return
     if "--add-b7" in sys.argv:
         add_b7()
