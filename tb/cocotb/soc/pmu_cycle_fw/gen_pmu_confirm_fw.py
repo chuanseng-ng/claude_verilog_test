@@ -9,6 +9,10 @@ gen_pmu_cycle_hex.py. No hex file and no cross toolchain is needed, so no binary
   noisy_image():  the CPU reads the PMU STATUS register in a loop. The register is not cached, so
                   every pass is one AXI read through the CPU bridge. It stands for software that
                   keeps bus traffic going.
+  violating_image(): the CPU requests CPU_OFF through the DMA engine, as the reference firmware does,
+                  but keeps its bus traffic going: it stores to the DMA control register again and
+                  then loops over a load, a store and a data cache flush. It breaks the stop-traffic
+                  rule. It is the control that shows the monitor of the live test sees such traffic.
   gpu_access_image(kind): GPU control register access with the GPU on, a request for GPU_OFF through
                   the PMU CTRL register, then one access (kind "read" or "write") with the GPU off,
                   then one PMU STATUS read. The labels mark where the test observes the commit PC.
@@ -27,6 +31,9 @@ if _HERE not in sys.path:
 import gen_pmu_cycle_hex as _ref  # noqa: E402
 
 from sim.riscv_encoder import ADDI, BEQ, BNE, EBREAK, JAL, LW, SW  # noqa: E402
+
+DMA_BASE = _ref.DMA_BASE
+SRAM_BASE = _ref.SRAM_BASE
 
 Assembler = _ref.Assembler
 ROM_BASE = _ref.ROM_BASE
@@ -93,6 +100,36 @@ def noisy_image():
     asm.label("NOISY_LOOP")
     asm.emit(LW(9, 5, PMU_STATUS))
     _jmp(asm, "NOISY_LOOP")
+    return _finish(asm)
+
+
+def violating_image():
+    asm = Assembler()
+    _li(asm, 2, SRAM_BASE)
+    _li(asm, 5, DMA_BASE)
+    _li(asm, 6, PMU_BASE)
+    asm.emit(ADDI(8, 0, _ref.MODE_CPU_OFF))
+    asm.emit(SW(8, 2, 0))
+    asm.emit(SW(0, 2, 4))
+    asm.emit(_ref.CSRRW(0, 0x7C0, 0))
+    asm.emit(ADDI(16, 0, 0))
+    _li(asm, 17, 1024)
+    asm.label("SPIN")
+    asm.emit(ADDI(16, 16, 1))
+    _br(asm, BNE, 16, 17, "SPIN")
+    asm.emit(SW(2, 5, 0))
+    asm.emit(SW(6, 5, 4))
+    asm.emit(ADDI(8, 0, 4))
+    asm.emit(SW(8, 5, 8))
+    asm.emit(ADDI(8, 0, 1))
+    asm.emit(SW(8, 5, 12))
+    asm.emit(SW(0, 5, 12))
+    asm.label("VIOLATING_LOOP")
+    asm.emit(LW(9, 2, 4))
+    asm.emit(ADDI(9, 9, 1))
+    asm.emit(SW(9, 2, 4))
+    asm.emit(_ref.CSRRW(0, 0x7C0, 0))
+    _jmp(asm, "VIOLATING_LOOP")
     return _finish(asm)
 
 
