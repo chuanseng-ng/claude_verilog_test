@@ -15,7 +15,10 @@ This script re-derives the verdict:
   3. match the residue against explicit, justified waivers
   4. fail if anything is left unwaived -- or if a waiver matched nothing
   5. fail if a `required_synchronisers` entry matched no register that
-     cdc_snitch classified CDC (a synchroniser that was removed or bypassed)
+     cdc_snitch classified CDC (a synchroniser that was removed or bypassed).
+     An entry with `same_domain_ok: true` also accepts a register that cdc_snitch
+     classified OK1 and that carries magic_cdc, for a crossing whose two faces
+     are one net in the netlist under analysis (see cdc_config.yml)
 
 Step 4's second half matters as much as the first: a waiver that stops
 matching is either a fixed bug whose waiver should go, or a renamed signal
@@ -187,15 +190,19 @@ def cdc_register_names(path: Path) -> dict[str, str]:
                 Doc: tm:flow:cdc-snitch-poc and the reproducer in Doc: tm:ch:dft-architecture
                 15.9), so a latch-launched (two pins: E and D) or any 2-input-logic-launched
                 synchroniser can never classify CDC. Only entries that opt in with
-                `latch_launched: true` may be satisfied by this second class."""
+                `latch_launched: true` may be satisfied by this second class.
+    OK1+magic = a magic_cdc-marked register whose launch and capture clocks are one net. Only
+                entries with `same_domain_ok: true` may be satisfied by this third class."""
     names = {}
     for line in path.open():
-        if not line.startswith(("CDC", "BAD")):
+        if not line.startswith(("CDC", "BAD", "OK1")):
             continue
         m = _LINE_RE.match(line)
         if not m:
             continue
-        if m.group("stat") == "CDC" or (m.group("stat") == "BAD" and m.group("magic")):
+        if m.group("stat") == "CDC" or (
+            m.group("stat") in ("BAD", "OK1") and m.group("magic")
+        ):
             names[m.group("name")] = m.group("stat")
     return names
 
@@ -207,10 +214,13 @@ def missing_synchronisers(cdc_names, cfg):
     with another domain; a raw single-source sample classifies OKX, which never fails the gate.
     This is the positive check: the named synchronisers must still be there. By default only a
     CDC-classified register satisfies an entry; `latch_launched: true` additionally accepts a
-    magic_cdc-marked register that cdc_snitch classed BAD (still never an unmarked or OKX one)."""
+    magic_cdc-marked register that cdc_snitch classed BAD, and `same_domain_ok: true` one that it
+    classed OK1 (still never an unmarked or OKX one)."""
     def ok(rs, name, stat):
         return bool(rs["_dest_re"].search(name)) and (
-            stat == "CDC" or (stat == "BAD" and rs.get("latch_launched") is True)
+            stat == "CDC"
+            or (stat == "BAD" and rs.get("latch_launched") is True)
+            or (stat == "OK1" and rs.get("same_domain_ok") is True)
         )
 
     return [

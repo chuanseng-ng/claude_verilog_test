@@ -313,7 +313,7 @@ cdc_report_through \
     $REPORTS_DIR/cdc_fifo_rd2wr.rpt
 
 puts "================================================================"
-puts "CDC boundary timing -- apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc)"
+puts "CDC boundary timing -- apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc, u_apb_pll_cdc)"
 puts "================================================================"
 cdc_report_through \
     [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*req_q* || name =~ *u_apb_pll2_cdc*ack_q*} -quiet] \
@@ -323,6 +323,10 @@ cdc_report_through \
     [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*req_q* || name =~ *u_apb_dbg_cdc*ack_q*} -quiet] \
     "check_cdc_timing.tcl u_apb_dbg_cdc req_q/ack_q report query" \
     $REPORTS_DIR/cdc_apb_dbg_toggle.rpt
+cdc_report_through \
+    [get_nets -hierarchical -filter {name =~ *u_apb_pll_cdc*req_q* || name =~ *u_apb_pll_cdc*ack_q*} -quiet] \
+    "check_cdc_timing.tcl u_apb_pll_cdc req_q/ack_q report query" \
+    $REPORTS_DIR/cdc_apb_pll_toggle.rpt
 
 puts "================================================================"
 puts "CDC boundary timing -- PMU/IRQ single-bit crossings"

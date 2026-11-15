@@ -202,3 +202,54 @@ def sky130_async_waiver_present(sdc: str) -> bool:
 def test_sky130_async_pin_waiver_covers_the_status_chain():
     assert sky130_async_waiver_present(SKY130_CHECK)
     assert not sky130_async_waiver_present(SKY130_CHECK.replace("-async_pins", "-data_pins"))
+
+
+# --- u_apb_pll_cdc: both check files must budget its two level crossings ----------------------
+
+
+def pll_bridge_budgets(sdc: str) -> dict:
+    """Which level crossings of u_apb_pll_cdc the check file budgets, by the names it matches."""
+    return {
+        "req": bool(
+            re.search(r"\*u_apb_pll_cdc\*req_q\*", sdc)
+            or re.search(r"cdc_apply_sync_budget \w+ \"u_apb_pll_cdc\*u_req_sync\"", sdc)
+        ),
+        "ack": bool(
+            re.search(r"\*u_apb_pll_cdc\*ack_q\*", sdc)
+            or re.search(r"cdc_apply_sync_budget \w+ \"u_apb_pll_cdc\*u_ack_sync\"", sdc)
+        ),
+    }
+
+
+def test_pll_bridge_is_an_apb_cdc_bridge_instance_of_soc_top():
+    assert re.search(r"\bapb_cdc_bridge\b[^;]*?\bu_apb_pll_cdc\s*\(", _strip(SOC_TOP), re.S)
+
+
+def test_both_check_files_budget_the_pll_bridge_level_crossings():
+    for name, sdc in (("sky130", SKY130_CHECK), ("asap7", ASAP7_CHECK)):
+        assert pll_bridge_budgets(sdc) == {"req": True, "ack": True}, name
+
+
+def test_pll_bridge_budget_names_are_names_of_the_bridge():
+    """The sky130 file matches u_req_sync and u_ack_sync, the ASAP7 file matches req_q and ack_q."""
+    inst = bridge_instances(BRIDGE)
+    assert {"u_req_sync", "u_ack_sync"} <= set(inst)
+    code = _strip(BRIDGE)
+    assert re.search(r"\blogic\s+req_q\b", code) and re.search(r"\blogic\s+ack_q\b", code)
+
+
+def test_pll_bridge_budget_negative_controls():
+    """A stale instance name and a missing section must both be seen as no budget."""
+    for sdc in (SKY130_CHECK, ASAP7_CHECK):
+        stale = sdc.replace("u_apb_pll_cdc", "u_apb_pllZ_cdc")
+        assert pll_bridge_budgets(stale) == {"req": False, "ack": False}
+    # the pll2 budgets must not satisfy the pll bridge pattern
+    only_pll2 = ASAP7_CHECK.replace("u_apb_pll_cdc", "u_apb_pll2_cdc")
+    assert pll_bridge_budgets(only_pll2) == {"req": False, "ack": False}
+
+
+def test_pll_bridge_budget_clock_variables_are_per_face():
+    """Each face has its own clock and period variable, so a new clock needs no new budget."""
+    for sdc in (SKY130_CHECK, ASAP7_CHECK):
+        for var in ("_pll_s_clk", "_pll_m_clk", "_pll_s_period", "_pll_m_period"):
+            assert re.search(rf"^set {var}\b", sdc, re.M), var

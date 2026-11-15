@@ -139,7 +139,7 @@ cr:arc:tm-rv32i-clock-gate	docs/manual/cr/parts/06-source-archive.tex	2447	\text
 cr:ch:about	docs/manual/cr/parts/00-about.tex	5	About this book
 cr:ch:archive	docs/manual/cr/parts/04-fix-log-and-archive.tex	7516	Archive
 cr:ch:asap7-cpu-gpu-and-soc-runs	docs/manual/cr/parts/02-run-histories.tex	2447	ASAP7 CPU, GPU and SoC runs
-cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	9966	Build files
+cr:ch:build-files	docs/manual/cr/parts/05-source-file-history.tex	10007	Build files
 cr:ch:fix-log	docs/manual/cr/parts/04-fix-log-and-archive.tex	3	Fix log
 cr:ch:investigations	docs/manual/cr/parts/03-investigations.tex	3	Investigations
 cr:ch:phase-5-soc-runs	docs/manual/cr/parts/02-run-histories.tex	3	Phase 5 SoC runs
@@ -151,7 +151,7 @@ cr:ch:source-archive-ds	docs/manual/cr/parts/06-source-archive.tex	5	Archived De
 cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	1984	Archived Technical Manual text
 cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	2640	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
-cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
+cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4642	Test benches
 cr:defect:apb-cdc-bridge-reset-race	docs/manual/cr/parts/03-investigations.tex	3130	APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
 cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
@@ -548,12 +548,12 @@ cr:fix:timing-analysis:possibility-3-debug-writes-require-cpu-to-be-halted-warni
 cr:fix:timing-analysis:problem-statement	docs/manual/cr/parts/04-fix-log-and-archive.tex	3606	Problem Statement
 cr:fix:timing-analysis:state-machine-flow	docs/manual/cr/parts/04-fix-log-and-archive.tex	3618	State Machine Flow
 cr:fix:timing-analysis:testing-hypothesis-what-if-branch-taken-0	docs/manual/cr/parts/04-fix-log-and-archive.tex	4204	\texorpdfstring{Testing Hypothesis: What if branch\_\allowbreak{}taken = 0?}{Testing Hypothesis: What if branch\_taken = 0?}
-cr:flow:ci-cocotb	docs/manual/cr/parts/05-source-file-history.tex	9971	\texttt{.github/workflows/cocotb.yml}
-cr:flow:ci-qa-checks	docs/manual/cr/parts/05-source-file-history.tex	10323	\texttt{.github/workflows/qa-checks.yml}
-cr:flow:ci-random-tests	docs/manual/cr/parts/05-source-file-history.tex	10414	\texttt{.github/workflows/random\_tests.yml}
-cr:flow:ci-rtl-checks	docs/manual/cr/parts/05-source-file-history.tex	10433	\texttt{.github/workflows/rtl-checks.yml}
-cr:flow:ci-soc-coverage	docs/manual/cr/parts/05-source-file-history.tex	10604	\texttt{.github/workflows/soc\_coverage.yml}
-cr:flow:ci-synth-undef-gate	docs/manual/cr/parts/05-source-file-history.tex	10868	\texttt{.github/workflows/synth-undef-gate.yml}
+cr:flow:ci-cocotb	docs/manual/cr/parts/05-source-file-history.tex	10012	\texttt{.github/workflows/cocotb.yml}
+cr:flow:ci-qa-checks	docs/manual/cr/parts/05-source-file-history.tex	10364	\texttt{.github/workflows/qa-checks.yml}
+cr:flow:ci-random-tests	docs/manual/cr/parts/05-source-file-history.tex	10455	\texttt{.github/workflows/random\_tests.yml}
+cr:flow:ci-rtl-checks	docs/manual/cr/parts/05-source-file-history.tex	10474	\texttt{.github/workflows/rtl-checks.yml}
+cr:flow:ci-soc-coverage	docs/manual/cr/parts/05-source-file-history.tex	10645	\texttt{.github/workflows/soc\_coverage.yml}
+cr:flow:ci-synth-undef-gate	docs/manual/cr/parts/05-source-file-history.tex	10909	\texttt{.github/workflows/synth-undef-gate.yml}
 cr:mod:apb-cdc-bridge	docs/manual/cr/parts/05-source-file-history.tex	31	\texttt{soc/apb\_cdc\_bridge.sv}
 cr:mod:apb4-register-bank	docs/manual/cr/parts/05-source-file-history.tex	8	\texttt{soc/apb4\_register\_bank.sv}
 cr:mod:axi-lite-interconnect	docs/manual/cr/parts/05-source-file-history.tex	71	\texttt{soc/axi\_lite\_interconnect.sv}
@@ -606,10 +606,10 @@ cr:pd:asap7-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	2124	\t
 cr:pd:asap7-soc-pdn-orfs-tcl	docs/manual/cr/parts/05-source-file-history.tex	2470	\texttt{asap7/soc/pdn\_orfs.tcl}
 cr:pd:asap7-soc-phase5-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	2212	\texttt{asap7/soc/constraints/phase5\_soc\_multiclock.sdc}
 cr:pd:asap7-soc-phase5-sdc	docs/manual/cr/parts/05-source-file-history.tex	2170	\texttt{asap7/soc/constraints/phase5\_soc.sdc}
-cr:pd:asap7-soc-rv32i-cpu-top-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4335	\texttt{asap7/soc/rv32i\_cpu\_top\_stub.sv}
-cr:pd:asap7-soc-soc-top-ports-v	docs/manual/cr/parts/05-source-file-history.tex	4368	\texttt{asap7/soc/soc\_top\_ports.v}
-cr:pd:freepdk45-gen-via-stubs-py	docs/manual/cr/parts/05-source-file-history.tex	4386	\texttt{freepdk45/gen\_via\_stubs.py}
-cr:pd:librelane-makefile	docs/manual/cr/parts/05-source-file-history.tex	4431	\texttt{librelane/Makefile}
+cr:pd:asap7-soc-rv32i-cpu-top-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4376	\texttt{asap7/soc/rv32i\_cpu\_top\_stub.sv}
+cr:pd:asap7-soc-soc-top-ports-v	docs/manual/cr/parts/05-source-file-history.tex	4409	\texttt{asap7/soc/soc\_top\_ports.v}
+cr:pd:freepdk45-gen-via-stubs-py	docs/manual/cr/parts/05-source-file-history.tex	4427	\texttt{freepdk45/gen\_via\_stubs.py}
+cr:pd:librelane-makefile	docs/manual/cr/parts/05-source-file-history.tex	4472	\texttt{librelane/Makefile}
 cr:pd:makefile	docs/manual/cr/parts/05-source-file-history.tex	1588	\texttt{Makefile}
 cr:pd:phase1-cpu-enhanced-sdc	docs/manual/cr/parts/05-source-file-history.tex	2487	\texttt{constraints/phase1\_cpu\_enhanced.sdc}
 cr:pd:phase1-cpu-post-cts-sdc	docs/manual/cr/parts/05-source-file-history.tex	2505	\texttt{constraints/phase1\_cpu\_post\_cts.sdc}
@@ -617,22 +617,22 @@ cr:pd:phase5-soc-multiclock-check-sdc	docs/manual/cr/parts/05-source-file-histor
 cr:pd:phase5-soc-multiclock-sdc	docs/manual/cr/parts/05-source-file-history.tex	2576	\texttt{constraints/phase5\_soc\_multiclock.sdc}
 cr:pd:phase5-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	2524	\texttt{constraints/phase5\_soc.sdc}
 cr:pd:phase5-soc-upf	docs/manual/cr/parts/05-source-file-history.tex	2557	\texttt{constraints/phase5\_soc.upf}
-cr:pd:plugins-librelane-plugin-cvt-synthgate-init-py	docs/manual/cr/parts/05-source-file-history.tex	4445	\texttt{plugins/librelane\_plugin\_cvt\_synthgate/\_\_init\_\_.py}
-cr:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/cr/parts/05-source-file-history.tex	3533	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
-cr:pd:scripts-check-cdc-timing-tcl	docs/manual/cr/parts/05-source-file-history.tex	3259	\texttt{scripts/check\_cdc\_timing.tcl}
-cr:pd:scripts-check-multiclock-sdc-tcl	docs/manual/cr/parts/05-source-file-history.tex	3549	\texttt{scripts/check\_multiclock\_sdc.tcl}
-cr:pd:sky130-soc-cdc-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	3930	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
-cr:pd:sky130-soc-macro-placement-cfg	docs/manual/cr/parts/05-source-file-history.tex	3977	\texttt{sky130/soc/macro\_placement.cfg}
-cr:pd:sky130-soc-openram-sram4k-config-sky130-sram-4kbyte-1rw1r-32x1024-8-py	docs/manual/cr/parts/05-source-file-history.tex	4465	\texttt{sky130/soc/openram\_sram4k/config\_sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8.py}
-cr:pd:sky130-soc-pdn-tcl	docs/manual/cr/parts/05-source-file-history.tex	4088	\texttt{sky130/soc/pdn.tcl}
-cr:pd:sky130-soc-plugin-cvt-maxcap-waiver-py	docs/manual/cr/parts/05-source-file-history.tex	4479	\texttt{sky130/soc/plugin/cvt\_maxcap\_waiver.py}
-cr:pd:sky130-soc-plugin-cvt-scan-step-py	docs/manual/cr/parts/05-source-file-history.tex	4499	\texttt{sky130/soc/plugin/cvt\_scan\_step.py}
-cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration	docs/manual/cr/parts/05-source-file-history.tex	4304	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/rc\_calibration.tcl}
-cr:pd:sky130-soc-rv32i-cpu-top-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4525	\texttt{sky130/soc/rv32i\_cpu\_top\_stub.sv}
-cr:pd:sky130-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	3585	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
-cr:pd:sky130-soc-sky130-clkcells-stub-v	docs/manual/cr/parts/05-source-file-history.tex	4545	\texttt{sky130/soc/sky130\_clkcells\_stub.v}
-cr:pd:sky130-soc-sky130-sram-4kbyte-1rw1r-32x1024-8-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4559	\texttt{sky130/soc/sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8\_stub.sv}
-cr:pd:sky130-soc-soc-top-ports-v	docs/manual/cr/parts/05-source-file-history.tex	4582	\texttt{sky130/soc/soc\_top\_ports.v}
+cr:pd:plugins-librelane-plugin-cvt-synthgate-init-py	docs/manual/cr/parts/05-source-file-history.tex	4486	\texttt{plugins/librelane\_plugin\_cvt\_synthgate/\_\_init\_\_.py}
+cr:pd:scripts-check-cdc-timing-sky130-tcl	docs/manual/cr/parts/05-source-file-history.tex	3553	\texttt{scripts/check\_cdc\_timing\_sky130.tcl}
+cr:pd:scripts-check-cdc-timing-tcl	docs/manual/cr/parts/05-source-file-history.tex	3279	\texttt{scripts/check\_cdc\_timing.tcl}
+cr:pd:scripts-check-multiclock-sdc-tcl	docs/manual/cr/parts/05-source-file-history.tex	3569	\texttt{scripts/check\_multiclock\_sdc.tcl}
+cr:pd:sky130-soc-cdc-check-sdc	docs/manual/cr/parts/05-source-file-history.tex	3950	\texttt{sky130/soc/constraints/sky130\_soc\_cdc\_check.sdc}
+cr:pd:sky130-soc-macro-placement-cfg	docs/manual/cr/parts/05-source-file-history.tex	4018	\texttt{sky130/soc/macro\_placement.cfg}
+cr:pd:sky130-soc-openram-sram4k-config-sky130-sram-4kbyte-1rw1r-32x1024-8-py	docs/manual/cr/parts/05-source-file-history.tex	4506	\texttt{sky130/soc/openram\_sram4k/config\_sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8.py}
+cr:pd:sky130-soc-pdn-tcl	docs/manual/cr/parts/05-source-file-history.tex	4129	\texttt{sky130/soc/pdn.tcl}
+cr:pd:sky130-soc-plugin-cvt-maxcap-waiver-py	docs/manual/cr/parts/05-source-file-history.tex	4520	\texttt{sky130/soc/plugin/cvt\_maxcap\_waiver.py}
+cr:pd:sky130-soc-plugin-cvt-scan-step-py	docs/manual/cr/parts/05-source-file-history.tex	4540	\texttt{sky130/soc/plugin/cvt\_scan\_step.py}
+cr:pd:sky130-soc-plugin-librelane-cvt-tcl-rc-calibration	docs/manual/cr/parts/05-source-file-history.tex	4345	\texttt{sky130/soc/plugin/librelane\_plugin\_cvt\_sky130/tcl/rc\_calibration.tcl}
+cr:pd:sky130-soc-rv32i-cpu-top-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4566	\texttt{sky130/soc/rv32i\_cpu\_top\_stub.sv}
+cr:pd:sky130-soc-sdc	docs/manual/cr/parts/05-source-file-history.tex	3605	\texttt{sky130/soc/constraints/sky130\_soc.sdc}
+cr:pd:sky130-soc-sky130-clkcells-stub-v	docs/manual/cr/parts/05-source-file-history.tex	4586	\texttt{sky130/soc/sky130\_clkcells\_stub.v}
+cr:pd:sky130-soc-sky130-sram-4kbyte-1rw1r-32x1024-8-stub-sv	docs/manual/cr/parts/05-source-file-history.tex	4600	\texttt{sky130/soc/sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8\_stub.sv}
+cr:pd:sky130-soc-soc-top-ports-v	docs/manual/cr/parts/05-source-file-history.tex	4623	\texttt{sky130/soc/soc\_top\_ports.v}
 cr:run:asap7	docs/manual/cr/parts/02-run-histories.tex	2452	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu	docs/manual/cr/parts/02-run-histories.tex	4728	ASAP7 P\&R Run History --- RV32I CPU
 cr:run:asap7-cpu:era-1-sdc-units-bug-runs-731	docs/manual/cr/parts/02-run-histories.tex	4842	Era 1: SDC Units Bug (Runs 7--31)
@@ -998,164 +998,164 @@ cr:status:roadmap:project-expectations	docs/manual/cr/parts/01-phase-and-status-
 cr:status:roadmap:target-technologies	docs/manual/cr/parts/01-phase-and-status-history.tex	5907	Target Technologies
 cr:status:roadmap:technology-node-cross-comparison-pd-results-estimates	docs/manual/cr/parts/01-phase-and-status-history.tex	7005	\texorpdfstring{Phase 6+ --- IP Expansion \& Technology Node Exploration (\ok{} 6a--6c complete; Gate B \ok{} 2026-10-05)}{Phase 6+ --- IP Expansion \& Technology Node Exploration ( 6a--6c complete; Gate B 2026-10-05)}
 cr:status:roadmap:timing-verification	docs/manual/cr/parts/01-phase-and-status-history.tex	5870	Timing Verification
-cr:suite:aes128-model	docs/manual/cr/parts/05-source-file-history.tex	4903	\texttt{tb/models/aes128\_model.py}
-cr:suite:bfm-apb4-master	docs/manual/cr/parts/05-source-file-history.tex	5776	\texttt{tb/cocotb/bfm/apb4\_master.py}
-cr:suite:bfm-i2c-slave	docs/manual/cr/parts/05-source-file-history.tex	5790	\texttt{tb/cocotb/bfm/i2c\_slave.py}
-cr:suite:common-clock-reset	docs/manual/cr/parts/05-source-file-history.tex	5804	\texttt{tb/cocotb/common/clock\_reset.py}
-cr:suite:common-sim-portability-mk	docs/manual/cr/parts/05-source-file-history.tex	5818	\texttt{tb/cocotb/common/sim\_portability.mk}
-cr:suite:cpu-makefile	docs/manual/cr/parts/05-source-file-history.tex	5832	\texttt{tb/cocotb/cpu/Makefile}
-cr:suite:cpu-phase2-test-utils	docs/manual/cr/parts/05-source-file-history.tex	5861	\texttt{tb/cocotb/cpu/phase2\_test\_utils.py}
-cr:suite:cpu-test-csr-access	docs/manual/cr/parts/05-source-file-history.tex	5905	\texttt{tb/cocotb/cpu/test\_csr\_access.py}
-cr:suite:cpu-test-decode-corners	docs/manual/cr/parts/05-source-file-history.tex	5925	\texttt{tb/cocotb/cpu/test\_decode\_corners.py}
-cr:suite:cpu-test-example-counter	docs/manual/cr/parts/05-source-file-history.tex	5945	\texttt{tb/cocotb/cpu/test\_example\_counter.py}
-cr:suite:cpu-test-hazard-unit	docs/manual/cr/parts/05-source-file-history.tex	5959	\texttt{tb/cocotb/cpu/test\_hazard\_unit.py}
-cr:suite:cpu-test-interrupts	docs/manual/cr/parts/05-source-file-history.tex	5973	\texttt{tb/cocotb/cpu/test\_interrupts.py}
-cr:suite:cpu-test-perf-counters	docs/manual/cr/parts/05-source-file-history.tex	5987	\texttt{tb/cocotb/cpu/test\_perf\_counters.py}
-cr:suite:cpu-uvm-test-isa-uvm	docs/manual/cr/parts/05-source-file-history.tex	4889	\texttt{tb/cpu\_uvm/tests/test\_isa\_uvm.py}
-cr:suite:csr-model	docs/manual/cr/parts/05-source-file-history.tex	4919	\texttt{tb/models/csr\_model.py}
-cr:suite:gpu-gpu-ref-model	docs/manual/cr/parts/05-source-file-history.tex	6001	\texttt{tb/cocotb/gpu/gpu\_ref\_model.py}
-cr:suite:gpu-kernel-model	docs/manual/cr/parts/05-source-file-history.tex	4957	\texttt{tb/models/gpu\_kernel\_model.py}
-cr:suite:gpu-kernels-kernel-control-paths	docs/manual/cr/parts/05-source-file-history.tex	6015	\texttt{tb/cocotb/gpu/kernels/kernel\_control\_paths.py}
-cr:suite:gpu-test-vector-alu	docs/manual/cr/parts/05-source-file-history.tex	6035	\texttt{tb/cocotb/gpu/test\_vector\_alu.py}
-cr:suite:gpu-test-warp-scheduler	docs/manual/cr/parts/05-source-file-history.tex	6055	\texttt{tb/cocotb/gpu/test\_warp\_scheduler.py}
-cr:suite:mem-test-icache	docs/manual/cr/parts/05-source-file-history.tex	6075	\texttt{tb/cocotb/mem/test\_icache.py}
-cr:suite:npu-model	docs/manual/cr/parts/05-source-file-history.tex	4977	\texttt{tb/models/npu\_model.py}
-cr:suite:sim-cxx-shim-sh	docs/manual/cr/parts/05-source-file-history.tex	4853	\texttt{sim/cxx\_shim.sh}
-cr:suite:sim-makefile	docs/manual/cr/parts/05-source-file-history.tex	4606	\texttt{sim/Makefile}
-cr:suite:sim-sky130-sram-4kbyte-1rw1r-32x1024-8-sv	docs/manual/cr/parts/05-source-file-history.tex	4867	\texttt{sim/sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8.sv}
-cr:suite:soc-axi4-fabric-bfm	docs/manual/cr/parts/05-source-file-history.tex	6089	\texttt{tb/cocotb/soc/axi4\_fabric\_bfm.py}
-cr:suite:soc-axil-stall-bfm	docs/manual/cr/parts/05-source-file-history.tex	6115	\texttt{tb/cocotb/soc/axil\_stall\_bfm.py}
-cr:suite:soc-makefile	docs/manual/cr/parts/05-source-file-history.tex	8916	\texttt{tb/cocotb/soc/Makefile}
-cr:suite:soc-mbist-golden	docs/manual/cr/parts/05-source-file-history.tex	6129	\texttt{tb/cocotb/soc/mbist\_golden.py}
-cr:suite:soc-pll2-fw-gen-pll2-decode-hex	docs/manual/cr/parts/05-source-file-history.tex	6143	\texttt{tb/cocotb/soc/pll2\_fw/gen\_pll2\_decode\_hex.py}
-cr:suite:soc-pmu-cycle-fw-gen-pmu-cycle-hex	docs/manual/cr/parts/05-source-file-history.tex	6157	\texttt{tb/cocotb/soc/pmu\_cycle\_fw/gen\_pmu\_cycle\_hex.py}
-cr:suite:soc-reg-maps	docs/manual/cr/parts/05-source-file-history.tex	6171	\texttt{tb/cocotb/soc/reg\_maps.py}
-cr:suite:soc-sky130-sram-fi-wrappers-sv	docs/manual/cr/parts/05-source-file-history.tex	6191	\texttt{tb/cocotb/soc/sky130\_sram\_fi\_wrappers.sv}
-cr:suite:soc-soc-clocks	docs/manual/cr/parts/05-source-file-history.tex	6205	\texttt{tb/cocotb/soc/soc\_clocks.py}
-cr:suite:soc-sram-fi-core-sv	docs/manual/cr/parts/05-source-file-history.tex	6225	\texttt{tb/cocotb/soc/sram\_fi\_core.sv}
-cr:suite:soc-tb-apb-cdc-bridge-sv	docs/manual/cr/parts/05-source-file-history.tex	6259	\texttt{tb/cocotb/soc/tb\_apb\_cdc\_bridge.sv}
-cr:suite:soc-tb-apb-interconnect-sv	docs/manual/cr/parts/05-source-file-history.tex	6279	\texttt{tb/cocotb/soc/tb\_apb\_interconnect.sv}
-cr:suite:soc-tb-apb4-register-bank-sv	docs/manual/cr/parts/05-source-file-history.tex	6239	\texttt{tb/cocotb/soc/tb\_apb4\_register\_bank.sv}
-cr:suite:soc-tb-async-axi-fifo-sv	docs/manual/cr/parts/05-source-file-history.tex	6293	\texttt{tb/cocotb/soc/tb\_async\_axi\_fifo.sv}
-cr:suite:soc-tb-axi-lite-register-bank-sv	docs/manual/cr/parts/05-source-file-history.tex	6319	\texttt{tb/cocotb/soc/tb\_axi\_lite\_register\_bank.sv}
-cr:suite:soc-tb-axil-apb-fabric-sv	docs/manual/cr/parts/05-source-file-history.tex	6339	\texttt{tb/cocotb/soc/tb\_axil\_apb\_fabric.sv}
-cr:suite:soc-tb-cdc-gray-fifo-sv	docs/manual/cr/parts/05-source-file-history.tex	6353	\texttt{tb/cocotb/soc/tb\_cdc\_gray\_fifo.sv}
-cr:suite:soc-tb-cdc-reset-sync-scan-sv	docs/manual/cr/parts/05-source-file-history.tex	6367	\texttt{tb/cocotb/soc/tb\_cdc\_reset\_sync\_scan.sv}
-cr:suite:soc-tb-cdc-sync-sv	docs/manual/cr/parts/05-source-file-history.tex	6381	\texttt{tb/cocotb/soc/tb\_cdc\_sync.sv}
-cr:suite:soc-tb-clock-gate-scan-sv	docs/manual/cr/parts/05-source-file-history.tex	6395	\texttt{tb/cocotb/soc/tb\_clock\_gate\_scan.sv}
-cr:suite:soc-tb-crypto-sv	docs/manual/cr/parts/05-source-file-history.tex	6409	\texttt{tb/cocotb/soc/tb\_crypto.sv}
-cr:suite:soc-tb-dft-clk-switch-sv	docs/manual/cr/parts/05-source-file-history.tex	6441	\texttt{tb/cocotb/soc/tb\_dft\_clk\_switch.sv}
-cr:suite:soc-tb-dft-ctrl-sv	docs/manual/cr/parts/05-source-file-history.tex	6455	\texttt{tb/cocotb/soc/tb\_dft\_ctrl.sv}
-cr:suite:soc-tb-dft-muxes-sv	docs/manual/cr/parts/05-source-file-history.tex	6469	\texttt{tb/cocotb/soc/tb\_dft\_muxes.sv}
-cr:suite:soc-tb-gpio-sv	docs/manual/cr/parts/05-source-file-history.tex	6483	\texttt{tb/cocotb/soc/tb\_gpio.sv}
-cr:suite:soc-tb-i2c-sv	docs/manual/cr/parts/05-source-file-history.tex	6503	\texttt{tb/cocotb/soc/tb\_i2c.sv}
-cr:suite:soc-tb-jtag-tap-sv	docs/manual/cr/parts/05-source-file-history.tex	6523	\texttt{tb/cocotb/soc/tb\_jtag\_tap.sv}
-cr:suite:soc-tb-mbist-cpu-macro-sv	docs/manual/cr/parts/05-source-file-history.tex	6537	\texttt{tb/cocotb/soc/tb\_mbist\_cpu\_macro.sv}
-cr:suite:soc-tb-mbist-domain-sv	docs/manual/cr/parts/05-source-file-history.tex	6551	\texttt{tb/cocotb/soc/tb\_mbist\_domain.sv}
-cr:suite:soc-tb-mbist-soc-slice-sv	docs/manual/cr/parts/05-source-file-history.tex	6571	\texttt{tb/cocotb/soc/tb\_mbist\_soc\_slice.sv}
-cr:suite:soc-tb-mbist-tap-sv	docs/manual/cr/parts/05-source-file-history.tex	6585	\texttt{tb/cocotb/soc/tb\_mbist\_tap.sv}
-cr:suite:soc-tb-npu-sv	docs/manual/cr/parts/05-source-file-history.tex	6599	\texttt{tb/cocotb/soc/tb\_npu.sv}
-cr:suite:soc-tb-pmu-sv	docs/manual/cr/parts/05-source-file-history.tex	6613	\texttt{tb/cocotb/soc/tb\_pmu.sv}
-cr:suite:soc-tb-pwm-sv	docs/manual/cr/parts/05-source-file-history.tex	6639	\texttt{tb/cocotb/soc/tb\_pwm.sv}
-cr:suite:soc-tb-soc-pll-sv	docs/manual/cr/parts/05-source-file-history.tex	6659	\texttt{tb/cocotb/soc/tb\_soc\_pll.sv}
-cr:suite:soc-tb-soc-top-sv	docs/manual/cr/parts/05-source-file-history.tex	6703	\texttt{tb/cocotb/soc/tb\_soc\_top.sv}
-cr:suite:soc-tb-trng-sv	docs/manual/cr/parts/05-source-file-history.tex	6759	\texttt{tb/cocotb/soc/tb\_trng.sv}
-cr:suite:soc-tb-wdt-sv	docs/manual/cr/parts/05-source-file-history.tex	6779	\texttt{tb/cocotb/soc/tb\_wdt.sv}
-cr:suite:soc-test-apb-cdc-bridge	docs/manual/cr/parts/05-source-file-history.tex	6849	\texttt{tb/cocotb/soc/test\_apb\_cdc\_bridge.py}
-cr:suite:soc-test-apb4-register-bank	docs/manual/cr/parts/05-source-file-history.tex	6799	\texttt{tb/cocotb/soc/test\_apb4\_register\_bank.py}
-cr:suite:soc-test-async-axi-fifo	docs/manual/cr/parts/05-source-file-history.tex	7121	\texttt{tb/cocotb/soc/test\_async\_axi\_fifo.py}
-cr:suite:soc-test-axi4-to-axilite	docs/manual/cr/parts/05-source-file-history.tex	7231	\texttt{tb/cocotb/soc/test\_axi4\_to\_axilite.py}
-cr:suite:soc-test-axil-apb-fabric	docs/manual/cr/parts/05-source-file-history.tex	7245	\texttt{tb/cocotb/soc/test\_axil\_apb\_fabric.py}
-cr:suite:soc-test-axil-interconnect	docs/manual/cr/parts/05-source-file-history.tex	7265	\texttt{tb/cocotb/soc/test\_axil\_interconnect.py}
-cr:suite:soc-test-axil-to-apb	docs/manual/cr/parts/05-source-file-history.tex	7297	\texttt{tb/cocotb/soc/test\_axil\_to\_apb.py}
-cr:suite:soc-test-axilite-to-axi4	docs/manual/cr/parts/05-source-file-history.tex	7335	\texttt{tb/cocotb/soc/test\_axilite\_to\_axi4.py}
-cr:suite:soc-test-boot	docs/manual/cr/parts/05-source-file-history.tex	7349	\texttt{tb/cocotb/soc/test\_boot.py}
-cr:suite:soc-test-boot-diag	docs/manual/cr/parts/05-source-file-history.tex	7375	\texttt{tb/cocotb/soc/test\_boot\_diag.py}
-cr:suite:soc-test-boot-rom	docs/manual/cr/parts/05-source-file-history.tex	7389	\texttt{tb/cocotb/soc/test\_boot\_rom.py}
-cr:suite:soc-test-boot-rom-init	docs/manual/cr/parts/05-source-file-history.tex	7403	\texttt{tb/cocotb/soc/test\_boot\_rom\_init.py}
-cr:suite:soc-test-cdc-reset-sync-scan	docs/manual/cr/parts/05-source-file-history.tex	7417	\texttt{tb/cocotb/soc/test\_cdc\_reset\_sync\_scan.py}
-cr:suite:soc-test-clock-gate-scan	docs/manual/cr/parts/05-source-file-history.tex	7431	\texttt{tb/cocotb/soc/test\_clock\_gate\_scan.py}
-cr:suite:soc-test-crossbar	docs/manual/cr/parts/05-source-file-history.tex	7445	\texttt{tb/cocotb/soc/test\_crossbar.py}
-cr:suite:soc-test-crossbar-errors	docs/manual/cr/parts/05-source-file-history.tex	7459	\texttt{tb/cocotb/soc/test\_crossbar\_errors.py}
-cr:suite:soc-test-crypto	docs/manual/cr/parts/05-source-file-history.tex	7473	\texttt{tb/cocotb/soc/test\_crypto.py}
-cr:suite:soc-test-dft-clk-switch	docs/manual/cr/parts/05-source-file-history.tex	7535	\texttt{tb/cocotb/soc/test\_dft\_clk\_switch.py}
-cr:suite:soc-test-dft-ctrl	docs/manual/cr/parts/05-source-file-history.tex	7597	\texttt{tb/cocotb/soc/test\_dft\_ctrl.py}
-cr:suite:soc-test-dft-muxes	docs/manual/cr/parts/05-source-file-history.tex	7635	\texttt{tb/cocotb/soc/test\_dft\_muxes.py}
-cr:suite:soc-test-dma	docs/manual/cr/parts/05-source-file-history.tex	7649	\texttt{tb/cocotb/soc/test\_dma.py}
-cr:suite:soc-test-gpio	docs/manual/cr/parts/05-source-file-history.tex	7681	\texttt{tb/cocotb/soc/test\_gpio.py}
-cr:suite:soc-test-gpio-driver	docs/manual/cr/parts/05-source-file-history.tex	7713	\texttt{tb/cocotb/soc/test\_gpio\_driver.py}
-cr:suite:soc-test-i2c	docs/manual/cr/parts/05-source-file-history.tex	7727	\texttt{tb/cocotb/soc/test\_i2c.py}
-cr:suite:soc-test-irq-ctrl	docs/manual/cr/parts/05-source-file-history.tex	7807	\texttt{tb/cocotb/soc/test\_irq\_ctrl.py}
-cr:suite:soc-test-jtag-tap	docs/manual/cr/parts/05-source-file-history.tex	7827	\texttt{tb/cocotb/soc/test\_jtag\_tap.py}
-cr:suite:soc-test-l2-bench	docs/manual/cr/parts/05-source-file-history.tex	7841	\texttt{tb/cocotb/soc/test\_l2\_bench.py}
-cr:suite:soc-test-mbist-cpu-macro	docs/manual/cr/parts/05-source-file-history.tex	7855	\texttt{tb/cocotb/soc/test\_mbist\_cpu\_macro.py}
-cr:suite:soc-test-mbist-soc-slice	docs/manual/cr/parts/05-source-file-history.tex	7882	\texttt{tb/cocotb/soc/test\_mbist\_soc\_slice.py}
-cr:suite:soc-test-mbist-tap	docs/manual/cr/parts/05-source-file-history.tex	7896	\texttt{tb/cocotb/soc/test\_mbist\_tap.py}
-cr:suite:soc-test-npu	docs/manual/cr/parts/05-source-file-history.tex	7916	\texttt{tb/cocotb/soc/test\_npu.py}
-cr:suite:soc-test-periph-loopback	docs/manual/cr/parts/05-source-file-history.tex	7948	\texttt{tb/cocotb/soc/test\_periph\_loopback.py}
-cr:suite:soc-test-periph-sync-stages	docs/manual/cr/parts/05-source-file-history.tex	7968	\texttt{tb/cocotb/soc/test\_periph\_sync\_stages.py}
-cr:suite:soc-test-pll-apb-regs	docs/manual/cr/parts/05-source-file-history.tex	7982	\texttt{tb/cocotb/soc/test\_pll\_apb\_regs.py}
-cr:suite:soc-test-pll-lock	docs/manual/cr/parts/05-source-file-history.tex	8050	\texttt{tb/cocotb/soc/test\_pll\_lock.py}
-cr:suite:soc-test-pll-regs	docs/manual/cr/parts/05-source-file-history.tex	8106	\texttt{tb/cocotb/soc/test\_pll\_regs.py}
-cr:suite:soc-test-pmu	docs/manual/cr/parts/05-source-file-history.tex	8120	\texttt{tb/cocotb/soc/test\_pmu.py}
-cr:suite:soc-test-pwm	docs/manual/cr/parts/05-source-file-history.tex	8164	\texttt{tb/cocotb/soc/test\_pwm.py}
-cr:suite:soc-test-register-bank	docs/manual/cr/parts/05-source-file-history.tex	8202	\texttt{tb/cocotb/soc/test\_register\_bank.py}
-cr:suite:soc-test-soc-crypto	docs/manual/cr/parts/05-source-file-history.tex	8264	\texttt{tb/cocotb/soc/test\_soc\_crypto.py}
-cr:suite:soc-test-soc-gpio	docs/manual/cr/parts/05-source-file-history.tex	8278	\texttt{tb/cocotb/soc/test\_soc\_gpio.py}
-cr:suite:soc-test-soc-i2c	docs/manual/cr/parts/05-source-file-history.tex	8292	\texttt{tb/cocotb/soc/test\_soc\_i2c.py}
-cr:suite:soc-test-soc-integration	docs/manual/cr/parts/05-source-file-history.tex	8336	\texttt{tb/cocotb/soc/test\_soc\_integration.py}
-cr:suite:soc-test-soc-multiclock	docs/manual/cr/parts/05-source-file-history.tex	8368	\texttt{tb/cocotb/soc/test\_soc\_multiclock.py}
-cr:suite:soc-test-soc-multiclock-pll2	docs/manual/cr/parts/05-source-file-history.tex	8412	\texttt{tb/cocotb/soc/test\_soc\_multiclock\_pll2.py}
-cr:suite:soc-test-soc-multiclock-reset	docs/manual/cr/parts/05-source-file-history.tex	8432	\texttt{tb/cocotb/soc/test\_soc\_multiclock\_reset.py}
-cr:suite:soc-test-soc-npu	docs/manual/cr/parts/05-source-file-history.tex	8446	\texttt{tb/cocotb/soc/test\_soc\_npu.py}
-cr:suite:soc-test-soc-pmu-iso-ack	docs/manual/cr/parts/05-source-file-history.tex	8460	\texttt{tb/cocotb/soc/test\_soc\_pmu\_iso\_ack.py}
-cr:suite:soc-test-soc-pmu-multiclock	docs/manual/cr/parts/05-source-file-history.tex	8480	\texttt{tb/cocotb/soc/test\_soc\_pmu\_multiclock.py}
-cr:suite:soc-test-soc-pwm	docs/manual/cr/parts/05-source-file-history.tex	8536	\texttt{tb/cocotb/soc/test\_soc\_pwm.py}
-cr:suite:soc-test-soc-stress	docs/manual/cr/parts/05-source-file-history.tex	8550	\texttt{tb/cocotb/soc/test\_soc\_stress.py}
-cr:suite:soc-test-soc-trng	docs/manual/cr/parts/05-source-file-history.tex	8564	\texttt{tb/cocotb/soc/test\_soc\_trng.py}
-cr:suite:soc-test-soc-wdt	docs/manual/cr/parts/05-source-file-history.tex	8578	\texttt{tb/cocotb/soc/test\_soc\_wdt.py}
-cr:suite:soc-test-spi	docs/manual/cr/parts/05-source-file-history.tex	8604	\texttt{tb/cocotb/soc/test\_spi.py}
-cr:suite:soc-test-sram-controller	docs/manual/cr/parts/05-source-file-history.tex	8636	\texttt{tb/cocotb/soc/test\_sram\_controller.py}
-cr:suite:soc-test-sram-fi-equiv	docs/manual/cr/parts/05-source-file-history.tex	8734	\texttt{tb/cocotb/soc/test\_sram\_fi\_equiv.py}
-cr:suite:soc-test-timer	docs/manual/cr/parts/05-source-file-history.tex	8748	\texttt{tb/cocotb/soc/test\_timer.py}
-cr:suite:soc-test-trng	docs/manual/cr/parts/05-source-file-history.tex	8774	\texttt{tb/cocotb/soc/test\_trng.py}
-cr:suite:soc-test-uart	docs/manual/cr/parts/05-source-file-history.tex	8800	\texttt{tb/cocotb/soc/test\_uart.py}
-cr:suite:soc-test-uart-boot	docs/manual/cr/parts/05-source-file-history.tex	8838	\texttt{tb/cocotb/soc/test\_uart\_boot.py}
-cr:suite:soc-test-wdt	docs/manual/cr/parts/05-source-file-history.tex	8882	\texttt{tb/cocotb/soc/test\_wdt.py}
-cr:suite:test-aes128-model	docs/manual/cr/parts/05-source-file-history.tex	5009	\texttt{tb/tests/test\_aes128\_model.py}
-cr:suite:test-asap7-macro-power-inject	docs/manual/cr/parts/05-source-file-history.tex	5023	\texttt{tb/tests/test\_asap7\_macro\_power\_inject.py}
-cr:suite:test-beads-checkout-guard	docs/manual/cr/parts/05-source-file-history.tex	5050	\texttt{tb/tests/test\_beads\_checkout\_guard.py}
-cr:suite:test-cache-stall-encoding	docs/manual/cr/parts/05-source-file-history.tex	5077	\texttt{tb/tests/test\_cache\_stall\_encoding.py}
-cr:suite:test-cdc-gate	docs/manual/cr/parts/05-source-file-history.tex	5091	\texttt{tb/tests/test\_cdc\_gate.py}
-cr:suite:test-check-beads-reopen	docs/manual/cr/parts/05-source-file-history.tex	5117	\texttt{tb/tests/test\_check\_beads\_reopen.py}
-cr:suite:test-check-cocotb-results	docs/manual/cr/parts/05-source-file-history.tex	5141	\texttt{tb/tests/test\_check\_cocotb\_results.py}
-cr:suite:test-check-cpu-netlist-census	docs/manual/cr/parts/05-source-file-history.tex	5161	\texttt{tb/tests/test\_check\_cpu\_netlist\_census.py}
-cr:suite:test-check-scan-chains	docs/manual/cr/parts/05-source-file-history.tex	5175	\texttt{tb/tests/test\_check\_scan\_chains.py}
-cr:suite:test-check-synth-undef	docs/manual/cr/parts/05-source-file-history.tex	5189	\texttt{tb/tests/test\_check\_synth\_undef.py}
-cr:suite:test-check-synth-undef-functemp	docs/manual/cr/parts/05-source-file-history.tex	5215	\texttt{tb/tests/test\_check\_synth\_undef\_functemp.py}
-cr:suite:test-check-upf	docs/manual/cr/parts/05-source-file-history.tex	5241	\texttt{tb/tests/test\_check\_upf.py}
-cr:suite:test-coverage-report	docs/manual/cr/parts/05-source-file-history.tex	5255	\texttt{tb/tests/test\_coverage\_report.py}
-cr:suite:test-coverage-waiver-anchors	docs/manual/cr/parts/05-source-file-history.tex	5317	\texttt{tb/tests/test\_coverage\_waiver\_anchors.py}
-cr:suite:test-csr-model	docs/manual/cr/parts/05-source-file-history.tex	5344	\texttt{tb/tests/test\_csr\_model.py}
-cr:suite:test-cvt-maxcap-waiver	docs/manual/cr/parts/05-source-file-history.tex	5370	\texttt{tb/tests/test\_cvt\_maxcap\_waiver.py}
-cr:suite:test-cvt-scan-step	docs/manual/cr/parts/05-source-file-history.tex	5396	\texttt{tb/tests/test\_cvt\_scan\_step.py}
-cr:suite:test-dft-atpg-coverage	docs/manual/cr/parts/05-source-file-history.tex	5416	\texttt{tb/tests/test\_dft\_atpg\_coverage.py}
-cr:suite:test-dft-atpg-hold-mask	docs/manual/cr/parts/05-source-file-history.tex	5442	\texttt{tb/tests/test\_dft\_atpg\_hold\_mask.py}
-cr:suite:test-dft-atpg-prep	docs/manual/cr/parts/05-source-file-history.tex	5462	\texttt{tb/tests/test\_dft\_atpg\_prep.py}
-cr:suite:test-dft-atpg-regrade	docs/manual/cr/parts/05-source-file-history.tex	5476	\texttt{tb/tests/test\_dft\_atpg\_regrade.py}
-cr:suite:test-dft-atpg-regrade-vl	docs/manual/cr/parts/05-source-file-history.tex	5490	\texttt{tb/tests/test\_dft\_atpg\_regrade\_vl.py}
-cr:suite:test-dft-scan-check	docs/manual/cr/parts/05-source-file-history.tex	5504	\texttt{tb/tests/test\_dft\_scan\_check.py}
-cr:suite:test-eda-summarize	docs/manual/cr/parts/05-source-file-history.tex	5548	\texttt{tb/tests/test\_eda\_summarize.py}
-cr:suite:test-functional-coverage-report	docs/manual/cr/parts/05-source-file-history.tex	5606	\texttt{tb/tests/test\_functional\_coverage\_report.py}
-cr:suite:test-gen-filelist	docs/manual/cr/parts/05-source-file-history.tex	5620	\texttt{tb/tests/test\_gen\_filelist.py}
-cr:suite:test-gpu-model	docs/manual/cr/parts/05-source-file-history.tex	5634	\texttt{tb/tests/test\_gpu\_model.py}
-cr:suite:test-gpu-ref-model-block	docs/manual/cr/parts/05-source-file-history.tex	5654	\texttt{tb/tests/test\_gpu\_ref\_model\_block.py}
-cr:suite:test-npu-model	docs/manual/cr/parts/05-source-file-history.tex	5674	\texttt{tb/tests/test\_npu\_model.py}
-cr:suite:test-pin-lock	docs/manual/cr/parts/05-source-file-history.tex	5688	\texttt{tb/tests/test\_pin\_lock.py}
-cr:suite:test-sim-build-key	docs/manual/cr/parts/05-source-file-history.tex	5708	\texttt{tb/tests/test\_sim\_build\_key.py}
-cr:suite:test-soc-shards	docs/manual/cr/parts/05-source-file-history.tex	5740	\texttt{tb/tests/test\_soc\_shards.py}
-cr:suite:test-sync-rtk-config	docs/manual/cr/parts/05-source-file-history.tex	5760	\texttt{tb/tests/test\_sync\_rtk\_config.py}
-cr:suite:trng-lfsr-model	docs/manual/cr/parts/05-source-file-history.tex	4993	\texttt{tb/models/trng\_lfsr\_model.py}
+cr:suite:aes128-model	docs/manual/cr/parts/05-source-file-history.tex	4944	\texttt{tb/models/aes128\_model.py}
+cr:suite:bfm-apb4-master	docs/manual/cr/parts/05-source-file-history.tex	5817	\texttt{tb/cocotb/bfm/apb4\_master.py}
+cr:suite:bfm-i2c-slave	docs/manual/cr/parts/05-source-file-history.tex	5831	\texttt{tb/cocotb/bfm/i2c\_slave.py}
+cr:suite:common-clock-reset	docs/manual/cr/parts/05-source-file-history.tex	5845	\texttt{tb/cocotb/common/clock\_reset.py}
+cr:suite:common-sim-portability-mk	docs/manual/cr/parts/05-source-file-history.tex	5859	\texttt{tb/cocotb/common/sim\_portability.mk}
+cr:suite:cpu-makefile	docs/manual/cr/parts/05-source-file-history.tex	5873	\texttt{tb/cocotb/cpu/Makefile}
+cr:suite:cpu-phase2-test-utils	docs/manual/cr/parts/05-source-file-history.tex	5902	\texttt{tb/cocotb/cpu/phase2\_test\_utils.py}
+cr:suite:cpu-test-csr-access	docs/manual/cr/parts/05-source-file-history.tex	5946	\texttt{tb/cocotb/cpu/test\_csr\_access.py}
+cr:suite:cpu-test-decode-corners	docs/manual/cr/parts/05-source-file-history.tex	5966	\texttt{tb/cocotb/cpu/test\_decode\_corners.py}
+cr:suite:cpu-test-example-counter	docs/manual/cr/parts/05-source-file-history.tex	5986	\texttt{tb/cocotb/cpu/test\_example\_counter.py}
+cr:suite:cpu-test-hazard-unit	docs/manual/cr/parts/05-source-file-history.tex	6000	\texttt{tb/cocotb/cpu/test\_hazard\_unit.py}
+cr:suite:cpu-test-interrupts	docs/manual/cr/parts/05-source-file-history.tex	6014	\texttt{tb/cocotb/cpu/test\_interrupts.py}
+cr:suite:cpu-test-perf-counters	docs/manual/cr/parts/05-source-file-history.tex	6028	\texttt{tb/cocotb/cpu/test\_perf\_counters.py}
+cr:suite:cpu-uvm-test-isa-uvm	docs/manual/cr/parts/05-source-file-history.tex	4930	\texttt{tb/cpu\_uvm/tests/test\_isa\_uvm.py}
+cr:suite:csr-model	docs/manual/cr/parts/05-source-file-history.tex	4960	\texttt{tb/models/csr\_model.py}
+cr:suite:gpu-gpu-ref-model	docs/manual/cr/parts/05-source-file-history.tex	6042	\texttt{tb/cocotb/gpu/gpu\_ref\_model.py}
+cr:suite:gpu-kernel-model	docs/manual/cr/parts/05-source-file-history.tex	4998	\texttt{tb/models/gpu\_kernel\_model.py}
+cr:suite:gpu-kernels-kernel-control-paths	docs/manual/cr/parts/05-source-file-history.tex	6056	\texttt{tb/cocotb/gpu/kernels/kernel\_control\_paths.py}
+cr:suite:gpu-test-vector-alu	docs/manual/cr/parts/05-source-file-history.tex	6076	\texttt{tb/cocotb/gpu/test\_vector\_alu.py}
+cr:suite:gpu-test-warp-scheduler	docs/manual/cr/parts/05-source-file-history.tex	6096	\texttt{tb/cocotb/gpu/test\_warp\_scheduler.py}
+cr:suite:mem-test-icache	docs/manual/cr/parts/05-source-file-history.tex	6116	\texttt{tb/cocotb/mem/test\_icache.py}
+cr:suite:npu-model	docs/manual/cr/parts/05-source-file-history.tex	5018	\texttt{tb/models/npu\_model.py}
+cr:suite:sim-cxx-shim-sh	docs/manual/cr/parts/05-source-file-history.tex	4894	\texttt{sim/cxx\_shim.sh}
+cr:suite:sim-makefile	docs/manual/cr/parts/05-source-file-history.tex	4647	\texttt{sim/Makefile}
+cr:suite:sim-sky130-sram-4kbyte-1rw1r-32x1024-8-sv	docs/manual/cr/parts/05-source-file-history.tex	4908	\texttt{sim/sky130\_sram\_4kbyte\_1rw1r\_32x1024\_8.sv}
+cr:suite:soc-axi4-fabric-bfm	docs/manual/cr/parts/05-source-file-history.tex	6130	\texttt{tb/cocotb/soc/axi4\_fabric\_bfm.py}
+cr:suite:soc-axil-stall-bfm	docs/manual/cr/parts/05-source-file-history.tex	6156	\texttt{tb/cocotb/soc/axil\_stall\_bfm.py}
+cr:suite:soc-makefile	docs/manual/cr/parts/05-source-file-history.tex	8957	\texttt{tb/cocotb/soc/Makefile}
+cr:suite:soc-mbist-golden	docs/manual/cr/parts/05-source-file-history.tex	6170	\texttt{tb/cocotb/soc/mbist\_golden.py}
+cr:suite:soc-pll2-fw-gen-pll2-decode-hex	docs/manual/cr/parts/05-source-file-history.tex	6184	\texttt{tb/cocotb/soc/pll2\_fw/gen\_pll2\_decode\_hex.py}
+cr:suite:soc-pmu-cycle-fw-gen-pmu-cycle-hex	docs/manual/cr/parts/05-source-file-history.tex	6198	\texttt{tb/cocotb/soc/pmu\_cycle\_fw/gen\_pmu\_cycle\_hex.py}
+cr:suite:soc-reg-maps	docs/manual/cr/parts/05-source-file-history.tex	6212	\texttt{tb/cocotb/soc/reg\_maps.py}
+cr:suite:soc-sky130-sram-fi-wrappers-sv	docs/manual/cr/parts/05-source-file-history.tex	6232	\texttt{tb/cocotb/soc/sky130\_sram\_fi\_wrappers.sv}
+cr:suite:soc-soc-clocks	docs/manual/cr/parts/05-source-file-history.tex	6246	\texttt{tb/cocotb/soc/soc\_clocks.py}
+cr:suite:soc-sram-fi-core-sv	docs/manual/cr/parts/05-source-file-history.tex	6266	\texttt{tb/cocotb/soc/sram\_fi\_core.sv}
+cr:suite:soc-tb-apb-cdc-bridge-sv	docs/manual/cr/parts/05-source-file-history.tex	6300	\texttt{tb/cocotb/soc/tb\_apb\_cdc\_bridge.sv}
+cr:suite:soc-tb-apb-interconnect-sv	docs/manual/cr/parts/05-source-file-history.tex	6320	\texttt{tb/cocotb/soc/tb\_apb\_interconnect.sv}
+cr:suite:soc-tb-apb4-register-bank-sv	docs/manual/cr/parts/05-source-file-history.tex	6280	\texttt{tb/cocotb/soc/tb\_apb4\_register\_bank.sv}
+cr:suite:soc-tb-async-axi-fifo-sv	docs/manual/cr/parts/05-source-file-history.tex	6334	\texttt{tb/cocotb/soc/tb\_async\_axi\_fifo.sv}
+cr:suite:soc-tb-axi-lite-register-bank-sv	docs/manual/cr/parts/05-source-file-history.tex	6360	\texttt{tb/cocotb/soc/tb\_axi\_lite\_register\_bank.sv}
+cr:suite:soc-tb-axil-apb-fabric-sv	docs/manual/cr/parts/05-source-file-history.tex	6380	\texttt{tb/cocotb/soc/tb\_axil\_apb\_fabric.sv}
+cr:suite:soc-tb-cdc-gray-fifo-sv	docs/manual/cr/parts/05-source-file-history.tex	6394	\texttt{tb/cocotb/soc/tb\_cdc\_gray\_fifo.sv}
+cr:suite:soc-tb-cdc-reset-sync-scan-sv	docs/manual/cr/parts/05-source-file-history.tex	6408	\texttt{tb/cocotb/soc/tb\_cdc\_reset\_sync\_scan.sv}
+cr:suite:soc-tb-cdc-sync-sv	docs/manual/cr/parts/05-source-file-history.tex	6422	\texttt{tb/cocotb/soc/tb\_cdc\_sync.sv}
+cr:suite:soc-tb-clock-gate-scan-sv	docs/manual/cr/parts/05-source-file-history.tex	6436	\texttt{tb/cocotb/soc/tb\_clock\_gate\_scan.sv}
+cr:suite:soc-tb-crypto-sv	docs/manual/cr/parts/05-source-file-history.tex	6450	\texttt{tb/cocotb/soc/tb\_crypto.sv}
+cr:suite:soc-tb-dft-clk-switch-sv	docs/manual/cr/parts/05-source-file-history.tex	6482	\texttt{tb/cocotb/soc/tb\_dft\_clk\_switch.sv}
+cr:suite:soc-tb-dft-ctrl-sv	docs/manual/cr/parts/05-source-file-history.tex	6496	\texttt{tb/cocotb/soc/tb\_dft\_ctrl.sv}
+cr:suite:soc-tb-dft-muxes-sv	docs/manual/cr/parts/05-source-file-history.tex	6510	\texttt{tb/cocotb/soc/tb\_dft\_muxes.sv}
+cr:suite:soc-tb-gpio-sv	docs/manual/cr/parts/05-source-file-history.tex	6524	\texttt{tb/cocotb/soc/tb\_gpio.sv}
+cr:suite:soc-tb-i2c-sv	docs/manual/cr/parts/05-source-file-history.tex	6544	\texttt{tb/cocotb/soc/tb\_i2c.sv}
+cr:suite:soc-tb-jtag-tap-sv	docs/manual/cr/parts/05-source-file-history.tex	6564	\texttt{tb/cocotb/soc/tb\_jtag\_tap.sv}
+cr:suite:soc-tb-mbist-cpu-macro-sv	docs/manual/cr/parts/05-source-file-history.tex	6578	\texttt{tb/cocotb/soc/tb\_mbist\_cpu\_macro.sv}
+cr:suite:soc-tb-mbist-domain-sv	docs/manual/cr/parts/05-source-file-history.tex	6592	\texttt{tb/cocotb/soc/tb\_mbist\_domain.sv}
+cr:suite:soc-tb-mbist-soc-slice-sv	docs/manual/cr/parts/05-source-file-history.tex	6612	\texttt{tb/cocotb/soc/tb\_mbist\_soc\_slice.sv}
+cr:suite:soc-tb-mbist-tap-sv	docs/manual/cr/parts/05-source-file-history.tex	6626	\texttt{tb/cocotb/soc/tb\_mbist\_tap.sv}
+cr:suite:soc-tb-npu-sv	docs/manual/cr/parts/05-source-file-history.tex	6640	\texttt{tb/cocotb/soc/tb\_npu.sv}
+cr:suite:soc-tb-pmu-sv	docs/manual/cr/parts/05-source-file-history.tex	6654	\texttt{tb/cocotb/soc/tb\_pmu.sv}
+cr:suite:soc-tb-pwm-sv	docs/manual/cr/parts/05-source-file-history.tex	6680	\texttt{tb/cocotb/soc/tb\_pwm.sv}
+cr:suite:soc-tb-soc-pll-sv	docs/manual/cr/parts/05-source-file-history.tex	6700	\texttt{tb/cocotb/soc/tb\_soc\_pll.sv}
+cr:suite:soc-tb-soc-top-sv	docs/manual/cr/parts/05-source-file-history.tex	6744	\texttt{tb/cocotb/soc/tb\_soc\_top.sv}
+cr:suite:soc-tb-trng-sv	docs/manual/cr/parts/05-source-file-history.tex	6800	\texttt{tb/cocotb/soc/tb\_trng.sv}
+cr:suite:soc-tb-wdt-sv	docs/manual/cr/parts/05-source-file-history.tex	6820	\texttt{tb/cocotb/soc/tb\_wdt.sv}
+cr:suite:soc-test-apb-cdc-bridge	docs/manual/cr/parts/05-source-file-history.tex	6890	\texttt{tb/cocotb/soc/test\_apb\_cdc\_bridge.py}
+cr:suite:soc-test-apb4-register-bank	docs/manual/cr/parts/05-source-file-history.tex	6840	\texttt{tb/cocotb/soc/test\_apb4\_register\_bank.py}
+cr:suite:soc-test-async-axi-fifo	docs/manual/cr/parts/05-source-file-history.tex	7162	\texttt{tb/cocotb/soc/test\_async\_axi\_fifo.py}
+cr:suite:soc-test-axi4-to-axilite	docs/manual/cr/parts/05-source-file-history.tex	7272	\texttt{tb/cocotb/soc/test\_axi4\_to\_axilite.py}
+cr:suite:soc-test-axil-apb-fabric	docs/manual/cr/parts/05-source-file-history.tex	7286	\texttt{tb/cocotb/soc/test\_axil\_apb\_fabric.py}
+cr:suite:soc-test-axil-interconnect	docs/manual/cr/parts/05-source-file-history.tex	7306	\texttt{tb/cocotb/soc/test\_axil\_interconnect.py}
+cr:suite:soc-test-axil-to-apb	docs/manual/cr/parts/05-source-file-history.tex	7338	\texttt{tb/cocotb/soc/test\_axil\_to\_apb.py}
+cr:suite:soc-test-axilite-to-axi4	docs/manual/cr/parts/05-source-file-history.tex	7376	\texttt{tb/cocotb/soc/test\_axilite\_to\_axi4.py}
+cr:suite:soc-test-boot	docs/manual/cr/parts/05-source-file-history.tex	7390	\texttt{tb/cocotb/soc/test\_boot.py}
+cr:suite:soc-test-boot-diag	docs/manual/cr/parts/05-source-file-history.tex	7416	\texttt{tb/cocotb/soc/test\_boot\_diag.py}
+cr:suite:soc-test-boot-rom	docs/manual/cr/parts/05-source-file-history.tex	7430	\texttt{tb/cocotb/soc/test\_boot\_rom.py}
+cr:suite:soc-test-boot-rom-init	docs/manual/cr/parts/05-source-file-history.tex	7444	\texttt{tb/cocotb/soc/test\_boot\_rom\_init.py}
+cr:suite:soc-test-cdc-reset-sync-scan	docs/manual/cr/parts/05-source-file-history.tex	7458	\texttt{tb/cocotb/soc/test\_cdc\_reset\_sync\_scan.py}
+cr:suite:soc-test-clock-gate-scan	docs/manual/cr/parts/05-source-file-history.tex	7472	\texttt{tb/cocotb/soc/test\_clock\_gate\_scan.py}
+cr:suite:soc-test-crossbar	docs/manual/cr/parts/05-source-file-history.tex	7486	\texttt{tb/cocotb/soc/test\_crossbar.py}
+cr:suite:soc-test-crossbar-errors	docs/manual/cr/parts/05-source-file-history.tex	7500	\texttt{tb/cocotb/soc/test\_crossbar\_errors.py}
+cr:suite:soc-test-crypto	docs/manual/cr/parts/05-source-file-history.tex	7514	\texttt{tb/cocotb/soc/test\_crypto.py}
+cr:suite:soc-test-dft-clk-switch	docs/manual/cr/parts/05-source-file-history.tex	7576	\texttt{tb/cocotb/soc/test\_dft\_clk\_switch.py}
+cr:suite:soc-test-dft-ctrl	docs/manual/cr/parts/05-source-file-history.tex	7638	\texttt{tb/cocotb/soc/test\_dft\_ctrl.py}
+cr:suite:soc-test-dft-muxes	docs/manual/cr/parts/05-source-file-history.tex	7676	\texttt{tb/cocotb/soc/test\_dft\_muxes.py}
+cr:suite:soc-test-dma	docs/manual/cr/parts/05-source-file-history.tex	7690	\texttt{tb/cocotb/soc/test\_dma.py}
+cr:suite:soc-test-gpio	docs/manual/cr/parts/05-source-file-history.tex	7722	\texttt{tb/cocotb/soc/test\_gpio.py}
+cr:suite:soc-test-gpio-driver	docs/manual/cr/parts/05-source-file-history.tex	7754	\texttt{tb/cocotb/soc/test\_gpio\_driver.py}
+cr:suite:soc-test-i2c	docs/manual/cr/parts/05-source-file-history.tex	7768	\texttt{tb/cocotb/soc/test\_i2c.py}
+cr:suite:soc-test-irq-ctrl	docs/manual/cr/parts/05-source-file-history.tex	7848	\texttt{tb/cocotb/soc/test\_irq\_ctrl.py}
+cr:suite:soc-test-jtag-tap	docs/manual/cr/parts/05-source-file-history.tex	7868	\texttt{tb/cocotb/soc/test\_jtag\_tap.py}
+cr:suite:soc-test-l2-bench	docs/manual/cr/parts/05-source-file-history.tex	7882	\texttt{tb/cocotb/soc/test\_l2\_bench.py}
+cr:suite:soc-test-mbist-cpu-macro	docs/manual/cr/parts/05-source-file-history.tex	7896	\texttt{tb/cocotb/soc/test\_mbist\_cpu\_macro.py}
+cr:suite:soc-test-mbist-soc-slice	docs/manual/cr/parts/05-source-file-history.tex	7923	\texttt{tb/cocotb/soc/test\_mbist\_soc\_slice.py}
+cr:suite:soc-test-mbist-tap	docs/manual/cr/parts/05-source-file-history.tex	7937	\texttt{tb/cocotb/soc/test\_mbist\_tap.py}
+cr:suite:soc-test-npu	docs/manual/cr/parts/05-source-file-history.tex	7957	\texttt{tb/cocotb/soc/test\_npu.py}
+cr:suite:soc-test-periph-loopback	docs/manual/cr/parts/05-source-file-history.tex	7989	\texttt{tb/cocotb/soc/test\_periph\_loopback.py}
+cr:suite:soc-test-periph-sync-stages	docs/manual/cr/parts/05-source-file-history.tex	8009	\texttt{tb/cocotb/soc/test\_periph\_sync\_stages.py}
+cr:suite:soc-test-pll-apb-regs	docs/manual/cr/parts/05-source-file-history.tex	8023	\texttt{tb/cocotb/soc/test\_pll\_apb\_regs.py}
+cr:suite:soc-test-pll-lock	docs/manual/cr/parts/05-source-file-history.tex	8091	\texttt{tb/cocotb/soc/test\_pll\_lock.py}
+cr:suite:soc-test-pll-regs	docs/manual/cr/parts/05-source-file-history.tex	8147	\texttt{tb/cocotb/soc/test\_pll\_regs.py}
+cr:suite:soc-test-pmu	docs/manual/cr/parts/05-source-file-history.tex	8161	\texttt{tb/cocotb/soc/test\_pmu.py}
+cr:suite:soc-test-pwm	docs/manual/cr/parts/05-source-file-history.tex	8205	\texttt{tb/cocotb/soc/test\_pwm.py}
+cr:suite:soc-test-register-bank	docs/manual/cr/parts/05-source-file-history.tex	8243	\texttt{tb/cocotb/soc/test\_register\_bank.py}
+cr:suite:soc-test-soc-crypto	docs/manual/cr/parts/05-source-file-history.tex	8305	\texttt{tb/cocotb/soc/test\_soc\_crypto.py}
+cr:suite:soc-test-soc-gpio	docs/manual/cr/parts/05-source-file-history.tex	8319	\texttt{tb/cocotb/soc/test\_soc\_gpio.py}
+cr:suite:soc-test-soc-i2c	docs/manual/cr/parts/05-source-file-history.tex	8333	\texttt{tb/cocotb/soc/test\_soc\_i2c.py}
+cr:suite:soc-test-soc-integration	docs/manual/cr/parts/05-source-file-history.tex	8377	\texttt{tb/cocotb/soc/test\_soc\_integration.py}
+cr:suite:soc-test-soc-multiclock	docs/manual/cr/parts/05-source-file-history.tex	8409	\texttt{tb/cocotb/soc/test\_soc\_multiclock.py}
+cr:suite:soc-test-soc-multiclock-pll2	docs/manual/cr/parts/05-source-file-history.tex	8453	\texttt{tb/cocotb/soc/test\_soc\_multiclock\_pll2.py}
+cr:suite:soc-test-soc-multiclock-reset	docs/manual/cr/parts/05-source-file-history.tex	8473	\texttt{tb/cocotb/soc/test\_soc\_multiclock\_reset.py}
+cr:suite:soc-test-soc-npu	docs/manual/cr/parts/05-source-file-history.tex	8487	\texttt{tb/cocotb/soc/test\_soc\_npu.py}
+cr:suite:soc-test-soc-pmu-iso-ack	docs/manual/cr/parts/05-source-file-history.tex	8501	\texttt{tb/cocotb/soc/test\_soc\_pmu\_iso\_ack.py}
+cr:suite:soc-test-soc-pmu-multiclock	docs/manual/cr/parts/05-source-file-history.tex	8521	\texttt{tb/cocotb/soc/test\_soc\_pmu\_multiclock.py}
+cr:suite:soc-test-soc-pwm	docs/manual/cr/parts/05-source-file-history.tex	8577	\texttt{tb/cocotb/soc/test\_soc\_pwm.py}
+cr:suite:soc-test-soc-stress	docs/manual/cr/parts/05-source-file-history.tex	8591	\texttt{tb/cocotb/soc/test\_soc\_stress.py}
+cr:suite:soc-test-soc-trng	docs/manual/cr/parts/05-source-file-history.tex	8605	\texttt{tb/cocotb/soc/test\_soc\_trng.py}
+cr:suite:soc-test-soc-wdt	docs/manual/cr/parts/05-source-file-history.tex	8619	\texttt{tb/cocotb/soc/test\_soc\_wdt.py}
+cr:suite:soc-test-spi	docs/manual/cr/parts/05-source-file-history.tex	8645	\texttt{tb/cocotb/soc/test\_spi.py}
+cr:suite:soc-test-sram-controller	docs/manual/cr/parts/05-source-file-history.tex	8677	\texttt{tb/cocotb/soc/test\_sram\_controller.py}
+cr:suite:soc-test-sram-fi-equiv	docs/manual/cr/parts/05-source-file-history.tex	8775	\texttt{tb/cocotb/soc/test\_sram\_fi\_equiv.py}
+cr:suite:soc-test-timer	docs/manual/cr/parts/05-source-file-history.tex	8789	\texttt{tb/cocotb/soc/test\_timer.py}
+cr:suite:soc-test-trng	docs/manual/cr/parts/05-source-file-history.tex	8815	\texttt{tb/cocotb/soc/test\_trng.py}
+cr:suite:soc-test-uart	docs/manual/cr/parts/05-source-file-history.tex	8841	\texttt{tb/cocotb/soc/test\_uart.py}
+cr:suite:soc-test-uart-boot	docs/manual/cr/parts/05-source-file-history.tex	8879	\texttt{tb/cocotb/soc/test\_uart\_boot.py}
+cr:suite:soc-test-wdt	docs/manual/cr/parts/05-source-file-history.tex	8923	\texttt{tb/cocotb/soc/test\_wdt.py}
+cr:suite:test-aes128-model	docs/manual/cr/parts/05-source-file-history.tex	5050	\texttt{tb/tests/test\_aes128\_model.py}
+cr:suite:test-asap7-macro-power-inject	docs/manual/cr/parts/05-source-file-history.tex	5064	\texttt{tb/tests/test\_asap7\_macro\_power\_inject.py}
+cr:suite:test-beads-checkout-guard	docs/manual/cr/parts/05-source-file-history.tex	5091	\texttt{tb/tests/test\_beads\_checkout\_guard.py}
+cr:suite:test-cache-stall-encoding	docs/manual/cr/parts/05-source-file-history.tex	5118	\texttt{tb/tests/test\_cache\_stall\_encoding.py}
+cr:suite:test-cdc-gate	docs/manual/cr/parts/05-source-file-history.tex	5132	\texttt{tb/tests/test\_cdc\_gate.py}
+cr:suite:test-check-beads-reopen	docs/manual/cr/parts/05-source-file-history.tex	5158	\texttt{tb/tests/test\_check\_beads\_reopen.py}
+cr:suite:test-check-cocotb-results	docs/manual/cr/parts/05-source-file-history.tex	5182	\texttt{tb/tests/test\_check\_cocotb\_results.py}
+cr:suite:test-check-cpu-netlist-census	docs/manual/cr/parts/05-source-file-history.tex	5202	\texttt{tb/tests/test\_check\_cpu\_netlist\_census.py}
+cr:suite:test-check-scan-chains	docs/manual/cr/parts/05-source-file-history.tex	5216	\texttt{tb/tests/test\_check\_scan\_chains.py}
+cr:suite:test-check-synth-undef	docs/manual/cr/parts/05-source-file-history.tex	5230	\texttt{tb/tests/test\_check\_synth\_undef.py}
+cr:suite:test-check-synth-undef-functemp	docs/manual/cr/parts/05-source-file-history.tex	5256	\texttt{tb/tests/test\_check\_synth\_undef\_functemp.py}
+cr:suite:test-check-upf	docs/manual/cr/parts/05-source-file-history.tex	5282	\texttt{tb/tests/test\_check\_upf.py}
+cr:suite:test-coverage-report	docs/manual/cr/parts/05-source-file-history.tex	5296	\texttt{tb/tests/test\_coverage\_report.py}
+cr:suite:test-coverage-waiver-anchors	docs/manual/cr/parts/05-source-file-history.tex	5358	\texttt{tb/tests/test\_coverage\_waiver\_anchors.py}
+cr:suite:test-csr-model	docs/manual/cr/parts/05-source-file-history.tex	5385	\texttt{tb/tests/test\_csr\_model.py}
+cr:suite:test-cvt-maxcap-waiver	docs/manual/cr/parts/05-source-file-history.tex	5411	\texttt{tb/tests/test\_cvt\_maxcap\_waiver.py}
+cr:suite:test-cvt-scan-step	docs/manual/cr/parts/05-source-file-history.tex	5437	\texttt{tb/tests/test\_cvt\_scan\_step.py}
+cr:suite:test-dft-atpg-coverage	docs/manual/cr/parts/05-source-file-history.tex	5457	\texttt{tb/tests/test\_dft\_atpg\_coverage.py}
+cr:suite:test-dft-atpg-hold-mask	docs/manual/cr/parts/05-source-file-history.tex	5483	\texttt{tb/tests/test\_dft\_atpg\_hold\_mask.py}
+cr:suite:test-dft-atpg-prep	docs/manual/cr/parts/05-source-file-history.tex	5503	\texttt{tb/tests/test\_dft\_atpg\_prep.py}
+cr:suite:test-dft-atpg-regrade	docs/manual/cr/parts/05-source-file-history.tex	5517	\texttt{tb/tests/test\_dft\_atpg\_regrade.py}
+cr:suite:test-dft-atpg-regrade-vl	docs/manual/cr/parts/05-source-file-history.tex	5531	\texttt{tb/tests/test\_dft\_atpg\_regrade\_vl.py}
+cr:suite:test-dft-scan-check	docs/manual/cr/parts/05-source-file-history.tex	5545	\texttt{tb/tests/test\_dft\_scan\_check.py}
+cr:suite:test-eda-summarize	docs/manual/cr/parts/05-source-file-history.tex	5589	\texttt{tb/tests/test\_eda\_summarize.py}
+cr:suite:test-functional-coverage-report	docs/manual/cr/parts/05-source-file-history.tex	5647	\texttt{tb/tests/test\_functional\_coverage\_report.py}
+cr:suite:test-gen-filelist	docs/manual/cr/parts/05-source-file-history.tex	5661	\texttt{tb/tests/test\_gen\_filelist.py}
+cr:suite:test-gpu-model	docs/manual/cr/parts/05-source-file-history.tex	5675	\texttt{tb/tests/test\_gpu\_model.py}
+cr:suite:test-gpu-ref-model-block	docs/manual/cr/parts/05-source-file-history.tex	5695	\texttt{tb/tests/test\_gpu\_ref\_model\_block.py}
+cr:suite:test-npu-model	docs/manual/cr/parts/05-source-file-history.tex	5715	\texttt{tb/tests/test\_npu\_model.py}
+cr:suite:test-pin-lock	docs/manual/cr/parts/05-source-file-history.tex	5729	\texttt{tb/tests/test\_pin\_lock.py}
+cr:suite:test-sim-build-key	docs/manual/cr/parts/05-source-file-history.tex	5749	\texttt{tb/tests/test\_sim\_build\_key.py}
+cr:suite:test-soc-shards	docs/manual/cr/parts/05-source-file-history.tex	5781	\texttt{tb/tests/test\_soc\_shards.py}
+cr:suite:test-sync-rtk-config	docs/manual/cr/parts/05-source-file-history.tex	5801	\texttt{tb/tests/test\_sync\_rtk\_config.py}
+cr:suite:trng-lfsr-model	docs/manual/cr/parts/05-source-file-history.tex	5034	\texttt{tb/models/trng\_lfsr\_model.py}
 ds:ch:about	docs/manual/ds/parts/00-about.tex	5	About this book
 ds:ch:cpu-phases-0-to-3	docs/manual/ds/parts/01-architecture.tex	133	CPU phases 0 to 3
 ds:ch:design-expectation	docs/manual/ds/parts/01-architecture.tex	9	Design Expectation
@@ -2147,19 +2147,19 @@ ds:req:pwr-083	docs/manual/ds/parts/chapters/power-intent.tex	254	DS-PWR-083 Ref
 ds:req:pwr-084	docs/manual/ds/parts/chapters/power-intent.tex	259	DS-PWR-084 Form of the directive lines
 fig:tm:ch:mod-cdc-primitives:soc	docs/manual/tm/parts/chapters/cdc.tex	34	Clock-domain crossing
 fig:tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	61	Power management
-fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	427	Functional description
-fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	459	Functional description
-fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	515	Functional description
-fig:tm:mod:apb-cdc-bridge:sfsm	docs/manual/tm/parts/chapters/cdc.tex	444	Functional description
-fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	480	Functional description
-fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	609	Functional description
-fig:tm:mod:cdc-gray-fifo:block	docs/manual/tm/parts/chapters/cdc.tex	304	Functional description
-fig:tm:mod:cdc-gray-fifo:ring	docs/manual/tm/parts/chapters/cdc.tex	346	Functional description
-fig:tm:mod:cdc-gray-fifo:timing	docs/manual/tm/parts/chapters/cdc.tex	362	Functional description
-fig:tm:mod:cdc-reset-sync:block	docs/manual/tm/parts/chapters/cdc.tex	209	Functional description
-fig:tm:mod:cdc-reset-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	232	Functional description
-fig:tm:mod:cdc-sync:chain	docs/manual/tm/parts/chapters/cdc.tex	128	Functional description
-fig:tm:mod:cdc-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	142	Functional description
+fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	433	Functional description
+fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	465	Functional description
+fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	521	Functional description
+fig:tm:mod:apb-cdc-bridge:sfsm	docs/manual/tm/parts/chapters/cdc.tex	450	Functional description
+fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	486	Functional description
+fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	615	Functional description
+fig:tm:mod:cdc-gray-fifo:block	docs/manual/tm/parts/chapters/cdc.tex	310	Functional description
+fig:tm:mod:cdc-gray-fifo:ring	docs/manual/tm/parts/chapters/cdc.tex	352	Functional description
+fig:tm:mod:cdc-gray-fifo:timing	docs/manual/tm/parts/chapters/cdc.tex	368	Functional description
+fig:tm:mod:cdc-reset-sync:block	docs/manual/tm/parts/chapters/cdc.tex	215	Functional description
+fig:tm:mod:cdc-reset-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	238	Functional description
+fig:tm:mod:cdc-sync:chain	docs/manual/tm/parts/chapters/cdc.tex	134	Functional description
+fig:tm:mod:cdc-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	148	Functional description
 fig:tm:mod:pmu:fsm	docs/manual/tm/parts/chapters/power.tex	114	Functional description
 fig:tm:mod:pmu:power-down	docs/manual/tm/parts/chapters/power.tex	142	Functional description
 fig:tm:mod:pmu:power-up	docs/manual/tm/parts/chapters/power.tex	164	Functional description
@@ -2183,10 +2183,10 @@ tab:tm:ch:tool-defects-and-caveats:caveats	docs/manual/tm/parts/06-tool-defects-
 tab:tm:ch:tool-defects-and-caveats:defects	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	55	Summary of the tool defects
 tab:tm:mod:apb-cdc-bridge:params	docs/manual/common/generated/facts/apb-cdc-bridge-params.tex	4	Parameters of \code{apb_cdc_bridge}
 tab:tm:mod:apb-cdc-bridge:signals	docs/manual/common/generated/facts/apb-cdc-bridge-signals.tex	4	Signals of \code{apb_cdc_bridge}
-tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	616	Functional description
+tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	622	Functional description
 tab:tm:mod:async-axi-fifo:params	docs/manual/common/generated/facts/async-axi-fifo-params.tex	4	Parameters of \code{async_axi_fifo}
 tab:tm:mod:async-axi-fifo:signals	docs/manual/common/generated/facts/async-axi-fifo-signals.tex	4	Signals of \code{async_axi_fifo}
-tab:tm:mod:cdc-gray-fifo:d2full	docs/manual/tm/parts/chapters/cdc.tex	319	Functional description
+tab:tm:mod:cdc-gray-fifo:d2full	docs/manual/tm/parts/chapters/cdc.tex	325	Functional description
 tab:tm:mod:cdc-gray-fifo:params	docs/manual/common/generated/facts/cdc-gray-fifo-params.tex	4	Parameters of \code{cdc_gray_fifo}
 tab:tm:mod:cdc-gray-fifo:signals	docs/manual/common/generated/facts/cdc-gray-fifo-signals.tex	4	Signals of \code{cdc_gray_fifo}
 tab:tm:mod:cdc-reset-sync:params	docs/manual/common/generated/facts/cdc-reset-sync-params.tex	4	Parameters of \code{cdc_reset_sync}
@@ -2663,14 +2663,14 @@ tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual
 tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	6995	Notes on tooling (for the next person)
 tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7043	Gap list toward real Stage 2
 tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1564	\texttt{periph/aes128\_core.sv}
-tm:mod:apb-cdc-bridge	docs/manual/tm/parts/chapters/cdc.tex	397	\texttt{apb\_cdc\_bridge}
+tm:mod:apb-cdc-bridge	docs/manual/tm/parts/chapters/cdc.tex	403	\texttt{apb\_cdc\_bridge}
 tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	448	\texttt{soc/apb\_interconnect.sv}
-tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	576	\texttt{async\_axi\_fifo}
+tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	582	\texttt{async\_axi\_fifo}
 tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	474	\texttt{soc/axi4\_crossbar.sv}
-tm:mod:cdc-gray-fifo	docs/manual/tm/parts/chapters/cdc.tex	268	\texttt{cdc\_gray\_fifo}
-tm:mod:cdc-reset-sync	docs/manual/tm/parts/chapters/cdc.tex	175	\texttt{cdc\_reset\_sync}
-tm:mod:cdc-sync	docs/manual/tm/parts/chapters/cdc.tex	100	\texttt{cdc\_sync}
-tm:mod:cdc-sync:debug	docs/manual/tm/parts/chapters/cdc.tex	162	Debug, test and DFT
+tm:mod:cdc-gray-fifo	docs/manual/tm/parts/chapters/cdc.tex	274	\texttt{cdc\_gray\_fifo}
+tm:mod:cdc-reset-sync	docs/manual/tm/parts/chapters/cdc.tex	181	\texttt{cdc\_reset\_sync}
+tm:mod:cdc-sync	docs/manual/tm/parts/chapters/cdc.tex	106	\texttt{cdc\_sync}
+tm:mod:cdc-sync:debug	docs/manual/tm/parts/chapters/cdc.tex	168	Debug, test and DFT
 tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	1638	\texttt{periph/crypto\_accel.sv}
 tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	843	\texttt{soc/dft/dft\_clk\_switch.sv}
 tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	949	\texttt{periph/dma\_engine.sv}

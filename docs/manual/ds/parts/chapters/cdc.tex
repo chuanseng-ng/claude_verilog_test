@@ -256,7 +256,7 @@ The bridge must work at any ratio of \code{s_clk_i} to \code{m_clk_i}.
 \end{requirement}
 
 \begin{requirement}{DS-CDC-110}{Names that the checks match}
-[verify={check:pnr/constraints/phase5_soc_multiclock_check.sdc; check:pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_bridge_instances_and_raw_reset_use; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_constraint_files_match_existing_instances; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_asap7_async_pin_fallback_exclusion_covers_every_bridge_reset_sync}]
+[verify={check:pnr/constraints/phase5_soc_multiclock_check.sdc; check:pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_both_check_files_budget_the_pll_bridge_level_crossings; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_pll_bridge_budget_negative_controls; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_bridge_instances_and_raw_reset_use; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_constraint_files_match_existing_instances; test:tb/tests/test_apb_cdc_bridge_reset_structure.py::test_asap7_async_pin_fallback_exclusion_covers_every_bridge_reset_sync}]
 These names must not change, because the check constraint files find them by name: the registers \code{req_q} and \code{ack_q}, the synchroniser instances \code{u_req_sync} and \code{u_ack_sync}, the reset synchroniser instances \code{u_s_rst_sync}, \code{u_m_rst_sync} and \code{u_comp_rst_sync}, and the status instance \code{u_m_alive_sync}.
 \end{requirement}
 \begin{information}

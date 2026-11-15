@@ -466,3 +466,76 @@ def test_latch_launched_entry_goes_red_when_the_stage_is_removed(tmp_path):
     cfg = write(tmp_path, "cfg.yml", LATCH_REQ_CFG)
     rpt = write(tmp_path, "r.txt", line("OK1", "u_x.other:D", "clk_b", "1 x clk_b"))
     assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+
+
+# --- same_domain_ok: a crossing whose two faces are one net in the analysed netlist ---------
+
+SAME_CFG = (
+    BASE_CFG
+    + """required_synchronisers:
+  - id: pll-bridge-req
+    dest: '^u_br\\.u_req_sync\\.sync_q\\[0\\]:D$'
+    same_domain_ok: true
+    reason: both faces are one net
+"""
+)
+
+
+def test_same_domain_ok_accepts_a_marked_ok1_register(tmp_path):
+    cfg = write(tmp_path, "cfg.yml", SAME_CFG)
+    rpt = write(
+        tmp_path,
+        "r.txt",
+        line("OK1", "u_br.u_req_sync.sync_q[0]:D", "clk_i", "1 x clk_i", magic=True),
+    )
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 0
+
+
+def test_same_domain_ok_still_accepts_the_cdc_class(tmp_path):
+    """When the netlist later gives the faces distinct nets, the register classifies CDC."""
+    cfg = write(tmp_path, "cfg.yml", SAME_CFG)
+    rpt = write(
+        tmp_path,
+        "r.txt",
+        line("CDC", "u_br.u_req_sync.sync_q[0]:D", "cpu_clk_i", "1 x clk_i", magic=True),
+    )
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 0
+
+
+def test_same_domain_ok_rejects_an_unmarked_register(tmp_path):
+    """Negative control: a bypassed synchroniser has no magic_cdc attribute."""
+    cfg = write(tmp_path, "cfg.yml", SAME_CFG)
+    rpt = write(tmp_path, "r.txt", line("OK1", "u_br.u_req_sync.sync_q[0]:D", "clk_i", "1 x clk_i"))
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+
+
+def test_same_domain_ok_rejects_a_renamed_register(tmp_path):
+    """Negative control: the name of the entry binds. A renamed instance leaves the entry unmet."""
+    cfg = write(tmp_path, "cfg.yml", SAME_CFG)
+    rpt = write(
+        tmp_path,
+        "r.txt",
+        line("OK1", "u_br2.u_req_sync.sync_q[0]:D", "clk_i", "1 x clk_i", magic=True),
+    )
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+
+
+def test_ok1_marked_register_does_not_satisfy_an_entry_without_the_flag(tmp_path):
+    cfg = write(tmp_path, "cfg.yml", SAME_CFG.replace("    same_domain_ok: true\n", ""))
+    rpt = write(
+        tmp_path,
+        "r.txt",
+        line("OK1", "u_br.u_req_sync.sync_q[0]:D", "clk_i", "1 x clk_i", magic=True),
+    )
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+
+
+def test_repo_config_requires_the_pll_bridge_synchronisers():
+    """The committed config must keep guarding the u_apb_pll_cdc synchronisers, with the
+    same-domain class allowed (core_clk and pll_ref_clk are one net in the elaborated SoC)."""
+    cfg = cdc_gate.load_config(_GATE_PATH.with_name("cdc_config.yml"))
+    ents = {rs["id"]: rs for rs in cfg["required_synchronisers"]}
+    for rid in ("apb-pll-bridge-req-sync", "apb-pll-bridge-ack-sync"):
+        assert rid in ents, rid
+        assert ents[rid].get("same_domain_ok") is True
+        assert "u_apb_pll_cdc" in ents[rid]["dest"]
