@@ -56,7 +56,8 @@ while {[gets $cfg l] >= 0} {
   set cache [lindex [split $nm .] 1]      ;# u_icache / u_dcache
   if {[regexp {gen_data_sram\[(\d)\]} $nm -> idx]} { set key "${cache}_gen_data_sram\[$idx\].u_data_sram" } else { set key "${cache}_u_tag_sram" }
   set hit {}
-  foreach i $allsram { set n [lindex [dbGet $i.name] 0]; if {$n eq "u_core/$key"} { lappend hit $i } }
+  if {[info exists ::env(NL_YOSYS)]} { set key "dummy"; foreach i $allsram { set n [string map {\\ {}} [lindex [dbGet $i.name] 0]]; if {$n eq $nm} { lappend hit $i } } } else {
+  foreach i $allsram { set n [lindex [dbGet $i.name] 0]; if {$n eq "u_core/$key"} { lappend hit $i } } }
   if {[llength $hit] != 1} { error "macro for $nm: key '$key' matched [llength $hit] instances" }
   set inst [lindex $hit 0]
   set iname [lindex [dbGet $inst.name] 0]

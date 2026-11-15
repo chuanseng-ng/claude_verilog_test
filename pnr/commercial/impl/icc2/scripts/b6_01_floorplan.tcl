@@ -37,7 +37,12 @@ while {[gets $cfg l] >= 0} {
   set cache [lindex $p 1]
   set cands [list "u_core/${cache}/${leaf}" "u_core/${cache}_${leaf}" "u_core_${cache}/${leaf}" "u_core_${cache}_${leaf}"]
   set c ""
+  if {[info exists ::env(NL_YOSYS)]} {   ;# step 9 D: Yosys netlist keeps the dotted flat name as ONE identifier
+    foreach_in_collection cc [get_cells -hier -filter "ref_name==$SRAM"] { if {[string map {\\ {}} [get_attribute $cc full_name]] eq $nm} { set c $cc } }
+    set cands [list $nm]
+  } else {
   foreach cand $cands { set cc [get_cells -quiet $cand]; if {[sizeof_collection $cc] == 1} { set c $cc; break } }
+  }
   if {$c eq ""} { error "macro for $nm not found (tried $cands)" }
   set_cell_location -coordinates [list $x $y] -orientation $o -fixed $c
   incr nplaced

@@ -16,6 +16,7 @@ if {[info exists ::env(B5H)] && $::env(B5H) == 1} {
   set ::env(CAPTBL) $REPO/pnr/commercial/impl/innovus/captbl6/sky130A_nom_li1m1.captbl
 }
 set NETLIST $REPO/pnr/commercial/syn/genus/runs/b3b_genus_tt_r2/out/rv32i_cpu_top.nl.v
+if {[info exists ::env(NETLIST_OVERRIDE)]} { set NETLIST $::env(NETLIST_OVERRIDE) }   ;# step 9 D: same flow on the Yosys netlist (NL_YOSYS=1 maps the macro names)
 set SCRIPTDIR [file dirname [file normalize [info script]]]
 # ---- B6 (B6=1): everything of B5H plus FULL MMMC (mmmc_b6.tcl: ss/tt/ff views, captbl6 nom/min/max, explicit per-view latency files) and the b5k SDC family (mbist input delays).
 #      Pre-CTS SDC = sky130_cpu_innovus_b6_pre.sdc; 04_cts switches to sky130_cpu_innovus_b5k_post.sdc (clk_io network latency 3.295, clk_i propagated) + sky130_cpu_innovus_b5k_latency.sdc.

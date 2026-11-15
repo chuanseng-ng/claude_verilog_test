@@ -1,0 +1,7 @@
+spef_src=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/innovusb6y_nom/rv32i_cpu_top.nom.spef
+spef_md5=0e38809f9fbe4f14b000a51a5317045a
+netlist_src=/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/innovus/runs/b6y_innovus/out/rv32i_cpu_top.nl.v
+netlist_md5=f8a8d812651e093d5ca2c3f7c5b56159
+sdc_md5=3c69635042a9d65cb87e71a9db713e4e
+scripts_md5=c2988528d74ba5fc12a38fc11043d54b
+power=0

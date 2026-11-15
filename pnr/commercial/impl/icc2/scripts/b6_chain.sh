@@ -4,7 +4,7 @@
 #   and writes runs/b6_icc2/markers/<stage>.done only when the stage log carries a STAGE_SAVED/WRITE_VERILOG marker; steps with a done marker are skipped on re-run.
 #   The design library is copied to rv32i.dlib.bak after each stage so a host crash loses at most the stage being written.
 set -u
-TAG=b6_icc2
+TAG=${B6_TAG:-b6_icc2}
 HERE=$(cd "$(dirname "$0")/.." && pwd); RUN=$HERE/runs/$TAG; M=$RUN/markers; CL=$RUN/reports/chain.log
 mkdir -p $M $RUN/reports $RUN/logs
 STAGES=${B6_STAGES:-"b6_01_floorplan b6_02_pdn b6_03_place b6_04_cts b6_05_route b6_06_eco b6_06b_eco2 b6_06c_eco3 b6_07_finish b6_08_write_verilog"}

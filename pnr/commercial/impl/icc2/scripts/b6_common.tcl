@@ -8,6 +8,7 @@ set SRAM   sky130_sram_1kbyte_1rw1r_32x256_8
 set CFGDIR $REPO/pnr/sky130/cpu
 set SDC    $CFGDIR/constraints/sky130_cpu.sdc
 set NETLIST $REPO/pnr/commercial/syn/dc/runs/b3c_dc_mcmm/out/rv32i_cpu_top.nl.v
+if {[info exists ::env(NETLIST_OVERRIDE)]} { set NETLIST $::env(NETLIST_OVERRIDE) }   ;# step 9 D: same flow on the Yosys netlist (NL_YOSYS=1 maps the macro names)
 set DLIB   $RUN/rv32i.dlib
 set SCRIPTDIR [file dirname [info script]]
 file mkdir $RUN/reports $RUN/out $RUN/logs

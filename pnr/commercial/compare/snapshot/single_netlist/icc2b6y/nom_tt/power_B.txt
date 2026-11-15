@@ -1,0 +1,33 @@
+****************************************
+Report : Averaged Power
+	-nosplit
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Mon Nov 16 01:38:44 2026
+****************************************
+
+
+
+  Attributes
+  ----------
+      i  -  Including register clock pin internal power
+      u  -  User defined power group
+
+                        Internal  Switching  Leakage    Total
+Power Group             Power     Power      Power      Power   (     %)  Attrs
+--------------------------------------------------------------------------------
+clock_network              0.0180 7.209e-03 2.560e-09    0.0252 (35.23%)  i
+register                1.094e-03 1.755e-03 4.430e-08 2.849e-03 ( 3.99%)  
+combinational           3.871e-03    0.0105 1.086e-07    0.0144 (20.16%)  
+sequential                 0.0000    0.0000    0.0000    0.0000 ( 0.00%)  
+memory                     0.0288 1.430e-04 9.516e-05    0.0290 (40.62%)  
+io_pad                     0.0000    0.0000    0.0000    0.0000 ( 0.00%)  
+black_box               -5.502e-11    0.0000 7.289e-13 -5.429e-11 (-0.00%)
+
+  Net Switching Power  =    0.0196   (27.49%)
+  Cell Internal Power  =    0.0517   (72.38%)
+  Cell Leakage Power   = 9.532e-05   ( 0.13%)
+                         ---------
+Total Power            =    0.0714  (100.00%)
+
+1

@@ -4,6 +4,8 @@
 arm_def() {
   case "$1" in
     openroad) echo pnr/commercial/runs/openroad/rv32i_cpu_top.def ;;
+    icc2b6y) echo pnr/commercial/impl/icc2/runs/b6y_icc2/out/rv32i_cpu_top.def ;;   # step 9 D
+    innovusb6y) echo pnr/commercial/impl/innovus/runs/b6y_innovus/out/rv32i_cpu_top.def ;;   # step 9 D
     openroadb3) echo pnr/commercial/runs/openroad_b3/rv32i_cpu_top.def ;;   # OpenROAD generation B3 (step 9)
     icc2)     echo pnr/commercial/impl/icc2/runs/b5e_icc2/out/rv32i_cpu_top.def ;;
     innovus)  echo pnr/commercial/impl/innovus/runs/b5g_innovus/out/rv32i_cpu_top.def ;;   # b5c reroute (b5b superseded, not extracted for results)
