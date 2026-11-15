@@ -3115,6 +3115,18 @@ Correction of the mutation counts above, 2026-11-15, measured. The campaign was 
 
 \end{record}
 
+\begin{record}
+
+Reference firmware and the two software rules, 2026-11-15. Bead \bead{zftj.25}. GH \#380. PR \#408 added the rules \reqref{DS-PMU-182} (stop the bus traffic before a CPU power-down) and \reqref{DS-PMU-187} (clear \code{STATUS} bit 3 by a write to \code{STATUS_CLR}). The reference firmware \src{tb/cocotb/soc/pmu_cycle_fw/gen_pmu_cycle_hex.py} did not follow them. After it started the DMA copy of the power-down request, it stored 0 to the DMA control register, and it ran a loop that read, wrote and flushed the data cache in each pass. No firmware in the repository wrote \code{STATUS_CLR}. Measured, one run on one host: with the old firmware, a monitor of the CPU handshakes between the DMA start and \code{DOM_OFF} counted one write address, one write data and one write response, which belong to the store that cleared the DMA control bit. The monitor is in \code{test_pmu_live_power_cycle} and in its new companion. Both failed on the old firmware.
+
+\end{record}
+
+\begin{record}
+
+Change of the same date. The firmware flushes the data cache and programs the DMA engine, stores 1 to the DMA control register in a line of the instruction cache that also holds its wait loop, and then runs only register instructions. After the wait loop it reads \code{STATUS}, records and clears a set bit 3, reads \code{STATUS} again and stores the result words. The counter of the live test is now the register \code{x9}, because the loop makes no memory access. The new test \code{test_pmu_live_power_cycle_clears_timeout_flag} holds the acknowledge input at 1 so that both waits time out. The new host test file \src{tb/tests/test_pmu_cycle_fw.py} has 5 tests. Measured with the new firmware: \code{soc_pmu_multiclock} 13 of 13, \code{test_pmu_cycle_fw.py} and \code{test_pmu_confirm_fw.py} 10 of 10. A build of the firmware without the write to \code{STATUS_CLR} fails the new test on the value of \code{STATUS} bit 3. \code{PASS_FLOOR} in the two workflows goes from 925 to 926. Limit: in one build of the firmware with the write to \code{STATUS_CLR} removed and so the code after it moved by one word, the store of the end marker did not reach the SRAM in the run without a timeout. The cause is not found. A build with the code moved by three words did not show it. The committed firmware does not show it.
+
+\end{record}
+
 \section{APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})}\label{cr:defect:apb-cdc-bridge-reset-race}
 
 \begin{record}

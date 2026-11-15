@@ -6,9 +6,10 @@ asynchronous ratio.
 Mechanism (rationale: pmu_cycle_fw/gen_pmu_cycle_hex.py): the CPU CANNOT power itself back on once
 the PMU gates its clock, so the trigger is split. The CPU firmware programs the DMA engine (a
 fabric-domain AXI4 master) to write MODE_CPU_OFF into PMU CTRL (0x2000_8000), then spins in a loop
-that increments an SRAM counter. The PMU gates the CPU clock out from under that loop, by design:
-the "no drain/quiesce step" gap is a known, accepted, non-blocking risk (soc_top.sv) that this test
-does not fix. The power-UP trigger is a backdoor deposit into the PMU CTRL storage flop
+of register instructions that increments x9. The loop makes no bus access (DS-PMU-182), and the
+test checks this. The PMU gates the CPU clock out from under the loop. After the power-up the loop
+ends, and the firmware records a set STATUS[3] and clears it by a write to STATUS_CLR (DS-PMU-187).
+The power-UP trigger is a backdoor deposit into the PMU CTRL storage flop
 (u_soc.u_pmu.u_regbank.regs[0], the cell apb4_register_bank.sv writes on an APB write).
 Ratio: CPU period 3 / fabric period 7, as test_soc_multiclock.py. The PMU runs on core_clk, so
 dom_state_q polling uses RisingEdge(dut.clk_i). cpu_clk_i free-runs; only the DERIVED gated clock in
@@ -20,8 +21,7 @@ true POR / PLL-lock reset) and NOT to cpu_domain_rst_n, which folds in the PMU r
 The bridge therefore keeps its state across a PMU power-cycle, like u_cpu; this test
 regression-guards that wiring. (3) The PMU power-down has NO drain/quiesce step: a CPU AXI
 transaction or D-cache writeback in flight when the clock gates is a documented non-blocking gap.
-The firmware is minimal (2-word SRAM working set, no fabric AXI traffic after the DMA trigger) to
-stay clear of it. The settling-delay injector in cdc_sync.sv exists; this suite does not enable it.
+The firmware stays clear of it, and a monitor asserts this. The settling-delay injector in cdc_sync.sv exists; this suite does not enable it.
 Run: make -C tb/cocotb/soc soc_pmu_multiclock
 Doc: tm:suite:soc-test-soc-pmu-multiclock
 """
@@ -47,6 +47,7 @@ if str(_CFW_DIR) not in sys.path:
     sys.path.insert(0, str(_CFW_DIR))
 
 import gen_pmu_confirm_fw as cfw  # noqa: E402
+import pmu_cycle_fw_addrs as fw_addrs  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Module-level task handle tracking (coroutine leakage guard, matching every
@@ -87,8 +88,7 @@ def _load_rom(dut, words: list) -> None:
 
 _FW_HEX = str(Path(__file__).parent / "pmu_cycle_fw" / "pmu_cycle.hex")
 
-CTRLVAL_WORD_IDX = 0  # SRAM word 0 (byte 0x2000) — DMA-copied MODE_CPU_OFF value
-COUNTER_WORD_IDX = 1  # SRAM word 1 (byte 0x2004) — free-running busy-loop counter
+# SRAM words of the reference firmware and its wait-loop counter register: pmu_cycle_fw_addrs.py.
 
 MODE_NORMAL  = 0x0
 MODE_CPU_OFF = 0x1
@@ -118,7 +118,9 @@ DIAG_RESUME_WINDOW_CPU_CLK_CYCLES = 2_500  # more than 2x the measured
                                             # note above this constant's use)
 
 ROM_BASE = 0x0000_1000
-LOOP_PC = 0x0000_1058  # pmu_cycle_fw/pmu_cycle_fw_addrs.py LOOP_PC
+STATUS_TIMEOUT_BIT = 3  # PMU STATUS[3]: sticky flag of a timed-out wait for the clamp acknowledge
+RESUME_SLACK_COUNTS = 16  # loop passes between the clock restart and the sample at DOM_ON
+FIRMWARE_DONE_CPU_CLK_CYCLES = 40_000  # the wait loop of the firmware ends well inside this time
 
 
 async def _wait_for_dom_state(dut, target_states, timeout_cycles, label) -> list:
@@ -144,12 +146,36 @@ async def _wait_for_dom_state(dut, target_states, timeout_cycles, label) -> list
 
 
 async def _read_counter(dut) -> int:
+    """Wait-loop counter of the firmware: the register that fw_addrs.LOOP_REG names. The loop makes
+    no memory access (DS-PMU-182), so the register is the only place where its progress shows."""
     await read_only()
-    sram = sram_mem(dut)
-    return int(sram[COUNTER_WORD_IDX].value)
+    regs = dut.u_soc.u_cpu.u_core.u_regfile.regs
+    return int(regs[fw_addrs.LOOP_REG].value)
 
 
-async def _pmu_live_cycle_body(dut) -> None:
+async def _read_sram_word(dut, idx: int) -> int:
+    await read_only()
+    return int(sram_mem(dut)[idx].value)
+
+
+async def _mark_request(dut, mon) -> None:
+    """Switch the epoch of the monitor to "down" when the DMA engine starts its copy of the
+    power-down request, so that the epoch holds every bus access of the CPU from the request on."""
+    while True:
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if int(dut.u_soc.u_dma.start_pulse.value):
+            mon.epoch = "down"
+            return
+
+
+async def _pmu_live_cycle_body(dut, force_timeout: bool = False) -> None:
+    """One live power cycle of the CPU domain under the reference firmware.
+
+    force_timeout holds the acknowledge input of the PMU at 1 from before the request until the
+    power-up ends. Both waits of the PMU then run to their timeout and set STATUS[3]. The firmware
+    must record the fault and clear the flag (DS-PMU-187).
+    """
     _kill_active_tasks()
     clk_task, cpu_clk_task = start_soc_clocks(
         dut, FABRIC_PERIOD_NS, cpu_period_ns=CPU_PERIOD_NS
@@ -183,12 +209,37 @@ async def _pmu_live_cycle_body(dut) -> None:
         "CPU-domain PMU sequencer did not start at DOM_ON after reset release"
     )
 
+    # Passive monitor of the bus handshakes of u_cpu. Its epoch is "pre" until the DMA engine
+    # starts its copy of the request, and "down" from then until the CPU domain is off.
+    mon = _ClampMonitor(dut).start()
+    mon.epoch = "pre"
+    _active_tasks.append(cocotb.start_soon(_mark_request(dut, mon)))
+    if force_timeout:
+        force = cocotb.start_soon(_force_ack_high(dut))
+        _active_tasks.append(force)
+
     # =========================================================================
     # Phase 1: power-DOWN, driven by the CPU's own firmware (via DMA — see
     # module docstring for why the CPU cannot write PMU CTRL directly).
     # =========================================================================
     powerdown_seq = await _wait_for_dom_state(
         dut, {DOM_OFF}, POWERDOWN_TIMEOUT_CLK_I_CYCLES, "power-down"
+    )
+    # DS-PMU-182: the firmware has stopped its bus traffic before the request. From the start of the
+    # DMA copy to the end of the power-down the CPU completes no write address, write data, read
+    # address or read data handshake. One write response is allowed: it belongs to the store that
+    # started the copy. The monitor saw traffic before the request, so a silent monitor is not the
+    # reason for the zero.
+    mon.epoch = "off"
+    down = dict(mon.hs["down"])
+    assert sum(mon.hs["pre"].values()) > 0, "harness: the monitor saw no bus traffic of the CPU"
+    assert down["aw"] + down["w"] + down["ar"] + down["r"] == 0 and down["b"] <= 1, (
+        f"the CPU made bus accesses between the power-down request and DOM_OFF: {down} "
+        "(DS-PMU-182)"
+    )
+    loop_count = await _read_counter(dut)
+    assert 0 < loop_count < fw_addrs.LOOP_LIMIT, (
+        f"harness: the wait loop of the firmware is not running at the request (count {loop_count})"
     )
     expected_powerdown = [DOM_ON, DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO, DOM_OFF]
     assert powerdown_seq == expected_powerdown, (
@@ -320,6 +371,7 @@ async def _pmu_live_cycle_body(dut) -> None:
     powerup_seq = await _wait_for_dom_state(
         dut, {DOM_ON}, POWERUP_TIMEOUT_CLK_I_CYCLES, "power-up"
     )
+    counter_at_on = await _read_counter(dut)
     expected_powerup = [
         DOM_PU_RST, DOM_PU_RESTORE, DOM_PU_ISO, DOM_PU_CLK, DOM_ON,
     ]
@@ -329,6 +381,14 @@ async def _pmu_live_cycle_body(dut) -> None:
         f"{powerup_seq}, expected {expected_powerup}"
     )
     dut._log.info(f"CPU domain reached DOM_ON via power-up (sequence: {powerup_seq})")
+    if force_timeout:
+        force.kill()
+        await ClockCycles(dut.clk_i, 6)
+        await read_only()
+        status = int(dut.u_soc.u_pmu.u_regbank.regs[1].value)
+        assert (status >> STATUS_TIMEOUT_BIT) & 1, (
+            f"harness: STATUS[3] is 0x{status:x} after two forced timeouts, the flag is not set"
+        )
 
     # Zero-corruption check: the busy-loop counter must resume climbing from
     # exactly where it was frozen -- proving architectural state (PC +
@@ -336,28 +396,10 @@ async def _pmu_live_cycle_body(dut) -> None:
     # the loop resumed on the exact next instruction, not from RESET_PC.
     # Survival is a property of the model, not a guarantee (DS-PMU-181).
     #
-    # Note on DIAG_RESUME_WINDOW_CPU_CLK_CYCLES's
-    # size: the loop body's per-iteration CSRW dcache_flush (see
-    # pmu_cycle_fw/gen_pmu_cycle_hex.py's LOOP note) is what makes the
-    # counter observable via the backdoor SRAM read below at all (SRAM_BASE
-    # is cacheable/write-back, so a store alone only dirties the D-cache
-    # line -- see that file's note), but a full CS_FLUSH_SCAN (256 sets) is
-    # the dominant per-iteration cost, not the 4-instruction loop body
-    # itself. Measured: the first post-resume SRAM-visible increment lands
-    # ~1000 cpu_clk_i cycles after DOM_ON (one-time settle cost: draining
-    # any beat the fabric-side CDC bridge retained in flight across the
-    # power-cycle, per the reset rewiring above, plus the loop's own first
-    # flush), then roughly every ~300 cycles thereafter in steady state.
-    # DIAG_RESUME_WINDOW_CPU_CLK_CYCLES is sized with margin above the
-    # measured first-increment latency so this assertion is not flaky.
-    #
-    # This loop intentionally does NOT break early on commit count (an
-    # earlier revision did, and broke well before even one flush-writeback
-    # round-trip could complete, which produced a "0 -> 0" false failure
-    # that briefly looked like a resume deadlock but was purely a test-
-    # timing-budget artifact -- see git history for that investigation). It
-    # always runs the full window so real wall-clock cycles reliably elapse
-    # regardless of how bursty commits are.
+    # The wait loop of the firmware counts in x9. The CPU clock restarts in the power-up before
+    # DOM_ON shows, so x9 is sampled at DOM_ON and again 10 clk_i cycles later. The sample at DOM_ON
+    # must continue from the value of the OFF window: a count that restarts at 0 shows a reboot.
+    # The window below always runs in full, so that real cycles elapse regardless of the commits.
     await ClockCycles(dut.clk_i, 10)
     counter_resumed_start = await _read_counter(dut)
     commits_seen = []
@@ -400,7 +442,7 @@ async def _pmu_live_cycle_body(dut) -> None:
         f"DIAGNOSTIC: commits observed after power-up (cycle, pc): {commits_seen} "
         f"(scanned up to {DIAG_RESUME_WINDOW_CPU_CLK_CYCLES} cpu_clk_i cycles); "
         f"counter {counter_resumed_start} -> {counter_resumed_end}; "
-        f"LOOP_PC=0x{LOOP_PC:08x} ROM_BASE=0x{ROM_BASE:08x}; "
+        f"LOOP_PC=0x{fw_addrs.LOOP_PC:08x} ROM_BASE=0x{ROM_BASE:08x}; "
         f"cpu_gated_clk toggle_count over window={toggle_count}"
     )
     dut._log.info(
@@ -416,12 +458,37 @@ async def _pmu_live_cycle_body(dut) -> None:
         f"state did not survive the live PMU-driven power cycle. commits observed: "
         f"{commits_seen}"
     )
-    assert counter_resumed_start == counter_after, (
-        f"busy-loop counter changed between the OFF-window's last sample "
-        f"({counter_after}) and the post-power-up first sample "
-        f"({counter_resumed_start}) -- counter moved with no active clock, "
-        "or the OFF-window settle margin was insufficient"
+    assert counter_after <= counter_at_on <= counter_after + RESUME_SLACK_COUNTS, (
+        f"busy-loop counter at DOM_ON ({counter_at_on}) does not continue from the OFF-window "
+        f"value ({counter_after}) -- the loop restarted, or moved with no active clock"
     )
+    assert counter_resumed_start >= counter_at_on, (
+        f"busy-loop counter decreased after DOM_ON ({counter_at_on} -> {counter_resumed_start})"
+    )
+    # =========================================================================
+    # Phase 3: the wait loop of the firmware ends, and the firmware reads STATUS. A set flag
+    # (bit 3) is recorded in an SRAM word and cleared by a write to STATUS_CLR (DS-PMU-187).
+    # =========================================================================
+    done = 0
+    for _ in range(FIRMWARE_DONE_CPU_CLK_CYCLES // 100):
+        await ClockCycles(dut.cpu_clk_i, 100)
+        done = await _read_sram_word(dut, fw_addrs.DONE_WORD_IDX)
+        if done:
+            break
+    assert done == 1, "the firmware did not reach its final loop after the power cycle"
+    fault = await _read_sram_word(dut, fw_addrs.FAULT_WORD_IDX)
+    status_after = await _read_sram_word(dut, fw_addrs.STATUS_WORD_IDX)
+    status_now = int(dut.u_soc.u_pmu.u_regbank.regs[1].value)
+    assert fault == (1 if force_timeout else 0), (
+        f"the fault record of the firmware is {fault}, expected {int(force_timeout)}"
+    )
+    assert (status_after >> STATUS_TIMEOUT_BIT) & 1 == 0, (
+        f"STATUS[3] still reads 1 for the firmware after its clear: 0x{status_after:x}"
+    )
+    assert (status_now >> STATUS_TIMEOUT_BIT) & 1 == 0, (
+        f"STATUS[3] is still set after the firmware has finished: 0x{status_now:x}"
+    )
+    mon.stop()
     dut._log.info(
         "test_pmu_live_power_cycle PASS: CPU-domain PMU sequencer walked a full "
         "OFF->ON live power cycle in the PMU sequence order under real "
@@ -476,7 +543,14 @@ async def _pmu_live_cycle_body(dut) -> None:
 # reset wiring first.
 @cocotb.test()
 async def test_pmu_live_power_cycle(dut):
-    await with_timeout(_pmu_live_cycle_body(dut), 400, "us")
+    await with_timeout(_pmu_live_cycle_body(dut), 800, "us")
+
+
+@cocotb.test()
+async def test_pmu_live_power_cycle_clears_timeout_flag(dut):
+    """The same live power cycle with a timed-out wait for the clamp acknowledge. The firmware
+    reads STATUS[3] at 1, records the fault and writes STATUS_CLR, and STATUS[3] then reads 0."""
+    await with_timeout(_pmu_live_cycle_body(dut, force_timeout=True), 800, "us")
 
 
 # =============================================================================

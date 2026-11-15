@@ -56,11 +56,11 @@ ID & Requirement & Verified by\\
 \reqref{DS-PMU-153} & Clock root & \textbf{review}\\
 \reqref{DS-PMU-180} & GPU state after a power cycle & \textbf{test} \code{tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu}\\
 \reqref{DS-PMU-181} & CPU state in CPU\_OFF & \textbf{review}\\
-\reqref{DS-PMU-182} & Quiet bus before a CPU power-down & \textbf{review}\\
+\reqref{DS-PMU-182} & Quiet bus before a CPU power-down & \textbf{test} \code{tb/cocotb/soc/test_soc_pmu_multiclock.py::test_pmu_live_power_cycle} \newline \textbf{test} \code{tb/tests/test_pmu_cycle_fw.py::test_no_bus_access_between_the_request_and_the_wake_up} \newline \textbf{review}\\
 \reqref{DS-PMU-183} & Wake-up of the CPU domain & \textbf{review}\\
 \reqref{DS-PMU-184} & Poll for the settled value & \textbf{review}\\
 \reqref{DS-PMU-185} & No GPU access while the GPU is off & \textbf{review}\\
 \reqref{DS-PMU-186} & Fabric reset with CPU reset & \textbf{review}\\
-\reqref{DS-PMU-187} & Clear of the timeout flag & \textbf{review}\\
+\reqref{DS-PMU-187} & Clear of the timeout flag & \textbf{test} \code{tb/cocotb/soc/test_soc_pmu_multiclock.py::test_pmu_live_power_cycle_clears_timeout_flag} \newline \textbf{test} \code{tb/tests/test_pmu_cycle_fw.py::test_status_bit_3_clear_is_written_when_the_flag_is_set} \newline \textbf{review}\\
 \end{longtable}
 }

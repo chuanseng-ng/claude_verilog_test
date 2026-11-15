@@ -2163,9 +2163,9 @@ fig:tm:mod:cdc-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	142	Functional 
 fig:tm:mod:pmu:fsm	docs/manual/tm/parts/chapters/power.tex	114	Functional description
 fig:tm:mod:pmu:power-down	docs/manual/tm/parts/chapters/power.tex	142	Functional description
 fig:tm:mod:pmu:power-up	docs/manual/tm/parts/chapters/power.tex	164	Functional description
-fig:tm:mod:rv32i-clock-gate:block	docs/manual/tm/parts/chapters/power.tex	389	Functional description
-fig:tm:mod:rv32i-clock-gate:timing	docs/manual/tm/parts/chapters/power.tex	402	Functional description
-fig:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	547	Introduction
+fig:tm:mod:rv32i-clock-gate:block	docs/manual/tm/parts/chapters/power.tex	390	Functional description
+fig:tm:mod:rv32i-clock-gate:timing	docs/manual/tm/parts/chapters/power.tex	403	Functional description
+fig:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	548	Introduction
 fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6747	Figures
 fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6765	Figures
 tab:ds:mm:address-map:all	docs/manual/common/generated/map/memory-map.tex	4	Memory map of the SoC in address order
@@ -2176,9 +2176,9 @@ tab:ds:req:cdc-map	docs/manual/ds/generated/requirements-cdc.tex	4	Requirements 
 tab:ds:req:pmu-map	docs/manual/ds/generated/requirements-pmu.tex	4	Requirements of area PMU and their verification
 tab:ds:req:pwr-map	docs/manual/ds/generated/requirements-pwr.tex	4	Requirements of area PWR and their verification
 tab:tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	41	Instances in the design
-tab:tm:ch:mod-power-management:iso-cpu	docs/manual/tm/parts/chapters/power.tex	459	SoC power integration
-tab:tm:ch:mod-power-management:iso-gpu	docs/manual/tm/parts/chapters/power.tex	473	SoC power integration
-tab:tm:ch:mod-power-management:resets	docs/manual/tm/parts/chapters/power.tex	492	SoC power integration
+tab:tm:ch:mod-power-management:iso-cpu	docs/manual/tm/parts/chapters/power.tex	460	SoC power integration
+tab:tm:ch:mod-power-management:iso-gpu	docs/manual/tm/parts/chapters/power.tex	474	SoC power integration
+tab:tm:ch:mod-power-management:resets	docs/manual/tm/parts/chapters/power.tex	493	SoC power integration
 tab:tm:ch:tool-defects-and-caveats:caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	30	Summary of the standing caveats
 tab:tm:ch:tool-defects-and-caveats:defects	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	55	Summary of the tool defects
 tab:tm:mod:apb-cdc-bridge:params	docs/manual/common/generated/facts/apb-cdc-bridge-params.tex	4	Parameters of \code{apb_cdc_bridge}
@@ -2202,20 +2202,20 @@ tab:tm:mod:pmu:states	docs/manual/tm/parts/chapters/power.tex	74	Functional desc
 tab:tm:mod:pmu:status	docs/manual/tm/parts/chapters/power.tex	224	Programmers model
 tab:tm:mod:pmu:status-clr	docs/manual/tm/parts/chapters/power.tex	264	Programmers model
 tab:tm:mod:pmu:verification	docs/manual/tm/parts/chapters/power.tex	288	Verification
-tab:tm:mod:rv32i-clock-gate:arms	docs/manual/tm/parts/chapters/power.tex	409	Functional description
-tab:tm:mod:rv32i-clock-gate:instances	docs/manual/tm/parts/chapters/power.tex	345	Introduction
+tab:tm:mod:rv32i-clock-gate:arms	docs/manual/tm/parts/chapters/power.tex	410	Functional description
+tab:tm:mod:rv32i-clock-gate:instances	docs/manual/tm/parts/chapters/power.tex	346	Introduction
 tab:tm:mod:rv32i-clock-gate:params	docs/manual/common/generated/facts/rv32i-clock-gate-params.tex	4	Parameters of \code{rv32i_clock_gate}
 tab:tm:mod:rv32i-clock-gate:signals	docs/manual/common/generated/facts/rv32i-clock-gate-signals.tex	4	Signals of \code{rv32i_clock_gate}
-tab:tm:pd:phase5-soc-upf:clamps	docs/manual/tm/parts/chapters/power.tex	632	Isolation
-tab:tm:pd:phase5-soc-upf:classes	docs/manual/tm/parts/chapters/power.tex	661	Isolation
-tab:tm:pd:phase5-soc-upf:contents	docs/manual/tm/parts/chapters/power.tex	555	Contents of the file
-tab:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	593	Domains, supplies and the roster
-tab:tm:pd:phase5-soc-upf:facts	docs/manual/tm/parts/chapters/power.tex	744	The checker
-tab:tm:pd:phase5-soc-upf:findings	docs/manual/tm/parts/chapters/power.tex	769	The checker
-tab:tm:pd:phase5-soc-upf:roster	docs/manual/tm/parts/chapters/power.tex	610	Domains, supplies and the roster
-tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	696	Power states
-tab:tm:pd:phase5-soc-upf:states	docs/manual/tm/parts/chapters/power.tex	678	Power states
-tab:tm:pd:phase5-soc-upf:supply	docs/manual/tm/parts/chapters/power.tex	576	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:clamps	docs/manual/tm/parts/chapters/power.tex	633	Isolation
+tab:tm:pd:phase5-soc-upf:classes	docs/manual/tm/parts/chapters/power.tex	662	Isolation
+tab:tm:pd:phase5-soc-upf:contents	docs/manual/tm/parts/chapters/power.tex	556	Contents of the file
+tab:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	594	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:facts	docs/manual/tm/parts/chapters/power.tex	745	The checker
+tab:tm:pd:phase5-soc-upf:findings	docs/manual/tm/parts/chapters/power.tex	770	The checker
+tab:tm:pd:phase5-soc-upf:roster	docs/manual/tm/parts/chapters/power.tex	611	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	697	Power states
+tab:tm:pd:phase5-soc-upf:states	docs/manual/tm/parts/chapters/power.tex	679	Power states
+tab:tm:pd:phase5-soc-upf:supply	docs/manual/tm/parts/chapters/power.tex	577	Domains, supplies and the roster
 tab:um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	12	Choose the block
 tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6503	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
@@ -2352,7 +2352,7 @@ tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1773	NPU
 tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	944	Peripherals
 tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	914	PLL subsystem
 tm:ch:mod-power-management	docs/manual/tm/parts/chapters/power.tex	3	Power management
-tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	448	SoC power integration
+tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	449	SoC power integration
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	443	SoC fabric
 tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6517	Constraint file notes
 tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9084	PDN and flow script notes
@@ -2689,7 +2689,7 @@ tm:mod:pmu	docs/manual/tm/parts/chapters/power.tex	64	\texttt{pmu}
 tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1244	\texttt{periph/pwm\_controller.sv}
 tm:mod:rv32i-alu	docs/manual/tm/parts/01-module-reference.tex	96	\texttt{cpu/core/rv32i\_alu.sv}
 tm:mod:rv32i-cache-pkg	docs/manual/tm/parts/01-module-reference.tex	295	\texttt{mem/rv32i\_cache\_pkg.sv}
-tm:mod:rv32i-clock-gate	docs/manual/tm/parts/chapters/power.tex	339	\texttt{rv32i\_clock\_gate}
+tm:mod:rv32i-clock-gate	docs/manual/tm/parts/chapters/power.tex	340	\texttt{rv32i\_clock\_gate}
 tm:mod:rv32i-control	docs/manual/tm/parts/01-module-reference.tex	111	\texttt{cpu/core/rv32i\_control.sv}
 tm:mod:rv32i-cpu-top	docs/manual/tm/parts/01-module-reference.tex	226	\texttt{cpu/rv32i\_cpu\_top.sv}
 tm:mod:rv32i-csr-file	docs/manual/tm/parts/01-module-reference.tex	144	\texttt{cpu/core/rv32i\_csr\_file.sv}
@@ -2920,8 +2920,8 @@ tm:pd:phase3-cache-upf	docs/manual/tm/parts/02-physical-design.tex	7752	\texttt{
 tm:pd:phase5-soc-multiclock-check-sdc	docs/manual/tm/parts/02-physical-design.tex	8073	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
 tm:pd:phase5-soc-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	7872	\texttt{constraints/phase5\_soc\_multiclock.sdc}
 tm:pd:phase5-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	7799	\texttt{constraints/phase5\_soc.sdc}
-tm:pd:phase5-soc-upf	docs/manual/tm/parts/chapters/power.tex	512	Power intent file
-tm:pd:phase5-soc-upf:checker	docs/manual/tm/parts/chapters/power.tex	727	The checker
+tm:pd:phase5-soc-upf	docs/manual/tm/parts/chapters/power.tex	513	Power intent file
+tm:pd:phase5-soc-upf:checker	docs/manual/tm/parts/chapters/power.tex	728	The checker
 tm:pd:power-domain-evaluation	docs/manual/tm/parts/02-physical-design.tex	2572	Per-IP Power Domains + On/Off Sequencing --- Evaluation (pre-Phase-6 \#5)
 tm:pd:power-domain-evaluation:1-findings	docs/manual/tm/parts/02-physical-design.tex	2652	Findings
 tm:pd:power-domain-evaluation:2-the-blocker-that-sets-the-scope	docs/manual/tm/parts/02-physical-design.tex	2680	The blocker that sets the scope
