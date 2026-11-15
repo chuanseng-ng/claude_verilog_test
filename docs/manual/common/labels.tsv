@@ -152,7 +152,7 @@ cr:ch:source-archive-tm	docs/manual/cr/parts/06-source-archive.tex	1984	Archived
 cr:ch:source-archive-um	docs/manual/cr/parts/06-source-archive.tex	2640	Archived User Manual text
 cr:ch:status-history	docs/manual/cr/parts/01-phase-and-status-history.tex	290	Status history
 cr:ch:test-benches	docs/manual/cr/parts/05-source-file-history.tex	4601	Test benches
-cr:defect:apb-cdc-bridge-reset-race	docs/manual/cr/parts/03-investigations.tex	3118	APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})
+cr:defect:apb-cdc-bridge-reset-race	docs/manual/cr/parts/03-investigations.tex	3130	APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})
 cr:defect:asap7-cpu-synlig-ma7	docs/manual/cr/parts/03-investigations.tex	10	\texorpdfstring{ASAP7 CPU macro netlist vs RTL differential (beads \code{ma7} / \code{u99} / \code{dud4})}{ASAP7 CPU macro netlist vs RTL differential (beads / / )}
 cr:defect:asap7-cpu-synlig-ma7:consequences	docs/manual/cr/parts/03-investigations.tex	447	Consequences
 cr:defect:asap7-cpu-synlig-ma7:controls-measured-unless-marked	docs/manual/cr/parts/03-investigations.tex	306	Controls (MEASURED unless marked)
