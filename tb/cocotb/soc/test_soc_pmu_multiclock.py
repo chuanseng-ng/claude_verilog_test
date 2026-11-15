@@ -424,7 +424,7 @@ async def _pmu_live_cycle_body(dut) -> None:
     )
     dut._log.info(
         "test_pmu_live_power_cycle PASS: CPU-domain PMU sequencer walked a full "
-        "OFF->ON live power cycle in the UPF-mandated order under real "
+        "OFF->ON live power cycle in the PMU sequence order under real "
         f"cross-domain traffic at the {CPU_PERIOD_NS}ns/{FABRIC_PERIOD_NS}ns "
         f"coprime ratio; busy-loop counter resumed cleanly "
         f"({counter_resumed_start} -> {counter_resumed_end}), proving zero "
@@ -437,8 +437,8 @@ async def _pmu_live_cycle_body(dut) -> None:
 # RTL prior to the fix below, and was pinned @cocotb.test(expect_fail=True)
 # while the root cause was open. Root cause was NOT in this test's subject
 # (pmu.sv's sequencer): the diagnostic trace proved the sequencer was correct
-# in both directions (power-down [0,1,2,3,4] and power-up [5,6,7,8,0] both
-# match the exact UPF-mandated order) and that every cross-domain control
+# in both directions (the power-down and the power-up walk the states of the
+# PMU sequence in order, see pmu_dom_state_e) and that every cross-domain control
 # signal was restored correctly on power-up (cpu_gated_clk_en=1,
 # pmu_cpu_clk_dis_sync=0, pmu_cpu_rst_n_cpu_sync=1, cpu_domain_rst_n=1,
 # pmu_cpu_iso_en_sync=0 -- a fully ungated, unreset, unisolated CPU domain).
@@ -488,7 +488,7 @@ async def test_pmu_live_power_cycle(dut):
 #       request qualified by the closed clock gate, and the PMU gates the clock before it raises
 #       the request, so no gated edge falls in a clamp window at any clock ratio. A bus handshake
 #       that u_cpu completes at such an edge would not reach u_cpu_axi_cdc: the clamp holds the
-#       valid and ready outputs of u_cpu at 0, not its inputs (DS-PMU-100, DS-PMU-182, DS-PMU-183).
+#       valid and ready outputs of u_cpu at 0, not its inputs (DS-PMU-100, DS-PMU-182).
 #   P3  A register access to the GPU control slave while the GPU domain is off does not end
 #       (DS-PMU-185). The slave takes the address and never answers.
 # The P2 tests are normal tests. The P3 tests that assert the specified behaviour are marked
@@ -981,7 +981,7 @@ async def test_p2_injected_reset_term_holds_the_clamp(dut):
 
 @cocotb.test()
 async def test_p2_control_quiet_firmware_loses_no_handshake(dut):
-    """Software that follows the stop-traffic rule (DS-PMU-183): the CPU runs register instructions
+    """Software that follows the stop-traffic rule (DS-PMU-182): the CPU runs register instructions
     only, and the request goes in when no handshake has happened for a long time. Then no handshake
     of u_cpu falls in the power-down or the power-up, at three clock ratios and four alignments.
     The clamp is active at these runs (see the control above). The CPU runs its loop before and

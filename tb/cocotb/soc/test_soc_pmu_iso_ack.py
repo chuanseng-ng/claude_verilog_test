@@ -791,11 +791,10 @@ async def _gate_sweep(dut) -> list:
 async def test_cpu_clock_never_ticks_while_pmu_reset_asserted(dut):
     """Asserts: cpu_gated_clk does not tick at an edge of cpu_core_clk that follows a half cycle
     with pmu_cpu_rst_n_cpu_sync low. A CPU power-down and a power-up run at 1:1, 3x and 8x slower
-    CPU clocks and with the CPU faster. The reset term of cpu_gated_clk_en is what holds this at
-    1:1 and with a slower CPU clock; the mutant that removes the term fails here. This view depends
-    on the order of the PMU actions: if the PMU disables the clock earlier, the clock disable term
-    stops the clock first and this test stops telling whether the reset term exists. The forced
-    test below does not depend on the order."""
+    CPU clocks and with the CPU faster. The PMU gates the clock before it asserts the reset, so the
+    clock disable term is the first stop and this test does not tell whether the reset term of
+    cpu_gated_clk_en exists. It guards the sequenced behaviour. The forced test below checks the
+    reset term."""
     rows = await with_timeout(_gate_sweep(dut), 3000, "us")
     bad = [r for r in rows if r["ticks_reset_low"]]
     assert not bad, "cpu_gated_clk ticked while the PMU reset was asserted: " + "; ".join(
@@ -820,13 +819,11 @@ async def test_cpu_clock_gate_control_monitor_sees_ticks_and_reset_window(dut):
             "PMU did not gate the clock before the reset")
 
 
-# The sequenced power-down above stops the clock by the reset term only because the PMU asserts the
-# reset one edge after it disables the clock and the reset crosses without a clock edge. A change of
-# the PMU order (clock disable before the reset by more edges) moves the first stop to the clock
-# disable term, and the sequenced test then no longer tells whether the reset term exists. The
-# forced test below keeps the clock enable of the PMU high and asserts only the PMU reset of the
-# CPU domain, by a deposit into the output flop. The clock disable term cannot stop the clock then,
-# so the reset term is the only guard, whatever order the PMU uses.
+# The sequenced power-down above does not test the reset term: the PMU gates the clock before it
+# asserts the reset, so the clock disable term stops the clock first. The forced test below keeps
+# the clock enable of the PMU high and asserts only the PMU reset of the CPU domain, by a deposit
+# into the output flop. The clock disable term cannot stop the clock then, so the reset term is
+# the only guard, whatever order the PMU uses.
 _FORCED_CACHE: dict = {}
 
 

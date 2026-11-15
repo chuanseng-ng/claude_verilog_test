@@ -122,8 +122,8 @@ MUTANTS = [
      "the registered clamp is a glitch-safety property of the crossing: it adds one cpu_core_clk cycle of "
      "latency and removes a combinational path to a synchroniser D pin. In a zero-delay run the "
      "combinational form orders the handshake the same way (the ack still follows the clamp), so no "
-     "cocotb assertion can tell them apart. Covered structurally by tools/verif/check_registered_outputs.py "
-     "and the CDC constraint on cpu_iso_clamp_q"),
+     "cocotb assertion can tell them apart. Nothing checks it: check_registered_outputs.py reads only "
+     "the outputs of pmu, not cpu_iso_clamp_q in soc_top, so the glitch safety is unverified"),
     ("s07_ack_means_request_seen", "soc_pmu_iso_ack", TOP, "ack synchroniser fed by the synchronised request, not the qualified clamp",
      [(".d_i     (cpu_iso_clamp_q),\n        .q_o     (pmu_cpu_iso_ack)", ".d_i     (pmu_cpu_iso_en_sync),\n        .q_o     (pmu_cpu_iso_ack)")],
      "with the PMU gating the clock before it raises the request, the closed gate is already true when the "

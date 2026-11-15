@@ -6541,7 +6541,7 @@ expected values from tb/models/npu_model.py and compares what the firmware store
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
 
 \begin{information}
-The text below was moved from the source before the change of the PMU order. The PMU now stops the clock before the isolation and accepts only a fresh acknowledge. Some of the orders, invariants and counts below describe the earlier design. The docstring of the test file and \cref{tm:mod:pmu} describe the present tests.
+The text below was moved from the source before the change of the PMU order. The PMU now stops the clock before the isolation and accepts only a fresh acknowledge. Some of the orders, invariants and counts below describe the earlier design. In particular, the text below names \code{pmu\_cpu\_iso\_en\_sync} as the source of the acknowledge and states INV2 as: a closed clock gate implies an active clamp. The acknowledge is now the registered clamp \code{cpu\_iso\_clamp\_q}, and INV2 is now the other direction: the clamp \code{cpu\_iso\_clamp} is active only while the clock gate is closed. The docstring of the test file and \cref{tm:mod:pmu} describe the present tests.
 \end{information}
 
 \begin{relocated}{tb/cocotb/soc/test_soc_pmu_iso_ack.py}
