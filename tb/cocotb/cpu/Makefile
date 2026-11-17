@@ -103,11 +103,24 @@ endif
 # Commercial simulators (SIM=vcs | SIM=xcelium): flag translation + SIM-keyed SIM_BUILD; inert for verilator.
 include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))../common/sim_portability.mk
 
+# Repo root, computed BEFORE the cocotb include: after it, lastword MAKEFILE_LIST is a cocotb makefile.
+PROJ_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../../..)
+
 # Include cocotb makefiles
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
+# cocotb 1.9.2 cannot set an exit code: its check_for_results_file macro only tests that results.xml EXISTS, so a suite with
+# failing tests exits 0. Redefine the macro after the include (make expands recipe lines when the rule runs, so this reaches every
+# target and simulator) to also run tools/verif/check_cocotb_results.py, which fails on any <failure>/<error>, an empty run or an
+# unparsable file. The existence check stays first so a missing file keeps cocotb's own message. Same gate as tb/cocotb/soc/Makefile;
+# `check-exit-propagation` below is the self-test that proves it stays wired.
+define check_for_results_file
+    @test -f $(COCOTB_RESULTS_FILE) || (echo "ERROR: $(COCOTB_RESULTS_FILE) was not written by the simulation!" >&2 && exit 1)
+    @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (cocotb itself cannot set an exit code)" >&2 && exit 1)
+endef
+
 # Convenience targets for different test suites
-.PHONY: smoke basic random ebreak debug all_tests usage info distclean
+.PHONY: smoke basic ebreak debug usage info distclean check-exit-propagation
 .PHONY: smoke_uvm random_uvm random_uvm_smoke random_uvm_waves isa_uvm all_uvm
 .PHONY: stress_uvm stress_uvm_smoke stress_alu stress_jump stress_shift stress_immediate
 .PHONY: directed_random_uvm directed_alu directed_immediate directed_rtype
@@ -120,10 +133,6 @@ smoke:
 basic:
 	@echo "Running basic CPU tests (smoke tests)..."
 	$(MAKE) MODULE=test_smoke
-
-random:
-	@echo "Running random instruction tests (10,000 instructions)..."
-	$(MAKE) MODULE=test_random_instructions
 
 ebreak:
 	@echo "Running EBREAK halt test..."
@@ -327,39 +336,6 @@ all_uvm:
 		exit 1; \
 	fi
 
-all_tests:
-	@echo "========================================="
-	@echo "Running All Test Suites"
-	@echo "========================================="
-	@failed=0; \
-	echo ""; \
-	echo "[1/2] Running smoke tests..."; \
-	if $(MAKE) smoke; then \
-		echo "✓ Smoke tests PASSED"; \
-	else \
-		echo "✗ Smoke tests FAILED"; \
-		failed=$$((failed + 1)); \
-	fi; \
-	echo ""; \
-	echo "[2/2] Running random instruction tests..."; \
-	if $(MAKE) random; then \
-		echo "✓ Random tests PASSED"; \
-	else \
-		echo "✗ Random tests FAILED"; \
-		failed=$$((failed + 1)); \
-	fi; \
-	echo ""; \
-	echo "========================================="; \
-	if [ $$failed -eq 0 ]; then \
-		echo "OVERALL RESULT: ✓ ALL TESTS PASSED"; \
-		echo "========================================="; \
-		exit 0; \
-	else \
-		echo "OVERALL RESULT: ✗ $$failed TEST SUITE(S) FAILED"; \
-		echo "========================================="; \
-		exit 1; \
-	fi
-
 # Usage/help target (renamed from 'help' to avoid conflict with cocotb's help)
 usage info:
 	@echo "RV32I CPU Cocotb Test Makefile"
@@ -405,13 +381,13 @@ usage info:
 	@echo "Legacy targets (DEPRECATED - use pyuvm instead):"
 	@echo "  make smoke        - Run legacy smoke tests"
 	@echo "  make basic        - Run legacy basic CPU tests"
-	@echo "  make random       - Run legacy random tests (10,000 instructions)"
+	@echo "  (the legacy random and all_tests targets are removed: test_random_instructions exists only under legacy/ and cannot be imported from here; use make random_uvm / make all_uvm)"
 	@echo "  (the legacy isa target is removed: legacy/test_isa_compliance.py drives Phase 1 port names; use make isa_uvm)"
 	@echo "  make ebreak       - Run EBREAK halt test"
-	@echo "  make all_tests    - Run all legacy test suites"
 	@echo ""
 	@echo "Utility targets:"
 	@echo "  make clean        - Remove simulation artifacts"
+	@echo "  make check-exit-propagation - Self-test: a deliberately failing cocotb suite must make make exit non-zero"
 	@echo "  make distclean    - Deep clean (remove all generated files)"
 	@echo "  make usage        - Show this usage message"
 	@echo "  make info         - Show this usage message (alias)"
@@ -459,11 +435,26 @@ usage info:
 	@echo "  Legacy cocotb tests (DEPRECATED - in legacy/ directory):"
 	@echo "    legacy/test_smoke                - Basic functionality tests (6 tests)"
 	@echo "    legacy/test_isa_compliance       - ISA compliance tests (not runnable: Phase 1 port names; use test_isa_uvm)"
-	@echo "    legacy/test_random_instructions  - Random instruction tests (10,000 instr)"
+	@echo "    legacy/test_random_instructions  - Random instruction tests (not importable from this Makefile; use test_random_uvm)"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Verilator or Icarus Verilog installed"
 	@echo "  - cocotb Python package installed"
+
+# Self-test: test_exit_propagation_neg always fails, so the sub-make MUST exit non-zero. Exit 0 from it means the
+# check_for_results_file redefinition above has stopped working. NOT part of any rollup: it fails a suite on purpose.
+check-exit-propagation:
+	@echo "=== check-exit-propagation: a deliberately failing suite MUST make make exit non-zero ==="; \
+	log=check_exit_propagation.log; \
+	if $(MAKE) MODULE=test_exit_propagation_neg sim >$$log 2>&1; then \
+		echo "check-exit-propagation: FAIL -- a failing cocotb suite exited 0 (results gate regressed)" >&2; \
+		exit 1; \
+	fi; \
+	if ! grep -q "FAIL=1" $$log || ! grep -q "ERROR: cocotb recorded failures" $$log; then \
+		echo "check-exit-propagation: FAIL -- the sub-make failed, but not through the results gate (see $$log)" >&2; \
+		exit 1; \
+	fi; \
+	echo "check-exit-propagation: PASS -- the failing suite exited non-zero through the results gate"
 
 # Custom clean target to avoid conflicts with cocotb's clean
 # Also sweep $(SIM_BUILD_ROOT), so a relocated build dir is reclaimed and not orphaned on the scratch FS.
@@ -473,5 +464,5 @@ clean-sim-builds:
 
 distclean: clean clean-sim-builds
 	@rm -rf __pycache__ 2>/dev/null || true
-	@rm -f *.vcd *.fst 2>/dev/null || true
+	@rm -f *.vcd *.fst check_exit_propagation.log 2>/dev/null || true
 	@echo "Deep clean complete"

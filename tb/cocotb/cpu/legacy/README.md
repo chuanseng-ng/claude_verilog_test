@@ -56,8 +56,7 @@ make MODULE=test_smoke smoke
 # Run ISA compliance tests (deprecated)
 make MODULE=test_isa_compliance isa
 
-# Run random tests (deprecated)
-make MODULE=test_random_instructions random
+# The legacy random tests have no runnable target (the CPU Makefile cannot import a module that lives only under legacy/); use make random_uvm in tb/cocotb/cpu
 ```
 
 **WARNING**: These tests will not be maintained and may break with future RTL changes.

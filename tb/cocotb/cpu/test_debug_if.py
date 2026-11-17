@@ -69,9 +69,6 @@ async def reset_dut(dut):
     """Apply reset to DUT using correct _i/_o signal names.
 
     The RTL top-level uses the _i/_o port suffix convention.
-    NOTE: Do NOT use the reset_dut from test_ebreak.py - that file uses
-    the old signal names without _i/_o suffixes and is incorrect.
-
     Per Doc: ds:mm:memory-map: Clear all AXI/APB signals BEFORE asserting reset.
     """
     # Initialize AXI slave inputs to safe idle values BEFORE reset
