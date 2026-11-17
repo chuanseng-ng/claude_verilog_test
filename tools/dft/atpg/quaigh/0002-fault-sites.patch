@@ -1,0 +1,370 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -12,7 +12,7 @@
+ [package]
+ edition = "2021"
+ name = "quaigh"
+-version = "0.0.6+cvt1"
++version = "0.0.6+cvt2"
+ authors = ["Gabriel Gouvine <gabriel.gouvine_cargo@m4x.org>"]
+ description = "Logic optimization library"
+ homepage = "https://github.com/Coloquinte/quaigh"
+--- a/src/atpg.rs
++++ b/src/atpg.rs
+@@ -10,6 +10,45 @@
+ use crate::sim::{detects_faults, detects_faults_multi, Fault};
+ use crate::{Gate, Network, Signal};
+ 
++/// Build the fault list of a fault-site file: one net name per line, each the output of a buffer
++/// (a cell pin), giving its output stuck-at-0 and stuck-at-1 faults.  No fault collapsing.
++/// Panics if a name is unknown, inverted, not a gate, or not a buffer: a silently shorter list would
++/// inflate coverage.
++pub fn fault_sites_from_names(
++    aig: &Network,
++    names: &std::collections::HashMap<String, Signal>,
++    sites: &str,
++) -> Vec<Fault> {
++    let mut ret = Vec::new();
++    let mut seen = std::collections::HashSet::new();
++    for line in sites.lines() {
++        let n = line.trim();
++        if n.is_empty() {
++            continue;
++        }
++        let s = *names
++            .get(n)
++            .unwrap_or_else(|| panic!("fault site {} is not a net of the network", n));
++        assert!(
++            s.is_var() && !s.is_inverted(),
++            "fault site {} is not a plain gate output",
++            n
++        );
++        let gate = s.var() as usize;
++        assert!(
++            matches!(aig.gate(gate), Gate::Buf(_)),
++            "fault site {} is not a buffer: {:?}",
++            n,
++            aig.gate(gate)
++        );
++        assert!(seen.insert(gate), "fault site {} listed twice", n);
++        for value in [false, true] {
++            ret.push(Fault::OutputStuckAtFault { gate, value });
++        }
++    }
++    ret
++}
++
+ /// Expose flip_flops as inputs for ATPG
+ ///
+ /// Flip-flop outputs are exposed are primary inputs. Flip-flop inputs, including
+@@ -124,10 +163,31 @@
+     /// deterministic patterns are graded against the few still-undetected faults only)
+     pattern_detections: Vec<Vec<u32>>,
+     detection: Vec<bool>,
++    /// Faults whose SAT miter is UNSAT (proven untestable)
++    unobservable: Vec<bool>,
+     rng: SmallRng,
+ }
+ 
+ impl<'a> TestPatternGenerator<'a> {
++    /// Write one line per fault: index and D (detected), U (proven untestable) or R (unresolved);
++    /// `graded_only` (report mode, no SAT) writes D or N (not detected)
++    pub fn write_fault_report(&self, path: &std::path::Path, graded_only: bool) {
++        use std::io::Write;
++        let mut w = std::io::BufWriter::new(std::fs::File::create(path).unwrap());
++        for i in 0..self.nb_faults() {
++            let s = if self.detection[i] {
++                'D'
++            } else if graded_only {
++                'N'
++            } else if self.unobservable[i] {
++                'U'
++            } else {
++                'R'
++            };
++            writeln!(w, "{} {}", i, s).unwrap();
++        }
++    }
++
+     pub fn nb_faults(&self) -> usize {
+         self.faults.len()
+     }
+@@ -151,6 +211,7 @@
+             patterns: Vec::new(),
+             pattern_detections: Vec::new(),
+             detection: vec![false; nb_faults],
++            unobservable: vec![false; nb_faults],
+             rng: SmallRng::seed_from_u64(seed),
+         }
+     }
+@@ -373,6 +434,7 @@
+                 self.add_random_patterns_from(pattern, false);
+             } else {
+                 unobservable += 1;
++                self.unobservable[i] = true;
+             }
+             progress.set_postfix(format!(
+                 "patterns={} unobservable={}",
+@@ -405,9 +467,22 @@
+     seed: u64,
+     with_redundant_faults: bool,
+ ) -> Vec<Vec<bool>> {
++    generate_comb_test_patterns_for(aig, seed, with_redundant_faults, None, None)
++}
++
++/// Same as generate_comb_test_patterns; `sites` replaces the fault list (no collapsing)
++pub fn generate_comb_test_patterns_for(
++    aig: &Network,
++    seed: u64,
++    with_redundant_faults: bool,
++    sites: Option<Vec<Fault>>,
++    fault_report: Option<&std::path::Path>,
++) -> Vec<Vec<bool>> {
+     assert!(aig.is_comb());
+-    let faults = Fault::all(aig);
+-    let unique_faults = Fault::all_unique(aig);
++    let (faults, unique_faults) = match sites {
++        Some(f) => (f.clone(), f),
++        None => (Fault::all(aig), Fault::all_unique(aig)),
++    };
+ 
+     println!(
+         "Analyzing network with {} inputs, {} outputs, {} gates, {} possible faults, {} unique faults",
+@@ -431,6 +506,9 @@
+     gen.check();
+     gen.compress_patterns();
+     gen.check();
++    if let Some(p) = fault_report {
++        gen.write_fault_report(p, false);
++    }
+     println!(
+         "Kept {} patterns, detecting {}/{} faults ({:.2}% coverage)",
+         gen.nb_patterns(),
+@@ -449,9 +527,22 @@
+     patterns: Vec<Vec<bool>>,
+     with_redundant_faults: bool,
+ ) {
++    report_comb_test_patterns_for(aig, patterns, with_redundant_faults, None, None)
++}
++
++/// Same as report_comb_test_patterns; `sites` replaces the fault list (no collapsing)
++pub fn report_comb_test_patterns_for(
++    aig: &Network,
++    patterns: Vec<Vec<bool>>,
++    with_redundant_faults: bool,
++    sites: Option<Vec<Fault>>,
++    fault_report: Option<&std::path::Path>,
++) {
+     assert!(aig.is_comb());
+-    let faults = Fault::all(aig);
+-    let unique_faults = Fault::all_unique(aig);
++    let (faults, unique_faults) = match sites {
++        Some(f) => (f.clone(), f),
++        None => (Fault::all(aig), Fault::all_unique(aig)),
++    };
+ 
+     println!(
+         "Analyzing network with {} inputs, {} outputs, {} gates, {} possible faults, {} unique faults",
+@@ -483,4 +574,7 @@
+         gen.nb_faults(),
+         100.0 * (gen.nb_detected() as f64) / (gen.nb_faults() as f64)
+     );
++    if let Some(p) = fault_report {
++        gen.write_fault_report(p, true);
++    }
+ }
+--- a/src/cmd.rs
++++ b/src/cmd.rs
+@@ -1,14 +1,18 @@
+ //! Command line interface
+ 
+ use crate::atpg::{
+-    expose_dff, generate_comb_test_patterns, generate_random_seq_patterns,
+-    report_comb_test_patterns,
++    expose_dff, fault_sites_from_names, generate_comb_test_patterns_for,
++    generate_random_seq_patterns, report_comb_test_patterns_for,
+ };
+ use crate::equiv::check_equivalence_bounded;
+-use crate::io::{read_network_file, read_pattern_file, write_network_file, write_pattern_file};
++use crate::io::{
++    read_network_file, read_network_file_named, read_pattern_file, write_network_file,
++    write_pattern_file,
++};
+ use crate::optim;
+ use crate::sim::simulate;
+ use clap::{Args, Parser, Subcommand};
++use std::fs::read_to_string;
+ use std::path::PathBuf;
+ 
+ /// Command line arguments
+@@ -265,18 +269,44 @@
+     /// Do not remove redundant faults beforehand
+     #[arg(long, default_value_t = false)]
+     with_redundant_faults: bool,
++
++    /// Restrict the fault list to the output stuck-at faults of the buffers named in this file
++    /// (one .blif net name per line; bead j41m.20 cell-pin faults)
++    #[arg(long)]
++    fault_sites: Option<PathBuf>,
++
++    /// Write the status of every fault (index D|U|R) to this file
++    #[arg(long)]
++    fault_report: Option<PathBuf>,
+ }
+ 
+ impl AtpgArgs {
+     pub fn run(&self) {
+-        let mut aig = read_network_file(&self.network);
++        let (mut aig, names) = match &self.fault_sites {
++            Some(_) => {
++                let (a, n) = read_network_file_named(&self.network);
++                (a, Some(n))
++            }
++            None => (read_network_file(&self.network), None),
++        };
+ 
+         if self.num_cycles.is_none() && self.num_random.is_none() {
+             if !aig.is_comb() {
+                 println!("Exposing flip-flops for a sequential network");
+                 aig = expose_dff(&aig);
+             }
+-            let patterns = generate_comb_test_patterns(&aig, self.seed, self.with_redundant_faults);
++            let sites = self.fault_sites.as_ref().map(|p| {
++                let f = fault_sites_from_names(&aig, names.as_ref().unwrap(), &read_to_string(p).unwrap());
++                println!("Fault sites: {} nets, {} faults", f.len() / 2, f.len());
++                f
++            });
++            let patterns = generate_comb_test_patterns_for(
++                &aig,
++                self.seed,
++                self.with_redundant_faults,
++                sites,
++                self.fault_report.as_deref(),
++            );
+             let seq_patterns = patterns.iter().map(|p| vec![p.clone()]).collect();
+             write_pattern_file(&self.output, &seq_patterns);
+         } else {
+@@ -302,18 +332,44 @@
+     /// Do not remove redundant faults beforehand
+     #[arg(long, default_value_t = false)]
+     with_redundant_faults: bool,
++
++    /// Restrict the fault list to the output stuck-at faults of the buffers named in this file
++    /// (one .blif net name per line; bead j41m.20 cell-pin faults)
++    #[arg(long)]
++    fault_sites: Option<PathBuf>,
++
++    /// Write the status of every fault (index D|N) to this file
++    #[arg(long)]
++    fault_report: Option<PathBuf>,
+ }
+ 
+ impl AtpgReportArgs {
+     pub fn run(&self) {
+-        let mut aig = read_network_file(&self.network);
++        let (mut aig, names) = match &self.fault_sites {
++            Some(_) => {
++                let (a, n) = read_network_file_named(&self.network);
++                (a, Some(n))
++            }
++            None => (read_network_file(&self.network), None),
++        };
+ 
+         if !aig.is_comb() {
+             println!("Exposing flip-flops for a sequential network");
+             aig = expose_dff(&aig);
+         }
++        let sites = self.fault_sites.as_ref().map(|p| {
++            let f = fault_sites_from_names(&aig, names.as_ref().unwrap(), &read_to_string(p).unwrap());
++            println!("Fault sites: {} nets, {} faults", f.len() / 2, f.len());
++            f
++        });
+         let seq_patterns = read_pattern_file(&self.patterns);
+         let patterns = seq_patterns.iter().map(|p| p[0].clone()).collect();
+-        report_comb_test_patterns(&aig, patterns, self.with_redundant_faults);
++        report_comb_test_patterns_for(
++            &aig,
++            patterns,
++            self.with_redundant_faults,
++            sites,
++            self.fault_report.as_deref(),
++        );
+     }
+ }
+--- a/src/io/blif.rs
++++ b/src/io/blif.rs
+@@ -85,6 +85,14 @@
+     statements: &Vec<Statement>,
+     name_to_sig: &HashMap<String, Signal>,
+ ) -> Result<Network, String> {
++    build_network_translated(statements, name_to_sig).map(|(n, _)| n)
++}
++
++/// Same as build_network, also returning the topological-sort translation (old signal index -> new signal)
++fn build_network_translated(
++    statements: &Vec<Statement>,
++    name_to_sig: &HashMap<String, Signal>,
++) -> Result<(Network, Box<[Signal]>), String> {
+     let mut ret: Network = Network::new();
+ 
+     let mut names_to_process = Vec::new();
+@@ -208,8 +216,8 @@
+             }
+         }
+     }
+-    ret.topo_sort();
+-    Ok(ret)
++    let translation = ret.topo_sort();
++    Ok((ret, translation))
+ }
+ 
+ fn read_single_statement(tokens: Vec<&str>) -> Result<Statement, String> {
+@@ -299,6 +307,23 @@
+     build_network(&statements, &name_to_sig)
+ }
+ 
++/// Read a network in .blif format, also returning the signal of every named net in the final (sorted) network
++pub fn read_blif_named<R: std::io::Read>(
++    r: R,
++) -> Result<(Network, HashMap<String, Signal>), String> {
++    let statements = read_statements(r)?;
++    let name_to_sig = build_name_to_sig(&statements)?;
++    let (aig, t) = build_network_translated(&statements, &name_to_sig)?;
++    let names = name_to_sig
++        .into_iter()
++        .map(|(k, s)| {
++            let s2 = if s.is_var() { s.remap_order(&t) } else { s };
++            (k, s2)
++        })
++        .collect();
++    Ok((aig, names))
++}
++
+ pub fn write_blif_cube<W: Write>(w: &mut W, mask: usize, num_vars: usize, val: bool) {
+     for i in 0..num_vars {
+         let val_i = (mask >> i) & 1 != 0;
+--- a/src/io.rs
++++ b/src/io.rs
+@@ -9,11 +9,21 @@
+ use std::path::PathBuf;
+ 
+ pub use bench::{read_bench, write_bench};
+-pub use blif::{read_blif, write_blif};
++pub use blif::{read_blif, read_blif_named, write_blif};
+ pub use patterns::{read_patterns, write_patterns};
+ 
+ use crate::Network;
+ 
++/// Read a .blif logic network together with the signal of every named net (fault-site selection)
++pub fn read_network_file_named(
++    path: &PathBuf,
++) -> (Network, std::collections::HashMap<String, crate::Signal>) {
++    match path.extension() {
++        Some(s) if s == "blif" => read_blif_named(File::open(path).unwrap()).unwrap(),
++        _ => panic!("--fault-sites needs a .blif network"),
++    }
++}
++
+ /// Read a logic network from a file
+ ///
+ /// .bench and .blif formats are supported, with limitations to the .blif format support

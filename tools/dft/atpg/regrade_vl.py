@@ -13,6 +13,10 @@ one, with its own simulator's verdict).  Method:
   4. For the faults the patterns do not detect, Yosys' own SAT solver (`miter -equiv` + `sat -prove`) decides whether the fault is untestable
      (proof of equivalence good vs faulted) or a coverage hole.  A different solver from Quaigh's Kissat.
 The result is compared fault by fault with the verdict in the fault list.
+
+Preselected mode (bead j41m.20, used by pin_inject.py): the BLIF already carries the fault selects as primary inputs `fsel_<k>`
+(fault k of the list), inserted upstream in the Verilog netlist rather than here; step 1 is skipped, the selects are kept out of
+the pattern vector, and the SAT step ties the selects to constants instead of rewriting a net.
 """
 
 import argparse
@@ -112,12 +116,47 @@ int main(int argc, char** argv) {
 """
 
 
+def tie_inputs(ctext: str, values: Dict[str, int]) -> str:
+    """Remove the given inputs from `.inputs` and drive each with a constant (the preselected fault selects)."""
+    lines = ctext.replace("\\\n", " ").split("\n")
+    for i, ln in enumerate(lines):
+        if ln.startswith(".inputs"):
+            lines[i] = " ".join(n for n in ln.split() if n not in values)
+            break
+    end = [i for i, ln in enumerate(lines) if ln.startswith(".end")]
+    at = end[0] if end else len(lines)
+    lines[at:at] = [x for n, v in values.items() for x in ([f".names {n}", "1"] if v else [f".names {n}"])]
+    return "\n".join(lines)
+
+
+def dealias_dual_ports(text: str) -> str:
+    """Give every net listed in BOTH .inputs and .outputs (a flop Q feeding the next flop's D directly, after to_comb_blif) a
+    separate output net through a buffer.  Bead j41m.20: with such dual ports, Yosys `miter -equiv` + `sat -prove` reported
+    good == faulted for a fault Yosys' own `sat -set` evaluation of the two files shows to be detected (timer, and4 pin B
+    stuck-at-1): the proof was false.  After this rewrite the same miter finds the counterexample."""
+    t = text.replace("\\\n", " ")
+    mi = re.search(r"^\.inputs (.*)$", t, re.M)
+    mo = re.search(r"^\.outputs (.*)$", t, re.M)
+    if not mi or not mo:
+        return t
+    ins = set(mi.group(1).split())
+    outs = mo.group(1).split()
+    dual = [o for o in dict.fromkeys(outs) if o in ins]
+    if not dual:
+        return t
+    t = t[:mo.start()] + ".outputs " + " ".join(o + "__po" if o in ins else o for o in outs) + t[mo.end():]
+    bufs = "\n".join(f".names {o} {o}__po\n1 1" for o in dual)
+    end = re.search(r"^\.end\b", t, re.M)
+    return (t[:end.start()] + bufs + "\n" + t[end.start():]) if end else t + "\n" + bufs + "\n"
+
+
 def yosys_sat_equiv(yosys: str, good: Path, faulted: Path, tmp: Path) -> bool:
-    """True when Yosys proves good == faulted for all inputs (the fault is untestable)."""
+    """True when Yosys proves good == faulted for all inputs (the fault is untestable).  Dual input/output nets are
+    de-aliased first (dealias_dual_ports): without that the proof can be false."""
     g = tmp / "gold.blif"
     f = tmp / "gate.blif"
-    g.write_text(re.sub(r"^\.model .*$", ".model gold", good.read_text(), flags=re.M))
-    f.write_text(re.sub(r"^\.model .*$", ".model gate", faulted.read_text(), flags=re.M))
+    g.write_text(re.sub(r"^\.model .*$", ".model gold", dealias_dual_ports(good.read_text()), flags=re.M))
+    f.write_text(re.sub(r"^\.model .*$", ".model gate", dealias_dual_ports(faulted.read_text()), flags=re.M))
     ys = tmp / "eq.ys"
     ys.write_text(f"read_blif {g}\nread_blif {f}\nmiter -equiv -flatten -make_outputs gold gate miter\n"
                   "hierarchy -top miter\nflatten\nopt\nopt\nopt\nsat -verify -prove trigger 0 miter\n")
@@ -126,11 +165,19 @@ def yosys_sat_equiv(yosys: str, good: Path, faulted: Path, tmp: Path) -> bool:
 
 
 def run(blif: Path, patterns: Path, faults: List[dict], yosys: str, vl_shell: str, tmp: Path,
-        sat_undetected: int = 60) -> dict:
+        sat_undetected: int = 60, preselected: bool = False) -> dict:
     ctext = to_comb_blif(Path(blif).read_text())
     ins, outs, _ = parse_blif(ctext)
-    fl = [(f["net"], int(f["value"])) for f in faults]
-    mtext, kept = multi_fault_blif(ctext, fl)
+    fl = [(f.get("net", ""), int(f["value"])) for f in faults]
+    if preselected:
+        sels = [n for n in ins if n.startswith("fsel_")]
+        idx = sorted(int(n[5:]) for n in sels)
+        if idx != list(range(len(faults))):
+            raise SystemExit(f"preselected BLIF has selects {idx[:5]}..., expected fsel_0..fsel_{len(faults) - 1}")
+        ins = [n for n in ins if not n.startswith("fsel_")]
+        mtext, kept = ctext, list(range(len(faults)))
+    else:
+        mtext, kept = multi_fault_blif(ctext, fl)
     ins2, outs2, _ = parse_blif(mtext)
     model = re.search(r"^\.model (\S+)", mtext, re.M).group(1)
     # an exposed flop Q that is also a primary output is both an input and an output of the BLIF: keep it as an input in the
@@ -185,21 +232,26 @@ def run(blif: Path, patterns: Path, faults: List[dict], yosys: str, vl_shell: st
         det = verdict[k] >= 0
         rep["detected" if det else "undetected"] += 1
         if "own_sim_detects" in f and f["own_sim_detects"] != det:
-            rep["disagreements"].append({"net": f["net"], "value": f["value"], "own_sim": f["own_sim_detects"], "verilator": det})
+            rep["disagreements"].append({"net": f.get("net"), "value": f["value"], "own_sim": f["own_sim_detects"], "verilator": det})
         if not det:
             if n_sat >= sat_undetected:
                 rep["undetected_proof_skipped"] += 1
                 continue
             n_sat += 1
             fb = tmp / "faulted.blif"
-            fb.write_text(fault_blif(ctext, f["net"], int(f["value"])))
             gb = tmp / "good.blif"
-            gb.write_text(ctext)
+            if preselected:
+                zero = {f"fsel_{j}": 0 for j in range(len(faults))}
+                gb.write_text(tie_inputs(ctext, zero))
+                fb.write_text(tie_inputs(ctext, {**zero, f"fsel_{k}": 1}))
+            else:
+                fb.write_text(fault_blif(ctext, f["net"], int(f["value"])))
+                gb.write_text(ctext)
             if yosys_sat_equiv(yosys, gb, fb, tmp):
                 rep["undetected_proven_untestable_yosys_sat"] += 1
             else:
                 rep["undetected_testable_hole"] += 1
-                rep.setdefault("holes", []).append({"net": f["net"], "value": f["value"]})
+                rep.setdefault("holes", []).append({"net": f.get("net"), "value": f["value"]})
     # negative control: one all-zero pattern must detect clearly fewer of the same faults than the Quaigh pattern set
     rep["control_all_zero"] = {"detected_by_quaigh_patterns": sum(v >= 0 for v in first),
                                "detected_by_all_zero_pattern": sum(v >= 0 for v in zero_first)}

@@ -78,3 +78,31 @@ def test_verilator_agrees_and_injected_mismatch_is_caught(tmp_path):
     work2.mkdir()
     rep2 = rv.run(blif, pats, faults, rv.DEFAULT_YOSYS, rv.DEFAULT_VL_SHELL, work2)
     assert not rep2["ok"] and len(rep2["disagreements"]) == 1
+
+
+# Yosys `miter -equiv` + `sat -prove` called y = a & q EQUIVALENT to y = 0 when q is listed in both .inputs and
+# .outputs (a flop Q feeding the next flop's D after to_comb_blif).  Measured with Yosys 0.46; the same pair without the dual
+# port fails as it should.  dealias_dual_ports gives the output its own net.
+DUAL_GOOD = ".model g\n.inputs a q\n.outputs q y\n.names a q y\n11 1\n.end\n"
+DUAL_FAULT = ".model f\n.inputs a q\n.outputs q y\n.names y\n.end\n"
+
+
+def test_dealias_dual_ports_gives_each_dual_output_its_own_net():
+    t = rv.dealias_dual_ports(DUAL_GOOD)
+    assert ".outputs q__po y" in t
+    assert ".names q q__po\n1 1\n.end" in t
+    assert (
+        rv.dealias_dual_ports(".model m\n.inputs a\n.outputs y\n.names a y\n1 1\n.end\n").count(
+            "__po"
+        )
+        == 0
+    )
+
+
+@pytest.mark.skipif(not Path(rv.DEFAULT_YOSYS).exists(), reason="needs Yosys")
+def test_sat_does_not_prove_a_detectable_fault_through_a_dual_port(tmp_path):
+    good, bad = tmp_path / "good.blif", tmp_path / "bad.blif"
+    good.write_text(DUAL_GOOD)
+    bad.write_text(DUAL_FAULT)
+    assert rv.yosys_sat_equiv(rv.DEFAULT_YOSYS, good, bad, tmp_path) is False  # a=q=1 detects it
+    assert rv.yosys_sat_equiv(rv.DEFAULT_YOSYS, good, good, tmp_path) is True

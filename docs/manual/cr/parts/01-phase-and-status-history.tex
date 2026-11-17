@@ -8289,8 +8289,16 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   generic-gate collapsed universe, \code{j41m.18}). \textbf{99 \% / 98
   \% is adopted as the target, provisionally} (\code{j41m.23},
   2026-10-30): the fabric and the CPU macro are separate rungs, and
-  sign-off waits on the cell-pin re-grade \code{j41m.20}
-  (\code{DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) 2.1, 18.8). Open: Q-TRST (\code{trst_ni}
+  sign-off waited on the cell-pin re-grade \code{j41m.20}
+  (\code{DFT_ARCHITECTURE.md} (\cref{tm:ch:dft-architecture}) 2.1, 18.8).
+  \textbf{Cell-pin re-grade done 2026-11-17} (\code{j41m.20},
+  \cref{tm:ch:dft-architecture:1810-cell-pin-re-grade}): 944,122
+  cell-pin faults, test coverage 99.96 \% (PASS), fault coverage
+  88.94 \% raw / 94.93 \% with the SCD/SCE scan-path pins credited to
+  the chain test; 104,081 faults proven untestable. Owner decision: the
+  sign-off gate is test coverage \textgreater= 99.0 \% only, fault
+  coverage is reported with no threshold; audit of the untestable faults
+  \code{j41m.25}. Open: Q-TRST (\code{trst_ni}
   power-up tie-off at the chip top), Q-STUB (1-bit SCAN stub until Stage
   2 chains exist), Stage 2 scan insertion and scan-mode SDC
   (\code{j41m.8}, \code{j41m.5}), the CPU-macro scan boundary and
