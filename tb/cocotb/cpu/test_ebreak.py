@@ -33,24 +33,24 @@ from tb.cpu_uvm.agents.axi_agent.axi_driver import AXIMemoryDriver
 
 async def reset_dut(dut):
     """Apply reset to DUT."""
-    dut.rst_n.value = 0
-    dut.axi_arready.value = 0
-    dut.axi_rvalid.value = 0
-    dut.axi_rdata.value = 0
-    dut.axi_rresp.value = 0
-    dut.axi_awready.value = 0
-    dut.axi_wready.value = 0
-    dut.axi_bvalid.value = 0
-    dut.axi_bresp.value = 0
-    dut.apb_psel.value = 0
-    dut.apb_penable.value = 0
-    dut.apb_pwrite.value = 0
-    dut.apb_paddr.value = 0
-    dut.apb_pwdata.value = 0
+    dut.rst_n_i.value = 0
+    dut.axi_arready_i.value = 0
+    dut.axi_rvalid_i.value = 0
+    dut.axi_rdata_i.value = 0
+    dut.axi_rresp_i.value = 0
+    dut.axi_awready_i.value = 0
+    dut.axi_wready_i.value = 0
+    dut.axi_bvalid_i.value = 0
+    dut.axi_bresp_i.value = 0
+    dut.apb_psel_i.value = 0
+    dut.apb_penable_i.value = 0
+    dut.apb_pwrite_i.value = 0
+    dut.apb_paddr_i.value = 0
+    dut.apb_pwdata_i.value = 0
 
-    await ClockCycles(dut.clk, 5)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 2)
+    await ClockCycles(dut.clk_i, 5)
+    dut.rst_n_i.value = 1
+    await ClockCycles(dut.clk_i, 2)
 
 
 @cocotb.test()
@@ -62,7 +62,7 @@ async def test_ebreak_instruction(dut):
     """
 
     # Start clock
-    clock = Clock(dut.clk, 10, units="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Reset DUT
@@ -82,7 +82,7 @@ async def test_ebreak_instruction(dut):
     cocotb.start_soon(axi_driver.axi_write_handler())
 
     # Give handlers time to start
-    await ClockCycles(dut.clk, 2)
+    await ClockCycles(dut.clk_i, 2)
 
     # Load EBREAK instruction at address 0x0000
     # EBREAK encoding: 0x00100073
@@ -116,7 +116,7 @@ async def test_ebreak_instruction(dut):
     dut._log.info("Waiting for CPU to halt from EBREAK...")
     halted = False
     for cycle in range(100):
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk_i)
 
         # Check halted status
         status = await apb_driver.apb_read(apb_driver.DBG_STATUS)
