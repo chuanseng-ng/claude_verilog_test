@@ -114,6 +114,7 @@ module tb_axil_apb_fabric #(
         .SLV_LIMIT (RING_LIMIT)
     ) u_ring (
         .clk(clk), .rst_n(rst_n),
+        .slv_off_i('0),
         .m_axil_awaddr(m_axil_awaddr), .m_axil_awprot(m_axil_awprot),
         .m_axil_awvalid(m_axil_awvalid), .m_axil_awready(m_axil_awready),
         .m_axil_wdata(m_axil_wdata), .m_axil_wstrb(m_axil_wstrb),
