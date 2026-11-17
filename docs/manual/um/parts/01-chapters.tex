@@ -242,8 +242,11 @@ make -C tb/cocotb/soc SIM=vcs gpio                           # or SIM=xcelium; s
 python3 tools/eda/run_cocotb_targets.py --sim vcs --jobs 3 $(python3 tools/eda/regress_specs.py soc)
 \end{lstlisting}
 
-With cocotb 1.x, \code{make} exits 0 even when tests fail.
-Judge the result from \code{results.xml}; the driver does this.
+cocotb 1.x does not set an exit code when a test fails. The SoC and CPU
+Makefiles therefore check \code{results.xml} after each run and exit
+non-zero when it records a failure or is missing. Other cocotb
+Makefiles do not have this check: judge their result from
+\code{results.xml}; the driver does this.
 The full setup, the pass floors, the portability rules and the troubleshooting are in
 \cref{um:flow:proprietary-sim}.
 For VCS coverage, see \cref{tm:flow:commercial-sim-coverage}.
@@ -5717,8 +5720,10 @@ make -C tb/cocotb/soc SIM=vcs uart TESTCASE=test_tx_transfer
 \end{lstlisting}
 
 \begin{quote}
-\warn{} \textbf{\code{make} exits 0 even when tests fail} (cocotb 1.x).
-Read the verdict from the
+\warn{} \textbf{cocotb 1.x does not set an exit code when a test
+fails.} The SoC and CPU Makefiles check \code{results.xml} and exit
+non-zero on a failure. For any other cocotb Makefile, read the verdict
+from the
 \texttt{TESTS=\allowbreak{}\ PASS=\allowbreak{}\ FAIL=\allowbreak{}}
 summary line or from \code{results.xml}, never from the exit code.
 \end{quote}
