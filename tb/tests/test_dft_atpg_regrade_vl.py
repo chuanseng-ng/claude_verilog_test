@@ -80,7 +80,7 @@ def test_verilator_agrees_and_injected_mismatch_is_caught(tmp_path):
     assert not rep2["ok"] and len(rep2["disagreements"]) == 1
 
 
-# Bead j41m.20: Yosys `miter -equiv` + `sat -prove` called y = a & q EQUIVALENT to y = 0 when q is listed in both .inputs and
+# Yosys `miter -equiv` + `sat -prove` called y = a & q EQUIVALENT to y = 0 when q is listed in both .inputs and
 # .outputs (a flop Q feeding the next flop's D after to_comb_blif).  Measured with Yosys 0.46; the same pair without the dual
 # port fails as it should.  dealias_dual_ports gives the output its own net.
 DUAL_GOOD = ".model g\n.inputs a q\n.outputs q y\n.names a q y\n11 1\n.end\n"

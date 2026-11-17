@@ -40,6 +40,11 @@ of every pin buffer).  Quaigh `0.0.6+cvt2` (`quaigh/0002-fault-sites.patch`, on 
 report gives `k D|U|R|N` per fault).  Without the flags `+cvt2` is byte-identical to `+cvt1` on timer/npu/crypto/dma.  Build:
 `PW=<dir> tools/dft/build_quaigh.sh patched` (default `PW` /nobackup/claude_sim_build/j41m20).  The cell-pin cut is checked against
 the generic cut by simulation (same outputs on every pattern) and by a formal positional miter (timer).
+Fabric result (B3, 944,122 faults): test coverage 99.96 %, fault coverage 88.94 % raw / 94.93 % with SCD/SCE credited, 37 h 57 min,
+6.0 GiB peak; the sign-off gate is test coverage only (TM book 18.10 and 2.1).  `cellpin_report.py <cut_dir> status.txt --label L
+--out report.json --md` gives the numbers.  A run of more than a few hours must not use the `--scope` of `run_capped.sh` from an
+interactive session (the scope ends with the session); start it as a user service:
+`systemd-run --user --unit=<name> --collect -p WorkingDirectory=$PWD --setenv=MEM_MAX=12G --setenv=WALL_MAX=72h bash tools/dft/atpg/run_capped.sh <out> -- <cmd>`.
 
 **Yosys SAT trap (fixed in `regrade_vl.yosys_sat_equiv`, j41m.20).** A net in both `.inputs` and `.outputs` of the comb view (a flop
 Q feeding the next flop's D) makes Yosys `miter -equiv` + `sat -prove` report EQUIVALENT for a detectable fault (`y = a & q` vs

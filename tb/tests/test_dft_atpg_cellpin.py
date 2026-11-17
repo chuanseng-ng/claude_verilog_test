@@ -1,5 +1,5 @@
 # ruff: noqa: E501
-"""Tests for the cell-pin fault universe of tools/dft/atpg/mk_cut.py --cellpin (bead j41m.20).
+"""Tests for the cell-pin fault universe of tools/dft/atpg/mk_cut.py --cellpin.
 
 The cell-pin cut wraps every Liberty cell model so each port passes through a kept `$_BUF_`, lowers Yosys' primitive gates
 to `.names` covers itself (abc is not run) and lists the output net of every surviving pin buffer in cut_sites.txt.  A Quaigh

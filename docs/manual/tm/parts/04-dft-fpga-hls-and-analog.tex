@@ -481,6 +481,24 @@ because the flow has no X, is restated with X-aware handling or
 shadowing (\code{j41m.21}). The per-block fallback of 2.4 / 18.8 item 2
 is \textbf{dropped}.
 
+\textbf{Gate restated 2026-11-17 (owner decision, bead \bead{j41m.20}),
+supersedes the fault-coverage half of the conditions above.} The
+cell-pin re-grade (18.10) gives fabric test coverage \textbf{99.96 \%}
+(99.97 \% with the scan-path pins credited) and fault coverage
+\textbf{88.94 \%} raw / \textbf{94.93 \%} credited. 104,081 of the
+944,122 cell-pin faults (11.0 \%) are proven untestable, so more
+patterns cannot raise the fault coverage. The owner decision: the
+stuck-at sign-off gate is \textbf{test coverage \textgreater= 99.0 \%}
+only. Fault coverage stays a reported number with no threshold. The
+SCD/SCE scan-path pin faults are credited to the chain-integrity
+(flush) test, so the credited numbers are the headline numbers; that
+credit holds only when the chain test exists as a real pattern set
+(\code{j41m.19}). Condition (1) is \textbf{met}. Conditions (2), the
+CPU-macro rung, now gated on test coverage only, and (3), the X-aware
+restatement, stay open. A sample audit of the proven-untestable logic-pin
+faults (\code{j41m.25}) checks that they are real redundancy and not a
+cut or tool artifact.
+
 Why 99.0 \%: the DFT orchestrator\textquotesingle s own sign-off
 criterion in this repo is
 \texttt{saf\_\allowbreak{}coverage\_\allowbreak{}pct\ >=\allowbreak{}\ 99.\allowbreak{}0}
@@ -1890,7 +1908,10 @@ commercial or patched engine (18.8, not adopted).} \textbf{Update
 2026-10-29/\allowbreak{}30 (beads \code{j41m.18}, \code{j41m.23}): the
 patched Quaigh completes the fabric (99.95 \% TC / 99.16 \% FC, 18.9).
 The 99 / 98 target is adopted provisionally (2.1); the per-block
-fallback is dropped.} \\
+fallback is dropped.} \textbf{Update 2026-11-17 (\code{j41m.20}): on
+the cell-pin list test coverage is 99.96 \% and fault coverage 94.93 \%
+credited (18.10); the gate is test coverage \textgreater= 99.0 \% only
+(2.1).} \\
 4 MBIST & \textbf{GO} & independent of ATPG; memory is 88 \% of placed
 area; cheap; known SRAM-pin timing risk. Depends on the Stage 1 TAP. \\
 5 & \textbf{N/A now} & pad ring out of scope. \\
@@ -6525,6 +6546,80 @@ about \textbf{98.07 \%} whole-fabric fault coverage on the uncollapsed
 universe: above the adopted 98.0 \% (2.1), with a margin of under 0.1
 point, which a cell-pin re-grade (\code{j41m.20}) can erase. Both
 universes meet the 98.0 \% fault coverage target only provisionally.
+
+\subsection{Cell-pin re-grade (bead \code{j41m.20},
+2026-11-17)}\label{tm:ch:dft-architecture:1810-cell-pin-re-grade}\origsec{18.10}
+
+\textbf{Universe {[}R/M: \code{tools/dft/atpg/mk_cut.py},
+\texttt{/\allowbreak{}nobackup/\allowbreak{}claude\_\allowbreak{}sim\_\allowbreak{}build/\allowbreak{}j41m20/\allowbreak{}fabric/\allowbreak{}cut5/\allowbreak{}cut\_\allowbreak{}info.\allowbreak{}json}{]}.}
+The 18.9 universe is generic gates after \code{abc -g}. This rung uses
+one stuck-at-0 and one stuck-at-1 fault on each Sky130 cell pin,
+uncollapsed. \code{mk_cut.py --cellpin} wraps each of the 412 Liberty
+cell models so that each pin goes through a \code{$_BUF_}, skips
+\code{abc}, and writes the list of pin sites. Same netlist and
+exclusions as 18.9 (\code{RUN_2026-10-28_05-14-30}, 18.4, CPU macro and
+SRAMs black-boxed). 3,155 clock-tree cells are not wrapped and 112
+unobservable latches are dropped. Result: 975,597 cells, 18,804 flops,
+472,061 pin sites, \textbf{944,122 faults}.
+
+\textbf{Tool {[}R:
+\code{tools/dft/atpg/quaigh/0002-fault-sites.patch}{]}.} Quaigh
+\code{0.0.6+cvt2} = the 18.9 binary plus two options:
+\code{--fault-sites} restricts the fault list to the given sites and
+\code{--fault-report} writes the status of each fault (detected, proven
+untestable, unresolved). \code{tools/dft/atpg/cellpin_report.py} reads
+that report and gives the raw numbers, the numbers with the scan-path
+pins credited, and a split by pin name.
+
+\textbf{Runs {[}M: \code{fabric/A/report.json},
+\code{fabric/B3/metrics.json}, \code{report.json}, \code{run.log}{]}.}
+
+{\small
+\begin{longtable}{@{}p{30mm}p{18mm}p{18mm}p{18mm}p{14mm}p{16mm}p{16mm}@{}}
+\toprule
+Run & Detected & Proven untestable & Unresolved & Patterns kept & FC raw / credited & TC raw / credited \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+A: 18.9 patterns graded on the cell-pin list & 830,725 & not run & not run & 23,627 & 87.99 / 93.97 \% & not available \\
+B3: ATPG on the cell-pin list & 839,742 & 104,081 & 299 & 21,660 & \textbf{88.94 / 94.93 \%} & \textbf{99.96 / 99.97 \%} \\
+\end{longtable}
+}
+
+B3 ran under \code{run_capped.sh} (12 GiB, 72 h) as a transient user
+service: completed, exit 0, wall \textbf{37 h 57 min}, cgroup peak
+6.0 GiB (max RSS 5.6 GiB), \code{oom_kill=0}. Two earlier attempts did
+not finish: one stopped at the 24 h cap (96 \%), and one was stopped at
+27.6 h because \code{run_capped.sh} uses \code{systemd-run --scope}, so
+the job ends with the session that starts it. Start a run of more than
+a few hours with \code{systemd-run --user --unit=...} instead.
+
+\textbf{Scan-path pins.} The SCD and SCE pins of the 18,803 scan flops
+give 75,212 faults. Capture patterns cannot detect a fault on SCD (0 of
+37,606) and detect 18,744 of 37,606 on SCE. The chain-integrity (flush)
+test detects all of them. The credited numbers count them as detected.
+
+\textbf{Proven untestable, by pin {[}M: \code{B3/report.json}
+\code{by_pin}{]}.} SCD 37,606 (36.1 \%), SCE 18,862 (18.1 \%), cell
+output pins 10,279 (9.9 \%), A 9,827, A1 4,842, A2 4,662, B1 4,502, C1
+2,948, A3 2,234, B 2,017, C 1,572, RESET\_B 1,184; the remainder is
+spread over other pins.
+
+\textbf{Verdict against 2.1 {[}A{]}.} Test coverage 99.96 \% raw
+(99.97 \% credited) \textgreater= 99.0 \%: \textbf{PASS}. Fault coverage
+94.93 \% credited is below the provisional 98.0 \%. The gap is proven
+untestable faults, not missing patterns. The owner made test coverage
+the only gate (2.1), so fault coverage is reported with no threshold.
+
+\textbf{Limits {[}A{]}.} No independent re-grade of the B3 patterns
+was run (the 18.5 method: Verilator confirms a sample of detected
+faults, Yosys SAT confirms a sample of untestable ones). The pass verdict
+therefore relies on Quaigh\textquotesingle s untestability proofs; the
+sample audit \code{j41m.25} checks them by pin class. The whole-cut
+estimate (\code{cellpin_report.py --whole-cut}) was not computed. Every
+caveat of 18.9 still applies: stuck-at only, no X around the black
+boxes, patterns not yet replayed on the scan netlist (\code{j41m.19}).
 \end{relocated}
 
 
