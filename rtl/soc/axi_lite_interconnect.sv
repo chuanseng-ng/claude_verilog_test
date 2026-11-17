@@ -115,6 +115,8 @@ module axi_lite_interconnect #(
     logic            w_off_q;  // selected slot was off at some point in this transaction (sticky) -> SLVERR
     logic            w_off;    // w_off_q or the selected slot is off now; meaningful when !w_dec
     logic            w_slv_off;
+    // A forwarded slave response is on m_axil_bvalid and not yet accepted. The response is then locked: the off flag cannot replace it.
+    logic            w_b_lock_q;
 
     // Combinational decode temporaries — avoids `automatic` vars in always_ff
     // (not synthesizable in Yosys/Synlig; causes RTLIL unnamed-wire assertion).
@@ -152,7 +154,7 @@ module axi_lite_interconnect #(
             if (aw_decode_d == 32'(s))          aw_dec_off = aw_dec_off | slv_off_i[s];
         end
     end
-    assign w_off = w_off_q | w_slv_off;
+    assign w_off = w_off_q | (w_slv_off & ~w_b_lock_q);
 
     logic aw_hs, w_hs, b_hs;
     assign aw_hs = m_axil_awvalid && m_axil_awready;
@@ -217,6 +219,7 @@ module axi_lite_interconnect #(
             wsel   <= '0;
             w_dec  <= 1'b0;
             w_off_q <= 1'b0;
+            w_b_lock_q <= 1'b0;
         end else begin
             unique case (wstate)
                 W_IDLE: if (m_axil_awvalid) begin
@@ -240,7 +243,11 @@ module axi_lite_interconnect #(
                 end
                 W_RESP: begin
                     if (!w_dec && w_off) w_off_q <= 1'b1;
-                    if (b_hs)  wstate <= W_IDLE;
+                    if (!w_dec && !w_off && m_axil_bvalid && !m_axil_bready) w_b_lock_q <= 1'b1;
+                    if (b_hs) begin
+                        wstate     <= W_IDLE;
+                        w_b_lock_q <= 1'b0;
+                    end
                 end
                 default: wstate <= W_IDLE;
             endcase
