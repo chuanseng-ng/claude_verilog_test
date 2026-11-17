@@ -445,7 +445,7 @@ usage info:
 # check_for_results_file redefinition above has stopped working. NOT part of any rollup: it fails a suite on purpose.
 check-exit-propagation:
 	@echo "=== check-exit-propagation: a deliberately failing suite MUST make make exit non-zero ==="; \
-	log=check_exit_propagation.log; \
+	mkdir -p $(SIM_BUILD); log=$(SIM_BUILD)/check_exit_propagation.log; \
 	if $(MAKE) MODULE=test_exit_propagation_neg sim >$$log 2>&1; then \
 		echo "check-exit-propagation: FAIL -- a failing cocotb suite exited 0 (results gate regressed)" >&2; \
 		exit 1; \
@@ -464,5 +464,5 @@ clean-sim-builds:
 
 distclean: clean clean-sim-builds
 	@rm -rf __pycache__ 2>/dev/null || true
-	@rm -f *.vcd *.fst check_exit_propagation.log 2>/dev/null || true
+	@rm -f *.vcd *.fst 2>/dev/null || true
 	@echo "Deep clean complete"
