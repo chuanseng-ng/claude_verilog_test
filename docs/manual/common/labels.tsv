@@ -166,6 +166,7 @@ cr:defect:asap7-cpu-synlig-ma7:result-1-the-two-ma7-programs-yosys-sim-original-
 cr:defect:asap7-cpu-synlig-ma7:result-2-six-programs-verilator-cycle-exact-vs-rtl-measured	docs/manual/cr/parts/03-investigations.tex	230	Result 2: six programs, Verilator, cycle-exact vs RTL (MEASURED)
 cr:defect:asap7-cpu-synlig-ma7:update-2026-10-10-bead-ainf-is-synlig-pr-259-safe-for-the-remaining-struct-member-selects	docs/manual/cr/parts/03-investigations.tex	518	\texorpdfstring{Update 2026-10-10 (bead \code{ainf}): is "Synlig + PR \#259" safe for the remaining struct-member selects?}{Update 2026-10-10 (bead ): is "Synlig + PR \#259" safe for the remaining struct-member selects?}
 cr:defect:asap7-cpu-synlig-ma7:verdict	docs/manual/cr/parts/03-investigations.tex	26	Verdict
+cr:defect:off-domain-slverr	docs/manual/cr/parts/03-investigations.tex	3184	Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})
 cr:defect:pmu-iso-order	docs/manual/cr/parts/03-investigations.tex	3080	PMU order: clock stop before the clamp (\code{zftj})
 cr:defect:pmu-mutation-campaign	docs/manual/cr/parts/03-investigations.tex	3038	PMU mutation campaign (\code{mutate_pmu_iso_ack.py})
 cr:defect:sky130-cpu-ss-setup-r51p	docs/manual/cr/parts/03-investigations.tex	2650	Sky130 CPU macro: ss reg-to-reg setup failure (bead r51p) - path analysis
@@ -1178,17 +1179,18 @@ ds:ch:locked-architecture-decisions	docs/manual/ds/parts/01-architecture.tex	149
 ds:ch:memory-map	docs/manual/ds/parts/01-architecture.tex	11957	Memory map
 ds:ch:mixed-signal-pll	docs/manual/ds/parts/01-architecture.tex	11390	Mixed-signal PLL
 ds:ch:mod-cdc-primitives	docs/manual/ds/parts/chapters/cdc.tex	3	Clock-domain crossing
-ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	433	No bypass at a clock ratio of 1:1
-ds:ch:mod-cdc-primitives:dec-comp-record	docs/manual/ds/parts/chapters/cdc.tex	419	Completion record outside the destination reset
-ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	398	FIFO with gray pointers and registered flags
-ds:ch:mod-cdc-primitives:dec-reset	docs/manual/ds/parts/chapters/cdc.tex	412	Reset topology
-ds:ch:mod-cdc-primitives:dec-rz	docs/manual/ds/parts/chapters/cdc.tex	405	Four-phase handshake in the APB bridge
-ds:ch:mod-cdc-primitives:dec-sdc	docs/manual/ds/parts/chapters/cdc.tex	440	A separate constraint file for the crossing budgets
-ds:ch:mod-cdc-primitives:dec-storage	docs/manual/ds/parts/chapters/cdc.tex	426	Flop-array storage with a combinational read
-ds:ch:mod-cdc-primitives:decisions	docs/manual/ds/parts/chapters/cdc.tex	395	Architecture decisions
+ds:ch:mod-cdc-primitives:dec-bypass	docs/manual/ds/parts/chapters/cdc.tex	459	No bypass at a clock ratio of 1:1
+ds:ch:mod-cdc-primitives:dec-comp-record	docs/manual/ds/parts/chapters/cdc.tex	438	Completion record outside the destination reset
+ds:ch:mod-cdc-primitives:dec-fifo	docs/manual/ds/parts/chapters/cdc.tex	417	FIFO with gray pointers and registered flags
+ds:ch:mod-cdc-primitives:dec-off	docs/manual/ds/parts/chapters/cdc.tex	445	Local error for an off destination and no timeout
+ds:ch:mod-cdc-primitives:dec-reset	docs/manual/ds/parts/chapters/cdc.tex	431	Reset topology
+ds:ch:mod-cdc-primitives:dec-rz	docs/manual/ds/parts/chapters/cdc.tex	424	Four-phase handshake in the APB bridge
+ds:ch:mod-cdc-primitives:dec-sdc	docs/manual/ds/parts/chapters/cdc.tex	466	A separate constraint file for the crossing budgets
+ds:ch:mod-cdc-primitives:dec-storage	docs/manual/ds/parts/chapters/cdc.tex	452	Flop-array storage with a combinational read
+ds:ch:mod-cdc-primitives:decisions	docs/manual/ds/parts/chapters/cdc.tex	414	Architecture decisions
 ds:ch:mod-cdc-primitives:definitions	docs/manual/ds/parts/chapters/cdc.tex	10	Definitions
 ds:ch:mod-cdc-primitives:family	docs/manual/ds/parts/chapters/cdc.tex	24	Rules for all crossings
-ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	447	Requirements and verification
+ds:ch:mod-cdc-primitives:map	docs/manual/ds/parts/chapters/cdc.tex	473	Requirements and verification
 ds:ch:mod-cdc-primitives:scope	docs/manual/ds/parts/chapters/cdc.tex	5	Scope
 ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
 ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3584	Crypto accelerator
@@ -1200,21 +1202,22 @@ ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	3995	NPU
 ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	2559	Peripherals
 ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2327	PLL subsystem
 ds:ch:mod-power-management	docs/manual/ds/parts/chapters/power.tex	3	Power management
-ds:ch:mod-power-management:dec-ack	docs/manual/ds/parts/chapters/power.tex	422	Acknowledge from the CPU domain
-ds:ch:mod-power-management:dec-bridge	docs/manual/ds/parts/chapters/power.tex	464	AXI bridge outside the domain reset
-ds:ch:mod-power-management:dec-clock	docs/manual/ds/parts/chapters/power.tex	443	Clock enable with the PMU reset
-ds:ch:mod-power-management:dec-flag	docs/manual/ds/parts/chapters/power.tex	457	Sticky timeout flag and fresh acknowledge
-ds:ch:mod-power-management:dec-fsm	docs/manual/ds/parts/chapters/power.tex	415	One action for each cycle with registered outputs
-ds:ch:mod-power-management:dec-model	docs/manual/ds/parts/chapters/power.tex	408	Sequencing without supply removal
-ds:ch:mod-power-management:dec-order	docs/manual/ds/parts/chapters/power.tex	450	Clock stop before the clamp
-ds:ch:mod-power-management:dec-reset	docs/manual/ds/parts/chapters/power.tex	436	Synchronous reset of the PMU
-ds:ch:mod-power-management:dec-timeout	docs/manual/ds/parts/chapters/power.tex	429	Timeout in the wait
-ds:ch:mod-power-management:decisions	docs/manual/ds/parts/chapters/power.tex	405	Architecture decisions
+ds:ch:mod-power-management:dec-ack	docs/manual/ds/parts/chapters/power.tex	458	Acknowledge from the CPU domain
+ds:ch:mod-power-management:dec-bridge	docs/manual/ds/parts/chapters/power.tex	500	AXI bridge outside the domain reset
+ds:ch:mod-power-management:dec-clock	docs/manual/ds/parts/chapters/power.tex	479	Clock enable with the PMU reset
+ds:ch:mod-power-management:dec-flag	docs/manual/ds/parts/chapters/power.tex	493	Sticky timeout flag and fresh acknowledge
+ds:ch:mod-power-management:dec-fsm	docs/manual/ds/parts/chapters/power.tex	451	One action for each cycle with registered outputs
+ds:ch:mod-power-management:dec-model	docs/manual/ds/parts/chapters/power.tex	444	Sequencing without supply removal
+ds:ch:mod-power-management:dec-order	docs/manual/ds/parts/chapters/power.tex	486	Clock stop before the clamp
+ds:ch:mod-power-management:dec-reset	docs/manual/ds/parts/chapters/power.tex	472	Synchronous reset of the PMU
+ds:ch:mod-power-management:dec-timeout	docs/manual/ds/parts/chapters/power.tex	465	Timeout in the wait
+ds:ch:mod-power-management:decisions	docs/manual/ds/parts/chapters/power.tex	441	Architecture decisions
 ds:ch:mod-power-management:definitions	docs/manual/ds/parts/chapters/power.tex	14	Definitions
-ds:ch:mod-power-management:map	docs/manual/ds/parts/chapters/power.tex	471	Requirements and verification
+ds:ch:mod-power-management:map	docs/manual/ds/parts/chapters/power.tex	507	Requirements and verification
+ds:ch:mod-power-management:off-guard	docs/manual/ds/parts/chapters/power.tex	309	Bus access to an off domain
 ds:ch:mod-power-management:scope	docs/manual/ds/parts/chapters/power.tex	5	Scope
 ds:ch:mod-power-management:soc	docs/manual/ds/parts/chapters/power.tex	216	SoC power integration
-ds:ch:mod-power-management:software	docs/manual/ds/parts/chapters/power.tex	338	Software rules
+ds:ch:mod-power-management:software	docs/manual/ds/parts/chapters/power.tex	370	Software rules
 ds:ch:mod-soc-fabric	docs/manual/ds/parts/03-module-contracts.tex	556	SoC fabric
 ds:ch:phase-6-ip-expansion	docs/manual/ds/parts/01-architecture.tex	9164	Phase 6 IP expansion
 ds:ch:phase0-architecture	docs/manual/ds/parts/01-architecture.tex	139	Phase 0 Architecture Specification
@@ -1943,7 +1946,7 @@ ds:mm:memory-map:wdt-registers-phase-6a-3	docs/manual/ds/parts/01-architecture.t
 ds:mod:aes128-core	docs/manual/ds/parts/03-module-contracts.tex	3589	\texttt{periph/aes128\_core.sv}
 ds:mod:apb-cdc-bridge	docs/manual/ds/parts/chapters/cdc.tex	197	\texttt{apb\_cdc\_bridge}
 ds:mod:apb4-register-bank	docs/manual/ds/parts/03-module-contracts.tex	561	\texttt{soc/apb4\_register\_bank.sv}
-ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	331	\texttt{async\_axi\_fifo}
+ds:mod:async-axi-fifo	docs/manual/ds/parts/chapters/cdc.tex	350	\texttt{async\_axi\_fifo}
 ds:mod:axi-lite-interconnect	docs/manual/ds/parts/03-module-contracts.tex	598	\texttt{soc/axi\_lite\_interconnect.sv}
 ds:mod:axi-lite-register-bank	docs/manual/ds/parts/03-module-contracts.tex	631	\texttt{soc/axi\_lite\_register\_bank.sv}
 ds:mod:cdc-gray-fifo	docs/manual/ds/parts/chapters/cdc.tex	135	\texttt{cdc\_gray\_fifo}
@@ -1982,7 +1985,7 @@ ds:mod:pmu:registers	docs/manual/ds/parts/chapters/power.tex	33	Programmers mode
 ds:mod:pmu:sequencer	docs/manual/ds/parts/chapters/power.tex	88	Sequencer
 ds:mod:pwm-controller	docs/manual/ds/parts/03-module-contracts.tex	3053	\texttt{periph/pwm\_controller.sv}
 ds:mod:rv32i-alu	docs/manual/ds/parts/03-module-contracts.tex	97	\texttt{cpu/core/rv32i\_alu.sv}
-ds:mod:rv32i-clock-gate	docs/manual/ds/parts/chapters/power.tex	309	\texttt{rv32i\_clock\_gate}
+ds:mod:rv32i-clock-gate	docs/manual/ds/parts/chapters/power.tex	341	\texttt{rv32i\_clock\_gate}
 ds:mod:rv32i-cpu-top	docs/manual/ds/parts/03-module-contracts.tex	235	\texttt{cpu/rv32i\_cpu\_top.sv}
 ds:mod:rv32i-csr-file	docs/manual/ds/parts/03-module-contracts.tex	130	\texttt{cpu/core/rv32i\_csr\_file.sv}
 ds:mod:rv32i-dcache	docs/manual/ds/parts/03-module-contracts.tex	341	\texttt{mem/rv32i\_dcache.sv}
@@ -2051,20 +2054,22 @@ ds:req:cdc-113	docs/manual/ds/parts/chapters/cdc.tex	276	DS-CDC-113 No stray tra
 ds:req:cdc-114	docs/manual/ds/parts/chapters/cdc.tex	281	DS-CDC-114 Quiet while the source reset is low
 ds:req:cdc-115	docs/manual/ds/parts/chapters/cdc.tex	286	DS-CDC-115 No destination select while the destination reset is low
 ds:req:cdc-116	docs/manual/ds/parts/chapters/cdc.tex	291	DS-CDC-116 Read data of a forced completion
-ds:req:cdc-117	docs/manual/ds/parts/chapters/cdc.tex	296	DS-CDC-117 Completed transfer survives a destination reset
-ds:req:cdc-118	docs/manual/ds/parts/chapters/cdc.tex	304	DS-CDC-118 At most one transfer for a destination reset pulse
-ds:req:cdc-119	docs/manual/ds/parts/chapters/cdc.tex	312	DS-CDC-119 No wait for an acknowledge after a destination reset
-ds:req:cdc-120	docs/manual/ds/parts/chapters/cdc.tex	320	DS-CDC-120 Stale acknowledge gives a local error
-ds:req:cdc-150	docs/manual/ds/parts/chapters/cdc.tex	334	DS-CDC-150 One FIFO for each channel
-ds:req:cdc-151	docs/manual/ds/parts/chapters/cdc.tex	339	DS-CDC-151 Payload unchanged and in order
-ds:req:cdc-152	docs/manual/ds/parts/chapters/cdc.tex	344	DS-CDC-152 A reset on one face resets both
-ds:req:cdc-153	docs/manual/ds/parts/chapters/cdc.tex	349	DS-CDC-153 Reset is a hard flush
-ds:req:cdc-154	docs/manual/ds/parts/chapters/cdc.tex	358	DS-CDC-154 Quiet outputs during either reset
-ds:req:cdc-155	docs/manual/ds/parts/chapters/cdc.tex	363	DS-CDC-155 Any clock ratio without a bypass
-ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	368	DS-CDC-156 No deadlock when channels are full
-ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	373	DS-CDC-157 No combinational path between the faces
-ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	381	DS-CDC-158 Exact depth
-ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	386	DS-CDC-159 Valid is not withdrawn
+ds:req:cdc-117	docs/manual/ds/parts/chapters/cdc.tex	299	DS-CDC-117 Completed transfer survives a destination reset
+ds:req:cdc-118	docs/manual/ds/parts/chapters/cdc.tex	307	DS-CDC-118 At most one transfer for a destination reset pulse
+ds:req:cdc-119	docs/manual/ds/parts/chapters/cdc.tex	315	DS-CDC-119 No wait for an acknowledge after a destination reset
+ds:req:cdc-120	docs/manual/ds/parts/chapters/cdc.tex	323	DS-CDC-120 Stale acknowledge gives a local error
+ds:req:cdc-121	docs/manual/ds/parts/chapters/cdc.tex	328	DS-CDC-121 Request while the destination is off
+ds:req:cdc-122	docs/manual/ds/parts/chapters/cdc.tex	336	DS-CDC-122 Destination goes off during a transfer
+ds:req:cdc-150	docs/manual/ds/parts/chapters/cdc.tex	353	DS-CDC-150 One FIFO for each channel
+ds:req:cdc-151	docs/manual/ds/parts/chapters/cdc.tex	358	DS-CDC-151 Payload unchanged and in order
+ds:req:cdc-152	docs/manual/ds/parts/chapters/cdc.tex	363	DS-CDC-152 A reset on one face resets both
+ds:req:cdc-153	docs/manual/ds/parts/chapters/cdc.tex	368	DS-CDC-153 Reset is a hard flush
+ds:req:cdc-154	docs/manual/ds/parts/chapters/cdc.tex	377	DS-CDC-154 Quiet outputs during either reset
+ds:req:cdc-155	docs/manual/ds/parts/chapters/cdc.tex	382	DS-CDC-155 Any clock ratio without a bypass
+ds:req:cdc-156	docs/manual/ds/parts/chapters/cdc.tex	387	DS-CDC-156 No deadlock when channels are full
+ds:req:cdc-157	docs/manual/ds/parts/chapters/cdc.tex	392	DS-CDC-157 No combinational path between the faces
+ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	400	DS-CDC-158 Exact depth
+ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	405	DS-CDC-159 Valid is not withdrawn
 ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6668	DS-EXAMPLE-001 Example of a requirement
 ds:req:pmu-001	docs/manual/ds/parts/chapters/power.tex	36	DS-PMU-001 CTRL mode field
 ds:req:pmu-002	docs/manual/ds/parts/chapters/power.tex	41	DS-PMU-002 STATUS fields
@@ -2103,18 +2108,22 @@ ds:req:pmu-107	docs/manual/ds/parts/chapters/power.tex	285	DS-PMU-107 Domain res
 ds:req:pmu-108	docs/manual/ds/parts/chapters/power.tex	293	DS-PMU-108 Clock gates in test mode
 ds:req:pmu-109	docs/manual/ds/parts/chapters/power.tex	301	DS-PMU-109 Bridge reset in a PMU power cycle
 ds:req:pmu-110	docs/manual/ds/parts/chapters/power.tex	231	DS-PMU-110 Clamp only while the clock gate is closed
-ds:req:pmu-150	docs/manual/ds/parts/chapters/power.tex	312	DS-PMU-150 Glitch-free gate
-ds:req:pmu-151	docs/manual/ds/parts/chapters/power.tex	320	DS-PMU-151 Test enable opens the gate
-ds:req:pmu-152	docs/manual/ds/parts/chapters/power.tex	325	DS-PMU-152 Static test enable
-ds:req:pmu-153	docs/manual/ds/parts/chapters/power.tex	330	DS-PMU-153 Clock root
-ds:req:pmu-180	docs/manual/ds/parts/chapters/power.tex	341	DS-PMU-180 GPU state after a power cycle
-ds:req:pmu-181	docs/manual/ds/parts/chapters/power.tex	349	DS-PMU-181 CPU state in CPU\_OFF
-ds:req:pmu-182	docs/manual/ds/parts/chapters/power.tex	357	DS-PMU-182 Quiet bus before a CPU power-down
-ds:req:pmu-183	docs/manual/ds/parts/chapters/power.tex	365	DS-PMU-183 Wake-up of the CPU domain
-ds:req:pmu-184	docs/manual/ds/parts/chapters/power.tex	373	DS-PMU-184 Poll for the settled value
-ds:req:pmu-185	docs/manual/ds/parts/chapters/power.tex	389	DS-PMU-185 No GPU access while the GPU is off
-ds:req:pmu-186	docs/manual/ds/parts/chapters/power.tex	397	DS-PMU-186 Fabric reset with CPU reset
-ds:req:pmu-187	docs/manual/ds/parts/chapters/power.tex	381	DS-PMU-187 Clear of the timeout flag
+ds:req:pmu-111	docs/manual/ds/parts/chapters/power.tex	312	DS-PMU-111 Off levels of the domains
+ds:req:pmu-112	docs/manual/ds/parts/chapters/power.tex	320	DS-PMU-112 Access to the GPU slot while the GPU is off
+ds:req:pmu-113	docs/manual/ds/parts/chapters/power.tex	325	DS-PMU-113 GPU goes off during a transaction
+ds:req:pmu-114	docs/manual/ds/parts/chapters/power.tex	333	DS-PMU-114 Debug access to the CPU domain while it is off
+ds:req:pmu-150	docs/manual/ds/parts/chapters/power.tex	344	DS-PMU-150 Glitch-free gate
+ds:req:pmu-151	docs/manual/ds/parts/chapters/power.tex	352	DS-PMU-151 Test enable opens the gate
+ds:req:pmu-152	docs/manual/ds/parts/chapters/power.tex	357	DS-PMU-152 Static test enable
+ds:req:pmu-153	docs/manual/ds/parts/chapters/power.tex	362	DS-PMU-153 Clock root
+ds:req:pmu-180	docs/manual/ds/parts/chapters/power.tex	373	DS-PMU-180 GPU state after a power cycle
+ds:req:pmu-181	docs/manual/ds/parts/chapters/power.tex	381	DS-PMU-181 CPU state in CPU\_OFF
+ds:req:pmu-182	docs/manual/ds/parts/chapters/power.tex	389	DS-PMU-182 Quiet bus before a CPU power-down
+ds:req:pmu-183	docs/manual/ds/parts/chapters/power.tex	399	DS-PMU-183 Wake-up of the CPU domain
+ds:req:pmu-184	docs/manual/ds/parts/chapters/power.tex	407	DS-PMU-184 Poll for the settled value
+ds:req:pmu-185	docs/manual/ds/parts/chapters/power.tex	423	DS-PMU-185 No GPU access while the GPU is off
+ds:req:pmu-186	docs/manual/ds/parts/chapters/power.tex	433	DS-PMU-186 Fabric reset with CPU reset
+ds:req:pmu-187	docs/manual/ds/parts/chapters/power.tex	415	DS-PMU-187 Clear of the timeout flag
 ds:req:pwr-001	docs/manual/ds/parts/chapters/power-intent.tex	34	DS-PWR-001 Power domains and their members
 ds:req:pwr-002	docs/manual/ds/parts/chapters/power-intent.tex	42	DS-PWR-002 One domain for each instance
 ds:req:pwr-003	docs/manual/ds/parts/chapters/power-intent.tex	47	DS-PWR-003 Always-on roster
@@ -2152,7 +2161,7 @@ fig:tm:mod:apb-cdc-bridge:dfsm	docs/manual/tm/parts/chapters/cdc.tex	465	Functio
 fig:tm:mod:apb-cdc-bridge:reset	docs/manual/tm/parts/chapters/cdc.tex	521	Functional description
 fig:tm:mod:apb-cdc-bridge:sfsm	docs/manual/tm/parts/chapters/cdc.tex	450	Functional description
 fig:tm:mod:apb-cdc-bridge:timing	docs/manual/tm/parts/chapters/cdc.tex	486	Functional description
-fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	615	Functional description
+fig:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	616	Functional description
 fig:tm:mod:cdc-gray-fifo:block	docs/manual/tm/parts/chapters/cdc.tex	310	Functional description
 fig:tm:mod:cdc-gray-fifo:ring	docs/manual/tm/parts/chapters/cdc.tex	352	Functional description
 fig:tm:mod:cdc-gray-fifo:timing	docs/manual/tm/parts/chapters/cdc.tex	368	Functional description
@@ -2183,7 +2192,7 @@ tab:tm:ch:tool-defects-and-caveats:caveats	docs/manual/tm/parts/06-tool-defects-
 tab:tm:ch:tool-defects-and-caveats:defects	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	55	Summary of the tool defects
 tab:tm:mod:apb-cdc-bridge:params	docs/manual/common/generated/facts/apb-cdc-bridge-params.tex	4	Parameters of \code{apb_cdc_bridge}
 tab:tm:mod:apb-cdc-bridge:signals	docs/manual/common/generated/facts/apb-cdc-bridge-signals.tex	4	Signals of \code{apb_cdc_bridge}
-tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	622	Functional description
+tab:tm:mod:async-axi-fifo:channels	docs/manual/tm/parts/chapters/cdc.tex	623	Functional description
 tab:tm:mod:async-axi-fifo:params	docs/manual/common/generated/facts/async-axi-fifo-params.tex	4	Parameters of \code{async_axi_fifo}
 tab:tm:mod:async-axi-fifo:signals	docs/manual/common/generated/facts/async-axi-fifo-signals.tex	4	Signals of \code{async_axi_fifo}
 tab:tm:mod:cdc-gray-fifo:d2full	docs/manual/tm/parts/chapters/cdc.tex	325	Functional description
@@ -2344,14 +2353,14 @@ tm:ch:mod-cdc-primitives	docs/manual/tm/parts/chapters/cdc.tex	3	Clock-domain cr
 tm:ch:mod-cdc-primitives:constraints	docs/manual/tm/parts/chapters/cdc.tex	72	Timing constraints and CDC checks
 tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	37	Instances in the design
 tm:ch:mod-cpu-core	docs/manual/tm/parts/01-module-reference.tex	3	CPU core
-tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	1559	Crypto accelerator
-tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	838	DFT blocks
-tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	1861	FPGA wrappers
+tm:ch:mod-crypto-accelerator	docs/manual/tm/parts/01-module-reference.tex	1572	Crypto accelerator
+tm:ch:mod-dft-blocks	docs/manual/tm/parts/01-module-reference.tex	851	DFT blocks
+tm:ch:mod-fpga-wrappers	docs/manual/tm/parts/01-module-reference.tex	1874	FPGA wrappers
 tm:ch:mod-gpu	docs/manual/tm/parts/01-module-reference.tex	439	GPU
 tm:ch:mod-memory-and-caches	docs/manual/tm/parts/01-module-reference.tex	290	Memory and caches
-tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1773	NPU
-tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	944	Peripherals
-tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	914	PLL subsystem
+tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1786	NPU
+tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	957	Peripherals
+tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	927	PLL subsystem
 tm:ch:mod-power-management	docs/manual/tm/parts/chapters/power.tex	3	Power management
 tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	449	SoC power integration
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	443	SoC fabric
@@ -2663,31 +2672,32 @@ tm:flow:tessent-atpg:6-runtime-and-memory-m-reportsruntimetxt	docs/manual/tm/par
 tm:flow:tessent-atpg:7-testability-findings-proposals-no-rtl-changed	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7030	Testability findings (proposals; no RTL changed)
 tm:flow:tessent-atpg:8-notes-on-tooling-for-the-next-person	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7090	Notes on tooling (for the next person)
 tm:flow:tessent-atpg:9-gap-list-toward-real-stage-2	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	7138	Gap list toward real Stage 2
-tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1564	\texttt{periph/aes128\_core.sv}
+tm:mod:aes128-core	docs/manual/tm/parts/01-module-reference.tex	1577	\texttt{periph/aes128\_core.sv}
 tm:mod:apb-cdc-bridge	docs/manual/tm/parts/chapters/cdc.tex	403	\texttt{apb\_cdc\_bridge}
-tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	448	\texttt{soc/apb\_interconnect.sv}
-tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	582	\texttt{async\_axi\_fifo}
-tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	474	\texttt{soc/axi4\_crossbar.sv}
+tm:mod:apb-interconnect	docs/manual/tm/parts/01-module-reference.tex	461	\texttt{soc/apb\_interconnect.sv}
+tm:mod:async-axi-fifo	docs/manual/tm/parts/chapters/cdc.tex	583	\texttt{async\_axi\_fifo}
+tm:mod:axi-lite-interconnect	docs/manual/tm/parts/01-module-reference.tex	447	Off slots of \texttt{axi\_lite\_interconnect}
+tm:mod:axi4-crossbar	docs/manual/tm/parts/01-module-reference.tex	487	\texttt{soc/axi4\_crossbar.sv}
 tm:mod:cdc-gray-fifo	docs/manual/tm/parts/chapters/cdc.tex	274	\texttt{cdc\_gray\_fifo}
 tm:mod:cdc-reset-sync	docs/manual/tm/parts/chapters/cdc.tex	181	\texttt{cdc\_reset\_sync}
 tm:mod:cdc-sync	docs/manual/tm/parts/chapters/cdc.tex	106	\texttt{cdc\_sync}
 tm:mod:cdc-sync:debug	docs/manual/tm/parts/chapters/cdc.tex	168	Debug, test and DFT
-tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	1638	\texttt{periph/crypto\_accel.sv}
-tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	843	\texttt{soc/dft/dft\_clk\_switch.sv}
-tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	949	\texttt{periph/dma\_engine.sv}
-tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	1866	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
-tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	1881	\texttt{fpga/fpga\_sram\_1rw.sv}
-tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1022	\texttt{periph/gpio\_controller.sv}
-tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1097	\texttt{periph/i2c\_bit\_engine.sv}
-tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1149	\texttt{periph/i2c\_controller.sv}
-tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1208	\texttt{periph/interrupt\_controller.sv}
-tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	892	\texttt{soc/dft/mbist\_ctrl.sv}
-tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	1778	\texttt{npu/npu\_mac\_array.sv}
-tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	1792	\texttt{npu/npu\_top.sv}
-tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	1820	\texttt{npu/npu\_weight\_mem.sv}
-tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	919	\texttt{soc/pll/pll\_subsystem.sv}
+tm:mod:crypto-accel	docs/manual/tm/parts/01-module-reference.tex	1651	\texttt{periph/crypto\_accel.sv}
+tm:mod:dft-clk-switch	docs/manual/tm/parts/01-module-reference.tex	856	\texttt{soc/dft/dft\_clk\_switch.sv}
+tm:mod:dma-engine	docs/manual/tm/parts/01-module-reference.tex	962	\texttt{periph/dma\_engine.sv}
+tm:mod:fpga-sdp-ram-be	docs/manual/tm/parts/01-module-reference.tex	1879	\texttt{fpga/fpga\_sdp\_ram\_be.sv}
+tm:mod:fpga-sram-1rw	docs/manual/tm/parts/01-module-reference.tex	1894	\texttt{fpga/fpga\_sram\_1rw.sv}
+tm:mod:gpio-controller	docs/manual/tm/parts/01-module-reference.tex	1035	\texttt{periph/gpio\_controller.sv}
+tm:mod:i2c-bit-engine	docs/manual/tm/parts/01-module-reference.tex	1110	\texttt{periph/i2c\_bit\_engine.sv}
+tm:mod:i2c-controller	docs/manual/tm/parts/01-module-reference.tex	1162	\texttt{periph/i2c\_controller.sv}
+tm:mod:interrupt-controller	docs/manual/tm/parts/01-module-reference.tex	1221	\texttt{periph/interrupt\_controller.sv}
+tm:mod:mbist-ctrl	docs/manual/tm/parts/01-module-reference.tex	905	\texttt{soc/dft/mbist\_ctrl.sv}
+tm:mod:npu-mac-array	docs/manual/tm/parts/01-module-reference.tex	1791	\texttt{npu/npu\_mac\_array.sv}
+tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	1805	\texttt{npu/npu\_top.sv}
+tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	1833	\texttt{npu/npu\_weight\_mem.sv}
+tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	932	\texttt{soc/pll/pll\_subsystem.sv}
 tm:mod:pmu	docs/manual/tm/parts/chapters/power.tex	64	\texttt{pmu}
-tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1244	\texttt{periph/pwm\_controller.sv}
+tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1257	\texttt{periph/pwm\_controller.sv}
 tm:mod:rv32i-alu	docs/manual/tm/parts/01-module-reference.tex	96	\texttt{cpu/core/rv32i\_alu.sv}
 tm:mod:rv32i-cache-pkg	docs/manual/tm/parts/01-module-reference.tex	295	\texttt{mem/rv32i\_cache\_pkg.sv}
 tm:mod:rv32i-clock-gate	docs/manual/tm/parts/chapters/power.tex	340	\texttt{rv32i\_clock\_gate}
@@ -2701,14 +2711,14 @@ tm:mod:rv32i-pipeline-ex1b	docs/manual/tm/parts/01-module-reference.tex	8	\textt
 tm:mod:rv32i-pipeline-ex1c	docs/manual/tm/parts/01-module-reference.tex	27	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex1c.sv}
 tm:mod:rv32i-pipeline-ex2	docs/manual/tm/parts/01-module-reference.tex	60	\texttt{cpu/core/pipeline/rv32i\_pipeline\_ex2.sv}
 tm:mod:rv32i-pipeline-if	docs/manual/tm/parts/01-module-reference.tex	75	\texttt{cpu/core/pipeline/rv32i\_pipeline\_if.sv}
-tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	1715	\texttt{periph/sha256\_core.sv}
-tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	496	\texttt{soc/soc\_top.sv}
-tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1303	\texttt{periph/spi\_controller.sv}
-tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	732	\texttt{soc/sram\_controller.sv}
-tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1369	\texttt{periph/trng.sv}
-tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1391	\texttt{periph/trng\_lfsr\_entropy.sv}
-tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1405	\texttt{periph/uart\_controller.sv}
-tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	1528	\texttt{periph/watchdog\_timer.sv}
+tm:mod:sha256-core	docs/manual/tm/parts/01-module-reference.tex	1728	\texttt{periph/sha256\_core.sv}
+tm:mod:soc-top	docs/manual/tm/parts/01-module-reference.tex	509	\texttt{soc/soc\_top.sv}
+tm:mod:spi-controller	docs/manual/tm/parts/01-module-reference.tex	1316	\texttt{periph/spi\_controller.sv}
+tm:mod:sram-controller	docs/manual/tm/parts/01-module-reference.tex	745	\texttt{soc/sram\_controller.sv}
+tm:mod:trng	docs/manual/tm/parts/01-module-reference.tex	1382	\texttt{periph/trng.sv}
+tm:mod:trng-lfsr-entropy	docs/manual/tm/parts/01-module-reference.tex	1404	\texttt{periph/trng\_lfsr\_entropy.sv}
+tm:mod:uart-controller	docs/manual/tm/parts/01-module-reference.tex	1418	\texttt{periph/uart\_controller.sv}
+tm:mod:watchdog-timer	docs/manual/tm/parts/01-module-reference.tex	1541	\texttt{periph/watchdog\_timer.sv}
 tm:part:decisions	docs/manual/tm/parts/05-decisions.tex	1	Decisions
 tm:part:dft-fpga-hls-and-analog	docs/manual/tm/parts/04-dft-fpga-hls-and-analog.tex	1	DFT, FPGA, HLS and analog
 tm:part:module-reference	docs/manual/tm/parts/01-module-reference.tex	1	Module reference

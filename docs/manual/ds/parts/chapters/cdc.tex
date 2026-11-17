@@ -289,9 +289,12 @@ With \code{scanmode_i} low and while \code{m_rst_n_i} is low, \code{m_psel_o} mu
 \end{requirement}
 
 \begin{requirement}{DS-CDC-116}{Read data of a forced completion}
-[verify={review}]
-A completion that the bridge forces, because the destination is in reset, must return \code{s_prdata_o} equal to zero.
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_only_error_keeps_prdata_zero; review}]
+A completion that the bridge forces, because the destination is in reset while \code{dest_off_i} is low, must return \code{s_prdata_o} equal to zero.
 \end{requirement}
+\begin{information}
+A completion that \code{dest_off_i} causes returns \code{OFF_RDATA} and not zero (\reqref{DS-CDC-121}).
+\end{information}
 
 \begin{requirement}{DS-CDC-117}{Completed transfer survives a destination reset}
 [verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b1_no_error_completion_after_completed_write; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_b5_read_never_completes_okay_with_wrong_data; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_reset_keeps_completion_record_and_asserts_status_without_clock; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_completed_write_returns_okay; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_completed_read_returns_real_data}]
@@ -321,6 +324,22 @@ When the source waits for the acknowledge level to fall and sees the destination
 [verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_stale_ack_completes_locally_with_error}]
 A request that starts while the acknowledge level on the source side is high must complete with \code{s_pready_o} and \code{s_pslverr_o} high after the second rising edge of \code{s_clk_i} that follows the SETUP edge. The request must not cause a transfer on the \code{m_*} face.
 \end{requirement}
+
+\begin{requirement}{DS-CDC-121}{Request while the destination is off}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_off_request_errors_locally_without_transfer; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_debug_access_while_cpu_off_completes_with_error}]
+A request that starts while \code{dest_off_i} is high must complete with \code{s_pready_o} and \code{s_pslverr_o} high and \code{s_prdata_o} equal to \code{OFF_RDATA}. The request must not cause a transfer on the \code{m_*} face.
+\end{requirement}
+\begin{rationale}
+The bridge reads \code{dest_off_i} as ``destination not alive'': the status \code{m_rst_n_s} is the synchronised reset status with \code{dest_off_i} cleared in. So the request takes the path of \reqref{DS-CDC-102}, and only the read data is different. The value \code{OFF_RDATA} lets software tell an access to an off domain from an access during a reset alone.
+\end{rationale}
+
+\begin{requirement}{DS-CDC-122}{Destination goes off during a transfer}
+[verify={test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_off_rises_in_flight_completes_once_with_error; test:tb/cocotb/soc/test_apb_cdc_bridge.py::test_off_rise_races_ack_real_ack_wins; test:tb/cocotb/soc/test_apb_cdc_bridge_skew.py::test_skew_off_rise_races_ack_real_ack_wins}]
+When \code{dest_off_i} rises after the SETUP edge of a forwarded request and before the acknowledge reaches the source side, the request must complete once, with \code{s_pslverr_o} high and \code{s_prdata_o} equal to \code{OFF_RDATA}. When the acknowledge and the rise of \code{dest_off_i} reach the source side on the same edge, the bridge must return the answer of the destination, as in \reqref{DS-CDC-104}.
+\end{requirement}
+\begin{information}
+\code{dest_off_i} is a level in the \code{s_clk_i} domain, and the bridge does not synchronise it. The bridge has no timeout. A destination clock that stops while \code{dest_off_i} is low and \code{m_rst_n_i} is high still stalls the transfer until the clock runs again or the destination resets (\cref{tm:mod:apb-cdc-bridge}). The owner accepts this limit. In \code{soc_top} the input of \code{u_apb_dbg_cdc} is the CPU-domain off level of \reqref{DS-PMU-111}, and the two PLL bridges tie it to 0.
+\end{information}
 
 \begin{information}
 The source side of the bridge resets from \code{s_rst_n_i} alone. The destination state machine resets from \code{s_rst_n_i} and \code{m_rst_n_i} together. The completion record resets from \code{s_rst_n_i} alone. The reset status \code{m_rst_n_s} reads ``in reset'' during a reset of either side, and after the release until the release of the destination reset has crossed into the \code{s_clk_i} domain. A request in that time ends with an error (\reqref{DS-CDC-102}). The status has no false ``not in reset'' window, so the bridge has no exception to \reqref{DS-CDC-005}.
@@ -423,6 +442,13 @@ Each subsection gives the decision, the alternatives that the team rejected, and
 
 \textbf{Consequence for the user.} An error response shows that the destination did not complete the access. The error bound of a destination reset is \code{SYNC_STAGES_TO_S}+3 edges (\reqref{DS-CDC-103}). The bridge has no rule for a minimum width of the destination reset.
 
+\subsection{Local error for an off destination and no timeout}\label{ds:ch:mod-cdc-primitives:dec-off}
+\textbf{Decision.} The APB bridge has an input \code{dest_off_i}. While it is high, the bridge sees the destination as not alive and completes each request locally with an error and the read data \code{OFF_RDATA}, 0xDEADBEEF by default (\reqref{DS-CDC-121}, \reqref{DS-CDC-122}). The bridge has no timeout. The owner made this decision.
+
+\textbf{Alternatives rejected.} A timeout in the bridge also ends a wait for a destination clock that stops while the domain is on. It needs a counter and a bound for each instance, and it can end a slow access that is correct. A response of zero for an off destination cannot be told from a reset alone.
+
+\textbf{Consequence for the user.} A debug access to an off CPU domain ends with an error. A destination clock that stops while the domain is on and not in reset still stalls the transfer. The test \code{test_b2_stalled_destination_clock_completes_within_bound} measures this stall and stays marked \code{expect_fail}.
+
 \subsection{Flop-array storage with a combinational read}\label{ds:ch:mod-cdc-primitives:dec-storage}
 \textbf{Decision.} The FIFO stores entries in an array of flops. The read data comes from the array without an output register.
 
@@ -447,6 +473,6 @@ Each subsection gives the decision, the alternatives that the team rejected, and
 \section{Requirements and verification}\label{ds:ch:mod-cdc-primitives:map}
 \Cref{tab:ds:req:cdc-map} lists each requirement and its verification references. A reference with the word \textbf{review} has no test and a person checks the rule in a review.
 
-A test that is marked \code{expect_fail} asserts the specified behaviour and is expected to fail on the present RTL, until the owner decides the RTL. Such a test is not a verification reference of a rule. \Cref{tm:mod:apb-cdc-bridge} names the one test of this kind for the APB bridge.
+A test that is marked \code{expect_fail} asserts the specified behaviour and is expected to fail on the present RTL, until the owner decides the RTL. Such a test is not a verification reference of a rule. \Cref{tm:mod:apb-cdc-bridge} names the one test of this kind for the APB bridge. That test stays marked, because the bridge has no timeout by decision (\cref{ds:ch:mod-cdc-primitives:dec-off}).
 
 \input{generated/requirements-cdc}
