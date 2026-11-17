@@ -71,6 +71,7 @@ module tb_axi_lite_interconnect #(
         .SLV_LIMIT (AXIL_SLV_LIMIT)
     ) u_axil_ic (
         .clk(clk), .rst_n(rst_n),
+        .slv_off_i('0),
         .m_axil_awaddr(m_axil_awaddr), .m_axil_awprot(m_axil_awprot),
         .m_axil_awvalid(m_axil_awvalid), .m_axil_awready(m_axil_awready),
         .m_axil_wdata(m_axil_wdata), .m_axil_wstrb(m_axil_wstrb),

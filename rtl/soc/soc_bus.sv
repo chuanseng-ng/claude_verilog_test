@@ -21,6 +21,9 @@ module soc_bus
     input  logic clk,
     input  logic rst_n,
 
+    // Per-slot off level of the AXI-Lite ring slaves, index as AXIL_*. A slot that is off is answered with SLVERR in the interconnect.
+    input  logic [AXIL_N_SLAVES-1:0] axil_slv_off_i,
+
     // =========================================================================
     // AXI4 master-facing ports [N_MASTERS=4]: crossbar master side
     //   M0=CPU, M1=GPU-ifetch, M2=GPU-data, M3=DMA
@@ -544,6 +547,7 @@ module soc_bus
     ) u_axil_ic (
         .clk                (clk),
         .rst_n              (rst_n),
+        .slv_off_i          (axil_slv_off_i),
         // Master-facing port (from axi4_to_axilite bridge)
         .m_axil_awaddr      (periph_axil_awaddr),
         .m_axil_awprot      (periph_axil_awprot),
