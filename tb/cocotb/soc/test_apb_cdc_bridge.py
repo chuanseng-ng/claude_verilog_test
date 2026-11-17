@@ -269,6 +269,7 @@ async def _setup(dut, s_ns, m_ns, wait_states=0, err_addrs=None, mem=None) -> Si
 
     dut.s_rst_n.value = 0
     dut.m_rst_n.value = 0
+    dut.dest_off.value = 0
     # A real-time hold (not clock-edge-counted) so it is correct regardless
     # of the s/m period ratio under test -- always >> SYNC_STAGES(2)+1
     # periods of the slower clock in this suite's matrix (max period 18, in ns).
@@ -2629,3 +2630,295 @@ async def test_stale_ack_completes_locally_with_error(dut):
     transfer, never with a stale okay and never by waiting for ack_s to fall. After the clock
     restarts, the next write is okay."""
     await with_timeout(_stale_ack_all(dut), 400, "us")
+
+
+# --- Destination off (dest_off_i) ----------------------------------------------------------------
+#
+# dest_off_i marks the destination domain as powered off. The bridge then ends a request locally
+# with PSLVERR=1 and PRDATA=OFF_RDATA, and sends nothing to the destination. The tests change
+# dest_off only in the active phase after an s_clk edge (it is a level in the s_clk domain), and run
+# at the ratios of _B4_RATIOS, which include 4/9, 18/4, 10/10 and 7/11 (not only 1:1). The
+# destination reset m_rst_n_i stays high unless a test says otherwise, so that the off flag alone is
+# proved to complete the request.
+
+OFF_RDATA = 0xDEAD_BEEF
+OFF_LOCAL_BOUND_S_CYCLES = 30  # a local completion takes about 5 s_clk cycles
+
+
+async def _set_off(dut, value: int) -> None:
+    await RisingEdge(dut.s_clk)
+    dut.dest_off.value = value
+
+
+class _DestWatch:
+    """Counts the s_clk cycles in which req_q is high and the m_clk cycles in which m_psel is high:
+    a request that was never forwarded leaves both at 0."""
+
+    def __init__(self, dut):
+        self.req_cycles = 0
+        self.psel_cycles = 0
+        for coro in (self._watch_req(dut), self._watch_psel(dut)):
+            _active_tasks.append(cocotb.start_soon(coro))
+
+    async def _watch_req(self, dut) -> None:
+        while True:
+            await FallingEdge(dut.s_clk)
+            if int(dut.u_dut.req_q.value):
+                self.req_cycles += 1
+
+    async def _watch_psel(self, dut) -> None:
+        while True:
+            await FallingEdge(dut.m_clk)
+            if int(dut.m_psel.value):
+                self.psel_cycles += 1
+
+
+async def _off_request_body(dut):
+    """A request that starts while dest_off is high: local error, OFF_RDATA, nothing forwarded, and
+    a normal transfer right after dest_off clears."""
+    for s_ns, m_ns in _B4_RATIOS:
+        tag = f"s/m={s_ns}/{m_ns}"
+        ctx = await _setup(dut, s_ns, m_ns)
+        ctx.responder.mem[0x240] = 0x0BAD_0BAD
+        obs = _Observer(dut).start()
+        watch = _DestWatch(dut)
+        await _set_off(dut, 1)
+        await ClockCycles(dut.s_clk, 4)
+        t0 = _now_ns()
+        data, ok = await ctx.s_master.read(0x240)
+        read_ns = _now_ns() - t0
+        assert not ok, f"{tag}: read while off completed without pslverr"
+        assert data == OFF_RDATA, f"{tag}: read data {data:#x}, expected {OFF_RDATA:#x}"
+        assert read_ns <= OFF_LOCAL_BOUND_S_CYCLES * s_ns, (
+            f"{tag}: the local completion took {read_ns} ns"
+        )
+        ok = await ctx.s_master.write(0x244, 0xC0DE_0001)
+        assert not ok, f"{tag}: write while off completed without pslverr"
+        await ClockCycles(dut.s_clk, 4)
+        await ClockCycles(dut.m_clk, 4)
+        assert [(e, d) for _t, e, d in obs.s_done] == [(1, OFF_RDATA)] * 2, (
+            f"{tag}: {obs.s_done}"
+        )
+        assert watch.req_cycles == 0 and watch.psel_cycles == 0, (
+            f"{tag}: the request reached the destination side "
+            f"(req_q {watch.req_cycles}, m_psel {watch.psel_cycles})"
+        )
+        assert ctx.responder.completed == 0 and not obs.m_xfers, (
+            f"{tag}: a transfer reached the m_* face"
+        )
+        assert (
+            0x244 not in ctx.responder.mem and ctx.responder.mem[0x240] == 0x0BAD_0BAD
+        ), f"{tag}: memory changed"
+        # dest_off clears: the next transfers are forwarded at once and return real data.
+        await _set_off(dut, 0)
+        assert await ctx.s_master.write(0x244, 0xC0DE_0002), (
+            f"{tag}: write after the flag cleared failed"
+        )
+        data, ok = await ctx.s_master.read(0x244)
+        assert ok and data == 0xC0DE_0002, (
+            f"{tag}: read after the flag cleared {data:#x} ok={ok}"
+        )
+        assert ctx.responder.completed == 2, (
+            f"{tag}: {ctx.responder.completed} destination transfers"
+        )
+        assert len(obs.s_done) == 4 and obs.s_done[2][1] == 0 and obs.s_done[3][1] == 0
+        obs.stop()
+    dut._log.info(
+        "off at the start: local SLVERR with OFF_RDATA, nothing forwarded, clean recovery"
+    )
+
+
+@cocotb.test()
+async def test_off_request_errors_locally_without_transfer(dut):
+    await with_timeout(_off_request_body(dut), 600, "us")
+
+
+async def _off_rise_inflight_body(dut):
+    """dest_off rises while the destination is in the ACCESS phase (slow slave) and no ack exists:
+    the request ends once with the error and OFF_RDATA, with no second completion when the
+    destination finishes later, and the bridge works after the flag clears."""
+    for s_ns, m_ns in _B4_RATIOS:
+        tag = f"s/m={s_ns}/{m_ns}"
+        ctx = await _setup(dut, s_ns, m_ns, wait_states=40)
+        obs = _Observer(dut).start()
+        master = cocotb.start_soon(ctx.s_master.write(0x248, 0xC0DE_0003))
+        for _ in range(400):
+            await RisingEdge(dut.m_clk)
+            await ReadOnly()
+            if int(dut.m_penable.value):
+                break
+        else:
+            raise RuntimeError(
+                f"harness: {tag}: the destination never reached the ACCESS phase"
+            )
+        await _set_off(dut, 1)
+        for _ in range(OFF_LOCAL_BOUND_S_CYCLES):
+            await RisingEdge(dut.s_clk)
+            if obs.s_done:
+                break
+        assert len(obs.s_done) == 1, (
+            f"{tag}: no completion after dest_off rose ({obs.s_done})"
+        )
+        assert not await master, f"{tag}: the request completed without pslverr"
+        # The slow destination finishes its transfer later. It must not make a second completion.
+        await Timer(100 * max(s_ns, m_ns), units="ns")
+        assert [(e, d) for _t, e, d in obs.s_done] == [(1, OFF_RDATA)], (
+            f"{tag}: {obs.s_done}"
+        )
+        await _set_off(dut, 0)
+        await Timer(60 * max(s_ns, m_ns), units="ns")
+        assert len(obs.s_done) == 1, (
+            f"{tag}: a completion appeared after dest_off cleared: {obs.s_done}"
+        )
+        done_before = ctx.responder.completed
+        ctx.responder.wait_states = 0
+        assert await ctx.s_master.write(0x24C, 0xC0DE_0004), (
+            f"{tag}: write after the flag cleared failed"
+        )
+        data, ok = await ctx.s_master.read(0x24C)
+        assert ok and data == 0xC0DE_0004, f"{tag}: readback {data:#x} ok={ok}"
+        assert ctx.responder.completed == done_before + 2, (
+            f"{tag}: transfers {done_before} -> {ctx.responder.completed}"
+        )
+        obs.stop()
+    dut._log.info(
+        "off rises in flight: one error completion with OFF_RDATA, no second completion, "
+        "clean recovery"
+    )
+
+
+@cocotb.test()
+async def test_off_rises_in_flight_completes_once_with_error(dut):
+    await with_timeout(_off_rise_inflight_body(dut), 1500, "us")
+
+
+OFF_RACE_OFFSETS = range(0, 8)
+
+
+async def _off_race_experiment(dut, s_ns, m_ns, j) -> dict:
+    """One read. dest_off rises j s_clk edges after ack_q rises at the destination. The oracle is
+    the state at the moment of the write: a request whose ack_s is already high (or whose FSM has
+    left S_REQ) returns the real data, otherwise the off flag wins."""
+    addr = 0x258
+    golden = 0xCAFE_0258
+    ctx = await _setup(dut, s_ns, m_ns)
+    ctx.responder.mem[addr] = golden
+    obs = _Observer(dut).start()
+    master = cocotb.start_soon(ctx.s_master.read(addr))
+    if await _wait_ack_q_rise(dut) is None:
+        raise RuntimeError("harness: ack_q never rose")
+    if j:
+        for _ in range(j):
+            await RisingEdge(dut.s_clk)
+        await ReadOnly()
+    real_expected = (
+        bool(int(dut.u_dut.ack_s.value)) or int(dut.u_dut.s_state_q.value) != S_REQ
+    )
+    await Timer(1, units="step")
+    dut.dest_off.value = 1
+    for _ in range(OFF_LOCAL_BOUND_S_CYCLES):
+        await RisingEdge(dut.s_clk)
+        if obs.s_done:
+            break
+    await Timer(30 * max(s_ns, m_ns), units="ns")
+    row = {
+        "ratio": (s_ns, m_ns),
+        "j": j,
+        "real_expected": real_expected,
+        "s_done": list(obs.s_done),
+        "m_xfers": len(obs.m_xfers),
+    }
+    data, ok = await master
+    row["data"], row["ok"] = data, ok
+    dut.dest_off.value = 0
+    obs.stop()
+    return row
+
+
+async def _off_race_sweep(dut) -> list:
+    rows = []
+    for s_ns, m_ns in _B4_RATIOS:
+        for j in OFF_RACE_OFFSETS:
+            rows.append(await _off_race_experiment(dut, s_ns, m_ns, j))
+    return rows
+
+
+def _check_off_race(rows) -> None:
+    golden = 0xCAFE_0258
+    for r in rows:
+        tag = f"s/m={r['ratio'][0]}/{r['ratio'][1]} j={r['j']}"
+        assert len(r["s_done"]) == 1, f"{tag}: {len(r['s_done'])} completions"
+        assert r["m_xfers"] == 1, f"{tag}: {r['m_xfers']} destination transfers"
+        if r["real_expected"]:
+            assert r["ok"] and r["data"] == golden, (
+                f"{tag}: ack_s was already seen, got ok={r['ok']} data={r['data']:#x}"
+            )
+        else:
+            assert not r["ok"] and r["data"] == OFF_RDATA, (
+                f"{tag}: off rose before ack_s, got ok={r['ok']} data={r['data']:#x}"
+            )
+    real = sum(1 for r in rows if r["ok"])
+    assert 0 < real < len(rows), (
+        f"the sweep did not cross the race: {real} real of {len(rows)}"
+    )
+
+
+@cocotb.test()
+async def test_off_rise_races_ack_real_ack_wins(dut):
+    """dest_off rises at 0 to 7 s_clk edges after ack_q rises, at four clock ratios. A request whose
+    ack_s was already high keeps the real data and OKAY; an earlier flag gives the error with
+    OFF_RDATA. Each run completes once. The sweep must contain both outcomes."""
+    rows = await with_timeout(_off_race_sweep(dut), 1500, "us")
+    _check_off_race(rows)
+    real = sum(1 for r in rows if r["ok"])
+    dut._log.info(
+        f"off race: {len(rows)} runs, {real} real responses, {len(rows) - real} off errors"
+    )
+
+
+async def _reset_only_body(dut):
+    """The error of a destination reset alone returns prdata 0 (DS-CDC-119). dest_off with the reset
+    returns OFF_RDATA, and the off record of the first request does not leak into the next one."""
+    for s_ns, m_ns in _B4_RATIOS:
+        tag = f"s/m={s_ns}/{m_ns}"
+        ctx = await _setup(dut, s_ns, m_ns)
+        obs = _Observer(dut).start()
+        sync_s = int(dut.sync_stages_to_s_o.value)
+        dut.m_rst_n.value = 0
+        await ClockCycles(dut.s_clk, sync_s + 3)
+        assert _in_rst(dut), f"{tag}: the source did not see the destination reset"
+        data, ok = await ctx.s_master.read(0x250)
+        assert not ok and data == 0, (
+            f"{tag}: reset-only error gave ok={ok} data={data:#x}"
+        )
+        await _set_off(dut, 1)
+        data, ok = await ctx.s_master.read(0x250)
+        assert not ok and data == OFF_RDATA, (
+            f"{tag}: off and reset gave ok={ok} data={data:#x}"
+        )
+        await _set_off(dut, 0)
+        data, ok = await ctx.s_master.read(0x250)
+        assert not ok and data == 0, (
+            f"{tag}: reset-only error after the flag cleared gave data={data:#x}"
+        )
+        assert [(e, d) for _t, e, d in obs.s_done] == [
+            (1, 0),
+            (1, OFF_RDATA),
+            (1, 0),
+        ], f"{tag}: {obs.s_done}"
+        assert ctx.responder.completed == 0
+        dut.m_rst_n.value = 1
+        n = _post_reset_recovery_cycles(dut)
+        await ClockCycles(dut.s_clk, n)
+        await ClockCycles(dut.m_clk, n)
+        await Timer(1, units="step")  # step off the edge, as _setup does
+        assert await ctx.s_master.write(0x254, 0x1234_5678), (
+            f"{tag}: write after the reset failed"
+        )
+        obs.stop()
+    dut._log.info("reset-only error keeps prdata 0; off with reset returns OFF_RDATA")
+
+
+@cocotb.test()
+async def test_reset_only_error_keeps_prdata_zero(dut):
+    await with_timeout(_reset_only_body(dut), 600, "us")

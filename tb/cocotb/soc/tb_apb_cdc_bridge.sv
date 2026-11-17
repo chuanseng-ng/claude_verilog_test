@@ -56,6 +56,9 @@ module tb_apb_cdc_bridge #(
     input  logic               m_pready,
     input  logic                m_pslverr,
 
+    // ══ Destination off level (source clock domain), driven by the test ═══
+    input  logic               dest_off,
+
     // ══ Parameter mirrors — so the test file never hardcodes a duplicate
     //    of the RTL's own SYNC_STAGES defaults ══════════════════════════════
     output logic [31:0]        sync_stages_to_s_o,
@@ -73,7 +76,7 @@ module tb_apb_cdc_bridge #(
         // DFT scan bypass tied inert — this TB exercises functional CDC
         // behaviour only; scan-mux behaviour is covered by
         // tb_cdc_reset_sync_scan.sv.
-        .dest_off_i  (1'b0),
+        .dest_off_i  (dest_off),
         .scanmode_i  (1'b0),
         .scan_rst_ni (1'b1),
 

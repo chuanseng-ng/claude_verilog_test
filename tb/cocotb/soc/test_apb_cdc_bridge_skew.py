@@ -46,3 +46,12 @@ async def test_skew_short_pulses_make_one_transfer(dut):
     assert live
     for r in live:
         assert r["m_xfers"] == 1 and len(r["s_done"]) == 1 and base._err_count(r) == 0, base._fmt_row(r)
+
+
+@cocotb.test()
+async def test_skew_off_rise_races_ack_real_ack_wins(dut):
+    """The off race sweep with one cycle of synchroniser skew on ack_s: a request whose ack_s was
+    already high keeps its real response, an earlier flag returns the error, and each request
+    completes once."""
+    rows = await with_timeout(base._off_race_sweep(dut), 1500, "us")
+    base._check_off_race(rows)
