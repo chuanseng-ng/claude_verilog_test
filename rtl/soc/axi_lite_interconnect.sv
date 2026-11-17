@@ -238,7 +238,10 @@ module axi_lite_interconnect #(
                     if (!w_dec && w_off) w_off_q <= 1'b1;
                     if (w_hs)  wstate <= W_RESP;
                 end
-                W_RESP: if (b_hs)  wstate <= W_IDLE;
+                W_RESP: begin
+                    if (!w_dec && w_off) w_off_q <= 1'b1;
+                    if (b_hs)  wstate <= W_IDLE;
+                end
                 default: wstate <= W_IDLE;
             endcase
         end
