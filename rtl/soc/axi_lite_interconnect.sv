@@ -13,6 +13,10 @@
 //     selected slave is latched for the life of the transaction.
 //   * Unmapped address -> the interconnect itself returns a DECERR response and
 //     completes the transfer (a bad config access never stalls the CPU).
+//   * A slave slot that slv_off_i marks as off is answered by the interconnect itself with SLVERR and the read data
+//     OFF_RDATA. The request is accepted and never forwarded, also when the flag rises after the transaction started.
+//     Each transaction latches the flag (w_off, r_off), so a flag edge during a transaction does not split it.
+//     Unmapped addresses keep DECERR and take priority over the off flag. Doc: ds:mod:axi-lite-interconnect
 //   * Parameterized SLV_BASE / SLV_LIMIT arrays keep the module reusable; the SoC
 //     top-level passes soc_periph_map_pkg constants.
 //   * SINGLE-MASTER ONLY: there is no arbitration logic.  A second control-plane
@@ -33,10 +37,15 @@ module axi_lite_interconnect #(
     // Packed 2D [N_SLAVES-1:0][AW-1:0]: avoids Synlig UHDM $mem lowering of
     // unpacked array parameters which emits empty-named RTLIL wires.
     parameter logic [N_SLAVES-1:0][AW-1:0] SLV_BASE  = '0,
-    parameter logic [N_SLAVES-1:0][AW-1:0] SLV_LIMIT = '0
+    parameter logic [N_SLAVES-1:0][AW-1:0] SLV_LIMIT = '0,
+    // Read data returned by the local response of an off slot.
+    parameter logic [DW-1:0] OFF_RDATA = DW'(32'hDEAD_BEEF)
 ) (
     input  logic clk,
     input  logic rst_n,
+
+    // Per-slot off level in clk. Tie to 0 for a slot that is always on.
+    input  logic [N_SLAVES-1:0] slv_off_i,
 
     // ══ Master-facing slave port (CPU config) ════════════════════════════════
     input  logic [AW-1:0] m_axil_awaddr,
@@ -103,6 +112,11 @@ module axi_lite_interconnect #(
     wr_e             wstate;
     logic [SELW-1:0] wsel;     // selected slave (valid when !w_dec)
     logic            w_dec;    // selected target is unmapped -> DECERR
+    logic            w_off_q;  // selected slot was off at some point in this transaction (sticky) -> SLVERR
+    logic            w_off;    // w_off_q or the selected slot is off now; meaningful when !w_dec
+    logic            w_slv_off;
+    // A forwarded slave response is on m_axil_bvalid and not yet accepted. The response is then locked: the off flag cannot replace it.
+    logic            w_b_lock_q;
 
     // Combinational decode temporaries — avoids `automatic` vars in always_ff
     // (not synthesizable in Yosys/Synlig; causes RTLIL unnamed-wire assertion).
@@ -130,6 +144,18 @@ module axi_lite_interconnect #(
     logic [N_SLAVES-1:0]          _s_arvalid;
     logic [N_SLAVES-1:0]          _s_rready;
 
+    // Off level of the selected slot, by compare and OR (no runtime-indexed mux).
+    logic aw_dec_off;
+    always_comb begin
+        w_slv_off  = 1'b0;
+        aw_dec_off = 1'b0;
+        for (int unsigned s = 0; s < N_SLAVES; s++) begin
+            if (wsel == SELW'(s))               w_slv_off  = w_slv_off  | slv_off_i[s];
+            if (aw_decode_d == 32'(s))          aw_dec_off = aw_dec_off | slv_off_i[s];
+        end
+    end
+    assign w_off = w_off_q | (w_slv_off & ~w_b_lock_q);
+
     logic aw_hs, w_hs, b_hs;
     assign aw_hs = m_axil_awvalid && m_axil_awready;
     assign w_hs  = m_axil_wvalid  && m_axil_wready;
@@ -154,17 +180,17 @@ module axi_lite_interconnect #(
 
         unique case (wstate)
             W_AW: begin
-                if (!w_dec) begin
+                if (!w_dec && !w_off) begin
                     _s_awaddr [wsel] = m_axil_awaddr;
                     _s_awprot [wsel] = m_axil_awprot;
                     _s_awvalid[wsel] = m_axil_awvalid;
                     m_axil_awready   = s_axil_awready[wsel];
                 end else begin
-                    m_axil_awready = 1'b1;   // accept and drop
+                    m_axil_awready = 1'b1;   // accept and drop (unmapped or off)
                 end
             end
             W_DATA: begin
-                if (!w_dec) begin
+                if (!w_dec && !w_off) begin
                     _s_wdata  [wsel] = m_axil_wdata;
                     _s_wstrb  [wsel] = m_axil_wstrb;
                     _s_wvalid [wsel] = m_axil_wvalid;
@@ -174,13 +200,13 @@ module axi_lite_interconnect #(
                 end
             end
             W_RESP: begin
-                if (!w_dec) begin
+                if (!w_dec && !w_off) begin
                     m_axil_bvalid    = s_axil_bvalid[wsel];
                     m_axil_bresp     = s_axil_bresp [wsel];
                     _s_bready[wsel]  = m_axil_bready;
                 end else begin
                     m_axil_bvalid = 1'b1;
-                    m_axil_bresp  = AXI_RESP_DECERR;
+                    m_axil_bresp  = w_dec ? AXI_RESP_DECERR : AXI_RESP_SLVERR;
                 end
             end
             default: ;
@@ -192,20 +218,37 @@ module axi_lite_interconnect #(
             wstate <= W_IDLE;
             wsel   <= '0;
             w_dec  <= 1'b0;
+            w_off_q <= 1'b0;
+            w_b_lock_q <= 1'b0;
         end else begin
             unique case (wstate)
                 W_IDLE: if (m_axil_awvalid) begin
                     if (aw_decode_d < N_SLAVES) begin
-                        wsel  <= aw_decode_d[SELW-1:0];
-                        w_dec <= 1'b0;
+                        wsel    <= aw_decode_d[SELW-1:0];
+                        w_dec   <= 1'b0;
+                        w_off_q <= aw_dec_off;
                     end else begin
-                        w_dec <= 1'b1;
+                        w_dec   <= 1'b1;
+                        w_off_q <= 1'b0;
                     end
                     wstate <= W_AW;
                 end
-                W_AW:   if (aw_hs) wstate <= W_DATA;
-                W_DATA: if (w_hs)  wstate <= W_RESP;
-                W_RESP: if (b_hs)  wstate <= W_IDLE;
+                W_AW:   begin
+                    if (!w_dec && w_off) w_off_q <= 1'b1;
+                    if (aw_hs) wstate <= W_DATA;
+                end
+                W_DATA: begin
+                    if (!w_dec && w_off) w_off_q <= 1'b1;
+                    if (w_hs)  wstate <= W_RESP;
+                end
+                W_RESP: begin
+                    if (!w_dec && w_off) w_off_q <= 1'b1;
+                    if (!w_dec && !w_off && m_axil_bvalid && !m_axil_bready) w_b_lock_q <= 1'b1;
+                    if (b_hs) begin
+                        wstate     <= W_IDLE;
+                        w_b_lock_q <= 1'b0;
+                    end
+                end
                 default: wstate <= W_IDLE;
             endcase
         end
@@ -218,6 +261,20 @@ module axi_lite_interconnect #(
     rd_e             rstate;
     logic [SELW-1:0] rsel;
     logic            r_dec;
+    logic            r_off_q;  // as w_off_q, for the read engine
+    logic            r_off;
+    logic            r_slv_off;
+    logic            ar_dec_off;
+
+    always_comb begin
+        r_slv_off  = 1'b0;
+        ar_dec_off = 1'b0;
+        for (int unsigned s = 0; s < N_SLAVES; s++) begin
+            if (rsel == SELW'(s))               r_slv_off  = r_slv_off  | slv_off_i[s];
+            if (ar_decode_d == 32'(s))          ar_dec_off = ar_dec_off | slv_off_i[s];
+        end
+    end
+    assign r_off = r_off_q | r_slv_off;
 
     logic ar_hs, r_hs;
     assign ar_hs = m_axil_arvalid && m_axil_arready;
@@ -264,7 +321,7 @@ module axi_lite_interconnect #(
 
         unique case (rstate)
             R_AR: begin
-                if (!r_dec) begin
+                if (!r_dec && !r_off) begin
                     _s_araddr [rsel] = m_axil_araddr;
                     _s_arprot [rsel] = m_axil_arprot;
                     _s_arvalid[rsel] = m_axil_arvalid;
@@ -274,16 +331,16 @@ module axi_lite_interconnect #(
                 end
             end
             R_DATA: begin
-                if (!r_dec) begin
+                if (!r_dec && !r_off) begin
                     r_dvalid_d       = s_axil_rvalid[rsel];
                     r_ddata_d        = s_axil_rdata [rsel];
                     r_dresp_d        = s_axil_rresp [rsel];
                     _s_rready[rsel]  = r_dreg_ready;
                 end else begin
-                    // The DECERR response is one-shot. Offer the beat only while the output register is empty.
+                    // The local response (DECERR or off SLVERR) is one-shot. Offer the beat only while the output register is empty.
                     r_dvalid_d = !r_dvalid_q;
-                    r_ddata_d  = '0;
-                    r_dresp_d  = AXI_RESP_DECERR;
+                    r_ddata_d  = r_dec ? '0 : OFF_RDATA;
+                    r_dresp_d  = r_dec ? AXI_RESP_DECERR : AXI_RESP_SLVERR;
                 end
             end
             default: ;
@@ -295,19 +352,28 @@ module axi_lite_interconnect #(
             rstate <= R_IDLE;
             rsel   <= '0;
             r_dec  <= 1'b0;
+            r_off_q <= 1'b0;
         end else begin
             unique case (rstate)
                 R_IDLE: if (m_axil_arvalid) begin
                     if (ar_decode_d < N_SLAVES) begin
-                        rsel  <= ar_decode_d[SELW-1:0];
-                        r_dec <= 1'b0;
+                        rsel    <= ar_decode_d[SELW-1:0];
+                        r_dec   <= 1'b0;
+                        r_off_q <= ar_dec_off;
                     end else begin
-                        r_dec <= 1'b1;
+                        r_dec   <= 1'b1;
+                        r_off_q <= 1'b0;
                     end
                     rstate <= R_AR;
                 end
-                R_AR:   if (ar_hs) rstate <= R_DATA;
-                R_DATA: if (r_hs)  rstate <= R_IDLE;
+                R_AR:   begin
+                    if (!r_dec && r_off) r_off_q <= 1'b1;
+                    if (ar_hs) rstate <= R_DATA;
+                end
+                R_DATA: begin
+                    if (!r_dec && r_off) r_off_q <= 1'b1;
+                    if (r_hs)  rstate <= R_IDLE;
+                end
                 default: rstate <= R_IDLE;
             endcase
         end

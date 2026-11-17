@@ -3180,3 +3180,35 @@ Status from the raw pin & not run, fails lint before simulation \\
 Constraints. \src{pnr/constraints/phase5_soc_multiclock_check.sdc}: the matcher of the asynchronous pins also matches \code{m_alive_sync}, so these pins do not fall into the domain-wide maximum-delay fallback. \src{pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc}: the budget of the removed \code{u_m_rst_status_sync} is deleted, and section 10a already waives the new reset crossing. \src{tools/cdc/cdc_config.yml} and the signed ASAP7 constraint file are unchanged. The binding is proven by name-binding tests with negative controls only. The net \code{cpu_domain_rst_n} is an AND of reset-tree signals, and its term \code{cpu_core_rst_n} comes from the reset port and the PLL lock through a scan mux and not from a flop.
 
 \end{record}
+
+\section{Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})}\label{cr:defect:off-domain-slverr}
+
+\begin{record}
+
+Date 2026-11-17. Bead \bead{zftj.26}. It fixes the off case of GH \#381 (bead \bead{zftj.11}: an access to the GPU while the GPU domain is off never ends) and of GH \#375 (bead \bead{zftj.16}: the APB bridge has no timeout when the destination clock stops). Before the change, the control slave of the GPU took the address of an access while it was held in reset and never answered, and the CPU waited for ever. A debug access to the CPU domain in flight at a power-down waited for the domain reset.
+
+\end{record}
+
+\begin{record}
+
+Owner decisions of 2026-11-15, recorded on bead \bead{zftj.22}. An access to an off domain ends with SLVERR, and a read returns \code{OFF_RDATA}, 0xDEADBEEF. The bridge gets no timeout: a destination clock that stops while the domain is on still stalls a transfer, and this is a stated limit. The off levels come from \code{soc_top}, from registered outputs of the PMU. The answer comes from \code{axi_lite_interconnect} (input \code{slv_off_i}) and from \code{apb_cdc_bridge} (input \code{dest_off_i}). The PMU does not change. The test \code{test_p3_control_slave_ready_low_while_in_reset} stays \code{expect_fail} with a written waiver in \reqref{DS-PMU-185}, and rule 6 of \src{AGENTS.md} (``a reset value must not advertise availability'') is read for this case as ``no request is accepted and lost''. An error of the bridge from a reset alone keeps the read data 0 (\reqref{DS-CDC-116}). Only the off case returns \code{OFF_RDATA}.
+
+\end{record}
+
+\begin{record}
+
+RTL change. \code{axi_lite_interconnect} has a new input \code{slv_off_i} with one bit for each slot and a parameter \code{OFF_RDATA}. Each engine latches the bit of the selected slot at the decode into a sticky flag (\code{w_off_q}, \code{r_off_q}) and sets it again in each later state. The effective level is the flag or the present bit. While it is high the engine accepts the address, sinks the write data and answers SLVERR itself, with \code{OFF_RDATA} for a read. It does not forward the access. A response of the slave that is already shown to the master is delivered once, unchanged. A fall of the level during a transaction does not resume forwarding. DECERR for an unmapped address has priority. \code{soc_bus} passes the new input \code{axil_slv_off_i}. \code{apb_cdc_bridge} has a new input \code{dest_off_i} and a parameter \code{OFF_RDATA}. The status \code{m_rst_n_s} is now \code{m_rst_n_s_raw} with \code{dest_off_i} cleared in, and \code{off_err_q} latches \code{dest_off_i} at SETUP. A request while the destination is off, or a rise of \code{dest_off_i} before the acknowledge, ends with PSLVERR and \code{OFF_RDATA}. A real acknowledge wins. In \code{soc_top}, \code{gpu_dom_off} is \code{~pmu_gpu_clk_en | pmu_gpu_iso_en | ~pmu_gpu_rst_n} and drives the GPU slot. \code{cpu_dom_off} is \code{~pmu_cpu_clk_en | pmu_cpu_iso_en | ~pmu_cpu_rst_n | pmu_cpu_iso_ack} and drives \code{dest_off_i} of \code{u_apb_dbg_cdc}. The PLL bridges tie the input to 0. Two later commits of the same bead keep the write response stable: the flag is also set in \code{W_RESP}, and a forwarded write response that is shown with BREADY low is locked.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. \code{soc_all_ci} exits 0. New tests: \code{test_axil_interconnect.py} has new tests of the off slot (off write and read, a rise of the level in each phase, a fall, a pulse, other slots, priority of DECERR, return to forwarding), \code{test_apb_cdc_bridge.py} has 46 tests, \code{apb_cdc_bridge_skew} has 4, and \code{test_soc_pmu_iso_ack.py} has the new \code{test_debug_access_while_cpu_off_completes_with_error}. \code{test_p3_gpu_access_while_off_completes_within_bound} of \code{test_soc_pmu_multiclock} lost the mark \code{expect_fail} and asserts SLVERR and 0xDEADBEEF. \code{PASS_FLOOR} in the two workflows goes from 927 to at least 947. Negative controls: with the off inputs tied to 0, the new tests fail. On the RTL of \code{origin/main} the P3 test fails with ``6 of 6 access(es) did not end within 4000 fabric cycles''.
+
+\end{record}
+
+\begin{record}
+
+Limits. The bridge has no timeout, so a destination clock that stops while the domain is on and not in reset still stalls a debug access (\code{test_b2_stalled_destination_clock_completes_within_bound} stays \code{expect_fail} by decision). Only the debug APB path into the CPU domain has the guard. The CPU AXI bridge \code{u_cpu_axi_cdc} has no guard and no drain step (\reqref{DS-PMU-182}). A transaction that the interconnect cuts short can leave the slave with a request that is not answered, and only the domain reset that the PMU applies clears it. An error from the bridge for an access in flight at a power-down does not prove that the access had no effect in the CPU domain. New and changed requirements: \reqref{DS-PMU-111} to \reqref{DS-PMU-114}, \reqref{DS-CDC-121}, \reqref{DS-CDC-122}; \reqref{DS-PMU-182}, \reqref{DS-PMU-185} and \reqref{DS-CDC-116} changed.
+
+\end{record}

@@ -124,6 +124,9 @@ modules:
       SYNC_STAGES_TO_M:
         legal: "2 or more"
         description: "Ranks of each synchroniser that ends in the `m_clk_i` domain: the request level, the reset of the destination side and the reset of the completion record."
+      OFF_RDATA:
+        legal: "any 32-bit value"
+        description: "Read data of an error completion that `dest_off_i` causes. An error completion from a destination reset alone returns zero."
     ports:
       scanmode_i:
         domain: quasi-static
@@ -131,6 +134,9 @@ modules:
       scan_rst_ni:
         domain: async
         description: "Active-low scan reset. It goes to the four internal reset synchronisers. Tie high without scan."
+      dest_off_i:
+        domain: s_clk_i
+        description: "1 = the destination domain is off. The bridge then sees the destination as not alive and completes a request locally with an error and `OFF_RDATA`. Tie low when the destination is always on."
       s_clk_i:
         domain: clock
         description: "Clock of the source face."
@@ -157,7 +163,7 @@ modules:
         description: "APB byte strobes. The bridge captures them in the SETUP cycle."
       s_prdata_o:
         domain: s_clk_i
-        description: "APB read data. It holds the data of the last completed transfer. It is zero after an error completion that the bridge forces."
+        description: "APB read data. It holds the data of the last completed transfer. After an error completion that the bridge forces, it is `OFF_RDATA` when `dest_off_i` caused the error and zero otherwise."
       s_pready_o:
         domain: s_clk_i
         description: "APB ready. It is high for one cycle at the end of each transfer."

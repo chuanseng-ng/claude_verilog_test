@@ -593,10 +593,12 @@ async def test_pmu_live_power_cycle_clears_timeout_flag(dut):
 #       the request, so no gated edge falls in a clamp window at any clock ratio. A bus handshake
 #       that u_cpu completes at such an edge would not reach u_cpu_axi_cdc: the clamp holds the
 #       valid and ready outputs of u_cpu at 0, not its inputs (DS-PMU-100, DS-PMU-182).
-#   P3  A register access to the GPU control slave while the GPU domain is off does not end
-#       (DS-PMU-185). The slave takes the address and never answers.
-# The P2 tests are normal tests. The P3 tests that assert the specified behaviour are marked
-# expect_fail: they must fail while the behaviour exists. If one of them passes, the review was
+#   P3  A register access to the GPU control slave while the GPU domain is off did not end
+#       (DS-PMU-185). The slave takes the address and never answers. The interconnect now answers
+#       such an access itself with SLVERR (read data 0xDEAD_BEEF), so the P3 end-of-access test is
+#       a normal test.
+# The P2 tests are normal tests. A test that asserts a behaviour the RTL does not have is marked
+# expect_fail: it must fail while the behaviour is missing. If one of them passes, the review was
 # wrong or the RTL changed. Then replace it by a normal test that proves the rule. A harness fault
 # raises RuntimeError, not AssertionError, so expect_fail cannot hide it. Each expect_fail test has
 # a normal companion test that proves the checker and the stimulus. The firmware images are built
@@ -1190,6 +1192,8 @@ class _P3Monitor:
                 int(s.cpu_bridge_s_rvalid.value) & int(s.cpu_bridge_s_rready.value),
                 int(s.cpu_bridge_s_rdata.value),
                 int(s.cpu_bridge_s_rlast.value),
+                int(s.cpu_bridge_s_bresp.value),
+                int(s.cpu_bridge_s_rresp.value),
             )
             await RisingEdge(clk)
             await ReadOnly()
@@ -1203,27 +1207,31 @@ class _P3Monitor:
                     self.commits[name] = now
 
     def _scoreboard(self, pre: tuple, now: int) -> None:
-        aw, awaddr, bh, ar, araddr, arlen, rh, rdata, rlast = pre
+        aw, awaddr, bh, ar, araddr, arlen, rh, rdata, rlast, bresp, rresp = pre
         if aw:
             op = None
             if awaddr >> 12 == GPU_WINDOW_PAGE:
-                op = {"kind": "write", "addr": awaddr, "t_req": now, "t_resp": None, "data": None}
+                op = {"kind": "write", "addr": awaddr, "t_req": now, "t_resp": None, "data": None,
+                      "resp": None}
                 self.ops.append(op)
             self._wq.append(op)
         if bh and self._wq:
             op = self._wq.pop(0)
             if op is not None:
                 op["t_resp"] = now
+                op["resp"] = bresp
         if ar:
             op = None
             if araddr >> 12 == GPU_WINDOW_PAGE:
-                op = {"kind": "read", "addr": araddr, "t_req": now, "t_resp": None, "data": None}
+                op = {"kind": "read", "addr": araddr, "t_req": now, "t_resp": None, "data": None,
+                      "resp": None}
                 self.ops.append(op)
             self._rq.append([op, arlen + 1])
         if rh and self._rq:
             head = self._rq[0]
             if head[0] is not None and head[0]["data"] is None:
                 head[0]["data"] = rdata
+                head[0]["resp"] = rresp
             head[1] -= 1
             if rlast or head[1] <= 0:
                 self._rq.pop(0)
@@ -1276,6 +1284,7 @@ def _p3_op_summary(op) -> dict:
         "cycles": None if op["t_resp"] is None
         else round((op["t_resp"] - op["t_req"]) / FABRIC_PERIOD_NS),
         "data": op["data"],
+        "resp": op["resp"],
     }
 
 
@@ -1318,6 +1327,7 @@ async def _p3_experiment(dut, cpu_ns: int, kind: str) -> dict:
     ops = mon.ops_since(t_begin)
     row["off_op"] = _p3_op_summary(ops[0] if ops else None)
     row["off_waited"] = waited
+    await _wait_marker(dut, mon, "NEXT_DONE", P3_BOUND_CYCLES)
     row["off_commits"] = {n: n in mon.commits for n in ("ACCESS_DONE", "NEXT_DONE")}
     row["off_slot"] = {k: v for k, v in mon.slot["off_access"].items()}
     row["off_first"] = dict(mon.first["off_access"])
@@ -1394,23 +1404,45 @@ def _p3_require_reached(rows: list) -> None:
             raise RuntimeError(f"harness: {row['kind']} cpu={row['cpu_ns']}ns: {row['aborted']}")
 
 
-@cocotb.test(expect_fail=True)
+P3_OFF_RESP_SLVERR = 2
+P3_OFF_RDATA = 0xDEAD_BEEF
+P3_SLOT_REQUEST_KEYS = ("aw_valid", "aw_hs", "w_valid", "w_hs", "ar_valid", "ar_hs")
+
+
+@cocotb.test()
 async def test_p3_gpu_access_while_off_completes_within_bound(dut):
     """Asserts: a register access to the GPU control slave while the GPU domain is off ends within
-    a long bound, with an error response or defined data (DS-PMU-185). Stimulus: the CPU reads and
-    writes GPU_KERNEL_PC after it has requested GPU_OFF and read STATUS as off, at three clock
-    ratios. The bound is P3_BOUND_CYCLES fabric cycles; the control access takes far fewer.
-
-    expect_fail: the review reads that the slave shows arready=1 and awready=1 while in reset and
-    never answers, so the master waits. If this test passes, the reading was wrong or the RTL
-    changed (an upstream timeout or an error response). The log says what happened at each
-    interface."""
+    a long bound with SLVERR, a read returns 0xDEAD_BEEF, the CPU commits the next instruction and a
+    following access outside the GPU, and the GPU slot of the interconnect sees no request
+    (DS-PMU-185). Stimulus: the CPU reads and writes GPU_KERNEL_PC after it has
+    requested GPU_OFF and read STATUS as off, at three clock ratios. The bound is P3_BOUND_CYCLES
+    fabric cycles; the control access takes far fewer. The response is read at the CPU interface
+    (s_* face of u_cpu_axi_cdc), so it has crossed the interconnect, the AXI-Lite bridge and the
+    CPU clock crossing. The GPU slot signals are counted in the off phase: no valid on aw, w or ar
+    means the access had no side effect on the GPU.
+    This test failed on the RTL before the off flag of the interconnect (the master waited for
+    ever)."""
     rows = await with_timeout(_p3_sweep(dut), 6000, "us")
     _p3_require_reached(rows)
     bad = [r for r in rows if not r["off_op"].get("completed")]
     assert not bad, (
         f"{len(bad)} of {len(rows)} access(es) did not end within {P3_BOUND_CYCLES} fabric cycles: "
         + "; ".join(f"{r['kind']} cpu={r['cpu_ns']}ns {r['off_op']}" for r in bad[:6]))
+    for row in rows:
+        tag = f"{row['kind']} cpu={row['cpu_ns']}ns"
+        op = row["off_op"]
+        assert op["resp"] == P3_OFF_RESP_SLVERR, f"{tag}: response {op['resp']}, expected SLVERR"
+        assert row["off_commits"] == {"ACCESS_DONE": True, "NEXT_DONE": True}, (
+            f"{tag}: the CPU did not continue after the error response: {row['off_commits']}")
+        if row["kind"] == "read":
+            assert op["data"] == P3_OFF_RDATA, f"{tag}: read data {op['data']:#x}"
+        side = {
+            k: row["off_slot"][k] for k in P3_SLOT_REQUEST_KEYS if row["off_slot"].get(k, 0)
+        }
+        assert not side, f"{tag}: the GPU slot saw the request while off: {side}"
+    dut._log.info(
+        f"P3 off access: {len(rows)} runs end with SLVERR, reads return {P3_OFF_RDATA:#x}, "
+        "no request reaches the GPU slot")
 
 
 @cocotb.test(expect_fail=True)
@@ -1419,7 +1451,10 @@ async def test_p3_control_slave_ready_low_while_in_reset(dut):
     are low (AGENTS.md rule 6: a reset value must not advertise availability).
 
     expect_fail: the review reads awready = ~aw_cap_q and arready = ~ar_cap_q, which are 1 in
-    reset. The values are in the log of every access."""
+    reset. The values are in the log of every access. The rule stays unmet by the owner's waiver
+    (DS-PMU-185): the off flag of the interconnect keeps the access away from the slave, so the
+    slave ready level has no effect on the bus. If this test passes, the slave was changed; then
+    make it a normal test."""
     rows = await with_timeout(_p3_sweep(dut), 6000, "us")
     _p3_require_reached(rows)
     bad = {}

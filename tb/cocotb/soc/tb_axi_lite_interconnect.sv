@@ -25,6 +25,10 @@ module tb_axi_lite_interconnect #(
     input  logic clk,
     input  logic rst_n,
 
+    // Per-slot off level, driven by the test; off_rdata_o mirrors the OFF_RDATA parameter of the DUT.
+    input  logic [soc_periph_map_pkg::AXIL_N_SLAVES-1:0] slv_off,
+    output logic [DW-1:0] off_rdata_o,
+
     // ── CPU-side master port (BFM prefix "m_axil_") ──────────────────────────
     input  logic [AW-1:0] m_axil_awaddr,
     input  logic [2:0]    m_axil_awprot,
@@ -71,6 +75,7 @@ module tb_axi_lite_interconnect #(
         .SLV_LIMIT (AXIL_SLV_LIMIT)
     ) u_axil_ic (
         .clk(clk), .rst_n(rst_n),
+        .slv_off_i(slv_off),
         .m_axil_awaddr(m_axil_awaddr), .m_axil_awprot(m_axil_awprot),
         .m_axil_awvalid(m_axil_awvalid), .m_axil_awready(m_axil_awready),
         .m_axil_wdata(m_axil_wdata), .m_axil_wstrb(m_axil_wstrb),
@@ -91,6 +96,8 @@ module tb_axi_lite_interconnect #(
         .s_axil_rdata(s_rdata), .s_axil_rresp(s_rresp),
         .s_axil_rvalid(s_rvalid), .s_axil_rready(s_rready)
     );
+
+    assign off_rdata_o = u_axil_ic.OFF_RDATA;
 
     // No hardware-side status injection in the interconnect testbench.
     logic        hw_wen_z   [N_REGS];

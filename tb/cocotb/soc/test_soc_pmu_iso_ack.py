@@ -896,3 +896,129 @@ async def test_cpu_clock_gate_control_forced_reset_window_reached(dut):
             f"{tag}: the clock disable arrived during the reset, so the reset term is not the "
             "sole guard")
         assert r["ticks_reset_high"] > 10, f"{tag}: gated clock barely ticked outside reset"
+
+
+# ---------------------------------------------------------------------------------------------
+# Part 5: debug access while the CPU domain is off
+# ---------------------------------------------------------------------------------------------
+DBG_CTRL, DBG_STATUS = 0x000, 0x004
+OFF_RDATA = 0xDEAD_BEEF
+DBG_MAX_WAIT_FABRIC = 600
+
+
+async def _dbg_xfer(dut, addr: int, write: bool = False, data: int = 0) -> tuple:
+    """One APB3 transfer on the debug port (clk_i domain). Returns (rdata, pslverr, completed)."""
+    dut.apb_paddr_i.value = addr
+    dut.apb_pwrite_i.value = 1 if write else 0
+    dut.apb_pwdata_i.value = data
+    dut.apb_psel_i.value = 1
+    dut.apb_penable_i.value = 0
+    await RisingEdge(dut.clk_i)
+    dut.apb_penable_i.value = 1
+    await RisingEdge(dut.clk_i)
+    waited = 0
+    result = None
+    while result is None:
+        if int(dut.apb_pready_o.value):
+            result = (
+                int(dut.apb_prdata_o.value),
+                bool(int(dut.apb_pslverr_o.value)),
+                True,
+            )
+        else:
+            waited += 1
+            if waited > DBG_MAX_WAIT_FABRIC:
+                result = (0, False, False)
+            else:
+                await RisingEdge(dut.clk_i)
+    dut.apb_psel_i.value = 0
+    dut.apb_penable_i.value = 0
+    dut.apb_pwrite_i.value = 0
+    return result
+
+
+async def _debug_while_off_body(dut, cpu_ns: int) -> dict:
+    await _setup(dut, cpu_ns)
+    assert _dom_state(dut) == DOM_ON
+    await _set_mode(dut, MODE_CPU_OFF)
+    during = []
+    for _ in range(400):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        st_issue = _dom_state(dut)
+        await RisingEdge(dut.clk_i)
+        rd, err, ok = await _dbg_xfer(dut, DBG_STATUS)
+        during.append((st_issue, _dom_state(dut), rd, err, ok))
+        if st_issue == DOM_OFF and len(during) >= 3:
+            break
+    else:
+        raise RuntimeError("harness: the CPU domain never reached DOM_OFF")
+    await ClockCycles(dut.clk_i, 40)
+    await ClockCycles(dut.cpu_clk_i, 8)
+    off_read = await _dbg_xfer(dut, DBG_STATUS)
+    off_write = await _dbg_xfer(dut, DBG_CTRL, True, 1)
+    gone = await _dbg_xfer(dut, DBG_STATUS)
+    await _set_mode(dut, MODE_NORMAL)
+    await _wait_state(dut, {DOM_ON}, 4000, "power-up")
+    await ClockCycles(dut.clk_i, 80)
+    await ClockCycles(dut.cpu_clk_i, 16)
+    on_read = await _dbg_xfer(dut, DBG_STATUS)
+    return {
+        "cpu_ns": cpu_ns,
+        "during": during,
+        "off_read": off_read,
+        "off_write": off_write,
+        "gone": gone,
+        "on_read": on_read,
+    }
+
+
+async def _debug_while_off_sweep(dut) -> list:
+    return [
+        await _debug_while_off_body(dut, ns)
+        for ns in (FABRIC_NS, 3 * FABRIC_NS, 8 * FABRIC_NS, 3)
+    ]
+
+
+@cocotb.test()
+async def test_debug_access_while_cpu_off_completes_with_error(dut):
+    """A debug APB access while the PMU has powered the CPU domain off completes with PSLVERR and
+    OFF_RDATA (0xDEAD_BEEF) instead of hanging, at CPU clocks 1:1, 3x slower, 8x slower and 7:3
+    faster. The access that reaches the bridge cannot be answered by the CPU domain: its clock is
+    gated and its reset is asserted. Back to back accesses run from the request until the domain is
+    off: each ends within the bound, and an access that starts after the domain is off returns the
+    error. After the power-up the debug port reads STATUS with no error."""
+    rows = await with_timeout(_debug_while_off_sweep(dut), 6000, "us")
+    for r in rows:
+        tag = f"cpu={r['cpu_ns']}ns"
+        assert all(ok for *_x, ok in r["during"]), (
+            f"{tag}: an access did not end: {r['during']}"
+        )
+        for st_issue, st_done, rd, err, _ok in r["during"]:
+            if st_issue == DOM_OFF and st_done == DOM_OFF:
+                assert err and rd == OFF_RDATA, (
+                    f"{tag}: access in DOM_OFF gave err={err} rd={rd:#x}"
+                )
+        errs = [x for x in r["during"] if x[3]]
+        assert errs, (
+            f"{tag}: no access during the power-down saw the off error: {r['during']}"
+        )
+        assert all(x[2] == OFF_RDATA for x in errs), (
+            f"{tag}: error data {[hex(x[2]) for x in errs]}"
+        )
+        for name in ("off_read", "off_write", "gone"):
+            rd, err, ok = r[name]
+            assert ok, f"{tag}: {name} hung while the CPU domain was off"
+            assert err and rd == OFF_RDATA, f"{tag}: {name} gave err={err} rd={rd:#x}"
+        rd, err, ok = r["on_read"]
+        assert ok and not err and rd != OFF_RDATA, (
+            f"{tag}: after power-up gave ok={ok} err={err} rd={rd:#x}"
+        )
+    dut._log.info(
+        "debug access while the CPU domain is off: "
+        + "; ".join(
+            f"cpu={r['cpu_ns']}ns {len(r['during'])} accesses to DOM_OFF, "
+            f"{sum(1 for x in r['during'] if x[3])} with the off error"
+            for r in rows
+        )
+    )

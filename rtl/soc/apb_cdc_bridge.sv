@@ -19,11 +19,17 @@
 //   only when req_m is low.
 //   If the destination clock stops after the completion, a destination reset ends S_DROP, so the source never waits for it.
 //   A request that finds a stale ack_s, or the destination in reset, completes locally with an error and no transfer.
+//   dest_off_i marks the destination domain as powered off. It counts as the destination not alive: m_rst_n_s is
+//   m_rst_n_s_raw with dest_off_i cleared in. A request that starts while dest_off_i is high, or sees it rise before the ack,
+//   ends with s_pslverr_o=1 and s_prdata_o=OFF_RDATA. An error from a reset alone, with dest_off_i low, still returns prdata 0.
+//   There is no timeout. A destination clock that stops while the domain is on and not in reset stalls the transfer
+//   until the clock returns or the destination resets.
 // Caller rules:
 //   - STA must set set_max_delay -datapath_only on the four payload buses, on req_q and ack_q, and on resp_prdata_dq and resp_pslverr_dq.
 //     The path from m_rst_sync_n to u_m_alive_sync is a reset crossing: constrain it as in the CDC check scripts.
 //   - m_rst_n_i must not glitch, because it acts on the s_clk_i domain without a clock.
-//   - Connect scanmode_i and scan_rst_ni at every instance.
+//   - Connect scanmode_i and scan_rst_ni at every instance. Tie dest_off_i to 0 when the destination is always on.
+//   - dest_off_i is a level in the s_clk_i domain. It must not come from another clock without a synchroniser.
 //   - Use the bridge for configuration and debug paths only. It is not a data path.
 //   - A reset on s_rst_n_i abandons a destination transfer with no response and no SLVERR. The upstream master re-issues it after reset.
 //   - phase5_soc_multiclock_check.sdc matches req_q and ack_q by name. Do not rename them.
@@ -32,12 +38,16 @@
 module apb_cdc_bridge #(
     parameter int unsigned ADDR_W           = 12,  // APB4 local address width (byte address)
     parameter int unsigned SYNC_STAGES_TO_S = 2,    // stages synchronising INTO the s_* domain (ack, s reset, m_rst_n_i status)
-    parameter int unsigned SYNC_STAGES_TO_M = 2     // stages synchronising INTO the m_* domain (req, m reset)
+    parameter int unsigned SYNC_STAGES_TO_M = 2,    // stages synchronising INTO the m_* domain (req, m reset)
+    parameter logic [31:0] OFF_RDATA        = 32'hDEAD_BEEF  // s_prdata_o of an error caused by dest_off_i
 ) (
     // DFT scan bypass. scanmode_i and scan_rst_ni go to the four internal cdc_reset_sync instances (u_s_rst_sync,
     // u_m_rst_sync, u_comp_rst_sync, u_m_alive_sync). Connect them at every instance.
     input  logic               scanmode_i,
     input  logic               scan_rst_ni,
+
+    // 1 = destination domain powered off. Level in the s_clk_i domain.
+    input  logic               dest_off_i,
 
     // ══ s_* face — source domain, APB4 SLAVE port (fabric/core_clk side) ═══
     input  logic              s_clk_i,
@@ -127,7 +137,8 @@ module apb_cdc_bridge #(
 
     // m_rst_n_s is 1 when the destination is observed alive. It falls SYNC_STAGES_TO_S+1 s_clk_i edges after the
     // reset starts, one edge later than ack_s can follow an ack_q that was set before the reset.
-    logic m_rst_n_s;    // 1 = destination domain observed NOT in reset (alive)
+    logic m_rst_n_s_raw;    // 1 = destination domain observed NOT in reset (alive)
+    logic m_rst_n_s;        // m_rst_n_s_raw and not dest_off_i
 
     cdc_sync #(
         .WIDTH     (1),
@@ -137,8 +148,10 @@ module apb_cdc_bridge #(
         .clk_i   (s_clk_i),
         .rst_n_i (s_rst_sync_n),
         .d_i     (m_alive_fast_s),
-        .q_o     (m_rst_n_s)
+        .q_o     (m_rst_n_s_raw)
     );
+
+    assign m_rst_n_s = m_rst_n_s_raw && !dest_off_i;
 
     // =========================================================================
     // Source domain (s_clk_i): command capture + req level + FSM
@@ -163,6 +176,8 @@ module apb_cdc_bridge #(
     // Latched once at SETUP: the request was forwarded (destination observed alive and no stale ack_s),
     // or captured only to be completed locally with an error. See ds:mod:apb-cdc-bridge.
     logic              req_fwd_q;
+    // Latched at SETUP: dest_off_i was high, so the local error returns OFF_RDATA.
+    logic              off_err_q;
 
     logic              ack_s;
     logic              fwd_ok;
@@ -194,6 +209,7 @@ module apb_cdc_bridge #(
             cmd_pstrb_q  <= '0;
             req_q        <= 1'b0;
             req_fwd_q    <= 1'b0;
+            off_err_q    <= 1'b0;
         end else begin
             s_state_q <= s_state_d;
             // Capture happens exactly once per transfer, on the SETUP cycle
@@ -208,6 +224,7 @@ module apb_cdc_bridge #(
                 cmd_pwdata_q <= s_pwdata_i;
                 cmd_pstrb_q  <= s_pstrb_i;
                 req_fwd_q    <= fwd_ok;
+                off_err_q    <= dest_off_i;
             end
             // req_q asserts once per forwarded request and clears when ack_s is seen.
             // req_q is clamped to 0 while m_rst_n_s is low.
@@ -341,7 +358,7 @@ module apb_cdc_bridge #(
                 resp_prdata_q  <= resp_prdata_dq;
                 resp_pslverr_q <= resp_pslverr_dq;
             end else if (!req_fwd_q || !m_rst_n_s) begin
-                resp_prdata_q  <= '0;
+                resp_prdata_q  <= (dest_off_i || off_err_q) ? OFF_RDATA : 32'h0;
                 resp_pslverr_q <= 1'b1;
             end
         end

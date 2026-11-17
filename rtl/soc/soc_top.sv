@@ -465,6 +465,23 @@ module soc_top
         .q_o     (pmu_cpu_iso_ack)
     );
 
+    // Domain-off levels in core_clk, for the bus guards. Each term is a PMU flop output or pmu_cpu_iso_ack, so no new
+    // crossing and no new flop. The GPU level rises with the first of clock stop, clamp or reset and falls when the last
+    // of them releases. The CPU level adds pmu_cpu_iso_ack because the CPU clock gate opens through the synchroniser
+    // after pmu_cpu_clk_en rises. The domain resets are not used, because they follow the scan reset in scan mode.
+    // A bus access to a domain while its level is high gets SLVERR and the data 32'hDEAD_BEEF. Doc: ds:mod:pmu
+    logic gpu_dom_off;
+    logic cpu_dom_off;
+    assign gpu_dom_off = ~pmu_gpu_clk_en | pmu_gpu_iso_en | ~pmu_gpu_rst_n;
+    assign cpu_dom_off = ~pmu_cpu_clk_en | pmu_cpu_iso_en | ~pmu_cpu_rst_n | pmu_cpu_iso_ack;
+
+    // Per-slot off levels of the AXI-Lite ring. Only the GPU slot can be off.
+    logic [AXIL_N_SLAVES-1:0] axil_slv_off;
+    always_comb begin
+        axil_slv_off            = '0;
+        axil_slv_off[AXIL_GPU]  = gpu_dom_off;
+    end
+
     // =========================================================================
     // WDT bite to CPU-domain reset.
     // When WDT_CTRL.RST_EN is 1, a bite resets the CPU domain only. It does not pass through pmu.sv.
@@ -703,6 +720,7 @@ module soc_top
     ) u_apb_dbg_cdc (
         .scanmode_i  (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
+        .dest_off_i  (cpu_dom_off),
 
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),
@@ -994,7 +1012,7 @@ module soc_top
         .rst_n                      (gpu_domain_rst_n),
         // AXI4-Lite ctrl slave ← soc_bus axil_gpu_* (ring slot AXIL_GPU=0);
         // slave-side response port not isolation-clamped (see clamp-scope
-        // note above) — stalling a ctrl access into a gated GPU is expected.
+        // note above). The interconnect answers SLVERR while the GPU is off and never forwards.
         .s_axil_awaddr              (bus_axil_gpu_awaddr[11:0]),
         .s_axil_awvalid             (bus_axil_gpu_awvalid),
         .s_axil_awready             (bus_axil_gpu_awready),
@@ -1136,6 +1154,7 @@ module soc_top
     ) u_bus (
         .clk            (core_clk),
         .rst_n          (core_rst_n),
+        .axil_slv_off_i (axil_slv_off),
         // AXI4 master-facing (CPU, GPU-ifetch, GPU-data, DMA)
         .m_awaddr       (xbar_m_awaddr),
         .m_awlen        (xbar_m_awlen),
@@ -1703,6 +1722,7 @@ module soc_top
     ) u_apb_pll_cdc (
         .scanmode_i  (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
+        .dest_off_i  (1'b0),
 
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),
@@ -1780,6 +1800,7 @@ module soc_top
     ) u_apb_pll2_cdc (
         .scanmode_i  (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
+        .dest_off_i  (1'b0),
 
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),

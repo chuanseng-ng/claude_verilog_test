@@ -14,20 +14,27 @@ apb_interconnect.sv's default-SLVERR-for-unclaimed-slot behaviour is NOT exercis
 (tb_axi_lite_interconnect) has neither apb_interconnect.sv nor axil_to_apb.sv. Its "apb_bridge" slot
 is a generic axi_lite_register_bank stub that completes OKAY for any in-window address. See
 test_reserved_slot_in_window.
+Off slots (slv_off_i): a slot that the test marks off is answered by the interconnect with SLVERR
+and OFF_RDATA, and the request never reaches the slave. The tests that use it drive the master port
+cycle by cycle (`_txn`) and sample the interface at the falling edge of the clock, so each cycle is
+one entry of the trace.
+
 Run: make -C tb/cocotb/soc axil_interconnect
 Doc: tm:suite:soc-test-axil-interconnect
 """
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import FallingEdge, RisingEdge
 
 from bfm.axi4lite_master import AXI4LiteMaster
 
 CLK_PERIOD_NS = 2
 
 RESP_OKAY = 0
+RESP_SLVERR = 2
 RESP_DECERR = 3
+OFF_RDATA = 0xDEAD_BEEF
 
 # 3-slave AXI-Lite ring (PR-7 topology).
 # Each entry maps to one register-bank stub in tb_axi_lite_interconnect.
@@ -57,6 +64,7 @@ async def _setup(dut):
     """Start clock, reset, build the CPU-side AXI4-Lite master."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     dut.rst_n.value = 0
+    dut.slv_off.value = 0
     m = AXI4LiteMaster(dut, "m_axil_", dut.clk)
     for _ in range(5):
         await RisingEdge(dut.clk)
@@ -196,6 +204,7 @@ async def test_backpressure(dut):
     # would defeat the stall we want to test).
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     dut.rst_n.value = 0
+    dut.slv_off.value = 0
     # Idle all master inputs.
     for sig in ("awvalid", "wvalid", "bready", "arvalid", "rready"):
         getattr(dut, f"m_axil_{sig}").value = 0
@@ -344,3 +353,503 @@ async def test_axprot_routed_to_selected_slave_only(dut):
         assert awp == [0] * n and arp == [0] * n, "PROT leaked to a slave on an unmapped access"
 
     dut._log.info("AxPROT routing OK")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Off slots (slv_off_i).
+#
+# The master port is driven cycle by cycle. Cycle 0 is the first cycle with the request valid high.
+# `off` and `ready` map a cycle number to a new value of slv_off or of bready/rready. A change
+# takes effect at the start of that cycle. With the register-bank stub slaves, a write passes the
+# states W_IDLE (cycle 0), W_AW (1), W_DATA (2) and W_RESP (3: the slave response is valid), and a
+# read passes R_IDLE (0), R_AR (1) and R_DATA (2: the slave response is valid, the output register
+# holds it from cycle 3). The trace keeps the engine state of every cycle, so a test can prove that
+# its flag change fell into the state it names.
+# ──────────────────────────────────────────────────────────────────────────────
+
+GPU = SLAVES["gpu"]
+APB = SLAVES["apb_bridge"]
+DMA = SLAVES["dma"]
+SLOT_GPU, SLOT_APB, SLOT_DMA = 0, 1, 2
+W_IDLE, W_AW, W_DATA, W_RESP = range(4)
+R_IDLE, R_AR, R_DATA = range(3)
+MAX_TXN_CYCLES = 60
+TAIL_CYCLES = 8
+
+
+class _Txn:
+    """Result of one `_txn`: the responses and the per-cycle trace."""
+
+    def __init__(self):
+        self.rec = []  # one dict per cycle
+        self.n_resp = 0  # response handshakes (B or R)
+        self.resp = None
+        self.rdata = None
+        self.resp_cycle = None
+        self.hang = False
+        self.unstable = []  # a valid response that changed while not accepted
+        self.fwd = {"aw": 0, "w": 0, "ar": 0}  # cycles in which any slave saw the valid
+
+    def state_at(self, cycle):
+        return self.rec[cycle]["state"]
+
+    def fmt(self):
+        return " ".join(
+            f"[{r['c']} off={r['off']:03b} st={r['state']} rv={r['rv']} resp={r['resp']}"
+            f" fwd={r['fwd']}]"
+            for r in self.rec[:14]
+        )
+
+
+async def _txn(dut, kind, addr, data=0, off=None, ready=None):
+    """One write (kind "w") or read (kind "r"). Returns a `_Txn`."""
+    off = off or {}
+    ready = ready or {}
+    is_w = kind == "w"
+    ready_sig = dut.m_axil_bready if is_w else dut.m_axil_rready
+    state_sig = dut.u_axil_ic.wstate if is_w else dut.u_axil_ic.rstate
+    t = _Txn()
+    ready_sig.value = 1
+    await RisingEdge(dut.clk)
+    aw = is_w
+    w = is_w
+    ar = not is_w
+    if is_w:
+        dut.m_axil_awaddr.value = addr
+        dut.m_axil_awprot.value = 0
+        dut.m_axil_awvalid.value = 1
+        dut.m_axil_wdata.value = data
+        dut.m_axil_wstrb.value = 0xF
+        dut.m_axil_wvalid.value = 1
+    else:
+        dut.m_axil_araddr.value = addr
+        dut.m_axil_arprot.value = 0
+        dut.m_axil_arvalid.value = 1
+    cycle = 0
+    done_at = None
+    prev = None
+    while True:
+        if cycle in off:
+            dut.slv_off.value = off[cycle]
+        if cycle in ready:
+            ready_sig.value = ready[cycle]
+        await FallingEdge(dut.clk)
+        fwd = {
+            "aw": int(dut.s_awvalid.value),
+            "w": int(dut.s_wvalid.value),
+            "ar": int(dut.s_arvalid.value),
+        }
+        for k, v in fwd.items():
+            if v:
+                t.fwd[k] += 1
+        rdy = int(ready_sig.value)
+        if is_w:
+            rv, resp, rdata = (
+                int(dut.m_axil_bvalid.value),
+                int(dut.m_axil_bresp.value),
+                None,
+            )
+            aw_hs = aw and int(dut.m_axil_awready.value)
+            w_hs = w and int(dut.m_axil_wready.value)
+        else:
+            rv, resp, rdata = (
+                int(dut.m_axil_rvalid.value),
+                int(dut.m_axil_rresp.value),
+                int(dut.m_axil_rdata.value),
+            )
+            aw_hs = w_hs = False
+        ar_hs = ar and int(dut.m_axil_arready.value)
+        if prev is not None and prev[0] and not prev[1]:
+            if not rv or (resp, rdata) != (prev[2], prev[3]):
+                t.unstable.append(
+                    f"cycle {cycle}: valid response changed before it was accepted"
+                )
+        prev = (rv, rdy, resp, rdata)
+        t.rec.append(
+            {
+                "c": cycle,
+                "off": int(dut.slv_off.value),
+                "state": int(state_sig.value),
+                "rv": rv,
+                "resp": resp,
+                "fwd": (fwd["aw"], fwd["w"], fwd["ar"]),
+            }
+        )
+        if rv and rdy:
+            t.n_resp += 1
+            if t.resp is None:
+                t.resp, t.rdata, t.resp_cycle = resp, rdata, cycle
+                done_at = cycle
+        await RisingEdge(dut.clk)
+        if aw_hs:
+            aw = False
+            dut.m_axil_awvalid.value = 0
+        if w_hs:
+            w = False
+            dut.m_axil_wvalid.value = 0
+        if ar_hs:
+            ar = False
+            dut.m_axil_arvalid.value = 0
+        cycle += 1
+        if done_at is None and cycle >= MAX_TXN_CYCLES:
+            t.hang = True
+            break
+        if done_at is not None and cycle > done_at + TAIL_CYCLES:
+            break
+    dut.m_axil_awvalid.value = 0
+    dut.m_axil_wvalid.value = 0
+    dut.m_axil_arvalid.value = 0
+    ready_sig.value = 1
+    return t
+
+
+def _check_once(t, resp, label, rdata=None):
+    """The transaction ended once, with the given response (and read data) and a stable response."""
+    assert not t.hang, f"{label}: no response in {MAX_TXN_CYCLES} cycles. {t.fmt()}"
+    assert t.n_resp == 1, (
+        f"{label}: {t.n_resp} responses, expected exactly 1. {t.fmt()}"
+    )
+    assert t.resp == resp, f"{label}: resp {t.resp}, expected {resp}. {t.fmt()}"
+    if rdata is not None:
+        assert t.rdata == rdata, (
+            f"{label}: rdata {t.rdata:#x}, expected {rdata:#x}. {t.fmt()}"
+        )
+    assert not t.unstable, f"{label}: {t.unstable}. {t.fmt()}"
+
+
+async def _setup_off(dut):
+    """Start the clock and reset, then write a known value to reg0 of the three slaves. Returns the
+    master BFM."""
+    m = await _setup(dut)
+    for k, base in enumerate(SLAVES.values()):
+        assert await m.write(base, 0x5A00_0000 | k) == RESP_OKAY
+    return m
+
+
+def _known(k):
+    return 0x5A00_0000 | k
+
+
+async def _rereset(dut, m):
+    """Reset the DUT and the stub slaves again without a second clock, then restore the known
+    values. A transaction that the flag cut short leaves a stub slave with an unanswered request,
+    as a powered-off slave would be reset before it returns."""
+    dut.slv_off.value = 0
+    dut.rst_n.value = 0
+    for _ in range(5):
+        await RisingEdge(dut.clk)
+    dut.rst_n.value = 1
+    for _ in range(2):
+        await RisingEdge(dut.clk)
+    for k, base in enumerate(SLAVES.values()):
+        assert await m.write(base, _known(k)) == RESP_OKAY
+
+
+async def _expect_slot_unchanged(dut, m, k, base, label):
+    data, rresp = await m.read(base)
+    assert rresp == RESP_OKAY and data == _known(k), (
+        f"{label}: slot {k} reg0 {data:#x} resp {rresp}"
+    )
+
+
+@cocotb.test()
+async def test_off_flag_default_value(dut):
+    """The wrapper mirrors the OFF_RDATA parameter of the DUT: it is 0xDEAD_BEEF."""
+    await _setup(dut)
+    assert int(dut.off_rdata_o.value) == OFF_RDATA, f"{int(dut.off_rdata_o.value):#x}"
+
+
+@cocotb.test()
+async def test_off_write_slverr_not_forwarded(dut):
+    """A write to an off slot ends once with SLVERR. No slave sees an AW or W valid, the slot keeps
+    its old value, and the slot answers normally once the flag is clear."""
+    m = await _setup_off(dut)
+    for k, base in enumerate(SLAVES.values()):
+        dut.slv_off.value = 1 << k
+        t = await _txn(dut, "w", base, 0xBAD0_0000 | k)
+        _check_once(t, RESP_SLVERR, f"write slot {k}")
+        assert t.fwd == {"aw": 0, "w": 0, "ar": 0}, (
+            f"slot {k}: forwarded {t.fwd}. {t.fmt()}"
+        )
+        dut.slv_off.value = 0
+        await _expect_slot_unchanged(dut, m, k, base, f"after off write slot {k}")
+
+
+@cocotb.test()
+async def test_off_read_slverr_and_data(dut):
+    """A read from an off slot ends once with SLVERR and the data 0xDEAD_BEEF. No slave sees an AR
+    valid."""
+    m = await _setup_off(dut)
+    for k, base in enumerate(SLAVES.values()):
+        dut.slv_off.value = 1 << k
+        t = await _txn(dut, "r", base)
+        _check_once(t, RESP_SLVERR, f"read slot {k}", OFF_RDATA)
+        assert t.fwd == {"aw": 0, "w": 0, "ar": 0}, (
+            f"slot {k}: forwarded {t.fwd}. {t.fmt()}"
+        )
+        dut.slv_off.value = 0
+        await _expect_slot_unchanged(dut, m, k, base, f"after off read slot {k}")
+
+
+@cocotb.test()
+async def test_off_rises_during_write_aw(dut):
+    """The flag rises in the cycle in which the write engine is in W_AW (the AW is not yet taken).
+    The AW and W are accepted and dropped, nothing is forwarded, and the write ends once with
+    SLVERR."""
+    m = await _setup_off(dut)
+    t = await _txn(dut, "w", GPU, 0xBAD0_0001, off={1: 0b001})
+    assert t.state_at(1) == W_AW, f"stimulus missed W_AW. {t.fmt()}"
+    assert t.state_at(0) == W_IDLE
+    _check_once(t, RESP_SLVERR, "off rises in W_AW")
+    assert t.fwd == {"aw": 0, "w": 0, "ar": 0}, f"forwarded {t.fwd}. {t.fmt()}"
+    dut.slv_off.value = 0
+    await _expect_slot_unchanged(dut, m, SLOT_GPU, GPU, "after")
+
+
+@cocotb.test()
+async def test_off_rises_during_write_w(dut):
+    """The flag rises in the cycle of W_DATA. The AW went to the slave before the flag rose. The W
+    is sunk and not forwarded, and the write ends once with SLVERR."""
+    await _setup_off(dut)
+    t = await _txn(dut, "w", GPU, 0xBAD0_0002, off={2: 0b001})
+    assert t.state_at(2) == W_DATA, f"stimulus missed W_DATA. {t.fmt()}"
+    _check_once(t, RESP_SLVERR, "off rises in W_DATA")
+    assert t.fwd["aw"] == 1, (
+        f"the AW before the flag should be forwarded once. {t.fmt()}"
+    )
+    assert t.fwd["w"] == 0, f"the W was forwarded after the flag rose. {t.fmt()}"
+
+
+@cocotb.test()
+async def test_off_rises_during_write_response(dut):
+    """The flag rises in W_RESP, in the cycle in which the slave response is valid. The local
+    SLVERR replaces it, once. With bready low the local response is held until accepted."""
+    m = await _setup_off(dut)
+    t = await _txn(dut, "w", GPU, 0xBAD0_0003, off={3: 0b001})
+    assert t.state_at(3) == W_RESP, f"stimulus missed W_RESP. {t.fmt()}"
+    _check_once(t, RESP_SLVERR, "off rises in W_RESP")
+    await _rereset(dut, m)
+    t = await _txn(dut, "w", GPU, 0xBAD0_0004, off={3: 0b001}, ready={0: 1, 3: 0, 6: 1})
+    assert t.state_at(3) == W_RESP
+    _check_once(t, RESP_SLVERR, "off rises in W_RESP, bready low for 3 cycles")
+    assert t.resp_cycle == 6, (
+        f"the response was accepted in cycle {t.resp_cycle}. {t.fmt()}"
+    )
+
+
+@cocotb.test()
+async def test_off_rises_during_read_ar(dut):
+    """The flag rises in R_AR. The AR is accepted and dropped, nothing is forwarded, and the read
+    ends once with SLVERR and 0xDEAD_BEEF."""
+    await _setup_off(dut)
+    t = await _txn(dut, "r", GPU, off={1: 0b001})
+    assert t.state_at(1) == R_AR and t.state_at(0) == R_IDLE, (
+        f"stimulus missed R_AR. {t.fmt()}"
+    )
+    _check_once(t, RESP_SLVERR, "off rises in R_AR", OFF_RDATA)
+    assert t.fwd == {"aw": 0, "w": 0, "ar": 0}, f"forwarded {t.fwd}. {t.fmt()}"
+
+
+@cocotb.test()
+async def test_off_rises_while_read_in_flight(dut):
+    """The AR went to the slave and the flag rises in R_DATA, in the cycle in which the slave read
+    response is valid but not yet registered. The local SLVERR is delivered once and the read does
+    not hang."""
+    await _setup_off(dut)
+    t = await _txn(dut, "r", GPU, off={2: 0b001})
+    assert t.state_at(2) == R_DATA, f"stimulus missed R_DATA. {t.fmt()}"
+    _check_once(t, RESP_SLVERR, "off rises with the read in flight", OFF_RDATA)
+    assert t.fwd["ar"] == 1, (
+        f"the AR before the flag should be forwarded once. {t.fmt()}"
+    )
+
+
+@cocotb.test()
+async def test_off_rises_after_read_response_registered(dut):
+    """The slave response is already in the output register when the flag rises. It is delivered
+    once with its own data and OKAY, and the local response does not replace it. Checked with rready
+    high and with rready low while the flag rises."""
+    m = await _setup_off(dut)
+    t = await _txn(dut, "r", GPU, off={3: 0b001})
+    assert t.state_at(3) == R_DATA, f"stimulus missed the registered cycle. {t.fmt()}"
+    _check_once(
+        t, RESP_OKAY, "flag rises with the response registered", _known(SLOT_GPU)
+    )
+    assert t.resp_cycle == 3, t.fmt()
+    # The flag is still high: the next read of the slot is answered locally.
+    t = await _txn(dut, "r", GPU)
+    _check_once(t, RESP_SLVERR, "next read while the flag stays high", OFF_RDATA)
+    await _rereset(dut, m)
+    t = await _txn(dut, "r", GPU, off={3: 0b001}, ready={0: 1, 3: 0, 7: 1})
+    assert t.state_at(3) == R_DATA
+    _check_once(
+        t,
+        RESP_OKAY,
+        "flag rises with the response registered, rready low",
+        _known(SLOT_GPU),
+    )
+    assert t.resp_cycle == 7, t.fmt()
+    t = await _txn(dut, "r", GPU)
+    _check_once(t, RESP_SLVERR, "next read while the flag stays high", OFF_RDATA)
+
+
+@cocotb.test()
+async def test_off_falls_mid_transaction_stays_local(dut):
+    """The flag falls during a transaction that it started. The transaction still ends locally with
+    SLVERR and nothing is forwarded afterwards. Cases: flag high from cycle 0 and low from cycle 2,
+    a one-cycle pulse in W_AW / R_AR, and a pulse in R_DATA."""
+    m = await _setup_off(dut)
+    for label, kind, off in (
+        ("write fall at 2", "w", {0: 0b001, 2: 0}),
+        ("write pulse in W_AW", "w", {1: 0b001, 2: 0}),
+        ("write pulse in W_DATA", "w", {2: 0b001, 3: 0}),
+        ("read fall at 2", "r", {0: 0b001, 2: 0}),
+        ("read pulse in R_AR", "r", {1: 0b001, 2: 0}),
+        ("read pulse in R_DATA", "r", {2: 0b001, 3: 0}),
+    ):
+        await _rereset(dut, m)
+        t = await _txn(dut, kind, GPU, 0xBAD0_0005, off=off)
+        _check_once(t, RESP_SLVERR, label, OFF_RDATA if kind == "r" else None)
+        late = [r for r in t.rec if r["c"] >= 3 and any(r["fwd"])]
+        assert not late, f"{label}: forwarding resumed after the flag fell. {t.fmt()}"
+
+
+@cocotb.test()
+async def test_off_pulse_in_write_response_keeps_error(dut):
+    """The flag is high for one cycle in W_RESP while bready is low, then falls. The master has seen
+    a valid SLVERR that it did not accept, so the response must stay SLVERR until it is accepted:
+    it does not change back to the slave response and it does not drop (AXI4 stability, and the
+    rule that a flag edge does not split a transaction). The write engine latches the flag in
+    W_RESP as it does in W_AW and W_DATA; without that latch bresp goes SLVERR in cycle 3 and OKAY
+    from cycle 4 with bvalid held."""
+    await _setup_off(dut)
+    t = await _txn(
+        dut, "w", GPU, 0xBAD0_0006, off={3: 0b001, 4: 0}, ready={0: 1, 3: 0, 6: 1}
+    )
+    assert t.state_at(3) == W_RESP, f"stimulus missed W_RESP. {t.fmt()}"
+    _check_once(t, RESP_SLVERR, "one-cycle off pulse in W_RESP, bready low")
+
+
+@cocotb.test()
+async def test_other_slots_unaffected_while_one_is_off(dut):
+    """With one slot off, the other two slots route, answer OKAY and return their own data. The
+    off slot answers SLVERR in the same sequence."""
+    m = await _setup_off(dut)
+    for off_slot in range(3):
+        dut.slv_off.value = 1 << off_slot
+        for k, base in enumerate(SLAVES.values()):
+            payload = 0xC0DE_0000 | (off_slot << 8) | k
+            tw = await _txn(dut, "w", base + 4, payload)
+            tr = await _txn(dut, "r", base + 4)
+            if k == off_slot:
+                _check_once(tw, RESP_SLVERR, f"off {off_slot}: write slot {k}")
+                _check_once(
+                    tr, RESP_SLVERR, f"off {off_slot}: read slot {k}", OFF_RDATA
+                )
+                assert tw.fwd == {"aw": 0, "w": 0, "ar": 0} and tr.fwd == tw.fwd
+            else:
+                _check_once(tw, RESP_OKAY, f"off {off_slot}: write slot {k}")
+                _check_once(tr, RESP_OKAY, f"off {off_slot}: read slot {k}", payload)
+                assert tw.fwd["aw"] == 1 and tw.fwd["w"] == 1 and tr.fwd["ar"] == 1, (
+                    f"off {off_slot}: slot {k} did not see the request. {tw.fmt()}"
+                )
+    dut.slv_off.value = 0
+    for k, base in enumerate(SLAVES.values()):
+        await _expect_slot_unchanged(dut, m, k, base, "reg0 after all off runs")
+
+
+@cocotb.test()
+async def test_unmapped_address_decerr_has_priority_over_off(dut):
+    """An unmapped address returns DECERR (and 0 read data) when every slot is off."""
+    await _setup_off(dut)
+    dut.slv_off.value = 0b111
+    for bad in (BAD_LOW, BAD_HIGH):
+        tw = await _txn(dut, "w", bad, 0x1234)
+        _check_once(tw, RESP_DECERR, f"write {bad:#x}")
+        tr = await _txn(dut, "r", bad)
+        _check_once(tr, RESP_DECERR, f"read {bad:#x}", 0)
+        assert tw.fwd == {"aw": 0, "w": 0, "ar": 0} and tr.fwd == tw.fwd
+
+
+@cocotb.test()
+async def test_forwarding_resumes_after_flag_clears(dut):
+    """Back to back: an off write and an off read, the flag clears in the cycle after the response,
+    and the next write and read are forwarded and answered normally."""
+    await _setup_off(dut)
+    tw = await _txn(dut, "w", GPU, 0xBAD0_0007, off={0: 0b001})
+    _check_once(tw, RESP_SLVERR, "off write")
+    dut.slv_off.value = 0
+    tw2 = await _txn(dut, "w", GPU, 0x0123_4567)
+    _check_once(tw2, RESP_OKAY, "write after the flag cleared")
+    assert tw2.fwd["aw"] == 1 and tw2.fwd["w"] == 1, tw2.fmt()
+    dut.slv_off.value = 0b001
+    tr = await _txn(dut, "r", GPU)
+    _check_once(tr, RESP_SLVERR, "off read", OFF_RDATA)
+    dut.slv_off.value = 0
+    tr2 = await _txn(dut, "r", GPU)
+    _check_once(tr2, RESP_OKAY, "read after the flag cleared", 0x0123_4567)
+    assert tr2.fwd["ar"] == 1, tr2.fmt()
+
+
+@cocotb.test()
+async def test_off_rises_after_write_response_shown_keeps_okay(dut):
+    """The slave response (OKAY) is shown to the master with bready low, then the flag rises, then
+    bready goes high. The master receives the OKAY once, and bvalid and bresp do not change in any
+    cycle while it waits. The write itself reached the slave, so the next write to the slot while
+    the flag is still high gets SLVERR and is not forwarded. Variants: the flag rises one cycle
+    after the response is first shown, and later; and it rises and falls before bready."""
+    m = await _setup_off(dut)
+    for label, off in (
+        ("rise 1 cycle after the response", {4: 0b001}),
+        ("rise 2 cycles after the response", {5: 0b001}),
+        ("pulse after the response", {4: 0b001, 5: 0}),
+    ):
+        await _rereset(dut, m)
+        t = await _txn(dut, "w", GPU, 0x0A11_0000, off=off, ready={0: 0, 8: 1})
+        assert t.state_at(3) == W_RESP and t.rec[3]["rv"] == 1, f"{label}: {t.fmt()}"
+        assert t.rec[3]["off"] == 0, f"{label}: the flag was already high when B was shown"
+        _check_once(t, RESP_OKAY, label)
+        assert t.resp_cycle == 8, f"{label}: accepted in cycle {t.resp_cycle}. {t.fmt()}"
+        assert all(r["rv"] == 1 and r["resp"] == RESP_OKAY for r in t.rec[3:9]), (
+            f"{label}: bvalid or bresp changed while waiting. {t.fmt()}"
+        )
+        # The write is not undone: with the flag cleared the slot holds the data.
+        dut.slv_off.value = 0
+        data, rresp = await m.read(GPU)
+        assert rresp == RESP_OKAY and data == 0x0A11_0000, f"{label}: slot holds {data:#x}"
+        # The next write while the flag is high gets SLVERR and nothing is forwarded.
+        dut.slv_off.value = 0b001
+        t2 = await _txn(dut, "w", GPU, 0x0A11_0001)
+        _check_once(t2, RESP_SLVERR, f"{label}: next write while off")
+        assert t2.fwd == {"aw": 0, "w": 0, "ar": 0}, f"{label}: forwarded {t2.fwd}. {t2.fmt()}"
+        dut.slv_off.value = 0
+        data, rresp = await m.read(GPU)
+        assert data == 0x0A11_0000, f"{label}: the off write changed the slot: {data:#x}"
+
+
+@cocotb.test()
+async def test_off_rises_after_read_response_shown_keeps_data(dut):
+    """The read response is shown with rready low (so it sits in the output register), then the
+    flag rises later, then rready goes high. The master receives the original data and OKAY once,
+    and rvalid, rresp and rdata do not change in any cycle while it waits. The next read of the slot
+    while the flag is still high gets SLVERR and 0xDEAD_BEEF."""
+    m = await _setup_off(dut)
+    for label, off in (
+        ("rise 1 cycle after the response", {4: 0b001}),
+        ("rise 3 cycles after the response", {6: 0b001}),
+        ("pulse after the response", {4: 0b001, 5: 0}),
+    ):
+        await _rereset(dut, m)
+        t = await _txn(dut, "r", GPU, off=off, ready={0: 0, 9: 1})
+        assert t.state_at(3) == R_DATA and t.rec[3]["rv"] == 1, f"{label}: {t.fmt()}"
+        assert t.rec[3]["off"] == 0, f"{label}: the flag was already high when R was shown"
+        _check_once(t, RESP_OKAY, label, _known(SLOT_GPU))
+        assert t.resp_cycle == 9, f"{label}: accepted in cycle {t.resp_cycle}. {t.fmt()}"
+        assert all(r["rv"] == 1 and r["resp"] == RESP_OKAY for r in t.rec[3:10]), (
+            f"{label}: rvalid or rresp changed while waiting. {t.fmt()}"
+        )
+        dut.slv_off.value = 0b001
+        t2 = await _txn(dut, "r", GPU)
+        _check_once(t2, RESP_SLVERR, f"{label}: next read while off", OFF_RDATA)
+        assert t2.fwd == {"aw": 0, "w": 0, "ar": 0}, f"{label}: forwarded {t2.fwd}. {t2.fmt()}"
+        dut.slv_off.value = 0
