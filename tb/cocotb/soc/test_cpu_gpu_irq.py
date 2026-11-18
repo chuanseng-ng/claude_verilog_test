@@ -31,6 +31,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from axi_outstanding_monitor import AxiOutstandingMonitor
 from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -205,10 +206,15 @@ async def test_cpu_gpu_irq_pass(dut):
     + ISR_FLAG_WI == 1 (ISR ran).
     """
     await _setup(dut)
+    mons = {name: AxiOutstandingMonitor(dut, m, dut.clk_i)
+            for name, m in (("ifetch", 1), ("data", 2))}
 
     saw_pass, saw_fail, last_pc = await _run_to_ebreak(
         dut, test_name="test_cpu_gpu_irq_pass"
     )
+    for name, mon in mons.items():
+        mon.stop()
+        dut._log.info("GPU %s master: %s", name, mon.summary())
 
     if not saw_pass:
         dut._log.error(
@@ -234,6 +240,15 @@ async def test_cpu_gpu_irq_pass(dut):
         f"{TIMEOUT_CYCLES} cycles "
         f"(last_pc=0x{last_pc:08x}, saw_fail={saw_fail})"
     )
+
+    # The crossbar keeps one transaction per slave engine and has no ordering between two requests
+    # of one master. Both GPU masters must therefore never have a second request in flight.
+    for name, mon in mons.items():
+        assert not mon.negative, f"GPU {name} master: response without request ({mon.summary()})"
+        assert mon.max_total <= 1, f"GPU {name} master had two requests in flight: {mon.summary()}"
+    data, ifetch = mons["data"], mons["ifetch"]
+    assert data.n_ar > 0 and data.n_aw > 0, f"monitor saw no GPU data traffic: {data.summary()}"
+    assert ifetch.n_ar > 0, f"monitor saw no GPU ifetch traffic: {ifetch.summary()}"
 
     # Backdoor checks
     sram = sram_mem(dut)
