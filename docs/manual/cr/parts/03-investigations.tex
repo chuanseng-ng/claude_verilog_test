@@ -3212,3 +3212,29 @@ Tests, measured, local, one host. \code{soc_all_ci} exits 0. New tests: \code{te
 Limits. The bridge has no timeout, so a destination clock that stops while the domain is on and not in reset still stalls a debug access (\code{test_b2_stalled_destination_clock_completes_within_bound} stays \code{expect_fail} by decision). Only the debug APB path into the CPU domain has the guard. The CPU AXI bridge \code{u_cpu_axi_cdc} has no guard and no drain step (\reqref{DS-PMU-182}). A transaction that the interconnect cuts short can leave the slave with a request that is not answered, and only the domain reset that the PMU applies clears it. An error from the bridge for an access in flight at a power-down does not prove that the access had no effect in the CPU domain. New and changed requirements: \reqref{DS-PMU-111} to \reqref{DS-PMU-114}, \reqref{DS-CDC-121}, \reqref{DS-CDC-122}; \reqref{DS-PMU-182}, \reqref{DS-PMU-185} and \reqref{DS-CDC-116} changed.
 
 \end{record}
+
+\section{\code{axil_to_apb} drives PSTRB low on a read}\label{cr:defect:axil-to-apb-read-pstrb}
+
+\begin{record}
+
+Date 2026-11-17. Bead \bead{zftj.29}, GH \#402. The bridge \code{axil_to_apb} drove the strobes of the last write on \code{pstrb} during an APB read. AMBA APB4 requires \code{pstrb} low in a read transfer. No test checked \code{pstrb} in a read. Measured before the fix, one run on one host: after a write with \code{wstrb} 4'b0110, the SETUP and ACCESS phases of the next read had \code{pstrb} 4'b0110.
+
+\end{record}
+
+\begin{record}
+
+RTL change. \code{pstrb} is \code{wstrb_q} when \code{is_write_q} is high and 0 otherwise. The output stays combinational. \code{is_write_q} goes low when the bridge captures a read address, so both phases of a read have \code{pstrb} at 0. A write still forwards \code{wstrb}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. \code{test_axil_to_apb.py} has five new tests: write \code{pstrb} equals \code{wstrb} for five strobe values, a monitor control that sees the read phases, a read after reset, a read after a write, and a write and a read issued together. The last two failed on the old RTL (\code{pstrb} 4'b0110 in 2 of 2 read cycles) and pass on the new RTL. \code{soc_all_ci} has no failure: 991 tests pass and 4 fail as expected. \code{PASS_FLOOR} goes from 950 to 955.
+
+\end{record}
+
+\begin{record}
+
+Limits. The bridge has no \code{pprot} output and ignores AxPROT. No slave in the APB tree uses a protection attribute. This is a stated limit by owner decision.
+
+\end{record}

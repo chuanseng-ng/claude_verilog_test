@@ -1,8 +1,7 @@
 """
 Phase 5 (APB migration PR-1) — axil_to_apb bridge unit tests.
 
-Verifies rtl/soc/axil_to_apb.sv (via tb_axil_to_apb) against the 6 directed
-tests.
+Verifies rtl/soc/axil_to_apb.sv (via tb_axil_to_apb) against the directed tests.
 
 The DUT is the AXI4-Lite → APB4 bridge wired to an apb4_register_bank slave.
 Tests drive the AXI4-Lite port via AXI4LiteMaster BFM and observe:
@@ -18,13 +17,16 @@ Tests:
     T4  test_aw_before_w               — AW arrives one cycle before W; bridge buffers AW
     T5  test_w_before_aw               — W arrives one cycle before AW; bridge buffers W
     T6  test_back_to_back_write_read   — back-to-back write then read; read waits for write
+
+test_*pstrb* check PSTRB: the write mask on a write, all-zero on a read (APB4).  The bridge
+has no PPROT output (documented limit), so PPROT is not tested.
 """
 
 import cocotb
 from axil_stall_bfm import StallMaster
 from bfm.axi4lite_master import AXI4LiteMaster
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import FallingEdge, RisingEdge
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -459,3 +461,152 @@ async def test_rresp_held_while_rready_low(dut):
         assert len(held) >= 5
         assert all(s[0] == 0 and s[1] == 0 and s[2] == 0 for s in held), \
             "bridge accepted a new request while the R response was pending"
+
+
+# ---------------------------------------------------------------------------
+# PSTRB per APB phase
+# ---------------------------------------------------------------------------
+async def _apb_monitor(dut, phases):
+    """Sample (psel, penable, pwrite, pstrb) once per cycle, in every cycle with psel high.
+
+    Sampled at the falling edge so the combinational APB outputs have settled for the cycle.
+    """
+    while True:
+        await FallingEdge(dut.clk)
+        if int(dut.u_bridge.psel.value):
+            phases.append(
+                (
+                    int(dut.u_bridge.penable.value),
+                    int(dut.u_bridge.pwrite.value),
+                    int(dut.u_bridge.pstrb.value),
+                )
+            )
+
+
+def _read_phases(phases):
+    return [p for p in phases if p[1] == 0]
+
+
+def _write_phases(phases):
+    return [p for p in phases if p[1] == 1]
+
+
+@cocotb.test()
+async def test_write_pstrb_equals_wstrb(dut):
+    """Every APB write phase (SETUP and ACCESS) carries PSTRB equal to the AXI WSTRB."""
+    m = await _setup(dut)
+    for strb in (0x6, 0xF, 0x1, 0x8, 0x9):
+        phases = []
+        mon = cocotb.start_soon(_apb_monitor(dut, phases))
+        bresp = await m.write(REG0, 0x1111_2222, strb=strb)
+        await RisingEdge(dut.clk)
+        mon.kill()
+        assert bresp == RESP_OKAY, f"write bresp {bresp}"
+        wr = _write_phases(phases)
+        assert {p[0] for p in wr} == {0, 1}, f"strb={strb:#x}: SETUP and ACCESS not both seen: {wr}"
+        assert not _read_phases(phases), f"strb={strb:#x}: unexpected read phase {phases}"
+        bad = [p for p in wr if p[2] != strb]
+        assert not bad, f"strb={strb:#x}: write PSTRB differs from WSTRB: {bad}"
+    dut._log.info("write PSTRB == WSTRB in SETUP and ACCESS for 5 strobe patterns")
+
+
+@cocotb.test()
+async def test_read_pstrb_phases_observed(dut):
+    """Monitor sanity: a read is seen as one SETUP and at least one ACCESS cycle with PWRITE low.
+
+    Guards the PSTRB read checks below against passing because nothing was sampled.
+    """
+    m = await _setup(dut)
+    await m.write(REG0, 0xCAFE_F00D, strb=0x6)
+    phases = []
+    mon = cocotb.start_soon(_apb_monitor(dut, phases))
+    data, rresp = await m.read(REG0)
+    await RisingEdge(dut.clk)
+    mon.kill()
+    assert rresp == RESP_OKAY, f"read rresp {rresp}"
+    rd = _read_phases(phases)
+    assert [p[0] for p in rd][:2] == [0, 1], f"read phases {rd}, expected SETUP then ACCESS"
+    assert not _write_phases(phases), f"unexpected write phase during a read: {phases}"
+    dut._log.info(f"read phases (penable, pwrite, pstrb): {rd}, rdata={data:#010x}")
+
+
+@cocotb.test()
+async def test_read_no_prior_write_pstrb_zero(dut):
+    """A read with no earlier write has PSTRB == 0 in every SETUP and ACCESS cycle."""
+    m = await _setup(dut)
+    phases = []
+    mon = cocotb.start_soon(_apb_monitor(dut, phases))
+    _, rresp = await m.read(REG1)
+    await RisingEdge(dut.clk)
+    mon.kill()
+    assert rresp == RESP_OKAY, f"read rresp {rresp}"
+    rd = _read_phases(phases)
+    assert len(rd) >= 2, f"read SETUP/ACCESS not both sampled: {phases}"
+    bad = [p for p in rd if p[2] != 0]
+    assert not bad, f"PSTRB non-zero during a read with no prior write: {bad}"
+
+
+@cocotb.test()
+async def test_read_pstrb_zero_after_write(dut):
+    """
+    APB4 requires PSTRB all-zero while PWRITE is low.
+
+    Regression guard: the strobe register is loaded only by a write, so a bridge that drives it
+    straight onto PSTRB puts the previous write's WSTRB on PSTRB in the SETUP and ACCESS cycles
+    of the next read.  The read must drive PSTRB to 4'b0000.
+    """
+    m = await _setup(dut)
+    WSTRB = 0b0110
+    bresp = await m.write(REG0, 0xA5A5_A5A5, strb=WSTRB)
+    assert bresp == RESP_OKAY, f"write bresp {bresp}"
+    phases = []
+    mon = cocotb.start_soon(_apb_monitor(dut, phases))
+    _, rresp = await m.read(REG0)
+    await RisingEdge(dut.clk)
+    mon.kill()
+    assert rresp == RESP_OKAY, f"read rresp {rresp}"
+    rd = _read_phases(phases)
+    dut._log.info(f"read phases (penable, pwrite, pstrb): {rd}")
+    assert len(rd) >= 2, f"read SETUP/ACCESS not both sampled: {phases}"
+    bad = [p for p in rd if p[2] != 0]
+    assert not bad, (
+        f"PSTRB must be 0 while PWRITE=0; observed {[f'{p[2]:#06b}' for p in bad]} in "
+        f"{len(bad)} of {len(rd)} read cycles after a write with WSTRB={WSTRB:#06b}"
+    )
+
+
+@cocotb.test()
+async def test_back_to_back_write_read_pstrb_zero(dut):
+    """
+    Write with WSTRB=4'b0110 and a read issued while it is in flight (as the back-to-back test).
+
+    Same guard as test_read_pstrb_zero_after_write.  The write phases must carry
+    PSTRB == WSTRB, the read phases must carry PSTRB == 0.
+    """
+    m = await _setup(dut)
+    WSTRB = 0b0110
+    phases = []
+    mon = cocotb.start_soon(_apb_monitor(dut, phases))
+
+    async def do_read():
+        for _ in range(2):
+            await RisingEdge(dut.clk)
+        return await m.read(REG0)
+
+    write_task = cocotb.start_soon(m.write(REG0, 0xBEEF_CAFE, strb=WSTRB))
+    read_task = cocotb.start_soon(do_read())
+    bresp = await write_task
+    _, rresp = await read_task
+    await RisingEdge(dut.clk)
+    mon.kill()
+    assert (bresp, rresp) == (RESP_OKAY, RESP_OKAY), f"bresp {bresp} rresp {rresp}"
+    wr, rd = _write_phases(phases), _read_phases(phases)
+    dut._log.info(f"write phases: {wr}  read phases: {rd}")
+    assert len(wr) >= 2 and len(rd) >= 2, f"phases not all sampled: {phases}"
+    bad_w = [p for p in wr if p[2] != WSTRB]
+    assert not bad_w, f"write PSTRB differs from WSTRB: {bad_w}"
+    bad_r = [p for p in rd if p[2] != 0]
+    assert not bad_r, (
+        f"PSTRB must be 0 while PWRITE=0; observed {[f'{p[2]:#06b}' for p in bad_r]} in "
+        f"{len(bad_r)} of {len(rd)} read cycles"
+    )

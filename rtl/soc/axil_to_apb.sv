@@ -9,7 +9,7 @@
 //   AXI-Lite read   (AR)    → one APB read transfer    (SETUP → ACCESS).
 //   Depth-1: one outstanding transfer at a time.
 //   Single-beat only (AXI-Lite has no burst).
-//   wstrb is forwarded as APB4 pstrb.
+//   wstrb is forwarded as APB4 pstrb on a write; pstrb is zero on a read.
 //   pslverr → bresp/rresp = AXI_RESP_SLVERR (2'b10).
 //
 // FSM states (per AXI channel pair):
@@ -150,7 +150,7 @@ module axil_to_apb #(
         pwrite  = is_write_q;
         paddr   = addr_q;
         pwdata  = wdata_q;
-        pstrb   = wstrb_q;
+        pstrb   = is_write_q ? wstrb_q : '0;   // APB4: PSTRB all-zero on a read
         unique case (state_q)
             S_SETUP:  begin psel = 1'b1; penable = 1'b0; end
             S_ACCESS: begin psel = 1'b1; penable = 1'b1; end
@@ -209,7 +209,7 @@ module axil_to_apb #(
             if (s_axil_arvalid && s_axil_arready) begin
                 addr_q     <= s_axil_araddr;
                 is_write_q <= 1'b0;
-                // wstrb not meaningful for reads; leave at reset value.
+                // pstrb is gated by is_write_q, so wstrb_q needs no clear here.
             end
 
             // ── APB response capture (ACCESS → response state) ───────────
