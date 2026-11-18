@@ -1,8 +1,7 @@
 """
 Phase 5 (APB migration PR-1) — axil_to_apb bridge unit tests.
 
-Verifies rtl/soc/axil_to_apb.sv (via tb_axil_to_apb) against the 6 directed
-tests.
+Verifies rtl/soc/axil_to_apb.sv (via tb_axil_to_apb) against the directed tests.
 
 The DUT is the AXI4-Lite → APB4 bridge wired to an apb4_register_bank slave.
 Tests drive the AXI4-Lite port via AXI4LiteMaster BFM and observe:
@@ -19,15 +18,8 @@ Tests:
     T5  test_w_before_aw               — W arrives one cycle before AW; bridge buffers W
     T6  test_back_to_back_write_read   — back-to-back write then read; read waits for write
 
-PSTRB checks (APB4: PSTRB is the write byte-lane mask and must be all-zero on a read):
-    test_write_pstrb_equals_wstrb              — PSTRB equals the AXI WSTRB on every write phase
-    test_read_pstrb_phases_observed            — the PSTRB monitor sees a read SETUP and ACCESS
-    test_read_no_prior_write_pstrb_zero        — read after reset, no earlier write
-    test_read_pstrb_zero_after_write           — write 4'b0110, then read (expect_fail)
-    test_back_to_back_write_read_pstrb_zero    — write and read issued together (expect_fail)
-
-The bridge has no PPROT output: AWPROT/ARPROT are not mapped to APB. That is a documented
-limit of the bridge, so no test checks PPROT.
+test_*pstrb* check PSTRB: the write mask on a write, all-zero on a read (APB4).  The bridge
+has no PPROT output (documented limit), so PPROT is not tested.
 """
 
 import cocotb
@@ -554,15 +546,14 @@ async def test_read_no_prior_write_pstrb_zero(dut):
     assert not bad, f"PSTRB non-zero during a read with no prior write: {bad}"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_read_pstrb_zero_after_write(dut):
     """
     APB4 requires PSTRB all-zero while PWRITE is low.
 
-    expect_fail: defect in axil_to_apb.  The strobe register is loaded only by a write and is
-    driven straight onto PSTRB, so a read that follows a write puts the previous write's WSTRB
-    on PSTRB in both its SETUP and its ACCESS cycle.  The read must drive PSTRB to 4'b0000.
-    Remove expect_fail when the RTL fix lands.
+    Regression guard: the strobe register is loaded only by a write, so a bridge that drives it
+    straight onto PSTRB puts the previous write's WSTRB on PSTRB in the SETUP and ACCESS cycles
+    of the next read.  The read must drive PSTRB to 4'b0000.
     """
     m = await _setup(dut)
     WSTRB = 0b0110
@@ -584,12 +575,12 @@ async def test_read_pstrb_zero_after_write(dut):
     )
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_back_to_back_write_read_pstrb_zero(dut):
     """
     Write with WSTRB=4'b0110 and a read issued while it is in flight (as the back-to-back test).
 
-    expect_fail: same defect as test_read_pstrb_zero_after_write.  The write phases must carry
+    Same guard as test_read_pstrb_zero_after_write.  The write phases must carry
     PSTRB == WSTRB, the read phases must carry PSTRB == 0.
     """
     m = await _setup(dut)
