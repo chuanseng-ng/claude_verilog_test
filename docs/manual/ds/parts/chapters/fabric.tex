@@ -1,0 +1,44 @@
+% Authored chapter: the AXI4 data fabric. States the rules for the masters of axi4_crossbar.
+\chapter{AXI4 data fabric}\label{ds:ch:mod-data-fabric}
+
+\section{Scope}\label{ds:ch:mod-data-fabric:scope}
+This chapter states the rules that a master of \code{axi4_crossbar} must obey. The crossbar is the AXI4 data fabric of the SoC. Its masters are the CPU cache arbiter, the GPU instruction fetch, the GPU data path and the DMA engine. Its slaves are the boot ROM, the SRAM controller and the bridge to the AXI-Lite control bus. \Cref{tm:mod:axi4-crossbar} in the Technical Manual holds the moved comment text of the module.
+
+\section{Definitions}\label{ds:ch:mod-data-fabric:definitions}
+\begin{description}
+  \item[Master face] The ports of one master on the crossbar. The master face has no ID signals.
+  \item[Transfer in flight] A write from the AW handshake to the B handshake, or a read from the AR handshake to the R handshake with RLAST high.
+  \item[Direction] The write direction (AW, W and B) or the read direction (AR and R).
+\end{description}
+
+\section{Rules for a master}\label{ds:ch:mod-data-fabric:master-rules}
+
+\begin{requirement}{DS-FAB-001}{One transfer in flight for each direction}
+[verify={test:tb/cocotb/soc/test_crossbar_outstanding.py::test_control_second_aw_after_first_completes; test:tb/cocotb/soc/test_crossbar_outstanding.py::test_control_second_ar_after_first_completes; test:tb/cocotb/soc/test_crossbar_outstanding.py::test_control_two_reads_two_slaves_in_order; test:tb/cocotb/soc/test_crossbar_outstanding.py::test_control_two_writes_two_slaves_in_order; review}]
+A master of \code{axi4_crossbar} must have a maximum of one transfer in flight in each direction. The master must not assert AWVALID for a new write before the B handshake of its last write. The master must not assert ARVALID for a new read before the R handshake with RLAST high of its last read. This rule applies to all slaves together, not to each slave.
+\end{requirement}
+\begin{rationale}
+The crossbar does not hold AWREADY or ARREADY low while a transfer of the same master and direction is in flight. It can accept a second request and then lose it. The master face has no ID, so the crossbar cannot route the beats of two reads or two writes of one master to different slaves. \Cref{ds:ch:mod-data-fabric:known-limits} gives the failures.
+\end{rationale}
+
+\begin{requirement}{DS-FAB-002}{GPU masters obey the rule}
+[verify={test:tb/cocotb/soc/test_cpu_gpu_irq.py::test_cpu_gpu_irq_pass; review}]
+The GPU data path (\code{memory_coalescer}) and the GPU instruction fetch must each obey \reqref{DS-FAB-001}. A read and a write of the GPU data path must not be in flight at the same time.
+\end{requirement}
+\begin{information}
+The coalescer has one state machine. It goes to the next request only after the R or B handshake of the last one. The test \code{test_cpu_gpu_irq_pass} has a passive monitor on the crossbar masters of the GPU. It fails if a GPU master has more than one transfer in flight. The monitor covers only the workload of that test. No negative control shows that the monitor fires on a second request. The CPU cache arbiter and the DMA engine are not examined against this rule.
+\end{information}
+
+A master that needs read-after-write order to one slave must also wait for B before AR. The crossbar gives no order between its read engine and its write engine.
+
+\section{Known limits}\label{ds:ch:mod-data-fabric:known-limits}
+\begin{information}
+These failures occur only when a master does not obey \reqref{DS-FAB-001}. Each one has a test that is marked \code{expect_fail} in \code{test_crossbar_outstanding.py}. A change of the RTL is a decision of the owner.
+\begin{itemize}
+  \item A second AW or AR while the first waits for its slave: the crossbar accepts the second request in the cycle that the slave raises its ready signal for the first. The slave gets only the first request, and the second gets no response (\code{test_defect_second_aw_while_first_waits}, \code{test_defect_second_ar_while_first_waits}).
+  \item Two reads in flight to two slaves: the R multiplexer of the master selects by slave, not by request order. The R beats of the second slave replace beats of the first, and the lost beats are consumed (\code{test_defect_two_reads_two_slaves_in_flight}).
+  \item Two writes in flight to two slaves: both slave engines take the same W beats. The second slave gets the data of the first burst, and no B arrives (\code{test_defect_two_writes_two_slaves_in_flight}).
+\end{itemize}
+\end{information}
+
+\input{generated/requirements-fab}

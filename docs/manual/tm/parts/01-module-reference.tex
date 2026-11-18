@@ -486,6 +486,10 @@ $clog2(N_SLAVES)-1:0 slice would be [-1:0].
 
 \section{\texttt{soc/axi4\_crossbar.sv}}\label{tm:mod:axi4-crossbar}
 
+\begin{information}
+The crossbar accepts a second AW or AR of one master while the first waits, and it cannot steer the beats of two transfers of one master to two slaves. A master must keep one transfer in flight for each direction (\reqref{DS-FAB-001}). \Cref{ds:ch:mod-data-fabric:known-limits} lists the failures and their tests.
+\end{information}
+
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
 
 \begin{relocated}{rtl/soc/axi4_crossbar.sv}
