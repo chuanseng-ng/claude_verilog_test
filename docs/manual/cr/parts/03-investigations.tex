@@ -3213,6 +3213,26 @@ Limits. The bridge has no timeout, so a destination clock that stops while the d
 
 \end{record}
 
+\section{\code{axi4_crossbar} arbitration has no fairness rule}\label{cr:defect:crossbar-fixed-priority}
+
+\begin{record}
+
+Date 2026-11-18. Bead \bead{zftj.28}, GH \#401. The arbitration of \code{axi4_crossbar} is fixed priority: the lowest-index master wins. No test measured the grant order or the hold-off of a lower master. No RTL was changed. A fairness rule is a decision of the owner.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host, on the three-master wrapper \code{tb_axi4_crossbar}. The new suite \code{test_crossbar_arbitration.py} has ten tests, five for reads and five for writes, and all pass. Requests in the same cycle are granted in ascending index for every subset of masters, both slaves, and AR and AW. The grant rule: while the engine of a slave is idle, the lowest-index master with xVALID high in that cycle wins, with the ready in the same cycle; the engine is idle for one cycle after RLAST or B; it keeps no record of arrival order. With master 0 re-requesting with no idle cycle in a window of 400 cycles, master 0 made 102 reads (82 writes), and masters 1 and 2 waited 402 and 406 cycles (404 and 409 for writes), until master 0 stopped. With one or two idle cycles between the transfers of master 0, the order after masters 1 and 2 arrive is 1, 0, 2. A master that holds one slave does not delay a master on the other slave. Negative controls on scratch copies of the RTL, not committed: highest index wins fails 8 of 10 tests, round robin fails 6 of 10, a block of slave 1 while slave 0 is busy fails the 2 cross-slave tests, and an ignored master 2 fails all 10.
+
+\end{record}
+
+\begin{record}
+
+Limits. The wrapper has three masters, so master 2 stands for the lowest-priority master of the SoC. The tests use their own drivers, not the masters of the SoC. The existing \code{test_crossbar} tests have no timeout, so the mutants ran against the new suite only.
+
+\end{record}
+
 \section{\code{axil_to_apb} drives PSTRB low on a read}\label{cr:defect:axil-to-apb-read-pstrb}
 
 \begin{record}
