@@ -525,6 +525,10 @@ Slave-side output intermediates (N_SLAVES slices)
 
 \end{relocated}
 
+\begin{information}
+Known limit: arbitration is fixed priority, with no fairness rule. While an engine of a slave is idle, the lowest-index master with xVALID high wins in that cycle. The engine keeps no record of arrival order. It is idle for one cycle after an RLAST or B handshake, so a master 0 that asserts its next request in that cycle keeps the slave without limit, and the other masters wait until master 0 stops. A slave that master 0 holds does not delay a master on another slave. The suite \code{test_crossbar_arbitration.py} measures this behaviour. A fairness rule, for example round robin, is a decision of the owner (\cref{cr:defect:crossbar-fixed-priority}).
+\end{information}
+
 \section{\texttt{soc/soc\_top.sv}}\label{tm:mod:soc-top}
 
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
