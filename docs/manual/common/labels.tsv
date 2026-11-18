@@ -166,6 +166,7 @@ cr:defect:asap7-cpu-synlig-ma7:result-1-the-two-ma7-programs-yosys-sim-original-
 cr:defect:asap7-cpu-synlig-ma7:result-2-six-programs-verilator-cycle-exact-vs-rtl-measured	docs/manual/cr/parts/03-investigations.tex	230	Result 2: six programs, Verilator, cycle-exact vs RTL (MEASURED)
 cr:defect:asap7-cpu-synlig-ma7:update-2026-10-10-bead-ainf-is-synlig-pr-259-safe-for-the-remaining-struct-member-selects	docs/manual/cr/parts/03-investigations.tex	518	\texorpdfstring{Update 2026-10-10 (bead \code{ainf}): is "Synlig + PR \#259" safe for the remaining struct-member selects?}{Update 2026-10-10 (bead ): is "Synlig + PR \#259" safe for the remaining struct-member selects?}
 cr:defect:asap7-cpu-synlig-ma7:verdict	docs/manual/cr/parts/03-investigations.tex	26	Verdict
+cr:defect:axil-to-apb-read-pstrb	docs/manual/cr/parts/03-investigations.tex	3216	\code{axil_to_apb} drives PSTRB low on a read
 cr:defect:off-domain-slverr	docs/manual/cr/parts/03-investigations.tex	3184	Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})
 cr:defect:pmu-iso-order	docs/manual/cr/parts/03-investigations.tex	3080	PMU order: clock stop before the clamp (\code{zftj})
 cr:defect:pmu-mutation-campaign	docs/manual/cr/parts/03-investigations.tex	3038	PMU mutation campaign (\code{mutate_pmu_iso_ack.py})
