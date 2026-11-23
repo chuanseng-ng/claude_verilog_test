@@ -3181,6 +3181,38 @@ Constraints. \src{pnr/constraints/phase5_soc_multiclock_check.sdc}: the matcher 
 
 \end{record}
 
+\section{Bus fabric protocol corners and stale \code{pslverr} waivers}\label{cr:defect:fabric-protocol-corners}
+
+\begin{record}
+
+Date 2026-11-24. Bead \bead{zftj.30}, GH \#403. The issue listed protocol corners of the bus fabric that no test covered, and two coverage waivers with a false reason. No RTL was changed.
+
+\end{record}
+
+\begin{record}
+
+Bridge \code{axi4_to_axilite}, measured, local, one host, at the unit level (no wrapper joins the crossbar and the bridge). Twelve new tests: four pass (WLAST on the AWLEN beat, WLAST never asserted, an INCR burst, the strobes of a narrow write) and eight fail as expected. Measured failures: ``bridge hung after WLAST on beat 2 of 4: no B after 200 cycles''; ``bvalid at edge 8 before all 3 W beats were accepted''; FIXED write and read addresses 0x20004040, 0x20004044, 0x20004048, 0x2000404c; WRAP addresses 0x4008, 0x400c, 0x4010, 0x4014 where 0x4008, 0x400c, 0x4000, 0x4004 is correct; AxSIZE 0 words 0x4000, 0x4004, 0x4008, 0x400c where 0x4000, 0x4000, 0x4000, 0x4004 is correct, and the same fault for AxSIZE 1. Each test was also run without the mark and failed for the stated reason.
+
+\end{record}
+
+\begin{record}
+
+Crossbar, measured. Nine new tests in \code{test_crossbar_errors.py}, all pass: a reset while each of W\_AW, W\_DATA, W\_RESP, R\_AR, R\_DATA, DW\_DATA, DW\_RESP and DR\_DATA is busy releases every engine; the slave IDs equal the master index for each master; a burst across a region boundary goes to the slave of its first beat; the DECERR engine ends on WLAST; an early WLAST closes the write; a missing WLAST holds back B; an early RLAST ends the read; a missing RLAST locks only that read engine. Mutants of the reset, \code{s_awid} and the DECERR WLAST logic made the new tests fail. \code{soc_all_ci}: exit 0, 1004 tests pass, 12 fail as expected, no failure. \code{PASS_FLOOR} goes from 955 to 968.
+
+\end{record}
+
+\begin{record}
+
+Waivers. Three waivers in \code{coverage_waivers.txt} said that every APB slave ties \code{pslverr} to 0. The APB slots of the PLL and PLL2 are \code{apb_cdc_bridge}, which can answer PSLVERR. On the PLL slot the destination reset also holds \code{core_rst_n} low, so the bit cannot toggle. On the PLL2 slot the destination reset is \code{cpu_rst_n_i}, so a DMA or GPU access while it is low gets PSLVERR. The array waivers of \code{soc_top} and \code{soc_bus} now exclude element 6, and their reason text is correct. The 1-bit waiver of \code{soc_bus} \code{apb_m_pslverr} stays, with a correct reason, as an exception until a SoC test toggles it. \code{coverage_report.py --check-waivers}: 36 anchored, 0 stale. The instrumented coverage run was not done.
+
+\end{record}
+
+\begin{record}
+
+Limits and open decisions. No test joins the crossbar and the bridge. The slave model cannot send a wrong BID or RID. Items 2 to 4 of the issue (no timeout in the fabric, the skid buffer of \code{u_gif_adapter} not reset with the GPU domain, ready outputs high in reset) are decisions of the owner and are not tested here.
+
+\end{record}
+
 \section{Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})}\label{cr:defect:off-domain-slverr}
 
 \begin{record}
