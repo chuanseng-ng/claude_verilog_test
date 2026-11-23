@@ -97,14 +97,19 @@ class AxiMaster:
         if self.has_id:
             g("arid").value = 0
 
-    async def write(self, addr, data, *, wid=0, awlen=None, burst=BURST_INCR, aw_delay=0,
-                    w_before_aw=False, w_gaps=None, b_stall=0, strb=0xF, timeout=3000):
+    async def write(self, addr, data, *, wid=0, awlen=None, burst=BURST_INCR, size=2, aw_delay=0,
+                    w_before_aw=False, w_gaps=None, b_stall=0, strb=0xF, wlast_at=None,
+                    timeout=3000):
         """One write burst.  ``w_gaps[i]`` idle cycles before beat i; ``b_stall`` edges of bvalid
-        seen with bready held low (bready is high from the start when 0)."""
+        seen with bready held low (bready is high from the start when 0).  ``strb`` is one value or
+        one per beat.  ``wlast_at``: beat indices that carry WLAST (default: the final beat only;
+        an empty set never asserts it), so ``awlen`` and WLAST can be made to disagree."""
         g, t = self.g, WriteTrace()
         n = len(data)
         awlen = n - 1 if awlen is None else awlen
         gaps = list(w_gaps) if w_gaps is not None else [0] * n
+        strbs = list(strb) if isinstance(strb, (list, tuple)) else [strb] * n
+        last_beats = {n - 1} if wlast_at is None else set(wlast_at)
         cyc = 0
         aw_done = aw_pres = w_pres = False
         beat = 0
@@ -116,7 +121,7 @@ class AxiMaster:
             awv = wv = 0
             if not aw_done and (aw_pres or cyc >= aw_delay):
                 g("awvalid").value, g("awaddr").value, g("awlen").value = 1, addr, awlen
-                g("awburst").value, g("awsize").value = burst, 2
+                g("awburst").value, g("awsize").value = burst, size
                 if self.has_id:
                     g("awid").value = wid
                 aw_pres = True
@@ -126,8 +131,8 @@ class AxiMaster:
                 if aw_done:
                     g("awaddr").value = 0xFFFF_FFFF
             if beat < n and (aw_done or w_before_aw) and (w_pres or gap_left == 0):
-                g("wvalid").value, g("wdata").value, g("wstrb").value = 1, data[beat], strb
-                g("wlast").value = 1 if beat == n - 1 else 0
+                g("wvalid").value, g("wdata").value, g("wstrb").value = 1, data[beat], strbs[beat]
+                g("wlast").value = 1 if beat in last_beats else 0
                 w_pres = True
                 wv = 1
             else:
@@ -170,7 +175,7 @@ class AxiMaster:
         self._idle_w()
         return t
 
-    async def read(self, addr, n, *, rid=0, arlen=None, burst=BURST_INCR, ar_delay=0,
+    async def read(self, addr, n, *, rid=0, arlen=None, burst=BURST_INCR, size=2, ar_delay=0,
                    r_stalls=0, pulse=False, timeout=3000):
         """One read burst of ``n`` beats.  ``r_stalls`` (int or per-beat list): edges of rvalid seen
         with rready held low before each beat is taken.  ``pulse``: arvalid is high for exactly one
@@ -187,7 +192,7 @@ class AxiMaster:
             arv = 0
             if not ar_done and (ar_pres or cyc >= ar_delay):
                 g("arvalid").value, g("araddr").value, g("arlen").value = 1, addr, arlen
-                g("arburst").value, g("arsize").value = burst, 2
+                g("arburst").value, g("arsize").value = burst, size
                 if self.has_id:
                     g("arid").value = rid
                 ar_pres = True
@@ -238,15 +243,17 @@ class AxiMaster:
 # ───────────────────────────── AXI4 slave ────────────────────────────────────
 class AxiSlave:
     """Scripted AXI4 slave.  ``resp_fn(kind, addr)`` -> response (``kind`` is "w" for the burst base
-    address, "r" for each read beat address).  Ready delays are in edges of the matching valid seen."""
+    address, "r" for each read beat address).  Ready delays are in edges of the matching valid seen.
+    ``rlast_fn(beat, arlen)`` overrides where RLAST is driven (default: the final beat only)."""
 
     def __init__(self, dut, prefix, clk, mem=None, *, aw_delay=0, w_delay=0, b_delay=0, ar_delay=0,
-                 r_delay=0, resp_fn=None):
+                 r_delay=0, resp_fn=None, rlast_fn=None):
         self.g, self.clk = _get(dut, prefix), clk
         self.mem = mem if mem is not None else {}
         self.aw_delay, self.w_delay, self.b_delay = aw_delay, w_delay, b_delay
         self.ar_delay, self.r_delay = ar_delay, r_delay
         self.resp_fn = resp_fn or (lambda kind, addr: OKAY)
+        self.rlast_fn = rlast_fn or (lambda beat, arlen: beat == arlen)
         self.aw_log, self.w_log, self.ar_log, self.viol = [], [], [], []
         self.cyc = 0
         self.arvalid_edges = 0     # edges arvalid was sampled high
@@ -388,7 +395,7 @@ class AxiSlave:
                         g("rid").value = ra["id"]
                         g("rdata").value = self.mem.get(a, a ^ 0x5A5A_0000)
                         g("rresp").value = self.resp_fn("r", a)
-                        g("rlast").value = 1 if rbeat == ra["len"] else 0
+                        g("rlast").value = 1 if self.rlast_fn(rbeat, ra["len"]) else 0
             g("arready").value = ar_ready if rst == "AR" else 0
             g("rvalid").value = r_valid if rst == "R" else 0
 

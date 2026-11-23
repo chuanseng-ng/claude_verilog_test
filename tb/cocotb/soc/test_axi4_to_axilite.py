@@ -14,10 +14,23 @@ Intent checked (AXI4 / the module header), not just line toggling:
     and rlast on the final beat only, even when the final beat is an error
   * every stall (AW/W/B/AR/R valid or ready held off) preserves data, order and payload stability
   * the AXI-Lite master never changes a held payload and never has two writes/reads in flight
+
+AXI4 corners the bridge does not honour (tests marked expect_fail, each with a passing control):
+  * WLAST that disagrees with AWLEN: the bridge counts beats from AWLEN and never looks at WLAST
+  * AxBURST other than INCR and AxSIZE below 4 bytes: every beat is issued at the last address + 4
 """
 
 import cocotb
-from axi4_fabric_bfm import (DECERR, OKAY, SLVERR, AxiLiteSlave, AxiMaster)
+from axi4_fabric_bfm import (
+    BURST_FIXED,
+    BURST_INCR,
+    BURST_WRAP,
+    DECERR,
+    OKAY,
+    SLVERR,
+    AxiLiteSlave,
+    AxiMaster,
+)
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
@@ -243,3 +256,160 @@ async def test_reset_mid_burst_returns_to_idle(dut):
     t = await master.write(BASE + 0x80, [9, 8], wid=3)
     assert t.bresp == OKAY and t.bid == 3, "response accumulator survived reset"
     assert not slave2.viol
+
+
+# ───────────────────── WLAST against AWLEN, AxSIZE and AxBURST ─────────────────────
+HANG_CYCLES = 200
+
+
+async def _write_bounded(master, *args, **kw):
+    """Return (trace, None), or (None, reason) when no B arrives within HANG_CYCLES edges."""
+    try:
+        return await master.write(*args, timeout=HANG_CYCLES, **kw), None
+    except AssertionError as exc:
+        master.idle()
+        return None, str(exc)
+
+
+def _word(addr):
+    return addr & ~3
+
+
+@cocotb.test()
+async def test_wlast_matches_awlen_control(dut):
+    """Control: WLAST on the beat AWLEN announces completes normally, so the WLAST tests below fail
+    for the mismatch and not for the harness."""
+    master, slave = await _setup(dut)
+    t, why = await _write_bounded(master, BASE, [1, 2, 3, 4], wid=2, awlen=3, wlast_at={3})
+    assert t is not None, why
+    assert t.bresp == OKAY and t.bid == 2 and not t.viol and not slave.viol, (t, slave.viol)
+    assert [w["addr"] for w in slave.aw_log] == [BASE + 4 * i for i in range(4)]
+
+
+@cocotb.test(expect_fail=True)
+async def test_wlast_early_must_still_complete(dut):
+    """AWLEN announces 4 beats but WLAST rides on the 2nd.  The master has sent its last beat, so
+    the burst must end with a B within a bounded time.  The bridge counts from AWLEN, waits for
+    beats 3 and 4 that never come, and never answers."""
+    master, slave = await _setup(dut)
+    t, why = await _write_bounded(master, BASE, [0xA1, 0xA2], awlen=3, wlast_at={1})
+    assert t is not None, f"bridge hung after WLAST on beat 2 of 4: {why}"
+    assert t.bresp == OKAY
+
+
+@cocotb.test()
+async def test_wlast_missing_completes_by_awlen_count(dut):
+    """WLAST never asserted: the bridge still finishes from the AWLEN count."""
+    master, slave = await _setup(dut)
+    t, why = await _write_bounded(master, BASE, [0xB1, 0xB2], wid=4, awlen=1, wlast_at=set())
+    assert t is not None, why
+    assert t.bresp == OKAY and t.bid == 4
+    assert [w["addr"] for w in slave.aw_log] == [BASE, BASE + 4]
+    assert [w["data"] for w in slave.w_log] == [0xB1, 0xB2]
+    assert not slave.viol
+
+
+@cocotb.test(expect_fail=True)
+async def test_wlast_late_b_must_follow_wlast(dut):
+    """AWLEN announces 2 beats but the master sends 3, WLAST on the 3rd.  AXI4 allows BVALID only
+    after the WLAST beat is accepted.  The bridge answers after the 2nd beat, before WLAST."""
+    master, slave = await _setup(dut)
+    t, why = await _write_bounded(master, BASE, [0xC1, 0xC2, 0xC3], awlen=1, wlast_at={2})
+    assert t is not None, why
+    assert not t.viol, f"B before WLAST: {t.viol}"
+
+
+async def _incr_control(master, slave):
+    """Explicit 4-byte INCR write and read, the one combination the bridge implements."""
+    t = await master.write(BASE + 0x300, [1, 2, 3, 4], burst=BURST_INCR, size=2)
+    assert t.bresp == OKAY
+    assert [w["addr"] for w in slave.aw_log] == [BASE + 0x300 + 4 * i for i in range(4)]
+    t = await master.read(BASE + 0x300, 4, burst=BURST_INCR, size=2)
+    assert t.data == [1, 2, 3, 4]
+    assert [a["addr"] for a in slave.ar_log] == [BASE + 0x300 + 4 * i for i in range(4)]
+
+
+@cocotb.test()
+async def test_incr_word_burst_control(dut):
+    """Control for the AxSIZE/AxBURST tests: INCR with 4-byte beats passes."""
+    master, slave = await _setup(dut)
+    await _incr_control(master, slave)
+    assert not slave.viol
+
+
+@cocotb.test()
+async def test_narrow_write_strobes_pass_through_control(dut):
+    """Control: per-beat WSTRB and WDATA of a narrow write reach the AXI-Lite write unchanged."""
+    master, slave = await _setup(dut)
+    strobes = [0b0010, 0b0100, 0b1000, 0b0001]
+    data = [0x1100, 0x220000, 0x33000000, 0x44]
+    t = await master.write(BASE + 1, data, size=0, strb=strobes)
+    assert t.bresp == OKAY
+    assert [w["strb"] for w in slave.w_log] == strobes
+    assert [w["data"] for w in slave.w_log] == data
+
+
+@cocotb.test(expect_fail=True)
+async def test_fixed_write_burst_keeps_address(dut):
+    """AXI4 FIXED: every beat targets the start address.  The bridge steps +4 per beat."""
+    master, slave = await _setup(dut)
+    t = await master.write(BASE + 0x40, [1, 2, 3, 4], burst=BURST_FIXED)
+    assert t.bresp == OKAY
+    got = [w["addr"] for w in slave.aw_log]
+    assert got == [BASE + 0x40] * 4, f"FIXED write addresses {[hex(a) for a in got]}"
+
+
+@cocotb.test(expect_fail=True)
+async def test_fixed_read_burst_keeps_address(dut):
+    """AXI4 FIXED: every beat reads the start address.  The bridge steps +4 per beat."""
+    master, slave = await _setup(dut)
+    t = await master.read(BASE + 0x40, 4, burst=BURST_FIXED)
+    assert t.resps == [OKAY] * 4
+    got = [a["addr"] for a in slave.ar_log]
+    assert got == [BASE + 0x40] * 4, f"FIXED read addresses {[hex(a) for a in got]}"
+
+
+@cocotb.test(expect_fail=True)
+async def test_wrap_write_burst_wraps(dut):
+    """AXI4 WRAP, 4 beats of 4 bytes from offset 8: 0x8, 0xC, then back to 0x0 and 0x4."""
+    master, slave = await _setup(dut)
+    t = await master.write(BASE + 8, [1, 2, 3, 4], burst=BURST_WRAP)
+    assert t.bresp == OKAY
+    got = [w["addr"] for w in slave.aw_log]
+    exp = [BASE + 8, BASE + 0xC, BASE, BASE + 4]
+    assert got == exp, f"WRAP write {[hex(a) for a in got]}, expected {[hex(a) for a in exp]}"
+
+
+@cocotb.test(expect_fail=True)
+async def test_wrap_read_burst_wraps(dut):
+    """AXI4 WRAP, 4 beats of 4 bytes from offset 8: 0x8, 0xC, then back to 0x0 and 0x4."""
+    master, slave = await _setup(dut)
+    t = await master.read(BASE + 8, 4, burst=BURST_WRAP)
+    assert t.resps == [OKAY] * 4
+    got = [a["addr"] for a in slave.ar_log]
+    exp = [BASE + 8, BASE + 0xC, BASE, BASE + 4]
+    assert got == exp, f"WRAP read {[hex(a) for a in got]}, expected {[hex(a) for a in exp]}"
+
+
+@cocotb.test(expect_fail=True)
+async def test_narrow_write_beats_stay_in_word(dut):
+    """AXI4 INCR with AxSIZE=0 from offset 1: beats at +1, +2, +3, +4, so the first three AXI-Lite
+    writes hit the same word and the fourth the next.  The bridge steps a whole word per beat."""
+    master, slave = await _setup(dut)
+    t = await master.write(BASE + 1, [1, 2, 3, 4], size=0, strb=[0b0010, 0b0100, 0b1000, 0b0001])
+    assert t.bresp == OKAY
+    got = [_word(w["addr"]) for w in slave.aw_log]
+    exp = [BASE, BASE, BASE, BASE + 4]
+    assert got == exp, f"byte write words {[hex(a) for a in got]}, expected {[hex(a) for a in exp]}"
+
+
+@cocotb.test(expect_fail=True)
+async def test_narrow_read_beats_stay_in_word(dut):
+    """AXI4 INCR with AxSIZE=1: beats at +0, +2, +4, +6 read words 0, 0, 1, 1.  The bridge steps a
+    whole word per beat."""
+    master, slave = await _setup(dut)
+    t = await master.read(BASE, 4, size=1)
+    assert t.resps == [OKAY] * 4
+    got = [_word(a["addr"]) for a in slave.ar_log]
+    exp = [BASE, BASE, BASE + 4, BASE + 4]
+    assert got == exp, f"halfword read {[hex(a) for a in got]}, expected {[hex(a) for a in exp]}"
