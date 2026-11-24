@@ -39,6 +39,7 @@ from cocotb.triggers import ClockCycles, FallingEdge, ReadOnly, RisingEdge, with
 from cocotb.utils import get_sim_time
 
 from soc_clocks import start_soc_clocks
+from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -70,7 +71,7 @@ def _kill_active_tasks() -> None:
 # ---------------------------------------------------------------------------------------------
 # Plumbing
 # ---------------------------------------------------------------------------------------------
-async def _setup(dut, cpu_ns: int, *, hold_cpu_reset: bool = False) -> None:
+async def _setup(dut, cpu_ns: int, *, hold_cpu_reset: bool = False, rom_words=None) -> None:
     """Clocks at FABRIC_NS / cpu_ns, idle inputs, reset (held long enough for the SLOWER clock).
 
     hold_cpu_reset leaves cpu_rst_n_i low (the CPU PLL domain stays dead) after the fabric is
@@ -94,6 +95,9 @@ async def _setup(dut, cpu_ns: int, *, hold_cpu_reset: bool = False) -> None:
     dut.i2c_scl_i.value = 1
     dut.i2c_sda_i.value = 1
 
+    if rom_words is not None:
+        for i, w in enumerate(rom_words):
+            dut.u_soc.u_boot_rom.mem[i].value = w
     await ClockCycles(dut.clk_i, 6)
     await ClockCycles(dut.cpu_clk_i, 6)
     dut.rst_n_i.value = 1
@@ -1021,4 +1025,705 @@ async def test_debug_access_while_cpu_off_completes_with_error(dut):
             f"{sum(1 for x in r['during'] if x[3])} with the off error"
             for r in rows
         )
+    )
+# =============================================================================
+# Part 3: GPU instruction-fetch adapter across a GPU domain reset (SoC level).
+#
+# u_gif_adapter turns the GPU ifetch AXI4-Lite port into the AXI4 master on crossbar M1. It
+# holds an AR request in a skid buffer until the crossbar accepts it and passes the R channel
+# through. The GPU is reset by gpu_domain_rst_n (core_rst_n AND pmu_gpu_rst_n) when the PMU
+# power-cycles it. A GPU power cycle must leave no fetch of the old GPU behind: no AR that
+# reaches the crossbar after the reset, no R beat that reaches the new GPU, and no crossbar
+# read engine that stays locked on a beat that nobody will take.
+# The firmware is the gpu_iso image: it runs a kernel on the GPU, so the GPU fetches. The test
+# makes the crossbar SRAM read engine busy for another master by a backdoor write of its state
+# (R_DATA for master 0, no response ever comes). That is the state of a slave that is slow for
+# another master. The GPU fetch then waits at the adapter. A release writes R_IDLE again.
+# A second backdoor holds the SRAM controller itself busy: the crossbar accepts the AR but the
+# R beat is late, and a free of the controller sets when the beat arrives.
+# The relaunch tests use a second image that waits in a loop without bus access while the
+# testbench power-cycles the GPU, then runs a second kernel on new source data.
+# The PMU power cycles are driven by the PMU CTRL backdoor, as in Part 1 and Part 2.
+# =============================================================================
+GIF_SRAM_SLAVE = 1
+XBAR_R_IDLE, XBAR_R_AR, XBAR_R_DATA = 0, 1, 2
+SRAM_CTRL_R_BUSY = 1  # sram_controller read FSM: R_IDLE is 0
+GIF_CPU_NS = 3  # CPU clock faster than the fabric clock (the GPU path is in the fabric domain)
+GIF_SLOW_CPU_NS = 9  # CPU clock slower than the fabric clock
+GIF_LAUNCH_TIMEOUT = 120_000
+GIF_HOLD_CYCLES = 3
+GIF_KERNEL_WINDOW = 3000  # a kernel needs a few hundred fabric cycles
+GIF_RELAUNCH_TIMEOUT = 150_000
+GIF_DWELL = 600  # loop count of the relaunch image, longer than any power cycle of these tests
+GIF_RESULT_WORD = 112  # first word of the kernel result in SRAM
+GIF_RESULT_SCALE = 0x20  # source scale of the second kernel of the relaunch image
+GIF_FW_HEX = Path(__file__).resolve().parent / "integ_fw" / "gpu_iso.hex"
+_GIF_CACHE: dict = {}
+
+
+def _read_hex_words(path: Path) -> list:
+    words = []
+    with open(path) as fh:
+        for line in fh:
+            tok = line.strip()
+            if tok and not tok.startswith("//") and not tok.startswith("@"):
+                words.append(int(tok, 16))
+    return words
+
+
+def _gif_relaunch_image() -> tuple:
+    """Return (ROM words, PASS pc, FAIL pc) of the relaunch image: kernel 1 is launched, then a loop
+    of register instructions runs while the testbench power-cycles the GPU, then the image waits for
+    the PMU to report both domains on and runs kernel 2 on new source data."""
+    if "image" in _GIF_CACHE:
+        return _GIF_CACHE["image"]
+    from tb.cocotb.soc.integ_fw import gen_integ_hex as gen
+
+    gi = gen.gpuirq
+    asm = gen.Assembler(origin=gen.ROM_BASE)
+    gen.trampoline(asm)
+    asm.label("MAIN")
+    gen.li(asm, 3, gi.SRC_BASE)
+    gen.li(asm, 5, gi.KERNEL_PC)
+    gen.li(asm, 6, gen.GPU_BASE)
+    gen.li(asm, 9, gen.PMU_BASE)
+
+    def write_src(scale):
+        for i in range(gi.N_SRC_WORDS):
+            asm.emit(gen.ADDI(7, 0, (i + 1) * scale))
+            asm.emit(gen.SW(7, 3, i * 4))
+
+    def launch():
+        asm.emit(gen.SW(5, 6, gi.GPU_OFF_KERNEL_PC))
+        asm.emit(gen.ADDI(7, 0, 1))
+        for off in (gi.GPU_OFF_GRID_X, gi.GPU_OFF_GRID_Y, gi.GPU_OFF_GRID_Z,
+                    gi.GPU_OFF_BLOCK_Y, gi.GPU_OFF_BLOCK_Z):
+            asm.emit(gen.SW(7, 6, off))
+        asm.emit(gen.ADDI(7, 0, 8))
+        asm.emit(gen.SW(7, 6, gi.GPU_OFF_BLOCK_X))
+        asm.emit(gen.ADDI(7, 0, 0x05))
+        asm.emit(gen.SW(7, 6, gi.GPU_OFF_CTRL))
+
+    def poll(tag, base, off, mask=None, eq=None):
+        gen.li(asm, 20, 20000)
+        asm.emit(gen.ADDI(21, 0, 0))
+        asm.label(f"{tag}_POLL")
+        asm.emit(gen.LW(22, base, off))
+        if eq is None:
+            asm.emit(gen.ANDI(22, 22, mask))
+            gen.br(asm, gen.BNE, 22, 0, f"{tag}_GOT")
+        else:
+            asm.emit(gen.ADDI(23, 0, eq))
+            gen.br(asm, gen.BEQ, 22, 23, f"{tag}_GOT")
+        asm.emit(gen.ADDI(21, 21, 1))
+        gen.br(asm, gen.BNE, 21, 20, f"{tag}_POLL")
+        gen.jmp(asm, "FAIL")
+        asm.label(f"{tag}_GOT")
+
+    write_src(0x10)
+    gen.flush_dcache(asm, "FL1")
+    for i, kw in enumerate(gi.build_gpu_kernel()):
+        gen.li(asm, 7, kw)
+        asm.emit(gen.SW(7, 5, i * 4))
+    gen.flush_dcache(asm, "FL2")
+    asm.emit(gen.LW(7, 6, gi.GPU_OFF_CTRL))
+    launch()
+    asm.emit(gen.ADDI(16, 0, 0))
+    gen.li(asm, 17, GIF_DWELL)
+    asm.label("DWELL")
+    asm.emit(gen.ADDI(16, 16, 1))
+    gen.br(asm, gen.BNE, 16, 17, "DWELL")
+    poll("PON", 9, 0x04, eq=gen.PMU_STATUS_NORMAL)
+    write_src(GIF_RESULT_SCALE)
+    gen.flush_dcache(asm, "FL3")
+    launch()
+    poll("GDONE2", 6, gi.GPU_OFF_STATUS, mask=2)
+    gen.flush_dcache(asm, "FL4")
+    gen.jmp(asm, "PASS")
+    gen.tail(asm)
+    words = asm.resolve()
+    assert len(words) <= gen.ROM_WORDS
+    image = (words + [gen.NOP] * (gen.ROM_WORDS - len(words)), asm.labels["PASS"],
+             asm.labels["FAIL"])
+    _GIF_CACHE["image"] = image
+    return image
+
+
+def _xbar(dut):
+    return _soc(dut).u_bus.u_xbar
+
+
+def _sram_rstate(dut) -> int:
+    return (int(_xbar(dut).rstate.value) >> (2 * GIF_SRAM_SLAVE)) & 3
+
+
+def _force_sram_rstate(dut, state: int, master: int = 0) -> None:
+    """Backdoor write of the crossbar read-engine state of the SRAM slave and its master grant."""
+    xb = _xbar(dut)
+    sh = 2 * GIF_SRAM_SLAVE
+    xb.rstate.value = (int(xb.rstate.value) & ~(3 << sh)) | (state << sh)
+    xb.rsel.value = (int(xb.rsel.value) & ~(3 << sh)) | (master << sh)
+
+
+def _hold_sram_ctrl(dut) -> None:
+    """Make the SRAM controller refuse an AR: busy, with a full head register that nobody takes,
+    because the crossbar read engine is not in R_DATA."""
+    ctrl = _soc(dut).u_sram
+    ctrl.r_active.value = 0
+    ctrl.r_valid_q.value = 1
+    ctrl.rstate.value = SRAM_CTRL_R_BUSY
+
+
+def _free_sram_ctrl(dut) -> None:
+    _soc(dut).u_sram.r_valid_q.value = 0
+
+
+def _gif_row(dut, cyc: int) -> dict:
+    soc = _soc(dut)
+    commit_pc = int(dut.commit_pc_o.value) if int(dut.commit_valid_o.value) else None
+    return dict(
+        cyc=cyc,
+        rst_n=int(soc.gpu_domain_rst_n.value),
+        iso=int(soc.pmu_gpu_iso_en.value),
+        m_arv=int(soc.gif_axi_arvalid.value),
+        m_arr=int(soc.gif_axi_arready.value),
+        m_addr=int(soc.gif_axi_araddr.value),
+        m_rv=int(soc.gif_axi_rvalid.value),
+        m_rr=int(soc.gif_axi_rready.value),
+        rv=int(soc.gif_axil_rvalid.value),
+        rr=int(soc.gif_axil_rready.value),
+        rstate=_sram_rstate(dut),
+        irq=int(soc.gpu_irq_raw.value),
+        st=int(soc.u_pmu.dom_state_q[DOM_GPU].value),
+        clk_en=int(soc.pmu_gpu_clk_en.value),
+        gpu_aw=int(soc.bus_axil_gpu_awvalid.value) & int(soc.bus_axil_gpu_awready.value),
+        gpu_awaddr=int(soc.bus_axil_gpu_awaddr.value) & 0xFFF,
+        commit_pc=commit_pc,
+    )
+
+
+def _gpu_off(r: dict) -> bool:
+    """The level of gpu_dom_off in soc_top."""
+    return bool(r["iso"] or not r["rst_n"] or not r["clk_en"])
+
+
+class _GifRun:
+    """One cycle-by-cycle run. step() advances one fabric clock, samples a row and returns it;
+    actions requested after a sample are applied at the next clock edge, before the next sample."""
+
+    def __init__(self, dut) -> None:
+        self.dut = dut
+        self.rows: list = []
+        self._pending: list = []
+        self.hold_idx = 0
+
+    def later(self, fn) -> None:
+        self._pending.append(fn)
+
+    async def step(self) -> dict:
+        await RisingEdge(self.dut.clk_i)
+        pending, self._pending = self._pending, []
+        for fn in pending:
+            fn()
+        await ReadOnly()
+        row = _gif_row(self.dut, len(self.rows))
+        self.rows.append(row)
+        return row
+
+    async def until(self, pred, limit: int, label: str) -> dict:
+        for _ in range(limit):
+            row = await self.step()
+            if pred(row):
+                return row
+        raise RuntimeError(f"harness: {label} not reached in {limit} cycles")
+
+
+async def _gif_held_start(dut, cpu_ns: int = GIF_CPU_NS, rom_words=None) -> _GifRun:
+    """Boot the gpu_iso image, block the SRAM read engine when the GPU kernel is launched, and
+    return once the GPU fetch AR has waited at the adapter for GIF_HOLD_CYCLES cycles."""
+    words = _read_hex_words(GIF_FW_HEX) if rom_words is None else rom_words
+    await _setup(dut, cpu_ns, rom_words=words)
+    run = _GifRun(dut)
+    # The launch is the GPU CTRL write at offset 0 (the registers before it are at other offsets).
+    limit = GIF_LAUNCH_TIMEOUT if cpu_ns <= FABRIC_NS else 2 * GIF_LAUNCH_TIMEOUT
+    await run.until(lambda r: r["gpu_aw"] and r["gpu_awaddr"] == 0, limit, "GPU launch")
+    if _sram_rstate(dut) != XBAR_R_IDLE:
+        raise RuntimeError("harness: the SRAM read engine was busy at the GPU launch")
+    run.later(lambda: _force_sram_rstate(dut, XBAR_R_DATA))
+    stable = 0
+    for _ in range(64):
+        row = await run.step()
+        stable = stable + 1 if (row["m_arv"] and not row["m_arr"]) else 0
+        if stable >= GIF_HOLD_CYCLES:
+            run.hold_idx = len(run.rows) - GIF_HOLD_CYCLES
+            return run
+    raise RuntimeError("harness: the GPU fetch AR never waited at the adapter")
+
+
+def _mode_now(dut, mode: int) -> None:
+    _soc(dut).u_pmu.u_regbank.regs[0].value = mode
+
+
+def _release_block(dut) -> None:
+    _force_sram_rstate(dut, XBAR_R_IDLE)
+
+
+async def _gif_power_up(run, wake_early: bool = False) -> dict:
+    """Request NORMAL (unless it was requested early) and return the row in which the GPU domain is
+    back to DOM_ON."""
+    if not wake_early:
+        run.later(lambda: _mode_now(run.dut, MODE_NORMAL))
+    return await run.until(lambda r: r["st"] == DOM_ON, 400, "GPU power-up")
+
+
+async def _gif_scenario_held_ar(dut, cpu_ns: int = GIF_CPU_NS, rom_words=None) -> dict:
+    """Held AR across a GPU domain reset: the reset asserts while the AR waits at the adapter.
+    The block is released when the reset has been low for 3 cycles, then the GPU powers up."""
+    run = await _gif_held_start(dut, cpu_ns, rom_words)
+    held_addr = run.rows[-1]["m_addr"]
+    run.later(lambda: _mode_now(dut, MODE_GPU_OFF))
+    first_rst = await run.until(lambda r: r["rst_n"] == 0, 400, "GPU domain reset")
+    for _ in range(3):
+        await run.step()
+    run.later(lambda: _release_block(dut))
+    for _ in range(14):
+        await run.step()
+    up = await _gif_power_up(run)
+    for _ in range(40):
+        await run.step()
+    return {"rows": run.rows, "t_rst": first_rst["cyc"], "t_up": up["cyc"],
+            "held_addr": held_addr, "run": run}
+
+
+async def _gif_scenario_r_in_flight(
+    dut, cpu_ns: int = GIF_CPU_NS, rom_words=None, *,
+    wake_early: bool = False, late_r: bool = False, cycles: int = 1,
+) -> dict:
+    """AR accepted, R in flight at the GPU domain reset. The block is released in the cycle after
+    the PMU enters its clock-gate state. The crossbar accepts the waiting AR in the cycle the
+    isolation clamp becomes active, the R beat arrives three cycles later and waits on the clamped
+    rready, and the GPU domain reset asserts one cycle after the clamp.
+    wake_early: the mode returns to NORMAL one cycle after the power-down request, so the power-down
+    is aborted by software and the PMU still has to complete it.
+    late_r: the SRAM controller refuses the AR, so the R beat comes only after the GPU is back on.
+    cycles: 2 repeats the power cycle with no idle gap."""
+    run = await _gif_held_start(dut, cpu_ns, rom_words)
+    run.later(lambda: _mode_now(dut, MODE_GPU_OFF))
+    if wake_early:
+        await run.step()
+        run.later(lambda: _mode_now(dut, MODE_NORMAL))
+    await run.until(lambda r: r["st"] == DOM_PD_GATE, 400, "GPU gate state")
+    run.later(lambda: _release_block(dut))
+    if late_r:
+        run.later(lambda: _hold_sram_ctrl(dut))
+    iso_row = await run.until(lambda r: r["iso"] == 1, 400, "GPU isolation")
+    first_rst = await run.until(lambda r: r["rst_n"] == 0, 400, "GPU domain reset")
+    t_rst = first_rst["cyc"]
+    accepted = [r for r in run.rows[iso_row["cyc"] : t_rst] if r["m_arv"] and r["m_arr"]]
+    if not accepted:
+        raise RuntimeError("harness: the crossbar did not accept the AR before the GPU reset")
+    # With a reset that waits, the R beat is still pending: nothing may have taken it.
+    if not late_r and any(r["rv"] and r["rr"] for r in run.rows[iso_row["cyc"] : t_rst]):
+        raise RuntimeError("harness: the GPU took the R beat before the reset")
+    for _ in range(24):
+        await run.step()
+    up = await _gif_power_up(run, wake_early)
+    t_rst2 = None
+    if cycles > 1:
+        run.later(lambda: _mode_now(dut, MODE_GPU_OFF))
+        second = await run.until(lambda r: r["rst_n"] == 0, 400, "second GPU domain reset")
+        t_rst2 = second["cyc"]
+        for _ in range(8):
+            await run.step()
+        up = await _gif_power_up(run)
+    if late_r:
+        run.later(lambda: _free_sram_ctrl(dut))
+    for _ in range(40):
+        await run.step()
+    return {"rows": run.rows, "t_rst": t_rst, "t_rst2": t_rst2, "t_up": up["cyc"],
+            "t_iso": iso_row["cyc"], "accepted": accepted, "run": run}
+
+
+async def _gif_scenario_early_r(dut, free_lead: int) -> dict:
+    """AR accepted while the GPU is on, with the R beat held back by the SRAM controller. The
+    controller is freed free_lead cycles before the PMU gets the power-down request, so the R beat
+    arrives in the cycle after the clock gate closed, before the clamp and the reset."""
+    run = await _gif_held_start(dut)
+    run.later(lambda: _release_block(dut))
+    run.later(lambda: _hold_sram_ctrl(dut))
+    await run.until(lambda r: r["m_arv"] and r["m_arr"], 16, "AR accepted")
+    run.later(lambda: _free_sram_ctrl(dut))
+    for _ in range(free_lead):
+        await run.step()
+    run.later(lambda: _mode_now(dut, MODE_GPU_OFF))
+    first_rst = await run.until(lambda r: r["rst_n"] == 0, 400, "GPU domain reset")
+    for _ in range(24):
+        await run.step()
+    up = await _gif_power_up(run)
+    for _ in range(40):
+        await run.step()
+    return {"rows": run.rows, "t_rst": first_rst["cyc"], "t_up": up["cyc"], "run": run}
+
+
+async def _gif_scenario_no_reset(dut) -> dict:
+    """Control: the same held AR, released while the GPU stays powered. No PMU action."""
+    run = await _gif_held_start(dut)
+    held_addr = run.rows[-1]["m_addr"]
+    run.later(lambda: _release_block(dut))
+    await run.until(lambda r: r["m_arv"] and r["m_arr"], 16, "held AR accepted")
+    for _ in range(GIF_KERNEL_WINDOW):
+        await run.step()
+    return {"rows": run.rows, "hold_idx": run.hold_idx, "held_addr": held_addr}
+
+
+async def _gif_scenario_idle_cycle(dut) -> dict:
+    """Control: a GPU power cycle with no fetch in flight. The firmware runs the kernel to its end,
+    then power-cycles the GPU through the PMU and launches again."""
+    await _setup(dut, GIF_CPU_NS, rom_words=_read_hex_words(GIF_FW_HEX))
+    run = _GifRun(dut)
+    await run.until(lambda r: r["irq"] == 1, GIF_LAUNCH_TIMEOUT + 20_000, "first kernel done")
+    first = len(run.rows)
+    await run.until(
+        lambda r: r["gpu_aw"] and r["gpu_awaddr"] == 0, GIF_RELAUNCH_TIMEOUT, "second launch"
+    )
+    return {"rows": run.rows[first:]}
+
+
+async def _gif_scenario_relaunch(dut, kind: str) -> dict:
+    """A power cycle as in scenario kind, then the relaunch image runs kernel 2 to the end."""
+    words, pass_pc, fail_pc = _gif_relaunch_image()
+    if kind == "held":
+        res = await _gif_scenario_held_ar(dut, rom_words=words)
+    elif kind == "rflight":
+        res = await _gif_scenario_r_in_flight(dut, rom_words=words)
+    elif kind == "late":
+        res = await _gif_scenario_r_in_flight(dut, rom_words=words, late_r=True)
+    else:
+        res = await _gif_scenario_r_in_flight(dut, rom_words=words, cycles=2)
+    run = res["run"]
+    for _ in range(GIF_RELAUNCH_TIMEOUT):
+        row = await run.step()
+        if row["commit_pc"] in (pass_pc, fail_pc):
+            break
+    else:
+        raise RuntimeError("harness: the relaunch image reached neither PASS nor FAIL")
+    res["pass"] = row["commit_pc"] == pass_pc
+    mem = sram_mem(dut)
+    res["result"] = [int(mem[GIF_RESULT_WORD + lane].value) for lane in range(8)]
+    return res
+
+
+async def _gif_cached(dut, key: str, fn) -> dict:
+    if key not in _GIF_CACHE:
+        _GIF_CACHE[key] = await with_timeout(fn(dut), 3000, "us")
+        await RisingEdge(dut.clk_i)  # leave the read-only phase
+    return _GIF_CACHE[key]
+
+
+def _first(rows, pred):
+    return next((r for r in rows if pred(r)), None)
+
+
+def _check_held(res) -> None:
+    rows, t_rst = res["rows"], res["t_rst"]
+    bad = [r for r in rows if r["rst_n"] == 0 and r["m_arv"]]
+    assert not bad, f"m_axi_arvalid high in {len(bad)} cycles with gpu_domain_rst_n low"
+    hs = [r for r in rows[t_rst:] if r["m_arv"] and r["m_arr"]]
+    assert not hs, f"{len(hs)} AR handshake(s) after the GPU reset asserted at cycle {t_rst}"
+    shown = [r for r in rows[t_rst:] if r["rv"]]
+    assert not shown, f"R valid shown to the GPU in {len(shown)} cycles after its reset"
+
+
+def _check_r_in_flight(res) -> None:
+    rows, t_rst = res["rows"], res["t_rst"]
+    off = [r for r in rows[t_rst:] if r["rst_n"] == 0 and r["iso"] == 1]
+    assert len(off) >= 16, f"harness: only {len(off)} cycles with the GPU off"
+    locked = [r for r in off[8:] if r["rstate"] != XBAR_R_IDLE]
+    assert not locked, f"SRAM read engine busy in {len(locked)} cycles of the GPU-off window"
+    shown = [r for r in rows[t_rst:] if r["rv"]]
+    assert not shown, f"R valid shown to the GPU in {len(shown)} cycles after its reset"
+
+
+# Scenario 1: held AR across a GPU domain reset.
+@cocotb.test()
+async def test_gif_held_ar_not_driven_in_gpu_reset(dut):
+    """Required: while gpu_domain_rst_n is low the GPU fetch adapter does not drive m_axi_arvalid.
+    The GPU fetch AR waits at the adapter because the crossbar is busy for another master. The
+    PMU then powers the GPU domain off. A request of the old GPU must not outlive its reset."""
+    res = await _gif_cached(dut, "held", _gif_scenario_held_ar)
+    bad = [r for r in res["rows"] if r["rst_n"] == 0 and r["m_arv"]]
+    assert not bad, (
+        f"m_axi_arvalid still high in {len(bad)} cycles with gpu_domain_rst_n low "
+        f"(first at cycle {bad[0]['cyc']}, reset asserted at {res['t_rst']}, "
+        f"araddr {bad[0]['m_addr']:#x})"
+    )
+
+
+@cocotb.test()
+async def test_gif_held_ar_never_reaches_crossbar_after_gpu_reset(dut):
+    """Required: no AR handshake on the GPU fetch master after the GPU domain reset asserts. The
+    crossbar is released while the GPU is still in reset; an AR of the old GPU that the adapter
+    kept would be accepted then."""
+    res = await _gif_cached(dut, "held", _gif_scenario_held_ar)
+    hs = [r for r in res["rows"][res["t_rst"] :] if r["m_arv"] and r["m_arr"]]
+    assert not hs, (
+        f"{len(hs)} AR handshake(s) on the GPU fetch master after the GPU reset asserted at cycle "
+        f"{res['t_rst']}: first at cycle {hs[0]['cyc']}, araddr {hs[0]['m_addr']:#x}"
+    )
+
+
+@cocotb.test()
+async def test_gif_held_ar_no_r_beat_for_new_gpu(dut):
+    """Required: after the GPU reset releases, the new GPU receives no R beat on the fetch port,
+    because it has issued no fetch. A beat is a handshake of gif_axil_rvalid and gif_axil_rready
+    after the reset."""
+    res = await _gif_cached(dut, "held", _gif_scenario_held_ar)
+    beats = [r for r in res["rows"][res["t_rst"] :] if r["rv"] and r["rr"]]
+    assert not beats, (
+        f"{len(beats)} unrequested R beat(s) reached the GPU after its reset (reset asserted at "
+        f"cycle {res['t_rst']}, first beat at cycle {beats[0]['cyc']}, "
+        f"gpu_domain_rst_n={beats[0]['rst_n']})"
+    )
+
+
+# Scenario 2: AR accepted, R in flight at the reset.
+@cocotb.test()
+async def test_gif_r_in_flight_does_not_lock_crossbar_while_gpu_off(dut):
+    """Required: with an R beat in flight at the GPU reset, the crossbar read engine of the target
+    slave is idle again while the GPU is still off. The beat is the response to a fetch that no
+    GPU waits for; the engine must not hold the slave until the GPU powers up (any other master
+    reading that slave would stall)."""
+    res = await _gif_cached(dut, "rflight", _gif_scenario_r_in_flight)
+    off = [r for r in res["rows"][res["t_rst"] :] if r["rst_n"] == 0 and r["iso"] == 1]
+    assert len(off) >= 16, f"harness: only {len(off)} cycles with the GPU off"
+    late = off[8:]
+    locked = [r for r in late if r["rstate"] != XBAR_R_IDLE]
+    assert not locked, (
+        f"crossbar SRAM read engine busy (state {locked[0]['rstate']}) in {len(locked)} of "
+        f"{len(late)} cycles of the GPU-off window, from cycle {locked[0]['cyc']} "
+        f"(reset asserted at {res['t_rst']})"
+    )
+
+
+@cocotb.test()
+async def test_gif_r_in_flight_no_r_beat_for_new_gpu(dut):
+    """Required: after the GPU reset releases, the new GPU receives no R beat for the fetch of the
+    old GPU that was in flight at the reset."""
+    res = await _gif_cached(dut, "rflight", _gif_scenario_r_in_flight)
+    beats = [r for r in res["rows"][res["t_rst"] :] if r["rv"] and r["rr"]]
+    assert not beats, (
+        f"{len(beats)} unrequested R beat(s) reached the GPU after its reset (reset asserted at "
+        f"cycle {res['t_rst']}, first beat at cycle {beats[0]['cyc']}, "
+        f"gpu_domain_rst_n={beats[0]['rst_n']}, isolation={beats[0]['iso']})"
+    )
+
+
+# Controls: the harness sees what the scenario tests rely on, and the rules hold when no reset
+# or no fetch is in the way.
+@cocotb.test()
+async def test_gif_control_held_ar_without_reset_completes(dut):
+    """Control for both scenarios: with no GPU reset, the AR that waits at the adapter keeps its
+    address and valid, is accepted exactly once when the crossbar is released, its R beat reaches
+    the GPU and the read engine returns to idle."""
+    res = await _gif_cached(dut, "noreset", _gif_scenario_no_reset)
+    rows, hold_idx, addr = res["rows"], res["hold_idx"], res["held_addr"]
+    first_hs = next(i for i in range(hold_idx, len(rows)) if rows[i]["m_arv"] and rows[i]["m_arr"])
+    held = rows[hold_idx:first_hs]
+    assert len(held) >= GIF_HOLD_CYCLES
+    assert all(r["m_arv"] and not r["m_arr"] and r["m_addr"] == addr for r in held), (
+        "the held AR changed or dropped before it was accepted"
+    )
+    assert rows[first_hs]["m_addr"] == addr
+    beats = [r for r in rows[first_hs : first_hs + 12] if r["rv"] and r["rr"]]
+    assert len(beats) == 1, f"{len(beats)} R beats after the held AR, expected 1"
+    assert rows[-1]["rstate"] == XBAR_R_IDLE
+    assert all(r["rst_n"] == 1 for r in rows[hold_idx:]), "harness: the GPU was reset"
+
+
+@cocotb.test()
+async def test_gif_control_gpu_reset_without_fetch_in_flight_is_clean(dut):
+    """Control for both scenarios: a PMU power cycle of the idle GPU (kernel finished, no fetch in
+    flight) leaves no AR valid, no AR handshake and no R beat on the fetch port, and the crossbar
+    read engine stays idle."""
+    res = await _gif_cached(dut, "idle", _gif_scenario_idle_cycle)
+    rows = res["rows"]
+    assert _first(rows, lambda r: r["rst_n"] == 0), "harness: the GPU was not reset"
+    assert _first(rows, lambda r: r["st"] == DOM_OFF), "harness: the GPU domain never reached OFF"
+    # The kernel's last fetch is over once the interrupt is raised; look from two cycles later.
+    win = rows[2:]
+    assert not [r for r in win if r["m_arv"] or r["m_arr"] or r["rv"]], (
+        "fetch-port activity during the idle power cycle"
+    )
+    assert all(r["rstate"] == XBAR_R_IDLE for r in win)
+
+
+@cocotb.test()
+async def test_gif_control_r_in_flight_window_is_reached(dut):
+    """Control for scenario 2: the harness reaches the state the scenario 2 tests need, and the
+    adapter handles it. The AR is accepted with the isolation clamp active and the GPU reset still
+    released. The R beat of that fetch then becomes valid at the crossbar while the GPU is off. The
+    adapter takes that beat itself; the GPU port never shows it."""
+    res = await _gif_cached(dut, "rflight", _gif_scenario_r_in_flight)
+    rows = res["rows"]
+    acc = res["accepted"][0]
+    assert acc["iso"] == 1 and acc["rst_n"] == 1 and acc["m_arr"] == 1
+    taken = _first(rows[acc["cyc"] + 1 :], lambda r: r["m_rv"] and r["m_rr"])
+    if taken is None:
+        raise RuntimeError("harness: the R beat of the accepted AR never reached the adapter")
+    assert taken["cyc"] > acc["cyc"]
+    assert _gpu_off(taken), f"the R beat was taken at cycle {taken['cyc']} with the GPU on"
+    shown = [r for r in rows[acc["cyc"] :] if r["rv"]]
+    assert not shown, f"R valid shown to the GPU in {len(shown)} cycles, first at {shown[0]['cyc']}"
+    assert rows[-1]["rstate"] == XBAR_R_IDLE
+
+
+# Power-down sequence variants. The PMU has no state that gates the GPU clock and leaves the GPU
+# out of reset (see the PMU sequencer chain), so a stale fetch can only be met in a full cycle.
+@cocotb.test()
+async def test_gif_wake_during_power_down_still_resets_and_drains(dut):
+    """Software requests NORMAL one cycle after GPU_OFF. The PMU does not reverse the power-down:
+    the clock gate closes, the clamp rises and the reset asserts for at least one cycle. The R beat
+    in flight is taken by the adapter and never shown to the GPU, and the read engine is idle after.
+    Every closing of the clock gate is followed by a reset before the clock opens again."""
+    res = await _gif_cached(
+        dut, "wake", lambda d: _gif_scenario_r_in_flight(d, wake_early=True)
+    )
+    rows, t_rst = res["rows"], res["t_rst"]
+    assert rows[t_rst]["rst_n"] == 0
+    assert _first(rows, lambda r: r["st"] == DOM_OFF), "the aborted power-down never reached OFF"
+    shown = [r for r in rows[res["accepted"][0]["cyc"] :] if r["rv"]]
+    assert not shown, f"R valid shown to the GPU in {len(shown)} cycles"
+    assert rows[-1]["rstate"] == XBAR_R_IDLE
+    assert rows[-1]["st"] == DOM_ON
+    gated_without_reset = False
+    seen_reset = True
+    for prev, cur in zip(rows, rows[1:]):
+        if prev["clk_en"] and not cur["clk_en"]:
+            seen_reset = False
+        if not cur["rst_n"]:
+            seen_reset = True
+        if not prev["clk_en"] and cur["clk_en"] and not seen_reset:
+            gated_without_reset = True
+    assert not gated_without_reset, "the GPU clock gate closed and opened with no GPU reset between"
+
+
+@cocotb.test()
+async def test_gif_r_beat_after_gpu_power_up_is_drained(dut):
+    """The SRAM controller refuses the AR, so the R beat of the old GPU comes only after the GPU
+    is back on and out of reset. The adapter still takes it: the new GPU sees no R valid, and the
+    read engine is idle after."""
+    res = await _gif_cached(dut, "late", lambda d: _gif_scenario_r_in_flight(d, late_r=True))
+    rows, t_up = res["rows"], res["t_up"]
+    beat = _first(rows[t_up:], lambda r: r["m_rv"] and r["m_rr"])
+    if beat is None:
+        raise RuntimeError("harness: the late R beat did not arrive after the GPU power-up")
+    assert beat["st"] == DOM_ON and not _gpu_off(beat)
+    shown = [r for r in rows[res["accepted"][0]["cyc"] :] if r["rv"]]
+    assert not shown, f"R valid shown to the GPU in {len(shown)} cycles, first at {shown[0]['cyc']}"
+    assert rows[-1]["rstate"] == XBAR_R_IDLE
+
+
+# free_lead places the arrival of the R beat in the window of a closed clock gate and a released
+# reset.
+GIF_EARLY_FREE_LEAD = 1
+
+
+@cocotb.test()
+async def test_gif_r_beat_while_gpu_clock_gated_is_not_presented(dut):
+    """An R beat that arrives after the GPU clock gate closed and before its reset asserts is taken
+    by the adapter and is not presented to the GPU. The off level of the adapter includes the clock
+    gate, so the drain starts there and not only at the reset."""
+    res = await _gif_cached(
+        dut, "early",
+        lambda d: _gif_scenario_early_r(d, GIF_EARLY_FREE_LEAD),
+    )
+    rows, t_rst = res["rows"], res["t_rst"]
+    beat = _first(rows, lambda r: r["m_rv"] and r["m_rr"] and not r["clk_en"] and r["rst_n"])
+    if beat is None:
+        raise RuntimeError("harness: no R beat arrived with the clock gated and the reset released")
+    assert beat["cyc"] < t_rst
+    shown = [r for r in rows if not r["clk_en"] and r["rv"]]
+    assert not shown, f"R valid shown to the GPU in {len(shown)} cycles with its clock gated"
+    assert rows[-1]["rstate"] == XBAR_R_IDLE
+
+
+# Relaunch: after a power cycle with a stale fetch, a new kernel completes with correct data.
+def _check_relaunch(res) -> None:
+    assert res["pass"], "the relaunch image reached FAIL: the second kernel did not complete"
+    want = [(lane + 1) * GIF_RESULT_SCALE + 1 for lane in range(8)]
+    assert res["result"] == want, f"second kernel result {res['result']}, expected {want}"
+    after = res["rows"][res["t_up"] :]
+    n_ar = len([r for r in after if r["m_arv"] and r["m_arr"]])
+    n_beats = len([r for r in after if r["rv"] and r["rr"]])
+    assert n_ar > 0 and n_beats == n_ar, (
+        f"{n_beats} R beats reached the GPU for {n_ar} fetches of the new GPU after power-up"
+    )
+    assert res["rows"][-1]["rstate"] == XBAR_R_IDLE
+
+
+@cocotb.test()
+async def test_gif_relaunch_after_held_ar_cycle(dut):
+    """Scenario 1, then the second kernel completes with the right data and every fetch of the new
+    GPU gets exactly one R beat."""
+    _check_relaunch(await _gif_cached(dut, "rl_held", lambda d: _gif_scenario_relaunch(d, "held")))
+
+
+@cocotb.test()
+async def test_gif_relaunch_after_r_in_flight_cycle(dut):
+    """Scenario 2, then the second kernel completes with the right data and no stale state is left
+    in the adapter."""
+    _check_relaunch(
+        await _gif_cached(dut, "rl_rflight", lambda d: _gif_scenario_relaunch(d, "rflight"))
+    )
+
+
+@cocotb.test()
+async def test_gif_relaunch_after_late_r_beat(dut):
+    """The old fetch's R beat arrives after the power-up; the second kernel still completes with the
+    right data."""
+    _check_relaunch(await _gif_cached(dut, "rl_late", lambda d: _gif_scenario_relaunch(d, "late")))
+
+
+@cocotb.test()
+async def test_gif_relaunch_after_back_to_back_power_cycles(dut):
+    """Two GPU power cycles with no idle gap, the first with an R beat in flight. Both resets
+    assert, no R valid reaches the GPU, and the second kernel completes with the right data."""
+    res = await _gif_cached(dut, "rl_b2b", lambda d: _gif_scenario_relaunch(d, "b2b"))
+    assert res["t_rst2"] is not None and res["t_rst2"] > res["t_rst"]
+    assert res["rows"][res["t_rst2"]]["rst_n"] == 0
+    window = res["rows"][res["t_rst"] : res["t_up"]]
+    assert not [r for r in window if r["rv"]], "R valid shown to the GPU during the two cycles"
+    _check_relaunch(res)
+
+
+# Both scenarios with the CPU clock slower than the fabric clock.
+@cocotb.test()
+async def test_gif_stale_fetch_cases_with_cpu_slower_than_fabric(dut):
+    """Scenario 1 and scenario 2 with the CPU clock slower than the fabric clock: the same rules
+    hold on the GPU fetch path, which stays in the fabric clock domain."""
+    held = await _gif_cached(
+        dut, "held_slow", lambda d: _gif_scenario_held_ar(d, GIF_SLOW_CPU_NS)
+    )
+    _check_held(held)
+    rflight = await _gif_cached(
+        dut, "rflight_slow", lambda d: _gif_scenario_r_in_flight(d, GIF_SLOW_CPU_NS)
+    )
+    _check_r_in_flight(rflight)
+
+
+@cocotb.test(expect_fail=True)
+async def test_gif_held_ar_fetch_not_lost_kernel_completes(dut):
+    """Required: a GPU fetch whose AR waits at the adapter because the crossbar is busy is not lost.
+    After the crossbar is released the GPU continues and the kernel runs to its end. The GPU
+    compute unit raises its issue pulse for one cycle and takes the fetch only when arready is high
+    in that cycle, while the adapter answers arready only in the cycle the crossbar accepts the AR.
+    No GPU reset is involved in this test. It tracks a separate defect of the GPU compute unit and
+    its handshake with the adapter, not of the power cycle, and stays expect_fail until that is
+    fixed."""
+    res = await _gif_cached(dut, "noreset", _gif_scenario_no_reset)
+    rows = res["rows"][res["hold_idx"] :]
+    assert _first(rows, lambda r: r["irq"] == 1), (
+        f"the GPU kernel did not finish within {GIF_KERNEL_WINDOW} cycles after the held AR was "
+        f"accepted; AR handshakes after the held one: "
+        f"{len([r for r in rows if r['m_arv'] and r['m_arr']]) - 1}"
     )

@@ -3283,6 +3283,38 @@ Limits. The bridge has no timeout, so a destination clock that stops while the d
 
 \end{record}
 
+\section{GPU fetch adapter keeps a stale fetch across a GPU power cycle (\code{axilite_to_axi4})}\label{cr:defect:gif-stale-fetch}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.34}, from item 3 of GH \#403. The adapter \code{u_gif_adapter} of the GPU instruction fetch ran on \code{core_rst_n} only. Owner decisions of 2026-11-24: reset the AR skid buffer with the GPU domain reset, and also drain a read response that is in flight at a power-down, in one change. The adapter gets a second reset input. A separate defect that the tests found, a fetch that the GPU loses when the adapter accepts it later than the issue cycle, became bead \bead{zftj.37}.
+
+\end{record}
+
+\begin{record}
+
+Measured on the RTL before the fix, SoC level, real PMU power cycle, CPU clock 3 ns and fabric clock 7 ns. PMU sequence of the GPU: clock gate, clamp, and the reset one cycle after the clamp. A held request: ``\code{m_axi_arvalid} still high in 5 cycles with \code{gpu_domain_rst_n} low''; the crossbar accepted it four cycles after the reset; its response reached the new GPU. A response in flight: ``crossbar SRAM read engine busy (state 2) in 18 of 18 cycles of the GPU-off window'', and the response reached the new GPU after the clamp released. A connection of the existing reset input to the GPU domain reset fixed only the three tests of the held request.
+
+\end{record}
+
+\begin{record}
+
+RTL change. \code{axilite_to_axi4} has the inputs \code{gpu_rst_i} and \code{gpu_off_i}, the flag \code{rd_out_q} on \code{core_rst_n} and the flag \code{stale_q}. The skid buffer resets with the GPU reset. While a read is in flight and the GPU is off, or the read became stale, the adapter forces RREADY and masks RVALID to the GPU. \code{soc_top} drives the inputs from \code{gpu_domain_rst_n} and \code{gpu_dom_off}. New requirements \reqref{DS-PMU-115} and \reqref{DS-PMU-116}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. \code{test_soc_pmu_iso_ack.py} has 31 tests: the five tests of the defect now pass without \code{expect_fail}; three controls; eight new tests (a new mode during a power-down, a response after the GPU is on again, a response while only the clock is gated, a second kernel after each case and after two power cycles, and both cases with the CPU clock slower than the fabric clock). Each RTL mutant was caught: skid reset on \code{rst_n} only, \code{rd_out_q} reset by the GPU reset, no RVALID mask, no RREADY force, no \code{stale_q}, and a drain on the reset only. The last two are caught only by the new tests of an early and a late response. \code{soc_all_ci} before the rebase on the crossbar changes: exit 0, 1007 tests pass. \code{PASS_FLOOR} goes from 1006 to 1019. The test of the lost fetch stays \code{expect_fail}.
+
+\end{record}
+
+\begin{record}
+
+Limits. The drain starts at the clock gate. The PMU has no state that gates the GPU clock without a reset, and a deposit of a one-cycle gate pulse showed that such a state would lose the fetch. The tests force the read engine of the crossbar busy through a backdoor, because no SoC workload keeps it busy at the exact cycle.
+
+\end{record}
+
 \section{\code{axi4_crossbar} arbitration has no fairness rule}\label{cr:defect:crossbar-fixed-priority}
 
 \begin{record}

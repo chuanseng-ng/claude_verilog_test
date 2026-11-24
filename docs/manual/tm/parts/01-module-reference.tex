@@ -459,6 +459,15 @@ Limits: the bridge cannot see the difference between a late beat that comes afte
 
 The masters of the SoC send only INCR bursts of 4-byte beats with WLAST on the beat that AWLEN gives, so the SoC uses only the INCR path. The crossbar ends a write on WLAST and a read on RLAST, and a missing WLAST or RLAST locks only the engine of that slave. The suite \code{test_crossbar_errors.py} measures this, the slave IDs, the decode of a burst that crosses a region boundary (the first beat decides) and a reset during each busy state of the engines.
 
+\section{GPU power cycle in \texttt{axilite\_to\_axi4}}\label{tm:mod:axilite-to-axi4-power-cycle}
+The adapter \code{u_gif_adapter} connects the AXI-Lite fetch port of the GPU to master 1 of the crossbar. It runs on \code{core_clk} and \code{core_rst_n}. It has two inputs for the GPU power cycle. \code{soc_top} drives \code{gpu_rst_i} with the inverse of \code{gpu_domain_rst_n} (after the scan reset multiplexer) and \code{gpu_off_i} with \code{gpu_dom_off}. The two inputs are active high, so an instance that ties them to 0 behaves as before.
+\begin{itemize}
+  \item The AR skid buffer (\code{ar_hold_q}, \code{ar_addr_q}) has the asynchronous reset \code{rst_n \& ~gpu_rst_i}. A held request of the old GPU therefore stops when the GPU reset asserts (\reqref{DS-PMU-115}).
+  \item The flag \code{rd_out_q} is set by the AR handshake on the crossbar and cleared by the R handshake. Only \code{rst_n} resets it.
+  \item The drain level is \code{rd_out_q \& (gpu_off_i | stale_q)}. The flag \code{stale_q} holds the drain after \code{gpu_off_i} falls, until the R handshake. While the drain level is high, \code{m_axi_rready} is forced high and \code{s_axil_rvalid} is masked (\reqref{DS-PMU-116}).
+\end{itemize}
+Rule 6 of \src{AGENTS.md}: while \code{core_rst_n} is low, \code{rd_out_q} is 0, so \code{m_axi_rready} follows the GPU, which the clamp holds low. The forced ready accepts only a response to a read that the adapter sent. The suite \code{test_soc_pmu_iso_ack.py} drives the real PMU power cycle and holds the read engine of the crossbar busy through a backdoor to place a request in each phase. History: \cref{cr:defect:gif-stale-fetch}.
+
 \section{Off slots of \texttt{axi\_lite\_interconnect}}\label{tm:mod:axi-lite-interconnect}
 This section describes how the AXI-Lite interconnect answers an access to a slot whose domain is off. \reqref{DS-PMU-112} and \reqref{DS-PMU-113} state the rules.
 

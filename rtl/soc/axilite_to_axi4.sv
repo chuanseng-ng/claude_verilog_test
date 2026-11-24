@@ -14,13 +14,19 @@
 //   crossbar is registering its R_IDLE→R_AR transition), the GPU CU drops
 //   arvalid, the crossbar AR channel is abandoned, and the fetch stalls.
 //
-//   Fix: a one-entry AR skid buffer.  When s_axil_arvalid rises and we are
-//   not already holding a pending request (ar_hold_q==0), we capture araddr
-//   and assert m_axi_arvalid immediately (combinatorially) AND latch both
-//   into ar_hold_q / ar_addr_q on the same rising edge.  We de-assert
-//   m_axi_arvalid (and clear the buffer) only when m_axi_arready is seen.
-//   s_axil_arready is returned to the GPU CU only on the accepting cycle
-//   so the CU does not re-issue the same address.
+//   Fix: a one-entry AR skid buffer.  When s_axil_arvalid rises with the buffer
+//   empty (ar_hold_q==0), m_axi_arvalid is asserted combinatorially and araddr is
+//   latched into ar_addr_q on the same edge.  The buffer is cleared only when
+//   m_axi_arready is seen.  s_axil_arready returns to the GPU CU only on the
+//   accepting cycle, so the CU does not re-issue the same address.
+//
+// GPU power cycle (Doc: ds:mod:pmu):
+//   gpu_rst_i clears the AR skid buffer, so a request of the old GPU does not outlive
+//   its reset.  rd_out_q marks a read in flight and is cleared by rst_n only.  While
+//   gpu_off_i is high, and after it fell with that read still in flight (stale_q), the
+//   adapter takes the R beat itself: m_axi_rready is forced high and s_axil_rvalid is
+//   masked.  A read issued after gpu_off_i falls is not stale.  Tie both inputs to 0
+//   for an instance with no GPU power cycle.
 //
 // Signals added / tied:
 //   arid   = 0
@@ -44,12 +50,10 @@ module axilite_to_axi4
     // Fixed AXI4 master ID for GPU ifetch channel
     parameter logic [3:0] MASTER_ID = 4'd0
 ) (
-    // Clock and reset (unused in pure combinatorial adapter, kept for
-    // structural consistency and future pipeline register insertion)
-    /* verilator lint_off UNUSEDSIGNAL */
     input  logic clk,
-    input  logic rst_n,
-    /* verilator lint_on  UNUSEDSIGNAL */
+    input  logic rst_n,       // fabric reset: clears every flop
+    input  logic gpu_rst_i,   // 1 = GPU domain in reset: clears the AR skid buffer only
+    input  logic gpu_off_i,   // 1 = GPU domain off: a read in flight is drained
 
     // ── AXI4-Lite read slave (from gpu_top m_axil_if_*) ─────────────────────
     input  logic [AW-1:0] s_axil_araddr,
@@ -122,6 +126,10 @@ module axilite_to_axi4
     logic             ar_hold_q;
     logic [AW-1:0]    ar_addr_q;
 
+    // Reset of the skid buffer: the fabric reset or the GPU domain reset.
+    logic skid_rst_n;
+    assign skid_rst_n = rst_n & ~gpu_rst_i;
+
     // Combinatorial: present arvalid to crossbar from either the live slave
     // input (new request) or the buffer (held request).
     logic ar_pending;
@@ -141,8 +149,8 @@ module axilite_to_axi4
     assign s_axil_arready = m_axi_arready & ar_pending;
 
     // AR skid buffer state machine
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge clk or negedge skid_rst_n) begin
+        if (!skid_rst_n) begin
             ar_hold_q <= 1'b0;
             ar_addr_q <= '0;
         end else begin
@@ -160,11 +168,32 @@ module axilite_to_axi4
         end
     end
 
-    // ── Read channel pass-through (no buffering needed on R channel) ─────────
+    // ── Read channel: pass-through, with a drain of a read the GPU no longer waits for ──
+    // rd_out_q: one read in flight (AR accepted, R beat not yet taken).  The crossbar
+    // read engine of a slave takes one read at a time, so one flag is enough.  A new AR
+    // and an R beat in one cycle keep the flag set.
+    logic ar_hs, r_hs, rd_out_q, stale_q, r_drain;
+    assign ar_hs   = m_axi_arvalid & m_axi_arready;
+    assign r_hs    = m_axi_rvalid  & m_axi_rready;
+    assign r_drain = rd_out_q & (gpu_off_i | stale_q);
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            rd_out_q <= 1'b0;
+            stale_q  <= 1'b0;
+        end else begin
+            if (ar_hs)        rd_out_q <= 1'b1;
+            else if (r_hs)    rd_out_q <= 1'b0;
+            // stale_q keeps the drain on after gpu_off_i falls, until the beat is taken.
+            if (r_hs)         stale_q  <= 1'b0;
+            else if (r_drain) stale_q  <= 1'b1;
+        end
+    end
+
     assign s_axil_rdata  = m_axi_rdata;
     assign s_axil_rresp  = m_axi_rresp;
-    assign s_axil_rvalid = m_axi_rvalid;
-    assign m_axi_rready  = s_axil_rready;
+    assign s_axil_rvalid = m_axi_rvalid & ~r_drain;
+    assign m_axi_rready  = s_axil_rready | r_drain;
 
     // ── Suppress unused port warning on write-channel inputs ─────────────────
     // m_axi_awready and m_axi_wready are inputs driven by crossbar — accepted
