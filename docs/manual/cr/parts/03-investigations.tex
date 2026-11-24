@@ -3127,6 +3127,20 @@ Change of the same date. The firmware flushes the data cache and programs the DM
 
 \end{record}
 
+\section{Scan mode while the PMU holds the CPU off (\code{soc_top})}\label{cr:defect:scan-with-cpu-off}
+
+\begin{record}
+
+Date 2026-11-24. Bead \bead{zftj.24}. The SoC tests of scan mode with the CPU domain off checked only the domain reset. The clock gate, the clamp and the exit from scan mode had no test in that state. No RTL defect was found, and the RTL did not change.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. \code{test_soc_dft_scan.py} has three new tests, and the suite passes 16 of 16. Three temporary edits of \code{soc_top.sv} were run against the whole suite and then removed. With the test enable of \code{u_cpu_cg} tied to 0, three tests fail: \code{test_cpu_clock_gate_forced_open} and the first two new tests. With the test enable tied to 1, two tests fail: the first new test, at its check that the gate is closed in functional mode, and the scan-exit test. With a clamp that scan mode removes, the clamp test and the scan-exit test fail. A test without the wake write fails the scan-exit test at its wake check. No RTL edit was found that breaks only the wake. \code{soc_all_ci} has no failure: 994 tests pass. \code{PASS_FLOOR} goes from 955 to 958.
+
+\end{record}
+
 \section{APB bridge: destination reset races and their fix (\code{apb_cdc_bridge})}\label{cr:defect:apb-cdc-bridge-reset-race}
 
 \begin{record}
