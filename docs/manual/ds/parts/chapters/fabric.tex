@@ -34,14 +34,27 @@ The rule \reqref{DS-FAB-001} now holds the second request of a direction in the 
 
 A master that needs read-after-write order to one slave must also wait for B before AR. The crossbar gives no order between its read engine and its write engine.
 
+\begin{requirement}{DS-FAB-003}{Round-robin grant among the masters of one slave}
+[verify={test:tb/cocotb/soc/test_crossbar_arbitration.py::test_grant_order_reads_same_cycle; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_grant_order_writes_same_cycle; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_m0_back_to_back_reads_lower_masters_served_within_bound; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_m0_back_to_back_writes_lower_masters_served_within_bound; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_three_hogs_share_reads_evenly_within_bound; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_three_hogs_share_writes_evenly_within_bound; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_m0_idle_gap_does_not_reorder_grants_reads; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_m0_idle_gap_does_not_reorder_grants_writes; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_lower_masters_granted_when_higher_idle_reads; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_lower_masters_granted_when_higher_idle_writes; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_slaves_serve_masters_concurrently_reads; test:tb/cocotb/soc/test_crossbar_arbitration.py::test_slaves_serve_masters_concurrently_writes}]
+Each slave of the crossbar must have one arbiter for writes and one arbiter for reads. Each arbiter must keep a pointer to one master. The pointer must be master 0 after reset. When the engine of the slave is idle, the arbiter must grant the first requesting master at or above the pointer. If no master at or above the pointer requests, the arbiter must grant the lowest-index requesting master. After each grant, the pointer must move to the master one above the granted master, with a wrap from the last master to master 0. The pointer must not move without a grant. The ready on the master face in the grant cycle must go to the same master that the engine of the slave takes. While a master keeps its request valid, the arbiter must grant each other master a maximum of one time before it grants that master.
+\end{requirement}
+\begin{rationale}
+A fixed-priority arbiter let master 0 keep a slave without limit, because the engine is idle for one cycle after each response and master 0 asserted its next request in that cycle. With the pointer, a waiting master is in the search span before each other master that was granted after it, so it waits a maximum of $N-1$ grants. The arbiters of two slaves are independent, so a master that keeps one slave busy does not delay a master on another slave.
+\end{rationale}
+\begin{information}
+With three masters, the arbiter grants a master within $(N-1) \times T$ cycles of its request, where $T$ is the period of back-to-back transfers of one master alone. The tests measure $T$ in each run and use it as the bound. The arbitration adds no cycle to a single transfer. The tests compare each grant with a Python model of the arbiter. They also check that the grant order on the master faces is the same as the order on the slave faces. At least one test detects each of these mutations: a pointer that does not move, a pointer set to the granted master, a pointer that moves on each cycle, one pointer for two slaves, and a fixed-priority winner for the ready on the master face. The tests use the three-master wrapper \code{tb_axi4_crossbar}, not the masters of the SoC.
+\end{information}
+
 \section{Known limits}\label{ds:ch:mod-data-fabric:known-limits}
 \begin{information}
 \begin{itemize}
   \item A master has a maximum of one read and one write in flight. Each new request of a master waits for the response of its last request in that direction.
   \item The crossbar gives no order between a read and a write of one master (\reqref{DS-FAB-002}).
   \item The ready outputs of the master faces are combinational from the valid inputs, also while the crossbar is in reset.
+  \item The arbiter takes no account of the age of a request or of the length of a burst. A master with long bursts gets more cycles of a slave than a master with short bursts, but not more grants (\reqref{DS-FAB-003}).
 \end{itemize}
 Before the hold, the crossbar accepted a second AW or AR while the first waited for its slave. It also mixed the beats of two transfers of one master to two slaves. \Cref{cr:defect:crossbar-second-request} gives the history.
+Before the round-robin arbiter, the request of the lowest-index master always won. \Cref{cr:defect:crossbar-fixed-priority} gives the history.
 \end{information}
 
 \input{generated/requirements-fab}

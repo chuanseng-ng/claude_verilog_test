@@ -3269,6 +3269,44 @@ Limits. The bridge has no timeout, so a destination clock that stops while the d
 
 \end{record}
 
+\section{\code{axi4_crossbar} arbitration has no fairness rule}\label{cr:defect:crossbar-fixed-priority}
+
+\begin{record}
+
+Date 2026-11-18. Bead \bead{zftj.28}, GH \#401. The arbitration of \code{axi4_crossbar} is fixed priority: the lowest-index master wins. No test measured the grant order or the hold-off of a lower master. No RTL was changed. A fairness rule is a decision of the owner.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host, on the three-master wrapper \code{tb_axi4_crossbar}. The new suite \code{test_crossbar_arbitration.py} has ten tests, five for reads and five for writes, and all pass. Requests in the same cycle are granted in ascending index for every subset of masters, both slaves, and AR and AW. The grant rule: while the engine of a slave is idle, the lowest-index master with xVALID high in that cycle wins, with the ready in the same cycle; the engine is idle for one cycle after RLAST or B; it keeps no record of arrival order. With master 0 re-requesting with no idle cycle in a window of 400 cycles, master 0 made 102 reads (82 writes), and masters 1 and 2 waited 402 and 406 cycles (404 and 409 for writes), until master 0 stopped. With one or two idle cycles between the transfers of master 0, the order after masters 1 and 2 arrive is 1, 0, 2. A master that holds one slave does not delay a master on the other slave. Negative controls on scratch copies of the RTL, not committed: highest index wins fails 8 of 10 tests, round robin fails 6 of 10, a block of slave 1 while slave 0 is busy fails the 2 cross-slave tests, and an ignored master 2 fails all 10.
+
+\end{record}
+
+\begin{record}
+
+Limits. The wrapper has three masters, so master 2 stands for the lowest-priority master of the SoC. The tests use their own drivers, not the masters of the SoC. The existing \code{test_crossbar} tests have no timeout, so the mutants ran against the new suite only.
+
+\end{record}
+
+\begin{record}
+
+Date 2026-11-24. Owner decision on GH \#401: the crossbar gets round-robin arbitration. RTL change in \code{axi4_crossbar}: each slave has a one-hot pointer for writes (\code{wr_ptr}) and one for reads (\code{rd_ptr}). Reset sets the pointer to master 0. The engine loads the pointer with the master one above the granted master when it takes a request in the idle state. The grant function \code{rr_grant} searches from the pointer and wraps to master 0. The early accept of the master face uses the same grant vectors as the engine. On the coarse netlist the counts of \code{\$shiftx} (12) and \code{\$pmux} (22) did not change. The latency of a single transfer did not change. New requirement \reqref{DS-FAB-003}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host, on \code{tb_axi4_crossbar}. The suite \code{test_crossbar_arbitration.py} now has twelve tests. Six tests that asserted fixed priority now compare each grant with a Python model of the round-robin arbiter. Two were renamed: \code{test_m0_back_to_back_*_hold_off_lower_masters} is now \code{test_m0_back_to_back_*_lower_masters_served_within_bound}, and \code{test_one_idle_cycle_lets_lower_master_in_*} is now \code{test_m0_idle_gap_does_not_reorder_grants_*}. New: \code{test_three_hogs_share_reads_evenly_within_bound} and \code{test_three_hogs_share_writes_evenly_within_bound}. Every test also checks that the order of grants on the master faces equals the order on the slave faces, and that no master waiting with xVALID high sees more than one grant of each other master. With master 0 re-requesting with no idle cycle, the worst wait of masters 1 and 2 was 8 cycles for reads and 10 cycles for writes, equal to the bound $(N-1) \times T$ with $T$ of 4 and 5 cycles. Before the change it was 402 to 409 cycles. Negative controls, each a temporary edit of the RTL: a pointer that does not move fails 8 of 34 crossbar tests, a pointer set to the granted master fails 10, a fixed-priority early accept fails 4 for each direction, a pointer that moves on each cycle fails 8, one pointer for both slaves fails 8, a pointer set two above the grant fails 8, and a search with no wrap deadlocks 17. \code{soc_all_ci} exits 0 with 1011 tests passed by the count of the CI workflow. \code{PASS_FLOOR} goes from 973 to 975.
+
+\end{record}
+
+\begin{record}
+
+Limits. The arbiter counts grants, not cycles, so a master with long bursts gets more time on a slave than a master with short bursts. The bound was measured with three masters on the wrapper, not with the masters of the SoC. The SoC regression passed, so no SoC test depended on fixed priority, but the regression does not measure the grant order in the SoC.
+
+\end{record}
+
 \section{\code{axil_to_apb} drives PSTRB low on a read}\label{cr:defect:axil-to-apb-read-pstrb}
 
 \begin{record}
