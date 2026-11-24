@@ -3294,3 +3294,41 @@ Tests, measured, local, one host. \code{test_axil_to_apb.py} has five new tests:
 Limits. The bridge has no \code{pprot} output and ignores AxPROT. No slave in the APB tree uses a protection attribute. This is a stated limit by owner decision.
 
 \end{record}
+
+\section{\code{axi4_crossbar} loses a second request of one master}\label{cr:defect:crossbar-second-request}
+
+\begin{record}
+
+Date 2026-11-18. Bead \bead{zftj.27}, GH \#400. Two suspected defects of \code{axi4_crossbar} were examined by simulation. First: while a write or a read of one master waits for a slow slave, the crossbar accepts a second AW or AR of that master in the cycle that the slave raises its ready signal for the first. The slave gets only the first request. Second: with two reads or two writes of one master in flight to two different slaves, the master face, which has no ID, cannot steer the R beats or the W beats. No RTL was changed. An RTL fix is a decision of the owner.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. The new suite \code{test_crossbar_outstanding.py} has four tests marked \code{expect_fail} and four controls. Each defect test failed with a real mismatch: ``2 AW accepted at edges [1, 6] but 1 B seen'' for writes to one slave, no R beats for the second AR to one slave, ROM beats 2 and 3 lost behind the SRAM beats for two reads to two slaves, and the second slave given the W data of the first burst for two writes to two slaves. The controls send the same traffic with the next request after the B or RLAST of the last one, and they pass. The crossbar suite has 22 tests and no failure. \code{soc_all_ci} on the tree before the merge of \code{zftj.29}: exit 0, 990 tests pass, 8 fail as expected. \code{PASS_FLOOR} goes from 955 to 959.
+
+\end{record}
+
+\begin{record}
+
+GPU masters. The data path (\code{memory_coalescer}) has one state machine that goes on only after R or B, so it has at most one transfer in flight. A passive monitor in \code{test_cpu_gpu_irq_pass} measured on crossbar master 2: 8 reads, 8 writes, a maximum of 1 in flight. The instruction fetch on master 1: 17 reads, a maximum of 1 in flight; the RTL reason is inferred from the stall logic of \code{gpu_compute_unit}. New rules: \reqref{DS-FAB-001} and \reqref{DS-FAB-002}.
+
+\end{record}
+
+\begin{record}
+
+Limits. The monitor covers only the workload of \code{test_cpu_gpu_irq_pass}, and no negative control shows that it fires. The CPU cache arbiter and the DMA engine were not examined against \reqref{DS-FAB-001}. The tests drive only master 0.
+
+\end{record}
+
+\begin{record}
+
+Date 2026-11-24. The owner approved an RTL fix: the crossbar holds the ready of a master face while that master has a transfer in flight. Each master has a write busy flag and a read busy flag. A flag is set by the request handshake of the master and cleared by its B handshake or by its R handshake with RLAST high. The flag masks the master valid in the slave arbiters, in the winner decode, in the early accept and in the unmapped decode. The arms of the slave engines that passed the ready of the slave to the master in the address phase are removed, because the early accept already completes the handshake. \reqref{DS-FAB-001} is now a rule of the crossbar, not of the master.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. The four defect tests of \code{test_crossbar_outstanding.py} pass on the new RTL. They are renamed to hold tests, without \code{expect_fail}, and they check that the ready stays low from the first request handshake up to the response. The 10 arbitration tests and the corner tests pass with the same simulation times as on the old RTL, so no cycle is added. Mutations: without the write busy mask or the read busy mask, the cross-slave hold test of that direction fails. With a flag cleared on the response cycle, the same test fails. With the old ready arm of a slave engine restored, both hold tests of that direction fail. The old RTL fails all four hold tests. \code{soc_all_ci} has no failure: 999 tests pass. \code{PASS_FLOOR} goes from 959 to 963.
+
+\end{record}
