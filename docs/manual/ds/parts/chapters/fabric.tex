@@ -45,6 +45,17 @@ A fixed-priority arbiter let master 0 keep a slave without limit, because the en
 With three masters, the arbiter grants a master within $(N-1) \times T$ cycles of its request, where $T$ is the period of back-to-back transfers of one master alone. The tests measure $T$ in each run and use it as the bound. The arbitration adds no cycle to a single transfer. The tests compare each grant with a Python model of the arbiter. They also check that the grant order on the master faces is the same as the order on the slave faces. At least one test detects each of these mutations: a pointer that does not move, a pointer set to the granted master, a pointer that moves on each cycle, one pointer for two slaves, and a fixed-priority winner for the ready on the master face. The tests use the three-master wrapper \code{tb_axi4_crossbar}, not the masters of the SoC.
 \end{information}
 
+\begin{requirement}{DS-FAB-004}{The GPU instruction fetch holds a request until the handshake}
+[verify={test:tb/cocotb/gpu/test_fetch_handshake.py::test_fetch_ar_held_through_long_stall; test:tb/cocotb/gpu/test_fetch_handshake.py::test_fetch_periodic_arready_and_latency; test:tb/cocotb/gpu/test_fetch_handshake.py::test_fetch_random_arready_random_kernels; test:tb/cocotb/gpu/test_fetch_handshake.py::test_fetch_multi_warp_under_back_pressure; test:tb/cocotb/gpu/test_fetch_handshake.py::test_fetch_soft_reset_with_ar_pending; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_held_ar_fetch_not_lost_kernel_completes; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_kernel_completes_under_sram_contention; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_control_held_ar_without_reset_completes}]
+The fetch port of \code{gpu_compute_unit} must keep ARVALID high and ARADDR stable from the cycle that it issues a fetch until the cycle of the AR handshake. The compute unit must record the issued fetch in the cycle of the issue, also when ARREADY is low in that cycle. It must issue a maximum of one AR handshake for each recorded fetch.
+\end{requirement}
+\begin{rationale}
+The warp scheduler gives an issue for one cycle only and marks the warp busy in that cycle. Before this rule, the compute unit recorded the fetch only when ARREADY was high in the issue cycle, and it dropped ARVALID after one cycle. AXI does not allow a master to drop ARVALID before the handshake. When the crossbar was busy, the adapter \code{u_gif_adapter} sent the request later, but the compute unit had no record of the issue. The warp stayed busy, and the kernel did not finish.
+\end{rationale}
+\begin{information}
+A flop \code{ar_pend_q} holds the request after an issue with ARREADY low. While it is set, the fetch address comes from the recorded program counter. The recorded fetch already stalls the scheduler, so a second issue cannot come while a request waits. When ARREADY is high in the issue cycle, the timing is the same as before. The adapter keeps its skid buffer for a master that does not hold its request.
+\end{information}
+
 \section{Known limits}\label{ds:ch:mod-data-fabric:known-limits}
 \begin{information}
 \begin{itemize}
