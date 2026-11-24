@@ -341,6 +341,22 @@ The input \code{dest_off_i} of \code{u_apb_dbg_cdc} must be the off level of the
 Only the debug APB path into the CPU domain has this guard. The AXI bridge \code{u_cpu_axi_cdc} carries the bus traffic of the CPU itself and has no off guard and no drain step (\reqref{DS-PMU-182}). The bridge has no timeout: a CPU clock that stops while the off level is low still stalls a debug access (\cref{ds:ch:mod-cdc-primitives:dec-off}).
 \end{information}
 
+\begin{requirement}{DS-PMU-115}{GPU fetch request across a GPU reset}
+[verify={test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_held_ar_not_driven_in_gpu_reset; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_held_ar_never_reaches_crossbar_after_gpu_reset; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_held_ar_no_r_beat_for_new_gpu; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_relaunch_after_held_ar_cycle; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_control_held_ar_without_reset_completes; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_control_gpu_reset_without_fetch_in_flight_is_clean}]
+The adapter \code{u_gif_adapter} of the GPU instruction fetch must clear a fetch request that the crossbar has not accepted when the GPU domain reset asserts. While the GPU domain reset is asserted, the adapter must hold ARVALID low on the crossbar. The reset input of the adapter must be the domain reset after the scan reset multiplexer.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-116}{GPU fetch response across a GPU power-down}
+[verify={test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_r_in_flight_does_not_lock_crossbar_while_gpu_off; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_r_in_flight_no_r_beat_for_new_gpu; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_control_r_in_flight_window_is_reached; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_wake_during_power_down_still_resets_and_drains; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_r_beat_after_gpu_power_up_is_drained; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_r_beat_while_gpu_clock_gated_is_not_presented; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_relaunch_after_r_in_flight_cycle; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_relaunch_after_late_r_beat; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_relaunch_after_back_to_back_power_cycles; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_gif_stale_fetch_cases_with_cpu_slower_than_fabric}]
+When the off level of the GPU domain (\reqref{DS-PMU-111}) rises while a fetch read of the adapter is in flight on the crossbar, the adapter must accept the read response itself and must not show it to the GPU. This also applies when the response arrives after the off level falls. The adapter must keep the record of the read in flight in the \code{core_rst_n} domain, so that the GPU reset does not clear it. A read that the GPU issues after the off level falls must complete normally.
+\end{requirement}
+\begin{rationale}
+The isolation clamp holds the RREADY of the GPU low. Before this rule, a response in flight at a power-down kept the read engine of the crossbar busy for the whole off time, and the new GPU then took the old response as its first instruction. The adapter takes the response while the off level is high, so the read engine of the slave is free before the GPU powers up. The crossbar keeps one read in flight for each master (\reqref{DS-FAB-001}), so a new fetch cannot pass a stale read to another slave.
+\end{rationale}
+\begin{information}
+The adapter starts to take the response when the GPU clock gate closes, before the clamp and the reset. The PMU has no state that gates the GPU clock without a domain reset after it. Each power-down goes through OFF, and the PMU samples a new mode only in ON and OFF. A test that wrote a new mode during a power-down measured a full sequence with the reset. If a later change adds a gate of the GPU clock without a reset, this rule loses a fetch that the GPU still waits for, and the trigger must then include the reset.
+\end{information}
+
 \section{\texttt{rv32i\_clock\_gate}}\label{ds:mod:rv32i-clock-gate}
 The module \code{rv32i_clock_gate} gates a clock with an enable. The PMU uses it for the CPU domain and the GPU domain. The caches, the weight memory of the NPU and the TAP clock gate use it too. \Cref{tm:mod:rv32i-clock-gate} describes it.
 
