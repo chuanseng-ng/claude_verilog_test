@@ -5870,6 +5870,10 @@ power-down state (it is reset by core_rst_n, which equals scan_rst_ni in scan mo
 
 \end{relocated}
 
+\begin{information}
+Three later tests hold the CPU domain off through the PMU and then enter scan mode. \code{test_scan_cpu_clock_gate_forced_open_with_pmu_cpu_off} checks that \code{dft_test_en} opens \code{u_cpu_cg} while every functional enable is 0. \code{test_scan_cpu_clamp_stays_active_with_pmu_cpu_off} checks that the clamp and the isolation acknowledge stay active in scan mode. \code{test_scan_exit_with_pmu_cpu_off_keeps_cpu_off_and_wakes} checks that the CPU stays in reset with its clock stopped after the exit from scan mode, and that a later PMU wake releases it. \reqref{DS-PMU-108} states the rule. \Cref{cr:defect:scan-with-cpu-off} gives the mutation results.
+\end{information}
+
 \section{\texttt{tb/cocotb/soc/test\_soc\_gpio.py}}\label{tm:suite:soc-test-soc-gpio}
 
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.

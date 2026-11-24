@@ -11,17 +11,17 @@ property is checked structurally by tools/dft/check_scan_clk_rst.py on the synth
 Doc: tm:ch:dft-architecture:14-stage-1a-implementation-record-bead-j41m2-scan-ready-fabric-rtl
 Functional-mode bit-identity comes from the existing suites, which tie these ports inactive
 (soc_clocks.drive_dft_inactive()).
-Tests: functional baseline; scan mode with clk_i / cpu_clk_i STOPPED (lock counters advance on
-scan_clk_i alone); functional clocks ignored; scan reset overrides the functional resets (async);
-internal resets equal scan_rst_ni; cpu_gated_clk toggles with the functional enable 0; scan_out is 0
-until Stage 2; exit restores functional reset; CPU macro scan boundary (bit-exact scan_in[7:6] map,
-control nets, pin leg), also under TAP serial scan with the PINS at 0; the crypto key wipe on scan
-entry and exit, through soc_top.
-test_scan_gpu_reset_with_pmu_gpu_off and test_scan_cpu_reset_with_pmu_cpu_off power the domain down
-through the PMU by CPU firmware first (the CPU case through DMA to PMU CTRL), then enter scan mode:
-the domain reset must follow scan_rst_ni (with the PMU idle the functional reset already equals it,
-so a mux that ignores scan mode would be invisible). Nothing is deposited on a net. scan_rst_ni
-stays 1 across scan entry so the PMU keeps its state.
+Tests: functional baseline; scan mode on scan_clk_i alone; functional clocks ignored; scan reset
+overrides functional (async); internal resets equal scan_rst_ni; cpu_gated_clk toggles with the
+functional enable 0; scan_out is 0 until Stage 2; exit restores functional reset; CPU macro scan
+boundary (bit-exact scan_in[7:6] map, control nets, pin leg), also under TAP serial scan with the
+PINS at 0; the crypto key wipe on scan entry and exit, through soc_top.
+The *_with_pmu_*_off tests power the domain down through the PMU by CPU firmware first (the CPU case
+through DMA to PMU CTRL), then enter scan mode with scan_rst_ni at 1 so the PMU keeps its state.
+Nothing is deposited on a net. CPU_OFF cases: the domain reset follows scan_rst_ni; dft_test_en
+opens u_cpu_cg with every enable 0; the CPU clamp and its ack stay up (scan does not override the
+PMU); scan exit leaves the CPU in reset with a constant gated clock and a later PMU wake works.
+Not proven: a clamp acting on a live raw CPU output (the CPU is in reset), wake from retained state.
 Run: make -C tb/cocotb/soc soc_dft_scan
 Doc: tm:suite:soc-test-soc-dft-scan
 """
@@ -32,7 +32,7 @@ from pathlib import Path
 import cocotb
 from common.hier import hsub
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, Timer
+from cocotb.triggers import ClockCycles, Edge, ReadOnly, RisingEdge, Timer
 from jtag_driver import JtagDriver
 from soc_clocks import drive_dft_inactive, start_soc_clocks
 
@@ -459,6 +459,233 @@ async def test_scan_cpu_reset_with_pmu_cpu_off(dut):
     dut.scan_rst_ni.value = 1
     await _toggle(dut.scan_clk_i, 4)
     assert int(soc.cpu_domain_rst_n.value) == 1
+
+
+# ---------------------------------------------------------------------------
+# Scan mode while the PMU holds the CPU in DOM_OFF: clock gate, clamp, scan exit.
+# ---------------------------------------------------------------------------
+# Functional-mode PMU state is the starting point of all three tests. Scan entry keeps scan_rst_ni
+# at 1 (_enter_scan_keeping_pmu), so the PMU keeps DOM_OFF and only the test controls change.
+DOM_ON = 0  # pmu.sv pmu_dom_state_e
+WAKE_TIMEOUT_CLK_I_CYCLES = 3_000
+OFF_HOLD_CLK_I_CYCLES = 300
+
+
+def _assert_pmu_holds_cpu_off(soc, where):
+    """The PMU state that makes the CPU domain off: DOM_OFF, clock disabled, clamp requested,
+    reset asserted, no isolation-ack timeout recorded."""
+    assert int(soc.u_pmu.dom_state_q[DOM_CPU].value) == DOM_OFF, f"{where}: PMU left DOM_OFF"
+    assert int(soc.pmu_cpu_clk_en.value) == 0, f"{where}: pmu_cpu_clk_en must be 0"
+    assert int(soc.pmu_cpu_clk_dis_sync.value) == 1, f"{where}: clock disable must reach the gate"
+    assert int(soc.pmu_cpu_iso_en.value) == 1, f"{where}: pmu_cpu_iso_en must be 1"
+    assert int(soc.pmu_cpu_rst_n.value) == 0, f"{where}: pmu_cpu_rst_n must be 0"
+    assert int(soc.u_pmu.cpu_iso_ack_to_q.value) == 0, f"{where}: isolation-ack timeout flag set"
+
+
+def _assert_clamp_active(soc, where):
+    """The CPU isolation clamp and its acknowledge are both up, and the clamped outputs are 0."""
+    assert int(soc.pmu_cpu_iso_en_sync.value) == 1, f"{where}: clamp request lost"
+    assert int(soc.cpu_iso_clamp.value) == 1, f"{where}: cpu_iso_clamp must be 1"
+    assert int(soc.cpu_iso_clamp_q.value) == 1, f"{where}: cpu_iso_clamp_q must be 1"
+    assert int(soc.pmu_cpu_iso_ack.value) == 1, f"{where}: pmu_cpu_iso_ack must be 1"
+    assert int(soc.cpu_dom_off.value) == 1, f"{where}: cpu_dom_off must be 1"
+    for name in (
+        "cpu_bridge_s_awvalid",
+        "cpu_bridge_s_wvalid",
+        "cpu_bridge_s_arvalid",
+        "cpu_bridge_s_bready",
+        "cpu_bridge_s_rready",
+    ):
+        assert int(getattr(soc, name).value) == 0, f"{where}: {name} not clamped to 0"
+    assert int(soc.commit_valid_o.value) == 0, f"{where}: commit_valid_o not clamped to 0"
+
+
+async def _scan_clk_cycles_watching_gclk(dut, n_cycles, per_cycle_check=None):
+    """Run n_cycles of scan_clk_i alone (functional clocks stay 0) and return how many times
+    cpu_gated_clk was high after a rising edge and low after a falling edge."""
+    soc = dut.u_soc
+    highs = lows = 0
+    for _ in range(n_cycles):
+        dut.scan_clk_i.value = 1
+        await Timer(2, units="ns")
+        highs += int(int(soc.cpu_gated_clk.value) == 1)
+        if per_cycle_check is not None:
+            per_cycle_check()
+        await Timer(3, units="ns")
+        dut.scan_clk_i.value = 0
+        await Timer(2, units="ns")
+        lows += int(int(soc.cpu_gated_clk.value) == 0)
+        await Timer(3, units="ns")
+    return highs, lows
+
+
+@cocotb.test()
+async def test_scan_cpu_clock_gate_forced_open_with_pmu_cpu_off(dut):
+    """dft_test_en opens u_cpu_cg while the PMU holds the CPU off and its clock enable is 0.
+
+    Functional mode first: the gate is really closed (cpu_gated_clk constant over many CPU
+    clocks). Scan mode then: every enable term of the gate is still 0, yet cpu_gated_clk follows
+    scan_clk_i, one rising and one falling edge per test clock. The functional clocks stay 0.
+    Doc: ds:mod:pmu
+    """
+    await _idle(dut)
+    soc = dut.u_soc
+    clk_task, cpu_clk_task = await _power_down_domain(dut, _cpu_off_firmware(), DOM_CPU)
+
+    # Functional precondition: PMU holds the CPU off, no gate enable term is active, test mode
+    # is off, and the gated clock really is stopped while cpu_clk_i runs.
+    _assert_pmu_holds_cpu_off(soc, "functional")
+    assert int(soc.cpu_gated_clk_en.value) == 0
+    assert int(soc.cpu_cg_en.value) == 0, "precondition: no MBIST term may open the gate"
+    assert int(soc.dft_test_en.value) == 0
+    levels = set()
+    for _ in range(24):
+        await RisingEdge(dut.cpu_clk_i)
+        await Timer(1, units="ns")
+        levels.add(int(soc.cpu_gated_clk.value))
+    assert levels == {0}, "precondition: cpu_gated_clk must stay low while the PMU holds CPU off"
+
+    await _enter_scan_keeping_pmu(dut, clk_task, cpu_clk_task)
+
+    # Scan precondition: the gate enable is still 0, only test_en can open it.
+    _assert_pmu_holds_cpu_off(soc, "scan")
+    assert int(soc.dft_test_en.value) == 1, "dft_test_en must be 1 in scan mode"
+    assert int(soc.pmu_cpu_clk_en.value) == 0
+    assert int(soc.cpu_gated_clk_en.value) == 0, "precondition: functional enable must be 0"
+    assert int(soc.cpu_cg_en.value) == 0, "precondition: gate enable input must be 0"
+    assert int(soc.mbist_force.value) == 0
+    assert int(dut.clk_i.value) == 0 and int(dut.cpu_clk_i.value) == 0
+
+    n = 8
+    highs, lows = await _scan_clk_cycles_watching_gclk(dut, n)
+    assert highs == n and lows == n, (
+        f"cpu_gated_clk did not follow scan_clk_i with the PMU holding CPU off: "
+        f"{highs}/{n} high, {lows}/{n} low"
+    )
+    _assert_pmu_holds_cpu_off(soc, "scan, after the test clocks")
+    assert int(soc.cpu_gated_clk_en.value) == 0
+
+
+@cocotb.test()
+async def test_scan_cpu_clamp_stays_active_with_pmu_cpu_off(dut):
+    """The CPU clamp is not overridden by scan mode: it stays active while the gate is forced open.
+
+    The power intent states that the PMU is not overridden in scan mode and the clamps do not
+    depend on scan_mode_i, so a clamp can be active during a scan. This test fixes that
+    behaviour: with the PMU in DOM_OFF, entering scan mode and clocking test clocks (cpu_gated_clk
+    toggling) keeps cpu_iso_clamp, cpu_iso_clamp_q, pmu_cpu_iso_ack and cpu_dom_off at 1 on every
+    test clock, the isolation-ack timeout flag clear and the PMU in DOM_OFF. The clamped outputs
+    read 0 (the CPU is in reset, so this does not show a clamp acting on a live raw signal).
+    Control, observed and not specified: scan_rst_ni low resets the PMU to its defaults and the
+    clamp then releases; this documents the one way scan mode ends the clamp.
+    Doc: ds:ch:power-intent:isolation
+    """
+    await _idle(dut)
+    soc = dut.u_soc
+    clk_task, cpu_clk_task = await _power_down_domain(dut, _cpu_off_firmware(), DOM_CPU)
+
+    _assert_pmu_holds_cpu_off(soc, "functional")
+    _assert_clamp_active(soc, "functional")
+    assert int(soc.cpu_gated_clk_en.value) == 0
+
+    await _enter_scan_keeping_pmu(dut, clk_task, cpu_clk_task)
+
+    _assert_pmu_holds_cpu_off(soc, "scan entry")
+    _assert_clamp_active(soc, "scan entry")
+    assert int(soc.dft_test_en.value) == 1
+
+    def _still_clamped():
+        assert int(soc.cpu_gated_clk.value) == 1, "precondition: gated clock must be ticking"
+        _assert_clamp_active(soc, "scan, gated clock ticking")
+        assert int(soc.u_pmu.dom_state_q[DOM_CPU].value) == DOM_OFF
+        assert int(soc.u_pmu.cpu_iso_ack_to_q.value) == 0
+
+    highs, _ = await _scan_clk_cycles_watching_gclk(dut, 16, _still_clamped)
+    assert highs == 16, "the gated clock did not tick, so the overlap was not exercised"
+
+    # Control: scan reset asserted resets the PMU (core_rst_n follows scan_rst_ni). The PMU
+    # returns to DOM_ON with the clamp request low, and the clamp and its acknowledge release.
+    dut.scan_rst_ni.value = 0
+    await _toggle(dut.scan_clk_i, 16)
+    assert int(soc.u_pmu.dom_state_q[DOM_CPU].value) == DOM_ON
+    assert int(soc.pmu_cpu_iso_en.value) == 0
+    assert int(soc.cpu_iso_clamp.value) == 0, "scan reset did not release the CPU clamp"
+    assert int(soc.pmu_cpu_iso_ack.value) == 0
+
+
+@cocotb.test()
+async def test_scan_exit_with_pmu_cpu_off_keeps_cpu_off_and_wakes(dut):
+    """Leaving scan mode with the PMU still in CPU_OFF changes nothing in the CPU domain.
+
+    After scan_mode_i returns to 0 and the functional clocks restart, over many clocks: the PMU
+    stays in DOM_OFF with reset asserted and no timeout flag, cpu_domain_rst_n stays 0, the clamp
+    and its acknowledge stay up, cpu_gated_clk does not change level at all (no edge, no glitch),
+    and the clock enable stays 0. A later PMU CTRL write to NORMAL (backdoor on the CTRL storage
+    cell, as the isolation-ack suite does; no new firmware) then walks the domain back to DOM_ON:
+    reset released, clamp released, cpu_gated_clk ticking again.
+    Doc: ds:mod:pmu
+    """
+    await _idle(dut)
+    soc = dut.u_soc
+    clk_task, cpu_clk_task = await _power_down_domain(dut, _cpu_off_firmware(), DOM_CPU)
+    await _enter_scan_keeping_pmu(dut, clk_task, cpu_clk_task)
+
+    _assert_pmu_holds_cpu_off(soc, "in scan")
+    assert int(soc.dft_test_en.value) == 1
+    assert int(soc.cpu_domain_rst_n.value) == 1, "precondition: scan released the CPU reset"
+    await _scan_clk_cycles_watching_gclk(dut, 4)
+
+    # Exit with every clock low, so no edge is lost to the clock mux or to the gate latch.
+    dut.scan_clk_i.value = 0
+    gclk_changes = []
+
+    async def _watch_gclk():
+        while True:
+            await Edge(soc.cpu_gated_clk)
+            gclk_changes.append(int(soc.cpu_gated_clk.value))
+
+    watcher = cocotb.start_soon(_watch_gclk())
+    dut.scan_mode_i.value = 0
+    await Timer(2, units="ns")
+    assert int(soc.dft_test_en.value) == 0, "dft_test_en must fall with scan_mode_i"
+    assert int(soc.cpu_domain_rst_n.value) == 0, "CPU reset must return to the PMU's hold"
+    _assert_pmu_holds_cpu_off(soc, "scan exit")
+
+    clk_task, cpu_clk_task = start_soc_clocks(dut, 7, cpu_period_ns=3)
+    for _ in range(OFF_HOLD_CLK_I_CYCLES):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        _assert_pmu_holds_cpu_off(soc, "after scan exit")
+        _assert_clamp_active(soc, "after scan exit")
+        assert int(soc.cpu_domain_rst_n.value) == 0, "CPU left reset after scan exit"
+        assert int(soc.cpu_gated_clk_en.value) == 0
+        assert int(soc.cpu_gated_clk.value) == 0, "CPU clock ran after scan exit"
+    assert gclk_changes == [], f"cpu_gated_clk changed after scan exit: {gclk_changes}"
+    watcher.kill()
+
+    # Wake: the PMU still works after the scan visit.
+    await RisingEdge(dut.clk_i)
+    soc.u_pmu.u_regbank.regs[0].value = 0  # MODE_NORMAL
+    for _ in range(WAKE_TIMEOUT_CLK_I_CYCLES):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if int(soc.u_pmu.dom_state_q[DOM_CPU].value) == DOM_ON:
+            break
+    else:
+        raise AssertionError("PMU did not walk the CPU domain back to DOM_ON after scan exit")
+    await ClockCycles(dut.cpu_clk_i, 8)
+    assert int(soc.pmu_cpu_rst_n.value) == 1 and int(soc.pmu_cpu_clk_en.value) == 1
+    assert int(soc.pmu_cpu_iso_en.value) == 0
+    assert int(soc.cpu_iso_clamp.value) == 0 and int(soc.pmu_cpu_iso_ack.value) == 0
+    assert int(soc.cpu_domain_rst_n.value) == 1, "CPU reset not released after wake"
+    seen = set()
+    for _ in range(12):
+        await RisingEdge(dut.cpu_clk_i)
+        await Timer(1, units="ns")
+        seen.add(int(soc.cpu_gated_clk.value))
+    assert seen == {1}, "cpu_gated_clk does not tick after wake"
+    clk_task.kill()
+    cpu_clk_task.kill()
 
 
 # ---------------------------------------------------------------------------

@@ -291,11 +291,14 @@ The tests hold the CPU domain and the GPU domain off in turn. They do not apply 
 \end{information}
 
 \begin{requirement}{DS-PMU-108}{Clock gates in test mode}
-[verify={check:tools/verif/check_upf.py; test:tb/cocotb/soc/test_clock_gate_scan.py::test_test_en_passes_clock_with_en_low}]
+[verify={check:tools/verif/check_upf.py; test:tb/cocotb/soc/test_clock_gate_scan.py::test_test_en_passes_clock_with_en_low; test:tb/cocotb/soc/test_soc_dft_scan.py::test_scan_cpu_clock_gate_forced_open_with_pmu_cpu_off}]
 The test enable of \code{u_cpu_cg} and \code{u_gpu_cg} must be \code{dft_test_en}. With \code{dft_test_en} high, both gates must pass the clock whatever their enable is.
 \end{requirement}
 \begin{information}
 The enable of \code{u_cpu_cg} also contains the MBIST terms \code{mbist_force} and \code{cpu_mbist_busy}, and the PMU does not know about them. While the PMU holds the CPU domain off, \code{mbist_force} opens the CPU clock gate although \code{cpu_domain_rst_n} is low. The CPU MBIST cannot start then, because \code{rv32i_cpu_top} gates \code{mbist_run_i} with its reset. The forced clock edges reach the CPU flops while their reset is low, so the CPU loses the state that the model otherwise keeps (\reqref{DS-PMU-181}). The test \code{test_mbist_force_opens_the_closed_clock_gate} shows that \code{mbist_force} opens a closed gate, in a bench that mirrors \code{u_cpu_cg} without the PMU reset. No SoC test covers an MBIST request while the PMU holds the CPU domain off. The PMU is not overridden in scan mode, and the clamps do not depend on the scan mode. A clamp can be active during a scan. \Cref{um:ch:power-integration} gives the rule for the user.
+\end{information}
+\begin{information}
+Three SoC tests in \code{test_soc_dft_scan.py} start with the PMU holding the CPU domain in \code{DOM_OFF}, set by firmware through the DMA engine. In \code{test_scan_cpu_clock_gate_forced_open_with_pmu_cpu_off} the functional enables of \code{u_cpu_cg} and \code{mbist_force} are 0 and \code{dft_test_en} is 1, and \code{cpu_gated_clk} follows the test clock. In \code{test_scan_cpu_clamp_stays_active_with_pmu_cpu_off} the clamp and the isolation acknowledge stay high for 16 test clocks with the gate open, and the PMU stays in \code{DOM_OFF}. In \code{test_scan_exit_with_pmu_cpu_off_keeps_cpu_off_and_wakes} the CPU stays in reset with no gated clock edge after the exit from scan mode, until a write of \code{CTRL} wakes the domain. The write is a deposit through the hierarchy, not a bus access. The CPU is in reset in all three tests, so the clamp acts on idle outputs. With the scan reset low, the PMU goes to its reset state and the clamp releases. The tests show this as observed behaviour. No rule states it.
 \end{information}
 
 \begin{requirement}{DS-PMU-109}{Bridge reset in a PMU power cycle}
