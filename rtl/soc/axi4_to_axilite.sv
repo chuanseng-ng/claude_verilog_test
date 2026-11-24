@@ -1,27 +1,43 @@
 // axi4_to_axilite.sv
-// Phase 5 (M8) — AXI4 slave → AXI4-Lite master bridge for peripheral ring.
+// AXI4 slave to AXI4-Lite master bridge for the peripheral ring.
 //
-// Purpose: the CPU D-cache issues AXI4 bursts (arlen/awlen up to 3 for cache
-// refill) to any address, including the peripheral window 0x2000_1000–6FFF.
-// This bridge sits between the crossbar S2 (SLV_PERIPH) slave port and the
-// axi_lite_interconnect master port, serialising multi-beat bursts into N
-// sequential single-beat AXI4-Lite transactions.
+// The CPU D-cache issues AXI4 bursts to any address, including the peripheral
+// window. The bridge sits between the crossbar peripheral slave port and the
+// axi_lite_interconnect master port. It splits a burst into single-beat
+// AXI4-Lite transactions, one outstanding transaction per direction.
+//   * Write: latch AW, accept W beats one at a time, send one AXI-Lite write
+//     per beat, reply one B with the worst response (DECERR over SLVERR over
+//     OKAY) of the forwarded beats.
+//   * Read: latch AR, send one AXI-Lite read per beat, forward each R beat
+//     with its own response and rlast on the final beat.
+//   * The write and read FSMs are independent. awid/arid reflect on bid/rid.
 //
-// Design:
-//   * One outstanding transaction at a time (depth-1).
-//   * Write path: latch AW (id, addr, len), drain W beats one-by-one, send
-//     one AXI-Lite write per beat (addr increments by 4 each beat, INCR),
-//     collect OKAY/SLVERR responses and reply a single B beat (worst-case
-//     SLVERR if any beat errored).
-//   * Read path: latch AR (id, addr, len), issue one AXI-Lite read per beat,
-//     forward R data beat-by-beat with rlast on the final beat.
-//   * Write and read FSMs are independent (AXI4 allows concurrent W+R).
-//   * AXI4 IDs: awid/arid stored, reflected on bid/rid.
+// Beat address (AxBURST, AxSIZE), as the byte address of the beat:
+//   * FIXED (0): every beat at the start address.
+//   * INCR (1): first beat at the start address, then the address aligned
+//     down to the beat size plus the beat size.
+//   * WRAP (2): as INCR inside a window of (AxLEN+1) * beat size bytes. AXI4
+//     allows 2, 4, 8 or 16 beats; other lengths give an undefined window.
+//   * Reserved AxBURST=3 is treated as INCR. AxSIZE above 2 (wider than the
+//     32-bit bus) is treated as 4 bytes.
+//   * WDATA, WSTRB and read data pass through, so narrow lanes stay in place.
+//
+// Write burst end (WLAST against AWLEN):
+//   * WLAST on a forwarded beat ends the burst after the AXI-Lite response of
+//     that beat, also when AWLEN announced more beats.
+//   * With the AWLEN count used up and no WLAST seen, WVALID is sampled after
+//     the last AXI-Lite response. A further beat offered then means the
+//     master sends more beats than AWLEN: they are accepted, not forwarded,
+//     and B follows the beat with WLAST. No beat offered means WLAST was
+//     omitted and the burst ends on the count.
+//   * Late beats add no error to B. A late beat not yet offered at the sample
+//     cannot be told from a missing WLAST. A late burst that never gets WLAST
+//     stays in the sink state.
+//
+// Doc: tm:mod:axi4-to-axilite
 //
 // AXI4-Lite master ports use full 32-bit address (m_axil_awaddr/araddr).
 // Peripheral slaves only decode their local 12-bit offset; upper bits ignored.
-//
-// Lint target: verilator -Wall 0 errors 0 warnings.
 
 module axi4_to_axilite
     import axi_pkg::*;
@@ -40,10 +56,8 @@ module axi4_to_axilite
     input  logic [IW-1:0]   s_awid,
     input  logic [AW-1:0]   s_awaddr,
     input  logic [LENW-1:0] s_awlen,
-    /* verilator lint_off UNUSEDSIGNAL */
     input  logic [2:0]      s_awsize,
     input  logic [1:0]      s_awburst,
-    /* verilator lint_on  UNUSEDSIGNAL */
     input  logic            s_awvalid,
     output logic            s_awready,
     // Write data
@@ -61,10 +75,8 @@ module axi4_to_axilite
     input  logic [IW-1:0]   s_arid,
     input  logic [AW-1:0]   s_araddr,
     input  logic [LENW-1:0] s_arlen,
-    /* verilator lint_off UNUSEDSIGNAL */
     input  logic [2:0]      s_arsize,
     input  logic [1:0]      s_arburst,
-    /* verilator lint_on  UNUSEDSIGNAL */
     input  logic            s_arvalid,
     output logic            s_arready,
     // Read data
@@ -98,6 +110,54 @@ module axi4_to_axilite
 );
 
     // =========================================================================
+    // Beat address generation (shared by the write and read paths)
+    // =========================================================================
+    localparam int unsigned MW = LENW + 3;  // wrap window mask width
+
+    // Beat size as log2 bytes: 0, 1 or 2. AxSIZE above 2 means 4 bytes.
+    function automatic logic [1:0] size_eff(input logic [2:0] sz);
+        return (sz[2] || sz[1]) ? 2'd2 : {1'b0, sz[0]};
+    endfunction
+
+    // Wrap window minus one: (len + 1) << size, less 1. The shift is a
+    // three-way case so that no variable shifter is built.
+    function automatic logic [MW-1:0] wrap_mask(input logic [LENW-1:0] len,
+                                                input logic [1:0]      sz);
+        logic [LENW:0]   beats;
+        logic [MW-1:0]   bytes;
+        beats = {1'b0, len} + 1'b1;
+        unique case (sz)
+            2'd0:    bytes = {2'b00, beats};
+            2'd1:    bytes = {1'b0, beats, 1'b0};
+            default: bytes = {beats, 2'b00};
+        endcase
+        return bytes - 1'b1;
+    endfunction
+
+    // Address of the beat that follows the one at addr.
+    function automatic logic [AW-1:0] next_addr(input logic [AW-1:0] addr,
+                                                input logic [1:0]    sz,
+                                                input logic          fixed,
+                                                input logic          wrap,
+                                                input logic [MW-1:0] wmask);
+        logic [AW-1:0] step;
+        logic [AW-1:0] aligned;
+        logic [AW-1:0] incr;
+        logic [AW-1:0] wm;
+        unique case (sz)
+            2'd0:    step = AW'(1);
+            2'd1:    step = AW'(2);
+            default: step = AW'(4);
+        endcase
+        aligned = addr & ~(step - AW'(1));
+        incr    = aligned + step;
+        wm      = AW'(wmask);
+        if (fixed)     return addr;
+        else if (wrap) return (addr & ~wm) | (incr & wm);
+        else           return incr;
+    endfunction
+
+    // =========================================================================
     // WRITE path FSM
     // =========================================================================
     typedef enum logic [2:0] {
@@ -105,6 +165,7 @@ module axi4_to_axilite
         WS_DATA,    // accepting one AXI4 W beat
         WS_REQ,     // driving AXI-Lite AW + W until both handshake
         WS_B,       // waiting for AXI-Lite B
+        WS_SINK,    // accepting W beats beyond AWLEN without forwarding them
         WS_RESP     // sending AXI4 B back to master
     } ws_e;
 
@@ -113,6 +174,11 @@ module axi4_to_axilite
     logic [AW-1:0]  w_addr_q;       // current beat address
     logic [LENW-1:0] w_rem_q;       // beats remaining after current
     logic [1:0]     w_resp_q;       // accumulated worst-case response
+    logic [1:0]     w_size_q;       // beat size, log2 bytes
+    logic           w_fixed_q;      // FIXED burst
+    logic           w_wrap_q;       // WRAP burst
+    logic [MW-1:0]  w_wmask_q;      // wrap window minus one
+    logic           w_last_q;       // WLAST seen on the beat now forwarded
     // Per-beat write data latch (captured on the AXI4 W handshake only).
     logic [DW-1:0]  wdata_q;
     logic [SW-1:0]  wstrb_q;
@@ -123,9 +189,10 @@ module axi4_to_axilite
     // AW handshake: accept only when IDLE
     assign s_awready = (ws_q == WS_IDLE);
 
-    // W handshake: accept exactly one beat in WS_DATA (the only state that
-    // asserts s_wready, so data is never consumed without a real handshake).
-    assign s_wready  = (ws_q == WS_DATA);
+    // W handshake: accept one beat in WS_DATA, or sink beats beyond AWLEN in
+    // WS_SINK. No other state asserts s_wready, so data is never consumed
+    // without a real handshake.
+    assign s_wready  = (ws_q == WS_DATA) || (ws_q == WS_SINK);
 
     // AXI-Lite AW drive (held until it handshakes)
     assign m_axil_awaddr  = w_addr_q;
@@ -162,6 +229,11 @@ module axi4_to_axilite
             w_addr_q  <= '0;
             w_rem_q   <= '0;
             w_resp_q  <= AXI_RESP_OKAY;
+            w_size_q  <= '0;
+            w_fixed_q <= 1'b0;
+            w_wrap_q  <= 1'b0;
+            w_wmask_q <= '0;
+            w_last_q  <= 1'b0;
             wdata_q   <= '0;
             wstrb_q   <= '0;
             aw_done_q <= 1'b0;
@@ -174,6 +246,10 @@ module axi4_to_axilite
                         w_addr_q <= s_awaddr;
                         w_rem_q  <= s_awlen;
                         w_resp_q <= AXI_RESP_OKAY;
+                        w_size_q  <= size_eff(s_awsize);
+                        w_fixed_q <= (s_awburst == 2'd0);
+                        w_wrap_q  <= (s_awburst == 2'd2);
+                        w_wmask_q <= wrap_mask(s_awlen, size_eff(s_awsize));
                         ws_q     <= WS_DATA;
                     end
                 end
@@ -182,6 +258,7 @@ module axi4_to_axilite
                     if (s_wvalid && s_wready) begin
                         wdata_q   <= s_wdata;
                         wstrb_q   <= s_wstrb;
+                        w_last_q  <= s_wlast;
                         aw_done_q <= 1'b0;
                         w_done_q  <= 1'b0;
                         ws_q      <= WS_REQ;
@@ -199,15 +276,27 @@ module axi4_to_axilite
                 WS_B: begin
                     if (m_axil_bvalid && m_axil_bready) begin
                         w_resp_q <= worse_resp(w_resp_q, m_axil_bresp);
-                        if (w_rem_q == '0) begin
-                            // Last beat done
+                        if (w_last_q || (w_rem_q == '0 && !s_wvalid)) begin
+                            // WLAST seen, or the AWLEN count is used up and
+                            // no further beat is offered.
                             ws_q <= WS_RESP;
+                        end else if (w_rem_q == '0) begin
+                            // Count used up, no WLAST, more beats offered.
+                            ws_q <= WS_SINK;
                         end else begin
                             // More beats: advance address, accept next W beat
-                            w_addr_q <= w_addr_q + 32'd4;
+                            w_addr_q <= next_addr(w_addr_q, w_size_q, w_fixed_q,
+                                                  w_wrap_q, w_wmask_q);
                             w_rem_q  <= w_rem_q - 1'b1;
                             ws_q     <= WS_DATA;
                         end
+                    end
+                end
+                WS_SINK: begin
+                    // Beats beyond AWLEN: accept, do not forward. B follows
+                    // the beat that carries WLAST.
+                    if (s_wvalid && s_wready && s_wlast) begin
+                        ws_q <= WS_RESP;
                     end
                 end
                 WS_RESP: begin
@@ -234,6 +323,10 @@ module axi4_to_axilite
     logic [IW-1:0]   r_id_q;
     logic [AW-1:0]   r_addr_q;
     logic [LENW-1:0] r_rem_q;
+    logic [1:0]      r_size_q;       // beat size, log2 bytes
+    logic            r_fixed_q;      // FIXED burst
+    logic            r_wrap_q;       // WRAP burst
+    logic [MW-1:0]   r_wmask_q;      // wrap window minus one
     // Registered AXI-Lite R beat. Reads always latch (RS_R) then forward
     // (RS_FWD); the beat is never both passed through and replayed.
     logic [DW-1:0]   rdata_q;
@@ -259,6 +352,10 @@ module axi4_to_axilite
             r_id_q   <= '0;
             r_addr_q <= '0;
             r_rem_q  <= '0;
+            r_size_q  <= '0;
+            r_fixed_q <= 1'b0;
+            r_wrap_q  <= 1'b0;
+            r_wmask_q <= '0;
             rdata_q  <= '0;
             rresp_q  <= AXI_RESP_OKAY;
         end else begin
@@ -268,6 +365,10 @@ module axi4_to_axilite
                         r_id_q   <= s_arid;
                         r_addr_q <= s_araddr;
                         r_rem_q  <= s_arlen;
+                        r_size_q  <= size_eff(s_arsize);
+                        r_fixed_q <= (s_arburst == 2'd0);
+                        r_wrap_q  <= (s_arburst == 2'd2);
+                        r_wmask_q <= wrap_mask(s_arlen, size_eff(s_arsize));
                         rs_q     <= RS_AR;
                     end
                 end
@@ -289,7 +390,8 @@ module axi4_to_axilite
                         if (r_rem_q == '0) begin
                             rs_q <= RS_IDLE;
                         end else begin
-                            r_addr_q <= r_addr_q + 32'd4;
+                            r_addr_q <= next_addr(r_addr_q, r_size_q, r_fixed_q,
+                                              r_wrap_q, r_wmask_q);
                             r_rem_q  <= r_rem_q - 1'b1;
                             rs_q     <= RS_AR;
                         end

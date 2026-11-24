@@ -444,6 +444,21 @@ This chapter describes how each module in this area works. The area holds the co
 
 This chapter describes how each module in this area works. The area holds the crossbar, the bus bridges and the top-level wiring. The CDC bridges \code{apb_cdc_bridge} and \code{async_axi_fifo} are in \cref{tm:ch:mod-cdc-primitives}. The PMU is in \cref{tm:ch:mod-power-management}.
 
+\section{Burst limits of \texttt{axi4\_to\_axilite}}\label{tm:mod:axi4-to-axilite}
+
+The bridge \code{axi4_to_axilite} splits an AXI4 burst into single AXI-Lite transfers. The AXI-Lite address of each beat is the byte address of that beat in AXI4. WDATA, WSTRB and the read data go through unchanged. The function \code{next_addr} gives the address of the next beat for both directions:
+\begin{itemize}
+  \item FIXED: the address does not change.
+  \item INCR: the address aligned down to the beat size, plus the beat size. So the beats of a narrow burst can stay in one word.
+  \item WRAP: \code{(addr \& \textasciitilde{}mask) | (incr \& mask)}, where the mask is $(\mathit{len}+1) \times \mathit{size} - 1$. The bridge calculates the mask when it latches AW or AR, with a case on AxSIZE, so it has no variable shifter.
+  \item The reserved AxBURST value 3 is INCR. An AxSIZE above 2 (wider than the 32-bit bus) is 4 bytes. A WRAP length that is not 2, 4, 8 or 16 beats gives an undefined window, because AXI4 does not allow it.
+\end{itemize}
+A write burst ends on the first forwarded beat with WLAST high, or on the count that AWLEN gives. When the count ends with no WLAST, the bridge looks at WVALID after the AXI-Lite B of the last beat. If the master offers a beat, the bridge goes to the state \code{WS_SINK}. In this state it accepts beats and does not forward them. It sends B after the beat with WLAST. If the master offers no beat, B follows the count. B carries the worst response of the forwarded beats.
+
+Limits: the bridge cannot see the difference between a late beat that comes after that cycle and an absent WLAST, so B follows the count. A burst in \code{WS_SINK} that never gets WLAST holds the write path. The suite \code{test_axi4_to_axilite.py} compares each beat address with a Python model (\code{_beat_addrs}) and checks the data, strobes, responses, RLAST and IDs. History: \cref{cr:defect:fabric-protocol-corners}.
+
+The masters of the SoC send only INCR bursts of 4-byte beats with WLAST on the beat that AWLEN gives, so the SoC uses only the INCR path. The crossbar ends a write on WLAST and a read on RLAST, and a missing WLAST or RLAST locks only the engine of that slave. The suite \code{test_crossbar_errors.py} measures this, the slave IDs, the decode of a burst that crosses a region boundary (the first beat decides) and a reset during each busy state of the engines.
+
 \section{Off slots of \texttt{axi\_lite\_interconnect}}\label{tm:mod:axi-lite-interconnect}
 This section describes how the AXI-Lite interconnect answers an access to a slot whose domain is off. \reqref{DS-PMU-112} and \reqref{DS-PMU-113} state the rules.
 

@@ -10,6 +10,10 @@ behaviour, not line toggling:
   * the decode-error engines are per master and do not disturb mapped traffic of other masters
   * a slave's own SLVERR/DECERR is steered back to the right master, per beat for reads
   * a one-cycle ARVALID pulse is held towards a slow slave until it accepts (AXI4 A3-38)
+  * slave-side ids carry the master index; a burst is routed by its first beat address only
+  * the crossbar trusts WLAST (master) and RLAST (slave) to end a burst, never AWLEN/ARLEN, and a
+    mismatch locks one slave engine, not the whole crossbar
+  * a reset in the middle of any engine state returns the crossbar to idle with nothing driven
 
 Same wrapper/topology as test_crossbar.py: 3 masters x 2 slaves (s0 = ROM, s1 = SRAM).
 Run together with it: ``make crossbar`` (MODULE=test_crossbar,test_crossbar_errors).
@@ -195,3 +199,302 @@ async def test_slave_side_stalls_on_every_channel(dut):
     a, b = await r0, await r1
     assert a.data == data[::-1] and b.data == data
     assert not (a.viol or b.viol or s0.viol or s1.viol), (a.viol, b.viol, s0.viol, s1.viol)
+
+
+# ───────────────────── ids, region boundary, WLAST/RLAST, reset ─────────────────────
+WINDOW = 40
+
+
+async def _cycles(dut, n):
+    for _ in range(n):
+        await RisingEdge(dut.clk)
+
+
+def _park(master, task):
+    """Kill a master coroutine that is expected to still be waiting and release its pins."""
+    task.kill()
+    master.idle()
+
+
+@cocotb.test()
+async def test_slave_side_ids_carry_master_index(dut):
+    """s_awid / s_arid name the issuing master, for every master and both slaves."""
+    masters, s0, s1 = await _setup2(dut, aw_delay=3, ar_delay=3)
+    for mi, m in enumerate(masters):
+        for slv, base in ((s0, ROM_BASE), (s1, SRAM_BASE)):
+            slv.aw_log.clear()
+            slv.ar_log.clear()
+            await m.write(base + 0x10 * mi, [mi, mi + 1])
+            await m.read(base + 0x10 * mi, 2)
+            awids = [a["id"] for a in slv.aw_log]
+            arids = [a["id"] for a in slv.ar_log]
+            assert awids == [mi], f"m{mi}: awid {awids}"
+            assert arids == [mi], f"m{mi}: arid {arids}"
+    # three masters in flight at once: two slaves, so the third waits and is still tagged correctly
+    s0.aw_log.clear()
+    s1.aw_log.clear()
+    tasks = [
+        cocotb.start_soon(masters[2].write(ROM_BASE + 0x80, [1])),
+        cocotb.start_soon(masters[1].write(SRAM_BASE + 0x80, [2])),
+        cocotb.start_soon(masters[0].write(SRAM_BASE + 0x90, [3])),
+    ]
+    for t in tasks:
+        await t
+    assert [a["id"] for a in s0.aw_log] == [2]
+    assert sorted(a["id"] for a in s1.aw_log) == [0, 1]
+    assert not (s0.viol or s1.viol), (s0.viol, s1.viol)
+
+
+@cocotb.test()
+async def test_burst_across_region_boundary_follows_first_beat(dut):
+    """Only the first beat address is decoded: a burst running past a region end stays on the
+    slave of its first beat, and an unmapped start is DECERR for every beat.  Such a burst also
+    crosses 4 KB, which AXI4 forbids, so this pins the routing rule only."""
+    masters, s0, s1 = await _setup2(dut)
+    leak = Watch(dut, ("s1_awvalid", "s1_wvalid", "s1_arvalid"), dut.clk)
+    m = masters[0]
+    top_of_rom = ROM_BASE + 0xFF8
+    t = await m.write(top_of_rom, [1, 2, 3, 4])
+    assert t.bresp == OKAY and not t.viol
+    assert [w["data"] for w in s0.w_log] == [1, 2, 3, 4], "all four beats belong to the ROM slave"
+    assert [s0.aw_log[0]["addr"]] == [top_of_rom]
+    r = await m.read(top_of_rom, 4)
+    assert r.resps == [OKAY] * 4 and not r.viol
+    assert len(s0.ar_log) == 1 and s0.ar_log[0]["len"] == 3
+    assert not leak.hits, f"SRAM slave saw a ROM-start burst: {sorted(set(leak.hits))}"
+    leak.stop()
+    # start unmapped, run into the ROM: DECERR for every beat, ROM untouched
+    n_w, n_ar = len(s0.w_log), len(s0.ar_log)
+    leak = Watch(dut, LEAK, dut.clk)
+    r = await m.read(ROM_BASE - 8, 4)
+    assert r.resps == [DECERR] * 4 and not r.viol, r.resps
+    t = await m.write(ROM_BASE - 8, [5, 6, 7, 8])
+    assert t.bresp == DECERR
+    _no_leak(leak)
+    assert len(s0.w_log) == n_w and len(s0.ar_log) == n_ar
+
+
+@cocotb.test()
+async def test_wlast_matches_awlen_control(dut):
+    """Control for the WLAST tests: WLAST on the announced final beat completes with one OKAY B."""
+    masters, s0, s1 = await _setup2(dut)
+    t = await masters[0].write(SRAM_BASE + 0x80, [1, 2, 3, 4], awlen=3, wlast_at={3})
+    assert t.bresp == OKAY and not t.viol and not s1.viol
+    assert [w["last"] for w in s1.w_log] == [0, 0, 0, 1]
+
+
+@cocotb.test()
+async def test_unmapped_write_ends_on_wlast_not_awlen(dut):
+    """The decode-error engine sinks beats until WLAST, whatever AWLEN says."""
+    masters, s0, s1 = await _setup2(dut)
+    leak = Watch(dut, LEAK, dut.clk)
+    t = await masters[0].write(UNMAPPED[0], [1, 2], awlen=3, wlast_at={1}, timeout=400)
+    assert t.bresp == DECERR and len(t.w_cycles) == 2 and not t.viol, t
+    t = await masters[1].write(UNMAPPED[0], [1, 2, 3, 4], awlen=1, wlast_at={3}, timeout=400)
+    assert t.bresp == DECERR and len(t.w_cycles) == 4 and not t.viol, t
+    t = await masters[2].write(UNMAPPED[0], [1, 2, 3, 4], awlen=3, wlast_at={3}, timeout=400)
+    assert t.bresp == DECERR and len(t.w_cycles) == 4
+    _no_leak(leak)
+
+
+@cocotb.test()
+async def test_master_wlast_early_closes_write_at_wlast(dut):
+    """AWLEN says 4 beats, WLAST rides on the 2nd: the crossbar ends the write at WLAST, so the
+    slave gets two beats.  The slave counts from AWLEN and waits on, which keeps that slave's write
+    engine locked to the master: a second master is held off, the other slave keeps serving."""
+    masters, s0, s1 = await _setup2(dut)
+    w_bad = cocotb.start_soon(
+        masters[0].write(SRAM_BASE + 0x80, [0xE1, 0xE2], awlen=3, wlast_at={1}, timeout=10_000)
+    )
+    await _cycles(dut, WINDOW)
+    assert [w["data"] for w in s1.w_log] == [0xE1, 0xE2] and [w["last"] for w in s1.w_log] == [0, 1]
+    assert s1.viol == ["wlast early at beat 1"], s1.viol
+    w_wait = cocotb.start_soon(masters[2].write(SRAM_BASE + 0x90, [9], timeout=10_000))
+    for _ in range(WINDOW):
+        await RisingEdge(dut.clk)
+        assert not int(dut.s1_wvalid.value), "a W beat was forwarded after WLAST"
+        assert not int(dut.m2_awready.value), "a second master was granted the locked slave"
+    t = await masters[1].write(ROM_BASE + 0x20, [7, 8], timeout=400)
+    assert t.bresp == OKAY and [w["data"] for w in s0.w_log] == [7, 8]
+    assert not w_bad.done() and not w_wait.done()
+    _park(masters[0], w_bad)
+    _park(masters[2], w_wait)
+
+
+@cocotb.test()
+async def test_master_wlast_missing_withholds_b(dut):
+    """WLAST never asserted: a slave counting from AWLEN answers after beat 4, but the crossbar
+    forwards B only after WLAST, so the master gets no B."""
+    masters, s0, s1 = await _setup2(dut)
+    w_bad = cocotb.start_soon(
+        masters[0].write(SRAM_BASE + 0x80, [1, 2, 3, 4], awlen=3, wlast_at=set(), timeout=10_000)
+    )
+    for _ in range(WINDOW):
+        await RisingEdge(dut.clk)
+        assert not int(dut.m0_bvalid.value), "B forwarded although the master never sent WLAST"
+    assert [w["data"] for w in s1.w_log] == [1, 2, 3, 4]
+    assert s1.viol == ["wlast missing on the final W beat"]
+    assert not w_bad.done()
+    _park(masters[0], w_bad)
+
+
+@cocotb.test()
+async def test_slave_rlast_early_ends_read(dut):
+    """RLAST on the 2nd of 4 beats: the crossbar forwards it and releases the engine there, so
+    the master sees a 2-beat burst and no later beat of the slave leaks to it."""
+    masters, s0, s1 = await _setup2(dut)
+    s1.rlast_fn = lambda beat, arlen: beat == 1
+    t = await masters[0].read(SRAM_BASE + 0x40, 4, timeout=400)
+    assert len(t.beats) == 2 and [b[2] for b in t.beats] == [0, 1], t.beats
+    assert t.viol == ["beat 1: rlast=1 expected 0"], t.viol
+    for _ in range(WINDOW):
+        await RisingEdge(dut.clk)
+        assert not int(dut.m0_rvalid.value), "a beat after RLAST reached the master"
+    assert not int(dut.s1_rready.value), "the crossbar kept accepting beats after RLAST"
+
+
+@cocotb.test()
+async def test_slave_rlast_missing_keeps_read_locked(dut):
+    """The slave never raises RLAST.  The crossbar forwards the beats with RLAST low and keeps the
+    read engine locked to that master, so another master's read to that slave is not accepted, while
+    reads of the other slave are."""
+    masters, s0, s1 = await _setup2(dut)
+    s1.rlast_fn = lambda beat, arlen: False
+    t = await masters[0].read(SRAM_BASE + 0x40, 4, timeout=400)
+    assert len(t.beats) == 4 and [b[2] for b in t.beats] == [0, 0, 0, 0]
+    assert t.viol == ["beat 3: rlast=0 expected 1"], t.viol
+    r_wait = cocotb.start_soon(masters[2].read(SRAM_BASE + 0x40, 1, timeout=10_000))
+    for _ in range(WINDOW):
+        await RisingEdge(dut.clk)
+        assert not int(dut.m2_arready.value), "the read engine was released without RLAST"
+    r = await masters[1].read(ROM_BASE + 0x10, 2, timeout=400)
+    assert r.resps == [OKAY] * 2 and not r.viol
+    assert not r_wait.done()
+    _park(masters[2], r_wait)
+
+
+# (label, engine state signal, slave index or master index, state value, slave kwargs, master call)
+RESET_CASES = (
+    (
+        "W_AW",
+        "wstate",
+        1,
+        1,
+        dict(aw_delay=400),
+        lambda m: m.write(SRAM_BASE + 0x20, [1, 2, 3, 4], timeout=10_000),
+    ),
+    (
+        "W_DATA",
+        "wstate",
+        1,
+        2,
+        {},
+        lambda m: m.write(SRAM_BASE + 0x20, [1, 2, 3, 4], w_gaps=[0, 300, 0, 0], timeout=10_000),
+    ),
+    (
+        "W_RESP",
+        "wstate",
+        0,
+        3,
+        {},
+        lambda m: m.write(ROM_BASE + 0x20, [1, 2], b_stall=10_000, timeout=20_000),
+    ),
+    (
+        "R_AR",
+        "rstate",
+        1,
+        1,
+        dict(ar_delay=400),
+        lambda m: m.read(SRAM_BASE + 0x20, 4, timeout=10_000),
+    ),
+    (
+        "R_DATA",
+        "rstate",
+        0,
+        2,
+        {},
+        lambda m: m.read(ROM_BASE + 0x20, 4, r_stalls=[0, 300, 0, 0], timeout=10_000),
+    ),
+    (
+        "DW_DATA",
+        "dwstate",
+        0,
+        1,
+        {},
+        lambda m: m.write(UNMAPPED[0], [1, 2, 3, 4], w_gaps=[0, 300, 0, 0], timeout=10_000),
+    ),
+    (
+        "DW_RESP",
+        "dwstate",
+        0,
+        2,
+        {},
+        lambda m: m.write(UNMAPPED[0], [1, 2], b_stall=10_000, timeout=20_000),
+    ),
+    (
+        "DR_DATA",
+        "drstate",
+        0,
+        1,
+        {},
+        lambda m: m.read(UNMAPPED[0], 4, r_stalls=[0, 300, 0, 0], timeout=10_000),
+    ),
+)
+MASTER_PINS = ("awready", "wready", "bvalid", "arready", "rvalid")
+SLAVE_PINS = ("awvalid", "wvalid", "bready", "arvalid", "rready")
+
+
+def _engine(dut, name, idx):
+    width = 1 if name == "drstate" else 2
+    return (int(getattr(dut.u_xbar, name).value) >> (width * idx)) & ((1 << width) - 1)
+
+
+@cocotb.test()
+async def test_reset_mid_transaction_releases_every_engine(dut):
+    """Reset while each write, read and decode-error engine is mid-transaction (state read from the
+    DUT, not assumed).  Afterwards every engine is idle, no master or slave pin is driven, and a
+    burst from each master to each slave completes with the right data."""
+    first = True
+    for label, eng, idx, want, kw, op in RESET_CASES:
+        masters, s0, s1 = await _setup2(dut, clock=first, **kw)
+        first = False
+        task = cocotb.start_soon(op(masters[0]))
+        await _cycles(dut, 30)
+        state = _engine(dut, eng, idx)
+        assert state == want, f"{label}: engine in state {state}, not {want}"
+        assert not task.done(), f"{label}: the transaction ended before the reset"
+        dut.rst_n.value = 0
+        await _cycles(dut, 2)
+        task.kill()
+        masters[0].idle()
+        s0.stop()
+        s1.stop()
+        await _cycles(dut, 1)
+        dut.rst_n.value = 1
+        # slave models restart idle, exactly as the slaves would after the same reset
+        s0, s1 = AxiSlave(dut, "s0_", dut.clk), AxiSlave(dut, "s1_", dut.clk)
+        s0.start()
+        s1.start()
+        for _ in range(6):
+            await RisingEdge(dut.clk)
+            for mi in range(3):
+                for pin in MASTER_PINS:
+                    sig = getattr(dut, f"m{mi}_{pin}")
+                    assert not int(sig.value), f"{label}: m{mi}_{pin} high after reset"
+            for si in range(2):
+                for pin in SLAVE_PINS:
+                    sig = getattr(dut, f"s{si}_{pin}")
+                    assert not int(sig.value), f"{label}: s{si}_{pin} high after reset"
+        for name in ("wstate", "rstate", "dwstate", "drstate"):
+            idle = int(getattr(dut.u_xbar, name).value) == 0
+            assert idle, f"{label}: {name} not idle after reset"
+        for mi, m in enumerate(masters):
+            for slv, base in ((s0, ROM_BASE), (s1, SRAM_BASE)):
+                a = base + 0x100 + 0x10 * mi
+                t = await m.write(a, [0xA0 + mi, 0xB0 + mi], timeout=400)
+                r = await m.read(a, 2, timeout=400)
+                got = (t.bresp, r.data, r.resps)
+                assert got == (OKAY, [0xA0 + mi, 0xB0 + mi], [OKAY] * 2), f"{label}: m{mi}: {got}"
+        assert not (s0.viol or s1.viol), (label, s0.viol, s1.viol)
+        s0.stop()
+        s1.stop()
