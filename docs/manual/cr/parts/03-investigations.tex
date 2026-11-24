@@ -3213,6 +3213,30 @@ Limits and open decisions. No test joins the crossbar and the bridge. The slave 
 
 \end{record}
 
+\begin{record}
+
+Date 2026-11-24. Owner decisions on GH \#403. The bridge \code{axi4_to_axilite} gets full support of FIXED, WRAP and narrow bursts, and a write burst ends on WLAST. Items 2 to 4 become new beads: \bead{zftj.34} (reset of the skid buffer of \code{u_gif_adapter} with the GPU domain), \bead{zftj.35} (ready outputs low in reset) and \bead{zftj.36} (a fabric timeout that answers SLVERR, design note first).
+
+\end{record}
+
+\begin{record}
+
+RTL change in \code{axi4_to_axilite}. A shared function \code{next_addr} gives the next beat address for FIXED, INCR (aligned to the beat size, then plus the beat size) and WRAP (with a mask latched at AW or AR). AxSIZE above 2 is 4 bytes, and AxBURST 3 is INCR. A write ends on the first forwarded beat with WLAST. When the AWLEN count ends with no WLAST and the master still offers a beat, a new state \code{WS_SINK} accepts the extra beats without forwarding them and sends B after WLAST. When no beat is offered, B follows the count, as before. The latency of an INCR burst with WLAST on the AWLEN beat did not change. On the coarse netlist \code{\$shiftx} stays 0 and \code{\$pmux} goes from 7 to 11 (the case statements on size and burst, and the new state). Three coverage waivers had line numbers of the module in their reason text, and these were updated.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. The eight tests that were \code{expect_fail} now pass without the mark, with the same names. Seven new tests: early WLAST at five lengths, an early WLAST that keeps SLVERR or DECERR of a forwarded beat, late beats that are not forwarded, WRAP at 2, 4, 8 and 16 beats with AxSIZE 0 to 2 and three start offsets, a narrow INCR burst across a word, AxBURST 3 and AxSIZE 3 and 7. The suite has 29 tests and all pass. Each RTL mutant was caught: FIXED as INCR (3 tests fail), WRAP with no mask (4), a wrap window one beat short or long (4 each), a narrow step of 4 (5), no alignment after the first beat (3), WLAST ignored (5), a sink that forwards (2) and no sink (2). \code{soc_all_ci}: exit 0, 1019 tests pass by the count of the CI workflow, no failure. \code{PASS_FLOOR} goes from 968 to 983.
+
+\end{record}
+
+\begin{record}
+
+Limits. No test joins the crossbar and the bridge. The case of a late beat that the master offers after the bridge looks at WVALID is not tested, and in that case B follows the count. The SoC masters use only the INCR path, so the SoC regression does not exercise FIXED, WRAP or narrow bursts.
+
+\end{record}
+
 \section{Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})}\label{cr:defect:off-domain-slverr}
 
 \begin{record}
