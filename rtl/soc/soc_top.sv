@@ -935,6 +935,10 @@ module soc_top
     axilite_to_axi4 u_gif_adapter (
         .clk                        (core_clk),
         .rst_n                      (core_rst_n),
+        // GPU power cycle: the reset is the scan-muxed GPU domain reset. The off level is the
+        // PMU flop level, as for the bus guards.
+        .gpu_rst_i                  (~gpu_domain_rst_n),
+        .gpu_off_i                  (gpu_dom_off),
         // AXI4-Lite slave ← gpu_top m_axil_if_*
         .s_axil_araddr              (gif_axil_araddr),
         .s_axil_arvalid             (gif_axil_arvalid),
