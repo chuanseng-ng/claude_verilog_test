@@ -526,7 +526,7 @@ Slave-side output intermediates (N_SLAVES slices)
 \end{relocated}
 
 \begin{information}
-Known limit: arbitration is fixed priority, with no fairness rule. While an engine of a slave is idle, the lowest-index master with xVALID high wins in that cycle. The engine keeps no record of arrival order. It is idle for one cycle after an RLAST or B handshake, so a master 0 that asserts its next request in that cycle keeps the slave without limit, and the other masters wait until master 0 stops. A slave that master 0 holds does not delay a master on another slave. The suite \code{test_crossbar_arbitration.py} measures this behaviour. A fairness rule, for example round robin, is a decision of the owner (\cref{cr:defect:crossbar-fixed-priority}).
+Arbitration is round robin, with one pointer for each slave and each direction (\reqref{DS-FAB-003}). The function \code{rr_grant} masks the requests below the pointer with \code{~(ptr - 1)} and takes the lowest set bit with \code{x & -x}. If the masked vector is zero, it takes the lowest set bit of all requests. The function \code{rr_next} rotates the grant vector by one position. The engine of the slave loads the pointer with \code{rr_next} only in the idle state, when it takes a request. The early accept of the master face uses the same grant vectors \code{wr_gnt} and \code{rd_gnt}, so the ready goes to the master that the engine takes. The pointers are one-hot, so the logic has no runtime-indexed multiplexer. The suite \code{test_crossbar_arbitration.py} compares each grant with a Python model of the arbiter and checks the bound of $N-1$ grants to other masters. History: \cref{cr:defect:crossbar-fixed-priority}.
 \end{information}
 
 \section{\texttt{soc/soc\_top.sv}}\label{tm:mod:soc-top}

@@ -166,9 +166,9 @@ cr:defect:asap7-cpu-synlig-ma7:result-1-the-two-ma7-programs-yosys-sim-original-
 cr:defect:asap7-cpu-synlig-ma7:result-2-six-programs-verilator-cycle-exact-vs-rtl-measured	docs/manual/cr/parts/03-investigations.tex	230	Result 2: six programs, Verilator, cycle-exact vs RTL (MEASURED)
 cr:defect:asap7-cpu-synlig-ma7:update-2026-10-10-bead-ainf-is-synlig-pr-259-safe-for-the-remaining-struct-member-selects	docs/manual/cr/parts/03-investigations.tex	518	\texorpdfstring{Update 2026-10-10 (bead \code{ainf}): is "Synlig + PR \#259" safe for the remaining struct-member selects?}{Update 2026-10-10 (bead ): is "Synlig + PR \#259" safe for the remaining struct-member selects?}
 cr:defect:asap7-cpu-synlig-ma7:verdict	docs/manual/cr/parts/03-investigations.tex	26	Verdict
-cr:defect:axil-to-apb-read-pstrb	docs/manual/cr/parts/03-investigations.tex	3292	\code{axil_to_apb} drives PSTRB low on a read
+cr:defect:axil-to-apb-read-pstrb	docs/manual/cr/parts/03-investigations.tex	3310	\code{axil_to_apb} drives PSTRB low on a read
 cr:defect:crossbar-fixed-priority	docs/manual/cr/parts/03-investigations.tex	3272	\code{axi4_crossbar} arbitration has no fairness rule
-cr:defect:crossbar-second-request	docs/manual/cr/parts/03-investigations.tex	3318	\code{axi4_crossbar} loses a second request of one master
+cr:defect:crossbar-second-request	docs/manual/cr/parts/03-investigations.tex	3336	\code{axi4_crossbar} loses a second request of one master
 cr:defect:fabric-protocol-corners	docs/manual/cr/parts/03-investigations.tex	3184	Bus fabric protocol corners and stale \code{pslverr} waivers
 cr:defect:off-domain-slverr	docs/manual/cr/parts/03-investigations.tex	3240	Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})
 cr:defect:pmu-iso-order	docs/manual/cr/parts/03-investigations.tex	3080	PMU order: clock stop before the clamp (\code{zftj})
@@ -1200,7 +1200,7 @@ ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
 ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3586	Crypto accelerator
 ds:ch:mod-data-fabric	docs/manual/ds/parts/chapters/fabric.tex	2	AXI4 data fabric
 ds:ch:mod-data-fabric:definitions	docs/manual/ds/parts/chapters/fabric.tex	7	Definitions
-ds:ch:mod-data-fabric:known-limits	docs/manual/ds/parts/chapters/fabric.tex	37	Known limits
+ds:ch:mod-data-fabric:known-limits	docs/manual/ds/parts/chapters/fabric.tex	48	Known limits
 ds:ch:mod-data-fabric:master-rules	docs/manual/ds/parts/chapters/fabric.tex	14	Rules for the crossbar and its masters
 ds:ch:mod-data-fabric:scope	docs/manual/ds/parts/chapters/fabric.tex	4	Scope
 ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	1736	DFT blocks
@@ -2082,6 +2082,7 @@ ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	405	DS-CDC-159 Valid is not
 ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6668	DS-EXAMPLE-001 Example of a requirement
 ds:req:fab-001	docs/manual/ds/parts/chapters/fabric.tex	16	DS-FAB-001 One transfer in flight for each direction
 ds:req:fab-002	docs/manual/ds/parts/chapters/fabric.tex	27	DS-FAB-002 GPU data path does not overlap a read and a write
+ds:req:fab-003	docs/manual/ds/parts/chapters/fabric.tex	37	DS-FAB-003 Round-robin grant among the masters of one slave
 ds:req:pmu-001	docs/manual/ds/parts/chapters/power.tex	36	DS-PMU-001 CTRL mode field
 ds:req:pmu-002	docs/manual/ds/parts/chapters/power.tex	41	DS-PMU-002 STATUS fields
 ds:req:pmu-003	docs/manual/ds/parts/chapters/power.tex	46	DS-PMU-003 DOMAIN\_EN fields
