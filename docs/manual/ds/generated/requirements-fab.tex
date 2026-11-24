@@ -13,7 +13,7 @@ ID & Requirement & Verified by\\
 \endhead
 \bottomrule
 \endlastfoot
-\reqref{DS-FAB-001} & One transfer in flight for each direction & \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_second_aw_after_first_completes} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_second_ar_after_first_completes} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_two_reads_two_slaves_in_order} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_two_writes_two_slaves_in_order} \newline \textbf{review}\\
-\reqref{DS-FAB-002} & GPU masters obey the rule & \textbf{test} \code{tb/cocotb/soc/test_cpu_gpu_irq.py::test_cpu_gpu_irq_pass} \newline \textbf{review}\\
+\reqref{DS-FAB-001} & One transfer in flight for each direction & \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_second_aw_held_while_first_waits} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_second_ar_held_while_first_waits} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_two_reads_two_slaves_second_ar_held} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_two_writes_two_slaves_second_aw_held} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_second_aw_after_first_completes} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_second_ar_after_first_completes} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_two_reads_two_slaves_in_order} \newline \textbf{test} \code{tb/cocotb/soc/test_crossbar_outstanding.py::test_control_two_writes_two_slaves_in_order}\\
+\reqref{DS-FAB-002} & GPU data path does not overlap a read and a write & \textbf{test} \code{tb/cocotb/soc/test_cpu_gpu_irq.py::test_cpu_gpu_irq_pass} \newline \textbf{review}\\
 \end{longtable}
 }

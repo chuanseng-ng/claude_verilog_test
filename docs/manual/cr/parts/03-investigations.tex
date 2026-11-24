@@ -3320,3 +3320,15 @@ GPU masters. The data path (\code{memory_coalescer}) has one state machine that 
 Limits. The monitor covers only the workload of \code{test_cpu_gpu_irq_pass}, and no negative control shows that it fires. The CPU cache arbiter and the DMA engine were not examined against \reqref{DS-FAB-001}. The tests drive only master 0.
 
 \end{record}
+
+\begin{record}
+
+Date 2026-11-24. The owner approved an RTL fix: the crossbar holds the ready of a master face while that master has a transfer in flight. Each master has a write busy flag and a read busy flag. A flag is set by the request handshake of the master and cleared by its B handshake or by its R handshake with RLAST high. The flag masks the master valid in the slave arbiters, in the winner decode, in the early accept and in the unmapped decode. The arms of the slave engines that passed the ready of the slave to the master in the address phase are removed, because the early accept already completes the handshake. \reqref{DS-FAB-001} is now a rule of the crossbar, not of the master.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. The four defect tests of \code{test_crossbar_outstanding.py} pass on the new RTL. They are renamed to hold tests, without \code{expect_fail}, and they check that the ready stays low from the first request handshake up to the response. The 10 arbitration tests and the corner tests pass with the same simulation times as on the old RTL, so no cycle is added. Mutations: without the write busy mask or the read busy mask, the cross-slave hold test of that direction fails. With a flag cleared on the response cycle, the same test fails. With the old ready arm of a slave engine restored, both hold tests of that direction fail. The old RTL fails all four hold tests. \code{soc_all_ci} has no failure: 999 tests pass. \code{PASS_FLOOR} goes from 959 to 963.
+
+\end{record}

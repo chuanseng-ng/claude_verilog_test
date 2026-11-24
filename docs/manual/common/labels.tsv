@@ -1199,8 +1199,8 @@ ds:ch:mod-cpu-core	docs/manual/ds/parts/03-module-contracts.tex	3	CPU core
 ds:ch:mod-crypto-accelerator	docs/manual/ds/parts/03-module-contracts.tex	3586	Crypto accelerator
 ds:ch:mod-data-fabric	docs/manual/ds/parts/chapters/fabric.tex	2	AXI4 data fabric
 ds:ch:mod-data-fabric:definitions	docs/manual/ds/parts/chapters/fabric.tex	7	Definitions
-ds:ch:mod-data-fabric:known-limits	docs/manual/ds/parts/chapters/fabric.tex	34	Known limits
-ds:ch:mod-data-fabric:master-rules	docs/manual/ds/parts/chapters/fabric.tex	14	Rules for a master
+ds:ch:mod-data-fabric:known-limits	docs/manual/ds/parts/chapters/fabric.tex	37	Known limits
+ds:ch:mod-data-fabric:master-rules	docs/manual/ds/parts/chapters/fabric.tex	14	Rules for the crossbar and its masters
 ds:ch:mod-data-fabric:scope	docs/manual/ds/parts/chapters/fabric.tex	4	Scope
 ds:ch:mod-dft-blocks	docs/manual/ds/parts/03-module-contracts.tex	1736	DFT blocks
 ds:ch:mod-fpga-wrappers	docs/manual/ds/parts/03-module-contracts.tex	4199	FPGA wrappers
@@ -2080,7 +2080,7 @@ ds:req:cdc-158	docs/manual/ds/parts/chapters/cdc.tex	400	DS-CDC-158 Exact depth
 ds:req:cdc-159	docs/manual/ds/parts/chapters/cdc.tex	405	DS-CDC-159 Valid is not withdrawn
 ds:req:example-001	docs/manual/um/parts/01-chapters.tex	6668	DS-EXAMPLE-001 Example of a requirement
 ds:req:fab-001	docs/manual/ds/parts/chapters/fabric.tex	16	DS-FAB-001 One transfer in flight for each direction
-ds:req:fab-002	docs/manual/ds/parts/chapters/fabric.tex	24	DS-FAB-002 GPU masters obey the rule
+ds:req:fab-002	docs/manual/ds/parts/chapters/fabric.tex	27	DS-FAB-002 GPU data path does not overlap a read and a write
 ds:req:pmu-001	docs/manual/ds/parts/chapters/power.tex	36	DS-PMU-001 CTRL mode field
 ds:req:pmu-002	docs/manual/ds/parts/chapters/power.tex	41	DS-PMU-002 STATUS fields
 ds:req:pmu-003	docs/manual/ds/parts/chapters/power.tex	46	DS-PMU-003 DOMAIN\_EN fields
