@@ -1,21 +1,25 @@
 """axi4_crossbar: one master with a second request in flight.
 
-The crossbar keeps one transaction per slave engine and the master face has no ids. A master that
-issues a new AW or AR before the previous one has completed is legal AXI4. These tests drive that
-case from m0 with a cycle-accurate pipelined driver and check the rule every master relies on:
-every request the master saw accepted gets exactly one response, with the right data, in order.
+The crossbar keeps one transaction per slave engine and the master face has no ids, so it accepts
+one transfer per master direction at a time: AWREADY (ARREADY) of a master face stays low from the
+request handshake to the B (RLAST) handshake. A master that issues a new AW or AR early is legal
+AXI4; it is stalled, not lost. These tests drive that case from m0 with a cycle-accurate pipelined
+driver and check two rules: the master face holds the ready low for the whole transfer and raises it
+after, and every request the master saw accepted gets exactly one response, with the right data, in
+order.
 
-Defect tests (expect_fail, each needs a different master behaviour):
-  * a second AW/AR while the first waits for its slave is acknowledged and lost
-  * two reads to two slaves in flight: the R channel of one slave hides the other
-  * two writes to two slaves in flight: the W beats are shown to both slave engines
+Hold tests (each needs a different master behaviour):
+  * a second AW/AR while the first waits for its slave is held, not acknowledged and lost
+  * two reads to two slaves: the second AR waits, so one slave's R channel never hides the other
+  * two writes to two slaves: the second AW waits, so no slave sees the W beats of the other burst
 
-Each defect test has a control that does the same work but waits for the response before the next
-request. The control passes, so the expect_fail cannot come from the driver or the checks.
+Each hold test has a control that does the same work but waits for the response before the next
+request. A mutation that removes the hold fails the hold tests and not the controls.
 
 Same wrapper/topology as test_crossbar.py: 3 masters x 2 slaves (s0 = ROM, s1 = SRAM).
 Run together with it: ``make crossbar``.
 """
+# Doc: ds:ch:mod-data-fabric
 
 import cocotb
 from axi4_fabric_bfm import OKAY, AxiMaster, AxiSlave
@@ -88,6 +92,7 @@ class _Run:
 
     def __init__(self):
         self.aw, self.w, self.b, self.ar, self.r = [], [], [], [], []
+        self.awr, self.arr = {}, {}     # edge -> m0 AWREADY / ARREADY level seen at that edge
         self.cycles = 0
 
 
@@ -121,6 +126,7 @@ async def _drive_writes(dut, reqs, *, gap, w_gap=0):
         g("bready").value = 1
         await RisingEdge(dut.clk)
         cyc += 1
+        run.awr[cyc] = int(g("awready").value)
         if awv and int(g("awready").value):
             run.aw.append((cyc, reqs[aw_i]["addr"]))
             aw_i += 1
@@ -157,6 +163,7 @@ async def _drive_reads(dut, reqs, *, gap):
         g("rready").value = 1
         await RisingEdge(dut.clk)
         cyc += 1
+        run.arr[cyc] = int(g("arready").value)
         if arv and int(g("arready").value):
             run.ar.append((cyc, reqs[ar_i]["addr"]))
             ar_i += 1
@@ -170,8 +177,24 @@ async def _drive_reads(dut, reqs, *, gap):
     return run
 
 
-def _write_problems(run, reqs):
-    """Every accepted AW has one B, and each slave got exactly its own AW and W beats."""
+def _hold_problems(levels, starts, ends, what):
+    """``levels`` (edge -> ready) must be 0 on every edge after a handshake in ``starts`` up to and
+    including the edge in ``ends`` that closes it, and the next handshake must come after that."""
+    bad = []
+    for i, (st, en) in enumerate(zip(starts, ends)):
+        high = [c for c in range(st + 1, en + 1) if levels.get(c)]
+        if high:
+            bad.append(f"{what} high at edges {high} inside transfer {i} "
+                       f"(handshake {st}, done {en})")
+        if i + 1 < len(starts) and starts[i + 1] <= en:
+            bad.append(f"{what} handshake {i + 1} at edge {starts[i + 1]} "
+                       f"before transfer {i} done at {en}")
+    return bad
+
+
+def _write_problems(run, reqs, hold):
+    """Every accepted AW has one B, and each slave got exactly its own AW and W beats. ``hold``:
+    also check the AWREADY hold window (off in a control, which must not depend on the property)."""
     bad = []
     if len(run.aw) != len(reqs):
         bad.append(f"master saw {len(run.aw)} of {len(reqs)} AW accepted")
@@ -180,6 +203,8 @@ def _write_problems(run, reqs):
                    f"{len(run.b)} B seen at edges {[c for c, _ in run.b]}")
     if any(resp != OKAY for _, resp in run.b):
         bad.append(f"B responses {[r for _, r in run.b]}")
+    if hold:
+        bad += _hold_problems(run.awr, [c for c, _ in run.aw], [c for c, _ in run.b], "m0 AWREADY")
     for slave, label in ((reqs[0]["slave"], "first"), (reqs[1]["slave"], "second")):
         mine = [r for r in reqs if r["slave"] is slave]
         want_aw = [r["addr"] for r in mine]
@@ -197,8 +222,9 @@ def _write_problems(run, reqs):
     return bad
 
 
-def _read_problems(run, reqs):
-    """Every accepted AR gets its own beats once, in request order, RLAST on each last beat."""
+def _read_problems(run, reqs, hold):
+    """Every accepted AR gets its own beats once, in request order, RLAST on each last beat.
+    ``hold`` as in _write_problems, for ARREADY."""
     bad = []
     want = []
     for r in reqs:
@@ -212,6 +238,9 @@ def _read_problems(run, reqs):
                    f"wanted {[(hex(d), last) for d, last in want]}")
     if any(r[2] != OKAY for r in run.r):
         bad.append(f"R responses {[r[2] for r in run.r]}")
+    if hold:
+        lasts = [b[0] for b in run.r if b[3]]
+        bad += _hold_problems(run.arr, [c for c, _ in run.ar], lasts, "m0 ARREADY")
     for slave in {id(r["slave"]): r["slave"] for r in reqs}.values():
         want_ar = [r["addr"] for r in reqs if r["slave"] is slave]
         got_ar = [a["addr"] for a in slave.ar_log]
@@ -231,7 +260,7 @@ def _verdict(dut, tap, problems, run):
     assert not problems, "; ".join(problems)
 
 
-# ───────────────────────── scenario setup shared by defect test and control ───────────────────
+# ───────────────────────── scenario setup shared by hold test and control ───────────────────
 def _fill(slave, base, tag, n=8):
     for k in range(n):
         slave.mem[base + 4 * k] = (tag << 16) + k
@@ -243,7 +272,7 @@ async def _same_slave_writes(dut, gap):
             dict(addr=SRAM_BASE + 0x50, data=[0x2222_0001, 0x2222_0002], slave=s1)]
     tap = _Tap(dut)
     run = await _drive_writes(dut, reqs, gap=gap)
-    _verdict(dut, tap, _write_problems(run, reqs), run)
+    _verdict(dut, tap, _write_problems(run, reqs, gap is not WAIT_RESP), run)
 
 
 async def _same_slave_reads(dut, gap):
@@ -253,7 +282,7 @@ async def _same_slave_reads(dut, gap):
     reqs = [dict(addr=SRAM_BASE + 0x40, n=2, slave=s1), dict(addr=SRAM_BASE + 0x80, n=2, slave=s1)]
     tap = _Tap(dut)
     run = await _drive_reads(dut, reqs, gap=gap)
-    _verdict(dut, tap, _read_problems(run, reqs), run)
+    _verdict(dut, tap, _read_problems(run, reqs, gap is not WAIT_RESP), run)
 
 
 async def _cross_slave_reads(dut, gap):
@@ -263,7 +292,7 @@ async def _cross_slave_reads(dut, gap):
     reqs = [dict(addr=ROM_BASE + 0x20, n=4, slave=s0), dict(addr=SRAM_BASE + 0x40, n=4, slave=s1)]
     tap = _Tap(dut)
     run = await _drive_reads(dut, reqs, gap=gap)
-    _verdict(dut, tap, _read_problems(run, reqs), run)
+    _verdict(dut, tap, _read_problems(run, reqs, gap is not WAIT_RESP), run)
 
 
 async def _cross_slave_writes(dut, gap):
@@ -272,17 +301,15 @@ async def _cross_slave_writes(dut, gap):
             dict(addr=SRAM_BASE + 0x40, data=[0xC002_0000 + k for k in range(4)], slave=s1)]
     tap = _Tap(dut)
     run = await _drive_writes(dut, reqs, gap=gap, w_gap=2)
-    _verdict(dut, tap, _write_problems(run, reqs), run)
+    _verdict(dut, tap, _write_problems(run, reqs, gap is not WAIT_RESP), run)
 
 
-# ───────────────────────────────── defect tests and controls ──────────────────────────────────
-@cocotb.test(expect_fail=True)
-async def test_defect_second_aw_while_first_waits(dut):
-    """Defect: while a granted write waits for its slave, the crossbar shows the slave's AWREADY to
-    the granted master (W_AW arm of slv_awready). A second AW issued in that window is acknowledged
-    and never forwarded, so it gets no response. Asserts: every accepted AW gets one B, and the
-    slave gets both AWs and W bursts. expect_fail until the crossbar holds AWREADY low in that
-    window."""
+# ───────────────────────────────── hold tests and controls ────────────────────────────────────
+@cocotb.test()
+async def test_second_aw_held_while_first_waits(dut):
+    """While a granted write waits for its slave, m0 AWREADY stays low from the first AW handshake
+    to the first B, and the second AW is accepted only after it. Asserts: every accepted AW gets one
+    B, the slave gets both AWs and W bursts, and the AWREADY hold window is clean."""
     await _same_slave_writes(dut, gap=0)
 
 
@@ -293,12 +320,11 @@ async def test_control_second_aw_after_first_completes(dut):
     await _same_slave_writes(dut, gap=WAIT_RESP)
 
 
-@cocotb.test(expect_fail=True)
-async def test_defect_second_ar_while_first_waits(dut):
-    """Defect: while a granted read waits for its slave, the crossbar shows the slave's ARREADY to
-    the granted master (R_AR arm of slv_arready). A second AR issued in that window is acknowledged
-    and never forwarded, so it gets no R beats. Asserts: every accepted AR gets its own R beats.
-    expect_fail until the crossbar holds ARREADY low in that window."""
+@cocotb.test()
+async def test_second_ar_held_while_first_waits(dut):
+    """While a granted read waits for its slave, m0 ARREADY stays low from the first AR handshake to
+    RLAST of the first read, and the second AR is accepted only after it. Asserts: every accepted AR
+    gets its own R beats, and the ARREADY hold window is clean."""
     await _same_slave_reads(dut, gap=0)
 
 
@@ -309,13 +335,12 @@ async def test_control_second_ar_after_first_completes(dut):
     await _same_slave_reads(dut, gap=WAIT_RESP)
 
 
-@cocotb.test(expect_fail=True)
-async def test_defect_two_reads_two_slaves_in_flight(dut):
-    """Defect: one master with a read in flight to s0 and a second to s1 gets the R channel of s1
-    only. The master-side mux assigns slv_rvalid/rdata per slave in turn, so the last slave in
-    R_DATA overrides the other while both rready are high. Asserts: the R beats are the burst of
-    s0 and then the burst of s1, once each. expect_fail until the R mux is steered by an in-order
-    queue."""
+@cocotb.test()
+async def test_two_reads_two_slaves_second_ar_held(dut):
+    """One master issues a read to s0 and, two cycles after the first AR, a read to s1. The second
+    AR is held until RLAST of the first, so only one slave drives R at a time. Asserts: the R beats
+    are the burst of s0 and then the burst of s1, once each, and ARREADY holds for the first
+    read."""
     await _cross_slave_reads(dut, gap=2)
 
 
@@ -326,12 +351,12 @@ async def test_control_two_reads_two_slaves_in_order(dut):
     await _cross_slave_reads(dut, gap=WAIT_RESP)
 
 
-@cocotb.test(expect_fail=True)
-async def test_defect_two_writes_two_slaves_in_flight(dut):
-    """Defect: one master with a write in flight to s0 and a second to s1. Both slave write engines
-    are in W_DATA and both take their W data from the one master (m_wdata[wsel]), so each slave gets
-    the beats of the other burst too. Asserts: s0 gets exactly the W beats of burst 1 and s1 exactly
-    those of burst 2, and both B arrive. expect_fail until W beats are steered per AW."""
+@cocotb.test()
+async def test_two_writes_two_slaves_second_aw_held(dut):
+    """One master issues a write to s0 and, two cycles after the first AW, a write to s1. The second
+    AW is held until the first B, so only one slave write engine takes W beats. Asserts: s0 gets
+    exactly the W beats of burst 1 and s1 exactly those of burst 2, both B arrive, and AWREADY holds
+    for the first write."""
     await _cross_slave_writes(dut, gap=2)
 
 
