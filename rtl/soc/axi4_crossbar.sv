@@ -2,8 +2,6 @@
 // Phase 5 (M3) — N-master x M-slave AXI4 data crossbar.
 //
 // Routes AW/W/B and AR/R between N masters and M slaves by address decode.
-// Arbitration reuses the proven priority-grant pattern from
-// rtl/mem/rv32i_cache_arbiter.sv, generalised to a per-slave grant engine.
 //
 // Design points (see Doc: ds:ch:phase5-soc-integration-plan M3):
 //   * Per-slave write engine + read engine, each depth-1 outstanding.  A slave
@@ -11,9 +9,11 @@
 //     never interleave and the fabric cannot deadlock.
 //   * Independent slaves serve different masters concurrently (no head-of-line
 //     block across slaves).
-//   * Fixed priority among masters: lowest index wins (master 0 highest).  This
-//     matches the cache-arbiter precedent; round-robin is a fairness upgrade if
-//     benchmarks show starvation.
+//   * Round-robin among masters, one rotating one-hot pointer per slave engine
+//     and direction: after a grant to master i the next search starts at i+1
+//     and wraps; from reset master 0 searches first.  The early-accept winner
+//     decode reads the same grant vector the engine captures.
+//     Doc: ds:ch:mod-data-fabric
 //   * One transfer in flight per master and direction: AWREADY stays low from a
 //     master's AW handshake to its B handshake, ARREADY from its AR handshake
 //     to its R handshake with RLAST.  The master face has no id, so this is
@@ -177,7 +177,12 @@ module axi4_crossbar #(
     logic [N_SLAVES-1:0][1:0]         ar_burst_q;
 
     // Per-slave write/read arbitration pre-compute (combinational).
-    // Identifies the lowest-index master requesting this slave this cycle.
+    // Identifies the round-robin winner among the masters requesting this slave
+    // this cycle.  *_req is the request vector, *_gnt the one-hot winner and
+    // *_ptr the one-hot position where the next search starts.
+    logic [N_SLAVES-1:0][N_MASTERS-1:0] wr_req, rd_req;
+    logic [N_SLAVES-1:0][N_MASTERS-1:0] wr_gnt, rd_gnt;
+    logic [N_SLAVES-1:0][N_MASTERS-1:0] wr_ptr, rd_ptr;
     logic [N_SLAVES-1:0]               wr_arb_valid;   // some master wants this slave
     logic [N_SLAVES-1:0][MIDX_W-1:0]  wr_arb_msel;    // winning master index
     logic [N_SLAVES-1:0][AW-1:0]      wr_arb_addr;
@@ -260,46 +265,67 @@ module axi4_crossbar #(
     logic [N_MASTERS-1:0]           _m_rlast;
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Write arbitration (combinational priority encoder, one entry per slave).
-    // Selects lowest-index master with AWVALID targeting each slave.
+    // Round-robin arbitration (combinational, one entry per slave and direction).
+    // The search starts at the pointer: requests at or above it win first, and
+    // when there are none the whole vector is searched from master 0.
+    // Doc: ds:ch:mod-data-fabric
     // ─────────────────────────────────────────────────────────────────────────
+    function automatic logic [N_MASTERS-1:0] rr_grant(
+        input logic [N_MASTERS-1:0] req,
+        input logic [N_MASTERS-1:0] ptr
+    );
+        logic [N_MASTERS-1:0] at_or_above;
+        logic [N_MASTERS-1:0] masked;
+        logic [N_MASTERS-1:0] pick;
+        at_or_above = ~(ptr - 1'b1);
+        masked      = req & at_or_above;
+        pick        = (masked != '0) ? masked : req;
+        rr_grant    = pick & (~pick + 1'b1);
+    endfunction
+
+    // Pointer after a grant: one position above the granted master, wrapping.
+    function automatic logic [N_MASTERS-1:0] rr_next(input logic [N_MASTERS-1:0] gnt);
+        logic [N_MASTERS-1:0] nxt;
+        for (int unsigned m = 0; m < N_MASTERS; m++) begin
+            nxt[(m + 1) % N_MASTERS] = gnt[m];
+        end
+        rr_next = nxt;
+    endfunction
+
     always_comb begin
         for (int unsigned s = 0; s < N_SLAVES; s++) begin
-            wr_arb_valid[s] = 1'b0;
+            for (int unsigned m = 0; m < N_MASTERS; m++) begin
+                wr_req[s][m] = awv_eff[m] && decode(m_awaddr[m]) == s;
+                rd_req[s][m] = arv_eff[m] && decode(m_araddr[m]) == s;
+            end
+            wr_gnt[s] = rr_grant(wr_req[s], wr_ptr[s]);
+            rd_gnt[s] = rr_grant(rd_req[s], rd_ptr[s]);
+        end
+    end
+
+    always_comb begin
+        for (int unsigned s = 0; s < N_SLAVES; s++) begin
+            wr_arb_valid[s] = |wr_req[s];
             wr_arb_msel [s] = '0;
             wr_arb_addr [s] = '0;
             wr_arb_len  [s] = '0;
             wr_arb_size [s] = AXI_SIZE_4B;
             wr_arb_burst[s] = AXI_BURST_INCR;
-            for (int unsigned m = 0; m < N_MASTERS; m++) begin
-                if (!wr_arb_valid[s] &&
-                    awv_eff[m] && decode(m_awaddr[m]) == s) begin
-                    wr_arb_valid[s] = 1'b1;
-                    wr_arb_msel [s] = m[MIDX_W-1:0];
-                    wr_arb_addr [s] = m_awaddr [m];
-                    wr_arb_len  [s] = m_awlen  [m];
-                    wr_arb_size [s] = m_awsize [m];
-                    wr_arb_burst[s] = m_awburst[m];
-                end
-            end
-        end
-    end
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Read arbitration (combinational priority encoder, one entry per slave).
-    // ─────────────────────────────────────────────────────────────────────────
-    always_comb begin
-        for (int unsigned s = 0; s < N_SLAVES; s++) begin
-            rd_arb_valid[s] = 1'b0;
+            rd_arb_valid[s] = |rd_req[s];
             rd_arb_msel [s] = '0;
             rd_arb_addr [s] = '0;
             rd_arb_len  [s] = '0;
             rd_arb_size [s] = AXI_SIZE_4B;
             rd_arb_burst[s] = AXI_BURST_INCR;
             for (int unsigned m = 0; m < N_MASTERS; m++) begin
-                if (!rd_arb_valid[s] &&
-                    arv_eff[m] && decode(m_araddr[m]) == s) begin
-                    rd_arb_valid[s] = 1'b1;
+                if (wr_gnt[s][m]) begin
+                    wr_arb_msel [s] = m[MIDX_W-1:0];
+                    wr_arb_addr [s] = m_awaddr [m];
+                    wr_arb_len  [s] = m_awlen  [m];
+                    wr_arb_size [s] = m_awsize [m];
+                    wr_arb_burst[s] = m_awburst[m];
+                end
+                if (rd_gnt[s][m]) begin
                     rd_arb_msel [s] = m[MIDX_W-1:0];
                     rd_arb_addr [s] = m_araddr [m];
                     rd_arb_len  [s] = m_arlen  [m];
@@ -360,6 +386,7 @@ module axi4_crossbar #(
             if (!rst_n) begin
                 wstate    [s] <= W_IDLE;
                 wsel      [s] <= '0;
+                wr_ptr    [s] <= N_MASTERS'(1);
                 aw_addr_q [s] <= '0;
                 aw_len_q  [s] <= '0;
                 aw_size_q [s] <= AXI_SIZE_4B;
@@ -369,6 +396,7 @@ module axi4_crossbar #(
                     W_IDLE: begin
                         if (wr_arb_valid[s]) begin
                             wsel      [s] <= wr_arb_msel [s];
+                            wr_ptr    [s] <= rr_next(wr_gnt[s]);
                             // Capture AW fields now — master may deassert
                             // AWVALID the next cycle (AXI4 single-cycle pulse).
                             aw_addr_q [s] <= wr_arb_addr [s];
@@ -426,6 +454,7 @@ module axi4_crossbar #(
             if (!rst_n) begin
                 rstate    [s] <= R_IDLE;
                 rsel      [s] <= '0;
+                rd_ptr    [s] <= N_MASTERS'(1);
                 ar_addr_q [s] <= '0;
                 ar_len_q  [s] <= '0;
                 ar_size_q [s] <= AXI_SIZE_4B;
@@ -435,6 +464,7 @@ module axi4_crossbar #(
                     R_IDLE: begin
                         if (rd_arb_valid[s]) begin
                             rsel      [s] <= rd_arb_msel [s];
+                            rd_ptr    [s] <= rr_next(rd_gnt[s]);
                             // Capture AR fields now — master may deassert
                             // ARVALID the next cycle (AXI4 single-cycle pulse,
                             // e.g. gpu_compute_unit if_arvalid_o).
@@ -555,26 +585,6 @@ module axi4_crossbar #(
 
     // ═════════════════ MASTER-FACING RESOLUTION (scan slaves) ════════════════
     always_comb begin
-        // aw_priority_winner[m][s]: 1 when master m is the highest-priority
-        // (lowest index) master presenting a valid AW request to slave s.
-        // Used to ensure the early-accept W_IDLE arm grants awready to exactly
-        // one master per slave per cycle — the same winner the FSM captures.
-        logic aw_priority_winner [N_MASTERS][N_SLAVES];
-        logic ar_priority_winner [N_MASTERS][N_SLAVES];
-        for (int unsigned m = 0; m < N_MASTERS; m++) begin
-            for (int unsigned s = 0; s < N_SLAVES; s++) begin
-                aw_priority_winner[m][s] = 1'b1;
-                ar_priority_winner[m][s] = 1'b1;
-                // Check if any lower-index master also targets this slave.
-                for (int unsigned m2 = 0; m2 < m; m2++) begin
-                    if (awv_eff[m2] && decode(m_awaddr[m2]) == s)
-                        aw_priority_winner[m][s] = 1'b0;
-                    if (arv_eff[m2] && decode(m_araddr[m2]) == s)
-                        ar_priority_winner[m][s] = 1'b0;
-                end
-            end
-        end
-
         for (int unsigned m = 0; m < N_MASTERS; m++) begin
             slv_awready[m] = 1'b0;
             slv_wready [m] = 1'b0;
@@ -587,7 +597,7 @@ module axi4_crossbar #(
             slv_rlast  [m] = 1'b0;
             for (int unsigned s = 0; s < N_SLAVES; s++) begin
                 // Write path
-                // Early-accept (W_IDLE): grant awready only to the priority-
+                // Early-accept (W_IDLE): grant awready only to the round-robin
                 // winner master — the same master the FSM captures into wsel.
                 // This is the only awready source: a master with a write in
                 // flight is masked out of awv_eff.
@@ -596,7 +606,7 @@ module axi4_crossbar #(
                 // "both see ready, only winner captured" silent-drop bug.
                 if (wstate[s] == W_IDLE &&
                     awv_eff[m] && decode(m_awaddr[m]) == s &&
-                    aw_priority_winner[m][s])
+                    wr_gnt[s][m])
                     slv_awready[m] = 1'b1;
                 if (wstate[s] == W_DATA && wsel[s] == m[MIDX_W-1:0])
                     slv_wready [m] = s_wready[s];
@@ -605,7 +615,7 @@ module axi4_crossbar #(
                     slv_bresp [m] = s_bresp [s];
                 end
                 // Read path
-                // Early-accept (R_IDLE): grant arready only to the priority-
+                // Early-accept (R_IDLE): grant arready only to the round-robin
                 // winner master — the same master the FSM captures into rsel.
                 // Single-grant invariant: at most one master per slave per cycle
                 // sees arready=1 from the early-accept arm, and a master with a
@@ -614,7 +624,7 @@ module axi4_crossbar #(
                 // is driven 1'b1 from ar_*_q starting next cycle.
                 if (rstate[s] == R_IDLE &&
                     arv_eff[m] && decode(m_araddr[m]) == s &&
-                    ar_priority_winner[m][s])
+                    rd_gnt[s][m])
                     slv_arready[m] = 1'b1;
                 if (rstate[s] == R_DATA && rsel[s] == m[MIDX_W-1:0]) begin
                     slv_rvalid[m] = s_rvalid[s];
