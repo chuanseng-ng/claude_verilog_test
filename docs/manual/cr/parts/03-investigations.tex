@@ -3305,7 +3305,7 @@ Tests, measured, local, one host. New suite \code{tb/cocotb/gpu/test_fetch_hands
 
 \begin{record}
 
-Limits. The mutants ran only against the GPU suite. No test has DMA contention. The clear of \code{ar_pend_q} on \code{soft_clr_i} is not reachable, because \code{if_ar_stuck} holds off the halt while an AR waits. The SoC contention test found a separate hang: a CPU read of the GPU status after the kernel ends did not reach the GPU slave (bead \bead{zftj.38}). The firmware of the test waits for the interrupt instead.
+Limits. The mutants ran only against the GPU suite. No test has DMA contention. The clear of \code{ar_pend_q} on \code{soft_clr_i} is not reachable, because \code{if_ar_stuck} holds off the halt while an AR waits. A first version of the SoC contention test seemed to hang on a CPU read of the GPU status after the kernel ended (bead \bead{zftj.38}). The read completed. The harness sampled the one-cycle commit of the CPU at the fabric clock, which is slower than the CPU clock, so it missed the commit of the pass address. The harness now records each commit at the CPU clock, and the test polls the GPU status and checks that the read reaches the GPU slave.
 
 \end{record}
 
