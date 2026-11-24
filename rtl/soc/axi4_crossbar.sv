@@ -14,6 +14,11 @@
 //   * Fixed priority among masters: lowest index wins (master 0 highest).  This
 //     matches the cache-arbiter precedent; round-robin is a fairness upgrade if
 //     benchmarks show starvation.
+//   * One transfer in flight per master and direction: AWREADY stays low from a
+//     master's AW handshake to its B handshake, ARREADY from its AR handshake
+//     to its R handshake with RLAST.  The master face has no id, so this is
+//     what lets a response be routed back by the grant register.
+//     Doc: ds:ch:mod-data-fabric
 //   * Unmapped address -> the crossbar returns a DECERR response and completes
 //     the transaction (a bad address never stalls a master).
 //   * Master-facing ports carry NO id; the crossbar tags slave-facing requests
@@ -197,6 +202,17 @@ module axi4_crossbar #(
     logic [N_MASTERS-1:0][LENW-1:0]   dr_len;    // latched burst length
     logic [N_MASTERS-1:0][LENW-1:0]   dr_cnt;    // beats sent
 
+    // Per-master in-flight flags.  Set on the AW (AR) handshake, cleared on the
+    // B (R with RLAST) handshake.  While set, the master's AWVALID (ARVALID) is
+    // not offered to arbitration or to the DECERR engine, so AWREADY (ARREADY)
+    // is low for the whole transfer.
+    logic [N_MASTERS-1:0]              wr_busy;
+    logic [N_MASTERS-1:0]              rd_busy;
+    logic [N_MASTERS-1:0]              awv_eff;
+    logic [N_MASTERS-1:0]              arv_eff;
+    assign awv_eff = m_awvalid & ~wr_busy;
+    assign arv_eff = m_arvalid & ~rd_busy;
+
     // Unmapped-address flags (one per master, driven from always_comb below).
     logic [N_MASTERS-1:0]              aw_unmapped;
     logic [N_MASTERS-1:0]              ar_unmapped;
@@ -257,7 +273,7 @@ module axi4_crossbar #(
             wr_arb_burst[s] = AXI_BURST_INCR;
             for (int unsigned m = 0; m < N_MASTERS; m++) begin
                 if (!wr_arb_valid[s] &&
-                    m_awvalid[m] && decode(m_awaddr[m]) == s) begin
+                    awv_eff[m] && decode(m_awaddr[m]) == s) begin
                     wr_arb_valid[s] = 1'b1;
                     wr_arb_msel [s] = m[MIDX_W-1:0];
                     wr_arb_addr [s] = m_awaddr [m];
@@ -282,7 +298,7 @@ module axi4_crossbar #(
             rd_arb_burst[s] = AXI_BURST_INCR;
             for (int unsigned m = 0; m < N_MASTERS; m++) begin
                 if (!rd_arb_valid[s] &&
-                    m_arvalid[m] && decode(m_araddr[m]) == s) begin
+                    arv_eff[m] && decode(m_araddr[m]) == s) begin
                     rd_arb_valid[s] = 1'b1;
                     rd_arb_msel [s] = m[MIDX_W-1:0];
                     rd_arb_addr [s] = m_araddr [m];
@@ -442,8 +458,8 @@ module axi4_crossbar #(
     // Unmapped-address detection (combinational).
     always_comb begin
         for (int unsigned m = 0; m < N_MASTERS; m++) begin
-            aw_unmapped[m] = m_awvalid[m] && (decode(m_awaddr[m]) == N_SLAVES);
-            ar_unmapped[m] = m_arvalid[m] && (decode(m_araddr[m]) == N_SLAVES);
+            aw_unmapped[m] = awv_eff[m] && (decode(m_awaddr[m]) == N_SLAVES);
+            ar_unmapped[m] = arv_eff[m] && (decode(m_araddr[m]) == N_SLAVES);
         end
     end
 
@@ -514,6 +530,29 @@ module axi4_crossbar #(
         end
     end
 
+    // ═════════════════ IN-FLIGHT TRACKING (per master) ═══════════════════════
+    // A transfer is in flight from its request handshake to the last response
+    // handshake.  The request handshake is the one the master sees on its own
+    // face, so slave-routed and DECERR transfers are tracked alike.
+    // Doc: ds:ch:mod-data-fabric
+    always_ff @(posedge clk) begin
+        for (int unsigned m = 0; m < N_MASTERS; m++) begin
+            if (!rst_n) begin
+                wr_busy[m] <= 1'b0;
+                rd_busy[m] <= 1'b0;
+            end else begin
+                if (_m_bvalid[m] && m_bready[m])
+                    wr_busy[m] <= 1'b0;
+                else if (awv_eff[m] && _m_awready[m])
+                    wr_busy[m] <= 1'b1;
+                if (_m_rvalid[m] && m_rready[m] && _m_rlast[m])
+                    rd_busy[m] <= 1'b0;
+                else if (arv_eff[m] && _m_arready[m])
+                    rd_busy[m] <= 1'b1;
+            end
+        end
+    end
+
     // ═════════════════ MASTER-FACING RESOLUTION (scan slaves) ════════════════
     always_comb begin
         // aw_priority_winner[m][s]: 1 when master m is the highest-priority
@@ -528,9 +567,9 @@ module axi4_crossbar #(
                 ar_priority_winner[m][s] = 1'b1;
                 // Check if any lower-index master also targets this slave.
                 for (int unsigned m2 = 0; m2 < m; m2++) begin
-                    if (m_awvalid[m2] && decode(m_awaddr[m2]) == s)
+                    if (awv_eff[m2] && decode(m_awaddr[m2]) == s)
                         aw_priority_winner[m][s] = 1'b0;
-                    if (m_arvalid[m2] && decode(m_araddr[m2]) == s)
+                    if (arv_eff[m2] && decode(m_araddr[m2]) == s)
                         ar_priority_winner[m][s] = 1'b0;
                 end
             end
@@ -550,15 +589,15 @@ module axi4_crossbar #(
                 // Write path
                 // Early-accept (W_IDLE): grant awready only to the priority-
                 // winner master — the same master the FSM captures into wsel.
+                // This is the only awready source: a master with a write in
+                // flight is masked out of awv_eff.
                 // Single-grant invariant: at most one master per slave per cycle
                 // sees awready=1 from the early-accept arm, preventing the
                 // "both see ready, only winner captured" silent-drop bug.
                 if (wstate[s] == W_IDLE &&
-                    m_awvalid[m] && decode(m_awaddr[m]) == s &&
+                    awv_eff[m] && decode(m_awaddr[m]) == s &&
                     aw_priority_winner[m][s])
                     slv_awready[m] = 1'b1;
-                if (wstate[s] == W_AW   && wsel[s] == m[MIDX_W-1:0])
-                    slv_awready[m] = s_awready[s];
                 if (wstate[s] == W_DATA && wsel[s] == m[MIDX_W-1:0])
                     slv_wready [m] = s_wready[s];
                 if (wstate[s] == W_RESP && wsel[s] == m[MIDX_W-1:0]) begin
@@ -569,15 +608,14 @@ module axi4_crossbar #(
                 // Early-accept (R_IDLE): grant arready only to the priority-
                 // winner master — the same master the FSM captures into rsel.
                 // Single-grant invariant: at most one master per slave per cycle
-                // sees arready=1 from the early-accept arm.  The address is
+                // sees arready=1 from the early-accept arm, and a master with a
+                // read in flight is masked out of arv_eff.  The address is
                 // latched in ar_*_q on this clock edge; s_arvalid to the slave
                 // is driven 1'b1 from ar_*_q starting next cycle.
                 if (rstate[s] == R_IDLE &&
-                    m_arvalid[m] && decode(m_araddr[m]) == s &&
+                    arv_eff[m] && decode(m_araddr[m]) == s &&
                     ar_priority_winner[m][s])
                     slv_arready[m] = 1'b1;
-                if (rstate[s] == R_AR   && rsel[s] == m[MIDX_W-1:0])
-                    slv_arready[m] = s_arready[s];
                 if (rstate[s] == R_DATA && rsel[s] == m[MIDX_W-1:0]) begin
                     slv_rvalid[m] = s_rvalid[s];
                     slv_rdata [m] = s_rdata [s];
