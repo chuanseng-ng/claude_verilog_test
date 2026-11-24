@@ -660,7 +660,7 @@ rollup:
 	$(MAKE) phase3_all || failed="$$failed phase3_all"; \
 	echo ""; \
 	echo "========================================"; \
-	echo "Rollup group: Phase 4 GPU (unit + kernels + handoff + random smoke)"; \
+	echo "Rollup group: Phase 4 GPU (unit + kernels + handoff + fetch + random smoke)"; \
 	echo "========================================"; \
 	$(MAKE) gpu_all || failed="$$failed gpu_all"; \
 	echo ""; \
@@ -1201,19 +1201,30 @@ gpu_handoff:
 		VERILOG_SOURCES="$(GPU_SOURCES)" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_handoff
 
+# GPU instruction-fetch handshake under back-pressure (gpu_top, varying arready and AR-to-R latency)
+.PHONY: gpu_fetch
+gpu_fetch:
+	@echo "Running Phase 4 GPU fetch-handshake tests..."
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_fetch_handshake \
+		TOPLEVEL=gpu_top \
+		VERILOG_SOURCES="$(GPU_SOURCES)" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_fetch
+
 # All Phase 4 tests: unit + kernels + handoff + random smoke
 .PHONY: gpu_all
 gpu_all:
-	@echo "Running all Phase 4 GPU tests (unit + kernels + handoff + random smoke)..."
+	@echo "Running all Phase 4 GPU tests (unit + kernels + handoff + fetch + random smoke)..."
 	@echo "Note: This should be run in WSL environment"
 	@echo ""
 	@failed_tests=""; \
-	for target in gpu_unit gpu_kernels gpu_handoff gpu_random_smoke; do \
+	for target in gpu_unit gpu_kernels gpu_handoff gpu_fetch gpu_random_smoke; do \
 		echo "========================================"; \
 		echo "Running target: $$target"; \
 		echo "========================================"; \
 		rm -f results.xml; \
-		if ! $(MAKE) $$target || { { [ "$$target" = "gpu_handoff" ] || [ "$$target" = "gpu_random_smoke" ]; } && { [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; }; }; then \
+		if ! $(MAKE) $$target || { { [ "$$target" = "gpu_handoff" ] || [ "$$target" = "gpu_fetch" ] || [ "$$target" = "gpu_random_smoke" ]; } && { [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; }; }; then \
 			failed_tests="$$failed_tests $$target"; \
 		fi; \
 		echo ""; \
