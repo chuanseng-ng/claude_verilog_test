@@ -56,16 +56,28 @@ The warp scheduler gives an issue for one cycle only and marks the warp busy in 
 A flop \code{ar_pend_q} holds the request after an issue with ARREADY low. While it is set, the fetch address comes from the recorded program counter. The recorded fetch already stalls the scheduler, so a second issue cannot come while a request waits. When ARREADY is high in the issue cycle, the timing is the same as before. The adapter keeps its skid buffer for a master that does not hold its request.
 \end{information}
 
+\begin{requirement}{DS-FAB-005}{Ready outputs low while in reset}
+[verify={test:tb/cocotb/soc/test_crossbar.py::test_reset_ready_low_in_reset; test:tb/cocotb/soc/test_crossbar.py::test_reset_mid_transaction_readies_low; test:tb/cocotb/soc/test_crossbar.py::test_reset_ready_control_after_release; test:tb/cocotb/soc/test_axi4_to_axilite.py::test_reset_ready_low_in_reset; test:tb/cocotb/soc/test_axil_to_apb.py::test_reset_ready_low_in_reset; test:tb/cocotb/soc/test_sram_controller.py::test_reset_ready_low_in_reset; test:tb/cocotb/soc/test_boot_rom.py::test_reset_ready_low_in_reset; test:tb/cocotb/soc/test_axil_interconnect.py::test_reset_ready_low_in_reset; test:tb/cocotb/soc/test_axilite_to_axi4.py::test_reset_ready_low_in_fabric_reset; test:tb/cocotb/soc/test_axilite_to_axi4.py::test_reset_ready_low_in_gpu_reset; test:tb/cocotb/soc/test_axilite_to_axi4.py::test_held_arvalid_in_reset_issues_one_ar_after_release; test:tb/cocotb/soc/test_axilite_to_axi4.py::test_gpu_reset_mid_hold_issues_one_ar_per_fetch; test:tb/cocotb/soc/test_soc_multiclock_reset.py::test_soc_reset_fabric_ready_low_while_fabric_held; test:tb/cocotb/soc/test_soc_multiclock_reset.py::test_soc_reset_fabric_ready_control_after_release}]
+While its reset is asserted, each module of the data fabric must hold low the AWREADY, WREADY and ARREADY that it drives to a master, also when the master holds VALID high. This applies to \code{axi4_crossbar}, \code{axi4_to_axilite}, \code{axi_lite_interconnect}, \code{axil_to_apb}, \code{sram_controller} and \code{boot_rom}. The adapter \code{axilite_to_axi4} must also hold ARREADY to the GPU and ARVALID to the crossbar low while the GPU domain reset is asserted, and it must hold BREADY low while the fabric reset is asserted. After the reset releases, a held request must give exactly one handshake.
+\end{requirement}
+\begin{rationale}
+This is rule 6 of \src{AGENTS.md}: a reset value must not advertise availability. A master in another clock domain can leave reset before the fabric does. A ready that is high in reset lets that master see a handshake that the fabric does not record. Each listed ready is the AND of the reset and the old ready term, so the first request after the release is not delayed.
+\end{rationale}
+\begin{information}
+In the crossbar the reset gates only AWREADY and ARREADY. WREADY, BVALID and RVALID come from the state of the engines, which have a synchronous reset, so they can stay high in the first cycle of a reset that arrives during a transfer. The interconnect \code{apb_interconnect} has no reset port, and its PREADY is high while PSEL is low, which APB allows. The clock-crossing bridges have their own reset rules.
+\end{information}
+
 \section{Known limits}\label{ds:ch:mod-data-fabric:known-limits}
 \begin{information}
 \begin{itemize}
   \item A master has a maximum of one read and one write in flight. Each new request of a master waits for the response of its last request in that direction.
   \item The crossbar gives no order between a read and a write of one master (\reqref{DS-FAB-002}).
-  \item The ready outputs of the master faces are combinational from the valid inputs, also while the crossbar is in reset.
+  \item In the crossbar, WREADY, BVALID and RVALID can stay high in the first cycle of a reset during a transfer (\reqref{DS-FAB-005}).
   \item The arbiter takes no account of the age of a request or of the length of a burst. A master with long bursts gets more cycles of a slave than a master with short bursts, but not more grants (\reqref{DS-FAB-003}).
 \end{itemize}
 Before the hold, the crossbar accepted a second AW or AR while the first waited for its slave. It also mixed the beats of two transfers of one master to two slaves. \Cref{cr:defect:crossbar-second-request} gives the history.
 Before the round-robin arbiter, the request of the lowest-index master always won. \Cref{cr:defect:crossbar-fixed-priority} gives the history.
+Before the reset gate, the ready outputs were high in reset. \Cref{cr:defect:fabric-ready-in-reset} gives the history.
 \end{information}
 
 \input{generated/requirements-fab}
