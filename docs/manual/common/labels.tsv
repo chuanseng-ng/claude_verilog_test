@@ -232,6 +232,7 @@ cr:defect:synlig-struct-select-ainf:step-2a-mechanical-site-table-toolsverifstru
 cr:defect:synlig-struct-select-ainf:step-2b-synlig-vs-sv2v-equivalence-on-the-real-modules-modeqsh-run-modeqsh-mkconepy	docs/manual/cr/parts/03-investigations.tex	2510	\texorpdfstring{Step 2b: Synlig-vs-sv2v equivalence on the real modules (\code{modeq.sh}, \code{run_modeq.sh}, \code{mkcone.py})}{Step 2b: Synlig-vs-sv2v equivalence on the real modules (, , )}
 cr:defect:synlig-struct-select-ainf:step-4-verdict-recommendation-limits	docs/manual/cr/parts/03-investigations.tex	2610	Step 4: verdict, recommendation, limits
 cr:defect:upf-checker-power-switch	docs/manual/cr/parts/03-investigations.tex	3552	The UPF checker accepts a power switch
+cr:defect:upf-checker-tap-scan	docs/manual/cr/parts/03-investigations.tex	3572	The UPF checker does not follow the scan sources of \code{dft_ctrl}
 cr:fix:cpu-dataflow-diagram	docs/manual/cr/parts/04-fix-log-and-archive.tex	5542	Phase 1 RV32I CPU Dataflow Diagram
 cr:fix:cpu-dataflow-diagram:1-fetch-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5601	1. FETCH Stage
 cr:fix:cpu-dataflow-diagram:2-decode-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5625	2. DECODE Stage
@@ -1656,18 +1657,18 @@ ds:ch:phase7-pll-plan:8-analog-agent-validation-this-phase-doubled-as-a-suite-te
 ds:ch:phase7-pll-plan:9-honest-sign-off-ledger-real-vs-indicative-vs-remaining	docs/manual/ds/parts/01-architecture.tex	11894	Honest sign-off ledger (real vs indicative vs remaining)
 ds:ch:phase7-pll-plan:how-to-use-this-document	docs/manual/ds/parts/01-architecture.tex	11418	How to use this document
 ds:ch:power-intent	docs/manual/ds/parts/chapters/power-intent.tex	3	Power intent
-ds:ch:power-intent:dec-facts	docs/manual/ds/parts/chapters/power-intent.tex	284	A checker that reads a generated facts file
-ds:ch:power-intent:dec-follow	docs/manual/ds/parts/chapters/power-intent.tex	270	The power intent follows the RTL
-ds:ch:power-intent:dec-switch	docs/manual/ds/parts/chapters/power-intent.tex	277	Supply ports and no power switch
-ds:ch:power-intent:decisions	docs/manual/ds/parts/chapters/power-intent.tex	267	Architecture decisions
+ds:ch:power-intent:dec-facts	docs/manual/ds/parts/chapters/power-intent.tex	297	A checker that reads a generated facts file
+ds:ch:power-intent:dec-follow	docs/manual/ds/parts/chapters/power-intent.tex	283	The power intent follows the RTL
+ds:ch:power-intent:dec-switch	docs/manual/ds/parts/chapters/power-intent.tex	290	Supply ports and no power switch
+ds:ch:power-intent:decisions	docs/manual/ds/parts/chapters/power-intent.tex	280	Architecture decisions
 ds:ch:power-intent:definitions	docs/manual/ds/parts/chapters/power-intent.tex	16	Definitions
 ds:ch:power-intent:domains	docs/manual/ds/parts/chapters/power-intent.tex	31	Domains and supplies
-ds:ch:power-intent:file	docs/manual/ds/parts/chapters/power-intent.tex	231	The file and its checker
+ds:ch:power-intent:file	docs/manual/ds/parts/chapters/power-intent.tex	244	The file and its checker
 ds:ch:power-intent:isolation	docs/manual/ds/parts/chapters/power-intent.tex	87	Isolation
-ds:ch:power-intent:map	docs/manual/ds/parts/chapters/power-intent.tex	291	Requirements and verification
+ds:ch:power-intent:map	docs/manual/ds/parts/chapters/power-intent.tex	304	Requirements and verification
 ds:ch:power-intent:scope	docs/manual/ds/parts/chapters/power-intent.tex	5	Scope
 ds:ch:power-intent:states	docs/manual/ds/parts/chapters/power-intent.tex	156	Power states
-ds:ch:power-intent:switches	docs/manual/ds/parts/chapters/power-intent.tex	204	Switches and retention
+ds:ch:power-intent:switches	docs/manual/ds/parts/chapters/power-intent.tex	217	Switches and retention
 ds:ch:reference-model	docs/manual/ds/parts/01-architecture.tex	14285	Reference Model Specification
 ds:ch:reference-model:ai-may-assist-with	docs/manual/ds/parts/01-architecture.tex	14849	AI MAY assist with
 ds:ch:reference-model:aihuman-responsibility	docs/manual/ds/parts/01-architecture.tex	14847	AI/Human Responsibility
@@ -2170,17 +2171,18 @@ ds:req:pwr-028	docs/manual/ds/parts/chapters/power-intent.tex	148	DS-PWR-028 Unc
 ds:req:pwr-040	docs/manual/ds/parts/chapters/power-intent.tex	159	DS-PWR-040 State names and encodings
 ds:req:pwr-041	docs/manual/ds/parts/chapters/power-intent.tex	167	DS-PWR-041 Rail states of the modes
 ds:req:pwr-042	docs/manual/ds/parts/chapters/power-intent.tex	175	DS-PWR-042 Functional states exclude scan
-ds:req:pwr-043	docs/manual/ds/parts/chapters/power-intent.tex	180	DS-PWR-043 The state SCAN
-ds:req:pwr-044	docs/manual/ds/parts/chapters/power-intent.tex	188	DS-PWR-044 Clock gates open in scan
-ds:req:pwr-045	docs/manual/ds/parts/chapters/power-intent.tex	196	DS-PWR-045 States of the supply sets
-ds:req:pwr-060	docs/manual/ds/parts/chapters/power-intent.tex	207	DS-PWR-060 No retention
-ds:req:pwr-061	docs/manual/ds/parts/chapters/power-intent.tex	215	DS-PWR-061 No power switch
-ds:req:pwr-062	docs/manual/ds/parts/chapters/power-intent.tex	223	DS-PWR-062 No cell mapping and no level shifter
-ds:req:pwr-080	docs/manual/ds/parts/chapters/power-intent.tex	233	DS-PWR-080 Facts file equals the RTL
-ds:req:pwr-081	docs/manual/ds/parts/chapters/power-intent.tex	241	DS-PWR-081 Version and commands
-ds:req:pwr-082	docs/manual/ds/parts/chapters/power-intent.tex	246	DS-PWR-082 Both arms
-ds:req:pwr-083	docs/manual/ds/parts/chapters/power-intent.tex	254	DS-PWR-083 References exist
-ds:req:pwr-084	docs/manual/ds/parts/chapters/power-intent.tex	259	DS-PWR-084 Form of the directive lines
+ds:req:pwr-043	docs/manual/ds/parts/chapters/power-intent.tex	183	DS-PWR-043 The state SCAN
+ds:req:pwr-044	docs/manual/ds/parts/chapters/power-intent.tex	191	DS-PWR-044 Clock gates open in scan
+ds:req:pwr-045	docs/manual/ds/parts/chapters/power-intent.tex	199	DS-PWR-045 States of the supply sets
+ds:req:pwr-046	docs/manual/ds/parts/chapters/power-intent.tex	207	DS-PWR-046 Scan sources of the DFT controller
+ds:req:pwr-060	docs/manual/ds/parts/chapters/power-intent.tex	220	DS-PWR-060 No retention
+ds:req:pwr-061	docs/manual/ds/parts/chapters/power-intent.tex	228	DS-PWR-061 No power switch
+ds:req:pwr-062	docs/manual/ds/parts/chapters/power-intent.tex	236	DS-PWR-062 No cell mapping and no level shifter
+ds:req:pwr-080	docs/manual/ds/parts/chapters/power-intent.tex	246	DS-PWR-080 Facts file equals the RTL
+ds:req:pwr-081	docs/manual/ds/parts/chapters/power-intent.tex	254	DS-PWR-081 Version and commands
+ds:req:pwr-082	docs/manual/ds/parts/chapters/power-intent.tex	259	DS-PWR-082 Both arms
+ds:req:pwr-083	docs/manual/ds/parts/chapters/power-intent.tex	267	DS-PWR-083 References exist
+ds:req:pwr-084	docs/manual/ds/parts/chapters/power-intent.tex	272	DS-PWR-084 Form of the directive lines
 fig:tm:ch:mod-cdc-primitives:soc	docs/manual/tm/parts/chapters/cdc.tex	34	Clock-domain crossing
 fig:tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	61	Power management
 fig:tm:mod:apb-cdc-bridge:block	docs/manual/tm/parts/chapters/cdc.tex	433	Functional description
@@ -2247,10 +2249,10 @@ tab:tm:pd:phase5-soc-upf:clamps	docs/manual/tm/parts/chapters/power.tex	633	Isol
 tab:tm:pd:phase5-soc-upf:classes	docs/manual/tm/parts/chapters/power.tex	662	Isolation
 tab:tm:pd:phase5-soc-upf:contents	docs/manual/tm/parts/chapters/power.tex	556	Contents of the file
 tab:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	594	Domains, supplies and the roster
-tab:tm:pd:phase5-soc-upf:facts	docs/manual/tm/parts/chapters/power.tex	745	The checker
-tab:tm:pd:phase5-soc-upf:findings	docs/manual/tm/parts/chapters/power.tex	770	The checker
+tab:tm:pd:phase5-soc-upf:facts	docs/manual/tm/parts/chapters/power.tex	757	The checker
+tab:tm:pd:phase5-soc-upf:findings	docs/manual/tm/parts/chapters/power.tex	783	The checker
 tab:tm:pd:phase5-soc-upf:roster	docs/manual/tm/parts/chapters/power.tex	611	Domains, supplies and the roster
-tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	697	Power states
+tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	698	Power states
 tab:tm:pd:phase5-soc-upf:states	docs/manual/tm/parts/chapters/power.tex	679	Power states
 tab:tm:pd:phase5-soc-upf:supply	docs/manual/tm/parts/chapters/power.tex	577	Domains, supplies and the roster
 tab:um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	12	Choose the block
@@ -2962,7 +2964,8 @@ tm:pd:phase5-soc-multiclock-check-sdc	docs/manual/tm/parts/02-physical-design.te
 tm:pd:phase5-soc-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	7872	\texttt{constraints/phase5\_soc\_multiclock.sdc}
 tm:pd:phase5-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	7799	\texttt{constraints/phase5\_soc.sdc}
 tm:pd:phase5-soc-upf	docs/manual/tm/parts/chapters/power.tex	513	Power intent file
-tm:pd:phase5-soc-upf:checker	docs/manual/tm/parts/chapters/power.tex	728	The checker
+tm:pd:phase5-soc-upf:checker	docs/manual/tm/parts/chapters/power.tex	740	The checker
+tm:pd:phase5-soc-upf:scan-sources	docs/manual/tm/parts/chapters/power.tex	717	Scan sources
 tm:pd:power-domain-evaluation	docs/manual/tm/parts/02-physical-design.tex	2572	Per-IP Power Domains + On/Off Sequencing --- Evaluation (pre-Phase-6 \#5)
 tm:pd:power-domain-evaluation:1-findings	docs/manual/tm/parts/02-physical-design.tex	2652	Findings
 tm:pd:power-domain-evaluation:2-the-blocker-that-sets-the-scope	docs/manual/tm/parts/02-physical-design.tex	2680	The blocker that sets the scope

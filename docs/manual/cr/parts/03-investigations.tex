@@ -3568,3 +3568,41 @@ Change, owner decision. The checker has a new finding U09. It reports each comma
 Tests, measured, local, one host. Before the change, a switch whose references all resolve gave no finding, and the new tests failed (7 failed, 1 passed, the one that passed being the comment control). After the change, \code{test_check_upf.py} has 64 tests and no failure. The committed UPF still gives \code{check_upf: PASS}, and \code{gen-facts --check} reports the facts file as up to date. Negative control: with the \code{up.err} call of U09 removed, 7 tests fail. Limit: the checker reads only the command word. It does not follow a command that a Tcl \code{eval} or a \code{source} builds.
 
 \end{record}
+
+\section{The UPF checker does not follow the scan sources of \code{dft_ctrl}}\label{cr:defect:upf-checker-tap-scan}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.20}, GH \#390. In \code{dft_ctrl}, \code{test_en_o} and \code{scan_mode_o} are each the OR of the pin leg and the scan mode of the JTAG TAP (\code{tap_scan}). So the TAP can open the CPU clock gate and the GPU clock gate while \code{scan_mode_i} is low. The power intent described this condition as a functional state, because each functional state required only \code{scan_mode_i == 1'b0}. The checker \code{check_upf.py} read only the text of \code{dft_ctrl_ports.sv}, so nothing checked the OR. The Technical Manual stated this as a documented limit.
+
+\end{record}
+
+\begin{record}
+
+Measured before the change, one run on one host. The checker gave PASS on the unchanged power intent. It gave PASS when \code{tap_scan} was removed from the OR of \code{test_en_o}, and it gave PASS when a third term (\code{mbist_force_o}) was added to the OR. The two RTL edits were made in a temporary copy of \code{dft_ctrl.sv}, and the file was restored. The power intent had no claim for the TAP path, and the checker passed.
+
+\end{record}
+
+\begin{record}
+
+Change, owner decision. The owner asked for the change to be done at once and not with the scan-insertion work. No RTL changed. The checker has a new finding U10. It reads the assignments of \code{test_en_o} and \code{scan_mode_o} in \code{dft_ctrl.sv} as text. Each must be an OR of plain names. A term that is an output of \code{dft_ctrl_ports} is followed to the input of \code{dft_ctrl} that it copies, and any other name is a net inside \code{dft_ctrl}. An assignment of another shape is finding U10, so a rewrite of the OR cannot pass without a change of the checker. The rules are these. The two outputs have the same sources. A scan state requires each source to be 1, and it requires no other net. Each functional state requires each source to be 0. The power intent has a new state \code{SCAN_TAP}: every rail ON, \code{scan_mode_i == 1'b0} and \code{u_dft_ctrl/tap_scan == 1'b1}. Each functional state also requires \code{u_dft_ctrl/tap_scan == 1'b0}, so the states exclude each other. The facts file has a new key \code{dft_ctrl} with the instance name and the net of each input. The facts were regenerated with \code{gen-facts}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. The new tests in \code{test_check_upf.py} remove the TAP term from the OR, remove it from one output only, add a third term, remove the state \code{SCAN_TAP}, name \code{tap_serial} in it, remove the exclusion from a functional state, change the shape of the OR (four forms), change the pin leg, change the connection of \code{scan_mode_i} in the facts, and run the command line on a changed \code{dft_ctrl.sv}. Each gave finding U10 (or U07 for the conditions on \code{scan_mode_i}). The file has 83 tests, and all pass. The commands \code{check_upf.py -v} and \code{check_upf.py gen-facts --check} pass.
+
+\end{record}
+
+\begin{record}
+
+Can the TAP raise \code{tap_scan} in every PMU mode? Yes. From the RTL: \code{tap_scan} is the instruction register of \code{jtag_tap} being \code{SCAN}. The register is a flop on \code{tck_i} and \code{trst_ni}. \code{dft_ctrl} and the TAP are in the always-on part of \code{soc_top}, and no PMU signal reaches them. A temporary probe test in the \code{soc_jtag} suite (not committed) set each of the four PMU modes, waited for the domains to settle, and loaded the instruction SCAN through the TAP pins with \code{scan_mode_i} low. In all four modes \code{u_dft_ctrl.tap_scan}, \code{dft_test_en} and \code{dft_scan_mode} were 1. In \code{CPU_OFF} and \code{IDLE} the CPU domain state was OFF, and the PMU clock enable of the CPU gate was 0 while \code{dft_test_en} was 1. The probe did not show a clock edge on the gated clocks. It sampled after the edge of \code{clk_i} and showed no edge in \code{NORMAL} either, so it does not prove that the gate is open. The gate opening follows from the gate RTL, where the test enable is ORed with the enable. This is a limit of the probe.
+
+\end{record}
+
+\begin{record}
+
+Limits. The state \code{SCAN_TAP} says that every rail is ON. The RTL does not do this: the PMU is not overridden by the TAP scan mode, and the clamps do not depend on it. This is the same documented limit as for \code{SCAN}. The checker reads text. It does not check what drives \code{tap_scan}, and a change that keeps the shape of the OR and swaps only the source of a term is not seen.
+
+\end{record}

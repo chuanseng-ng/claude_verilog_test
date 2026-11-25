@@ -158,7 +158,7 @@ The power state group \code{SOC_PST} names the settled conditions of the SoC. A 
 
 \begin{requirement}{DS-PWR-040}{State names and encodings}
 [verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_state_encoding_mismatch_fails; test:tb/tests/test_check_upf.py::test_unknown_state_name_fails}]
-The state group must have one state for each mode of the PMU, with the name of the mode and the value of \code{pmu_mode_req} of the mode, and it must have no other state except \code{SCAN}. The states are NORMAL (00), CPU\_OFF (01), GPU\_OFF (10) and IDLE (11).
+The state group must have one state for each mode of the PMU, with the name of the mode and the value of \code{pmu_mode_req} of the mode, and it must have no other state except \code{SCAN} and \code{SCAN_TAP}. The states are NORMAL (00), CPU\_OFF (01), GPU\_OFF (10) and IDLE (11).
 \end{requirement}
 \begin{information}
 The checker reads the modes from the text of \src{rtl/soc/pmu.sv}. \Cref{ds:ch:mod-power-management} states the modes of the PMU.
@@ -173,16 +173,19 @@ The targets are the values of \code{dom_target_on} in the text of \code{pmu.sv}.
 \end{information}
 
 \begin{requirement}{DS-PWR-042}{Functional states exclude scan}
-[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_scan_must_be_exclusive_with_functional_states}]
-Each state that is a PMU mode must require \code{scan_mode_i == 1'b0}.
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_scan_must_be_exclusive_with_functional_states; test:tb/tests/test_check_upf.py::test_functional_state_must_exclude_the_tap_scan}]
+Each state that is a PMU mode must require \code{scan_mode_i == 1'b0} and, for each other scan source of \code{dft_ctrl} (\reqref{DS-PWR-046}), the value 1'b0 of that source. Today the other source is the net \code{u_dft_ctrl/tap_scan}.
 \end{requirement}
+\begin{information}
+The checker reports the condition on \code{scan_mode_i} as finding U07 and the condition on each other scan source as finding U10. The condition on \code{scan_mode_i} is tested by the first test and the condition on the TAP scan mode by the second test.
+\end{information}
 
 \begin{requirement}{DS-PWR-043}{The state SCAN}
 [verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_scan_state_is_required; review}]
 The power intent must define the state \code{SCAN}. The state \code{SCAN} must require \code{scan_mode_i == 1'b1}, must have every supply set ON, and must not depend on \code{pmu_mode_req}.
 \end{requirement}
 \begin{information}
-The checker reports a file without the state \code{SCAN} (finding U07). The test removes the state. When the state exists, the checker checks that it requires \code{scan_mode_i == 1'b1}, that it does not use \code{pmu_mode_req}, and that the primary supply set of the always-on domain, of \code{PD_CPU} and of \code{PD_GPU} is ON. A supply set that is the primary supply of no domain is not checked, and the file has none. These three checks have no test. The checker also checks the clock gates (\reqref{DS-PWR-044}).
+The checker reports a file without the state \code{SCAN} (finding U07). The test removes the state. When the state exists, the checker checks that it requires \code{scan_mode_i == 1'b1}, that it does not use \code{pmu_mode_req}, and that the primary supply set of the always-on domain, of \code{PD_CPU} and of \code{PD_GPU} is ON. A supply set that is the primary supply of no domain is not checked, and the file has none. These three checks have no test. The checker also checks the clock gates (\reqref{DS-PWR-044}). The state \code{SCAN_TAP} is the same override raised by the JTAG TAP (\reqref{DS-PWR-046}). The checker applies the checks of the rails and of the independence from the mode to it. It requires \code{scan_mode_i == 1'b0} in it, so that the two scan states exclude each other. The tests are \code{test_tap_scan_state_must_be_exclusive_with_scan} and \code{test_tap_scan_state_cannot_depend_on_the_pmu}.
 \end{information}
 
 \begin{requirement}{DS-PWR-044}{Clock gates open in scan}
@@ -190,7 +193,7 @@ The checker reports a file without the state \code{SCAN} (finding U07). The test
 In the state \code{SCAN}, the test enable of each top-level clock gate of \code{soc_top} must be the net \code{dft_test_en}, which is the output \code{test_en_o} of \code{u_dft_ctrl}.
 \end{requirement}
 \begin{information}
-The checker reads the test enable of each gate from the facts file. It also requires the assignment \code{assign test_en_o = scan_mode_i} in the text of \src{rtl/soc/dft/dft_ctrl_ports.sv}. It does not read \src{rtl/soc/dft/dft_ctrl.sv}. In \code{dft_ctrl}, \code{test_en_o} is the OR of the test enable of \code{dft_ctrl_ports} and the scan mode of the JTAG TAP. So \code{scan_mode_i} high opens the gates. The TAP can also open them while \code{scan_mode_i} is low, and the state \code{SCAN} does not describe that case. The test of the checker changes the gate connection in the facts. No test changes the assignment in \code{dft_ctrl_ports.sv}. \reqref{DS-PMU-108} states the connection for the clock gates. This rule states that the state \code{SCAN} of the file depends on it. The state \code{SCAN} does not match the RTL in two points. The PMU is not overridden in scan mode, and the clamps do not depend on \code{scan_mode_i}. A clamp can be active during a scan. No rule removes this limit. \reqref{DS-PMU-107} and \reqref{DS-PMU-108} state what the RTL does in scan mode, and \cref{tm:pd:phase5-soc-upf} lists the limit.
+The checker reads the test enable of each gate from the facts file. It also requires the assignment \code{assign test_en_o = scan_mode_i} in the text of \src{rtl/soc/dft/dft_ctrl_ports.sv}. In \code{dft_ctrl}, \code{test_en_o} is the OR of the test enable of \code{dft_ctrl_ports} and the scan mode of the JTAG TAP. So \code{scan_mode_i} high opens the gates. The TAP can also open them while \code{scan_mode_i} is low. The state \code{SCAN} does not describe that case, and the state \code{SCAN_TAP} does (\reqref{DS-PWR-046}). The test of the checker changes the gate connection in the facts, and \code{test_pin_leg_driven_from_another_input_fails} changes the assignment in \code{dft_ctrl_ports.sv}. \reqref{DS-PMU-108} states the connection for the clock gates. This rule states that the state \code{SCAN} of the file depends on it. The scan states do not match the RTL in two points. The PMU is not overridden in scan mode, and the clamps do not depend on the scan mode. A clamp can be active during a scan. No rule removes this limit. \reqref{DS-PMU-107} and \reqref{DS-PMU-108} state what the RTL does in scan mode, and \cref{tm:pd:phase5-soc-upf} lists the limit.
 \end{information}
 
 \begin{requirement}{DS-PWR-045}{States of the supply sets}
@@ -199,6 +202,16 @@ Each supply set must have a power state. \code{SS_AON} must have the state ON. \
 \end{requirement}
 \begin{information}
 The checker looks for the text OFF in the state expressions of a supply set. It does not parse the expressions. The test removes the OFF port state of \code{VDD_GPU}. A rail with an OFF port state and no OFF power state, and a supply set without a power state, have a check and no test.
+\end{information}
+
+\begin{requirement}{DS-PWR-046}{Scan sources of the DFT controller}
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_tap_term_removed_from_the_or_fails; test:tb/tests/test_check_upf.py::test_third_term_in_the_or_fails; test:tb/tests/test_check_upf.py::test_upf_without_a_tap_scan_state_fails; test:tb/tests/test_check_upf.py::test_tap_scan_state_naming_the_wrong_signal_fails; test:tb/tests/test_check_upf.py::test_unrecognised_or_shape_is_a_finding_not_a_pass}]
+Each net that can raise the output \code{test_en_o} or \code{scan_mode_o} of \code{dft_ctrl} must be required to be 1'b1 by one scan state of the group. A scan state must not require a net that is not such a source. The scan state of the pin is \code{SCAN}, and the scan state of the JTAG TAP is \code{SCAN_TAP}. The state \code{SCAN_TAP} must require \code{scan_mode_i == 1'b0} and \code{u_dft_ctrl/tap_scan == 1'b1}.
+\end{requirement}
+\begin{information}
+The checker reads the assignments of \code{test_en_o} and \code{scan_mode_o} in \src{rtl/soc/dft/dft_ctrl.sv} as text. Each must be an OR of plain names. It follows the pin leg through \src{rtl/soc/dft/dft_ctrl_ports.sv} to the input that \code{dft_ctrl} gets from \code{soc_top}, and it takes a name that is not an input as a net inside \code{dft_ctrl}. The facts file gives the net of \code{soc_top} that each input of \code{dft_ctrl} has (finding U10 when the net is missing, finding U08 when the facts have no record). An assignment of another shape, for example a term with an AND, a ternary or a bracket, is finding U10 and not a pass. The two outputs must have the same sources (finding U10). The tests remove the TAP term, add a third term, remove the state \code{SCAN_TAP}, name another net in it, and change the shape of the assignment.
+
+The state \code{SCAN_TAP} has every supply set ON. As for \code{SCAN}, the RTL does not do this: the PMU is not overridden while the TAP scan mode is high, and the clamps do not depend on it. \cref{tm:pd:phase5-soc-upf} lists the limit. The JTAG TAP can raise its scan mode in every PMU mode. Only the JTAG pins write its instruction register, and no PMU signal reaches it (\cref{tm:pd:phase5-soc-upf}).
 \end{information}
 
 \section{Switches and retention}\label{ds:ch:power-intent:switches}
