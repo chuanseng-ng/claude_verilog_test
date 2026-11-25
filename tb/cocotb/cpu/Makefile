@@ -5,6 +5,11 @@
 #        make usage              show the available targets
 # Doc: tm:suite:cpu-makefile
 
+# Repo root from this file's own path, not from $(PWD): PWD is the caller's directory, so `make -C tb/cocotb/cpu` from
+# the repo root would resolve every source path wrong. Defined once, first in the file, before any include: after the cocotb
+# include, lastword MAKEFILE_LIST is a cocotb makefile.
+PROJ_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../../..)
+
 # Simulator selection
 SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
@@ -19,7 +24,7 @@ endif
 SIM_BUILD ?= $(SIM_BUILD_ROOT)/sim_build
 
 # Python path: repo root must be on PYTHONPATH for `from tb.xxx import` to work
-export PYTHONPATH := $(PWD)/../../..:$(PYTHONPATH)
+export PYTHONPATH := $(PROJ_ROOT):$(PYTHONPATH)
 
 # Runtime library path: nix-built Vtop binary needs system libexpat, libz, libffi
 # when it dlopen's system Python (libpython3.10).  Only these three libs are added
@@ -39,50 +44,50 @@ endif
 # Kept in sync with pnr/asap7/cpu/config.json's VERILOG_FILES import order —
 # see tools/verif/check_source_closure.py, which verifies this list closes
 # over every `import <pkg>::*` used by the files it lists.
-VERILOG_SOURCES += $(PWD)/../../../rtl/soc/axi_pkg.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/soc/soc_addr_map_pkg.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_cache_pkg.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/soc/axi_pkg.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/soc/soc_addr_map_pkg.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_pipeline_pkg.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/mem/rv32i_cache_pkg.sv
 # MBIST (c54a): the CPU macro's cache collars and controller
-VERILOG_SOURCES += $(PWD)/../../../rtl/soc/dft/mem_collar.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/soc/dft/mbist_ctrl.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/soc/dft/mem_collar.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/soc/dft/mbist_ctrl.sv
 # rv32i_clock_gate.sv: instantiated by rv32i_icache.sv/rv32i_dcache.sv (tag/data bank clock gating)
-VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_clock_gate.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/mem/rv32i_clock_gate.sv
 # Phase 3: Verilator-compatible SRAM behavioral model
 # (sram_1rw_256x32_verilator.v avoids mixed blocking/non-blocking and negedge
 #  triggers that Verilator cannot handle in the original OpenRAM model)
-VERILOG_SOURCES += $(PWD)/../../../sim/sram_1rw_256x32_verilator.v
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/rv32i_cpu_top.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_core.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/rv32i_cpu_top.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_core.sv
 # rv32i_control.sv is Phase 1 only — rv32i_core.sv (Phase 2+) does not instantiate it
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_decode.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_alu.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_regfile.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_imm_gen.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_branch_comp.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_decode.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_alu.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_regfile.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_imm_gen.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_branch_comp.sv
 # Pipeline stage modules (IF / ID / EX / EX1b / EX1c / EX2 / MEM / WB).
 # EX1b/EX1c/EX2 are the EX-stage retiming split (Run 14+, ASAP7 sign-off) —
 # the pre-retiming TB list only had IF/ID/EX/MEM/WB and predates this.
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv
 # Hazard detection, forwarding, CSR, and interrupt control units
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_hazard_unit.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_forwarding_unit.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_csr_file.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_interrupt_ctrl.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_hazard_unit.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_forwarding_unit.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_csr_file.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/cpu/core/rv32i_interrupt_ctrl.sv
 # NOTE: rv32i_axi_arbiter.sv (Phase 1 AXI4-Lite IF-vs-MEM arbiter) intentionally
 # dropped — dead since Phase 2's cache_arbiter took over; nothing in the current
 # hierarchy instantiates it (confirmed via grep + absent from pnr/asap7/cpu/config.json).
 # Phase 3: Cache RTL (I-cache, D-cache, cache arbiter)
-VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_icache.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_dcache.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_cache_arbiter.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/mem/rv32i_icache.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/mem/rv32i_dcache.sv
+VERILOG_SOURCES += $(PROJ_ROOT)/rtl/mem/rv32i_cache_arbiter.sv
 
 # Testbench settings (can override MODULE on command line)
 TOPLEVEL = rv32i_cpu_top
@@ -102,9 +107,6 @@ endif
 
 # Commercial simulators (SIM=vcs | SIM=xcelium): flag translation + SIM-keyed SIM_BUILD; inert for verilator.
 include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))../common/sim_portability.mk
-
-# Repo root, computed BEFORE the cocotb include: after it, lastword MAKEFILE_LIST is a cocotb makefile.
-PROJ_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../../..)
 
 # Include cocotb makefiles
 include $(shell cocotb-config --makefiles)/Makefile.sim
@@ -140,25 +142,25 @@ ebreak:
 
 debug:
 	@echo "Running APB3 debug interface tests (5 tests: single-step, BP0, BP1, GPR write, PC write)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_debug_if
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_debug_if
 
 # ── Phase 2 Verification Targets ──────────────────────────────────────────────
 pipeline_hazards:
 	@echo "Running pipeline hazard tests (Groups 2-3: RAW, load-use, control hazards)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_pipeline_hazards
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_pipeline_hazards
 
 interrupts:
 	@echo "Running interrupt and CSR tests (Groups 4-5: timer/ext IRQ, MRET, CSR insns)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_interrupts
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_interrupts
 
 axi_protocol:
 	# Covers Phase 1 protocol regression AND Phase 2 arbiter (IF vs MEM) contention tests.
 	@echo "Running AXI protocol + arbiter tests (Phase 1 compliance + Phase 2 IF/MEM arbiter)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_axi_protocol
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_axi_protocol
 
 fault_injection:
 	@echo "Running fault injection tests (misaligned access, illegal instruction traps)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_fault_injection
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_fault_injection
 
 phase2_all:
 	@echo "========================================="
@@ -236,64 +238,64 @@ phase2_all:
 # pyuvm test targets (Phase F+)
 smoke_uvm:
 	@echo "Running pyuvm smoke tests (4 tests)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_smoke_uvm
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_smoke_uvm
 
 random_uvm:
 	@echo "Running pyuvm random instruction tests..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_random_uvm
 
 random_uvm_smoke:
 	@echo "Running pyuvm random instruction tests (SMOKE TEST: 10 seeds × 50 instructions)..."
-	export RANDOM_TEST_SMOKE=1 && export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
+	export RANDOM_TEST_SMOKE=1 && export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_random_uvm
 
 random_uvm_waves:
 	@echo "Running pyuvm random instruction tests with waveform capture enabled..."
 	@echo "Note: Waveforms are saved automatically for failed seeds to results/waveforms/"
-	export ENABLE_WAVEFORMS=1 && export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
+	export ENABLE_WAVEFORMS=1 && export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_random_uvm
 
 isa_uvm:
 	@echo "Running pyuvm ISA compliance tests (54 tests, 37 RV32I instructions)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_isa_uvm
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_isa_uvm
 
 stress_uvm:
 	@echo "Running pyuvm stress tests (4 profiles: ALU, Jump, Shift, Immediate)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_stress_uvm
 
 stress_uvm_smoke:
 	@echo "Running pyuvm stress tests (SMOKE TEST: 10 seeds × 100 instr per profile)..."
-	export STRESS_TEST_SMOKE=1 && export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm
+	export STRESS_TEST_SMOKE=1 && export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_stress_uvm
 
 stress_alu:
 	@echo "Running ALU-intensive stress test (90% ALU operations)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_alu_intensive
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_alu_intensive
 
 stress_jump:
 	@echo "Running jump-heavy stress test (40% jump instructions)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_jump_heavy
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_jump_heavy
 
 stress_shift:
 	@echo "Running shift-intensive stress test..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_shift_intensive
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_shift_intensive
 
 stress_immediate:
 	@echo "Running immediate-heavy stress test..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_immediate_heavy
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_immediate_heavy
 
 directed_random_uvm:
 	@echo "Running pyuvm directed random tests (3 scenarios: ALU-focused, immediate-heavy, R-type dominant)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_directed_random_uvm
 
 directed_alu:
 	@echo "Running directed random ALU-focused test (70% ALU operations)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_alu_focused
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_alu_focused
 
 directed_immediate:
 	@echo "Running directed random immediate-heavy test (80% I-type + upper immediate)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_immediate_heavy
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_immediate_heavy
 
 directed_rtype:
 	@echo "Running directed random R-type dominant test (90% R-type)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_rtype_dominant
+	export PYTHONPATH=$$PYTHONPATH:$(PROJ_ROOT) && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_rtype_dominant
 
 all_uvm:
 	@echo "========================================="
