@@ -940,3 +940,161 @@ async def test_soc_gpu_walk_both_masters(dut):
         len(ifetch["A"]),
         {p: marks[p] for p in GW_PHASES},
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests: DMA read of the APB_PLL2 slot with and without the CPU domain in reset
+# ---------------------------------------------------------------------------
+M_DMA = 3                      # crossbar master port of the DMA engine
+PLL2_CONTROL_ADDR = 0x2000_9000
+PLL2_CONTROL_RESET = 0x1
+ERR_INFO_SLVERR_READ = 0b110   # RRESP = SLVERR, error on the read channel
+DMA_ERR_BOUND_CYCLES = 200     # far below axi_lite_interconnect TIMEOUT_CYCLES (4096)
+P2_FILL = 0xFFFFFFFF
+RESET_HOLD_CYCLES = 300        # the CPU domain stays in reset this long after the read ends
+
+
+class _Pll2Probe:
+    """Per-cycle scoreboard of the DMA's read of the PLL2 slot, sampled in ReadOnly."""
+
+    def __init__(self, soc):
+        self.soc = soc
+        self.ar_addrs = []        # address of each DMA read-address handshake
+        self.r_resps = []         # RRESP of each DMA read-data handshake
+        self.pslverr_cycles = 0   # cycles of a completed APB access that answers PSLVERR
+        self.apb_pll2_sel = 0     # cycles with the APB_PLL2 slot selected
+
+    def sample(self):
+        soc = self.soc
+        if _bit(soc.xbar_m_arvalid, M_DMA) and _bit(soc.xbar_m_arready, M_DMA):
+            self.ar_addrs.append(_port(soc.xbar_m_araddr, M_DMA, 32))
+        if _bit(soc.xbar_m_rvalid, M_DMA) and _bit(soc.xbar_m_rready, M_DMA):
+            self.r_resps.append(_port(soc.xbar_m_rresp, M_DMA, 2))
+        bus = soc.u_bus
+        access = int(bus.apb_m_psel.value) and int(bus.apb_m_penable.value)
+        done = access and int(bus.apb_m_pready.value)
+        if done and int(bus.apb_m_pslverr.value):
+            self.pslverr_cycles += 1
+
+
+def _p2_dst(dut):
+    return sram_mem(dut)[(A.P2_DST - 0x2000) // 4]
+
+
+@cocotb.test()
+async def test_soc_dma_pll2_slot_pslverr_in_cpu_reset(dut):
+    """A DMA read of the PLL2 slot with cpu_rst_n_i low ends in PSLVERR, then works after release.
+
+    The CPU firmware (integ_fw dma_pll2.hex) starts one DMA read of the PLL2 CONTROL register and
+    waits without bus traffic. The testbench drops cpu_rst_n_i on the edge after the start. The
+    destination reset of u_apb_pll2_cdc is cpu_rst_n_i, and the fabric clock and reset keep running,
+    so the bridge answers locally:
+
+      * the DMA read reaches 0x2000_9000 and the APB master of the fabric completes the access with
+        PSLVERR (apb_m_pslverr);
+      * the DMA master sees RRESP = SLVERR, sets STATUS.error with ERR_INFO = read channel + SLVERR,
+        and goes idle, well inside the interconnect timeout, so the answer is the bridge's and not
+        a timeout;
+      * the destination word is not written;
+      * after cpu_rst_n_i releases, the CPU boots again, the DMA is soft-reset by the firmware, and
+        the same read returns OKAY with the CONTROL reset value, with no PSLVERR.
+    """
+    words = _read_hex(_FW_DIR / "dma_pll2.hex")
+    await _setup(dut, words)
+    soc = dut.u_soc
+    _p2_dst(dut).value = P2_FILL
+    probe = _Pll2Probe(soc)
+
+    start_cycle = None
+    drop_pending = False
+    err_cycle = None
+    for cycle in range(100_000):
+        await RisingEdge(dut.clk_i)
+        if drop_pending:
+            dut.cpu_rst_n_i.value = 0
+            drop_pending = False
+        await ReadOnly()
+        probe.sample()
+        if start_cycle is None and int(soc.u_dma.start_pulse.value):
+            start_cycle = cycle
+            drop_pending = True
+        if start_cycle is not None and err_cycle is None and int(soc.u_dma.err_sticky_q.value):
+            err_cycle = cycle
+        if err_cycle is not None and cycle >= err_cycle + RESET_HOLD_CYCLES:
+            break
+    assert start_cycle is not None, "the DMA start pulse never came"
+    assert int(dut.cpu_rst_n_i.value) == 0, "the CPU domain was not in reset during the read"
+    assert err_cycle is not None, "STATUS.error never set: the PLL2 read did not fail"
+    assert err_cycle - start_cycle < DMA_ERR_BOUND_CYCLES, (
+        f"STATUS.error after {err_cycle - start_cycle} cycles, bound {DMA_ERR_BOUND_CYCLES}"
+    )
+
+    assert probe.ar_addrs == [PLL2_CONTROL_ADDR], (
+        f"DMA read addresses {[hex(a) for a in probe.ar_addrs]}, expected 0x{PLL2_CONTROL_ADDR:08x}"
+    )
+    assert probe.pslverr_cycles >= 1, "apb_m_pslverr never completed an APB access with an error"
+    assert probe.r_resps == [2], f"DMA R beats {probe.r_resps}, expected one SLVERR (2)"
+    assert int(soc.u_dma.err_on_read_q.value) == 1
+    assert int(soc.u_dma.last_resp_q.value) == 2
+    err_info = int(soc.u_dma.err_on_read_q.value) << 2 | int(soc.u_dma.last_resp_q.value)
+    assert err_info == ERR_INFO_SLVERR_READ, f"ERR_INFO 0b{err_info:03b}"
+    assert int(soc.u_dma.done_sticky_q.value) == 0, "STATUS.done set on a failed read"
+    assert int(_p2_dst(dut).value) == P2_FILL, "the destination was written by a failed read"
+    dut._log.info(
+        "PLL2 slot in CPU reset: start at cycle %d, STATUS.error after %d cycles, "
+        "%d PSLVERR cycle(s), RRESP %s",
+        start_cycle, err_cycle - start_cycle, probe.pslverr_cycles, probe.r_resps,
+    )
+
+    # ---- cpu_rst_n_i releases: the same access succeeds ----------------------------------------
+    await RisingEdge(dut.clk_i)
+    dut.cpu_rst_n_i.value = 1
+    probe_after = _Pll2Probe(soc)
+    saw_pass = False
+    for _ in range(200_000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        probe_after.sample()
+        if not int(dut.commit_valid_o.value):
+            continue
+        pc = int(dut.commit_pc_o.value)
+        assert pc != A.DMA_PLL2_FAIL, "firmware reached FAIL_PC after cpu_rst_n_i released"
+        if pc == A.DMA_PLL2_PASS:
+            saw_pass = True
+            break
+    assert saw_pass, "PASS_PC never committed after cpu_rst_n_i released"
+    assert probe_after.ar_addrs == [PLL2_CONTROL_ADDR]
+    assert probe_after.r_resps == [0], f"DMA R beats {probe_after.r_resps}, expected OKAY"
+    assert probe_after.pslverr_cycles == 0, "PSLVERR after cpu_rst_n_i released"
+    assert int(_p2_dst(dut).value) == PLL2_CONTROL_RESET
+
+
+@cocotb.test()
+async def test_soc_dma_pll2_slot_okay_with_cpu_running(dut):
+    """Negative control: the same DMA read with cpu_rst_n_i high returns OKAY and no PSLVERR."""
+    words = _read_hex(_FW_DIR / "dma_pll2.hex")
+    await _setup(dut, words)
+    soc = dut.u_soc
+    _p2_dst(dut).value = P2_FILL
+    probe = _Pll2Probe(soc)
+    saw_pass = False
+    for _ in range(200_000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        probe.sample()
+        assert int(dut.cpu_rst_n_i.value) == 1
+        if not int(dut.commit_valid_o.value):
+            continue
+        pc = int(dut.commit_pc_o.value)
+        assert pc != A.DMA_PLL2_FAIL, "firmware reached FAIL_PC"
+        if pc == A.DMA_PLL2_PASS:
+            saw_pass = True
+            break
+    assert saw_pass, "PASS_PC never committed"
+    assert probe.ar_addrs == [PLL2_CONTROL_ADDR], (
+        f"DMA read addresses {[hex(a) for a in probe.ar_addrs]}: no PLL2 read seen"
+    )
+    assert probe.r_resps == [0], f"DMA R beats {probe.r_resps}, expected one OKAY"
+    assert probe.pslverr_cycles == 0, "PSLVERR on the PLL2 slot with the CPU domain running"
+    assert int(soc.u_dma.err_sticky_q.value) == 0
+    assert int(_p2_dst(dut).value) == PLL2_CONTROL_RESET
