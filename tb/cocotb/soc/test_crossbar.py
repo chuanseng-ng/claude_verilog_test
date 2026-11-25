@@ -15,7 +15,8 @@ import cocotb
 from axi4_slave_model import AXI4SlaveModel
 from bfm.axi4_master import RESP_DECERR, RESP_OKAY, AXI4Master
 from cocotb.clock import Clock
-from cocotb.triggers import Combine, RisingEdge, with_timeout
+from cocotb.triggers import Combine, FallingEdge, RisingEdge, with_timeout
+from reset_ready_probe import assert_ready_low, hold_reset_sample_ready, release_reset_sample_ready
 
 CLK_PERIOD_NS = 2
 
@@ -227,3 +228,118 @@ async def test_concurrent_ar_aw_same_slave(dut):
     assert t1.result() == RESP_OKAY
     assert s1.mem[SRAM_BASE + 0x360] == 0xBEEF0001
     dut._log.info("concurrent AR+AW to same slave OK")
+
+
+# ---------------------------------------------------------------------------
+# Master-face ready outputs while reset is asserted (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+# While rst_n is low every master face must show AWREADY, WREADY and ARREADY low, whatever the
+# masters present on VALID. Master 0 targets the ROM window, master 1 an unmapped address (DECERR
+# engine) and master 2 the SRAM window, so the slave-grant path and the DECERR path are both
+# probed.
+def _xbar_reset_probe_ports(dut):
+    valids, extra, readies = [], {}, {}
+    targets = (ROM_BASE, BAD_ADDR, SRAM_BASE)
+    for i, addr in enumerate(targets):
+        for ch in ("aw", "w", "ar"):
+            valids.append(getattr(dut, f"m{i}_{ch}valid"))
+            readies[f"m{i}_{ch}ready"] = getattr(dut, f"m{i}_{ch}ready")
+        extra[getattr(dut, f"m{i}_awaddr")] = addr
+        extra[getattr(dut, f"m{i}_araddr")] = addr
+        extra[getattr(dut, f"m{i}_wlast")] = 1
+        extra[getattr(dut, f"m{i}_bready")] = 1
+        extra[getattr(dut, f"m{i}_rready")] = 1
+    return valids, extra, readies
+
+
+@cocotb.test()
+async def test_reset_ready_low_in_reset(dut):
+    """Every master-face ready is low in every cycle that rst_n is low, with all VALIDs high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _xbar_reset_probe_ports(dut)
+    seen = await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    assert_ready_low(dut, seen, "master-face ready while rst_n is low")
+
+
+@cocotb.test()
+async def test_reset_ready_control_after_release(dut):
+    """Control: after rst_n releases, the same stimulus shows AWREADY and ARREADY high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _xbar_reset_probe_ports(dut)
+    await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    high = await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    want = {f"m{i}_{ch}ready" for i in range(3) for ch in ("aw", "ar")}
+    assert want <= high, (
+        f"probe is blind: after release only {sorted(high)} went high, want {sorted(want)}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Reset asserted in the middle of transactions (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+# Every engine is driven busy first, with all master VALIDs still held: master 0 holds a write burst
+# in W_DATA and a read in R_DATA at the ROM slave, master 2 does the same at the SRAM slave, and
+# master 1 sits in the DECERR write response and read data states. Then rst_n falls.
+# Reset is synchronous, so the engines leave their states at the first clock edge in reset.
+#   Sample 0 (before that edge): AWREADY and ARREADY are already low. WREADY, BVALID and RVALID
+#   still show the busy engine, because they are a function of engine state.
+#   Sample 1 and later: every master-face ready and response valid, and every slave-face VALID, is
+#   low, although the masters still hold all VALIDs.
+_BUSY_TARGETS = (ROM_BASE, BAD_ADDR, SRAM_BASE)
+
+
+def _drive_busy_inputs(dut):
+    for i, addr in enumerate(_BUSY_TARGETS):
+        decerr = addr == BAD_ADDR
+        for name, val in (("awaddr", addr), ("araddr", addr), ("awvalid", 1), ("arvalid", 1),
+                          ("wvalid", 1), ("wlast", int(decerr)), ("bready", 0), ("rready", 0)):
+            getattr(dut, f"m{i}_{name}").value = val
+    for s in (0, 1):
+        for name, val in (("awready", 1), ("wready", 1), ("arready", 1), ("rvalid", 1),
+                          ("rlast", 1), ("bvalid", 0)):
+            getattr(dut, f"s{s}_{name}").value = val
+
+
+@cocotb.test()
+async def test_reset_mid_transaction_readies_low(dut):
+    """Reset with every engine busy and VALIDs held: AWREADY/ARREADY low in every reset cycle."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    dut.rst_n.value = 0
+    _drive_busy_inputs(dut)
+    for i in range(3):
+        for ch in ("aw", "ar", "w"):
+            getattr(dut, f"m{i}_{ch}valid").value = 0
+    for _ in range(4):
+        await RisingEdge(dut.clk)
+    _drive_busy_inputs(dut)
+    dut.rst_n.value = 1
+    for _ in range(12):
+        await RisingEdge(dut.clk)
+    await FallingEdge(dut.clk)
+    busy = {"m0_wready": 1, "m2_wready": 1, "m1_bvalid": 1, "m0_rvalid": 1, "m2_rvalid": 1,
+            "m1_rvalid": 1, "m0_awready": 0, "m2_awready": 0, "m0_arready": 0, "m2_arready": 0}
+    got = {n: int(getattr(dut, n).value) for n in busy}
+    assert got == busy, f"bench error: engines are not all busy before reset: {got}"
+
+    await RisingEdge(dut.clk)
+    dut.rst_n.value = 0
+    ready_names = [f"m{i}_{ch}ready" for i in range(3) for ch in ("aw", "ar")]
+    resp_names = [f"m{i}_{n}" for i in range(3) for n in ("wready", "bvalid", "rvalid")]
+    slave_valids = [f"s{s}_{n}" for s in (0, 1) for n in ("awvalid", "wvalid", "arvalid")]
+    bad = []
+    first = {}
+    for cycle in range(8):
+        await FallingEdge(dut.clk)
+        bad += [(cycle, n) for n in ready_names if int(getattr(dut, n).value)]
+        if cycle == 0:
+            first = {n: int(getattr(dut, n).value) for n in resp_names}
+        else:
+            bad += [(cycle, n) for n in resp_names + slave_valids if int(getattr(dut, n).value)]
+    dut._log.info(f"response signals in the first reset cycle: {first}")
+    assert not bad, f"high while rst_n is low (cycle, signal): {bad}"
+
+    readies = {n: getattr(dut, n) for n in ready_names}
+    seen = await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    assert {"m0_awready", "m2_awready", "m0_arready", "m2_arready"} <= seen, (
+        f"engines did not take new requests after release: {sorted(seen)}"
+    )

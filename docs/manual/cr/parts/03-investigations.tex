@@ -3283,6 +3283,38 @@ Limits. The bridge has no timeout, so a destination clock that stops while the d
 
 \end{record}
 
+\section{Ready outputs of the data fabric high in reset}\label{cr:defect:fabric-ready-in-reset}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.35}, item 4 of GH \#403. Rule 6 of \src{AGENTS.md} requires a ready to be low while its domain is in reset. The owner approved an RTL fix on 2026-11-24. A survey of the ready outputs found readies high in reset in \code{axi4_crossbar} (AWREADY and ARREADY through the early accept and the DECERR path), \code{axi4_to_axilite}, \code{axil_to_apb}, \code{sram_controller}, \code{boot_rom} and \code{axilite_to_axi4} (ARREADY follows the crossbar, and BREADY was a constant 1). \code{axi_lite_interconnect} already conformed. \code{apb_interconnect} has no reset, and its PREADY while PSEL is low was not changed.
+
+\end{record}
+
+\begin{record}
+
+Measured before the fix. Each unit test held reset with every VALID high for 8 cycles, and each listed ready was high in 8 of 8 cycles. At SoC level, with a fabric clock of 13 ns and a CPU clock of 3 ns and the fabric held in reset while the CPU ran, the readies of the boot ROM, the SRAM, the peripheral bridge, the APB bridge and the BREADY of the GPU adapter were high in 60 of 60 sampled cycles.
+
+\end{record}
+
+\begin{record}
+
+RTL change: each listed ready is the AND of \code{rst_n} and its old term, with no added cycle. In \code{axilite_to_axi4} the request term \code{ar_pending} is gated with the reset of the skid buffer, so ARVALID to the crossbar and ARREADY to the GPU are both low in the fabric reset and in the GPU reset. This prevents a handshake on the crossbar that the GPU does not see. \code{m_axi_bready} is \code{rst_n}. New requirement \reqref{DS-FAB-005}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. Eight tests that were \code{expect_fail} now pass, each with a control after the release and a passing guard for \code{axi_lite_interconnect}. New tests: a crossbar reset in the middle of a write burst, a read and a DECERR response; and two adapter tests that check one AR for each fetch after a reset with a held request. Each mutant that removes the gate of one module is caught, and so is an adapter that gates ARREADY but not ARVALID. \code{soc_pmu_iso_ack}: 32 of 32 pass. \code{soc_all_ci}: exit 0, 1082 pass. \code{PASS_FLOOR} goes from 1021 to 1043.
+
+\end{record}
+
+\begin{record}
+
+Limits. The direct AND puts the reset on a combinational output path in the modules with an asynchronous reset, and no RDC tool ran on this host. The crossbar WREADY, BVALID and RVALID can be high in the first cycle of a reset during a transfer. The mutant of \code{sram_controller} changed one of its two variants only.
+
+\end{record}
+
 \section{GPU compute unit loses a fetch that is accepted after its issue cycle (\code{gpu_compute_unit})}\label{cr:defect:gpu-fetch-lost}
 
 \begin{record}

@@ -27,6 +27,9 @@
 // Read path:
 //   AR is accepted; APB read sequence begins immediately.
 //
+// Reset: AWREADY, WREADY and ARREADY are gated with rst_n, so all three are
+// low while the bridge is in reset although the FSM already sits in IDLE.
+//
 // AXI4-Lite address/data widths: 32-bit address, 32-bit data, 4-bit strobe.
 // APB4 address width must match (tied to AXI ADDR_W).
 //
@@ -125,13 +128,13 @@ module axil_to_apb #(
     logic          pslverr_q;
 
     // ── AXI ready signals ────────────────────────────────────────────────────
-    // Accept AW/W only in IDLE (before we start the APB sequence).
-    assign s_axil_awready = (state_q == S_IDLE) && !aw_cap_q;
-    assign s_axil_wready  = (state_q == S_IDLE) && !w_cap_q;
+    // Accept AW/W only in IDLE (before we start the APB sequence) and not in reset.
+    assign s_axil_awready = rst_n && (state_q == S_IDLE) && !aw_cap_q;
+    assign s_axil_wready  = rst_n && (state_q == S_IDLE) && !w_cap_q;
 
     // Accept AR only in S_IDLE and only when no write is assembled.
     // Also require !s_axil_awvalid and !s_axil_wvalid.
-    assign s_axil_arready = (state_q == S_IDLE) && !aw_cap_q && !w_cap_q &&
+    assign s_axil_arready = rst_n && (state_q == S_IDLE) && !aw_cap_q && !w_cap_q &&
                             !s_axil_awvalid && !s_axil_wvalid;
 
     // ── AXI response outputs ─────────────────────────────────────────────────

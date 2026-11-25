@@ -27,6 +27,7 @@ from axil_stall_bfm import StallMaster
 from bfm.axi4lite_master import AXI4LiteMaster
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
+from reset_ready_probe import assert_ready_low, hold_reset_sample_ready, release_reset_sample_ready
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -609,4 +610,51 @@ async def test_back_to_back_write_read_pstrb_zero(dut):
     assert not bad_r, (
         f"PSTRB must be 0 while PWRITE=0; observed {[f'{p[2]:#06b}' for p in bad_r]} in "
         f"{len(bad_r)} of {len(rd)} read cycles"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Slave-face ready outputs while rst_n is asserted (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+# AWREADY and WREADY are probed with the write channels valid. ARREADY is held low by the bridge
+# while a write channel is valid, so it is probed in a second hold with only ARVALID high.
+def _reset_probe_write(dut):
+    valids = [dut.s_axil_awvalid, dut.s_axil_wvalid]
+    extra = {dut.s_axil_awaddr: REG0, dut.s_axil_wstrb: 0xF,
+             dut.s_axil_bready: 1, dut.s_axil_rready: 1}
+    readies = {"s_axil_awready": dut.s_axil_awready, "s_axil_wready": dut.s_axil_wready}
+    return valids, extra, readies
+
+
+def _reset_probe_read(dut):
+    valids = [dut.s_axil_arvalid]
+    extra = {dut.s_axil_araddr: REG0, dut.s_axil_awvalid: 0, dut.s_axil_wvalid: 0,
+             dut.s_axil_bready: 1, dut.s_axil_rready: 1}
+    readies = {"s_axil_arready": dut.s_axil_arready}
+    return valids, extra, readies
+
+
+@cocotb.test()
+async def test_reset_ready_low_in_reset(dut):
+    """AWREADY, WREADY and ARREADY are low while rst_n is low, with the channel VALID high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    seen = []
+    for probe in (_reset_probe_write, _reset_probe_read):
+        valids, extra, readies = probe(dut)
+        seen += await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    assert_ready_low(dut, seen, "slave-face ready while rst_n is low")
+
+
+@cocotb.test()
+async def test_reset_ready_control_after_release(dut):
+    """Control: the same stimulus after rst_n releases shows AWREADY, WREADY and ARREADY high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    high = set()
+    for probe in (_reset_probe_write, _reset_probe_read):
+        valids, extra, readies = probe(dut)
+        await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+        high |= await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    want = {"s_axil_awready", "s_axil_wready", "s_axil_arready"}
+    assert want <= high, (
+        f"probe is blind: after release only {sorted(high)} went high, want {sorted(want)}"
     )

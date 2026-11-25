@@ -11,6 +11,7 @@
 //   * Read: latch AR, send one AXI-Lite read per beat, forward each R beat
 //     with its own response and rlast on the final beat.
 //   * The write and read FSMs are independent. awid/arid reflect on bid/rid.
+//   * AWREADY and ARREADY are gated with rst_n: both are low in reset.
 //
 // Beat address (AxBURST, AxSIZE), as the byte address of the beat:
 //   * FIXED (0): every beat at the start address.
@@ -33,7 +34,6 @@
 //   * Late beats add no error to B. A late beat not yet offered at the sample
 //     cannot be told from a missing WLAST. A late burst that never gets WLAST
 //     stays in the sink state.
-//
 // Doc: tm:mod:axi4-to-axilite
 //
 // AXI4-Lite master ports use full 32-bit address (m_axil_awaddr/araddr).
@@ -186,8 +186,8 @@ module axi4_to_axilite
     logic           aw_done_q;
     logic           w_done_q;
 
-    // AW handshake: accept only when IDLE
-    assign s_awready = (ws_q == WS_IDLE);
+    // AW handshake: accept only when IDLE and not in reset
+    assign s_awready = rst_n && (ws_q == WS_IDLE);
 
     // W handshake: accept one beat in WS_DATA, or sink beats beyond AWLEN in
     // WS_SINK. No other state asserts s_wready, so data is never consumed
@@ -332,7 +332,7 @@ module axi4_to_axilite
     logic [DW-1:0]   rdata_q;
     logic [1:0]      rresp_q;
 
-    assign s_arready = (rs_q == RS_IDLE);
+    assign s_arready = rst_n && (rs_q == RS_IDLE);
 
     assign m_axil_araddr  = r_addr_q;
     assign m_axil_arprot  = 3'b000;

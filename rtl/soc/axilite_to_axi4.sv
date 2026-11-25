@@ -4,7 +4,7 @@
 // Purpose: the GPU ifetch port (m_axil_if_*) is a pure AXI4-Lite read
 // channel.  This adapter presents it to the AXI4 crossbar as a full AXI4
 // read master (arlen=0, arsize=4B, arburst=INCR, arid=const=0).
-// Write channels are tied off: awvalid=0, wvalid=0, bready=1.
+// Write channels are tied off: awvalid=0, wvalid=0, bready=rst_n.
 //
 // AXI4 handshake buffering:
 //   AXI4 rule A3-38 requires arvalid to remain asserted until arready is seen.
@@ -19,6 +19,8 @@
 //   the master only on the accepting cycle, so a master that holds arvalid does
 //   not issue the same address twice.
 //
+// Reset: m_axi_arvalid and s_axil_arready are low while rst_n is low or gpu_rst_i is high.
+//
 // GPU power cycle (Doc: ds:mod:pmu):
 //   gpu_rst_i clears the AR skid buffer, so a request of the old GPU does not outlive
 //   its reset.  rd_out_q marks a read in flight and is cleared by rst_n only.  While
@@ -32,9 +34,7 @@
 //   arlen  = 0       (single-beat)
 //   arsize = 3'b010  (4 bytes, AXI_SIZE_4B)
 //   arburst= 2'b01   (INCR, AXI_BURST_INCR)
-// Write channels fully tied off:
-//   awvalid = 0,  wvalid = 0,  bready = 1
-//   awid/awaddr/awlen/awsize/awburst/wdata/wstrb/wlast all tied 0.
+// Write channels fully tied off: awvalid = wvalid = 0, bready = rst_n, all other outputs 0.
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
@@ -117,7 +117,7 @@ module axilite_to_axi4
     assign m_axi_wstrb   = '0;
     assign m_axi_wlast   = 1'b0;
     assign m_axi_wvalid  = 1'b0;
-    assign m_axi_bready  = 1'b1;   // always absorb spurious B beats
+    assign m_axi_bready  = rst_n;  // no B is outstanding, so ready only drops in reset
 
     // ── AR skid buffer: hold arvalid until arready (AXI4 A3-38) ─────────────
     // ar_hold_q=1 means we have a pending AR transaction the crossbar has not
@@ -130,9 +130,9 @@ module axilite_to_axi4
     assign skid_rst_n = rst_n & ~gpu_rst_i;
 
     // Combinatorial: present arvalid to crossbar from either the live slave
-    // input (new request) or the buffer (held request).
+    // input (new request) or the buffer (held request); none in reset.
     logic ar_pending;
-    assign ar_pending = ar_hold_q | s_axil_arvalid;
+    assign ar_pending = (ar_hold_q | s_axil_arvalid) & skid_rst_n;
 
     assign m_axi_arid    = IW'(MASTER_ID);
     assign m_axi_araddr  = ar_hold_q ? ar_addr_q : s_axil_araddr;

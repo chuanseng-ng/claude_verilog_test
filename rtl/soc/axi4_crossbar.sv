@@ -21,6 +21,7 @@
 //     Doc: ds:ch:mod-data-fabric
 //   * Unmapped address -> the crossbar returns a DECERR response and completes
 //     the transaction (a bad address never stalls a master).
+//   * Master-facing AWREADY and ARREADY are low while rst_n is low.
 //   * Master-facing ports carry NO id; the crossbar tags slave-facing requests
 //     with the master index (s_*id) and routes responses back via the per-slave
 //     grant register (engine memory), so id echo is not required for routing.
@@ -30,7 +31,6 @@
 //     read-after-write ordering to the same slave must wait for B before AR.
 //     The deadlock-free claim covers only masters that drain responses; a
 //     master that stalls its R/B channel indefinitely wedges that slave engine.
-//
 // Lint note: packed 2D arrays for all internal state; generate blocks that
 // used always_comb to drive port array slices are replaced with two-step
 // patterns: (1) always_comb drives packed intermediate wires, (2) a generate
@@ -637,15 +637,17 @@ module axi4_crossbar #(
     end
 
     // Combine slave-sourced and DECERR-sourced master responses into _m_* intermediates.
+    // AWREADY and ARREADY are the only outputs that can rise from an idle
+    // engine, so they are the ones gated with rst_n: no ready while in reset.
     // Does NOT drive port arrays directly — see generate assigns below.
     always_comb begin
         for (int unsigned m = 0; m < N_MASTERS; m++) begin
-            _m_awready[m] = slv_awready[m] | dec_awready[m];
+            _m_awready[m] = rst_n && (slv_awready[m] | dec_awready[m]);
             _m_wready [m] = slv_wready [m] | dec_wready [m];
             _m_bvalid [m] = slv_bvalid [m] | dec_bvalid [m];
             _m_bresp  [m] = dec_bvalid [m] ? AXI_RESP_DECERR : slv_bresp[m];
 
-            _m_arready[m] = slv_arready[m] | dec_arready[m];
+            _m_arready[m] = rst_n && (slv_arready[m] | dec_arready[m]);
             _m_rvalid [m] = slv_rvalid [m] | dec_rvalid [m];
             _m_rdata  [m] = dec_rvalid [m] ? '0             : slv_rdata[m];
             _m_rresp  [m] = dec_rvalid [m] ? AXI_RESP_DECERR : slv_rresp[m];

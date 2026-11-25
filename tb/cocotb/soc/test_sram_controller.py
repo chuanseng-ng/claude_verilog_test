@@ -20,6 +20,7 @@ from bfm.axi4_master import RESP_OKAY, AXI4Master
 from cocotb.clock import Clock
 from cocotb.triggers import ReadOnly, RisingEdge, with_timeout
 from cocotb.utils import get_sim_time
+from reset_ready_probe import assert_ready_low, hold_reset_sample_ready, release_reset_sample_ready
 
 CLK_PERIOD_NS = 2
 RESP_SLVERR = 0b10
@@ -1335,3 +1336,37 @@ async def test_wrap_burst_is_rejected_with_slverr(dut):
     t = await m.read(base + 8, 3, burst=BURST_FIXED)
     assert t.data == [good[2]] * 3 and t.resps == [RESP_OKAY] * 3, [hex(d) for d in t.data]
     dut._log.info("test_wrap_burst_is_rejected_with_slverr PASS")
+
+
+# ---------------------------------------------------------------------------
+# Ready outputs while rst_n is asserted (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+def _reset_probe_ports(dut):
+    valids = [dut.s_awvalid, dut.s_wvalid, dut.s_arvalid]
+    extra = {dut.s_awaddr: SRAM_BASE, dut.s_araddr: SRAM_BASE, dut.s_awsize: 2, dut.s_arsize: 2,
+             dut.s_wlast: 1, dut.s_bready: 1, dut.s_rready: 1}
+    for sig in ("mb_en_i", "mb_ce_i", "mb_we_i", "mb_wmask_i", "mb_addr_i", "mb_din_i"):
+        extra[getattr(dut, sig)] = 0
+    readies = {"s_awready": dut.s_awready, "s_wready": dut.s_wready, "s_arready": dut.s_arready}
+    return valids, extra, readies
+
+
+@cocotb.test()
+async def test_reset_ready_low_in_reset(dut):
+    """AWREADY, WREADY and ARREADY are low while rst_n is low, with all VALIDs high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _reset_probe_ports(dut)
+    seen = await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    assert_ready_low(dut, seen, "ready while rst_n is low")
+
+
+@cocotb.test()
+async def test_reset_ready_control_after_release(dut):
+    """Control: the same stimulus after rst_n releases shows AWREADY and ARREADY high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _reset_probe_ports(dut)
+    await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    high = await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    assert {"s_awready", "s_arready"} <= high, (
+        f"probe is blind: after release only {sorted(high)} went high"
+    )

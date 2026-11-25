@@ -20,6 +20,7 @@ import cocotb
 from axi4_fabric_bfm import (BURST_INCR, DECERR, GARBAGE, OKAY, SLVERR, AxiSlave)
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
+from reset_ready_probe import assert_ready_low, hold_reset_sample_ready, release_reset_sample_ready
 
 ADDR_A = 0x0000_1040
 ADDR_B = 0x0000_2080
@@ -218,3 +219,118 @@ async def test_reset_clears_held_request(dut):
     dut.rst_n.value = 1
     rows = await _observe(dut, 6)
     assert all(not r["av"] for r in rows), "held AR reappeared after reset release"
+
+
+# ---------------------------------------------------------------------------
+# Ready outputs while a reset input is asserted (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+# Two reset inputs: rst_n (fabric) and gpu_rst_i (GPU domain, active high). ARREADY toward the GPU
+# follows the fabric ARREADY while ARVALID is high, so the probe holds the fabric ARREADY high, as
+# a crossbar that accepts in reset would. BREADY toward the fabric is a constant; RREADY follows
+# the GPU RREADY, which the probe holds low so that any high RREADY would come from the adapter
+# itself.
+def _reset_probe_ports(dut):
+    valids = [dut.s_axil_arvalid]
+    extra = {dut.s_axil_araddr: ADDR_A, dut.s_axil_rready: 0, dut.m_axi_arready: 1}
+    return valids, extra
+
+
+@cocotb.test()
+async def test_reset_ready_low_in_fabric_reset(dut):
+    """ARREADY, BREADY and RREADY are low in every cycle that rst_n is low, with ARVALID high."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    dut.gpu_rst_i.value = 0
+    valids, extra = _reset_probe_ports(dut)
+    readies = {"s_axil_arready": dut.s_axil_arready, "m_axi_bready": dut.m_axi_bready,
+               "m_axi_rready": dut.m_axi_rready}
+    seen = await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    assert_ready_low(dut, seen, "adapter ready while rst_n is low")
+
+
+@cocotb.test()
+async def test_reset_ready_low_in_gpu_reset(dut):
+    """ARREADY toward the GPU is low in every cycle that gpu_rst_i is high, with ARVALID high."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    dut.rst_n.value = 1
+    valids, extra = _reset_probe_ports(dut)
+    readies = {"s_axil_arready": dut.s_axil_arready}
+    seen = await hold_reset_sample_ready(dut.clk, dut.gpu_rst_i, valids, readies, extra,
+                                         reset_active_low=False)
+    assert_ready_low(dut, seen, "adapter ready while gpu_rst_i is high")
+
+
+async def _hold_until_accepted(dut, addr, limit=30):
+    """GPU side: hold ARVALID with `addr` until ARREADY is seen at a clock edge, then drop it."""
+    dut.s_axil_araddr.value = addr
+    dut.s_axil_arvalid.value = 1
+    for _ in range(limit):
+        await RisingEdge(dut.clk)
+        if int(dut.s_axil_arready.value):
+            dut.s_axil_arvalid.value = 0
+            dut.s_axil_araddr.value = GARBAGE
+            return True
+    return False
+
+
+@cocotb.test()
+async def test_held_arvalid_in_reset_issues_one_ar_after_release(dut):
+    """GPU holds ARVALID through a reset: no AR or ARREADY in reset, one AR after release."""
+    first = True
+    for kind in ("rst_n", "gpu_rst_i"):
+        slave = await _setup(dut, clock=first, ar_delay=0)
+        first = False
+        dut.gpu_rst_i.value = 0
+        in_reset = (dut.rst_n, 0) if kind == "rst_n" else (dut.gpu_rst_i, 1)
+        in_reset[0].value = in_reset[1]
+        dut.s_axil_araddr.value = ADDR_A
+        dut.s_axil_arvalid.value = 1
+        rows = await _observe(dut, 8)
+        assert all(not r["av"] and not r["sar"] for r in rows), (
+            f"{kind}: AR or ARREADY seen while in reset: {[r for r in rows if r['av'] or r['sar']]}"
+        )
+        assert not slave.ar_log, f"{kind}: {len(slave.ar_log)} AR handshake(s) while in reset"
+        in_reset[0].value = 1 - in_reset[1]
+        assert await _hold_until_accepted(dut, ADDR_A), f"{kind}: no ARREADY after release"
+        await _observe(dut, 8)
+        assert [a["addr"] for a in slave.ar_log] == [ADDR_A], (
+            f"{kind}: AR handshakes after release: {[hex(a['addr']) for a in slave.ar_log]}"
+        )
+        slave.stop()
+    dut.gpu_rst_i.value = 0
+
+
+@cocotb.test()
+async def test_gpu_reset_mid_hold_issues_one_ar_per_fetch(dut):
+    """GPU reset while a held AR waits for the crossbar: one AR per fetch, no duplicate."""
+    slave = await _setup(dut, ar_delay=6)
+    dut.gpu_rst_i.value = 0
+    for addr in (ADDR_A, ADDR_B):
+        dut.s_axil_araddr.value = addr
+        dut.s_axil_arvalid.value = 1
+        await _observe(dut, 2)
+        dut.gpu_rst_i.value = 1
+        rows = await _observe(dut, 4)
+        assert all(not r["av"] and not r["sar"] for r in rows), (
+            f"{addr:#x}: AR or ARREADY seen while gpu_rst_i is high"
+        )
+        dut.gpu_rst_i.value = 0
+        assert await _hold_until_accepted(dut, addr), f"{addr:#x}: no ARREADY after release"
+        await _observe(dut, 20)
+    assert [a["addr"] for a in slave.ar_log] == [ADDR_A, ADDR_B], (
+        f"AR handshakes: {[hex(a['addr']) for a in slave.ar_log]}"
+    )
+    slave.stop()
+
+
+@cocotb.test()
+async def test_reset_ready_control_after_release(dut):
+    """Control: with both resets released and ARVALID high, ARREADY and BREADY are high."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    dut.gpu_rst_i.value = 0
+    valids, extra = _reset_probe_ports(dut)
+    readies = {"s_axil_arready": dut.s_axil_arready, "m_axi_bready": dut.m_axi_bready}
+    await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    high = await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    assert {"s_axil_arready", "m_axi_bready"} <= high, (
+        f"probe is blind: after release only {sorted(high)} went high"
+    )
