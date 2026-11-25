@@ -922,15 +922,14 @@ async def test_reset_ready_control_after_release(dut):
 # response of the slot is absorbed, then the slot is forwarded again. Other slots are not
 # affected. Unmapped addresses (DECERR) and off slots keep their answers.
 #
-# The tests use the default bound. The wrapper does not pass TIMEOUT_CYCLES to the DUT, so the
-# build keeps elaborating on an RTL that has no such parameter. A later change that adds the
-# parameter can pass a small value through the wrapper and shrink TIMEOUT_CYCLES below.
+# The wrapper builds the DUT with TIMEOUT_CYCLES = 512 (the SoC default is larger), so the tests
+# stay short. `TIMEOUT_CYCLES` below must equal the wrapper parameter.
 #
 # The wrapper stalls a slot with hang_addr (address handshake never completes), hang_w (W never
 # accepted) and hang_resp (B or R held back, released by the test for a slave that answers late).
-#
-# Each test that needs the bounded wait is expect_fail until the RTL has it. The tests without
-# expect_fail are controls: they pass on the present RTL and must keep passing.
+# A request that the slot has not taken stays presented to it after the timeout, so a slot that
+# recovers still receives it. A master stall (wvalid, bready or rready low) is not a wait for the
+# slot and does not count toward the bound.
 # ──────────────────────────────────────────────────────────────────────────────
 
 TIMEOUT_CYCLES = 512  # TIMEOUT_CYCLES of the wrapper build
@@ -976,35 +975,30 @@ async def _run_in_background(coro):
     return ev, box
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_timeout_write_no_response_slverr(dut):
-    """The slot takes AW and W and never gives B. The master gets one BRESP SLVERR within the bound.
-
-    expect_fail: the write engine waits for B forever (no bounded wait yet)."""
+    """The slot takes AW and W and never gives B. The master gets one BRESP SLVERR within the
+    bound."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_GPU)
     t = await _txn(dut, "w", GPU, 0xBAD0_1001, max_cycles=BOUND_RUN)
     _check_bounded(t, RESP_SLVERR, "write, slot never answers B")
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_timeout_read_no_response_slverr_and_data(dut):
     """The slot takes AR and never gives R. The master gets one RRESP SLVERR and RDATA 0xDEAD_BEEF
-    within the bound.
-
-    expect_fail: the read engine waits for R forever."""
+    within the bound."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_APB)
     t = await _txn(dut, "r", APB, max_cycles=BOUND_RUN)
     _check_bounded(t, RESP_SLVERR, "read, slot never answers R", OFF_RDATA)
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_timeout_write_address_never_accepted(dut):
     """The slot never accepts the AW. The bound also covers this wait: the master gets one SLVERR
-    within the bound and its AW and W are both taken.
-
-    expect_fail: the write engine waits for AWREADY forever."""
+    within the bound and its AW and W are both taken."""
     await _setup_off(dut)
     _set_hang(dut, addr=1 << SLOT_DMA)
     t = await _txn(dut, "w", DMA, 0xBAD0_1002, max_cycles=BOUND_RUN)
@@ -1012,12 +1006,10 @@ async def test_timeout_write_address_never_accepted(dut):
     assert t.master_hs["aw"] and t.master_hs["w"], f"master channels not taken: {t.master_hs}"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_timeout_write_data_never_accepted(dut):
     """The slot takes the AW and never accepts the W. The master gets one SLVERR within the bound
-    and its W is taken.
-
-    expect_fail: the write engine waits for WREADY forever."""
+    and its W is taken."""
     await _setup_off(dut)
     _set_hang(dut, w=1 << SLOT_APB)
     t = await _txn(dut, "w", APB, 0xBAD0_1003, max_cycles=BOUND_RUN)
@@ -1025,12 +1017,10 @@ async def test_timeout_write_data_never_accepted(dut):
     assert t.master_hs["w"], f"master W not taken: {t.master_hs}"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_timeout_read_address_never_accepted(dut):
     """The slot never accepts the AR. The master gets one SLVERR and 0xDEAD_BEEF within the bound
-    and its AR is taken.
-
-    expect_fail: the read engine waits for ARREADY forever."""
+    and its AR is taken."""
     await _setup_off(dut)
     _set_hang(dut, addr=1 << SLOT_GPU)
     t = await _txn(dut, "r", GPU, max_cycles=BOUND_RUN)
@@ -1038,12 +1028,10 @@ async def test_timeout_read_address_never_accepted(dut):
     assert t.master_hs["ar"], f"master AR not taken: {t.master_hs}"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_stale_write_slot_answers_at_once(dut):
     """After a write timeout the slot is stale: the next write to it ends at once with SLVERR and
-    no AW or W is forwarded. A write to another slot still works.
-
-    expect_fail: the first write never times out."""
+    no AW or W is forwarded. A write to another slot still works."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_GPU)
     t = await _txn(dut, "w", GPU, 0xBAD0_2001, max_cycles=BOUND_RUN)
@@ -1055,12 +1043,10 @@ async def test_stale_write_slot_answers_at_once(dut):
     _check_once(t, RESP_OKAY, "write to another slot")
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_stale_read_slot_answers_at_once(dut):
     """After a read timeout the slot is stale: the next read of it ends at once with SLVERR and
-    0xDEAD_BEEF and no AR is forwarded. A read of another slot still works.
-
-    expect_fail: the first read never times out."""
+    0xDEAD_BEEF and no AR is forwarded. A read of another slot still works."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_GPU)
     t = await _txn(dut, "r", GPU, max_cycles=BOUND_RUN)
@@ -1072,12 +1058,10 @@ async def test_stale_read_slot_answers_at_once(dut):
     _check_once(t, RESP_OKAY, "read of another slot", _known(SLOT_DMA))
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_late_write_response_absorbed_slot_reopens(dut):
     """The late B of a timed-out write is not shown to the master. Once the slot has answered, the
-    next write is forwarded and ends with OKAY, and the data reads back.
-
-    expect_fail: the first write never times out."""
+    next write is forwarded and ends with OKAY, and the data reads back."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_GPU)
     t = await _txn(dut, "w", GPU, 0xBAD0_3001, max_cycles=BOUND_RUN)
@@ -1093,12 +1077,10 @@ async def test_late_write_response_absorbed_slot_reopens(dut):
     assert rresp == RESP_OKAY and data == 0x600D_3003, f"read back {data:#x} resp {rresp}"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_late_read_response_absorbed_slot_reopens(dut):
     """The late R of a timed-out read is not shown to the master. Once the slot has answered, the
-    next read is forwarded and returns the real data with OKAY.
-
-    expect_fail: the first read never times out."""
+    next read is forwarded and returns the real data with OKAY."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_GPU)
     t = await _txn(dut, "r", GPU, max_cycles=BOUND_RUN)
@@ -1118,12 +1100,10 @@ async def dut_read(dut, addr):
     return t.rdata, t.resp
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_write_timeout_leaves_read_engine_and_other_slots_alone(dut):
     """While the write engine waits for a slot that never answers, reads of the other slots work
-    at once. The write then times out with SLVERR, and writes to the other slots work afterwards.
-
-    expect_fail: the write never times out."""
+    at once. The write then times out with SLVERR, and writes to the other slots work afterwards."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_GPU)
     ev, box = await _run_in_background(_txn(dut, "w", GPU, 0xBAD0_4001, max_cycles=BOUND_RUN))
@@ -1138,13 +1118,11 @@ async def test_write_timeout_leaves_read_engine_and_other_slots_alone(dut):
         _check_once(t, RESP_OKAY, f"write to slot {k} after the timeout")
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_read_timeout_leaves_write_engine_and_other_slots_alone(dut):
     """While the read engine waits for a slot that never answers, writes to the other slots work
     at once. The read then times out with SLVERR and 0xDEAD_BEEF, and reads of the other slots work
-    afterwards.
-
-    expect_fail: the read never times out."""
+    afterwards."""
     await _setup_off(dut)
     _set_hang(dut, resp=1 << SLOT_GPU)
     ev, box = await _run_in_background(_txn(dut, "r", GPU, max_cycles=BOUND_RUN))
@@ -1202,3 +1180,364 @@ async def test_decerr_and_off_keep_priority_with_all_slots_stalled(dut):
         t = await _txn(dut, "r", base)
         _check_local(t, RESP_SLVERR, f"read off slot {k}", OFF_RDATA)
     dut.slv_off.value = 0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Bounded wait: the held request, stale-slot interaction, master stalls, the bound edge.
+# ──────────────────────────────────────────────────────────────────────────────
+
+QUIET = 40  # cycles that the late response needs to pass through a stale slot
+ABSORB = 20  # cycles for the held request and the late response of a recovered slot to settle
+
+
+async def _idle(dut, cycles):
+    for _ in range(cycles):
+        await RisingEdge(dut.clk)
+
+
+def _slot_field(sig, k, width):
+    """Lane `k` of a packed [N][width] slave-side bus."""
+    return (int(sig.value) >> (k * width)) & ((1 << width) - 1)
+
+
+async def _held_presented(dut, valid, field, width, k, expect, cycles, label):
+    """The valid of slot `k` stays high with the payload `expect` for `cycles` cycles, and no other
+    slot sees the valid."""
+    for c in range(cycles):
+        await FallingEdge(dut.clk)
+        v = int(valid.value)
+        assert (v >> k) & 1, f"{label}: valid of slot {k} dropped in cycle {c}"
+        assert v == 1 << k, f"{label}: valid {v:03b} reaches another slot in cycle {c}"
+        got = _slot_field(field, k, width)
+        assert got == expect, f"{label}: payload {got:#x}, expected {expect:#x} in cycle {c}"
+    await RisingEdge(dut.clk)
+
+
+async def _timeout_once(dut, kind, addr, data=0, label=""):
+    t = await _txn(dut, kind, addr, data, max_cycles=BOUND_RUN)
+    _check_bounded(t, RESP_SLVERR, label, None if kind == "w" else OFF_RDATA)
+    return t
+
+
+@cocotb.test()
+async def test_held_aw_reaches_slot_after_release(dut):
+    """The slot never accepts the AW. After the timeout the AW stays presented to the slot with its
+    address, the stale slot answers a new write locally, and the late request is not lost: when the
+    slot recovers it takes the held AW and W, the write lands at the address of the timed-out write
+    (not the new one), the late B is not shown to the master and the slot is forwarded again."""
+    m = await _setup_off(dut)
+    addr = GPU + 8
+    _set_hang(dut, addr=1 << SLOT_GPU)
+    await _timeout_once(dut, "w", addr, 0x600D_8001, "write, slot never accepts AW")
+    await _held_presented(dut, dut.s_awvalid, dut.s_awaddr, 32, SLOT_GPU, addr, 20, "held AW")
+    t = await _txn(dut, "w", GPU, 0xBAD0_8002)
+    _check_once(t, RESP_SLVERR, "write to the stale slot")
+    assert t.resp_cycle <= AT_ONCE, f"stale answer in cycle {t.resp_cycle}"
+    _set_hang(dut)
+    await _quiet_master(dut, "m_axil_bvalid", QUIET, "late B")
+    assert int(dut.s_awvalid.value) == 0 and int(dut.s_wvalid.value) == 0, "request still presented"
+    data, rresp = await m.read(addr)
+    assert rresp == RESP_OKAY and data == 0x600D_8001, f"held write: {data:#x} resp {rresp}"
+    await _expect_slot_unchanged(dut, m, SLOT_GPU, GPU, "address of the dropped write")
+    t = await _txn(dut, "w", GPU, 0x600D_8003)
+    _check_once(t, RESP_OKAY, "write after the slot reopened")
+    assert t.fwd["aw"] >= 1 and t.fwd["w"] >= 1, f"not forwarded: {t.fwd}"
+
+
+@cocotb.test()
+async def test_held_w_reaches_slot_after_release(dut):
+    """The slot takes the AW and never accepts the W. After the timeout the W stays presented with
+    its data. When the slot recovers it takes the held W, the write lands, the late B is not shown
+    to the master and the slot is forwarded again."""
+    m = await _setup_off(dut)
+    addr = GPU + 8
+    _set_hang(dut, w=1 << SLOT_GPU)
+    await _timeout_once(dut, "w", addr, 0x600D_8101, "write, slot never accepts W")
+    await _held_presented(dut, dut.s_wvalid, dut.s_wdata, 32, SLOT_GPU, 0x600D_8101, 20, "held W")
+    t = await _txn(dut, "w", GPU, 0xBAD0_8102)
+    _check_once(t, RESP_SLVERR, "write to the stale slot")
+    assert t.resp_cycle <= AT_ONCE, f"stale answer in cycle {t.resp_cycle}"
+    _set_hang(dut)
+    await _quiet_master(dut, "m_axil_bvalid", QUIET, "late B")
+    assert int(dut.s_wvalid.value) == 0, "W still presented"
+    data, rresp = await m.read(addr)
+    assert rresp == RESP_OKAY and data == 0x600D_8101, f"held write: {data:#x} resp {rresp}"
+    await _expect_slot_unchanged(dut, m, SLOT_GPU, GPU, "address of the dropped write")
+    t = await _txn(dut, "w", GPU, 0x600D_8103)
+    _check_once(t, RESP_OKAY, "write after the slot reopened")
+    assert t.fwd["aw"] >= 1 and t.fwd["w"] >= 1, f"not forwarded: {t.fwd}"
+
+
+@cocotb.test()
+async def test_held_ar_reaches_slot_after_release(dut):
+    """The slot never accepts the AR. After the timeout the AR stays presented with its address and
+    the stale slot answers a new read locally. When the slot recovers it takes the held AR, the late
+    R is not shown to the master and the slot is forwarded again."""
+    m = await _setup_off(dut)
+    addr = GPU + 8
+    assert await m.write(addr, 0x600D_8201) == RESP_OKAY
+    _set_hang(dut, addr=1 << SLOT_GPU)
+    await _timeout_once(dut, "r", addr, label="read, slot never accepts AR")
+    await _held_presented(dut, dut.s_arvalid, dut.s_araddr, 32, SLOT_GPU, addr, 20, "held AR")
+    t = await _txn(dut, "r", GPU)
+    _check_once(t, RESP_SLVERR, "read of the stale slot", OFF_RDATA)
+    assert t.resp_cycle <= AT_ONCE, f"stale answer in cycle {t.resp_cycle}"
+    _set_hang(dut)
+    await _quiet_master(dut, "m_axil_rvalid", QUIET, "late R")
+    assert int(dut.s_arvalid.value) == 0, "AR still presented"
+    t = await _txn(dut, "r", addr)
+    _check_once(t, RESP_OKAY, "read after the slot reopened", 0x600D_8201)
+    assert t.fwd["ar"] >= 1, f"not forwarded: {t.fwd}"
+
+
+@cocotb.test()
+async def test_off_pulse_keeps_stale_bit_and_late_response_is_absorbed(dut):
+    """Off and stale on one slot, write and read engine. An off pulse in the stale window does not
+    drop the stale bit: after the flag falls the slot still answers locally while its response is
+    outstanding. The late response is absorbed while the slot is off. Then the slot is forwarded."""
+    m = await _setup_off(dut)
+    for kind in ("w", "r"):
+        what = "write" if kind == "w" else "read"
+        rd = None if kind == "w" else OFF_RDATA
+        quiet = "m_axil_bvalid" if kind == "w" else "m_axil_rvalid"
+        _set_hang(dut, resp=1 << SLOT_GPU)
+        await _timeout_once(dut, kind, GPU, 0xBAD0_9001, f"{what} that times out")
+        dut.slv_off.value = 1 << SLOT_GPU
+        t = await _txn(dut, kind, GPU, 0xBAD0_9002)
+        _check_local(t, RESP_SLVERR, f"{what}, slot off and stale", rd)
+        dut.slv_off.value = 0
+        t = await _txn(dut, kind, GPU, 0xBAD0_9003)
+        _check_local(t, RESP_SLVERR, f"{what}, off fell and the response is outstanding", rd)
+        dut.slv_off.value = 1 << SLOT_GPU
+        _set_hang(dut)
+        await _quiet_master(dut, quiet, QUIET, f"late response of the {what}, slot off")
+        t = await _txn(dut, kind, GPU, 0xBAD0_9004)
+        _check_local(t, RESP_SLVERR, f"{what}, slot off after absorption", rd)
+        dut.slv_off.value = 0
+        t = await _txn(dut, kind, GPU, 0x600D_9005)
+        _check_once(t, RESP_OKAY, f"{what} after off fell and the response was absorbed")
+        assert t.fwd["aw" if kind == "w" else "ar"] >= 1, f"{what} not forwarded: {t.fwd}"
+        await _rereset(dut, m)
+
+
+@cocotb.test()
+async def test_two_stale_slots_reopen_independently(dut):
+    """Two slots of one engine are stale at once, write and read. Each late response clears only the
+    bit of its own slot: after the first slot answers, only that slot is forwarded again."""
+    m = await _setup_off(dut)
+    both = (1 << SLOT_GPU) | (1 << SLOT_APB)
+    for kind in ("w", "r"):
+        what = "write" if kind == "w" else "read"
+        rd = None if kind == "w" else OFF_RDATA
+        quiet = "m_axil_bvalid" if kind == "w" else "m_axil_rvalid"
+        _set_hang(dut, resp=both)
+        await _timeout_once(dut, kind, GPU, 0xBAD0_A001, f"{what} to slot GPU")
+        await _timeout_once(dut, kind, APB, 0xBAD0_A002, f"{what} to slot APB")
+        for base in (GPU, APB):
+            t = await _txn(dut, kind, base, 0xBAD0_A003)
+            _check_local(t, RESP_SLVERR, f"{what}, both slots stale", rd)
+        _set_hang(dut, resp=1 << SLOT_APB)
+        await _quiet_master(dut, quiet, QUIET, f"late response of slot GPU, {what}")
+        t = await _txn(dut, kind, GPU, 0x600D_A004)
+        _check_once(t, RESP_OKAY, f"{what}, slot GPU after its response")
+        t = await _txn(dut, kind, APB, 0xBAD0_A005)
+        _check_local(t, RESP_SLVERR, f"{what}, slot APB still stale", rd)
+        _set_hang(dut)
+        await _quiet_master(dut, quiet, QUIET, f"late response of slot APB, {what}")
+        t = await _txn(dut, kind, APB, 0x600D_A006)
+        _check_once(t, RESP_OKAY, f"{what}, slot APB after its response")
+        await _rereset(dut, m)
+
+
+@cocotb.test()
+async def test_stale_bit_belongs_to_one_engine(dut):
+    """A write timeout does not make the slot stale for reads, and a read timeout does not make it
+    stale for writes: the access is forwarded and ends only at the bound."""
+    m = await _setup_off(dut)
+    for first, second, sig in (("w", "r", "ar"), ("r", "w", "aw")):
+        _set_hang(dut, resp=1 << SLOT_GPU)
+        await _timeout_once(dut, first, GPU, 0xBAD0_B001, f"{first} that times out")
+        t = await _txn(dut, second, GPU, 0xBAD0_B002, max_cycles=BOUND_RUN)
+        assert t.fwd[sig] >= 1, f"{second} to the slot stale for {first} not forwarded: {t.fwd}"
+        assert t.resp_cycle is not None and t.resp_cycle > AT_ONCE, (
+            f"{second} answered at once in cycle {t.resp_cycle}: stale bit shared across engines"
+        )
+        rd = None if second == "w" else OFF_RDATA
+        _check_bounded(t, RESP_SLVERR, f"{second} that times out", rd)
+        _set_hang(dut)
+        await _idle(dut, QUIET)
+        await _rereset(dut, m)
+
+
+@cocotb.test()
+async def test_master_wvalid_stall_is_not_counted(dut):
+    """The master gives the AW and holds wvalid low for twice the bound. The slot owes nothing, so
+    no timeout: no B appears. When the W comes the write ends with its real OKAY and the data
+    lands."""
+    m = await _setup_off(dut)
+    addr = GPU + 8
+    dut.m_axil_bready.value = 1
+    dut.m_axil_awaddr.value = addr
+    dut.m_axil_awprot.value = 0
+    dut.m_axil_awvalid.value = 1
+    dut.m_axil_wvalid.value = 0
+    dut.m_axil_wdata.value = 0x600D_C001
+    dut.m_axil_wstrb.value = 0xF
+    aw_taken = False
+    for c in range(2 * TIMEOUT_CYCLES):
+        await FallingEdge(dut.clk)
+        assert int(dut.m_axil_bvalid.value) == 0, f"B in cycle {c} with the W withheld"
+        hs = int(dut.m_axil_awvalid.value) and int(dut.m_axil_awready.value)
+        await RisingEdge(dut.clk)
+        if hs:
+            aw_taken = True
+            dut.m_axil_awvalid.value = 0
+    assert aw_taken, "AW was never taken"
+    dut.m_axil_wvalid.value = 1
+    resp = None
+    for c in range(ABSORB):
+        await FallingEdge(dut.clk)
+        if int(dut.m_axil_bvalid.value):
+            resp = int(dut.m_axil_bresp.value)
+            await RisingEdge(dut.clk)
+            break
+        await RisingEdge(dut.clk)
+    dut.m_axil_wvalid.value = 0
+    assert resp == RESP_OKAY, f"response after the late W: {resp}"
+    data, rresp = await m.read(addr)
+    assert rresp == RESP_OKAY and data == 0x600D_C001, f"write did not land: {data:#x} resp {rresp}"
+
+
+@cocotb.test()
+async def test_master_response_stall_is_not_counted(dut):
+    """The slot answers at once and the master holds bready (rready) low for longer than the bound.
+    The response waits unchanged, no timeout: the real OKAY (and the real read data) is delivered
+    once, when the master takes it."""
+    m = await _setup_off(dut)
+    hold = TIMEOUT_CYCLES + 150
+    t = await _txn(dut, "w", GPU, 0x600D_C101, ready={0: 0, hold: 1}, max_cycles=hold + 40)
+    _check_once(t, RESP_OKAY, "write, master holds bready low")
+    assert t.resp_cycle >= hold, f"response taken in cycle {t.resp_cycle}"
+    t = await _txn(dut, "r", GPU, ready={0: 0, hold: 1}, max_cycles=hold + 40)
+    _check_once(t, RESP_OKAY, "read, master holds rready low", 0x600D_C101)
+    assert t.resp_cycle >= hold, f"response taken in cycle {t.resp_cycle}"
+    t = await _txn(dut, "r", GPU)
+    _check_once(t, RESP_OKAY, "read after the stall: the slot is not stale", 0x600D_C101)
+    assert t.fwd["ar"] >= 1, f"not forwarded: {t.fwd}"
+    t = await _txn(dut, "w", GPU, 0x600D_C102)
+    _check_once(t, RESP_OKAY, "write after the stall: the slot is not stale")
+    assert t.fwd["aw"] >= 1, f"not forwarded: {t.fwd}"
+    await _expect_slot_unchanged(dut, m, SLOT_APB, APB, "other slot")
+
+
+BOUND_EDGE = (
+    # kind, hang argument, what the test calls it
+    ("w", "resp", "B"),
+    ("w", "addr", "AW"),
+    ("w", "w", "W"),
+    ("r", "resp", "R"),
+    ("r", "addr", "AR"),
+)
+
+
+async def _edge_run(dut, m, kind, arg, release_at):
+    """One transaction to slot GPU whose stall is released at cycle `release_at`. Returns the
+    _Txn."""
+    _set_hang(dut)
+    await _rereset(dut, m)
+    assert await m.write(GPU + 8, 0x600D_D003) == RESP_OKAY
+    _set_hang(dut, **{arg: 1 << SLOT_GPU})
+    return await _txn(
+        dut, kind, GPU + 8, 0x600D_D001,
+        act={release_at: lambda: _set_hang(dut)} if release_at is not None else None,
+        max_cycles=BOUND_RUN,
+    )
+
+
+@cocotb.test()
+async def test_response_at_the_bound_wins_no_double_answer(dut):
+    """The slot recovers in each cycle around the bound, for B, AW, W, R and AR. Whatever side of
+    the bound the recovery falls on, the master gets exactly one answer, a late one is never shown,
+    the write lands, and the slot is forwarded again. The sweep must show both outcomes (the real
+    OKAY before the bound, SLVERR after it), once each, in that order."""
+    m = await _setup_off(dut)
+    for kind, arg, name in BOUND_EDGE:
+        what = "write" if kind == "w" else "read"
+        quiet = "m_axil_bvalid" if kind == "w" else "m_axil_rvalid"
+        ref = await _edge_run(dut, m, kind, arg, None)
+        assert not ref.hang and ref.resp == RESP_SLVERR, f"{what} {name}: reference run {ref.fmt()}"
+        edge = ref.resp_cycle
+        outcomes = []
+        for rel in range(edge - 10, edge + 2):
+            t = await _edge_run(dut, m, kind, arg, rel)
+            label = f"{what}, {name} released in cycle {rel} (timeout answer in cycle {edge})"
+            assert not t.hang, f"{label}: no response"
+            assert t.n_resp == 1, f"{label}: {t.n_resp} responses. {t.fmt()}"
+            assert not t.unstable, f"{label}: {t.unstable}"
+            assert t.resp in (RESP_OKAY, RESP_SLVERR), f"{label}: resp {t.resp}"
+            if kind == "r":
+                want = 0x600D_D003 if t.resp == RESP_OKAY else OFF_RDATA
+                assert t.rdata == want, f"{label}: rdata {t.rdata:#x}, expected {want:#x}"
+            outcomes.append(t.resp)
+            await _quiet_master(dut, quiet, QUIET, label)
+            if kind == "w":
+                data = (await _txn(dut, "r", GPU + 8)).rdata
+                assert data == 0x600D_D001, f"{label}: write did not land, read back {data:#x}"
+            t = await _txn(dut, kind, GPU, 0x600D_D002)
+            _check_once(t, RESP_OKAY, f"{label}: access after recovery")
+        assert RESP_OKAY in outcomes and RESP_SLVERR in outcomes, (
+            f"{what} {name}: the sweep does not straddle the bound: {outcomes}"
+        )
+        flip = outcomes.index(RESP_SLVERR)
+        assert all(o == RESP_SLVERR for o in outcomes[flip:]), (
+            f"{what} {name}: outcomes not ordered: {outcomes}"
+        )
+
+
+@cocotb.test()
+async def test_double_fault_write_second_address_timeout(dut):
+    """Known limit: the holder keeps one request per engine. Two slots never accept their AW. The
+    first write times out and its AW and W stay presented to its slot from the holder. The second
+    write times out while the holder is busy: it gets its SLVERR, but its own AW is not kept. Its
+    VALID is withdrawn, so that slot never sees the request and no response will come to clear its
+    stale bit: the slot keeps answering locally until reset. The test pins what must hold in spite
+    of that: each write gets exactly one SLVERR within the bound, nothing hangs, a slot that is not
+    stalled works, the held request of the first write still reaches its slot when it recovers, and
+    the second slot still ends each access once."""
+    m = await _setup_off(dut)
+    _set_hang(dut, addr=(1 << SLOT_GPU) | (1 << SLOT_APB))
+    await _timeout_once(dut, "w", GPU + 8, 0x600D_E001, "first write, AW never accepted")
+    t = await _txn(dut, "w", APB + 8, 0xBAD0_E002, max_cycles=BOUND_RUN)
+    _check_bounded(t, RESP_SLVERR, "second write while the holder is busy")
+    t = await _txn(dut, "w", DMA, 0x600D_E003)
+    _check_once(t, RESP_OKAY, "write to a slot that is not stalled")
+    _set_hang(dut)
+    await _quiet_master(dut, "m_axil_bvalid", QUIET, "late B")
+    data, rresp = await m.read(GPU + 8)
+    assert rresp == RESP_OKAY and data == 0x600D_E001, f"held write: {data:#x} resp {rresp}"
+    t = await _txn(dut, "w", GPU, 0x600D_E004)
+    _check_once(t, RESP_OKAY, "write to the first slot after it recovered")
+    t = await _txn(dut, "w", APB, 0x600D_E005, max_cycles=BOUND_RUN)
+    assert not t.hang and t.n_resp == 1, f"write to the second slot after recovery: {t.fmt()}"
+
+
+@cocotb.test()
+async def test_double_fault_read_second_address_timeout(dut):
+    """Known limit, read engine: the holder keeps one AR. The second read times out while it is
+    busy, gets its SLVERR with OFF_RDATA, and its AR is not kept, so its slot never sees the
+    request and no response will come to clear its stale bit: the slot keeps answering locally
+    until reset. Each read ends once within the bound, nothing hangs, a slot that is not stalled
+    works, the held AR of the first read still reaches its slot when it recovers, and the second
+    slot still ends each access once."""
+    await _setup_off(dut)
+    _set_hang(dut, addr=(1 << SLOT_GPU) | (1 << SLOT_APB))
+    await _timeout_once(dut, "r", GPU, label="first read, AR never accepted")
+    await _timeout_once(dut, "r", APB, label="second read while the holder is busy")
+    t = await _txn(dut, "r", DMA)
+    _check_once(t, RESP_OKAY, "read of a slot that is not stalled", _known(SLOT_DMA))
+    _set_hang(dut)
+    await _quiet_master(dut, "m_axil_rvalid", QUIET, "late R")
+    t = await _txn(dut, "r", GPU)
+    _check_once(t, RESP_OKAY, "read of the first slot after it recovered", _known(SLOT_GPU))
+    t = await _txn(dut, "r", APB, max_cycles=BOUND_RUN)
+    assert not t.hang and t.n_resp == 1, f"read of the second slot after recovery: {t.fmt()}"
