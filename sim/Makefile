@@ -545,9 +545,38 @@ ifneq ($(filter test sim regression results.xml,$(MAKECMDGOALS)),)
 
     # Include cocotb makefiles
     include $(shell $(COCOTB_CONFIG) --makefiles)/Makefile.sim
+
+    # Make a failing cocotb suite fail the make. cocotb 1.9.2's check_for_results_file only tests that the results file EXISTS,
+    # never that it holds no failures, so a red suite run through a single target exited 0. This redefinition goes AFTER the include
+    # and reaches every target, because make expands recipe lines when the rule runs. The verdict comes from
+    # tools/verif/check_cocotb_results.py, which reuses tools/eda/summarize.py's parser. The existence check stays first, so a missing
+    # file still gets cocotb's own message. `check-exit-propagation` below is the self-test that proves this stays wired.
+    define check_for_results_file
+        @test -f $(COCOTB_RESULTS_FILE) || (echo "ERROR: $(COCOTB_RESULTS_FILE) was not written by the simulation!" >&2 && exit 1)
+        @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (cocotb itself cannot set an exit code)" >&2 && exit 1)
+    endef
 endif
 
 .PHONY: all test waves
+
+# Self-test: tb.cocotb.common.test_exit_propagation_neg always fails, so the sub-make MUST exit non-zero, and through the results gate.
+# Exit 0 from it means the check_for_results_file redefinition above has stopped working. NOT part of any rollup: it fails a suite on purpose.
+.PHONY: check-exit-propagation
+check-exit-propagation:
+	@echo "=== check-exit-propagation: a deliberately failing suite MUST make make exit non-zero ==="; \
+	mkdir -p $(SIM_BUILD_ROOT)/sim_build_check_exit_propagation; \
+	log=$(SIM_BUILD_ROOT)/sim_build_check_exit_propagation/check_exit_propagation.log; \
+	if $(MAKE) sim MODULE=tb.cocotb.common.test_exit_propagation_neg TOPLEVEL=rv32i_clock_gate \
+		VERILOG_SOURCES="$(RTL_DIR)/mem/rv32i_clock_gate.sv" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_check_exit_propagation >$$log 2>&1; then \
+		echo "check-exit-propagation: FAIL -- a failing cocotb suite exited 0 (results gate regressed)" >&2; \
+		exit 1; \
+	fi; \
+	if ! grep -q "FAIL=1" $$log || ! grep -q "ERROR: cocotb recorded failures" $$log; then \
+		echo "check-exit-propagation: FAIL -- the sub-make failed, but not through the results gate (see $$log)" >&2; \
+		exit 1; \
+	fi; \
+	echo "check-exit-propagation: PASS -- the failing suite exited non-zero through the results gate"
 
 all: test
 
