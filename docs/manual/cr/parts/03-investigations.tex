@@ -3297,6 +3297,20 @@ Change: \src{sim/Makefile} runs \src{tools/verif/check_cocotb_results.py} as its
 
 \end{record}
 
+\section{\code{tb/cocotb/cpu/Makefile} builds its paths from the caller directory}\label{cr:defect:cpu-makefile-pwd}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.32}. The Makefile built \code{PYTHONPATH} and 51 entries of \code{VERILOG_SOURCES} from \code{\$(PWD)/../../..}, and \code{PWD} is the directory of the caller. The usual targets still passed, because the cocotb \code{sim} recipe runs \code{\$(MAKE)} through a shell that resets \code{PWD}. A goal that the top-level make evaluates itself, such as \code{results.xml} with \code{make -C tb/cocotb/cpu}, failed with ``No rule to make target'' for \code{rtl/soc/axi_pkg.sv} in a plain copy of the tree. In a git worktree nested inside the main checkout the same path pointed into the main checkout and read its RTL without an error.
+
+\end{record}
+
+\begin{record}
+
+Change: \code{PROJ_ROOT} is derived from \code{MAKEFILE_LIST} once at the top of the file, and every \code{\$(PWD)/../../..} reads \code{\$(PROJ_ROOT)}. Measured after the change: the failing goal passes, \code{make ebreak} passes from the repository root and from the directory of the Makefile, \code{check-exit-propagation} passes, and \code{phase2_all} passes. No other Makefile under \src{tb} or \src{sim} has the pattern.
+
+\end{record}
+
 \section{AXI-Lite interconnect waits for ever on a slot that does not answer}\label{cr:defect:fabric-timeout}
 
 \begin{record}

@@ -166,14 +166,15 @@ cr:defect:asap7-cpu-synlig-ma7:result-1-the-two-ma7-programs-yosys-sim-original-
 cr:defect:asap7-cpu-synlig-ma7:result-2-six-programs-verilator-cycle-exact-vs-rtl-measured	docs/manual/cr/parts/03-investigations.tex	230	Result 2: six programs, Verilator, cycle-exact vs RTL (MEASURED)
 cr:defect:asap7-cpu-synlig-ma7:update-2026-10-10-bead-ainf-is-synlig-pr-259-safe-for-the-remaining-struct-member-selects	docs/manual/cr/parts/03-investigations.tex	518	\texorpdfstring{Update 2026-10-10 (bead \code{ainf}): is "Synlig + PR \#259" safe for the remaining struct-member selects?}{Update 2026-10-10 (bead ): is "Synlig + PR \#259" safe for the remaining struct-member selects?}
 cr:defect:asap7-cpu-synlig-ma7:verdict	docs/manual/cr/parts/03-investigations.tex	26	Verdict
-cr:defect:axil-to-apb-read-pstrb	docs/manual/cr/parts/03-investigations.tex	3460	\code{axil_to_apb} drives PSTRB low on a read
-cr:defect:crossbar-fixed-priority	docs/manual/cr/parts/03-investigations.tex	3422	\code{axi4_crossbar} arbitration has no fairness rule
-cr:defect:crossbar-second-request	docs/manual/cr/parts/03-investigations.tex	3486	\code{axi4_crossbar} loses a second request of one master
+cr:defect:axil-to-apb-read-pstrb	docs/manual/cr/parts/03-investigations.tex	3474	\code{axil_to_apb} drives PSTRB low on a read
+cr:defect:cpu-makefile-pwd	docs/manual/cr/parts/03-investigations.tex	3300	\code{tb/cocotb/cpu/Makefile} builds its paths from the caller directory
+cr:defect:crossbar-fixed-priority	docs/manual/cr/parts/03-investigations.tex	3436	\code{axi4_crossbar} arbitration has no fairness rule
+cr:defect:crossbar-second-request	docs/manual/cr/parts/03-investigations.tex	3500	\code{axi4_crossbar} loses a second request of one master
 cr:defect:fabric-protocol-corners	docs/manual/cr/parts/03-investigations.tex	3198	Bus fabric protocol corners and stale \code{pslverr} waivers
-cr:defect:fabric-ready-in-reset	docs/manual/cr/parts/03-investigations.tex	3332	Ready outputs of the data fabric high in reset
-cr:defect:fabric-timeout	docs/manual/cr/parts/03-investigations.tex	3300	AXI-Lite interconnect waits for ever on a slot that does not answer
-cr:defect:gif-stale-fetch	docs/manual/cr/parts/03-investigations.tex	3390	GPU fetch adapter keeps a stale fetch across a GPU power cycle (\code{axilite_to_axi4})
-cr:defect:gpu-fetch-lost	docs/manual/cr/parts/03-investigations.tex	3364	GPU compute unit loses a fetch that is accepted after its issue cycle (\code{gpu_compute_unit})
+cr:defect:fabric-ready-in-reset	docs/manual/cr/parts/03-investigations.tex	3346	Ready outputs of the data fabric high in reset
+cr:defect:fabric-timeout	docs/manual/cr/parts/03-investigations.tex	3314	AXI-Lite interconnect waits for ever on a slot that does not answer
+cr:defect:gif-stale-fetch	docs/manual/cr/parts/03-investigations.tex	3404	GPU fetch adapter keeps a stale fetch across a GPU power cycle (\code{axilite_to_axi4})
+cr:defect:gpu-fetch-lost	docs/manual/cr/parts/03-investigations.tex	3378	GPU compute unit loses a fetch that is accepted after its issue cycle (\code{gpu_compute_unit})
 cr:defect:off-domain-slverr	docs/manual/cr/parts/03-investigations.tex	3254	Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})
 cr:defect:pmu-iso-order	docs/manual/cr/parts/03-investigations.tex	3080	PMU order: clock stop before the clamp (\code{zftj})
 cr:defect:pmu-mutation-campaign	docs/manual/cr/parts/03-investigations.tex	3038	PMU mutation campaign (\code{mutate_pmu_iso_ack.py})
