@@ -165,8 +165,67 @@ def test_switch_with_nonexistent_control_net_fails() -> None:
     expect(run(bad), "U08", "cpu_pg_ctrl")
 
 
-def test_retention_is_refused() -> None:
-    expect(run(UPF_TEXT + "set_retention RET -domain PD_CPU\n"), "U01", "no retention state")
+VALID_SWITCH = (
+    "create_power_switch PSW_CPU -domain PD_CPU -input_supply_port {vin VDD} "
+    "-output_supply_port {vout VDD_CPU} -control_port {sleep_n cpu_iso_clamp} "
+    "-on_state {on vin {sleep_n}} -off_state {off {!sleep_n}}\n"
+)
+
+
+def test_power_switch_is_refused_even_when_every_reference_resolves() -> None:
+    # Every reference of this switch resolves, so no other rule fires: only U09 refuses it.
+    findings = run(UPF_TEXT + VALID_SWITCH)
+    expect(findings, "U09", "create_power_switch")
+    assert [f for f in findings if not f.startswith("U09")] == [], findings
+
+
+@pytest.mark.parametrize(
+    "cmd",
+    [
+        "set_retention RET -domain PD_CPU",
+        "set_retention_control RET -domain PD_CPU -save_signal {cpu_ret_save_o high}",
+        "map_retention_cell RET -domain PD_CPU -lib_cells {RETCELL}",
+    ],
+)
+def test_retention_command_is_refused(cmd: str) -> None:
+    findings = run(UPF_TEXT + cmd + "\n")
+    expect(findings, "U09", cmd.split()[0])
+    assert not any(f.startswith("U01") for f in findings), findings
+
+
+def test_scope_finding_carries_the_command_line() -> None:
+    n_lines = UPF_TEXT.count("\n")
+    up = chk.parse_upf(UPF_TEXT + VALID_SWITCH + "set_retention RET -domain PD_CPU\n")
+    chk.check(up, FACTS, PMU, DFT_TEXT, [])
+    lines = {f.line for f in up.findings if f.fid == "U09"}
+    assert lines == {n_lines + 1, n_lines + 2}, up.findings
+
+
+def test_scope_commands_in_comments_do_not_trip_the_rule() -> None:
+    text = UPF_TEXT + (
+        "# create_power_switch PSW -domain PD_CPU\n"
+        "# set_retention RET; map_retention_cell X\n"
+        "set_isolation ISO_CPU -update -domain PD_CPU ;# set_retention_control R\n"
+    )
+    findings = run(text)
+    assert not any(f.startswith("U09") for f in findings), findings
+
+
+def test_scope_commands_after_a_semicolon_are_found() -> None:
+    expect(run(UPF_TEXT + "upf_version 3.0 ; set_retention RET\n"), "U09", "set_retention")
+
+
+def test_scope_rule_summary_line_is_ok_on_the_clean_file_and_fails_on_a_switch(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code, out = _cli(["-v"], capsys)
+    assert code == 0
+    assert any(ln.strip().startswith("ok") and "power intent scope" in ln for ln in out), out
+    bad = tmp_path / "bad.upf"
+    bad.write_text(UPF_TEXT + VALID_SWITCH, encoding="utf-8")
+    code, out = _cli(["--upf", str(bad), "-v"], capsys)
+    assert code == 1
+    assert any(ln.strip().startswith("FAIL") and "power intent scope" in ln for ln in out), out
 
 
 def test_wrong_upf_version_fails() -> None:
@@ -426,8 +485,11 @@ def test_docstring_describes_the_code() -> None:
     assert "UPF_POWER_SPEC" not in doc
     u01 = doc.split("  U01", 1)[1].split("  U02", 1)[0]
     u06 = doc.split("  U06", 1)[1].split("  U07", 1)[0]
-    assert "retention" in u01
+    u09 = doc.split("  U09", 1)[1].split("\n\n", 1)[0]
+    assert "retention" not in u01
     assert "retention" not in u06
+    for cmd in chk.SCOPE_REFUSED:
+        assert cmd in u09, cmd
     assert "-v` lists" not in doc and "-v lists the finding" not in doc
 
 

@@ -205,19 +205,19 @@ The checker looks for the text OFF in the state expressions of a supply set. It 
 The RTL has no power switch and no retention cell. The PMU drives retention pulses, and \code{soc_top} uses none of them.
 
 \begin{requirement}{DS-PWR-060}{No retention}
-[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_retention_is_refused}]
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_retention_command_is_refused; test:tb/tests/test_check_upf.py::test_scope_commands_in_comments_do_not_trip_the_rule}]
 The power intent must not declare retention.
 \end{requirement}
 \begin{information}
-The checker refuses the commands \code{set_retention}, \code{set_retention_control} and \code{map_retention_cell}.
+The checker reports the commands \code{set_retention}, \code{set_retention_control} and \code{map_retention_cell} as finding U09. It matches the command word of a parsed command, so a comment that names one is not a finding. The checker does not read the options of such a command.
 \end{information}
 
 \begin{requirement}{DS-PWR-061}{No power switch}
-[verify={review}]
+[verify={check:tools/verif/check_upf.py; test:tb/tests/test_check_upf.py::test_power_switch_is_refused_even_when_every_reference_resolves; test:tb/tests/test_check_upf.py::test_scope_commands_in_comments_do_not_trip_the_rule}]
 The power intent must not declare a power switch.
 \end{requirement}
 \begin{information}
-The PMU has no output that controls a switch. The checker accepts a switch command when its options are known, its domain and supply nets exist, it has a control port and its control net is in the facts file. It does not report a supply net that has both a supply port and a switch as source. A check cannot find a switch that someone adds with an existing control net. A reviewer finds it. The checker cannot accept a real power switch that replaces a supply port, because it derives from the port states that a rail can be off. \Cref{tm:pd:phase5-soc-upf} shows the form of a switch for a later change that adds the control.
+The PMU has no output that controls a switch. The checker reports each command \code{create_power_switch} as finding U09, also when its options, its domain, its supply nets and its control net are all valid. The checker still parses such a command and checks its references (finding U06 and U08), so a switch with a wrong reference gives more than one finding. The checker does not model a switch. It derives from the port states that a rail can be off, so it could not accept a real power switch that replaces a supply port. A change that adds a switch needs a new control output in the RTL and a change of the checker. \Cref{tm:pd:phase5-soc-upf} shows the form of a switch for such a change.
 \end{information}
 
 \begin{requirement}{DS-PWR-062}{No cell mapping and no level shifter}
