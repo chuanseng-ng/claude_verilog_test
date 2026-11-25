@@ -3534,3 +3534,23 @@ Date 2026-11-24. The owner approved an RTL fix: the crossbar holds the ready of 
 Tests, measured, local, one host. The four defect tests of \code{test_crossbar_outstanding.py} pass on the new RTL. They are renamed to hold tests, without \code{expect_fail}, and they check that the ready stays low from the first request handshake up to the response. The 10 arbitration tests and the corner tests pass with the same simulation times as on the old RTL, so no cycle is added. Mutations: without the write busy mask or the read busy mask, the cross-slave hold test of that direction fails. With a flag cleared on the response cycle, the same test fails. With the old ready arm of a slave engine restored, both hold tests of that direction fail. The old RTL fails all four hold tests. \code{soc_all_ci} has no failure: 999 tests pass. \code{PASS_FLOOR} goes from 959 to 963.
 
 \end{record}
+
+\section{The UPF checker accepts a power switch}\label{cr:defect:upf-checker-power-switch}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.21}, GH \#391. The rule \reqref{DS-PWR-061} says that the power intent has no power switch. The checker \code{check_upf.py} did not enforce it. It accepted a command \code{create_power_switch} when its options were known and its domain, supply nets and control net existed. The rule had the verification method review. The retention commands were already refused as finding U01, but \reqref{DS-PWR-060} named a test that checked the text of that finding.
+
+\end{record}
+
+\begin{record}
+
+Change, owner decision. The checker has a new finding U09. It reports each command \code{create_power_switch}, \code{set_retention}, \code{set_retention_control} and \code{map_retention_cell} by the command word of a parsed command. A comment that names a command is not a finding. The retention commands moved from U01 to U09. A switch is still parsed, so its references still give U06 and U08 findings in addition. Full modelling of a switch is out of scope. \reqref{DS-PWR-060} and \reqref{DS-PWR-061} now name the check and the tests.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. Before the change, a switch whose references all resolve gave no finding, and the new tests failed (7 failed, 1 passed, the one that passed being the comment control). After the change, \code{test_check_upf.py} has 64 tests and no failure. The committed UPF still gives \code{check_upf: PASS}, and \code{gen-facts --check} reports the facts file as up to date. Negative control: with the \code{up.err} call of U09 removed, 7 tests fail. Limit: the checker reads only the command word. It does not follow a command that a Tcl \code{eval} or a \code{source} builds.
+
+\end{record}

@@ -35,8 +35,8 @@ ID & Requirement & Verified by\\
 \reqref{DS-PWR-043} & The state SCAN & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_scan_state_is_required} \newline \textbf{review}\\
 \reqref{DS-PWR-044} & Clock gates open in scan & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_scan_state_claim_is_checked_against_rtl}\\
 \reqref{DS-PWR-045} & States of the supply sets & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_off_state_without_off_port_state_fails}\\
-\reqref{DS-PWR-060} & No retention & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_retention_is_refused}\\
-\reqref{DS-PWR-061} & No power switch & \textbf{review}\\
+\reqref{DS-PWR-060} & No retention & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_retention_command_is_refused} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_scope_commands_in_comments_do_not_trip_the_rule}\\
+\reqref{DS-PWR-061} & No power switch & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_power_switch_is_refused_even_when_every_reference_resolves} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_scope_commands_in_comments_do_not_trip_the_rule}\\
 \reqref{DS-PWR-062} & No cell mapping and no level shifter & \textbf{check} \code{tools/verif/check_upf.py}\\
 \reqref{DS-PWR-080} & Facts file equals the RTL & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_facts_file_matches_fresh_elaboration}\\
 \reqref{DS-PWR-081} & Version and commands & \textbf{check} \code{tools/verif/check_upf.py} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_wrong_upf_version_fails} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_unknown_option_and_command_fail} \newline \textbf{test} \code{tb/tests/test_check_upf.py::test_committed_upf_is_clean}\\

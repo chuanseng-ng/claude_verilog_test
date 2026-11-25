@@ -230,6 +230,7 @@ cr:defect:synlig-struct-select-ainf:step-1-the-defect-rule-probe-evidence-toolsv
 cr:defect:synlig-struct-select-ainf:step-2a-mechanical-site-table-toolsverifstruct-selectsitetablepy-output-resultssitetabletxt	docs/manual/cr/parts/03-investigations.tex	2425	\texorpdfstring{Step 2a: mechanical site table (\src{tools/verif/struct_select/sitetable.py}, output \code{results/sitetable.txt})}{Step 2a: mechanical site table (, output )}
 cr:defect:synlig-struct-select-ainf:step-2b-synlig-vs-sv2v-equivalence-on-the-real-modules-modeqsh-run-modeqsh-mkconepy	docs/manual/cr/parts/03-investigations.tex	2510	\texorpdfstring{Step 2b: Synlig-vs-sv2v equivalence on the real modules (\code{modeq.sh}, \code{run_modeq.sh}, \code{mkcone.py})}{Step 2b: Synlig-vs-sv2v equivalence on the real modules (, , )}
 cr:defect:synlig-struct-select-ainf:step-4-verdict-recommendation-limits	docs/manual/cr/parts/03-investigations.tex	2610	Step 4: verdict, recommendation, limits
+cr:defect:upf-checker-power-switch	docs/manual/cr/parts/03-investigations.tex	3538	The UPF checker accepts a power switch
 cr:fix:cpu-dataflow-diagram	docs/manual/cr/parts/04-fix-log-and-archive.tex	5542	Phase 1 RV32I CPU Dataflow Diagram
 cr:fix:cpu-dataflow-diagram:1-fetch-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5601	1. FETCH Stage
 cr:fix:cpu-dataflow-diagram:2-decode-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5625	2. DECODE Stage
