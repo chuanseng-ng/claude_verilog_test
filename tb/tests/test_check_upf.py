@@ -27,12 +27,18 @@ UPF_TEXT = chk.DEFAULT_UPF.read_text(encoding="utf-8")
 FACTS: dict[str, Any] = json.loads(chk.DEFAULT_FACTS.read_text(encoding="utf-8"))
 PMU = chk.parse_pmu(chk.DEFAULT_PMU.read_text(encoding="utf-8"))
 DFT_TEXT = chk.DEFAULT_DFT.read_text(encoding="utf-8")
+CTRL_TEXT = chk.DEFAULT_DFT_CTRL.read_text(encoding="utf-8")
 
 
-def run(upf_text: str = UPF_TEXT, facts: dict[str, Any] | None = None) -> list[str]:
+def run(
+    upf_text: str = UPF_TEXT,
+    facts: dict[str, Any] | None = None,
+    ctrl_text: str = CTRL_TEXT,
+    ports_text: str = DFT_TEXT,
+) -> list[str]:
     """Return 'ID message' strings for every finding (syntax + semantic)."""
     up = chk.parse_upf(upf_text)
-    chk.check(up, FACTS if facts is None else facts, PMU, DFT_TEXT, [])
+    chk.check(up, FACTS if facts is None else facts, PMU, ports_text, [], ctrl_text)
     return [f"{f.fid} {f.msg}" for f in up.findings]
 
 
@@ -196,7 +202,7 @@ def test_retention_command_is_refused(cmd: str) -> None:
 def test_scope_finding_carries_the_command_line() -> None:
     n_lines = UPF_TEXT.count("\n")
     up = chk.parse_upf(UPF_TEXT + VALID_SWITCH + "set_retention RET -domain PD_CPU\n")
-    chk.check(up, FACTS, PMU, DFT_TEXT, [])
+    chk.check(up, FACTS, PMU, DFT_TEXT, [], CTRL_TEXT)
     lines = {f.line for f in up.findings if f.fid == "U09"}
     assert lines == {n_lines + 1, n_lines + 2}, up.findings
 
@@ -293,7 +299,9 @@ def test_unknown_state_name_fails() -> None:
 
 def test_scan_must_be_exclusive_with_functional_states() -> None:
     bad = mutate(
-        "&& scan_mode_i == 1'b0}} \\\n    -state {CPU_OFF", "}} \\\n    -state {CPU_OFF", 1
+        "&& scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b0}} \\\n    -state {CPU_OFF",
+        "&& u_dft_ctrl/tap_scan == 1'b0}} \\\n    -state {CPU_OFF",
+        1,
     )
     expect(run(bad), "U07", "NORMAL")
 
@@ -302,6 +310,154 @@ def test_scan_state_claim_is_checked_against_rtl() -> None:
     facts = copy.deepcopy(FACTS)
     facts["arms"]["asap7"]["clock_gates"]["u_gpu_cg"]["test_en"] = "1'b0"
     expect(run(facts=facts), "U07", "u_gpu_cg")
+
+
+# -------------------------------------------- negative controls: the scan sources of dft_ctrl (U10)
+
+TEST_EN_OR = "assign test_en_o   = pin_test_en   | tap_scan;"
+SCAN_MODE_OR = "assign scan_mode_o = pin_scan_mode | tap_scan;"
+
+
+def ctrl_with(old: str, new: str) -> str:
+    assert CTRL_TEXT.count(old) == 1, f"mutation anchor not unique in dft_ctrl.sv: {old!r}"
+    return CTRL_TEXT.replace(old, new)
+
+
+def test_combiner_sources_are_the_pin_and_the_tap() -> None:
+    for out in chk.COMBINER_OUTPUTS:
+        got = chk.parse_combiner(CTRL_TEXT, DFT_TEXT, out)
+        assert sorted(got) == [("input", "scan_mode_i"), ("net", "tap_scan")], (out, got)
+
+
+def test_tap_term_removed_from_the_or_fails() -> None:
+    bad = ctrl_with(TEST_EN_OR, "assign test_en_o   = pin_test_en;")
+    bad = bad.replace(SCAN_MODE_OR, "assign scan_mode_o = pin_scan_mode;")
+    expect(run(ctrl_text=bad), "U10", "state SCAN_TAP requires u_dft_ctrl/tap_scan")
+
+
+def test_tap_term_removed_from_one_output_only_fails() -> None:
+    bad = ctrl_with(TEST_EN_OR, "assign test_en_o   = pin_test_en;")
+    expect(run(ctrl_text=bad), "U10", "scan_mode_o has other scan sources than test_en_o")
+
+
+def test_third_term_in_the_or_fails() -> None:
+    bad = ctrl_with(TEST_EN_OR, "assign test_en_o   = pin_test_en   | tap_scan | mbist_force_o;")
+    bad = bad.replace(
+        SCAN_MODE_OR, "assign scan_mode_o = pin_scan_mode | tap_scan | mbist_force_o;"
+    )
+    expect(run(ctrl_text=bad), "U10", "u_dft_ctrl/mbist_force_o can raise")
+
+
+def test_upf_without_a_tap_scan_state_fails() -> None:
+    bad = mutate_cmd(
+        " \\\n    -state {SCAN_TAP -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  "
+        "&& scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b1}}",
+        "",
+    )
+    got = run(bad)
+    expect(got, "U10", "u_dft_ctrl/tap_scan can raise")
+    assert not any(f.startswith("U07") for f in got), got
+
+
+def test_tap_scan_state_naming_the_wrong_signal_fails() -> None:
+    bad = mutate_cmd("u_dft_ctrl/tap_scan == 1'b1}}", "u_dft_ctrl/tap_serial == 1'b1}}")
+    got = run(bad)
+    expect(got, "U10", "state SCAN_TAP requires u_dft_ctrl/tap_serial")
+    expect(got, "U10", "u_dft_ctrl/tap_scan can raise")
+
+
+def test_tap_scan_state_must_be_exclusive_with_scan() -> None:
+    bad = mutate_cmd(
+        "&& scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b1}}",
+        "&& u_dft_ctrl/tap_scan == 1'b1}}",
+    )
+    expect(run(bad), "U07", "state SCAN_TAP must require scan_mode_i == 1'b0")
+
+
+def test_tap_scan_state_cannot_depend_on_the_pmu() -> None:
+    bad = mutate_cmd(
+        "&& scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b1}}",
+        "&& u_pmu/pmu_mode_req == 2'b00 && scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b1}}",
+    )
+    expect(run(bad), "U07", "state SCAN_TAP must not depend on pmu_mode_req")
+
+
+def test_functional_state_must_exclude_the_tap_scan() -> None:
+    bad = mutate_cmd(
+        " && u_dft_ctrl/tap_scan == 1'b0}} \\\n    -state {CPU_OFF", "}} \\\n    -state {CPU_OFF"
+    )
+    expect(run(bad), "U10", "state NORMAL must require u_dft_ctrl/tap_scan == 1'b0")
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (TEST_EN_OR, "assign test_en_o   = pin_test_en & ~tap_scan;"),
+        (TEST_EN_OR, "assign test_en_o   = tap_serial ? tap_scan : pin_test_en;"),
+        (TEST_EN_OR, "assign test_en_o   = (pin_test_en | tap_scan);"),
+        (TEST_EN_OR, ""),
+    ],
+)
+def test_unrecognised_or_shape_is_a_finding_not_a_pass(old: str, new: str) -> None:
+    expect(run(ctrl_text=ctrl_with(old, new)), "U10", "cannot read the scan-source OR")
+
+
+def test_pin_leg_that_is_not_a_plain_copy_fails() -> None:
+    bad = DFT_TEXT.replace(
+        "assign test_en_o   = scan_mode_i;", "assign test_en_o   = scan_mode_i & scan_en_i;"
+    )
+    assert bad != DFT_TEXT
+    expect(run(ports_text=bad), "U10", "cannot read the scan-source OR")
+
+
+def test_pin_leg_driven_from_another_input_fails() -> None:
+    bad = DFT_TEXT.replace("assign test_en_o   = scan_mode_i;", "assign test_en_o   = scan_en_i;")
+    assert bad != DFT_TEXT
+    got = run(ports_text=bad)
+    expect(got, "U10", "other scan sources")
+    expect(got, "U07", "no longer drives test_en_o from scan_mode_i")
+
+
+def test_facts_without_the_dft_ctrl_record_fail() -> None:
+    facts = copy.deepcopy(FACTS)
+    del facts["arms"]["sky130"]["dft_ctrl"]
+    expect(run(facts=facts), "U08", "no dft_ctrl record")
+
+
+def test_pin_input_not_connected_to_the_top_port_fails() -> None:
+    facts = copy.deepcopy(FACTS)
+    facts["arms"]["asap7"]["dft_ctrl"]["inputs"]["scan_mode_i"] = "scan_en_i"
+    got = run(facts=facts)
+    expect(got, "U10", "scan_en_i can raise")
+    expect(
+        got, "U10", "state SCAN requires scan_mode_i == 1'b1 but scan_mode_i is not a scan source"
+    )
+
+
+def test_cli_fails_on_a_mutated_dft_ctrl(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bad = tmp_path / "dft_ctrl.sv"
+    bad.write_text(
+        ctrl_with(TEST_EN_OR, "assign test_en_o   = pin_test_en | tap_scan | tap_serial;"),
+        encoding="utf-8",
+    )
+    code, out = _cli(["--dft-ctrl", str(bad)], capsys)
+    assert code == 1
+    assert any(ln.strip().startswith("U10") and "tap_serial" in ln for ln in out), out
+
+
+def test_scan_sources_summary_line_is_ok_on_the_clean_file_and_fails_on_a_mutated_or(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code, out = _cli(["-v"], capsys)
+    assert code == 0
+    assert any(ln.strip().startswith("ok") and "scan sources" in ln for ln in out), out
+    bad = tmp_path / "dft_ctrl.sv"
+    bad.write_text(ctrl_with(TEST_EN_OR, "assign test_en_o   = pin_test_en;"), encoding="utf-8")
+    code, out = _cli(["--dft-ctrl", str(bad), "-v"], capsys)
+    assert code == 1
+    assert any(ln.strip().startswith("FAIL") and "scan sources" in ln for ln in out), out
 
 
 # ---------------------------------------------------------- negative controls: the facts (RTL side)
@@ -483,6 +639,8 @@ def test_docstring_describes_the_code() -> None:
     doc = chk.__doc__ or ""
     assert "Doc: tm:pd:phase5-soc-upf" in doc
     assert "UPF_POWER_SPEC" not in doc
+    u10 = doc.split("  U10", 1)[1].split("Inputs", 1)[0]
+    assert "SCAN_TAP" in u10 and "dft_ctrl" in u10
     u01 = doc.split("  U01", 1)[1].split("  U02", 1)[0]
     u06 = doc.split("  U06", 1)[1].split("  U07", 1)[0]
     u09 = doc.split("  U09", 1)[1].split("\n\n", 1)[0]

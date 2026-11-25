@@ -101,6 +101,21 @@
     "USE_ICG_CELL",
     "__pnr__"
    ],
+   "dft_ctrl": {
+    "inputs": {
+     "mbist_status_i": "mbist_status",
+     "mbist_wr_ready_i": "mbist_wr_ready",
+     "scan_clk_i": "scan_clk_i",
+     "scan_en_i": "scan_en_i",
+     "scan_mode_i": "scan_mode_i",
+     "scan_rst_ni": "scan_rst_ni",
+     "tck_i": "tck_i",
+     "tdi_i": "tdi_i",
+     "tms_i": "tms_i",
+     "trst_ni": "trst_ni"
+    },
+    "instance": "u_dft_ctrl"
+   },
    "instances": {
     "u_apb_dbg_cdc": "apb_cdc_bridge",
     "u_apb_pll2_cdc": "apb_cdc_bridge",
@@ -151,6 +166,10 @@
     },
     "scan_mode_i": {
      "kind": "port",
+     "width": 1
+    },
+    "u_dft_ctrl/tap_scan": {
+     "kind": "net",
      "width": 1
     },
     "u_pmu/pmu_mode_req": {
@@ -828,6 +847,21 @@
     "SRAM_SKY130",
     "__pnr__"
    ],
+   "dft_ctrl": {
+    "inputs": {
+     "mbist_status_i": "mbist_status",
+     "mbist_wr_ready_i": "mbist_wr_ready",
+     "scan_clk_i": "scan_clk_i",
+     "scan_en_i": "scan_en_i",
+     "scan_mode_i": "scan_mode_i",
+     "scan_rst_ni": "scan_rst_ni",
+     "tck_i": "tck_i",
+     "tdi_i": "tdi_i",
+     "tms_i": "tms_i",
+     "trst_ni": "trst_ni"
+    },
+    "instance": "u_dft_ctrl"
+   },
    "instances": {
     "u_apb_dbg_cdc": "apb_cdc_bridge",
     "u_apb_pll2_cdc": "apb_cdc_bridge",
@@ -878,6 +912,10 @@
     },
     "scan_mode_i": {
      "kind": "port",
+     "width": 1
+    },
+    "u_dft_ctrl/tap_scan": {
+     "kind": "net",
      "width": 1
     },
     "u_pmu/pmu_mode_req": {

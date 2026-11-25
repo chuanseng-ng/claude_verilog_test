@@ -35,6 +35,11 @@ What it checks (finding ids are stable)
        ``create_power_switch``, ``set_retention``, ``set_retention_control`` or
        ``map_retention_cell`` is a finding, whatever its options.  The match is on the command
        word of a parsed command, so a comment that names one is not a finding
+  U10  scan sources: the checker reads the OR in ``dft_ctrl`` that makes ``test_en_o`` and ``scan_mode_o``
+       (through ``dft_ctrl_ports``) and derives the nets that can raise it.  Each such net must be
+       required ``== 1'b1`` by a SCAN power state (``SCAN`` for the pin, ``SCAN_TAP`` for the JTAG TAP),
+       each SCAN state must name a net of the OR, and each functional state must require every such
+       net ``== 1'b0``.  An OR the checker cannot read is a finding, not a pass
 
 Inputs
 ------
@@ -43,6 +48,7 @@ Inputs
            (pyslang elaboration of rtl/filelist/soc_top.f, once per arm: asap7, sky130).  The checker
            itself reads only this JSON, so ``check`` needs the standard library alone.
   PMU      rtl/soc/pmu.sv   (mode encodings and per-mode domain targets, parsed as text)
+  DFT      rtl/soc/dft/dft_ctrl_ports.sv and rtl/soc/dft/dft_ctrl.sv   (the scan-source OR, parsed as text)
 
 Usage
 -----
@@ -84,6 +90,7 @@ DEFAULT_UPF = REPO_ROOT / "pnr/constraints/phase5_soc.upf"
 DEFAULT_FACTS = REPO_ROOT / "pnr/constraints/phase5_soc_rtl_facts.json"
 DEFAULT_PMU = REPO_ROOT / "rtl/soc/pmu.sv"
 DEFAULT_DFT = REPO_ROOT / "rtl/soc/dft/dft_ctrl_ports.sv"
+DEFAULT_DFT_CTRL = REPO_ROOT / "rtl/soc/dft/dft_ctrl.sv"
 FILELIST = "rtl/filelist/soc_top.f"
 TOP = "soc_top"
 
@@ -97,8 +104,14 @@ ARMS: dict[str, list[str]] = {
 UPF_VERSION = "3.0"
 CLASSES = ("payload", "slave_response", "observability")
 # States the UPF may define beyond the PMU's modes.  SCAN is not a PMU mode: it is the test-mode
-# override (soc_top scan_mode_i).  Anything else must come from pmu.sv.
-EXTRA_STATES = ("SCAN",)
+# override (soc_top scan_mode_i).  SCAN_TAP is the same override raised by the JTAG TAP while
+# scan_mode_i is low.  Anything else must come from pmu.sv.  Only SCAN is always required: which
+# other scan states are needed is derived from the dft_ctrl OR (U10).
+EXTRA_STATES = ("SCAN", "SCAN_TAP")
+REQUIRED_STATES = ("SCAN",)
+# The dft_ctrl outputs that are an OR of scan sources, and the module that holds the pin leg.
+COMBINER_OUTPUTS = ("test_en_o", "scan_mode_o")
+PIN_LEG_MODULE = "dft_ctrl_ports"
 # The power domains the design requires, with the elements each one holds (``.`` is the top scope).
 # The state check and the isolation check refer to these names, so they are fixed here once.
 REQUIRED_DOMAINS: dict[str, list[str]] = {
@@ -320,7 +333,9 @@ class Upf:
     domains: dict[str, dict[str, Any]] = field(default_factory=dict)
     isolations: list[Isolation] = field(default_factory=list)
     switches: list[dict[str, Any]] = field(default_factory=list)
-    scope_cmds: list[tuple[str, int]] = field(default_factory=list)  # (command, line) refused by U09
+    scope_cmds: list[tuple[str, int]] = field(
+        default_factory=list
+    )  # (command, line) refused by U09
     set_states: dict[str, dict[str, str]] = field(default_factory=dict)  # set -> state -> expr
     group_states: dict[str, dict[str, tuple[str, int]]] = field(default_factory=dict)
     aon_roster: dict[str, int] = field(default_factory=dict)
@@ -648,7 +663,12 @@ def _domain_elems(up: Upf, dom: str) -> list[str]:
 
 
 def check(
-    up: Upf, facts: dict[str, Any], pmu: dict[str, Any], dft_text: str, log: list[str]
+    up: Upf,
+    facts: dict[str, Any],
+    pmu: dict[str, Any],
+    dft_text: str,
+    log: list[str],
+    ctrl_text: str,
 ) -> list[Finding]:
     f = up.findings
     arms: dict[str, Any] = facts.get("arms", {})
@@ -673,6 +693,9 @@ def check(
     _group(up, log, "switches and nets", lambda lg: _check_switch_and_net_refs(up, arms, lg))
     _group(up, log, "power intent scope", lambda lg: _check_scope(up, lg))
     _group(up, log, "power states", lambda lg: _check_pst(up, arms, pmu, dft_text, lg))
+    _group(
+        up, log, "scan sources", lambda lg: _check_scan_sources(up, arms, dft_text, ctrl_text, lg)
+    )
     return f
 
 
@@ -1012,7 +1035,9 @@ def _check_scope(up: Upf, log: list[str]) -> None:
     """U09: the power intent has no power switch and no retention."""
     for name, line in up.scope_cmds:
         up.err("U09", line, f"{name} is not allowed: {SCOPE_REFUSED[name]}")
-    log.append(f"power intent scope: {len(up.scope_cmds)} power switch or retention command(s), none allowed")
+    log.append(
+        f"power intent scope: {len(up.scope_cmds)} power switch or retention command(s), none allowed"
+    )
 
 
 def _check_switch_and_net_refs(up: Upf, arms: dict[str, Any], log: list[str]) -> None:
@@ -1068,7 +1093,7 @@ def _check_pst(
         want = set(modes)
         for miss in sorted(want - names):
             up.err("U07", 0, f"group {gname}: PMU mode {miss} (pmu.sv) has no power state")
-        for req in EXTRA_STATES:
+        for req in REQUIRED_STATES:
             if req not in names:
                 up.err(
                     "U07",
@@ -1091,23 +1116,30 @@ def _check_pst(
                 if v not in up.set_states.get(k, {}):
                     up.err("U07", ln, f"state {name}: {k} == {v} but {k} has no state {v}")
             scan = nets.get("scan_mode_i")
-            if name == "SCAN":
-                if scan != "1'b1":
-                    up.err("U07", ln, f"state SCAN must require scan_mode_i == 1'b1, got {scan!r}")
+            if name in EXTRA_STATES:
+                want_scan = "1'b1" if name == "SCAN" else "1'b0"
+                if scan != want_scan:
+                    why = "" if name == "SCAN" else " so it is exclusive with SCAN"
+                    up.err(
+                        "U07",
+                        ln,
+                        f"state {name} must require scan_mode_i == {want_scan}{why}, got {scan!r}",
+                    )
                 if "u_pmu/pmu_mode_req" in nets:
                     up.err(
                         "U07",
                         ln,
-                        "state SCAN must not depend on pmu_mode_req (the scan override is independent of the PMU)",
+                        f"state {name} must not depend on pmu_mode_req (the scan override is independent of the PMU)",
                     )
                 for s in (aon_set, cpu_set, gpu_set):
                     if s and supply.get(s) != "ON":
                         up.err(
                             "U07",
                             ln,
-                            f"state SCAN must have every rail ON; {s} == {supply.get(s)!r}",
+                            f"state {name} must have every rail ON; {s} == {supply.get(s)!r}",
                         )
-                _check_scan_claim(up, arms, dft_text, ln)
+                if name == "SCAN":
+                    _check_scan_claim(up, arms, dft_text, ln)
                 continue
             if name not in modes:
                 continue
@@ -1168,6 +1200,157 @@ def _check_scan_claim(up: Upf, arms: dict[str, Any], dft_text: str, ln: int) -> 
                     ln,
                     f"[{arm}] SCAN: clock gate {g} test_en is {info.get('test_en')!r}, not the dft test-enable net {af.get('test_en_net')!r}",
                 )
+
+
+# --------------------------------------------------------------------------------------------------
+# Scan sources: the OR in dft_ctrl (text parse; the checker stays stdlib-only)
+# --------------------------------------------------------------------------------------------------
+
+_IDENT = r"[A-Za-z_]\w*"
+
+
+class CombinerError(ValueError):
+    """The dft_ctrl RTL does not have the shape the scan-source parser reads."""
+
+
+def _strip_comments(text: str) -> str:
+    return re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", text, flags=re.S))
+
+
+def _or_terms(text: str, lhs: str, where: str) -> list[str]:
+    """The names of ``assign <lhs> = a | b | ...;``.  Any other shape raises, so a rewrite cannot pass silently."""
+    found = re.findall(rf"\bassign\s+{lhs}\s*=\s*([^;]*);", text)
+    if len(found) != 1:
+        raise CombinerError(f"{where}: expected one 'assign {lhs} = ...;', found {len(found)}")
+    expr = found[0].strip()
+    if not re.fullmatch(rf"{_IDENT}(\s*\|\s*{_IDENT})*", expr):
+        raise CombinerError(
+            f"{where}: 'assign {lhs} = {expr}' is not an OR of plain names; extend parse_combiner to read it"
+        )
+    return [t.strip() for t in expr.split("|")]
+
+
+def _is_input(text: str, name: str) -> bool:
+    return re.search(rf"\binput\s+(?:logic|wire)\s*(?:\[[^\]]*\]\s*)?{name}\b", text) is not None
+
+
+def _connections(text: str, module: str) -> dict[str, str]:
+    """Port -> net of the one instance of ``module`` in ``text`` (named connections to plain names only)."""
+    inst = list(re.finditer(rf"\b{module}\s+{_IDENT}\s*\(([^;]*?)\)\s*;", text, re.S))
+    if len(inst) != 1:
+        raise CombinerError(f"dft_ctrl.sv: expected one instance of {module}, found {len(inst)}")
+    return dict(re.findall(rf"\.({_IDENT})\s*\(\s*({_IDENT})\s*\)", inst[0].group(1)))
+
+
+def parse_combiner(ctrl_text: str, ports_text: str, out: str) -> list[tuple[str, str]]:
+    """Sources of one OR output of ``dft_ctrl`` as ``(kind, name)`` pairs.
+
+    ``input`` is a port of ``dft_ctrl`` (reached through the pin leg ``dft_ctrl_ports`` when the term is
+    one of its outputs); ``net`` is a net inside ``dft_ctrl`` (the TAP scan mode)."""
+    ctrl, ports = _strip_comments(ctrl_text), _strip_comments(ports_text)
+    pin_conn = _connections(ctrl, PIN_LEG_MODULE)
+    by_net = {
+        net: port
+        for port, net in pin_conn.items()
+        if re.search(rf"\boutput\s+logic\s+{port}\b", ports)
+    }
+    sources: list[tuple[str, str]] = []
+    for term in _or_terms(ctrl, out, "dft_ctrl.sv"):
+        if _is_input(ctrl, term):
+            sources.append(("input", term))
+        elif term in by_net:
+            port = by_net[term]
+            copy = _or_terms(ports, port, "dft_ctrl_ports.sv")
+            if len(copy) != 1 or not _is_input(ports, copy[0]):
+                raise CombinerError(
+                    f"dft_ctrl_ports.sv: {port} is not a plain copy of one input port"
+                )
+            inner = copy[0]
+            net = pin_conn.get(inner)
+            if net is None:
+                raise CombinerError(
+                    f"dft_ctrl.sv: {PIN_LEG_MODULE} input {inner} is not connected by name"
+                )
+            sources.append(("input" if _is_input(ctrl, net) else "net", net))
+        else:
+            sources.append(("net", term))
+    return sources
+
+
+def _scan_nets(up: Upf, state: str) -> dict[str, str]:
+    for states in up.group_states.values():
+        if state in states:
+            return {k: v for k, v in logic_terms(states[state][0]) if k not in up.sets}
+    return {}
+
+
+def _check_scan_sources(
+    up: Upf, arms: dict[str, Any], dft_text: str, ctrl_text: str, log: list[str]
+) -> None:
+    """U10: the scan states name exactly the nets that can raise the clock-gate test enable and the scan mode."""
+    try:
+        per_out = {o: parse_combiner(ctrl_text, dft_text, o) for o in COMBINER_OUTPUTS}
+    except CombinerError as exc:
+        up.err("U10", 0, f"cannot read the scan-source OR: {exc}")
+        return
+    ref = sorted(set(per_out[COMBINER_OUTPUTS[0]]))
+    for o, srcs in per_out.items():
+        if sorted(set(srcs)) != ref:
+            up.err(
+                "U10",
+                0,
+                f"dft_ctrl.sv: {o} has other scan sources than {COMBINER_OUTPUTS[0]}: {sorted(set(srcs))} vs {ref}",
+            )
+    for arm, af in arms.items():
+        info = af.get("dft_ctrl")
+        if not info:
+            up.err("U08", 0, f"[{arm}] the facts file has no dft_ctrl record; run gen-facts")
+            continue
+        nets: list[str] = []
+        for kind, name in ref:
+            net = info["inputs"].get(name) if kind == "input" else f"{info['instance']}/{name}"
+            if net is None:
+                up.err(
+                    "U10", 0, f"[{arm}] dft_ctrl input {name} is not connected in soc_top (facts)"
+                )
+            else:
+                nets.append(net)
+        for gname, states in up.group_states.items():
+            raised: dict[str, str] = {}
+            for name in EXTRA_STATES:
+                if name not in states:
+                    continue
+                terms = _scan_nets(up, name)
+                for net, val in terms.items():
+                    if val == "1'b1":
+                        raised[net] = name
+                        if net not in nets:
+                            up.err(
+                                "U10",
+                                states[name][1],
+                                f"[{arm}] state {name} requires {net} == 1'b1 but {net} is not a scan source of dft_ctrl (sources: {', '.join(sorted(nets))})",
+                            )
+            for net in nets:
+                if net not in raised:
+                    up.err(
+                        "U10",
+                        0,
+                        f"[{arm}] group {gname}: {net} can raise test_en_o and scan_mode_o of dft_ctrl but no SCAN state requires {net} == 1'b1",
+                    )
+                for fname, (expr, ln) in states.items():
+                    if fname in EXTRA_STATES:
+                        continue
+                    if dict(logic_terms(expr)).get(net) != "1'b0":
+                        up.err(
+                            "U10",
+                            ln,
+                            f"[{arm}] state {fname} must require {net} == 1'b0 so it is exclusive with the scan states",
+                        )
+    if arms:
+        log.append(
+            f"scan sources: test_en_o and scan_mode_o are the OR of {', '.join(f'{k} {n}' for k, n in ref)}; "
+            "each is required high by a SCAN state"
+        )
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1322,6 +1505,7 @@ def build_facts_arm(arm: str, up: Upf) -> dict[str, Any]:
 
     clock_gates: dict[str, dict[str, Any]] = {}
     test_en_net = None
+    dft_ctrl_facts: dict[str, Any] | None = None
     for m in body:
         if str(m.kind).endswith("Instance") and m.body.definition.name == "rv32i_clock_gate":
             te = None
@@ -1330,10 +1514,13 @@ def build_facts_arm(arm: str, up: Upf) -> dict[str, Any]:
                     te = _sym_name(pc.expression) or str(pc.expression)
             clock_gates[m.name] = {"test_en": te}
         if str(m.kind).endswith("Instance") and m.body.definition.name == "dft_ctrl":
+            dft_ctrl_facts = {"instance": m.name, "inputs": {}}
             for pc in m.portConnections:
                 if pc.port.name == "test_en_o":
                     lhs = getattr(pc.expression, "left", None)
                     test_en_net = _sym_name(lhs) if lhs is not None else None
+                if str(pc.port.direction).endswith("In") and pc.expression is not None:
+                    dft_ctrl_facts["inputs"][pc.port.name] = _sym_name(_unwrap(pc.expression))
 
     return {
         "defines": ARMS[arm],
@@ -1343,6 +1530,7 @@ def build_facts_arm(arm: str, up: Upf) -> dict[str, Any]:
         "paths": paths,
         "nets": {n: resolve_net(n) for n in sorted(rtl_net_refs(up))},
         "clock_gates": dict(sorted(clock_gates.items())),
+        "dft_ctrl": dft_ctrl_facts,
         "test_en_net": test_en_net,
     }
 
@@ -1367,18 +1555,21 @@ def dump_facts(facts: dict[str, Any]) -> str:
 # --------------------------------------------------------------------------------------------------
 
 
-def run_check(upf: Path, facts_path: Path, pmu_path: Path, dft_path: Path, verbose: bool) -> int:
+def run_check(
+    upf: Path, facts_path: Path, pmu_path: Path, dft_path: Path, ctrl_path: Path, verbose: bool
+) -> int:
     try:
         text = upf.read_text()
         facts = json.loads(facts_path.read_text())
         pmu = parse_pmu(pmu_path.read_text())
         dft_text = dft_path.read_text()
+        ctrl_text = ctrl_path.read_text()
     except (OSError, json.JSONDecodeError) as exc:
         print(f"check_upf: cannot read an input: {exc}", file=sys.stderr)
         return 2
     up = parse_upf(text)
     log: list[str] = []
-    findings = check(up, facts, pmu, dft_text, log)
+    findings = check(up, facts, pmu, dft_text, log, ctrl_text)
     if verbose or not findings:
         for ln in log:
             print(f"  {ln}")
@@ -1445,6 +1636,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--facts", type=Path, default=DEFAULT_FACTS)
     ap.add_argument("--pmu", type=Path, default=DEFAULT_PMU)
     ap.add_argument("--dft", type=Path, default=DEFAULT_DFT)
+    ap.add_argument("--dft-ctrl", type=Path, default=DEFAULT_DFT_CTRL)
     ap.add_argument("-v", "--verbose", action="store_true")
     sub = ap.add_subparsers(dest="cmd")
     g = sub.add_parser(
@@ -1454,7 +1646,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = ap.parse_args(argv)
     if args.cmd == "gen-facts":
         return run_gen(args.upf, args.facts, args.check)
-    return run_check(args.upf, args.facts, args.pmu, args.dft, args.verbose)
+    return run_check(args.upf, args.facts, args.pmu, args.dft, args.dft_ctrl, args.verbose)
 
 
 if __name__ == "__main__":
