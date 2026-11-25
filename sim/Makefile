@@ -546,14 +546,13 @@ ifneq ($(filter test sim regression results.xml,$(MAKECMDGOALS)),)
     # Include cocotb makefiles
     include $(shell $(COCOTB_CONFIG) --makefiles)/Makefile.sim
 
-    # Make a failing cocotb suite fail the make. cocotb 1.9.2's check_for_results_file only tests that the results file EXISTS,
-    # never that it holds no failures, so a red suite run through a single target exited 0. This redefinition goes AFTER the include
-    # and reaches every target, because make expands recipe lines when the rule runs. The verdict comes from
-    # tools/verif/check_cocotb_results.py, which reuses tools/eda/summarize.py's parser. The existence check stays first, so a missing
-    # file still gets cocotb's own message. `check-exit-propagation` below is the self-test that proves this stays wired.
+    # Make a failing cocotb suite fail the make: cocotb 1.9.2's check_for_results_file only tests that the results file EXISTS.
+    # Defined AFTER the include, so it reaches every target. The existence check stays first (cocotb's own message), then
+    # tools/verif/check_cocotb_results.py gives the verdict on cocotb's interpreter (PYTHON_BIN; /usr/bin/python3 fails on a CI runner).
+    # `check-exit-propagation` below is the self-test that proves this stays wired. Doc: tm:suite:sim-makefile
     define check_for_results_file
         @test -f $(COCOTB_RESULTS_FILE) || (echo "ERROR: $(COCOTB_RESULTS_FILE) was not written by the simulation!" >&2 && exit 1)
-        @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (cocotb itself cannot set an exit code)" >&2 && exit 1)
+        @$(or $(PYTHON_BIN),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (cocotb itself cannot set an exit code)" >&2 && exit 1)
     endef
 endif
 
