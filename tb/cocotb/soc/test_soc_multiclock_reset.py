@@ -400,8 +400,9 @@ async def _fabric_ready_low_in_reset_body(dut) -> None:
     assert_ready_low(dut, seen, "fabric ready while core_rst_n is low, CPU free-running")
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_soc_reset_fabric_ready_low_while_fabric_held(dut):
+    """Every fabric ready stays low while core_rst_n is low, with the CPU free-running."""
     await with_timeout(_fabric_ready_low_in_reset_body(dut), 400, "us")
 
 

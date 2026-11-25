@@ -634,7 +634,7 @@ def _reset_probe_read(dut):
     return valids, extra, readies
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_reset_ready_low_in_reset(dut):
     """AWREADY, WREADY and ARREADY are low while rst_n is low, with the channel VALID high."""
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
