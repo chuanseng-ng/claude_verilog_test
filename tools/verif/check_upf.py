@@ -9,8 +9,8 @@ tool); it proves that the references are real and that the sets match.
 What it checks (finding ids are stable)
 ---------------------------------------
   U01  every UPF command and option is one this checker knows (a typo or a non-standard option such
-       as ``create_power_switch -on_value`` is an error); retention, isolation-cell mapping, level
-       shifter and legacy PST commands are refused; the UPF version and the design top are right
+       as ``create_power_switch -on_value`` is an error); isolation-cell mapping, level shifter and
+       legacy PST commands are refused; the UPF version and the design top are right
   U02  every ``-elements`` / ``-exclude_elements`` path exists in the elaborated hierarchy (both arms)
   U03  domain membership: the domains are exactly ``REQUIRED_DOMAINS`` with the elements listed
        there, no instance is in two domains, and the ``# upf-check aon <inst>`` roster equals the
@@ -31,6 +31,10 @@ What it checks (finding ids are stable)
        state's CPU/GPU rail state equals the PMU's ``dom_target_on`` for that mode, the SCAN state
        exists, and its claim (clock gates forced open) is true of the RTL
   U08  facts file is complete for the references the UPF makes
+  U09  scope of the power intent: the UPF has no power switch and no retention.  A command named
+       ``create_power_switch``, ``set_retention``, ``set_retention_control`` or
+       ``map_retention_cell`` is a finding, whatever its options.  The match is on the command
+       word of a parsed command, so a comment that names one is not a finding
 
 Inputs
 ------
@@ -236,10 +240,15 @@ SPECS: dict[str, tuple[int, dict[str, int]]] = {
     "create_power_state_group": (1, {}),
     "add_power_state": (1, {"-supply": 1, "-domain": 1, "-group": 1, "-state": 1, "-update": 0}),
 }  # fmt: skip
-REFUSED: dict[str, str] = {
+# Commands the power intent must not contain (rule U09).  create_power_switch is also in SPECS, so
+# a switch is still parsed and its references still checked (U06); the finding is U09 either way.
+SCOPE_REFUSED: dict[str, str] = {
+    "create_power_switch": "the PMU has no switch control output and the rails are supply ports",
     "set_retention": "no retention state exists in the RTL (pmu.sv ret_save/ret_restore drive nothing)",
     "set_retention_control": "no retention state exists in the RTL",
     "map_retention_cell": "no retention state exists in the RTL",
+}
+REFUSED: dict[str, str] = {
     "map_isolation_cell": "ASAP7/Sky130 libraries carry no isolation cell; the RTL clamp is plain logic",
     "set_level_shifter": "single-voltage design",
     "create_pst": "legacy PST form; use create_power_state_group + add_power_state -group",
@@ -311,6 +320,7 @@ class Upf:
     domains: dict[str, dict[str, Any]] = field(default_factory=dict)
     isolations: list[Isolation] = field(default_factory=list)
     switches: list[dict[str, Any]] = field(default_factory=list)
+    scope_cmds: list[tuple[str, int]] = field(default_factory=list)  # (command, line) refused by U09
     set_states: dict[str, dict[str, str]] = field(default_factory=dict)  # set -> state -> expr
     group_states: dict[str, dict[str, tuple[str, int]]] = field(default_factory=dict)
     aon_roster: dict[str, int] = field(default_factory=dict)
@@ -366,6 +376,10 @@ def parse_upf(text: str) -> Upf:
         up.err("U01", 0, f"cannot tokenize: {exc}")
         return up
     for cmd in cmds:
+        if cmd.name in SCOPE_REFUSED:
+            up.scope_cmds.append((cmd.name, cmd.line))
+            if cmd.name not in SPECS:
+                continue
         if cmd.name in REFUSED:
             up.err("U01", cmd.line, f"{cmd.name} refused: {REFUSED[cmd.name]}")
             continue
@@ -657,6 +671,7 @@ def check(
     _group(up, log, "domains", run_domains)
     _group(up, log, "isolation", lambda lg: _check_isolation(up, arms, gated, lg))
     _group(up, log, "switches and nets", lambda lg: _check_switch_and_net_refs(up, arms, lg))
+    _group(up, log, "power intent scope", lambda lg: _check_scope(up, lg))
     _group(up, log, "power states", lambda lg: _check_pst(up, arms, pmu, dft_text, lg))
     return f
 
@@ -991,6 +1006,13 @@ def _check_isolation(
         log.append(
             f"isolation[{arm}]: {len(upf_elems)} UPF-isolated == {len(rtl)} RTL-clamped; {len(set(up.unclamped) & outs)} outputs classified unclamped"
         )
+
+
+def _check_scope(up: Upf, log: list[str]) -> None:
+    """U09: the power intent has no power switch and no retention."""
+    for name, line in up.scope_cmds:
+        up.err("U09", line, f"{name} is not allowed: {SCOPE_REFUSED[name]}")
+    log.append(f"power intent scope: {len(up.scope_cmds)} power switch or retention command(s), none allowed")
 
 
 def _check_switch_and_net_refs(up: Upf, arms: dict[str, Any], log: list[str]) -> None:
