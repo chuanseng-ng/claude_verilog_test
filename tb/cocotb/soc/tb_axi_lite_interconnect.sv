@@ -20,7 +20,9 @@ module tb_axi_lite_interconnect #(
     parameter int unsigned DW     = axi_pkg::AXI_DATA_WIDTH,
     parameter int unsigned SW     = axi_pkg::AXI_STRB_WIDTH,
     parameter int unsigned N_REGS = 8,
-    parameter int unsigned BANK_AW = 12
+    parameter int unsigned BANK_AW = 12,
+    // Bound of the DUT bounded wait. The unit build keeps it small so the timeout tests stay short.
+    parameter int unsigned TIMEOUT_CYCLES = 512
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -80,7 +82,8 @@ module tb_axi_lite_interconnect #(
     axi_lite_interconnect #(
         .N_SLAVES  (NS),
         .SLV_BASE  (AXIL_SLV_BASE),
-        .SLV_LIMIT (AXIL_SLV_LIMIT)
+        .SLV_LIMIT (AXIL_SLV_LIMIT),
+        .TIMEOUT_CYCLES (TIMEOUT_CYCLES)
     ) u_axil_ic (
         .clk(clk), .rst_n(rst_n),
         .slv_off_i(slv_off),

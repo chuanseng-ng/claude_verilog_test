@@ -933,7 +933,7 @@ async def test_reset_ready_control_after_release(dut):
 # expect_fail are controls: they pass on the present RTL and must keep passing.
 # ──────────────────────────────────────────────────────────────────────────────
 
-TIMEOUT_CYCLES = 4096  # default of the TIMEOUT_CYCLES parameter
+TIMEOUT_CYCLES = 512  # TIMEOUT_CYCLES of the wrapper build
 TIMEOUT_MARGIN = 32  # cycles for the request handshake, the engine states and the output register
 AT_ONCE = 12  # a local answer ends within this many cycles
 BOUND_RUN = TIMEOUT_CYCLES + TIMEOUT_MARGIN + 8
