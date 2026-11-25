@@ -28,6 +28,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
 
 from bfm.axi4lite_master import AXI4LiteMaster
+from reset_ready_probe import assert_ready_low, hold_reset_sample_ready, release_reset_sample_ready
 
 CLK_PERIOD_NS = 2
 
@@ -853,3 +854,39 @@ async def test_off_rises_after_read_response_shown_keeps_data(dut):
         _check_once(t2, RESP_SLVERR, f"{label}: next read while off", OFF_RDATA)
         assert t2.fwd == {"aw": 0, "w": 0, "ar": 0}, f"{label}: forwarded {t2.fwd}. {t2.fmt()}"
         dut.slv_off.value = 0
+
+
+# ---------------------------------------------------------------------------
+# Master-face ready outputs while rst_n is asserted (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+# The interconnect already drives these low in reset, so the first test is a regression guard and
+# passes. The target is an unmapped address: the interconnect accepts and drops it, which makes
+# AWREADY and ARREADY rise as soon as the request is captured, so the control can see them.
+def _reset_probe_ports(dut):
+    valids = [dut.m_axil_awvalid, dut.m_axil_wvalid, dut.m_axil_arvalid]
+    extra = {dut.m_axil_awaddr: BAD_LOW, dut.m_axil_araddr: BAD_LOW,
+             dut.m_axil_bready: 1, dut.m_axil_rready: 1}
+    readies = {"m_axil_awready": dut.m_axil_awready, "m_axil_wready": dut.m_axil_wready,
+               "m_axil_arready": dut.m_axil_arready}
+    return valids, extra, readies
+
+
+@cocotb.test()
+async def test_reset_ready_low_in_reset(dut):
+    """Guard: AWREADY, WREADY and ARREADY are low while rst_n is low, with all VALIDs high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _reset_probe_ports(dut)
+    seen = await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    assert_ready_low(dut, seen, "master-face ready while rst_n is low")
+
+
+@cocotb.test()
+async def test_reset_ready_control_after_release(dut):
+    """Control: the same stimulus after rst_n releases shows AWREADY and ARREADY high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _reset_probe_ports(dut)
+    await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    high = await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    assert {"m_axil_awready", "m_axil_arready"} <= high, (
+        f"probe is blind: after release only {sorted(high)} went high"
+    )

@@ -28,8 +28,9 @@ import sys
 from pathlib import Path
 
 import cocotb
-from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, with_timeout
+from cocotb.triggers import ClockCycles, FallingEdge, ReadOnly, RisingEdge, with_timeout
 
+from reset_ready_probe import assert_ready_low
 from soc_clocks import start_soc_clocks
 from sram_backdoor import sram_mem
 
@@ -326,3 +327,102 @@ async def _cpu_held_fabric_free_body(dut) -> None:
 @cocotb.test()
 async def test_soc_reset_asym_cpu_held_fabric_free(dut):
     await with_timeout(_cpu_held_fabric_free_body(dut), 400, "us")
+
+
+# =============================================================================
+# Test 3 and 4 -- fabric ready outputs while the fabric reset (rst_n_i, hence core_rst_n) is held,
+# at the wide clock-ratio pair of test 1. The CPU domain is released and offers real fetches, so
+# the fabric is not idle by construction of the bench. Every ready output on the core_clk fabric
+# (boot ROM, SRAM controller, peripheral bridge, AXI-Lite to APB bridge, GPU adapter BREADY) must
+# stay low in every cycle that core_rst_n is low. The control releases rst_n_i and shows the same
+# probes see a high ready once the fabric is out of reset. Both tests use the wide clock-ratio
+# pair of test 1. =============================================================================
+FABRIC_READY_PROBES = {
+    "u_boot_rom.s_awready": "u_boot_rom.s_awready",
+    "u_boot_rom.s_wready": "u_boot_rom.s_wready",
+    "u_boot_rom.s_arready": "u_boot_rom.s_arready",
+    "u_sram.s_awready": "u_sram.s_awready",
+    "u_sram.s_wready": "u_sram.s_wready",
+    "u_sram.s_arready": "u_sram.s_arready",
+    "u_bus.u_periph_bridge.s_awready": "u_bus.u_periph_bridge.s_awready",
+    "u_bus.u_periph_bridge.s_arready": "u_bus.u_periph_bridge.s_arready",
+    "u_bus.u_axil_apb_bridge.s_axil_awready": "u_bus.u_axil_apb_bridge.s_axil_awready",
+    "u_bus.u_axil_apb_bridge.s_axil_wready": "u_bus.u_axil_apb_bridge.s_axil_wready",
+    "u_bus.u_axil_apb_bridge.s_axil_arready": "u_bus.u_axil_apb_bridge.s_axil_arready",
+    "u_gif_adapter.m_axi_bready": "u_gif_adapter.m_axi_bready",
+}
+FABRIC_READY_WINDOW_CYCLES = 60
+CPU_FETCH_LEAD_CYCLES = 40
+
+
+def _fabric_ready_handles(dut) -> dict:
+    handles = {}
+    for name, path in FABRIC_READY_PROBES.items():
+        node = dut.u_soc
+        for part in path.split("."):
+            node = getattr(node, part)
+        handles[name] = node
+    return handles
+
+
+async def _start_fabric_held_cpu_free(dut) -> None:
+    _kill_active_tasks()
+    clk_task, cpu_clk_task = start_soc_clocks(
+        dut, FABRIC_PERIOD_NS_WIDE, cpu_period_ns=CPU_PERIOD_NS_WIDE
+    )
+    _active_tasks.extend([clk_task, cpu_clk_task])
+    dut.rst_n_i.value = 0
+    dut.cpu_rst_n_i.value = 0
+    dut.apb_paddr_i.value = 0
+    dut.apb_psel_i.value = 0
+    dut.apb_penable_i.value = 0
+    dut.apb_pwrite_i.value = 0
+    dut.apb_pwdata_i.value = 0
+    dut.uart_rx_i.value = 1
+    dut.spi_miso_i.value = 0
+    _load_rom(dut, _read_hex_words(_BOOT_HEX))
+    for _ in range(5):
+        await RisingEdge(dut.clk_i)
+    dut.cpu_rst_n_i.value = 1
+    await ClockCycles(dut.cpu_clk_i, CPU_FETCH_LEAD_CYCLES)
+
+
+async def _fabric_ready_low_in_reset_body(dut) -> None:
+    await _start_fabric_held_cpu_free(dut)
+    handles = _fabric_ready_handles(dut)
+    seen = []
+    for cycle in range(FABRIC_READY_WINDOW_CYCLES):
+        await FallingEdge(dut.clk_i)
+        assert int(dut.u_soc.core_rst_n.value) == 0, "bench error: core_rst_n left reset"
+        for name, sig in handles.items():
+            if int(sig.value):
+                seen.append((cycle, name))
+    assert_ready_low(dut, seen, "fabric ready while core_rst_n is low, CPU free-running")
+
+
+@cocotb.test(expect_fail=True)
+async def test_soc_reset_fabric_ready_low_while_fabric_held(dut):
+    await with_timeout(_fabric_ready_low_in_reset_body(dut), 400, "us")
+
+
+async def _fabric_ready_control_body(dut) -> None:
+    await _start_fabric_held_cpu_free(dut)
+    handles = _fabric_ready_handles(dut)
+    dut.rst_n_i.value = 1
+    high = set()
+    for _ in range(4000):
+        await FallingEdge(dut.clk_i)
+        if int(dut.u_soc.core_rst_n.value):
+            high.update(name for name, sig in handles.items() if int(sig.value))
+            if {"u_boot_rom.s_arready", "u_bus.u_periph_bridge.s_awready"} <= high:
+                break
+    assert int(dut.u_soc.core_rst_n.value) == 1, "fabric never left reset after rst_n_i released"
+    assert {"u_boot_rom.s_arready", "u_bus.u_periph_bridge.s_awready"} <= high, (
+        f"probe is blind: after release only {sorted(high)} went high"
+    )
+
+
+@cocotb.test()
+async def test_soc_reset_fabric_ready_control_after_release(dut):
+    """Control: with the fabric out of reset, boot ROM ARREADY and bridge AWREADY go high."""
+    await with_timeout(_fabric_ready_control_body(dut), 2000, "us")

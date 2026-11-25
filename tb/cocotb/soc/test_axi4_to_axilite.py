@@ -37,6 +37,7 @@ from axi4_fabric_bfm import (
 )
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
+from reset_ready_probe import assert_ready_low, hold_reset_sample_ready, release_reset_sample_ready
 
 BASE = 0x2000_4000
 
@@ -666,3 +667,35 @@ async def test_axsize_above_word_acts_as_four_bytes(dut):
             await _check_write(master, slave, addr, n, tag, burst=burst, size=size)
             await _check_read(master, slave, addr, n, tag, burst=burst, size=size)
     await _followup(dut, master, slave, "size>2")
+
+
+# ---------------------------------------------------------------------------
+# Slave-face ready outputs while rst_n is asserted (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+def _reset_probe_ports(dut):
+    valids = [dut.s_awvalid, dut.s_wvalid, dut.s_arvalid]
+    extra = {dut.s_awaddr: 0x2000_1000, dut.s_araddr: 0x2000_1000, dut.s_wlast: 1,
+             dut.s_bready: 1, dut.s_rready: 1}
+    readies = {"s_awready": dut.s_awready, "s_wready": dut.s_wready, "s_arready": dut.s_arready}
+    return valids, extra, readies
+
+
+@cocotb.test(expect_fail=True)
+async def test_reset_ready_low_in_reset(dut):
+    """AWREADY, WREADY and ARREADY are low while rst_n is low, with all VALIDs high."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    valids, extra, readies = _reset_probe_ports(dut)
+    seen = await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    assert_ready_low(dut, seen, "slave-face ready while rst_n is low")
+
+
+@cocotb.test()
+async def test_reset_ready_control_after_release(dut):
+    """Control: the same stimulus after rst_n releases shows AWREADY and ARREADY high."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    valids, extra, readies = _reset_probe_ports(dut)
+    await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    high = await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    assert {"s_awready", "s_arready"} <= high, (
+        f"probe is blind: after release only {sorted(high)} went high"
+    )

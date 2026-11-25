@@ -16,6 +16,7 @@ from axi4_slave_model import AXI4SlaveModel
 from bfm.axi4_master import RESP_DECERR, RESP_OKAY, AXI4Master
 from cocotb.clock import Clock
 from cocotb.triggers import Combine, RisingEdge, with_timeout
+from reset_ready_probe import assert_ready_low, hold_reset_sample_ready, release_reset_sample_ready
 
 CLK_PERIOD_NS = 2
 
@@ -227,3 +228,47 @@ async def test_concurrent_ar_aw_same_slave(dut):
     assert t1.result() == RESP_OKAY
     assert s1.mem[SRAM_BASE + 0x360] == 0xBEEF0001
     dut._log.info("concurrent AR+AW to same slave OK")
+
+
+# ---------------------------------------------------------------------------
+# Master-face ready outputs while reset is asserted (single clock, 1:1 by construction)
+# ---------------------------------------------------------------------------
+# While rst_n is low every master face must show AWREADY, WREADY and ARREADY low, whatever the
+# masters present on VALID. Master 0 targets the ROM window, master 1 an unmapped address (DECERR
+# engine) and master 2 the SRAM window, so the slave-grant path and the DECERR path are both
+# probed.
+def _xbar_reset_probe_ports(dut):
+    valids, extra, readies = [], {}, {}
+    targets = (ROM_BASE, BAD_ADDR, SRAM_BASE)
+    for i, addr in enumerate(targets):
+        for ch in ("aw", "w", "ar"):
+            valids.append(getattr(dut, f"m{i}_{ch}valid"))
+            readies[f"m{i}_{ch}ready"] = getattr(dut, f"m{i}_{ch}ready")
+        extra[getattr(dut, f"m{i}_awaddr")] = addr
+        extra[getattr(dut, f"m{i}_araddr")] = addr
+        extra[getattr(dut, f"m{i}_wlast")] = 1
+        extra[getattr(dut, f"m{i}_bready")] = 1
+        extra[getattr(dut, f"m{i}_rready")] = 1
+    return valids, extra, readies
+
+
+@cocotb.test(expect_fail=True)
+async def test_reset_ready_low_in_reset(dut):
+    """Every master-face ready is low in every cycle that rst_n is low, with all VALIDs high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _xbar_reset_probe_ports(dut)
+    seen = await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    assert_ready_low(dut, seen, "master-face ready while rst_n is low")
+
+
+@cocotb.test()
+async def test_reset_ready_control_after_release(dut):
+    """Control: after rst_n releases, the same stimulus shows AWREADY and ARREADY high."""
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    valids, extra, readies = _xbar_reset_probe_ports(dut)
+    await hold_reset_sample_ready(dut.clk, dut.rst_n, valids, readies, extra)
+    high = await release_reset_sample_ready(dut.clk, dut.rst_n, readies)
+    want = {f"m{i}_{ch}ready" for i in range(3) for ch in ("aw", "ar")}
+    assert want <= high, (
+        f"probe is blind: after release only {sorted(high)} went high, want {sorted(want)}"
+    )
