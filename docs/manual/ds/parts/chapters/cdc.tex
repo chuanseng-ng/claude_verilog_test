@@ -447,7 +447,7 @@ Each subsection gives the decision, the alternatives that the team rejected, and
 
 \textbf{Alternatives rejected.} A timeout in the bridge also ends a wait for a destination clock that stops while the domain is on. It needs a counter and a bound for each instance, and it can end a slow access that is correct. A response of zero for an off destination cannot be told from a reset alone.
 
-\textbf{Consequence for the user.} A debug access to an off CPU domain ends with an error. A destination clock that stops while the domain is on and not in reset still stalls the transfer. The test \code{test_b2_stalled_destination_clock_completes_within_bound} measures this stall and stays marked \code{expect_fail}.
+\textbf{Consequence for the user.} A debug access to an off CPU domain ends with an error. A destination clock that stops while the domain is on and not in reset still stalls the transfer. The test \code{test_b2_stalled_destination_clock_completes_within_bound} measures this stall and stays marked \code{expect_fail}. In the SoC the interconnect ends the wait of the master with SLVERR after \code{TIMEOUT_CYCLES} (\reqref{DS-FAB-006}). The bridge itself still waits, and the slot stays stale until the bridge answers (\reqref{DS-FAB-007}).
 
 \subsection{Flop-array storage with a combinational read}\label{ds:ch:mod-cdc-primitives:dec-storage}
 \textbf{Decision.} The FIFO stores entries in an array of flops. The read data comes from the array without an output register.
