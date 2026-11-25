@@ -20,7 +20,9 @@ module tb_axi_lite_interconnect #(
     parameter int unsigned DW     = axi_pkg::AXI_DATA_WIDTH,
     parameter int unsigned SW     = axi_pkg::AXI_STRB_WIDTH,
     parameter int unsigned N_REGS = 8,
-    parameter int unsigned BANK_AW = 12
+    parameter int unsigned BANK_AW = 12,
+    // Bound of the DUT bounded wait. The unit build keeps it small so the timeout tests stay short.
+    parameter int unsigned TIMEOUT_CYCLES = 512
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -28,6 +30,14 @@ module tb_axi_lite_interconnect #(
     // Per-slot off level, driven by the test; off_rdata_o mirrors the OFF_RDATA parameter of the DUT.
     input  logic [soc_periph_map_pkg::AXIL_N_SLAVES-1:0] slv_off,
     output logic [DW-1:0] off_rdata_o,
+
+    // Per-slot stall controls, driven by the test. Each level holds one channel group of the stub
+    // slave away from the interconnect: hang_addr stops the AW/AR handshake, hang_w stops the W
+    // handshake, hang_resp holds the B/R response of a request that the stub already took. Releasing
+    // hang_resp lets the held response through, as a slave that answers late.
+    input  logic [soc_periph_map_pkg::AXIL_N_SLAVES-1:0] hang_addr,
+    input  logic [soc_periph_map_pkg::AXIL_N_SLAVES-1:0] hang_w,
+    input  logic [soc_periph_map_pkg::AXIL_N_SLAVES-1:0] hang_resp,
 
     // ── CPU-side master port (BFM prefix "m_axil_") ──────────────────────────
     input  logic [AW-1:0] m_axil_awaddr,
@@ -72,7 +82,8 @@ module tb_axi_lite_interconnect #(
     axi_lite_interconnect #(
         .N_SLAVES  (NS),
         .SLV_BASE  (AXIL_SLV_BASE),
-        .SLV_LIMIT (AXIL_SLV_LIMIT)
+        .SLV_LIMIT (AXIL_SLV_LIMIT),
+        .TIMEOUT_CYCLES (TIMEOUT_CYCLES)
     ) u_axil_ic (
         .clk(clk), .rst_n(rst_n),
         .slv_off_i(slv_off),
@@ -117,6 +128,21 @@ module tb_axi_lite_interconnect #(
         /* verilator lint_off UNUSEDSIGNAL */
         logic [31:0] regs_o [N_REGS];
         /* verilator lint_on  UNUSEDSIGNAL */
+        // Stall gates between the interconnect and the stub: a held channel group shows no valid to the
+        // stub and no ready to the interconnect.
+        logic bk_awvalid, bk_awready, bk_wvalid, bk_wready, bk_bvalid, bk_bready;
+        logic bk_arvalid, bk_arready, bk_rvalid, bk_rready;
+        assign bk_awvalid    = s_awvalid[gs] & ~hang_addr[gs];
+        assign s_awready[gs] = bk_awready    & ~hang_addr[gs];
+        assign bk_arvalid    = s_arvalid[gs] & ~hang_addr[gs];
+        assign s_arready[gs] = bk_arready    & ~hang_addr[gs];
+        assign bk_wvalid     = s_wvalid[gs]  & ~hang_w[gs];
+        assign s_wready[gs]  = bk_wready     & ~hang_w[gs];
+        assign s_bvalid[gs]  = bk_bvalid     & ~hang_resp[gs];
+        assign bk_bready     = s_bready[gs]  & ~hang_resp[gs];
+        assign s_rvalid[gs]  = bk_rvalid     & ~hang_resp[gs];
+        assign bk_rready     = s_rready[gs]  & ~hang_resp[gs];
+
         axi_lite_register_bank #(
             .N_REGS (N_REGS),
             .ADDR_W (BANK_AW)
@@ -124,16 +150,16 @@ module tb_axi_lite_interconnect #(
             .clk(clk), .rst_n(rst_n),
             .s_axil_awaddr (s_awaddr[gs][BANK_AW-1:0]),
             .s_axil_awprot (s_awprot[gs]),
-            .s_axil_awvalid(s_awvalid[gs]), .s_axil_awready(s_awready[gs]),
+            .s_axil_awvalid(bk_awvalid), .s_axil_awready(bk_awready),
             .s_axil_wdata  (s_wdata[gs]),   .s_axil_wstrb (s_wstrb[gs]),
-            .s_axil_wvalid (s_wvalid[gs]),  .s_axil_wready(s_wready[gs]),
-            .s_axil_bresp  (s_bresp[gs]),   .s_axil_bvalid(s_bvalid[gs]),
-            .s_axil_bready (s_bready[gs]),
+            .s_axil_wvalid (bk_wvalid),  .s_axil_wready(bk_wready),
+            .s_axil_bresp  (s_bresp[gs]),   .s_axil_bvalid(bk_bvalid),
+            .s_axil_bready (bk_bready),
             .s_axil_araddr (s_araddr[gs][BANK_AW-1:0]),
             .s_axil_arprot (s_arprot[gs]),
-            .s_axil_arvalid(s_arvalid[gs]), .s_axil_arready(s_arready[gs]),
+            .s_axil_arvalid(bk_arvalid), .s_axil_arready(bk_arready),
             .s_axil_rdata  (s_rdata[gs]),   .s_axil_rresp (s_rresp[gs]),
-            .s_axil_rvalid (s_rvalid[gs]),  .s_axil_rready(s_rready[gs]),
+            .s_axil_rvalid (bk_rvalid),  .s_axil_rready(bk_rready),
             .regs_o(regs_o), .hw_wen_i(hw_wen_z), .hw_wdata_i(hw_wdata_z)
         );
     end

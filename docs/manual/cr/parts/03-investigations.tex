@@ -3283,6 +3283,38 @@ Limits. The bridge has no timeout, so a destination clock that stops while the d
 
 \end{record}
 
+\section{AXI-Lite interconnect waits for ever on a slot that does not answer}\label{cr:defect:fabric-timeout}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.36}, item 2 of GH \#403: the fabric had no timeout, so a slot that did not answer held the master. The owner had declined a timeout in \code{apb_cdc_bridge} (\cref{ds:ch:mod-cdc-primitives:dec-off}). Owner decisions of 2026-11-25: the timeout is in \code{axi_lite_interconnect}, one counter for each engine; a parameter \code{TIMEOUT_CYCLES}, 4096 by default and 0 to disable, one value for all slots; the count starts when the engine presents the request; on a timeout the master gets SLVERR and \code{OFF_RDATA}, the request stays presented, the slot is stale for that engine, new accesses get SLVERR at once, and the late response is absorbed before the slot reopens.
+
+\end{record}
+
+\begin{record}
+
+Measured before the fix, unit level: each of eleven tests stopped with ``no response in 4136 cycles'' (the bound of 4096 plus a margin), for a slot that never answers, never accepts the address, never accepts the write data, and for the stale and late-response cases.
+
+\end{record}
+
+\begin{record}
+
+RTL change. Counters \code{w_cnt_q} and \code{r_cnt_q}, stale bits \code{w_stale_q} and \code{r_stale_q} for each slot, and one holder register for each engine. The timeout reuses the off flags for the local answer. The coarse netlist has the same 8 \code{\$shiftx} and 2 \code{\$pmux} as before. New requirements \reqref{DS-FAB-006} and \reqref{DS-FAB-007}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. \code{test_axil_interconnect.py} has 48 tests with the wrapper bound at 512: the eleven tests pass without \code{expect_fail}, two controls (a slow legal slave is not cut; DECERR and the off answer keep priority), and eleven new tests (a held AW, W or AR that reaches the slot after release, an off pulse while stale, two stale slots, a stale bit for each engine, master stalls not counted, a response in the cycle of the bound, and the double fault). With the bound at 0, 20 tests fail and all others pass. Nineteen RTL mutants were each caught. \code{soc_all_ci}: exit 0, 1106 pass. \code{PASS_FLOOR} goes from 1043 to 1067.
+
+\end{record}
+
+\begin{record}
+
+Limits. No SoC test stalls a slot, because the default PLL model ties the destination clock of the bridge to the fabric clock. In the double fault the second slot stays stale until reset, and its request is removed before READY. A slot that never answers stays stale. The crossbar has no timeout.
+
+\end{record}
+
 \section{Ready outputs of the data fabric high in reset}\label{cr:defect:fabric-ready-in-reset}
 
 \begin{record}
