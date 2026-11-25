@@ -969,6 +969,10 @@ The generated .v is not committed; run `make -C hls memory_coalescer` (inside
 
 \end{relocated}
 
+\begin{information}
+Results gate: \src{sim/Makefile} redefines \code{check_for_results_file} after the include of the cocotb \code{Makefile.sim}. It checks that \code{results.xml} exists and then runs \src{tools/verif/check_cocotb_results.py}, the same gate as the cpu and soc Makefiles. A failing test of the CPU, cache, GPU or memory suites therefore makes the target exit non-zero, also when the target runs alone. The target \code{check-exit-propagation} runs the always-failing module \src{tb/cocotb/common/test_exit_propagation_neg.py} on the small top level \code{rv32i_clock_gate} and passes only if the run exits non-zero with \code{FAIL=1}. History: \cref{cr:defect:sim-makefile-false-pass}.
+\end{information}
+
 \section{\texttt{tb/models/aes128\_model.py}}\label{tm:suite:aes128-model}
 
 This section holds comment text that was in the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
