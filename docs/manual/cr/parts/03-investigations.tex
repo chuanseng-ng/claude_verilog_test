@@ -3283,6 +3283,20 @@ Limits. The bridge has no timeout, so a destination clock that stops while the d
 
 \end{record}
 
+\section{\code{sim/Makefile} passes a failing cocotb test}\label{cr:defect:sim-makefile-false-pass}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.31}. The bead named Makefiles in \src{tb/cocotb/gpu} and \src{tb/cocotb/mem}. These directories hold only Python tests, and their suites run through \src{sim/Makefile}, which kept the stock \code{check_for_results_file}. The aggregate targets \code{gpu_unit}, \code{gpu_kernels} and \code{rollup} already read \code{results.xml}, but \code{phase3_all} and each target that ran alone did not. Measured before the fix: an always-failing module through \code{make sim} logged \code{TESTS=1 PASS=0 FAIL=1} and make exited 0.
+
+\end{record}
+
+\begin{record}
+
+Change: \src{sim/Makefile} runs \src{tools/verif/check_cocotb_results.py} as its results gate, as the cpu and soc Makefiles do, and has a new target \code{check-exit-propagation} with the module \src{tb/cocotb/common/test_exit_propagation_neg.py}. The self-test passes. Each CPU, cache and GPU target was run again alone and passed; \code{make test} logged 243 passes and no failure. No test that failed without a report was found. The self-tests of the cpu, soc and sim Makefiles are not in a CI workflow.
+
+\end{record}
+
 \section{AXI-Lite interconnect waits for ever on a slot that does not answer}\label{cr:defect:fabric-timeout}
 
 \begin{record}
