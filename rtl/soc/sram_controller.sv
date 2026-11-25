@@ -9,7 +9,7 @@
 //   SRAM_SKY130: a hard macro. Writes use port 0. Reads use port 1 and a 2-entry output skid buffer.
 //   A burst starts after 3 cycles.
 // Parameters: AW, DW, SW, IW, LENW and MEM_WORDS. SRAM_SKY130 requires MEM_WORDS=1024.
-// Clocks and resets: clk is the clock. rst_n is the reset.
+// Clocks and resets: clk is the clock. rst_n is the reset. AWREADY and ARREADY are gated with rst_n, so both are low in reset.
 // Caller rules:
 //   - A master that must read new data after a write must wait for B before it issues AR.
 //   - A read of a word whose write is still in the pipeline returns the old value. The module has no forwarding.
@@ -225,7 +225,7 @@ module sram_controller
         end
     end
 
-    assign s_awready = (wstate == W_IDLE);
+    assign s_awready = rst_n && (wstate == W_IDLE);
     assign s_wready  = (wstate == W_DATA);
     assign s_bvalid  = (wstate == W_RESP);
     assign s_bid     = bid_q;
@@ -445,7 +445,7 @@ module sram_controller
         end
     end
 
-    assign s_arready = (rstate == R_IDLE);
+    assign s_arready = rst_n && (rstate == R_IDLE);
     assign s_rvalid  = r_valid_q;
     assign s_rdata   = r_data_q;
     assign s_rid     = rid_q;
@@ -598,7 +598,7 @@ module sram_controller
     assign mem_csb1  = ~(rstate == R_BUSY && r_issue_now);
     assign mem_addr1 = r_idx;
 
-    assign s_arready = (rstate == R_IDLE);
+    assign s_arready = rst_n && (rstate == R_IDLE);
     assign s_rvalid  = buf_v_q[0];
     assign s_rdata   = buf_data_q[0];
     assign s_rid     = rid_q;

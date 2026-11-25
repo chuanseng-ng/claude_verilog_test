@@ -12,6 +12,9 @@
 // Ports mirror sram_controller.sv exactly so the crossbar can use either
 // as a generic AXI4 slave.
 //
+// AWREADY and ARREADY are gated with rst_n, so both are low while the ROM is
+// in reset although the engines already sit in their idle states.
+//
 // Coding conventions: no `default_nettype` directive (Spyglass IND,
 // Doc: um:guide:coding-guidelines sec 1.3), synchronous reset, no #delays, no initial
 // blocks in synthesisable path.  $readmemh is in an initial block
@@ -167,7 +170,7 @@ module boot_rom
         end
     end
 
-    assign s_awready = (w_state_q == W_IDLE);
+    assign s_awready = rst_n && (w_state_q == W_IDLE);
     assign s_wready  = (w_state_q == W_DATA);
     assign s_bvalid  = (w_state_q == W_RESP);
     assign s_bid     = w_id_q;
@@ -225,7 +228,7 @@ module boot_rom
     logic [IDX_W-1:0] r_idx;
     assign r_idx = r_addr_q[ADDR_LSB +: IDX_W];
 
-    assign s_arready = (r_state_q == R_IDLE);
+    assign s_arready = rst_n && (r_state_q == R_IDLE);
     assign s_rvalid  = (r_state_q == R_BUSY);
     assign s_rid     = r_id_q;
     assign s_rdata   = mem[r_idx];
