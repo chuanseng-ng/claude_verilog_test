@@ -6,19 +6,18 @@
 // read master (arlen=0, arsize=4B, arburst=INCR, arid=const=0).
 // Write channels are tied off: awvalid=0, wvalid=0, bready=1.
 //
-// AXI4 handshake buffering (Phase 5 M9 fix):
-//   The GPU compute unit asserts m_axil_if_arvalid for exactly one cycle
-//   (driven by warp_issue_i which is a single-cycle scheduler pulse).
-//   AXI4 rule A3-38 requires arvalid to remain asserted until arready is
-//   seen.  If arready does not arrive that same cycle (e.g. the downstream
-//   crossbar is registering its R_IDLE→R_AR transition), the GPU CU drops
-//   arvalid, the crossbar AR channel is abandoned, and the fetch stalls.
+// AXI4 handshake buffering:
+//   AXI4 rule A3-38 requires arvalid to remain asserted until arready is seen.
+//   The GPU compute unit keeps m_axil_if_arvalid and its address stable until
+//   s_axil_arready, so it is a conforming AXI4-Lite master.  A master that
+//   pulses arvalid for one cycle and does not repeat it needs the buffer below.
 //
-//   Fix: a one-entry AR skid buffer.  When s_axil_arvalid rises with the buffer
-//   empty (ar_hold_q==0), m_axi_arvalid is asserted combinatorially and araddr is
-//   latched into ar_addr_q on the same edge.  The buffer is cleared only when
-//   m_axi_arready is seen.  s_axil_arready returns to the GPU CU only on the
-//   accepting cycle, so the CU does not re-issue the same address.
+//   A one-entry AR skid buffer covers such a master.  When s_axil_arvalid rises
+//   with the buffer empty (ar_hold_q==0), m_axi_arvalid is asserted
+//   combinatorially and araddr is latched into ar_addr_q on the same edge.  The
+//   buffer is cleared only when m_axi_arready is seen.  s_axil_arready returns to
+//   the master only on the accepting cycle, so a master that holds arvalid does
+//   not issue the same address twice.
 //
 // GPU power cycle (Doc: ds:mod:pmu):
 //   gpu_rst_i clears the AR skid buffer, so a request of the old GPU does not outlive

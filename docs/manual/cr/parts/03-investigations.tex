@@ -3283,6 +3283,32 @@ Limits. The bridge has no timeout, so a destination clock that stops while the d
 
 \end{record}
 
+\section{GPU compute unit loses a fetch that is accepted after its issue cycle (\code{gpu_compute_unit})}\label{cr:defect:gpu-fetch-lost}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.37}, found by a control test of bead \bead{zftj.34}. The compute unit recorded a fetch only when \code{warp_issue_i} and \code{if_arready_i} were high in the same cycle, and ARVALID was a pulse of one cycle. When the AR waited in the skid buffer of \code{u_gif_adapter}, the issue had no record, the warp stayed busy and the kernel did not finish. Measured before the fix: ``the GPU kernel did not finish within 3000 cycles after the held AR was accepted''. The CPU and the GPU share the SRAM, so contention on the crossbar can cause this.
+
+\end{record}
+
+\begin{record}
+
+RTL change in \code{gpu_compute_unit}: the fetch is recorded on \code{fetch_go} (issue and no pipeline stall) whatever ARREADY is. A new flop \code{ar_pend_q} holds ARVALID and the recorded address until the handshake, and clears on the handshake, on \code{soft_clr_i} and on reset. The adapter is unchanged except for its header text. The check \code{if_ar_stuck} in \code{gpu_top} already assumed a held request. New requirement \reqref{DS-FAB-004}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. New suite \code{tb/cocotb/gpu/test_fetch_handshake.py} on \code{gpu_top} (target \code{make -C sim gpu_fetch}, in \code{gpu_all}), five tests: a long ARREADY stall, periodic ARREADY with three latencies, 40 random kernels with random ARREADY and latency, eight warps under back-pressure, and a GPU soft reset while an AR waits. Each checks that ARVALID and ARADDR hold until the handshake, that AR handshakes, R beats and recorded fetches are equal, and the results against \code{gpu_ref_model.py}. In \code{test_soc_pmu_iso_ack.py} the test of the lost fetch passes without \code{expect_fail}, a control now counts only the R beat of the held AR, and a new test runs a kernel while the CPU loads the same SRAM (11 cycles of AR wait measured). Mutants in the compute unit, each failing all five GPU tests: the old pulse, \code{ar_pend_q} never set, the address not held, and \code{ar_pend_q} not cleared. \code{soc_all_ci}: 1060 pass, 0 fail. \code{gpu_all}: 91 pass. \code{PASS_FLOOR} 1019 to 1021, \code{CPU_PASS_FLOOR} 262 to 267.
+
+\end{record}
+
+\begin{record}
+
+Limits. The mutants ran only against the GPU suite. No test has DMA contention. The clear of \code{ar_pend_q} on \code{soft_clr_i} is not reachable, because \code{if_ar_stuck} holds off the halt while an AR waits. A first version of the SoC contention test seemed to hang on a CPU read of the GPU status after the kernel ended (bead \bead{zftj.38}). The read completed. The harness sampled the one-cycle commit of the CPU at the fabric clock, which is slower than the CPU clock, so it missed the commit of the pass address. The harness now records each commit at the CPU clock, and the test polls the GPU status and checks that the read reaches the GPU slave.
+
+\end{record}
+
 \section{GPU fetch adapter keeps a stale fetch across a GPU power cycle (\code{axilite_to_axi4})}\label{cr:defect:gif-stale-fetch}
 
 \begin{record}

@@ -12,6 +12,8 @@
 //
 // Memory ops (VLD/VST) stall the pipeline via mem_stall_i from
 // gpu_memory_unit. Instruction fetch stalls via axi_r* handshake.
+// The fetch AR stays valid until accepted (AXI4-Lite master rule); the issue is
+// recorded in its issue cycle, so a late-accepted fetch is not lost.
 //
 // NOTE: Human review required before merge (divergence algorithm,
 //       memory stall interaction, reconverge logic).
@@ -229,9 +231,25 @@ module gpu_compute_unit
     // -----------------------------------------------------------------------
     // FETCH stage
     // -----------------------------------------------------------------------
-    assign if_araddr_o  = warp_pc_i;
-    assign if_arvalid_o = warp_issue_i && !pipe_stall_o;
+    // The scheduler consumes an issue in its issue cycle (the warp turns busy and the round-robin
+    // pointer moves), so the CU records the issue in that same cycle, whether or not the AR is
+    // accepted.  An AR that is not accepted in its issue cycle stays valid, with the latched pc,
+    // until if_arready_i (AXI4-Lite master rule).  if_id_q.valid stalls the scheduler meanwhile.
+    logic        fetch_go;       // a warp issues into the fetch stage this cycle
+    logic        ar_pend_q;      // AR issued, not yet accepted
+    logic [31:0] if_id_pc;       // pc of the recorded issue (named wire: no select on a struct member)
+    assign if_id_pc     = if_id_q.pc;
+    assign fetch_go     = warp_issue_i && !pipe_stall_o;
+    assign if_araddr_o  = ar_pend_q ? if_id_pc : warp_pc_i;
+    assign if_arvalid_o = ar_pend_q || fetch_go;
     assign if_rready_o  = 1'b1;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)                              ar_pend_q <= 1'b0;
+        else if (soft_clr_i)                     ar_pend_q <= 1'b0;
+        else if (if_arvalid_o && !if_arready_i)  ar_pend_q <= 1'b1;
+        else                                     ar_pend_q <= 1'b0;
+    end
 
     // Single always_ff for if_id_q — instruction word captured separately from control fields.
     // rdata can arrive while the stage is stalled; new warp issue sets the other fields.
@@ -242,7 +260,7 @@ module gpu_compute_unit
             if (if_rvalid_i && if_rready_o)
                 if_id_q.instr <= if_rdata_i;
             if (!pipe_stall) begin
-                if (warp_issue_i && if_arready_i) begin
+                if (fetch_go) begin
                     if_id_q.valid       <= 1'b1;
                     if_id_q.warp_id     <= warp_id_i;
                     if_id_q.pc          <= warp_pc_i;

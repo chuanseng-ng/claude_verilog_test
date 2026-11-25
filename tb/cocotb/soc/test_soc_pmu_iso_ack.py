@@ -1057,6 +1057,12 @@ GIF_RELAUNCH_TIMEOUT = 150_000
 GIF_DWELL = 600  # loop count of the relaunch image, longer than any power cycle of these tests
 GIF_RESULT_WORD = 112  # first word of the kernel result in SRAM
 GIF_RESULT_SCALE = 0x20  # source scale of the second kernel of the relaunch image
+GIF_HAMMER_A = 0x2800  # SRAM word range the CPU hammers, clear of the kernel, its source and result
+GIF_HAMMER_B = GIF_HAMMER_A + 0x1000  # the same SRAM words through the 4 KB alias: same D-cache set
+GIF_HAMMER_LOOPS = 40
+GIF_STATUS_POLLS = 20000
+GIF_STATUS_DONE = 2  # GPU STATUS done bit
+GIF_CONTENTION_TIMEOUT = 120_000
 GIF_FW_HEX = Path(__file__).resolve().parent / "integ_fw" / "gpu_iso.hex"
 _GIF_CACHE: dict = {}
 
@@ -1180,7 +1186,6 @@ def _free_sram_ctrl(dut) -> None:
 
 def _gif_row(dut, cyc: int) -> dict:
     soc = _soc(dut)
-    commit_pc = int(dut.commit_pc_o.value) if int(dut.commit_valid_o.value) else None
     return dict(
         cyc=cyc,
         rst_n=int(soc.gpu_domain_rst_n.value),
@@ -1190,6 +1195,9 @@ def _gif_row(dut, cyc: int) -> dict:
         m_addr=int(soc.gif_axi_araddr.value),
         m_rv=int(soc.gif_axi_rvalid.value),
         m_rr=int(soc.gif_axi_rready.value),
+        al_arv=int(soc.gif_axil_arvalid.value),
+        al_arr=int(soc.gif_axil_arready.value),
+        al_addr=int(soc.gif_axil_araddr.value),
         rv=int(soc.gif_axil_rvalid.value),
         rr=int(soc.gif_axil_rready.value),
         rstate=_sram_rstate(dut),
@@ -1197,8 +1205,9 @@ def _gif_row(dut, cyc: int) -> dict:
         st=int(soc.u_pmu.dom_state_q[DOM_GPU].value),
         clk_en=int(soc.pmu_gpu_clk_en.value),
         gpu_aw=int(soc.bus_axil_gpu_awvalid.value) & int(soc.bus_axil_gpu_awready.value),
+        gpu_ar=int(soc.bus_axil_gpu_arvalid.value) & int(soc.bus_axil_gpu_arready.value),
+        gpu_araddr=int(soc.bus_axil_gpu_araddr.value) & 0xFFF,
         gpu_awaddr=int(soc.bus_axil_gpu_awaddr.value) & 0xFFF,
-        commit_pc=commit_pc,
     )
 
 
@@ -1215,7 +1224,18 @@ class _GifRun:
         self.dut = dut
         self.rows: list = []
         self._pending: list = []
+        self._commits: list = []
         self.hold_idx = 0
+        _active_tasks.append(cocotb.start_soon(self._watch_commits()))
+
+    async def _watch_commits(self) -> None:
+        """Record every commit at the CPU clock. commit_valid_o lasts one CPU clock, so a sample at
+        the fabric clock misses commits when the CPU clock is faster."""
+        while True:
+            await RisingEdge(self.dut.cpu_clk_i)
+            await ReadOnly()
+            if int(self.dut.commit_valid_o.value):
+                self._commits.append(int(self.dut.commit_pc_o.value))
 
     def later(self, fn) -> None:
         self._pending.append(fn)
@@ -1227,6 +1247,7 @@ class _GifRun:
             fn()
         await ReadOnly()
         row = _gif_row(self.dut, len(self.rows))
+        row["commits"], self._commits = self._commits, []
         self.rows.append(row)
         return row
 
@@ -1389,6 +1410,11 @@ async def _gif_scenario_idle_cycle(dut) -> dict:
     return {"rows": run.rows[first:]}
 
 
+def _end_pc(row: dict, pass_pc: int, fail_pc: int):
+    """The PASS or FAIL pc committed since the previous sample, or None."""
+    return next((pc for pc in row["commits"] if pc in (pass_pc, fail_pc)), None)
+
+
 async def _gif_scenario_relaunch(dut, kind: str) -> dict:
     """A power cycle as in scenario kind, then the relaunch image runs kernel 2 to the end."""
     words, pass_pc, fail_pc = _gif_relaunch_image()
@@ -1402,15 +1428,102 @@ async def _gif_scenario_relaunch(dut, kind: str) -> dict:
         res = await _gif_scenario_r_in_flight(dut, rom_words=words, cycles=2)
     run = res["run"]
     for _ in range(GIF_RELAUNCH_TIMEOUT):
-        row = await run.step()
-        if row["commit_pc"] in (pass_pc, fail_pc):
+        end_pc = _end_pc(await run.step(), pass_pc, fail_pc)
+        if end_pc is not None:
             break
     else:
         raise RuntimeError("harness: the relaunch image reached neither PASS nor FAIL")
-    res["pass"] = row["commit_pc"] == pass_pc
+    res["pass"] = end_pc == pass_pc
     mem = sram_mem(dut)
     res["result"] = [int(mem[GIF_RESULT_WORD + lane].value) for lane in range(8)]
     return res
+
+
+def _gif_contention_image() -> tuple:
+    """Return (ROM words, PASS pc, FAIL pc) of the contention image: the kernel is launched, then
+    the CPU alternates stores and loads on two aliases of the same SRAM words. They map to one
+    D-cache set, so every access is a miss with a write-back and a refill on the crossbar SRAM
+    slave while the GPU fetches from the same slave. Each load must return the stored value.
+    The image then polls GPU STATUS over MMIO until the done bit is set."""
+    if "contention" in _GIF_CACHE:
+        return _GIF_CACHE["contention"]
+    from tb.cocotb.soc.integ_fw import gen_integ_hex as gen
+
+    gi = gen.gpuirq
+    asm = gen.Assembler(origin=gen.ROM_BASE)
+    gen.trampoline(asm)
+    asm.label("MAIN")
+    gen.li(asm, 3, gi.SRC_BASE)
+    gen.li(asm, 5, gi.KERNEL_PC)
+    gen.li(asm, 6, gen.GPU_BASE)
+    for i in range(gi.N_SRC_WORDS):
+        asm.emit(gen.ADDI(7, 0, (i + 1) * GIF_RESULT_SCALE))
+        asm.emit(gen.SW(7, 3, i * 4))
+    gen.flush_dcache(asm, "FL1")
+    for i, kw in enumerate(gi.build_gpu_kernel()):
+        gen.li(asm, 7, kw)
+        asm.emit(gen.SW(7, 5, i * 4))
+    gen.flush_dcache(asm, "FL2")
+    asm.emit(gen.LW(7, 6, gi.GPU_OFF_CTRL))
+    asm.emit(gen.SW(5, 6, gi.GPU_OFF_KERNEL_PC))
+    asm.emit(gen.ADDI(7, 0, 1))
+    for off in (gi.GPU_OFF_GRID_X, gi.GPU_OFF_GRID_Y, gi.GPU_OFF_GRID_Z,
+                gi.GPU_OFF_BLOCK_Y, gi.GPU_OFF_BLOCK_Z):
+        asm.emit(gen.SW(7, 6, off))
+    asm.emit(gen.ADDI(7, 0, 8))
+    asm.emit(gen.SW(7, 6, gi.GPU_OFF_BLOCK_X))
+    asm.emit(gen.ADDI(7, 0, 0x05))
+    asm.emit(gen.SW(7, 6, gi.GPU_OFF_CTRL))
+    gen.li(asm, 12, GIF_HAMMER_A)
+    gen.li(asm, 13, GIF_HAMMER_B)
+    asm.emit(gen.ADDI(24, 0, 0))
+    gen.li(asm, 25, GIF_HAMMER_LOOPS)
+    asm.label("HAMMER")
+    asm.emit(gen.SW(24, 12, 0))
+    asm.emit(gen.LW(26, 13, 0))
+    gen.br(asm, gen.BNE, 26, 24, "FAIL")
+    asm.emit(gen.SW(24, 13, 4))
+    asm.emit(gen.LW(27, 12, 4))
+    gen.br(asm, gen.BNE, 27, 24, "FAIL")
+    asm.emit(gen.ADDI(24, 24, 1))
+    gen.br(asm, gen.BNE, 24, 25, "HAMMER")
+    gen.li(asm, 20, GIF_STATUS_POLLS)
+    asm.emit(gen.ADDI(21, 0, 0))
+    asm.label("GDONE_POLL")
+    asm.emit(gen.LW(22, 6, gi.GPU_OFF_STATUS))
+    asm.emit(gen.ANDI(22, 22, GIF_STATUS_DONE))
+    gen.br(asm, gen.BNE, 22, 0, "GDONE_GOT")
+    asm.emit(gen.ADDI(21, 21, 1))
+    gen.br(asm, gen.BNE, 21, 20, "GDONE_POLL")
+    gen.jmp(asm, "FAIL")
+    asm.label("GDONE_GOT")
+    gen.jmp(asm, "PASS")
+    gen.tail(asm)
+    words = asm.resolve()
+    assert len(words) <= gen.ROM_WORDS
+    image = (words + [gen.NOP] * (gen.ROM_WORDS - len(words)), asm.labels["PASS"],
+             asm.labels["FAIL"])
+    _GIF_CACHE["contention"] = image
+    return image
+
+
+async def _gif_scenario_contention(dut) -> dict:
+    """The GPU kernel runs while the CPU thrashes the SRAM slave. No backdoor on the bus."""
+    words, pass_pc, fail_pc = _gif_contention_image()
+    await _setup(dut, GIF_CPU_NS, rom_words=words)
+    run = _GifRun(dut)
+    for _ in range(GIF_CONTENTION_TIMEOUT):
+        end_pc = _end_pc(await run.step(), pass_pc, fail_pc)
+        if end_pc is not None:
+            break
+    else:
+        raise RuntimeError(
+            f"harness: the contention image reached neither PASS nor FAIL in "
+            f"{GIF_CONTENTION_TIMEOUT} cycles"
+        )
+    mem = sram_mem(dut)
+    return {"rows": run.rows, "pass": end_pc == pass_pc,
+            "result": [int(mem[GIF_RESULT_WORD + lane].value) for lane in range(8)]}
 
 
 async def _gif_cached(dut, key: str, fn) -> dict:
@@ -1534,10 +1647,19 @@ async def test_gif_control_held_ar_without_reset_completes(dut):
         "the held AR changed or dropped before it was accepted"
     )
     assert rows[first_hs]["m_addr"] == addr
-    beats = [r for r in rows[first_hs : first_hs + 12] if r["rv"] and r["rr"]]
-    assert len(beats) == 1, f"{len(beats)} R beats after the held AR, expected 1"
+    # The kernel runs on and fetches again, so the R beat of the held address is the first beat
+    # after its AR handshake and the one before the next AR handshake.
+    assert not any(r["rv"] and r["rr"] for r in rows[hold_idx:first_hs]), (
+        "an R beat arrived before the held AR was accepted"
+    )
+    next_hs = next(
+        (i for i in range(first_hs + 1, len(rows)) if rows[i]["m_arv"] and rows[i]["m_arr"]),
+        len(rows),
+    )
+    beats = [r for r in rows[first_hs:next_hs] if r["rv"] and r["rr"]]
+    assert len(beats) == 1, f"{len(beats)} R beats for the held AR, expected 1"
     assert rows[-1]["rstate"] == XBAR_R_IDLE
-    assert all(r["rst_n"] == 1 for r in rows[hold_idx:]), "harness: the GPU was reset"
+    assert all(r["rst_n"] == 1 for r in rows[hold_idx:next_hs]), "harness: the GPU was reset"
 
 
 @cocotb.test()
@@ -1711,15 +1833,12 @@ async def test_gif_stale_fetch_cases_with_cpu_slower_than_fabric(dut):
     _check_r_in_flight(rflight)
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_gif_held_ar_fetch_not_lost_kernel_completes(dut):
     """Required: a GPU fetch whose AR waits at the adapter because the crossbar is busy is not lost.
     After the crossbar is released the GPU continues and the kernel runs to its end. The GPU
-    compute unit raises its issue pulse for one cycle and takes the fetch only when arready is high
-    in that cycle, while the adapter answers arready only in the cycle the crossbar accepts the AR.
-    No GPU reset is involved in this test. It tracks a separate defect of the GPU compute unit and
-    its handshake with the adapter, not of the power cycle, and stays expect_fail until that is
-    fixed."""
+    compute unit records the fetch in its issue cycle and keeps ARVALID and the address until
+    arready. No GPU reset is involved in this test."""
     res = await _gif_cached(dut, "noreset", _gif_scenario_no_reset)
     rows = res["rows"][res["hold_idx"] :]
     assert _first(rows, lambda r: r["irq"] == 1), (
@@ -1727,3 +1846,41 @@ async def test_gif_held_ar_fetch_not_lost_kernel_completes(dut):
         f"accepted; AR handshakes after the held one: "
         f"{len([r for r in rows if r['m_arv'] and r['m_arr']]) - 1}"
     )
+
+
+@cocotb.test()
+async def test_gif_kernel_completes_under_sram_contention(dut):
+    """The CPU thrashes the SRAM slave with D-cache misses on two aliases of the same words while
+    the GPU kernel fetches from that slave. The fetch AR waits at the adapter for the crossbar,
+    stays valid with its address on the GPU side, every AR gets one R beat, the CPU reads back
+    what it stored and the kernel result is right. After the hammer loop the CPU reads GPU STATUS
+    over MMIO and sees the done bit, so the read path to the GPU register slave is live."""
+    from tb.cocotb.soc.integ_fw import gen_integ_hex as gen
+
+    res = await _gif_cached(dut, "contention", _gif_scenario_contention)
+    rows = res["rows"]
+    assert res["pass"], "the contention image reached FAIL: a read-back or the STATUS poll failed"
+    irq = _first(rows, lambda r: r["irq"] == 1)
+    assert irq, "the GPU kernel did not finish (no done IRQ)"
+    status_reads = [r for r in rows if r["gpu_ar"] and r["gpu_araddr"] == gen.gpuirq.GPU_OFF_STATUS]
+    assert status_reads and status_reads[-1]["cyc"] > irq["cyc"], (
+        "no CPU read of GPU STATUS reached the GPU slave after the done IRQ"
+    )
+    want = [(lane + 1) * GIF_RESULT_SCALE + 1 for lane in range(8)]
+    assert res["result"] == want, f"kernel result {res['result']}, expected {want}"
+    waits_gpu = [r for r in rows if r["al_arv"] and not r["al_arr"]]
+    waits_xbar = [r for r in rows if r["m_arv"] and not r["m_arr"]]
+    if not waits_gpu or not waits_xbar:
+        raise RuntimeError(
+            f"harness: no contention reached (GPU AR waits {len(waits_gpu)}, "
+            f"crossbar AR waits {len(waits_xbar)})"
+        )
+    dut._log.info(f"AR wait cycles: GPU side {len(waits_gpu)}, crossbar side {len(waits_xbar)}")
+    for prev, cur in zip(rows, rows[1:]):
+        if prev["al_arv"] and not prev["al_arr"]:
+            assert cur["al_arv"] and cur["al_addr"] == prev["al_addr"], (
+                f"the GPU AR was withdrawn or changed before arready in cycle {cur['cyc']}"
+            )
+    ars = sum(1 for r in rows if r["al_arv"] and r["al_arr"])
+    beats = sum(1 for r in rows if r["rv"] and r["rr"])
+    assert ars == beats and ars > 0, f"{ars} GPU AR handshakes, {beats} R beats"
