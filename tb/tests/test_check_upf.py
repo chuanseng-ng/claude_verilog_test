@@ -27,7 +27,7 @@ UPF_TEXT = chk.DEFAULT_UPF.read_text(encoding="utf-8")
 FACTS: dict[str, Any] = json.loads(chk.DEFAULT_FACTS.read_text(encoding="utf-8"))
 PMU = chk.parse_pmu(chk.DEFAULT_PMU.read_text(encoding="utf-8"))
 DFT_TEXT = chk.DEFAULT_DFT.read_text(encoding="utf-8")
-CTRL_TEXT = chk.DEFAULT_DFT_CTRL.read_text(encoding="utf-8")
+CTRL_TEXT: str = chk.DEFAULT_DFT_CTRL.read_text(encoding="utf-8")
 
 
 def run(
