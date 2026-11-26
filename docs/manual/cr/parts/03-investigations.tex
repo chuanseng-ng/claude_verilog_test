@@ -3343,6 +3343,20 @@ Limits. No SoC test stalls a slot, because the default PLL model ties the destin
 
 \end{record}
 
+\section{PSLVERR of the APB PLL2 slot is tested at SoC level}\label{cr:defect:pll2-pslverr-untested}
+
+\begin{record}
+
+Date 2026-11-25. Bead \bead{zftj.33}, from \cref{cr:defect:fabric-protocol-corners}. The toggle waiver of \code{apb_m_pslverr} in \code{soc_bus} stayed as an exception, because no SoC test made an APB slave answer PSLVERR. The APB slot of PLL2 is \code{u_apb_pll2_cdc}, whose destination reset is \code{cpu_rst_n_i}.
+
+\end{record}
+
+\begin{record}
+
+Tests, measured, local, one host. A new firmware image \code{dma_pll2.hex} starts one DMA read of the PLL2 control register. The test \code{test_soc_dma_pll2_slot_pslverr_in_cpu_reset} in \code{test_soc_integration.py} drops \code{cpu_rst_n_i} on the edge after the DMA start: one APB access has PSLVERR, the DMA gets one R beat with RRESP SLVERR, and its error status is set 15 fabric cycles after the start, far below the bound of the interconnect. After the release the CPU boots again and the same read returns OKAY. The control \code{test_soc_dma_pll2_slot_okay_with_cpu_running} gives OKAY with no PSLVERR. The waiver line is removed; \code{coverage_report.py --check-waivers}: 36 anchored, 0 stale. An instrumented run of the error test recorded both edges of \code{apb_m_pslverr}. \code{PASS_FLOOR} rises by 2.
+
+\end{record}
+
 \section{Ready outputs of the data fabric high in reset}\label{cr:defect:fabric-ready-in-reset}
 
 \begin{record}

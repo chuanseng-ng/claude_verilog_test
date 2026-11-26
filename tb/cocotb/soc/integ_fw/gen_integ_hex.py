@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_integ_hex.py -- firmware images for the SoC-level integration suite (test_soc_integration.py).
-One generator, five ROM images (JAL trampoline and ISR at word 1). Every image is self-checking: it
+One generator, six ROM images (JAL trampoline and ISR at word 1). Every image is self-checking: it
 branches to FAIL (x31=-1, EBREAK) on a mismatch and ends at PASS (x31=1, EBREAK). The cocotb test
 scoreboards commit_pc_o for the marker PCs written to integ_fw_addrs.py.
 IMAGE 1 irq_spi.hex: one interrupt phase per peripheral, and the CPU takes the trap. TIMER (APB4
@@ -820,6 +820,50 @@ def build_gpu_walk(asm):
             asm.emit(w)
 
 
+# =============================================================================
+# IMAGE 6: one DMA read of PLL2 CONTROL (the apb_cdc_bridge slot), a bus-free wait, then STATUS must
+# read done without error. The testbench resets the CPU domain around the read.
+# =============================================================================
+P2_DST = SRAM_BASE + 0x780      # destination word; the testbench pre-fills it with all-ones
+P2_HOLD_ITERS = 300             # bus-free wait after CTRL.start (instruction-cache loop)
+
+
+def build_dma_pll2(asm):
+    trampoline(asm)
+    asm.label("MAIN")
+    li(asm, 6, DMA_BASE)
+    asm.emit(ADDI(8, 0, 4))
+    asm.emit(SW(8, 6, 0x0C))  # CTRL.soft_reset: clears sticky bits
+    li(asm, 5, PLL2_BASE)
+    asm.emit(SW(5, 6, 0x00))                      # SRC = PLL2 CONTROL
+    li(asm, 5, P2_DST)
+    asm.emit(SW(5, 6, 0x04))                      # DST
+    asm.emit(ADDI(8, 0, 4))
+    asm.emit(SW(8, 6, 0x08))                      # LEN = one word
+    asm.emit(ADDI(8, 0, 1))
+    asm.emit(SW(8, 6, 0x0C))                      # CTRL.start
+    asm.label("STARTED")
+    asm.emit(ADDI(14, 0, 0))
+    li(asm, 15, P2_HOLD_ITERS)
+    asm.label("HOLD")  # no bus traffic: CPU-domain reset window
+    asm.emit(ADDI(14, 14, 1))
+    br(asm, BNE, 14, 15, "HOLD")
+    asm.emit(ADDI(14, 0, 0))
+    li(asm, 15, 3000)
+    asm.label("POLL")
+    asm.emit(LW(9, 6, 0x10))                      # STATUS
+    asm.emit(ANDI(10, 9, DMA_STATUS_DONE | DMA_STATUS_ERR))
+    br(asm, BNE, 10, 0, "POLLED")
+    asm.emit(ADDI(14, 14, 1))
+    br(asm, BNE, 14, 15, "POLL")
+    jmp(asm, "FAIL")                              # never completed
+    asm.label("POLLED")
+    asm.emit(ADDI(11, 0, DMA_STATUS_DONE))        # done and NOT error
+    br(asm, BNE, 10, 11, "FAIL")
+    jmp(asm, "PASS")
+    tail(asm)
+
+
 IMAGES = {
     "irq_spi": (build_irq_spi, ("ISR", "MAIN", "PASS", "FAIL", "TIMER_ARMED", "SPI_ARMED")),
     "pll_prog": (build_pll_prog, ("MAIN", "PASS", "FAIL", "PLL_RESET_OK", "PLL1_A",
@@ -830,6 +874,7 @@ IMAGES = {
                                   "DECERR_DONE", "UNAL_DONE")),
     "gpu_walk": (build_gpu_walk, ("MAIN", "PASS", "FAIL", "GA_DONE", "GB_DONE", "GC_DONE",
                                   "GD_DONE", "GE_DONE", "GF_DONE")),
+    "dma_pll2": (build_dma_pll2, ("MAIN", "PASS", "FAIL", "STARTED")),
 }
 
 
@@ -862,6 +907,7 @@ def main():
         "WALK_UNAL_DST": WALK_UNAL_DST, "WALK_N_UNAL": len(WALK_UNAL_OFFS),
         "WALK_N_ALIAS": len(WALK_ALIAS_BITS), "WALK_N_ROM_COPIES": len(WALK_ROM_COPIES),
         "WALK_ROM_BEATS": sum(n // 4 for n, _ in WALK_ROM_COPIES),
+        "P2_DST": P2_DST, "P2_HOLD_ITERS": P2_HOLD_ITERS,
         "GW_KBASE": GW_KBASE, "GW_SRC": GW_SRC, "GW_LD_OFF": GW_LD_OFF, "GW_ST_OFF": GW_ST_OFF,
         "GW_SCR_B": GW_SCR_B, "GW_SCR_F": GW_SCR_F, "GW_SCR_C": GW_SCR_C, "GW_TIMER_CMP": GW_TIMER_CMP,
         "GW_ROM_WR": GW_ROM_WR, "GW_DATA_BASE": GW_DATA_BASE, "GW_N_ALIAS": len(GW_ALIAS_BITS),
