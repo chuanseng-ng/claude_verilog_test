@@ -15,6 +15,8 @@ Signal & Dir & Width & Clock domain & Description\\
 \endlastfoot
 \code{clk_i} & in & 1 & clock & Clock of the unit. In the SoC it is \code{core_clk}.\\
 \code{rst_n_i} & in & 1 & \code{clk_i} & Active-low synchronous reset. In the SoC it is \code{core_rst_n}.\\
+\code{wake_ext_i} & in & 1 & \code{clk_i} & Wake source, a level in \code{clk_i}. In the SoC it is \code{ext_irq}, the output of the interrupt controller. \code{WAKE_EN} bit 0 enables it.\\
+\code{wake_timer_i} & in & 1 & \code{clk_i} & Wake source, a level in \code{clk_i}. In the SoC it is \code{timer_irq}. \code{WAKE_EN} bit 1 enables it.\\
 \code{psel} & in & 1 & \code{clk_i} & APB select.\\
 \code{penable} & in & 1 & \code{clk_i} & APB enable. It is high in the ACCESS phase.\\
 \code{pwrite} & in & 1 & \code{clk_i} & APB direction. High for a write.\\

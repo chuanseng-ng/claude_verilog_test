@@ -13,7 +13,7 @@ Parameter & Type & Default & Legal values & Description\\
 \endhead
 \bottomrule
 \endlastfoot
-\code{ADDR_W} & \code{int unsigned} & \code{12} & 4 or more; 12 in the SoC & Byte address width of the APB slot. The slot holds 4 KB at 12.\\
+\code{ADDR_W} & \code{int unsigned} & \code{12} & 5 or more; 12 in the SoC & Byte address width of the APB slot. The slot holds 4 KB at 12.\\
 \code{ISO_ACK_TIMEOUT} & \code{int unsigned} & \code{255} & 2 or more & Number of \code{clk_i} cycles that one isolation wait of the CPU domain can last before the sequencer goes on and sets STATUS bit 3. Elaboration stops with an error when the value is below 2.\\
 \end{longtable}
 }

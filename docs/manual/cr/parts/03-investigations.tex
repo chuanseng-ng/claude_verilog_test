@@ -3371,6 +3371,32 @@ Tests, measured, local, one host. A new firmware image \code{dma_pll2.hex} start
 
 \end{record}
 
+\section{The PMU wakes the CPU domain on an enabled interrupt}\label{cr:defect:pmu-irq-wake}
+
+\begin{record}
+
+Date 2026-11-27. Bead \bead{zftj.19}, GH \#373. Nothing inside the CPU domain could request a power-up, and no path in the SoC woke the domain. Firmware that entered CPU\_OFF or IDLE needed another master to write \code{CTRL}, and the SoC tests woke the domain by a deposit into the register. The owner chose a wake in the PMU from the interrupt controller and the timer, and approved the specification on 2026-11-26: a register \code{WAKE_EN} at 0x10, a hardware write of \code{CTRL} (CPU\_OFF to NORMAL, IDLE to GPU\_OFF), a sticky flag in \code{STATUS} bit 4 that \code{STATUS_CLR} bit 1 clears, and no abort of a power-down in progress.
+
+\end{record}
+
+\begin{record}
+
+Tests first, measured, local, one host. Seven new unit tests in \code{test_pmu.py} and one SoC test in \code{test_soc_pmu_iso_ack.py} failed on the old RTL with an assertion and were marked \code{expect_fail}. Example message: stayed in \code{DOM_OFF} for 40 cycles with an enabled source high, CTRL 0x1, STATUS 0x02. Three unit controls and one SoC control passed. The SoC control shows that the timer interrupt rises after the CPU domain is off. Two unit tests could not reach their own checks before the fix, because they need a wake to set the flag first.
+
+\end{record}
+
+\begin{record}
+
+RTL change in \code{pmu.sv}: new inputs \code{wake_ext_i} and \code{wake_timer_i}, a fifth bank word \code{WAKE_EN} with the write mask 0x3, one flop \code{woke_q}, and a signal \code{wake_fire} that drives the hardware write port of \code{CTRL}. No state was added to the sequencer, and the ten sequencing outputs stay flop-driven. The minimum of \code{ADDR_W} rises from 4 to 5. In \code{soc_top} the inputs are \code{ext_irq} and \code{timer_irq}, which are in \code{core_clk}, so no synchroniser was added. All new tests pass: \code{pmu} 46 of 46, \code{soc_pmu_iso_ack} 34 of 34, \code{soc_integration} 11 of 11 with the new word in the register walk. The registered-output check passes for 10 of 10 outputs.
+
+\end{record}
+
+\begin{record}
+
+Mutation, measured. Ten new mutants (\code{w01} to \code{w10}) in \code{mutate_pmu_iso_ack.py}. Nine are killed. The mutant \code{w03} (wake during the walk down) survived the first test set, and the new test \code{test_wake_does_not_fire_before_the_cpu_is_settled_off} kills it. The mutant \code{w10} (a clear of \code{STATUS_CLR} in the wake cycle hides the wake) survives, because no test times a clear into that cycle. It is an expected survivor. The term that checks the CPU target in \code{wake_fire} cannot be told apart by a mutant. It is kept as a guard of the intent. A software write of \code{CTRL} in the wake cycle wins over the wake write. No test covers this race. New requirements \reqref{DS-PMU-009} and \reqref{DS-PMU-030} to \reqref{DS-PMU-033}. FLOORTEXT
+
+\end{record}
+
 \section{Ready outputs of the data fabric high in reset}\label{cr:defect:fabric-ready-in-reset}
 
 \begin{record}
