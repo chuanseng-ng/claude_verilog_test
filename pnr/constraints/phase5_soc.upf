@@ -201,14 +201,17 @@ add_power_state -supply SS_GPU \
     -state {OFF -supply_expr {power == {OFF} && ground == {FULL_ON 0.0}}}
 
 # System states. Names and encodings follow pmu.sv CTRL[1:0]. A state is a settled condition: transient PMU cycles belong to no state.
-# Each functional state requires scan_mode_i == 1'b0, so it is exclusive with SCAN. The checker compares names, encodings and rail states with pmu.sv.
-# SCAN (scan_mode_i = 1, every rail ON) does not match the RTL fully: the PMU is not overridden, and the ISO clamps are not qualified by scan_mode_i.
+# Each functional state requires scan_mode_i == 1'b0 and u_dft_ctrl/tap_scan == 1'b0, so it is exclusive with SCAN and SCAN_TAP. The checker compares names, encodings and rail states with pmu.sv.
+# SCAN is the scan mode of the pin. SCAN_TAP is the scan mode of the JTAG TAP while scan_mode_i is low. dft_ctrl ORs both into the clock-gate test enable and the scan mode.
+# The checker reads that OR in dft_ctrl.sv and requires one scan state for each of its terms.
+# Both scan states (every rail ON) do not match the RTL fully: the PMU is not overridden, and the ISO clamps are not qualified by the scan mode.
 # So a clamp can be active under scan. This is documented, not changed. See ds:ch:upf-power-spec.
 create_power_state_group SOC_PST
 
 add_power_state -group SOC_PST \
-    -state {NORMAL -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  && u_pmu/pmu_mode_req == 2'b00 && scan_mode_i == 1'b0}} \
-    -state {CPU_OFF -logic_expr {SS_AON == ON && SS_CPU == OFF && SS_GPU == ON  && u_pmu/pmu_mode_req == 2'b01 && scan_mode_i == 1'b0}} \
-    -state {GPU_OFF -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == OFF && u_pmu/pmu_mode_req == 2'b10 && scan_mode_i == 1'b0}} \
-    -state {IDLE -logic_expr {SS_AON == ON && SS_CPU == OFF && SS_GPU == OFF && u_pmu/pmu_mode_req == 2'b11 && scan_mode_i == 1'b0}} \
-    -state {SCAN -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  && scan_mode_i == 1'b1}}
+    -state {NORMAL -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  && u_pmu/pmu_mode_req == 2'b00 && scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b0}} \
+    -state {CPU_OFF -logic_expr {SS_AON == ON && SS_CPU == OFF && SS_GPU == ON  && u_pmu/pmu_mode_req == 2'b01 && scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b0}} \
+    -state {GPU_OFF -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == OFF && u_pmu/pmu_mode_req == 2'b10 && scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b0}} \
+    -state {IDLE -logic_expr {SS_AON == ON && SS_CPU == OFF && SS_GPU == OFF && u_pmu/pmu_mode_req == 2'b11 && scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b0}} \
+    -state {SCAN -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  && scan_mode_i == 1'b1}} \
+    -state {SCAN_TAP -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  && scan_mode_i == 1'b0 && u_dft_ctrl/tap_scan == 1'b1}}
