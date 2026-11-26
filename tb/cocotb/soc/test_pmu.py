@@ -1286,10 +1286,9 @@ async def test_p4_unit_control_sequenced_power_up_order(dut):
 # =============================================================================
 # Wake of the CPU domain on an enabled interrupt (WAKE_EN, STATUS[4], STATUS_CLR[1]).
 #
-# tb_pmu drives wake_ext_i and wake_timer_i. The expect_fail tests fail until the PMU has the wake
-# path. A test with no expect_fail passes today and is the control: it proves the stimulus and the
-# checks that the expect_fail tests share, or it holds with and without the wake path.
-# A harness fault raises RuntimeError, which expect_fail cannot hide.
+# tb_pmu drives wake_ext_i and wake_timer_i. The control tests hold with and without the wake path:
+# they prove the stimulus and the checks that the other tests share.
+# A harness fault raises RuntimeError, not AssertionError.
 # =============================================================================
 
 WAKE_EXT = 0x1
@@ -1374,7 +1373,7 @@ def _assert_cpu_woke(r: dict, what: str) -> None:
     assert cpu == [DOM_OFF] + WAKE_UP_WALK, f"{what}: the CPU walk after the source is {cpu}"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_wake_en_reset_rw_and_reserved_bits(dut):
     """WAKE_EN reads 0 after reset, holds bits 1:0 and reads 0 in bits 31:2."""
     _kill_active_tasks()
@@ -1413,7 +1412,7 @@ async def test_wake_en_neighbours_unchanged_and_unused_words_drop_writes(dut):
     assert _sample_cpu(dut) == ON and _sample_gpu(dut) == ON
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_wake_from_cpu_off_by_ext_irq(dut):
     """CPU_OFF with WAKE_EN[0]: ext_irq powers the CPU up in the normal order, CTRL reads NORMAL,
     STATUS[4] is set, the GPU never leaves ON."""
@@ -1429,7 +1428,7 @@ async def test_wake_from_cpu_off_by_ext_irq(dut):
     assert _walk(r["trace"], 1) == [DOM_ON], "the GPU domain must stay ON"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_wake_from_cpu_off_by_timer_irq(dut):
     """The same as the ext_irq wake, for WAKE_EN[1] and the timer."""
     _kill_active_tasks()
@@ -1444,7 +1443,7 @@ async def test_wake_from_cpu_off_by_timer_irq(dut):
     assert _walk(r["trace"], 1) == [DOM_ON], "the GPU domain must stay ON"
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_wake_from_idle_powers_up_cpu_only(dut):
     """IDLE: the wake rewrites CTRL to GPU_OFF and powers the CPU up. The GPU stays OFF, its outputs
     never move."""
@@ -1518,7 +1517,7 @@ async def test_wake_while_cpu_on_does_nothing(dut):
     assert _sample_cpu(dut) == ON and _sample_gpu(dut) == OFF
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_wake_source_high_at_cpu_off_write_completes_power_down_then_wakes(dut):
     """A source that is already high when software writes CPU_OFF does not abort the power-down: the
     domain walks to OFF and then powers up."""
@@ -1539,7 +1538,33 @@ async def test_wake_source_high_at_cpu_off_write_completes_power_down_then_wakes
     assert await _wake_read(bfm, CTRL_OFFSET) == MODE_NORMAL
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
+async def test_wake_does_not_fire_before_the_cpu_is_settled_off(dut):
+    """With a source high, nothing of the wake shows until the CPU domain is in OFF: CTRL still
+    holds CPU_OFF and STATUS[4] is clear in every cycle of the power-down walk."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    await _wake_write(bfm, WAKE_EN_OFFSET, WAKE_EXT)
+    _wake_source(dut, WAKE_EXT, 1)
+    await _wake_write(bfm, CTRL_OFFSET, MODE_CPU_OFF)
+    seen = []
+    for _ in range(WAKE_WINDOW):
+        await RisingEdge(dut.clk)
+        st = int(dut.u_dut.dom_state_q[DOM_CPU_IDX].value)
+        if st == DOM_OFF:
+            break
+        seen.append(st)
+        woke = int(dut.u_dut.woke_q.value)
+        ctrl = int(dut.u_dut.pmu_mode_req.value)
+        assert woke == 0 and ctrl == MODE_CPU_OFF, (
+            f"state {st} before OFF: woke_by_irq {woke}, CTRL 0x{ctrl:x}; the wake fired early"
+        )
+    assert seen[-3:] == [DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO], f"walk before OFF: {seen}"
+    await _wake_wait(dut, DOM_CPU_IDX, DOM_PU_RST, limit=4)
+
+
+@cocotb.test()
 async def test_wake_flag_clears_by_status_clr_bit1_and_bit0_still_clears_timeout(dut):
     """STATUS_CLR[1] clears STATUS[4] and leaves STATUS[3]. STATUS_CLR[0] clears STATUS[3] and
     leaves STATUS[4]. Both flags are set first: the timeout by a dead-ack power-down, the wake by
@@ -1573,7 +1598,7 @@ async def test_wake_flag_clears_by_status_clr_bit1_and_bit0_still_clears_timeout
     )
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_wake_flag_and_wake_en_cleared_by_pmu_reset(dut):
     """A reset of the PMU clears STATUS[4] and WAKE_EN."""
     _kill_active_tasks()

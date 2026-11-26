@@ -1888,8 +1888,8 @@ async def test_gif_kernel_completes_under_sram_contention(dut):
 
 # ---------------------------------------------------------------------------------------------
 # Wake of the CPU domain on the timer interrupt, through the real path. The firmware enables the
-# timer wake and a DMA copy writes CPU_OFF into CTRL, so no test code writes CTRL. The wake test is
-# expect_fail until the PMU has the wake path. Its control proves the power-down and the timer.
+# timer wake and a DMA copy writes CPU_OFF into CTRL, so no test code writes CTRL. The control test
+# proves the power-down and the timer.
 # ---------------------------------------------------------------------------------------------
 WAKE_CPU_NS = 5
 WAKE_TIMER_COMPARE = (
@@ -2062,7 +2062,7 @@ async def test_wake_soc_control_firmware_powers_cpu_down_and_timer_fires_while_o
     dut._log.info(f"CPU domain OFF at cycle {ev['off']}, timer irq at cycle {ev['irq']}")
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_wake_soc_timer_irq_wakes_cpu_and_cpu_takes_it(dut):
     """The timer interrupt powers the CPU domain up with no write of CTRL, CTRL reads NORMAL, and
     the CPU takes the interrupt, checks mcause and STATUS[4], clears it by STATUS_CLR[1]: PASS."""
