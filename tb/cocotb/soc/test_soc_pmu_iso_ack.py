@@ -1884,3 +1884,198 @@ async def test_gif_kernel_completes_under_sram_contention(dut):
     ars = sum(1 for r in rows if r["al_arv"] and r["al_arr"])
     beats = sum(1 for r in rows if r["rv"] and r["rr"])
     assert ars == beats and ars > 0, f"{ars} GPU AR handshakes, {beats} R beats"
+
+
+# ---------------------------------------------------------------------------------------------
+# Wake of the CPU domain on the timer interrupt, through the real path. The firmware enables the
+# timer wake and a DMA copy writes CPU_OFF into CTRL, so no test code writes CTRL. The wake test is
+# expect_fail until the PMU has the wake path. Its control proves the power-down and the timer.
+# ---------------------------------------------------------------------------------------------
+WAKE_CPU_NS = 5
+WAKE_TIMER_COMPARE = (
+    2500  # fabric cycles from the timer enable, long after the DMA-driven power-down
+)
+WAKE_VAR_WI = 400  # SRAM word of the firmware variables, clear of the DMA window
+WAKE_W_CTRLVAL, WAKE_W_COUNT, WAKE_W_MCAUSE, WAKE_W_BOOTED = 0, 4, 8, 12
+WAKE_MAGIC = 0x5A5A_C3C3
+WAKE_LOOP = 128
+WAKE_PMU_WAKE_EN, WAKE_PMU_STATUS, WAKE_PMU_STATUS_CLR = 0x10, 0x04, 0x0C
+WAKE_SOC_TIMEOUT = 60_000
+WAKE_SOC_ON_WINDOW = 400  # fabric cycles from the timer interrupt to the CPU domain ON
+_WAKE_CACHE: dict = {}
+
+
+def _wake_image() -> tuple:
+    """(ROM words, PASS pc, FAIL pc). MAIN writes the variables and flushes the D-cache, enables the
+    timer wake, starts the timer and the DMA copy of CPU_OFF into PMU CTRL, and waits in a loop of
+    register instructions. The CPU is stopped there. After the wake (a resume, or a boot that sees
+    the booted marker) it enables the timer interrupt, waits for the handler, then checks mcause,
+    STATUS[4] and the STATUS_CLR[1] clear."""
+    if "image" in _WAKE_CACHE:
+        return _WAKE_CACHE["image"]
+    from tb.cocotb.soc.integ_fw import gen_integ_hex as gen
+
+    var_base = gen.SRAM_BASE + WAKE_VAR_WI * 4
+    asm = gen.Assembler(origin=gen.ROM_BASE)
+    gen.trampoline(asm)
+    asm.label("ISR")
+    gen.li(asm, 24, gen.TIMER_BASE)
+    asm.emit(gen.ADDI(25, 0, 4))
+    asm.emit(gen.SW(25, 24, 0x08))  # timer CTRL: clear the pending interrupt, disable
+    gen.li(asm, 29, var_base)
+    asm.emit(gen.CSRRS(28, 0x342, 0))
+    asm.emit(gen.SW(28, 29, WAKE_W_MCAUSE))
+    asm.emit(gen.LW(25, 29, WAKE_W_COUNT))
+    asm.emit(gen.ADDI(25, 25, 1))
+    asm.emit(gen.SW(25, 29, WAKE_W_COUNT))
+    asm.emit(gen.MRET())
+    asm.pad_to_word(40)
+
+    asm.label("MAIN")
+    gen.li(asm, 2, var_base)
+    gen.li(asm, 3, gen.TIMER_BASE)
+    gen.li(asm, 5, gen.DMA_BASE)
+    gen.li(asm, 6, gen.PMU_BASE)
+    gen.li(asm, 9, WAKE_MAGIC)
+    asm.emit(gen.LW(8, 2, WAKE_W_BOOTED))
+    gen.br(asm, gen.BEQ, 8, 9, "RESUME")
+    asm.emit(gen.ADDI(8, 0, 1))
+    asm.emit(gen.SW(8, 2, WAKE_W_CTRLVAL))  # CPU_OFF, the word the DMA copies
+    asm.emit(gen.SW(0, 2, WAKE_W_COUNT))
+    asm.emit(gen.SW(0, 2, WAKE_W_MCAUSE))
+    asm.emit(gen.SW(9, 2, WAKE_W_BOOTED))
+    gen.flush_dcache(asm, "FL1")
+    asm.emit(gen.ADDI(8, 0, 2))
+    asm.emit(gen.SW(8, 6, WAKE_PMU_WAKE_EN))  # WAKE_EN[1]: wake on the timer
+    gen.li(asm, 8, WAKE_TIMER_COMPARE)
+    asm.emit(gen.SW(8, 3, 0x04))
+    asm.emit(gen.SW(0, 3, 0x0C))
+    asm.emit(gen.SW(2, 5, 0))  # DMA SRC = the CTRL value word
+    asm.emit(gen.SW(6, 5, 4))  # DMA DST = PMU CTRL
+    asm.emit(gen.ADDI(8, 0, 4))
+    asm.emit(gen.SW(8, 5, 8))
+    asm.emit(gen.ADDI(10, 0, 3))  # timer CTRL: enable and irq_en
+    asm.emit(gen.ADDI(11, 0, 1))  # DMA CTRL: start
+    asm.emit(gen.ADDI(13, 0, 0))
+    gen.li(asm, 14, WAKE_LOOP)
+    words_so_far = sum(1 for t_, _ in asm._items if t_ != "label")
+    asm.pad_to_word((words_so_far + 3) // 4 * 4)  # START and LOOP share one instruction cache line
+    asm.emit(gen.SW(10, 3, 0x08))
+    asm.emit(gen.SW(11, 5, 0x0C))
+    asm.label("LOOP")
+    asm.emit(gen.ADDI(13, 13, 1))
+    gen.br(asm, gen.BNE, 13, 14, "LOOP")
+
+    asm.label("RESUME")
+    gen.li(asm, 1, gen.ROM_BASE + 4)
+    asm.emit(gen.CSRRW(0, 0x305, 1))  # mtvec
+    asm.emit(gen.ADDI(1, 0, 0x80))
+    asm.emit(gen.CSRRW(0, 0x304, 1))  # mie.MTIE
+    asm.emit(gen.ADDI(1, 0, 8))
+    asm.emit(gen.CSRRW(0, 0x300, 1))  # mstatus.MIE
+    gen.li(asm, 20, gen.POLL_LIMIT)
+    asm.emit(gen.ADDI(21, 0, 0))
+    asm.label("POLL")
+    asm.emit(gen.LW(22, 2, WAKE_W_COUNT))
+    gen.br(asm, gen.BNE, 22, 0, "GOT")
+    asm.emit(gen.ADDI(21, 21, 1))
+    gen.br(asm, gen.BNE, 21, 20, "POLL")
+    gen.jmp(asm, "FAIL")
+    asm.label("GOT")
+    gen.expect_word(asm, 2, WAKE_W_COUNT, 1)
+    gen.expect_word(asm, 2, WAKE_W_MCAUSE, gen.MCAUSE_MTI)
+    asm.emit(gen.LW(10, 6, WAKE_PMU_STATUS))
+    asm.emit(gen.ANDI(10, 10, 0x10))
+    gen.br(asm, gen.BEQ, 10, 0, "FAIL")  # STATUS[4] must record the wake
+    asm.emit(gen.ADDI(10, 0, 2))
+    asm.emit(gen.SW(10, 6, WAKE_PMU_STATUS_CLR))  # STATUS_CLR[1]
+    asm.emit(gen.LW(10, 6, WAKE_PMU_STATUS))
+    asm.emit(gen.ANDI(10, 10, 0x10))
+    gen.br(asm, gen.BNE, 10, 0, "FAIL")
+    gen.jmp(asm, "PASS")
+    gen.tail(asm)
+    words = asm.resolve()
+    assert len(words) <= gen.ROM_WORDS
+    image = (
+        words + [gen.NOP] * (gen.ROM_WORDS - len(words)),
+        asm.labels["PASS"],
+        asm.labels["FAIL"],
+    )
+    _WAKE_CACHE["image"] = image
+    return image
+
+
+async def _wake_soc_run(dut, through: str) -> dict:
+    """Boot the wake image and watch the CPU domain. through is "irq" (stop at the timer interrupt)
+    or "end" (also wait for the CPU domain ON and the PASS or FAIL marker). No test writes CTRL.
+    Returns cycle numbers of off, irq, on, the end pc, and CTRL when the CPU domain was OFF."""
+    words, pass_pc, fail_pc = _wake_image()
+    mem = sram_mem(dut)
+    for w_ in range(4):
+        mem[WAKE_VAR_WI + w_].value = 0  # SRAM keeps the booted marker of an earlier run
+    await _setup(dut, WAKE_CPU_NS, rom_words=words)
+    run = _GifRun(dut)
+    soc = _soc(dut)
+    ev: dict = dict(off=None, irq=None, on=None, end=None, ctrl_off=None, pass_pc=pass_pc)
+    for _ in range(WAKE_SOC_TIMEOUT):
+        row = await run.step()
+        cyc = row["cyc"]
+        state = int(soc.u_pmu.dom_state_q[DOM_CPU].value)
+        if ev["off"] is None and state == DOM_OFF:
+            ev["off"], ev["ctrl_off"] = cyc, int(soc.u_pmu.u_regbank.regs[0].value)
+        if ev["irq"] is None and int(soc.timer_irq.value):
+            ev["irq"] = cyc
+            if through == "irq":
+                break
+        if ev["irq"] is not None and ev["on"] is None:
+            if state == DOM_ON and ev["off"] is not None:
+                ev["on"] = cyc
+            elif cyc - ev["irq"] > WAKE_SOC_ON_WINDOW:
+                break
+        end = _end_pc(row, pass_pc, fail_pc)
+        if end is not None:
+            ev["end"] = end
+            break
+    ev["ctrl_end"] = int(soc.u_pmu.u_regbank.regs[0].value)
+    return ev
+
+
+def _wake_check_stimulus(ev: dict) -> None:
+    if ev["off"] is None:
+        raise RuntimeError(
+            "harness: the firmware did not power the CPU domain down through the DMA"
+        )
+    if ev["ctrl_off"] != MODE_CPU_OFF:
+        raise RuntimeError(f"harness: CTRL was 0x{ev['ctrl_off']:x} when the CPU domain was OFF")
+    if ev["irq"] is None:
+        raise RuntimeError("harness: the timer interrupt never rose")
+    if ev["irq"] <= ev["off"]:
+        raise RuntimeError("harness: the timer interrupt rose before the CPU domain was OFF")
+
+
+@cocotb.test()
+async def test_wake_soc_control_firmware_powers_cpu_down_and_timer_fires_while_off(dut):
+    """Control. The firmware powers the CPU domain down through the DMA with no backdoor write, and
+    the timer interrupt rises while the domain is OFF. This is the stimulus of the wake test."""
+    ev = await _wake_soc_run(dut, "irq")
+    _wake_check_stimulus(ev)
+    dut._log.info(f"CPU domain OFF at cycle {ev['off']}, timer irq at cycle {ev['irq']}")
+
+
+@cocotb.test(expect_fail=True)
+async def test_wake_soc_timer_irq_wakes_cpu_and_cpu_takes_it(dut):
+    """The timer interrupt powers the CPU domain up with no write of CTRL, CTRL reads NORMAL, and
+    the CPU takes the interrupt, checks mcause and STATUS[4], clears it by STATUS_CLR[1]: PASS."""
+    ev = await _wake_soc_run(dut, "end")
+    _wake_check_stimulus(ev)
+    assert ev["on"] is not None, (
+        f"the CPU domain was still not ON {WAKE_SOC_ON_WINDOW} cycles after the timer interrupt "
+        f"(cycle {ev['irq']}, CTRL 0x{ev['ctrl_end']:x}): the PMU has no wake path"
+    )
+    assert ev["ctrl_end"] == MODE_NORMAL, (
+        f"CTRL must read NORMAL after the wake, read 0x{ev['ctrl_end']:x}"
+    )
+    assert ev["end"] is not None, "the CPU did not reach the PASS or FAIL marker after the wake"
+    assert ev["end"] == ev["pass_pc"], (
+        "the CPU reached FAIL: mcause, STATUS[4] or the STATUS_CLR[1] clear"
+    )
