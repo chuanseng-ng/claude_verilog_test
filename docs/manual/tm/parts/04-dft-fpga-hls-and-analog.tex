@@ -499,6 +499,12 @@ restatement, stay open. A sample audit of the proven-untestable logic-pin
 faults (\code{j41m.25}) checks that they are real redundancy and not a
 cut or tool artifact.
 
+\textbf{Update 2026-11-27 (bead \bead{j41m.25}).} The audit (18.11)
+found that about 9,068 untestable faults come from flops that the cut
+excludes. The owner decision counts them against test coverage. The
+estimated test coverage is \textbf{98.97 \%} (95 \% interval 98.78 to
+99.14), below the 99.0 \% gate. Condition (1) is \textbf{open} again.
+
 Why 99.0 \%: the DFT orchestrator\textquotesingle s own sign-off
 criterion in this repo is
 \texttt{saf\_\allowbreak{}coverage\_\allowbreak{}pct\ >=\allowbreak{}\ 99.\allowbreak{}0}
@@ -6620,6 +6626,104 @@ sample audit \code{j41m.25} checks them by pin class. The whole-cut
 estimate (\code{cellpin_report.py --whole-cut}) was not computed. Every
 caveat of 18.9 still applies: stuck-at only, no X around the black
 boxes, patterns not yet replayed on the scan netlist (\code{j41m.19}).
+
+\textbf{Superseded by 18.11.} The audit of the untestable faults
+(\cref{tm:ch:dft-architecture:1811-untestable-audit}) found an artifact
+class. The PASS verdict above does not hold on the owner's counting rule.
+
+\subsection{Audit of the proven-untestable faults (bead \code{j41m.25},
+2026-11-27)}\label{tm:ch:dft-architecture:1811-untestable-audit}
+
+\textbf{Purpose.} The 18.10 verdict relies on the untestability proofs
+of Quaigh. This audit checks a sample of the proven-untestable faults
+that are not on scan-path pins, and finds the cause of each. No new ATPG
+run was made.
+
+\textbf{Method {[}M{]}.} Tool: \src{tools/dft/atpg/untestable_audit.py}
+(subcommands \code{sample}, \code{analyse}, \code{attribute},
+\code{report}) with \src{tools/dft/atpg/audit_graph.py}. Input: the B3
+status file of 18.10. The non-scan untestable set has 47,613 faults. A
+seeded sample (seed 244) takes 50 faults from each of the ten largest
+pin classes and 50 from the other classes (3,546 faults), 550 in total.
+The tool proves each fault again with its own BLIF parser, a ternary
+simulator and a SAT solver (python-sat, Glucose4). It does not use
+Quaigh. The tool simulates each SAT vector again to confirm it. The
+cause comes from the cell netlist and the Liberty models. A second SAT
+run frees the nets that the cut ties to a constant for the excluded
+flops (810 ties in 22 groups). It shows which faults become testable
+when those flops are not excluded.
+
+\textbf{Negative control {[}M{]}.} 50 detected faults (5 for each top
+class) all classify as testable. SAT finds a detecting vector for each,
+and simulation confirms the vector. The classifier calls none of them
+tie-off, constant or redundant.
+
+\textbf{Result for the sample {[}M{]}.} 0 of the 550 faults are testable
+in the cut, 0 are unresolved, and 1024 random vectors detect none of
+them. The cause of each fault:
+
+\begin{tabular}{lrrrrrrr}
+class & N & n & tie-off & constant & redundant & scan shift & exclusion \\
+\code{<output>} & 10279 & 50 & 3 & 15 & 3 & 27 & 2 \\
+A & 9827 & 50 & 0 & 3 & 7 & 20 & 20 \\
+A1 & 4842 & 50 & 0 & 26 & 24 & 0 & 0 \\
+A2 & 4662 & 50 & 0 & 23 & 20 & 0 & 7 \\
+B1 & 4502 & 50 & 0 & 23 & 13 & 0 & 14 \\
+C1 & 2948 & 50 & 0 & 19 & 4 & 0 & 27 \\
+A3 & 2234 & 50 & 0 & 19 & 31 & 0 & 0 \\
+B & 2017 & 50 & 0 & 34 & 10 & 0 & 6 \\
+C & 1572 & 50 & 0 & 34 & 15 & 0 & 1 \\
+RESET\_B & 1184 & 50 & 0 & 13 & 0 & 0 & 37 \\
+other & 3546 & 50 & 13 & 26 & 10 & 0 & 1 \\
+\end{tabular}
+
+\textbf{Estimate for the 47,613 faults {[}A: stratified estimate from
+the sample, 95 \% Wilson interval{]}.} Tie-off 1,539 (937 to 2,590).
+Constant from logic 16,968 (15,040 to 19,005); of these, 6,902 are the
+AES key mask, which is correct by design (\code{key_eff_w} in
+\src{rtl/periph/crypto_accel.sv}, \code{rk_eff_w} in
+\src{rtl/periph/aes128_core.sv}). Redundant 10,557 (8,998 to 12,375).
+Scan shift 9,481 (7,658 to 11,529): hold and delay buffers that feed
+only SCD pins. Exclusion 9,068 (7,465 to 10,815). Unresolved 0 (upper
+bound 330).
+
+\textbf{Artifact: exclusion faults.} About 19 \% of the non-scan
+untestable faults are untestable only because the cut excludes some
+flops (TAP, MBIST TDR, clock switch, CDC synchronisers, crypto key
+registers) and ties their outputs to a constant. The largest cause is
+\code{tap_rst_assert}, tied to 0. Then \code{scan_rst_no} in
+\src{rtl/soc/dft/dft_ctrl.sv} follows the scan reset pin only, the core
+reset stays at 1 in scan mode, and the RESET\_B pins of the reset tree
+cannot be controlled. Example: fault 681709, RESET\_B stuck-at-1 on the
+flop \code{_150816_} (\code{sdfrtp_4}). The free-net SAT run is an upper
+bound on testability: it treats each tied net as independent, and these
+values are reachable only through JTAG, not through scan patterns.
+
+\textbf{Owner decisions 2026-11-27.} (1) The exclusion faults count
+against test coverage. This agrees with the usual ATPG-untestable (AU)
+rule. (2) The scan-shift buffers get the same chain-test credit as the
+SCD and SCE pins (this credit needs \code{j41m.19}).
+
+\textbf{Corrected test coverage {[}A: from the estimate{]}.}
+
+\begin{tabular}{lr}
+basis & test coverage \\
+raw, 18.10 {[}M{]} & 99.96 \% \\
+exclusion counted, scan shift and SCD/SCE credited (\textbf{headline}) & \textbf{98.97 \%} (98.78 to 99.14) \\
+same, no SCD/SCE credit & 98.90 \% (98.69 to 99.08) \\
+scan-shift buffers not credited & 97.80 \% (97.61 to 97.99) \\
+\end{tabular}
+
+\textbf{Verdict against 2.1.} The headline value 98.97 \% is below the
+99.0 \% gate, and its interval includes the gate. Condition (1) of 2.1
+is \textbf{open} again. Recovery of the exclusion faults (for example,
+a scan test point on the core reset) is a separate bead.
+
+\textbf{Limits {[}A{]}.} The estimate comes from 550 faults; no full
+classification was run. The redundant faults are proven by SAT, but
+most have no RTL cause found. Many can be constants that Yosys folded
+into the BLIF (not checked). The patterns of \code{cut.test} were not
+replayed.
 \end{relocated}
 
 

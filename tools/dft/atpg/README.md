@@ -20,6 +20,7 @@ and writes `metrics.json` (rc, wall, maxrss, cgroup peak, oom_kill, timed_out). 
 | `regrade_vl.py` | Verilator + Yosys SAT re-grade of a fault sample (shares nothing with Quaigh); preselected mode for `pin_inject.py` |
 | `pin_inject.py` | (j41m.20) injects sampled cell-pin faults at the instance pins of the Verilog netlist, then the generic flow + `regrade_vl.py` |
 | `cellpin_report.py` | (j41m.20) cell-pin coverage from a Quaigh `--fault-report`: raw, scan-path pins (SCD/SCE) credited, by pin, whole-cut estimate |
+| `untestable_audit.py`, `audit_graph.py` | (j41m.25) sample audit of the SAT-proven untestable cell-pin faults: seeded sample per pin class, cause per fault (tie-off / constant from logic / redundant / cut artifact), independent SAT (python-sat Glucose, not Quaigh), exclusion counterfactual, negative control on detected faults, Wilson extrapolation; `sample` / `analyse` / `report` subcommands |
 | `run_rung.sh`, `Makefile` | the ladder |
 
 Tools: Yosys 0.46 (the flow's), sv2v 0.0.13.1, Quaigh 0.0.6 (pinned external binary, `tools/dft/build_quaigh.sh`).
@@ -52,3 +53,11 @@ Q feeding the next flop's D) makes Yosys `miter -equiv` + `sat -prove` report EQ
 `tb/tests/test_dft_atpg_regrade_vl.py`.  Re-grades of the generic cuts made before the fix (j41m.15/.18) were re-run.
 
 Not done here: pattern -> scan-chain-order mapping, SVF/TAP replay, SRAM shadowing, delay faults (follow-up beads).
+
+**Untestable-fault audit (bead j41m.25).** No new ATPG run: it reads the B3 `status.txt`, the `cut5` BLIF and `netlist_cellpin.v`.
+`python3 untestable_audit.py sample --cut-dir cut5 --status B3/status.txt --out sample.json` (seed 244, 50 per top-10 pin class plus a
+pooled 50 for the rest, and 5 detected faults per class as a negative control), then
+`PYTHONPATH=<dir with python-sat> run_capped.sh <out> -- python3 untestable_audit.py analyse --cut-dir cut5 --netlist cut5/netlist_cellpin.v --sample sample.json --out analysis.json`
+(about 5 min, under 1 GiB), then `untestable_audit.py report --analysis analysis.json --md`.  `python-sat` is the only extra
+dependency (`pip install --target DIR python-sat`).  The cell-level constant analysis reads `assign net = 1'bV;` lines of the prepped
+netlist as the cut's exclusion ties; the free-mode counterfactual re-runs each fault with those nets free.

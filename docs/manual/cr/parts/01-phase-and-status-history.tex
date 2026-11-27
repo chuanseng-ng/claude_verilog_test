@@ -8298,7 +8298,12 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   the chain test; 104,081 faults proven untestable. Owner decision: the
   sign-off gate is test coverage \textgreater= 99.0 \% only, fault
   coverage is reported with no threshold; audit of the untestable faults
-  \code{j41m.25}. Open: Q-TRST (\code{trst_ni}
+  \code{j41m.25}. \textbf{Audit done 2026-11-27} (\code{j41m.25},
+  \cref{tm:ch:dft-architecture:1811-untestable-audit}): about 19 \% of
+  the non-scan untestable faults are untestable only because the cut
+  excludes the TAP, TDR, clock-switch, CDC and key flops. The owner
+  counts them against test coverage, so the estimated test coverage is
+  98.97 \%, below the 99.0 \% gate; the gate is open again. Open: Q-TRST (\code{trst_ni}
   power-up tie-off at the chip top), Q-STUB (1-bit SCAN stub until Stage
   2 chains exist), Stage 2 scan insertion and scan-mode SDC
   (\code{j41m.8}, \code{j41m.5}), the CPU-macro scan boundary and
