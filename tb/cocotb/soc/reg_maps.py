@@ -242,6 +242,8 @@ PMU = [
     Reg("PMU_DOMAIN_EN", _w(2), reset=0x33, wmask=0),      # clk_en / rst_n of both domains
     # STATUS_CLR[0] clears the sticky STATUS[3] flag. It is a write-1-to-clear snoop that always reads 0.
     Reg("PMU_STATUS_CLR", _w(3), reset=0, wmask=0, kind="w1c"),
+    # WAKE_EN[0] enables the interrupt controller wake and [1] the timer wake. Both are 0 at reset.
+    Reg("PMU_WAKE_EN", _w(4), reset=0, wmask=0x3),
 ]
 
 # ---------------------------------------------------------------------------------------------
@@ -267,7 +269,7 @@ BANKS = {
     "i2c": (I2C, 12),
     "crypto": (CRYPTO, 32),
     "npu": (NPU, 16),
-    "pmu": (PMU, 4),
+    "pmu": (PMU, 5),
     "pll": (PLL, 3),
 }
 

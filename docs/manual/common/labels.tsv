@@ -166,18 +166,19 @@ cr:defect:asap7-cpu-synlig-ma7:result-1-the-two-ma7-programs-yosys-sim-original-
 cr:defect:asap7-cpu-synlig-ma7:result-2-six-programs-verilator-cycle-exact-vs-rtl-measured	docs/manual/cr/parts/03-investigations.tex	230	Result 2: six programs, Verilator, cycle-exact vs RTL (MEASURED)
 cr:defect:asap7-cpu-synlig-ma7:update-2026-10-10-bead-ainf-is-synlig-pr-259-safe-for-the-remaining-struct-member-selects	docs/manual/cr/parts/03-investigations.tex	518	\texorpdfstring{Update 2026-10-10 (bead \code{ainf}): is "Synlig + PR \#259" safe for the remaining struct-member selects?}{Update 2026-10-10 (bead ): is "Synlig + PR \#259" safe for the remaining struct-member selects?}
 cr:defect:asap7-cpu-synlig-ma7:verdict	docs/manual/cr/parts/03-investigations.tex	26	Verdict
-cr:defect:axil-to-apb-read-pstrb	docs/manual/cr/parts/03-investigations.tex	3502	\code{axil_to_apb} drives PSTRB low on a read
+cr:defect:axil-to-apb-read-pstrb	docs/manual/cr/parts/03-investigations.tex	3528	\code{axil_to_apb} drives PSTRB low on a read
 cr:defect:cpu-event-sampling-audit	docs/manual/cr/parts/03-investigations.tex	3346	Audit of one-cycle CPU events sampled at the fabric clock
 cr:defect:cpu-makefile-pwd	docs/manual/cr/parts/03-investigations.tex	3300	\code{tb/cocotb/cpu/Makefile} builds its paths from the caller directory
-cr:defect:crossbar-fixed-priority	docs/manual/cr/parts/03-investigations.tex	3464	\code{axi4_crossbar} arbitration has no fairness rule
-cr:defect:crossbar-second-request	docs/manual/cr/parts/03-investigations.tex	3528	\code{axi4_crossbar} loses a second request of one master
+cr:defect:crossbar-fixed-priority	docs/manual/cr/parts/03-investigations.tex	3490	\code{axi4_crossbar} arbitration has no fairness rule
+cr:defect:crossbar-second-request	docs/manual/cr/parts/03-investigations.tex	3554	\code{axi4_crossbar} loses a second request of one master
 cr:defect:fabric-protocol-corners	docs/manual/cr/parts/03-investigations.tex	3198	Bus fabric protocol corners and stale \code{pslverr} waivers
-cr:defect:fabric-ready-in-reset	docs/manual/cr/parts/03-investigations.tex	3374	Ready outputs of the data fabric high in reset
+cr:defect:fabric-ready-in-reset	docs/manual/cr/parts/03-investigations.tex	3400	Ready outputs of the data fabric high in reset
 cr:defect:fabric-timeout	docs/manual/cr/parts/03-investigations.tex	3314	AXI-Lite interconnect waits for ever on a slot that does not answer
-cr:defect:gif-stale-fetch	docs/manual/cr/parts/03-investigations.tex	3432	GPU fetch adapter keeps a stale fetch across a GPU power cycle (\code{axilite_to_axi4})
-cr:defect:gpu-fetch-lost	docs/manual/cr/parts/03-investigations.tex	3406	GPU compute unit loses a fetch that is accepted after its issue cycle (\code{gpu_compute_unit})
+cr:defect:gif-stale-fetch	docs/manual/cr/parts/03-investigations.tex	3458	GPU fetch adapter keeps a stale fetch across a GPU power cycle (\code{axilite_to_axi4})
+cr:defect:gpu-fetch-lost	docs/manual/cr/parts/03-investigations.tex	3432	GPU compute unit loses a fetch that is accepted after its issue cycle (\code{gpu_compute_unit})
 cr:defect:off-domain-slverr	docs/manual/cr/parts/03-investigations.tex	3254	Bus access to a powered-off domain answers SLVERR (\code{axi_lite_interconnect}, \code{apb_cdc_bridge})
 cr:defect:pll2-pslverr-untested	docs/manual/cr/parts/03-investigations.tex	3360	PSLVERR of the APB PLL2 slot is tested at SoC level
+cr:defect:pmu-irq-wake	docs/manual/cr/parts/03-investigations.tex	3374	The PMU wakes the CPU domain on an enabled interrupt
 cr:defect:pmu-iso-order	docs/manual/cr/parts/03-investigations.tex	3080	PMU order: clock stop before the clamp (\code{zftj})
 cr:defect:pmu-mutation-campaign	docs/manual/cr/parts/03-investigations.tex	3038	PMU mutation campaign (\code{mutate_pmu_iso_ack.py})
 cr:defect:scan-with-cpu-off	docs/manual/cr/parts/03-investigations.tex	3130	Scan mode while the PMU holds the CPU off (\code{soc_top})
@@ -232,8 +233,8 @@ cr:defect:synlig-struct-select-ainf:step-1-the-defect-rule-probe-evidence-toolsv
 cr:defect:synlig-struct-select-ainf:step-2a-mechanical-site-table-toolsverifstruct-selectsitetablepy-output-resultssitetabletxt	docs/manual/cr/parts/03-investigations.tex	2425	\texorpdfstring{Step 2a: mechanical site table (\src{tools/verif/struct_select/sitetable.py}, output \code{results/sitetable.txt})}{Step 2a: mechanical site table (, output )}
 cr:defect:synlig-struct-select-ainf:step-2b-synlig-vs-sv2v-equivalence-on-the-real-modules-modeqsh-run-modeqsh-mkconepy	docs/manual/cr/parts/03-investigations.tex	2510	\texorpdfstring{Step 2b: Synlig-vs-sv2v equivalence on the real modules (\code{modeq.sh}, \code{run_modeq.sh}, \code{mkcone.py})}{Step 2b: Synlig-vs-sv2v equivalence on the real modules (, , )}
 cr:defect:synlig-struct-select-ainf:step-4-verdict-recommendation-limits	docs/manual/cr/parts/03-investigations.tex	2610	Step 4: verdict, recommendation, limits
-cr:defect:upf-checker-power-switch	docs/manual/cr/parts/03-investigations.tex	3566	The UPF checker accepts a power switch
-cr:defect:upf-checker-tap-scan	docs/manual/cr/parts/03-investigations.tex	3586	The UPF checker does not follow the scan sources of \code{dft_ctrl}
+cr:defect:upf-checker-power-switch	docs/manual/cr/parts/03-investigations.tex	3592	The UPF checker accepts a power switch
+cr:defect:upf-checker-tap-scan	docs/manual/cr/parts/03-investigations.tex	3612	The UPF checker does not follow the scan sources of \code{dft_ctrl}
 cr:fix:cpu-dataflow-diagram	docs/manual/cr/parts/04-fix-log-and-archive.tex	5542	Phase 1 RV32I CPU Dataflow Diagram
 cr:fix:cpu-dataflow-diagram:1-fetch-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5601	1. FETCH Stage
 cr:fix:cpu-dataflow-diagram:2-decode-stage	docs/manual/cr/parts/04-fix-log-and-archive.tex	5625	2. DECODE Stage
@@ -1222,22 +1223,22 @@ ds:ch:mod-npu	docs/manual/ds/parts/03-module-contracts.tex	3997	NPU
 ds:ch:mod-peripherals	docs/manual/ds/parts/03-module-contracts.tex	2561	Peripherals
 ds:ch:mod-pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2329	PLL subsystem
 ds:ch:mod-power-management	docs/manual/ds/parts/chapters/power.tex	3	Power management
-ds:ch:mod-power-management:dec-ack	docs/manual/ds/parts/chapters/power.tex	477	Acknowledge from the CPU domain
-ds:ch:mod-power-management:dec-bridge	docs/manual/ds/parts/chapters/power.tex	519	AXI bridge outside the domain reset
-ds:ch:mod-power-management:dec-clock	docs/manual/ds/parts/chapters/power.tex	498	Clock enable with the PMU reset
-ds:ch:mod-power-management:dec-flag	docs/manual/ds/parts/chapters/power.tex	512	Sticky timeout flag and fresh acknowledge
-ds:ch:mod-power-management:dec-fsm	docs/manual/ds/parts/chapters/power.tex	470	One action for each cycle with registered outputs
-ds:ch:mod-power-management:dec-model	docs/manual/ds/parts/chapters/power.tex	463	Sequencing without supply removal
-ds:ch:mod-power-management:dec-order	docs/manual/ds/parts/chapters/power.tex	505	Clock stop before the clamp
-ds:ch:mod-power-management:dec-reset	docs/manual/ds/parts/chapters/power.tex	491	Synchronous reset of the PMU
-ds:ch:mod-power-management:dec-timeout	docs/manual/ds/parts/chapters/power.tex	484	Timeout in the wait
-ds:ch:mod-power-management:decisions	docs/manual/ds/parts/chapters/power.tex	460	Architecture decisions
+ds:ch:mod-power-management:dec-ack	docs/manual/ds/parts/chapters/power.tex	508	Acknowledge from the CPU domain
+ds:ch:mod-power-management:dec-bridge	docs/manual/ds/parts/chapters/power.tex	550	AXI bridge outside the domain reset
+ds:ch:mod-power-management:dec-clock	docs/manual/ds/parts/chapters/power.tex	529	Clock enable with the PMU reset
+ds:ch:mod-power-management:dec-flag	docs/manual/ds/parts/chapters/power.tex	543	Sticky timeout flag and fresh acknowledge
+ds:ch:mod-power-management:dec-fsm	docs/manual/ds/parts/chapters/power.tex	501	One action for each cycle with registered outputs
+ds:ch:mod-power-management:dec-model	docs/manual/ds/parts/chapters/power.tex	494	Sequencing without supply removal
+ds:ch:mod-power-management:dec-order	docs/manual/ds/parts/chapters/power.tex	536	Clock stop before the clamp
+ds:ch:mod-power-management:dec-reset	docs/manual/ds/parts/chapters/power.tex	522	Synchronous reset of the PMU
+ds:ch:mod-power-management:dec-timeout	docs/manual/ds/parts/chapters/power.tex	515	Timeout in the wait
+ds:ch:mod-power-management:decisions	docs/manual/ds/parts/chapters/power.tex	491	Architecture decisions
 ds:ch:mod-power-management:definitions	docs/manual/ds/parts/chapters/power.tex	14	Definitions
-ds:ch:mod-power-management:map	docs/manual/ds/parts/chapters/power.tex	526	Requirements and verification
-ds:ch:mod-power-management:off-guard	docs/manual/ds/parts/chapters/power.tex	312	Bus access to an off domain
+ds:ch:mod-power-management:map	docs/manual/ds/parts/chapters/power.tex	557	Requirements and verification
+ds:ch:mod-power-management:off-guard	docs/manual/ds/parts/chapters/power.tex	343	Bus access to an off domain
 ds:ch:mod-power-management:scope	docs/manual/ds/parts/chapters/power.tex	5	Scope
-ds:ch:mod-power-management:soc	docs/manual/ds/parts/chapters/power.tex	216	SoC power integration
-ds:ch:mod-power-management:software	docs/manual/ds/parts/chapters/power.tex	389	Software rules
+ds:ch:mod-power-management:soc	docs/manual/ds/parts/chapters/power.tex	247	SoC power integration
+ds:ch:mod-power-management:software	docs/manual/ds/parts/chapters/power.tex	420	Software rules
 ds:ch:mod-soc-fabric	docs/manual/ds/parts/03-module-contracts.tex	556	SoC fabric
 ds:ch:phase-6-ip-expansion	docs/manual/ds/parts/01-architecture.tex	9164	Phase 6 IP expansion
 ds:ch:phase0-architecture	docs/manual/ds/parts/01-architecture.tex	139	Phase 0 Architecture Specification
@@ -2000,12 +2001,13 @@ ds:mod:pll-clkgen	docs/manual/ds/parts/03-module-contracts.tex	2388	\texttt{soc/
 ds:mod:pll-rnm	docs/manual/ds/parts/03-module-contracts.tex	2431	\texttt{soc/pll/pll\_rnm.sv}
 ds:mod:pll-subsystem	docs/manual/ds/parts/03-module-contracts.tex	2474	\texttt{soc/pll/pll\_subsystem.sv}
 ds:mod:pmu	docs/manual/ds/parts/chapters/power.tex	30	\texttt{pmu}
-ds:mod:pmu:handshake	docs/manual/ds/parts/chapters/power.tex	158	Isolation handshake
+ds:mod:pmu:handshake	docs/manual/ds/parts/chapters/power.tex	189	Isolation handshake
 ds:mod:pmu:registers	docs/manual/ds/parts/chapters/power.tex	33	Programmers model
-ds:mod:pmu:sequencer	docs/manual/ds/parts/chapters/power.tex	88	Sequencer
+ds:mod:pmu:sequencer	docs/manual/ds/parts/chapters/power.tex	119	Sequencer
+ds:mod:pmu:wake	docs/manual/ds/parts/chapters/power.tex	93	Wake on interrupt
 ds:mod:pwm-controller	docs/manual/ds/parts/03-module-contracts.tex	3055	\texttt{periph/pwm\_controller.sv}
 ds:mod:rv32i-alu	docs/manual/ds/parts/03-module-contracts.tex	97	\texttt{cpu/core/rv32i\_alu.sv}
-ds:mod:rv32i-clock-gate	docs/manual/ds/parts/chapters/power.tex	360	\texttt{rv32i\_clock\_gate}
+ds:mod:rv32i-clock-gate	docs/manual/ds/parts/chapters/power.tex	391	\texttt{rv32i\_clock\_gate}
 ds:mod:rv32i-cpu-top	docs/manual/ds/parts/03-module-contracts.tex	235	\texttt{cpu/rv32i\_cpu\_top.sv}
 ds:mod:rv32i-csr-file	docs/manual/ds/parts/03-module-contracts.tex	130	\texttt{cpu/core/rv32i\_csr\_file.sv}
 ds:mod:rv32i-dcache	docs/manual/ds/parts/03-module-contracts.tex	341	\texttt{mem/rv32i\_dcache.sv}
@@ -2106,53 +2108,58 @@ ds:req:pmu-005	docs/manual/ds/parts/chapters/power.tex	59	DS-PMU-005 Access resp
 ds:req:pmu-006	docs/manual/ds/parts/chapters/power.tex	67	DS-PMU-006 Address of the registers
 ds:req:pmu-007	docs/manual/ds/parts/chapters/power.tex	72	DS-PMU-007 STATUS\_CLR
 ds:req:pmu-008	docs/manual/ds/parts/chapters/power.tex	80	DS-PMU-008 Minimum address width
-ds:req:pmu-020	docs/manual/ds/parts/chapters/power.tex	91	DS-PMU-020 Mode and target
-ds:req:pmu-021	docs/manual/ds/parts/chapters/power.tex	96	DS-PMU-021 Order of a power-down
-ds:req:pmu-022	docs/manual/ds/parts/chapters/power.tex	104	DS-PMU-022 Order of a power-up
-ds:req:pmu-023	docs/manual/ds/parts/chapters/power.tex	112	DS-PMU-023 One-cycle retention pulses
-ds:req:pmu-024	docs/manual/ds/parts/chapters/power.tex	117	DS-PMU-024 No reversal of a sequence
-ds:req:pmu-025	docs/manual/ds/parts/chapters/power.tex	122	DS-PMU-025 Independent domains
-ds:req:pmu-026	docs/manual/ds/parts/chapters/power.tex	127	DS-PMU-026 Registered outputs
-ds:req:pmu-027	docs/manual/ds/parts/chapters/power.tex	135	DS-PMU-027 Busy
-ds:req:pmu-028	docs/manual/ds/parts/chapters/power.tex	143	DS-PMU-028 The PMU is not gated
-ds:req:pmu-029	docs/manual/ds/parts/chapters/power.tex	148	DS-PMU-029 Reset of the PMU
-ds:req:pmu-060	docs/manual/ds/parts/chapters/power.tex	161	DS-PMU-060 Power-down waits for the acknowledge
-ds:req:pmu-061	docs/manual/ds/parts/chapters/power.tex	166	DS-PMU-061 Power-up waits for the release
-ds:req:pmu-062	docs/manual/ds/parts/chapters/power.tex	171	DS-PMU-062 Timeout
-ds:req:pmu-063	docs/manual/ds/parts/chapters/power.tex	179	DS-PMU-063 Life of the timeout flag
-ds:req:pmu-064	docs/manual/ds/parts/chapters/power.tex	184	DS-PMU-064 Full timeout for each wait
-ds:req:pmu-065	docs/manual/ds/parts/chapters/power.tex	192	DS-PMU-065 Minimum timeout
-ds:req:pmu-066	docs/manual/ds/parts/chapters/power.tex	200	DS-PMU-066 Size of the timeout
-ds:req:pmu-067	docs/manual/ds/parts/chapters/power.tex	208	DS-PMU-067 No stale acknowledge
-ds:req:pmu-100	docs/manual/ds/parts/chapters/power.tex	219	DS-PMU-100 Clamp before reset
-ds:req:pmu-101	docs/manual/ds/parts/chapters/power.tex	243	DS-PMU-101 Source of the acknowledge
-ds:req:pmu-102	docs/manual/ds/parts/chapters/power.tex	251	DS-PMU-102 Clock stop in reset
-ds:req:pmu-103	docs/manual/ds/parts/chapters/power.tex	259	DS-PMU-103 Clamp of the CPU domain
-ds:req:pmu-104	docs/manual/ds/parts/chapters/power.tex	267	DS-PMU-104 Clamp of the GPU domain
-ds:req:pmu-105	docs/manual/ds/parts/chapters/power.tex	275	DS-PMU-105 Reset of the GPU domain and the clamp
-ds:req:pmu-106	docs/manual/ds/parts/chapters/power.tex	280	DS-PMU-106 Clock and reset of the CPU-domain synchronisers
-ds:req:pmu-107	docs/manual/ds/parts/chapters/power.tex	285	DS-PMU-107 Domain resets in scan mode
-ds:req:pmu-108	docs/manual/ds/parts/chapters/power.tex	293	DS-PMU-108 Clock gates in test mode
-ds:req:pmu-109	docs/manual/ds/parts/chapters/power.tex	304	DS-PMU-109 Bridge reset in a PMU power cycle
-ds:req:pmu-110	docs/manual/ds/parts/chapters/power.tex	231	DS-PMU-110 Clamp only while the clock gate is closed
-ds:req:pmu-111	docs/manual/ds/parts/chapters/power.tex	315	DS-PMU-111 Off levels of the domains
-ds:req:pmu-112	docs/manual/ds/parts/chapters/power.tex	323	DS-PMU-112 Access to the GPU slot while the GPU is off
-ds:req:pmu-113	docs/manual/ds/parts/chapters/power.tex	328	DS-PMU-113 GPU goes off during a transaction
-ds:req:pmu-114	docs/manual/ds/parts/chapters/power.tex	336	DS-PMU-114 Debug access to the CPU domain while it is off
-ds:req:pmu-115	docs/manual/ds/parts/chapters/power.tex	344	DS-PMU-115 GPU fetch request across a GPU reset
-ds:req:pmu-116	docs/manual/ds/parts/chapters/power.tex	349	DS-PMU-116 GPU fetch response across a GPU power-down
-ds:req:pmu-150	docs/manual/ds/parts/chapters/power.tex	363	DS-PMU-150 Glitch-free gate
-ds:req:pmu-151	docs/manual/ds/parts/chapters/power.tex	371	DS-PMU-151 Test enable opens the gate
-ds:req:pmu-152	docs/manual/ds/parts/chapters/power.tex	376	DS-PMU-152 Static test enable
-ds:req:pmu-153	docs/manual/ds/parts/chapters/power.tex	381	DS-PMU-153 Clock root
-ds:req:pmu-180	docs/manual/ds/parts/chapters/power.tex	392	DS-PMU-180 GPU state after a power cycle
-ds:req:pmu-181	docs/manual/ds/parts/chapters/power.tex	400	DS-PMU-181 CPU state in CPU\_OFF
-ds:req:pmu-182	docs/manual/ds/parts/chapters/power.tex	408	DS-PMU-182 Quiet bus before a CPU power-down
-ds:req:pmu-183	docs/manual/ds/parts/chapters/power.tex	418	DS-PMU-183 Wake-up of the CPU domain
-ds:req:pmu-184	docs/manual/ds/parts/chapters/power.tex	426	DS-PMU-184 Poll for the settled value
-ds:req:pmu-185	docs/manual/ds/parts/chapters/power.tex	442	DS-PMU-185 No GPU access while the GPU is off
-ds:req:pmu-186	docs/manual/ds/parts/chapters/power.tex	452	DS-PMU-186 Fabric reset with CPU reset
-ds:req:pmu-187	docs/manual/ds/parts/chapters/power.tex	434	DS-PMU-187 Clear of the timeout flag
+ds:req:pmu-009	docs/manual/ds/parts/chapters/power.tex	88	DS-PMU-009 WAKE\_EN fields
+ds:req:pmu-020	docs/manual/ds/parts/chapters/power.tex	122	DS-PMU-020 Mode and target
+ds:req:pmu-021	docs/manual/ds/parts/chapters/power.tex	127	DS-PMU-021 Order of a power-down
+ds:req:pmu-022	docs/manual/ds/parts/chapters/power.tex	135	DS-PMU-022 Order of a power-up
+ds:req:pmu-023	docs/manual/ds/parts/chapters/power.tex	143	DS-PMU-023 One-cycle retention pulses
+ds:req:pmu-024	docs/manual/ds/parts/chapters/power.tex	148	DS-PMU-024 No reversal of a sequence
+ds:req:pmu-025	docs/manual/ds/parts/chapters/power.tex	153	DS-PMU-025 Independent domains
+ds:req:pmu-026	docs/manual/ds/parts/chapters/power.tex	158	DS-PMU-026 Registered outputs
+ds:req:pmu-027	docs/manual/ds/parts/chapters/power.tex	166	DS-PMU-027 Busy
+ds:req:pmu-028	docs/manual/ds/parts/chapters/power.tex	174	DS-PMU-028 The PMU is not gated
+ds:req:pmu-029	docs/manual/ds/parts/chapters/power.tex	179	DS-PMU-029 Reset of the PMU
+ds:req:pmu-030	docs/manual/ds/parts/chapters/power.tex	96	DS-PMU-030 Wake condition
+ds:req:pmu-031	docs/manual/ds/parts/chapters/power.tex	101	DS-PMU-031 Wake action
+ds:req:pmu-032	docs/manual/ds/parts/chapters/power.tex	106	DS-PMU-032 No abort of a power-down
+ds:req:pmu-033	docs/manual/ds/parts/chapters/power.tex	111	DS-PMU-033 Wake flag
+ds:req:pmu-060	docs/manual/ds/parts/chapters/power.tex	192	DS-PMU-060 Power-down waits for the acknowledge
+ds:req:pmu-061	docs/manual/ds/parts/chapters/power.tex	197	DS-PMU-061 Power-up waits for the release
+ds:req:pmu-062	docs/manual/ds/parts/chapters/power.tex	202	DS-PMU-062 Timeout
+ds:req:pmu-063	docs/manual/ds/parts/chapters/power.tex	210	DS-PMU-063 Life of the timeout flag
+ds:req:pmu-064	docs/manual/ds/parts/chapters/power.tex	215	DS-PMU-064 Full timeout for each wait
+ds:req:pmu-065	docs/manual/ds/parts/chapters/power.tex	223	DS-PMU-065 Minimum timeout
+ds:req:pmu-066	docs/manual/ds/parts/chapters/power.tex	231	DS-PMU-066 Size of the timeout
+ds:req:pmu-067	docs/manual/ds/parts/chapters/power.tex	239	DS-PMU-067 No stale acknowledge
+ds:req:pmu-100	docs/manual/ds/parts/chapters/power.tex	250	DS-PMU-100 Clamp before reset
+ds:req:pmu-101	docs/manual/ds/parts/chapters/power.tex	274	DS-PMU-101 Source of the acknowledge
+ds:req:pmu-102	docs/manual/ds/parts/chapters/power.tex	282	DS-PMU-102 Clock stop in reset
+ds:req:pmu-103	docs/manual/ds/parts/chapters/power.tex	290	DS-PMU-103 Clamp of the CPU domain
+ds:req:pmu-104	docs/manual/ds/parts/chapters/power.tex	298	DS-PMU-104 Clamp of the GPU domain
+ds:req:pmu-105	docs/manual/ds/parts/chapters/power.tex	306	DS-PMU-105 Reset of the GPU domain and the clamp
+ds:req:pmu-106	docs/manual/ds/parts/chapters/power.tex	311	DS-PMU-106 Clock and reset of the CPU-domain synchronisers
+ds:req:pmu-107	docs/manual/ds/parts/chapters/power.tex	316	DS-PMU-107 Domain resets in scan mode
+ds:req:pmu-108	docs/manual/ds/parts/chapters/power.tex	324	DS-PMU-108 Clock gates in test mode
+ds:req:pmu-109	docs/manual/ds/parts/chapters/power.tex	335	DS-PMU-109 Bridge reset in a PMU power cycle
+ds:req:pmu-110	docs/manual/ds/parts/chapters/power.tex	262	DS-PMU-110 Clamp only while the clock gate is closed
+ds:req:pmu-111	docs/manual/ds/parts/chapters/power.tex	346	DS-PMU-111 Off levels of the domains
+ds:req:pmu-112	docs/manual/ds/parts/chapters/power.tex	354	DS-PMU-112 Access to the GPU slot while the GPU is off
+ds:req:pmu-113	docs/manual/ds/parts/chapters/power.tex	359	DS-PMU-113 GPU goes off during a transaction
+ds:req:pmu-114	docs/manual/ds/parts/chapters/power.tex	367	DS-PMU-114 Debug access to the CPU domain while it is off
+ds:req:pmu-115	docs/manual/ds/parts/chapters/power.tex	375	DS-PMU-115 GPU fetch request across a GPU reset
+ds:req:pmu-116	docs/manual/ds/parts/chapters/power.tex	380	DS-PMU-116 GPU fetch response across a GPU power-down
+ds:req:pmu-150	docs/manual/ds/parts/chapters/power.tex	394	DS-PMU-150 Glitch-free gate
+ds:req:pmu-151	docs/manual/ds/parts/chapters/power.tex	402	DS-PMU-151 Test enable opens the gate
+ds:req:pmu-152	docs/manual/ds/parts/chapters/power.tex	407	DS-PMU-152 Static test enable
+ds:req:pmu-153	docs/manual/ds/parts/chapters/power.tex	412	DS-PMU-153 Clock root
+ds:req:pmu-180	docs/manual/ds/parts/chapters/power.tex	423	DS-PMU-180 GPU state after a power cycle
+ds:req:pmu-181	docs/manual/ds/parts/chapters/power.tex	431	DS-PMU-181 CPU state in CPU\_OFF
+ds:req:pmu-182	docs/manual/ds/parts/chapters/power.tex	439	DS-PMU-182 Quiet bus before a CPU power-down
+ds:req:pmu-183	docs/manual/ds/parts/chapters/power.tex	449	DS-PMU-183 Wake-up of the CPU domain
+ds:req:pmu-184	docs/manual/ds/parts/chapters/power.tex	457	DS-PMU-184 Poll for the settled value
+ds:req:pmu-185	docs/manual/ds/parts/chapters/power.tex	473	DS-PMU-185 No GPU access while the GPU is off
+ds:req:pmu-186	docs/manual/ds/parts/chapters/power.tex	483	DS-PMU-186 Fabric reset with CPU reset
+ds:req:pmu-187	docs/manual/ds/parts/chapters/power.tex	465	DS-PMU-187 Clear of the timeout flag
 ds:req:pwr-001	docs/manual/ds/parts/chapters/power-intent.tex	34	DS-PWR-001 Power domains and their members
 ds:req:pwr-002	docs/manual/ds/parts/chapters/power-intent.tex	42	DS-PWR-002 One domain for each instance
 ds:req:pwr-003	docs/manual/ds/parts/chapters/power-intent.tex	47	DS-PWR-003 Always-on roster
@@ -2202,9 +2209,9 @@ fig:tm:mod:cdc-sync:timing	docs/manual/tm/parts/chapters/cdc.tex	148	Functional 
 fig:tm:mod:pmu:fsm	docs/manual/tm/parts/chapters/power.tex	114	Functional description
 fig:tm:mod:pmu:power-down	docs/manual/tm/parts/chapters/power.tex	142	Functional description
 fig:tm:mod:pmu:power-up	docs/manual/tm/parts/chapters/power.tex	164	Functional description
-fig:tm:mod:rv32i-clock-gate:block	docs/manual/tm/parts/chapters/power.tex	390	Functional description
-fig:tm:mod:rv32i-clock-gate:timing	docs/manual/tm/parts/chapters/power.tex	403	Functional description
-fig:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	548	Introduction
+fig:tm:mod:rv32i-clock-gate:block	docs/manual/tm/parts/chapters/power.tex	397	Functional description
+fig:tm:mod:rv32i-clock-gate:timing	docs/manual/tm/parts/chapters/power.tex	410	Functional description
+fig:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	555	Introduction
 fig:um:guide:figures:block	docs/manual/um/parts/01-chapters.tex	6752	Figures
 fig:um:guide:figures:timing	docs/manual/um/parts/01-chapters.tex	6770	Figures
 tab:ds:mm:address-map:all	docs/manual/common/generated/map/memory-map.tex	4	Memory map of the SoC in address order
@@ -2216,9 +2223,9 @@ tab:ds:req:fab-map	docs/manual/ds/generated/requirements-fab.tex	4	Requirements 
 tab:ds:req:pmu-map	docs/manual/ds/generated/requirements-pmu.tex	4	Requirements of area PMU and their verification
 tab:ds:req:pwr-map	docs/manual/ds/generated/requirements-pwr.tex	4	Requirements of area PWR and their verification
 tab:tm:ch:mod-cdc-primitives:instances	docs/manual/tm/parts/chapters/cdc.tex	41	Instances in the design
-tab:tm:ch:mod-power-management:iso-cpu	docs/manual/tm/parts/chapters/power.tex	460	SoC power integration
-tab:tm:ch:mod-power-management:iso-gpu	docs/manual/tm/parts/chapters/power.tex	474	SoC power integration
-tab:tm:ch:mod-power-management:resets	docs/manual/tm/parts/chapters/power.tex	493	SoC power integration
+tab:tm:ch:mod-power-management:iso-cpu	docs/manual/tm/parts/chapters/power.tex	467	SoC power integration
+tab:tm:ch:mod-power-management:iso-gpu	docs/manual/tm/parts/chapters/power.tex	481	SoC power integration
+tab:tm:ch:mod-power-management:resets	docs/manual/tm/parts/chapters/power.tex	500	SoC power integration
 tab:tm:ch:tool-defects-and-caveats:caveats	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	30	Summary of the standing caveats
 tab:tm:ch:tool-defects-and-caveats:defects	docs/manual/tm/parts/06-tool-defects-and-standing-caveats.tex	55	Summary of the tool defects
 tab:tm:mod:apb-cdc-bridge:params	docs/manual/common/generated/facts/apb-cdc-bridge-params.tex	4	Parameters of \code{apb_cdc_bridge}
@@ -2233,29 +2240,29 @@ tab:tm:mod:cdc-reset-sync:params	docs/manual/common/generated/facts/cdc-reset-sy
 tab:tm:mod:cdc-reset-sync:signals	docs/manual/common/generated/facts/cdc-reset-sync-signals.tex	4	Signals of \code{cdc_reset_sync}
 tab:tm:mod:cdc-sync:params	docs/manual/common/generated/facts/cdc-sync-params.tex	4	Parameters of \code{cdc_sync}
 tab:tm:mod:cdc-sync:signals	docs/manual/common/generated/facts/cdc-sync-signals.tex	4	Signals of \code{cdc_sync}
-tab:tm:mod:pmu:ctrl	docs/manual/tm/parts/chapters/power.tex	211	Programmers model
-tab:tm:mod:pmu:domain-en	docs/manual/tm/parts/chapters/power.tex	242	Programmers model
+tab:tm:mod:pmu:ctrl	docs/manual/tm/parts/chapters/power.tex	212	Programmers model
+tab:tm:mod:pmu:domain-en	docs/manual/tm/parts/chapters/power.tex	244	Programmers model
 tab:tm:mod:pmu:params	docs/manual/common/generated/facts/pmu-params.tex	4	Parameters of \code{pmu}
 tab:tm:mod:pmu:regmap	docs/manual/tm/parts/chapters/power.tex	196	Programmers model
 tab:tm:mod:pmu:signals	docs/manual/common/generated/facts/pmu-signals.tex	4	Signals of \code{pmu}
 tab:tm:mod:pmu:states	docs/manual/tm/parts/chapters/power.tex	74	Functional description
-tab:tm:mod:pmu:status	docs/manual/tm/parts/chapters/power.tex	224	Programmers model
-tab:tm:mod:pmu:status-clr	docs/manual/tm/parts/chapters/power.tex	264	Programmers model
-tab:tm:mod:pmu:verification	docs/manual/tm/parts/chapters/power.tex	288	Verification
-tab:tm:mod:rv32i-clock-gate:arms	docs/manual/tm/parts/chapters/power.tex	410	Functional description
-tab:tm:mod:rv32i-clock-gate:instances	docs/manual/tm/parts/chapters/power.tex	346	Introduction
+tab:tm:mod:pmu:status	docs/manual/tm/parts/chapters/power.tex	225	Programmers model
+tab:tm:mod:pmu:status-clr	docs/manual/tm/parts/chapters/power.tex	266	Programmers model
+tab:tm:mod:pmu:verification	docs/manual/tm/parts/chapters/power.tex	295	Verification
+tab:tm:mod:rv32i-clock-gate:arms	docs/manual/tm/parts/chapters/power.tex	417	Functional description
+tab:tm:mod:rv32i-clock-gate:instances	docs/manual/tm/parts/chapters/power.tex	353	Introduction
 tab:tm:mod:rv32i-clock-gate:params	docs/manual/common/generated/facts/rv32i-clock-gate-params.tex	4	Parameters of \code{rv32i_clock_gate}
 tab:tm:mod:rv32i-clock-gate:signals	docs/manual/common/generated/facts/rv32i-clock-gate-signals.tex	4	Signals of \code{rv32i_clock_gate}
-tab:tm:pd:phase5-soc-upf:clamps	docs/manual/tm/parts/chapters/power.tex	633	Isolation
-tab:tm:pd:phase5-soc-upf:classes	docs/manual/tm/parts/chapters/power.tex	662	Isolation
-tab:tm:pd:phase5-soc-upf:contents	docs/manual/tm/parts/chapters/power.tex	556	Contents of the file
-tab:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	594	Domains, supplies and the roster
-tab:tm:pd:phase5-soc-upf:facts	docs/manual/tm/parts/chapters/power.tex	757	The checker
-tab:tm:pd:phase5-soc-upf:findings	docs/manual/tm/parts/chapters/power.tex	783	The checker
-tab:tm:pd:phase5-soc-upf:roster	docs/manual/tm/parts/chapters/power.tex	611	Domains, supplies and the roster
-tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	698	Power states
-tab:tm:pd:phase5-soc-upf:states	docs/manual/tm/parts/chapters/power.tex	679	Power states
-tab:tm:pd:phase5-soc-upf:supply	docs/manual/tm/parts/chapters/power.tex	577	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:clamps	docs/manual/tm/parts/chapters/power.tex	640	Isolation
+tab:tm:pd:phase5-soc-upf:classes	docs/manual/tm/parts/chapters/power.tex	669	Isolation
+tab:tm:pd:phase5-soc-upf:contents	docs/manual/tm/parts/chapters/power.tex	563	Contents of the file
+tab:tm:pd:phase5-soc-upf:domains	docs/manual/tm/parts/chapters/power.tex	601	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:facts	docs/manual/tm/parts/chapters/power.tex	764	The checker
+tab:tm:pd:phase5-soc-upf:findings	docs/manual/tm/parts/chapters/power.tex	790	The checker
+tab:tm:pd:phase5-soc-upf:roster	docs/manual/tm/parts/chapters/power.tex	618	Domains, supplies and the roster
+tab:tm:pd:phase5-soc-upf:scan	docs/manual/tm/parts/chapters/power.tex	705	Power states
+tab:tm:pd:phase5-soc-upf:states	docs/manual/tm/parts/chapters/power.tex	686	Power states
+tab:tm:pd:phase5-soc-upf:supply	docs/manual/tm/parts/chapters/power.tex	584	Domains, supplies and the roster
 tab:um:ch:cdc-integration:choose	docs/manual/um/parts/02-integration.tex	12	Choose the block
 tab:um:guide:label-kinds	docs/manual/um/parts/01-chapters.tex	6508	Labels
 tm:app:project-infrastructure	docs/manual/tm/parts/99-appendix.tex	3	Project infrastructure
@@ -2393,7 +2400,7 @@ tm:ch:mod-npu	docs/manual/tm/parts/01-module-reference.tex	1820	NPU
 tm:ch:mod-peripherals	docs/manual/tm/parts/01-module-reference.tex	991	Peripherals
 tm:ch:mod-pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	961	PLL subsystem
 tm:ch:mod-power-management	docs/manual/tm/parts/chapters/power.tex	3	Power management
-tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	449	SoC power integration
+tm:ch:mod-power-management:soc	docs/manual/tm/parts/chapters/power.tex	456	SoC power integration
 tm:ch:mod-soc-fabric	docs/manual/tm/parts/01-module-reference.tex	443	SoC fabric
 tm:ch:pd-constraint-notes	docs/manual/tm/parts/02-physical-design.tex	6517	Constraint file notes
 tm:ch:pd-flow-script-notes	docs/manual/tm/parts/02-physical-design.tex	9084	PDN and flow script notes
@@ -2730,10 +2737,11 @@ tm:mod:npu-top	docs/manual/tm/parts/01-module-reference.tex	1839	\texttt{npu/npu
 tm:mod:npu-weight-mem	docs/manual/tm/parts/01-module-reference.tex	1867	\texttt{npu/npu\_weight\_mem.sv}
 tm:mod:pll-subsystem	docs/manual/tm/parts/01-module-reference.tex	966	\texttt{soc/pll/pll\_subsystem.sv}
 tm:mod:pmu	docs/manual/tm/parts/chapters/power.tex	64	\texttt{pmu}
+tm:mod:pmu:wake	docs/manual/tm/parts/chapters/power.tex	281	Wake on interrupt
 tm:mod:pwm-controller	docs/manual/tm/parts/01-module-reference.tex	1291	\texttt{periph/pwm\_controller.sv}
 tm:mod:rv32i-alu	docs/manual/tm/parts/01-module-reference.tex	96	\texttt{cpu/core/rv32i\_alu.sv}
 tm:mod:rv32i-cache-pkg	docs/manual/tm/parts/01-module-reference.tex	295	\texttt{mem/rv32i\_cache\_pkg.sv}
-tm:mod:rv32i-clock-gate	docs/manual/tm/parts/chapters/power.tex	340	\texttt{rv32i\_clock\_gate}
+tm:mod:rv32i-clock-gate	docs/manual/tm/parts/chapters/power.tex	347	\texttt{rv32i\_clock\_gate}
 tm:mod:rv32i-control	docs/manual/tm/parts/01-module-reference.tex	111	\texttt{cpu/core/rv32i\_control.sv}
 tm:mod:rv32i-cpu-top	docs/manual/tm/parts/01-module-reference.tex	226	\texttt{cpu/rv32i\_cpu\_top.sv}
 tm:mod:rv32i-csr-file	docs/manual/tm/parts/01-module-reference.tex	144	\texttt{cpu/core/rv32i\_csr\_file.sv}
@@ -2964,9 +2972,9 @@ tm:pd:phase3-cache-upf	docs/manual/tm/parts/02-physical-design.tex	7752	\texttt{
 tm:pd:phase5-soc-multiclock-check-sdc	docs/manual/tm/parts/02-physical-design.tex	8073	\texttt{constraints/phase5\_soc\_multiclock\_check.sdc}
 tm:pd:phase5-soc-multiclock-sdc	docs/manual/tm/parts/02-physical-design.tex	7872	\texttt{constraints/phase5\_soc\_multiclock.sdc}
 tm:pd:phase5-soc-sdc	docs/manual/tm/parts/02-physical-design.tex	7799	\texttt{constraints/phase5\_soc.sdc}
-tm:pd:phase5-soc-upf	docs/manual/tm/parts/chapters/power.tex	513	Power intent file
-tm:pd:phase5-soc-upf:checker	docs/manual/tm/parts/chapters/power.tex	740	The checker
-tm:pd:phase5-soc-upf:scan-sources	docs/manual/tm/parts/chapters/power.tex	717	Scan sources
+tm:pd:phase5-soc-upf	docs/manual/tm/parts/chapters/power.tex	520	Power intent file
+tm:pd:phase5-soc-upf:checker	docs/manual/tm/parts/chapters/power.tex	747	The checker
+tm:pd:phase5-soc-upf:scan-sources	docs/manual/tm/parts/chapters/power.tex	724	Scan sources
 tm:pd:power-domain-evaluation	docs/manual/tm/parts/02-physical-design.tex	2572	Per-IP Power Domains + On/Off Sequencing --- Evaluation (pre-Phase-6 \#5)
 tm:pd:power-domain-evaluation:1-findings	docs/manual/tm/parts/02-physical-design.tex	2652	Findings
 tm:pd:power-domain-evaluation:2-the-blocker-that-sets-the-scope	docs/manual/tm/parts/02-physical-design.tex	2680	The blocker that sets the scope
@@ -3164,14 +3172,14 @@ um:ch:getting-started	docs/manual/um/parts/01-chapters.tex	1	Getting started
 um:ch:issue-tracking	docs/manual/um/parts/01-chapters.tex	6460	Issue tracking
 um:ch:local-quality-checks	docs/manual/um/parts/01-chapters.tex	2242	Local quality checks
 um:ch:power-integration	docs/manual/um/parts/02-integration.tex	196	Power management integration
-um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	347	Checklist
-um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	228	Clocks and resets
+um:ch:power-integration:checklist	docs/manual/um/parts/02-integration.tex	353	Checklist
+um:ch:power-integration:clocks	docs/manual/um/parts/02-integration.tex	234	Clocks and resets
 um:ch:power-integration:cpu	docs/manual/um/parts/02-integration.tex	214	Power the CPU down
-um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	240	Integrate a clock gate
+um:ch:power-integration:gate	docs/manual/um/parts/02-integration.tex	246	Integrate a clock gate
 um:ch:power-integration:gpu	docs/manual/um/parts/02-integration.tex	203	Power the GPU down and up
 um:ch:power-integration:registers	docs/manual/um/parts/02-integration.tex	200	Register map
-um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	256	Keep the power intent in step
-um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	327	Verify
+um:ch:power-integration:upf	docs/manual/um/parts/02-integration.tex	262	Keep the power intent in step
+um:ch:power-integration:verify	docs/manual/um/parts/02-integration.tex	333	Verify
 um:ch:project-status	docs/manual/um/parts/01-chapters.tex	6787	Project status
 um:ch:project-structure	docs/manual/um/parts/01-chapters.tex	39	Project structure
 um:ch:supported-instructions	docs/manual/um/parts/01-chapters.tex	364	Supported instructions

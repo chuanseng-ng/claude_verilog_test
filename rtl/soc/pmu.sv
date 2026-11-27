@@ -7,8 +7,15 @@
 //   Power-up order: release *_rst_n, *_ret_restore, de-assert *_iso_en, ungate the clock (*_clk_en=1).
 //   The clock is stopped before the clamp rises and the clamp is released before the clock runs.
 //   Each domain walks one action per clk_i cycle through nine states. It samples its target only at ON or OFF.
-// Registers: CTRL, STATUS, DOMAIN_EN and STATUS_CLR. STATUS[3] is the sticky cpu_iso_ack_timeout flag.
-//   Reset or a write of 1 to STATUS_CLR[0] clears it. STATUS_CLR is write-1-to-clear and reads 0.
+// Registers: CTRL, STATUS, DOMAIN_EN, STATUS_CLR and WAKE_EN. STATUS_CLR is write-1-to-clear and reads 0.
+//   STATUS[3] is the sticky cpu_iso_ack_timeout flag. Reset or a write of 1 to STATUS_CLR[0] clears it.
+//   STATUS[4] is the sticky woke_by_irq flag. Reset or a write of 1 to STATUS_CLR[1] clears it.
+//   WAKE_EN[0] enables wake_ext_i and WAKE_EN[1] enables wake_timer_i. Both are 0 at reset. Bits 31:2 read 0.
+// Wake: The CPU domain is settled in DOM_OFF with a power-down mode in CTRL, and an enabled source is high.
+//   The unit then sets STATUS[4] and rewrites CTRL: CPU_OFF becomes NORMAL and IDLE becomes GPU_OFF.
+//   The CPU power-up walk then runs as for a software write. The GPU is not touched.
+//   A source that is high during a power-down does not abort it. The walk reaches OFF and the wake follows.
+//   A source has no effect while the CPU domain is not settled OFF.
 // Outputs: Every *_clk_en_o, *_iso_en_o, *_rst_n_o, *_ret_save_o and *_ret_restore_o is the Q of a flop.
 // Parameters: ADDR_W is the local byte address width. ISO_ACK_TIMEOUT is the ack wait limit. The default is 255.
 // Clocks and resets: clk_i and rst_n_i are core_clk and core_rst_n. The reset is synchronous.
@@ -23,6 +30,8 @@
 //   - ISO_ACK_TIMEOUT must exceed the worst-case ack round trip, about 4*R+4 clk_i cycles when cpu_core_clk is R times slower
 //     than clk_i. The default 255 covers R up to about 60 (an unmeasured estimate). A value that is too small ends a wait early.
 //   - soc_top holds the isolation clamps. The UPF sense is high and the clamp value is 0.
+//   - wake_ext_i and wake_timer_i are core_clk levels that stay high until software clears their cause.
+//     They need no synchroniser. A one-cycle pulse is caught only in the cycle the domain is settled OFF.
 //   - Retention save and restore have no effect. The GPU loses its state on a power cycle.
 //   - Software must re-initialise the GPU after every power-up. It must not rely on CPU state surviving.
 // Full contract: ds:mod:pmu
@@ -36,6 +45,10 @@ module pmu #(
 ) (
     input logic clk_i,
     input logic rst_n_i,
+
+    // ── Wake sources, core_clk levels (ext_irq and timer_irq of soc_top) ────
+    input logic wake_ext_i,    // interrupt controller output, enabled by WAKE_EN[0]
+    input logic wake_timer_i,  // timer interrupt, enabled by WAKE_EN[1]
 
     // ── APB4 slave port (from apb_interconnect APB_PMU slot) ────────────────
     input  logic              psel,
@@ -66,22 +79,25 @@ module pmu #(
     output logic gpu_ret_restore_o
 );
 
-    // The register bank decodes four word indices, so the local byte address needs at least four bits.
-    if (ADDR_W < 4) begin : g_addrw_check
-        $fatal(1, "pmu: ADDR_W (%0d) must be >= 4", ADDR_W);
+    // The register bank decodes five word indices, so the local byte address needs at least five bits.
+    if (ADDR_W < 5) begin : g_addrw_check
+        $fatal(1, "pmu: ADDR_W (%0d) must be >= 5", ADDR_W);
     end
 
     // =========================================================================
-    // Register file: 4 words — CTRL (RW), STATUS (RO/HW), DOMAIN_EN (RO/HW), STATUS_CLR (W1C snoop)
+    // Register file: 5 words — CTRL (RW, HW on wake), STATUS (RO/HW), DOMAIN_EN (RO/HW),
+    // STATUS_CLR (W1C snoop), WAKE_EN (RW)
     // =========================================================================
-    localparam int unsigned N_REGS = 4;
+    localparam int unsigned N_REGS = 5;
     localparam int unsigned REG_STATUS_CLR = 3;
+    localparam int unsigned REG_WAKE_EN = 4;
 
     localparam logic [31:0] WMASK[N_REGS] = '{
         32'h0000_0003,  // CTRL:      bits[1:0] pmu_mode_req writable
         32'h0000_0000,  // STATUS:    RO (HW-driven)
         32'h0000_0000,  // DOMAIN_EN: RO (HW-driven)
-        32'h0000_0000  // STATUS_CLR: no stored bits, the write is snooped
+        32'h0000_0000,  // STATUS_CLR: no stored bits, the write is snooped
+        32'h0000_0003  // WAKE_EN:   bits[1:0] writable
     };
 
     localparam logic [31:0] RESET_VAL[N_REGS] = '{
@@ -89,7 +105,8 @@ module pmu #(
         32'h0000_0003,  // STATUS:    cpu_domain_on=1, gpu_domain_on=1, busy=0
         32'h0000_0033,  // DOMAIN_EN: cpu_clk_en=gpu_clk_en=cpu_rst_n=gpu_rst_n=1;
                         //   iso/ret bits=0 -- matches DOM_ON reset defaults below
-        32'h0000_0000  // STATUS_CLR: reads 0
+        32'h0000_0000,  // STATUS_CLR: reads 0
+        32'h0000_0000  // WAKE_EN:   no source enabled at reset
     };
 
     logic [31:0] regs_out[N_REGS];
@@ -122,10 +139,6 @@ module pmu #(
     // already registers the SW-written value; no PMU-local copy needed.
     logic [1:0] pmu_mode_req;
     assign pmu_mode_req = regs_out[0][1:0];
-
-    // reg 0 (CTRL): no HW write -- SW-only.
-    assign hw_wen  [0] = 1'b0;
-    assign hw_wdata[0] = '0;
 
     // =========================================================================
     // Per-domain sequencer FSM (0 = CPU, 1 = GPU) -- identical structure,
@@ -210,6 +223,19 @@ module pmu #(
     logic pu_ack_ok [N_DOM];
     logic wait_hit  [N_DOM];
     logic cpu_iso_ack_to_q;   // STATUS[3], sticky
+    logic woke_q;             // STATUS[4], sticky
+
+    // STATUS_CLR write-snoop, honouring pstrb[0]. sts_clr_w is the one-cycle clear pulse for STATUS[3] and
+    // sts_clr_woke_w the one for STATUS[4].
+    logic [ADDR_W-3:0] addr_word_w;
+    logic              sts_clr_sel_w;
+    logic              sts_clr_w;
+    logic              sts_clr_woke_w;
+    assign addr_word_w    = paddr[ADDR_W-1:2];
+    assign sts_clr_sel_w  = psel && penable && pwrite && pstrb[0] &&
+                            ({{(32-(ADDR_W-2)){1'b0}}, addr_word_w} == 32'(REG_STATUS_CLR));
+    assign sts_clr_w      = sts_clr_sel_w && pwdata[0];
+    assign sts_clr_woke_w = sts_clr_sel_w && pwdata[1];
 
     // A zero or one cycle timeout can never be distinguished from "no wait" (the counter would
     // expire in the cycle the wait starts), so reject it at elaboration (generate-scope $fatal:
@@ -350,7 +376,6 @@ module pmu #(
                 // from an earlier timed-out handshake cannot end the wait. ack_high_seen_q mirrors it for power-up.
                 logic          ack_low_seen_q;
                 logic          ack_high_seen_q;
-                logic          sts_clr_w;
 
                 assign pd_ack_ok[d] = cpu_iso_ack_i && ack_low_seen_q;
                 assign pu_ack_ok[d] = !cpu_iso_ack_i && ack_high_seen_q;
@@ -360,12 +385,6 @@ module pmu #(
                     ((dom_state_q[d] == DOM_PD_ISO) && !pd_ack_ok[d]) ||
                     ((dom_state_q[d] == DOM_PU_ISO) && !pu_ack_ok[d]);
                 assign wait_hit[d] = wait_active && (wait_cnt_q == CW'(ISO_ACK_TIMEOUT - 1));
-
-                // STATUS_CLR write-snoop: one-cycle clear pulse for STATUS[3], honouring pstrb[0].
-                logic [ADDR_W-3:0] addr_word_w;
-                assign addr_word_w = paddr[ADDR_W-1:2];
-                assign sts_clr_w = psel && penable && pwrite && pstrb[0] && pwdata[0] &&
-                                   ({{(32-(ADDR_W-2)){1'b0}}, addr_word_w} == 32'(REG_STATUS_CLR));
 
                 always_ff @(posedge clk_i) begin
                     if (!rst_n_i) begin
@@ -407,6 +426,31 @@ module pmu #(
         end : g_dom_seq
     endgenerate
 
+    // ── Wake from an enabled interrupt ──────────────────────────────────────
+    // The wake fires in the one cycle that the CPU domain is settled OFF with a power-down mode in CTRL and an
+    // enabled source is high. It sets STATUS[4] and rewrites CTRL, which clears the CPU power-down bit: CPU_OFF
+    // becomes NORMAL and IDLE becomes GPU_OFF. The next cycle the CPU target is on and the normal walk runs.
+    // A CTRL write by software in the same cycle wins inside WMASK, and the flag still sets.
+    logic [1:0] wake_en;
+    logic       wake_hit;
+    logic       wake_fire;
+    assign wake_en   = regs_out[REG_WAKE_EN][1:0];
+    assign wake_hit  = |(wake_en & {wake_timer_i, wake_ext_i});
+    assign wake_fire = (dom_state_q[DOM_CPU] == DOM_OFF) && !dom_target_on[DOM_CPU] && wake_hit;
+
+    assign hw_wen  [0] = wake_fire;
+    assign hw_wdata[0] = {30'b0, pmu_mode_req[1], 1'b0};
+
+    always_ff @(posedge clk_i) begin
+        if (!rst_n_i)             woke_q <= 1'b0;
+        else if (wake_fire)       woke_q <= 1'b1;
+        else if (sts_clr_woke_w)  woke_q <= 1'b0;
+    end
+
+    // WAKE_EN is software-only.
+    assign hw_wen  [REG_WAKE_EN] = 1'b0;
+    assign hw_wdata[REG_WAKE_EN] = '0;
+
     // ── Map per-domain arrays to named output ports ─────────────────────────
     assign cpu_clk_en_o      = clk_en_q[DOM_CPU];
     assign cpu_iso_en_o      = iso_en_q[DOM_CPU];
@@ -432,7 +476,7 @@ module pmu #(
                       (dom_state_q[DOM_GPU] != DOM_ON && dom_state_q[DOM_GPU] != DOM_OFF);
 
     assign hw_wen  [1]   = 1'b1;
-    assign hw_wdata[1]   = {28'b0, cpu_iso_ack_to_q, pmu_busy, gpu_domain_on, cpu_domain_on};
+    assign hw_wdata[1]   = {27'b0, woke_q, cpu_iso_ack_to_q, pmu_busy, gpu_domain_on, cpu_domain_on};
 
     // STATUS_CLR (word 3) has no stored bits. The clear is snooped from the APB write in g_ack_cpu.
     assign hw_wen  [3]   = 1'b0;

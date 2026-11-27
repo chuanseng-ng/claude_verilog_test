@@ -11,7 +11,7 @@ modules:
     label: tm:mod:pmu
     params:
       ADDR_W:
-        legal: "4 or more; 12 in the SoC"
+        legal: "5 or more; 12 in the SoC"
         description: "Byte address width of the APB slot. The slot holds 4 KB at 12."
       ISO_ACK_TIMEOUT:
         legal: "2 or more"
@@ -68,6 +68,12 @@ modules:
       cpu_iso_ack_i:
         domain: clk_i
         description: "Isolation acknowledge of the CPU domain, already synchronised into `clk_i` by the caller. High means the clamp is seen active. Low means the clamp is seen released."
+      wake_ext_i:
+        domain: clk_i
+        description: "Wake source, a level in `clk_i`. In the SoC it is `ext_irq`, the output of the interrupt controller. `WAKE_EN` bit 0 enables it."
+      wake_timer_i:
+        domain: clk_i
+        description: "Wake source, a level in `clk_i`. In the SoC it is `timer_irq`. `WAKE_EN` bit 1 enables it."
       gpu_clk_en_o:
         domain: clk_i
         description: "Clock enable of the GPU domain. High means the clock runs. The output is the Q of a flop."

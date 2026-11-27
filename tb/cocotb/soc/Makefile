@@ -1045,15 +1045,15 @@ pmu_lint:
 		--top-module tb_pmu \
 		$(PMU_SOURCES)
 
-# Negative control: an ADDR_W that cannot hold four register words, or an ISO_ACK_TIMEOUT that cannot be
+# Negative control: an ADDR_W that cannot hold five register words, or an ISO_ACK_TIMEOUT that cannot be
 # told from "no wait", must fail elaboration through the generate-scope $fatal and name the guard.
 pmu_guard_neg:
-	@for a in 0 1 2 3; do \
+	@for a in 0 1 2 3 4; do \
 		out=$$(verilator --lint-only -Wall -Wno-IMPORTSTAR -GADDR_W=$$a \
 			--top-module pmu $(RTL)/soc/apb4_register_bank.sv $(RTL)/soc/pmu.sv 2>&1); rc=$$?; \
 		if [ $$rc -eq 0 ]; then \
 			echo "FAIL: ADDR_W=$$a elaborated cleanly"; exit 1; \
-		elif echo "$$out" | grep -q "pmu: ADDR_W ($$a) must be >= 4"; then \
+		elif echo "$$out" | grep -q "pmu: ADDR_W ($$a) must be >= 5"; then \
 			echo "PASS: ADDR_W=$$a rejected by pmu elaboration guard"; \
 		else \
 			echo "FAIL: ADDR_W=$$a failed for the wrong reason"; echo "$$out"; exit 1; \

@@ -16,6 +16,10 @@
 //   0x004  STATUS    [RO]  [0]=cpu_domain_on [1]=gpu_domain_on [2]=busy
 //                          [3]=cpu_iso_ack_timeout (sticky)
 //   0x008  DOMAIN_EN [RO]  live per-signal bitmap (see pmu.sv header)
+//   0x00C  STATUS_CLR [W1C snoop]
+//   0x010  WAKE_EN   [RW]  [0]=wake on the interrupt controller output, [1]=wake on the timer irq
+//
+// Wake sources. wake_ext_i and wake_timer_i stand for ext_irq and timer_irq of soc_top, both core_clk levels.
 //
 // CPU isolation-acknowledge model.  In soc_top the PMU's cpu_iso_ack_i is the CPU-domain
 // clamp (pmu_cpu_iso_en_sync) synchronised back to core_clk.  Here a small behavioural model stands in
@@ -49,6 +53,10 @@ module tb_pmu #(
     input  logic       ack_force_i,
     input  logic       ack_force_val_i,
     output logic       cpu_iso_ack_o,       // the ack the PMU actually sees (observability)
+
+    // -- Wake sources (see header) ------------------------------------------
+    input  logic       wake_ext_i,
+    input  logic       wake_timer_i,
 
     // -- APB4 slave port (BFM-facing, flat APB4 names) ----------------------
     input  logic              psel,
@@ -113,6 +121,10 @@ module tb_pmu #(
     ) u_dut (
         .clk_i  (clk),
         .rst_n_i(rst_n),
+
+        // Wake sources
+        .wake_ext_i  (wake_ext_i),
+        .wake_timer_i(wake_timer_i),
 
         // APB4 slave
         .psel   (psel),

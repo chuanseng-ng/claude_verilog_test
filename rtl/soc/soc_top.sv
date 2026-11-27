@@ -1877,6 +1877,9 @@ module soc_top
     ) u_pmu (
         .clk_i               (core_clk),
         .rst_n_i             (core_rst_n),
+        // Wake sources, both core_clk levels
+        .wake_ext_i          (ext_irq),
+        .wake_timer_i        (timer_irq),
         // APB4 slave ← apb_interconnect APB_PMU slot
         .psel                (apb_psel    [APB_PMU]),
         .penable             (apb_penable [APB_PMU]),

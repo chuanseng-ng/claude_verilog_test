@@ -48,6 +48,7 @@ CTRL_OFFSET      = 0x000
 STAT_OFFSET      = 0x004
 DOMAIN_EN_OFFSET = 0x008
 STATUS_CLR_OFFSET = 0x00C
+WAKE_EN_OFFSET   = 0x010
 
 MODE_NORMAL  = 0x0
 MODE_CPU_OFF = 0x1
@@ -98,6 +99,8 @@ async def _start_clock_and_reset(dut) -> None:
     dut.ack_stuck_i.value     = 0
     dut.ack_force_i.value     = 0
     dut.ack_force_val_i.value = 0
+    dut.wake_ext_i.value      = 0
+    dut.wake_timer_i.value    = 0
     dut.rst_n.value    = 0
     dut.psel.value     = 0
     dut.penable.value  = 0
@@ -513,6 +516,7 @@ STATUS_TO_BIT = 3
 
 DOM_ON, DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF = 0, 1, 2, 3, 4
 DOM_PU_RST, DOM_PU_CLK, DOM_PU_RESTORE, DOM_PU_ISO = 5, 6, 7, 8
+DOM_CPU_IDX, DOM_GPU_IDX = 0, 1
 
 
 def _snap(dut, dom: int = 0) -> tuple:
@@ -1277,3 +1281,337 @@ async def test_p4_unit_control_sequenced_power_up_order(dut):
     releases the reset, then the clamp, then the clock enable, one sample apart or more."""
     ev = await _p4_unit_events(dut, "sequenced")
     assert ev["rst"] < ev["iso"] < ev["clk"], f"sequenced power-up release samples: {ev}"
+
+
+# =============================================================================
+# Wake of the CPU domain on an enabled interrupt (WAKE_EN, STATUS[4], STATUS_CLR[1]).
+#
+# tb_pmu drives wake_ext_i and wake_timer_i. The control tests hold with and without the wake path:
+# they prove the stimulus and the checks that the other tests share.
+# A harness fault raises RuntimeError, not AssertionError.
+# =============================================================================
+
+WAKE_EXT = 0x1
+WAKE_TIMER = 0x2
+STATUS_WOKE_BIT = 4
+STATUS_CLR_WOKE = 0x2
+WAKE_WINDOW = 40  # cycles from the source to the end of the power-up, many times the walk
+WAKE_UP_WALK = [DOM_PU_RST, DOM_PU_RESTORE, DOM_PU_ISO, DOM_PU_CLK, DOM_ON]
+
+
+def _wake_source(dut, bit: int, level: int) -> None:
+    sig = dut.wake_ext_i if bit == WAKE_EXT else dut.wake_timer_i
+    sig.value = level
+
+
+async def _wake_write(bfm, offset: int, data: int) -> None:
+    ok = await bfm.write(offset, data)
+    if not ok:
+        raise RuntimeError(f"harness: write to 0x{offset:03x} returned SLVERR")
+
+
+async def _wake_read(bfm, offset: int) -> int:
+    val, ok = await bfm.read(offset)
+    if not ok:
+        raise RuntimeError(f"harness: read of 0x{offset:03x} returned SLVERR")
+    return val
+
+
+async def _wake_wait(dut, dom: int, target: int, limit: int = 40) -> None:
+    try:
+        await _wait_state(dut, target, limit=limit, dom=dom)
+    except AssertionError as exc:
+        raise RuntimeError(f"harness: {exc}") from None
+
+
+async def _wake_power_down(dut, bfm, mode: int, wake_en: int) -> None:
+    """WAKE_EN, then a power-down request, then wait until the CPU (and for IDLE the GPU) is OFF."""
+    await _wake_write(bfm, WAKE_EN_OFFSET, wake_en)
+    await _wake_write(bfm, CTRL_OFFSET, mode)
+    await _wake_wait(dut, DOM_CPU_IDX, DOM_OFF)
+    if mode == MODE_IDLE:
+        await _wake_wait(dut, DOM_GPU_IDX, DOM_OFF)
+
+
+async def _wake_trace(dut, n: int) -> list:
+    """(cpu state, gpu state) after each of n clock edges."""
+    out = []
+    for _ in range(n):
+        await RisingEdge(dut.clk)
+        out.append(
+            (
+                int(dut.u_dut.dom_state_q[DOM_CPU_IDX].value),
+                int(dut.u_dut.dom_state_q[DOM_GPU_IDX].value),
+            )
+        )
+    return out
+
+
+def _walk(trace: list, which: int) -> list:
+    """The states of one domain with repeats removed."""
+    return [s_ for s_, _ in _rle([t_[which] for t_ in trace])]
+
+
+async def _wake_from_off(dut, bfm, mode: int, wake_en: int, source: int) -> dict:
+    await _wake_power_down(dut, bfm, mode, wake_en)
+    _wake_source(dut, source, 1)
+    trace = await _wake_trace(dut, WAKE_WINDOW)
+    return dict(
+        trace=trace,
+        ctrl=await _wake_read(bfm, CTRL_OFFSET),
+        status=await _wake_read(bfm, STAT_OFFSET),
+    )
+
+
+def _assert_cpu_woke(r: dict, what: str) -> None:
+    cpu = _walk(r["trace"], 0)
+    assert cpu != [DOM_OFF], (
+        f"{what}: the CPU domain stayed in DOM_OFF for {WAKE_WINDOW} cycles with an enabled source "
+        f"high "
+        f"(CTRL reads 0x{r['ctrl']:x}, STATUS 0x{r['status']:02x}): the PMU has no wake path"
+    )
+    assert cpu == [DOM_OFF] + WAKE_UP_WALK, f"{what}: the CPU walk after the source is {cpu}"
+
+
+@cocotb.test()
+async def test_wake_en_reset_rw_and_reserved_bits(dut):
+    """WAKE_EN reads 0 after reset, holds bits 1:0 and reads 0 in bits 31:2."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    assert await _wake_read(bfm, WAKE_EN_OFFSET) == 0, "WAKE_EN must read 0 after reset"
+    for wr, rd in ((0x1, 0x1), (0x2, 0x2), (0x3, 0x3), (0xFFFF_FFFF, 0x3), (0x0, 0x0)):
+        await _wake_write(bfm, WAKE_EN_OFFSET, wr)
+        got = await _wake_read(bfm, WAKE_EN_OFFSET)
+        assert got == rd, f"WAKE_EN after a write of 0x{wr:08x}: expected 0x{rd:x}, read 0x{got:x}"
+
+
+@cocotb.test()
+async def test_wake_en_neighbours_unchanged_and_unused_words_drop_writes(dut):
+    """Control. A write of WAKE_EN leaves CTRL, STATUS, DOMAIN_EN and STATUS_CLR as they were. The
+    words after WAKE_EN still read 0 and drop a write, and so does the top word of the slot."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    before = [
+        await _wake_read(bfm, a_)
+        for a_ in (CTRL_OFFSET, STAT_OFFSET, DOMAIN_EN_OFFSET, STATUS_CLR_OFFSET)
+    ]
+    await _wake_write(bfm, WAKE_EN_OFFSET, 0x3)
+    after = [
+        await _wake_read(bfm, a_)
+        for a_ in (CTRL_OFFSET, STAT_OFFSET, DOMAIN_EN_OFFSET, STATUS_CLR_OFFSET)
+    ]
+    assert before == after, f"a WAKE_EN write moved a neighbour: {before} -> {after}"
+    for addr in (0x014, 0x018, 0x01C, 0x020, 0xFFC):
+        await _wake_write(bfm, addr, 0xFFFF_FFFF)
+        assert await _wake_read(bfm, addr) == 0, f"unused word 0x{addr:03x} must read 0"
+    assert [
+        await _wake_read(bfm, a_) for a_ in (CTRL_OFFSET, STAT_OFFSET, DOMAIN_EN_OFFSET)
+    ] == before[:3]
+    assert _sample_cpu(dut) == ON and _sample_gpu(dut) == ON
+
+
+@cocotb.test()
+async def test_wake_from_cpu_off_by_ext_irq(dut):
+    """CPU_OFF with WAKE_EN[0]: ext_irq powers the CPU up in the normal order, CTRL reads NORMAL,
+    STATUS[4] is set, the GPU never leaves ON."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    r = await _wake_from_off(dut, bfm, MODE_CPU_OFF, WAKE_EXT, WAKE_EXT)
+    _assert_cpu_woke(r, "wake by ext_irq")
+    assert r["ctrl"] == MODE_NORMAL, f"CTRL must read NORMAL after the wake, read 0x{r['ctrl']:x}"
+    assert r["status"] == 0x13, (
+        f"STATUS must show cpu on, gpu on, woke_by_irq (0x13), read 0x{r['status']:02x}"
+    )
+    assert _walk(r["trace"], 1) == [DOM_ON], "the GPU domain must stay ON"
+
+
+@cocotb.test()
+async def test_wake_from_cpu_off_by_timer_irq(dut):
+    """The same as the ext_irq wake, for WAKE_EN[1] and the timer."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    r = await _wake_from_off(dut, bfm, MODE_CPU_OFF, WAKE_TIMER, WAKE_TIMER)
+    _assert_cpu_woke(r, "wake by timer_irq")
+    assert r["ctrl"] == MODE_NORMAL, f"CTRL must read NORMAL after the wake, read 0x{r['ctrl']:x}"
+    assert r["status"] == 0x13, (
+        f"STATUS must show cpu on, gpu on, woke_by_irq (0x13), read 0x{r['status']:02x}"
+    )
+    assert _walk(r["trace"], 1) == [DOM_ON], "the GPU domain must stay ON"
+
+
+@cocotb.test()
+async def test_wake_from_idle_powers_up_cpu_only(dut):
+    """IDLE: the wake rewrites CTRL to GPU_OFF and powers the CPU up. The GPU stays OFF, its outputs
+    never move."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    r = await _wake_from_off(dut, bfm, MODE_IDLE, WAKE_EXT | WAKE_TIMER, WAKE_TIMER)
+    _assert_cpu_woke(r, "wake from IDLE")
+    assert r["ctrl"] == MODE_GPU_OFF, (
+        f"CTRL must read GPU_OFF after a wake from IDLE, read 0x{r['ctrl']:x}"
+    )
+    assert r["status"] == 0x11, (
+        f"STATUS must show cpu on, gpu off, woke_by_irq (0x11), read 0x{r['status']:02x}"
+    )
+    assert _walk(r["trace"], 1) == [DOM_OFF], "the GPU domain must stay OFF"
+    assert _sample_gpu(dut) == OFF
+
+
+@cocotb.test()
+async def test_wake_disabled_source_never_wakes(dut):
+    """Control. A source that WAKE_EN does not enable never wakes the CPU: neither source with
+    WAKE_EN=0, nor the timer with only ext enabled, nor ext with only the timer enabled."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    for wake_en, source in (
+        (0x0, WAKE_EXT),
+        (0x0, WAKE_TIMER),
+        (WAKE_EXT, WAKE_TIMER),
+        (WAKE_TIMER, WAKE_EXT),
+    ):
+        await _wake_power_down(dut, bfm, MODE_CPU_OFF, wake_en)
+        _wake_source(dut, source, 1)
+        trace = await _wake_trace(dut, WAKE_WINDOW)
+        _wake_source(dut, source, 0)
+        assert _walk(trace, 0) == [DOM_OFF], (
+            f"WAKE_EN=0x{wake_en:x} source 0x{source:x}: walk {_walk(trace, 0)}"
+        )
+        assert await _wake_read(bfm, CTRL_OFFSET) == MODE_CPU_OFF
+        assert (await _wake_read(bfm, STAT_OFFSET)) >> STATUS_WOKE_BIT & 1 == 0
+        await _wake_write(bfm, CTRL_OFFSET, MODE_NORMAL)
+        await _wake_wait(dut, DOM_CPU_IDX, DOM_ON, limit=40)
+
+
+@cocotb.test()
+async def test_wake_while_cpu_on_does_nothing(dut):
+    """Control. With both sources enabled and high, a CPU that is ON does not change: not in NORMAL
+    and not in GPU_OFF, where the GPU stays off. CTRL, STATUS and the outputs stay as they were."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    await _wake_write(bfm, WAKE_EN_OFFSET, WAKE_EXT | WAKE_TIMER)
+    _wake_source(dut, WAKE_EXT, 1)
+    _wake_source(dut, WAKE_TIMER, 1)
+    trace = await _wake_trace(dut, WAKE_WINDOW)
+    assert _walk(trace, 0) == [DOM_ON] and _walk(trace, 1) == [DOM_ON]
+    assert (
+        await _wake_read(bfm, CTRL_OFFSET) == MODE_NORMAL
+        and await _wake_read(bfm, STAT_OFFSET) == 0x3
+    )
+    await _wake_write(bfm, CTRL_OFFSET, MODE_GPU_OFF)
+    await _wake_wait(dut, DOM_GPU_IDX, DOM_OFF)
+    trace = await _wake_trace(dut, WAKE_WINDOW)
+    assert _walk(trace, 0) == [DOM_ON] and _walk(trace, 1) == [DOM_OFF]
+    assert await _wake_read(bfm, CTRL_OFFSET) == MODE_GPU_OFF, (
+        "a wake while the CPU is ON must not rewrite CTRL"
+    )
+    assert await _wake_read(bfm, STAT_OFFSET) == 0x1, (
+        "STATUS must show cpu on, gpu off, no wake flag"
+    )
+    assert _sample_cpu(dut) == ON and _sample_gpu(dut) == OFF
+
+
+@cocotb.test()
+async def test_wake_source_high_at_cpu_off_write_completes_power_down_then_wakes(dut):
+    """A source that is already high when software writes CPU_OFF does not abort the power-down: the
+    domain walks to OFF and then powers up."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    await _wake_write(bfm, WAKE_EN_OFFSET, WAKE_EXT)
+    _wake_source(dut, WAKE_EXT, 1)
+    await _wake_write(bfm, CTRL_OFFSET, MODE_CPU_OFF)
+    trace = await _wake_trace(dut, WAKE_WINDOW)
+    cpu = _walk(trace, 0)
+    assert cpu[:5] == [DOM_ON, DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO, DOM_OFF], (
+        f"the power-down must run to OFF with the source high, walk {cpu}"
+    )
+    assert cpu == [DOM_ON, DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO, DOM_OFF] + WAKE_UP_WALK, (
+        f"the power-down reached OFF but the wake never ran, walk {cpu}"
+    )
+    assert await _wake_read(bfm, CTRL_OFFSET) == MODE_NORMAL
+
+
+@cocotb.test()
+async def test_wake_does_not_fire_before_the_cpu_is_settled_off(dut):
+    """With a source high, nothing of the wake shows until the CPU domain is in OFF: CTRL still
+    holds CPU_OFF and STATUS[4] is clear in every cycle of the power-down walk."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    await _wake_write(bfm, WAKE_EN_OFFSET, WAKE_EXT)
+    _wake_source(dut, WAKE_EXT, 1)
+    await _wake_write(bfm, CTRL_OFFSET, MODE_CPU_OFF)
+    seen = []
+    for _ in range(WAKE_WINDOW):
+        await RisingEdge(dut.clk)
+        st = int(dut.u_dut.dom_state_q[DOM_CPU_IDX].value)
+        if st == DOM_OFF:
+            break
+        seen.append(st)
+        woke = int(dut.u_dut.woke_q.value)
+        ctrl = int(dut.u_dut.pmu_mode_req.value)
+        assert woke == 0 and ctrl == MODE_CPU_OFF, (
+            f"state {st} before OFF: woke_by_irq {woke}, CTRL 0x{ctrl:x}; the wake fired early"
+        )
+    assert seen[-3:] == [DOM_PD_SAVE, DOM_PD_GATE, DOM_PD_ISO], f"walk before OFF: {seen}"
+    await _wake_wait(dut, DOM_CPU_IDX, DOM_PU_RST, limit=4)
+
+
+@cocotb.test()
+async def test_wake_flag_clears_by_status_clr_bit1_and_bit0_still_clears_timeout(dut):
+    """STATUS_CLR[1] clears STATUS[4] and leaves STATUS[3]. STATUS_CLR[0] clears STATUS[3] and
+    leaves STATUS[4]. Both flags are set first: the timeout by a dead-ack power-down, the wake by
+    the source."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    dut.ack_stuck_i.value = 1
+    await _wake_write(bfm, WAKE_EN_OFFSET, WAKE_EXT)
+    await _wake_write(bfm, CTRL_OFFSET, MODE_CPU_OFF)
+    await _wake_wait(dut, DOM_CPU_IDX, DOM_OFF, limit=ISO_ACK_TIMEOUT + 30)
+    _wake_source(dut, WAKE_EXT, 1)
+    await _wake_trace(dut, ISO_ACK_TIMEOUT + 30)
+    status = await _wake_read(bfm, STAT_OFFSET)
+    assert status >> STATUS_WOKE_BIT & 1, (
+        f"precondition: STATUS[4] must be set by the wake, STATUS 0x{status:02x}"
+    )
+    assert status >> STATUS_TO_BIT & 1, (
+        f"precondition: STATUS[3] must be set by the dead ack, STATUS 0x{status:02x}"
+    )
+    await _wake_write(bfm, STATUS_CLR_OFFSET, STATUS_CLR_WOKE)
+    status = await _wake_read(bfm, STAT_OFFSET)
+    assert status >> STATUS_WOKE_BIT & 1 == 0, (
+        f"STATUS_CLR[1] must clear STATUS[4], STATUS 0x{status:02x}"
+    )
+    assert status >> STATUS_TO_BIT & 1, f"STATUS_CLR[1] must leave STATUS[3], STATUS 0x{status:02x}"
+    await _wake_write(bfm, STATUS_CLR_OFFSET, 0x1)
+    status = await _wake_read(bfm, STAT_OFFSET)
+    assert status >> STATUS_TO_BIT & 1 == 0 and status >> STATUS_WOKE_BIT & 1 == 0, (
+        f"STATUS 0x{status:02x}"
+    )
+
+
+@cocotb.test()
+async def test_wake_flag_and_wake_en_cleared_by_pmu_reset(dut):
+    """A reset of the PMU clears STATUS[4] and WAKE_EN."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    r = await _wake_from_off(dut, bfm, MODE_CPU_OFF, WAKE_EXT | WAKE_TIMER, WAKE_TIMER)
+    assert r["status"] >> STATUS_WOKE_BIT & 1, (
+        f"precondition: STATUS[4] must be set by the wake, STATUS 0x{r['status']:02x}"
+    )
+    _wake_source(dut, WAKE_TIMER, 0)
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 2)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 2)
+    assert await _wake_read(bfm, STAT_OFFSET) == 0x3, "a reset must clear STATUS[4]"
+    assert await _wake_read(bfm, WAKE_EN_OFFSET) == 0x0, "a reset must clear WAKE_EN"

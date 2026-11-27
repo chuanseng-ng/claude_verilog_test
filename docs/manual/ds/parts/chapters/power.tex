@@ -31,16 +31,16 @@ The chapter uses these terms with a fixed meaning.
 The module \code{pmu} has a register block and two sequencers. The register block sets the mode. Each sequencer drives the clock enable, the isolation control, the reset and the two retention pulses of one domain. \Cref{tm:mod:pmu} describes it.
 
 \subsection{Programmers model}\label{ds:mod:pmu:registers}
-The registers have 32 bits. Their offsets are 0x00 for \code{CTRL}, 0x04 for \code{STATUS}, 0x08 for \code{DOMAIN_EN} and 0x0C for \code{STATUS_CLR}.
+The registers have 32 bits. Their offsets are 0x00 for \code{CTRL}, 0x04 for \code{STATUS}, 0x08 for \code{DOMAIN_EN}, 0x0C for \code{STATUS_CLR} and 0x10 for \code{WAKE_EN}.
 
 \begin{requirement}{DS-PMU-001}{CTRL mode field}
 [verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_ctrl_wmask; test:tb/cocotb/soc/test_pmu.py::test_register_walk}]
-The bits 1 and 0 of \code{CTRL} must be read and write, and must select the mode. The bits 31 to 2 must read 0 and must ignore a write.
+The bits 1 and 0 of \code{CTRL} must be read and write, and must select the mode. The bits 31 to 2 must read 0 and must ignore a write. The PMU itself must write \code{CTRL} only for a wake (\reqref{DS-PMU-031}).
 \end{requirement}
 
 \begin{requirement}{DS-PMU-002}{STATUS fields}
-[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_status_domain_en_readonly; test:tb/cocotb/soc/test_pmu.py::test_pmu_busy_semantics; test:tb/cocotb/soc/test_pmu.py::test_pmu_iso_ack_timeout_power_down; mutation:tools/verif/mutate_pmu_iso_ack.py::t11_flag_wrong_bit}]
-\code{STATUS} must be read only. Bit 0 must be \code{cpu_domain_on}. Bit 1 must be \code{gpu_domain_on}. Bit 2 must be \code{busy}. Bit 3 must be the sticky flag \code{cpu_iso_ack_timeout}. The bits 31 to 4 must read 0. A write to \code{STATUS} must have no effect.
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_status_domain_en_readonly; test:tb/cocotb/soc/test_pmu.py::test_pmu_busy_semantics; test:tb/cocotb/soc/test_pmu.py::test_pmu_iso_ack_timeout_power_down; mutation:tools/verif/mutate_pmu_iso_ack.py::t11_flag_wrong_bit; test:tb/cocotb/soc/test_pmu.py::test_wake_from_cpu_off_by_ext_irq; mutation:tools/verif/mutate_pmu_iso_ack.py::w06_woke_flag_never_set}]
+\code{STATUS} must be read only. Bit 0 must be \code{cpu_domain_on}. Bit 1 must be \code{gpu_domain_on}. Bit 2 must be \code{busy}. Bit 3 must be the sticky flag \code{cpu_iso_ack_timeout}. Bit 4 must be the sticky flag \code{woke_by_irq} (\reqref{DS-PMU-033}). The bits 31 to 5 must read 0. A write to \code{STATUS} must have no effect.
 \end{requirement}
 
 \begin{requirement}{DS-PMU-003}{DOMAIN\_EN fields}
@@ -52,16 +52,16 @@ The bits 1 and 0 of \code{CTRL} must be read and write, and must select the mode
 \end{information}
 
 \begin{requirement}{DS-PMU-004}{Reset values}
-[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_reset_defaults}]
-After the reset, \code{CTRL} must be 0 (NORMAL), \code{STATUS} must be 0x3, \code{DOMAIN_EN} must be 0x33 and \code{STATUS_CLR} must read 0. Both domains must be on. Every clock enable and every active-low reset must be high. Every isolation control and every retention pulse must be low.
+[verify={test:tb/cocotb/soc/test_pmu.py::test_pmu_reset_defaults; test:tb/cocotb/soc/test_pmu.py::test_wake_en_reset_rw_and_reserved_bits; test:tb/cocotb/soc/test_pmu.py::test_wake_flag_and_wake_en_cleared_by_pmu_reset; mutation:tools/verif/mutate_pmu_iso_ack.py::w09_woke_flag_not_reset}]
+After the reset, \code{CTRL} must be 0 (NORMAL), \code{STATUS} must be 0x3, \code{DOMAIN_EN} must be 0x33, \code{STATUS_CLR} must read 0 and \code{WAKE_EN} must be 0. Both domains must be on. Every clock enable and every active-low reset must be high. Every isolation control and every retention pulse must be low.
 \end{requirement}
 
 \begin{requirement}{DS-PMU-005}{Access response}
-[verify={test:tb/cocotb/soc/test_pmu.py::test_register_walk; test:tb/cocotb/soc/test_pmu.py::test_status_clr_only_decodes_its_word; review}]
-Every APB access must end without an error response. An access to a word at offset 0x10 or above in the slot must read 0 and must drop a write.
+[verify={test:tb/cocotb/soc/test_pmu.py::test_register_walk; test:tb/cocotb/soc/test_pmu.py::test_status_clr_only_decodes_its_word; test:tb/cocotb/soc/test_pmu.py::test_wake_en_neighbours_unchanged_and_unused_words_drop_writes; review}]
+Every APB access must end without an error response. An access to a word at offset 0x14 or above in the slot must read 0 and must drop a write.
 \end{requirement}
 \begin{information}
-The module ties \code{pready} high, so an access has no wait state. This holds by construction. No test counts wait states. The register bank ignores \code{paddr[1:0]}. The byte offsets 0x01 to 0x03 address \code{CTRL}, 0x05 to 0x07 address \code{STATUS}, 0x09 to 0x0B address \code{DOMAIN_EN} and 0x0D to 0x0F address \code{STATUS_CLR}.
+The module ties \code{pready} high, so an access has no wait state. This holds by construction. No test counts wait states. The register bank ignores \code{paddr[1:0]}. The byte offsets 0x01 to 0x03 address \code{CTRL}, 0x05 to 0x07 address \code{STATUS}, 0x09 to 0x0B address \code{DOMAIN_EN}, 0x0D to 0x0F address \code{STATUS_CLR} and 0x11 to 0x13 address \code{WAKE_EN}.
 \end{information}
 
 \begin{requirement}{DS-PMU-006}{Address of the registers}
@@ -70,8 +70,8 @@ The registers of the PMU must be in the address range 0x2000\_8000 to 0x2000\_8F
 \end{requirement}
 
 \begin{requirement}{DS-PMU-007}{STATUS\_CLR}
-[verify={test:tb/cocotb/soc/test_pmu.py::test_status_clr_w1c_reads_zero_and_clears; test:tb/cocotb/soc/test_pmu.py::test_status_clr_noop_when_flag_low; test:tb/cocotb/soc/test_pmu.py::test_status_clr_write_zero_keeps_flag; test:tb/cocotb/soc/test_pmu.py::test_status_clr_honours_pstrb; test:tb/cocotb/soc/test_pmu.py::test_status_clr_only_decodes_its_word; test:tb/cocotb/soc/test_pmu.py::test_status_clr_set_beats_clear; test:tb/cocotb/soc/test_pmu.py::test_register_walk; mutation:tools/verif/mutate_pmu_iso_ack.py::q06_status_clr_ignores_pstrb; mutation:tools/verif/mutate_pmu_iso_ack.py::q07_status_clr_ignores_pwdata; mutation:tools/verif/mutate_pmu_iso_ack.py::q08_status_clr_any_word; mutation:tools/verif/mutate_pmu_iso_ack.py::q09_clear_beats_set; mutation:tools/verif/mutate_pmu_iso_ack.py::t09_flag_not_cleared_by_power_down}]
-\code{STATUS_CLR} must read 0. A write to \code{STATUS_CLR} with bit 0 at 1 and \code{pstrb[0]} at 1 must clear the flag \code{cpu_iso_ack_timeout}. A write with bit 0 at 0 or with \code{pstrb[0]} at 0 must have no effect. When a wait ends by the timeout in the cycle of a clear, the flag must be 1 after that cycle.
+[verify={test:tb/cocotb/soc/test_pmu.py::test_status_clr_w1c_reads_zero_and_clears; test:tb/cocotb/soc/test_pmu.py::test_status_clr_noop_when_flag_low; test:tb/cocotb/soc/test_pmu.py::test_status_clr_write_zero_keeps_flag; test:tb/cocotb/soc/test_pmu.py::test_status_clr_honours_pstrb; test:tb/cocotb/soc/test_pmu.py::test_status_clr_only_decodes_its_word; test:tb/cocotb/soc/test_pmu.py::test_status_clr_set_beats_clear; test:tb/cocotb/soc/test_pmu.py::test_register_walk; mutation:tools/verif/mutate_pmu_iso_ack.py::q06_status_clr_ignores_pstrb; mutation:tools/verif/mutate_pmu_iso_ack.py::q07_status_clr_ignores_pwdata; mutation:tools/verif/mutate_pmu_iso_ack.py::q08_status_clr_any_word; mutation:tools/verif/mutate_pmu_iso_ack.py::q09_clear_beats_set; mutation:tools/verif/mutate_pmu_iso_ack.py::t09_flag_not_cleared_by_power_down; test:tb/cocotb/soc/test_pmu.py::test_wake_flag_clears_by_status_clr_bit1_and_bit0_still_clears_timeout; mutation:tools/verif/mutate_pmu_iso_ack.py::w07_woke_flag_not_cleared; mutation:tools/verif/mutate_pmu_iso_ack.py::w08_woke_clear_on_bit0}]
+\code{STATUS_CLR} must read 0. A write to \code{STATUS_CLR} with bit 0 at 1 and \code{pstrb[0]} at 1 must clear the flag \code{cpu_iso_ack_timeout}. A write with bit 1 at 1 and \code{pstrb[0]} at 1 must clear the flag \code{woke_by_irq}. Each bit must clear only its own flag. A write with both bits at 0 or with \code{pstrb[0]} at 0 must have no effect. When a wait ends by the timeout in the cycle of a clear, the flag must be 1 after that cycle.
 \end{requirement}
 \begin{information}
 \code{STATUS_CLR} has no storage. The PMU decodes the write on the APB bus, as the registers \code{GPIO_IRQ_CLR} and \code{CRYPTO_IRQ_CLR} do. The mutant \code{t09_flag_not_cleared_by_power_down} keeps its old name. It now removes the clear of \code{STATUS_CLR}, so only a reset clears the flag.
@@ -79,10 +79,41 @@ The registers of the PMU must be in the address range 0x2000\_8000 to 0x2000\_8F
 
 \begin{requirement}{DS-PMU-008}{Minimum address width}
 [verify={check:tb/cocotb/soc/Makefile}]
-Elaboration of \code{pmu} must fail when \code{ADDR_W} is below 4.
+Elaboration of \code{pmu} must fail when \code{ADDR_W} is below 5.
 \end{requirement}
 \begin{information}
-The register bank decodes four word indices, so it needs two bits above \code{paddr[1:0]}. The Makefile target \code{pmu_guard_neg} is the negative control of this rule. It elaborates \code{pmu} with \code{ADDR_W} at 0, 1, 2 and 3, and passes only when each elaboration fails with the message of the guard. The target \code{pmu} runs it.
+The register bank decodes five word indices, so it needs three bits above \code{paddr[1:0]}. The Makefile target \code{pmu_guard_neg} is the negative control of this rule. It elaborates \code{pmu} with \code{ADDR_W} at 0, 1, 2, 3 and 4, and passes only when each elaboration fails with the message of the guard. The target \code{pmu} runs it.
+\end{information}
+
+\begin{requirement}{DS-PMU-009}{WAKE\_EN fields}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_wake_en_reset_rw_and_reserved_bits; test:tb/cocotb/soc/test_pmu.py::test_wake_en_neighbours_unchanged_and_unused_words_drop_writes; mutation:tools/verif/mutate_pmu_iso_ack.py::w02_wake_enable_bits_swapped}]
+The bits 1 and 0 of \code{WAKE_EN} must be read and write. Bit 0 must enable the wake source \code{wake_ext_i}. Bit 1 must enable the wake source \code{wake_timer_i}. The bits 31 to 2 must read 0 and must ignore a write. A write to \code{WAKE_EN} must not change another register.
+\end{requirement}
+
+\subsection{Wake on interrupt}\label{ds:mod:pmu:wake}
+The PMU can power the CPU domain up when an enabled interrupt is high. The inputs \code{wake_ext_i} and \code{wake_timer_i} are levels in \code{clk_i}. In \code{soc_top} they come from \code{ext_irq}, the output of the interrupt controller, and from \code{timer_irq}. Both nets are in \code{core_clk}, the clock of the PMU, so the wake path has no clock crossing.
+
+\begin{requirement}{DS-PMU-030}{Wake condition}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_wake_from_cpu_off_by_ext_irq; test:tb/cocotb/soc/test_pmu.py::test_wake_from_cpu_off_by_timer_irq; test:tb/cocotb/soc/test_pmu.py::test_wake_disabled_source_never_wakes; test:tb/cocotb/soc/test_pmu.py::test_wake_while_cpu_on_does_nothing; test:tb/cocotb/soc/test_pmu.py::test_wake_does_not_fire_before_the_cpu_is_settled_off; mutation:tools/verif/mutate_pmu_iso_ack.py::w01_wake_ignores_wake_en; mutation:tools/verif/mutate_pmu_iso_ack.py::w03_wake_during_power_down}]
+The PMU must start a wake only when the CPU sequencer is in \code{DOM_OFF}, the mode is CPU\_OFF or IDLE, and a source is high while its bit in \code{WAKE_EN} is 1. A source must have no effect while the CPU sequencer is in another state.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-031}{Wake action}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_wake_from_cpu_off_by_ext_irq; test:tb/cocotb/soc/test_pmu.py::test_wake_from_idle_powers_up_cpu_only; test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_wake_soc_timer_irq_wakes_cpu_and_cpu_takes_it; mutation:tools/verif/mutate_pmu_iso_ack.py::w04_wake_does_not_rewrite_ctrl; mutation:tools/verif/mutate_pmu_iso_ack.py::w05_idle_wakes_to_normal}]
+A wake must write \code{CTRL}. The mode CPU\_OFF must become NORMAL. The mode IDLE must become GPU\_OFF. The CPU sequencer must then do the power-up of \reqref{DS-PMU-022}. A wake must not change the state or the outputs of the GPU sequencer.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-032}{No abort of a power-down}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_wake_source_high_at_cpu_off_write_completes_power_down_then_wakes; test:tb/cocotb/soc/test_pmu.py::test_wake_does_not_fire_before_the_cpu_is_settled_off; mutation:tools/verif/mutate_pmu_iso_ack.py::w03_wake_during_power_down}]
+A source that is high during a power-down of the CPU domain must not stop the power-down. The CPU sequencer must reach \code{DOM_OFF}, and the wake must follow.
+\end{requirement}
+
+\begin{requirement}{DS-PMU-033}{Wake flag}
+[verify={test:tb/cocotb/soc/test_pmu.py::test_wake_from_cpu_off_by_ext_irq; test:tb/cocotb/soc/test_pmu.py::test_wake_flag_clears_by_status_clr_bit1_and_bit0_still_clears_timeout; test:tb/cocotb/soc/test_pmu.py::test_wake_flag_and_wake_en_cleared_by_pmu_reset; mutation:tools/verif/mutate_pmu_iso_ack.py::w06_woke_flag_never_set; mutation:tools/verif/mutate_pmu_iso_ack.py::w07_woke_flag_not_cleared; mutation:tools/verif/mutate_pmu_iso_ack.py::w09_woke_flag_not_reset}]
+A wake must set \code{STATUS} bit 4 (\code{woke_by_irq}). The bit must stay 1 until a reset of the PMU or a clear through \code{STATUS_CLR} bit 1.
+\end{requirement}
+\begin{information}
+The wake goes through the hardware write port of \code{CTRL}. The PMU adds one flop, \code{woke_q}, and no state to the sequencer. The ten sequencing outputs stay flop-driven (\reqref{DS-PMU-026}). The CPU sequencer stays one more cycle in \code{DOM_OFF}, because it reads the new mode in the cycle after the write. A software write to \code{CTRL} in the wake cycle wins over the wake write, and the flag is still set. No test covers this race. A write to \code{STATUS_CLR} bit 1 in the wake cycle is also not tested: the mutant \code{w10_clear_beats_wake} survives. A pulse that ends before the CPU sequencer reaches \code{DOM_OFF} is not stored, so a wake source must stay high until software clears its cause. The SoC test \code{test_wake_soc_timer_irq_wakes_cpu_and_cpu_takes_it} runs firmware that enables the timer source, sets a timer compare value and has the DMA engine write CPU\_OFF. The timer interrupt rises after the CPU domain is off, the PMU wakes the domain, the CPU takes the interrupt, and the firmware clears the flag. The control \code{test_wake_soc_control_firmware_powers_cpu_down_and_timer_fires_while_off} shows that the interrupt rises after \code{DOM_OFF}.
 \end{information}
 
 \subsection{Sequencer}\label{ds:mod:pmu:sequencer}
@@ -416,11 +447,11 @@ A debug access into the CPU domain while the domain is off no longer waits: it e
 \end{information}
 
 \begin{requirement}{DS-PMU-183}{Wake-up of the CPU domain}
-[verify={review}]
-Before it enters the mode CPU\_OFF or IDLE, software must arrange that another master writes \code{CTRL} to wake the CPU domain. Without such a write, only a reset of both \code{rst_n_i} and \code{cpu_rst_n_i} returns the domain.
+[verify={test:tb/cocotb/soc/test_soc_pmu_iso_ack.py::test_wake_soc_timer_irq_wakes_cpu_and_cpu_takes_it; review}]
+Before it enters the mode CPU\_OFF or IDLE, software must arrange a wake of the CPU domain. It must enable a wake source in \code{WAKE_EN} whose interrupt will rise (\reqref{DS-PMU-030}), or arrange that another master writes \code{CTRL}. Without one of these, only a reset of both \code{rst_n_i} and \code{cpu_rst_n_i} returns the domain.
 \end{requirement}
 \begin{information}
-Nothing inside the CPU domain can request a power-up. The reference firmware uses the DMA engine to write the mode CPU\_OFF, not to wake the domain. The tests wake the domain by a deposit into the register. No test wakes the CPU domain by a bus write. A reset of \code{rst_n_i} alone resets the PMU to NORMAL and flushes \code{u_cpu_axi_cdc}, but it does not reset \code{u_cpu}. The CPU then restarts its clock without a reset, while the bridge has lost the transfers that the CPU can wait for. This is derived from the RTL.
+Nothing inside the CPU domain can request a power-up. The interrupt wake comes from the timer and the interrupt controller, which are outside the CPU domain. The reference firmware of the live power-cycle test uses the DMA engine to write the mode CPU\_OFF, not to wake the domain. Most tests wake the domain by a deposit into the register. The test of the interrupt wake is the exception. No test wakes the CPU domain by a bus write. A reset of \code{rst_n_i} alone resets the PMU to NORMAL and flushes \code{u_cpu_axi_cdc}, but it does not reset \code{u_cpu}. The CPU then restarts its clock without a reset, while the bridge has lost the transfers that the CPU can wait for. This is derived from the RTL.
 \end{information}
 
 \begin{requirement}{DS-PMU-184}{Poll for the settled value}
