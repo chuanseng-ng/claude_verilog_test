@@ -3343,6 +3343,20 @@ Limits. No SoC test stalls a slot, because the default PLL model ties the destin
 
 \end{record}
 
+\section{Audit of one-cycle CPU events sampled at the fabric clock}\label{cr:defect:cpu-event-sampling-audit}
+
+\begin{record}
+
+Date 2026-11-27. Bead \bead{zftj.39}, from the harness fault that \bead{zftj.38} found in \code{test_soc_pmu_iso_ack}. A one-cycle event of the CPU domain, for example \code{commit_valid_o}, can fall between two samples when a test reads it at \code{clk_i} and the CPU clock is faster. The audit read every reader of such an event in \code{tb/cocotb/soc}. Most suites start the clocks 1:1 through the default of \code{start_soc_clocks}, so a sample at \code{clk_i} sees each CPU cycle. The suites with an independent CPU period are \code{test_soc_multiclock*}, \code{test_soc_pmu_multiclock}, \code{test_soc_pmu_iso_ack} and two tests of \code{test_soc_dft_scan}. They record commits at \code{cpu_clk_i} already, or read held levels, with one exception.
+
+\end{record}
+
+\begin{record}
+
+The exception is the absence check of commits in \code{test_soc_reset_asym_cpu_held_fabric_free} of \code{test_soc_multiclock_reset.py}, at a CPU clock of 3 ns and a fabric clock of 7 ns. It read \code{commit_valid_o} once per fabric cycle. The fix records commits on each edge of \code{cpu_clk_i} and asserts that the record is empty. Measured: on \code{tb_soc_top} at the same periods, a recorder at \code{cpu_clk_i} saw 8 commits in 400 CPU cycles and a sampler at \code{clk_i} saw 3. A mutant that releases the CPU reset in the held window fails the fixed test. The old check never failed on the correct RTL, so the fix is preventive. The suite passes 4 of 4 before and after. No test was added, and \code{PASS_FLOOR} does not change. The 1:1 suites were classified by a reading of their clock setup and were not run.
+
+\end{record}
+
 \section{PSLVERR of the APB PLL2 slot is tested at SoC level}\label{cr:defect:pll2-pslverr-untested}
 
 \begin{record}
