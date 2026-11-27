@@ -83,7 +83,9 @@ def test_shift_streams_round_trip_through_a_model_of_the_shift_register():
     vals = [1, 0, 0, 1, 1]
     for max_len in (5, 8):
         flops = [0] * len(vals)
-        for bit in pm.chain_load_stream(vals, max_len):  # one shift edge per bit; position 0 takes scan-in
+        for bit in pm.chain_load_stream(
+            vals, max_len
+        ):  # one shift edge per bit; position 0 takes scan-in
             flops = [bit] + flops[:-1]
         assert flops == vals
         seen = []
@@ -102,8 +104,18 @@ def test_unequal_chains_pad_in_front_and_do_not_disturb_the_longer_chain():
 
 def build(blif_text=BLIF, masked=(), clocks=("clk_i",), consts=None):
     b = pm.parse_blif(blif_text.splitlines(True), track_edges=True)
-    return pm.build_map(b, cells(), NETLIST, top="soc_top", consts=consts or {"scan_mode_i": 1}, clocks=clocks, n_ports=2,
-                        in_fmt="scan_in_i[%d]", out_fmt="scan_out_o[%d]", masked=set(masked))
+    return pm.build_map(
+        b,
+        cells(),
+        NETLIST,
+        top="soc_top",
+        consts=consts or {"scan_mode_i": 1},
+        clocks=clocks,
+        n_ports=2,
+        in_fmt="scan_in_i[%d]",
+        out_fmt="scan_out_o[%d]",
+        masked=set(masked),
+    )
 
 
 def test_full_map_of_the_toy_cut():
@@ -114,7 +126,10 @@ def test_full_map_of_the_toy_cut():
     lat = {x["q"]: x for x in m["latches"]}
     assert (lat["u_dut.f0.cvtpin_Q"]["chain"], lat["u_dut.f0.cvtpin_Q"]["pos"]) == (0, 0)
     assert lat["u_dut.f1.cvtpin_Q"]["pos"] == 1 and lat["u_dut.f1.cvtpin_Q"]["masked"] is True
-    assert (lat["$auto$async2sync.cc:228:execute$9"]["inst"], lat["$auto$async2sync.cc:228:execute$9"]["pos"]) == ("f2", 2)
+    assert (
+        lat["$auto$async2sync.cc:228:execute$9"]["inst"],
+        lat["$auto$async2sync.cc:228:execute$9"]["pos"],
+    ) == ("f2", 2)
     assert lat["u_dut.g0.cvtpin_Q"]["chain"] == 1
     assert lat["u_dut.u0.cvtpin_Q"]["kind"] == "free"
     assert [x["kind"] for x in m["outputs"]] == ["pin", "bb"]
@@ -122,7 +137,9 @@ def test_full_map_of_the_toy_cut():
 
 
 def test_unmapped_bits_are_refused_not_guessed():
-    bad = BLIF.replace("u_dut.u_cpu.a_o", "u_dut.u_gpu.a_o").replace(".latch dd3 u_dut.g0.cvtpin_Q", ".latch dd3 $auto$x")
+    bad = BLIF.replace("u_dut.u_cpu.a_o", "u_dut.u_gpu.a_o").replace(
+        ".latch dd3 u_dut.g0.cvtpin_Q", ".latch dd3 $auto$x"
+    )
     m = build(bad)
     whys = {(u["list"], u["name"] if "name" in u else u["q"]) for u in m["unmapped"]}
     assert ("inputs", "u_dut.u_gpu.a_o") in whys and ("latches", "$auto$x") in whys
@@ -134,7 +151,9 @@ def test_a_clock_that_reaches_a_data_endpoint_is_refused_but_a_clock_sink_is_not
     data = BLIF.replace(".names d_i y_o\n1 1", ".names clk_i y_o\n1 1")
     m = build(data)
     assert any(u["name"] == "clk_i" and "observable" in u["why"] for u in m["unmapped"])
-    sink = BLIF.replace(".outputs y_o u_dut.u_cpu.b_i", ".outputs y_o u_dut.u_cpu.clk0").replace(".names d_i y_o", ".names clk_i u_dut.u_cpu.clk0")
+    sink = BLIF.replace(".outputs y_o u_dut.u_cpu.b_i", ".outputs y_o u_dut.u_cpu.clk0").replace(
+        ".names d_i y_o", ".names clk_i u_dut.u_cpu.clk0"
+    )
     m = build(sink)
     assert [x["kind"] for x in m["inputs"]][0] == "clock"
 

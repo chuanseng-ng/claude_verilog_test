@@ -33,7 +33,11 @@ endmodule
 def test_conn_bits_handles_scalar_vector_concat_and_escaped_names():
     assert rn.conn_bits("n1", 1) == ["n1"]
     assert rn.conn_bits("bus", 3) == ["bus[0]", "bus[1]", "bus[2]"]
-    assert rn.conn_bits("{a, b, c}", 3) == ["c", "b", "a"]  # MSB first in the text, LSB first in the result
+    assert rn.conn_bits("{a, b, c}", 3) == [
+        "c",
+        "b",
+        "a",
+    ]  # MSB first in the text, LSB first in the result
     assert rn.conn_bits("{\\u.x[3] , b}", 2) == ["b", "\\u.x[3] "]
     assert rn.conn_bits("", 2) == [None, None]
     with pytest.raises(SystemExit):
@@ -43,7 +47,9 @@ def test_conn_bits_handles_scalar_vector_concat_and_escaped_names():
 def test_inject_pins_branch_and_stem_faults_are_selectable_and_leave_other_pins_alone():
     out = rn.inject_pins(NETLIST, "soc_top", [("g1", "B", "in", 1), ("g2", "Y", "out", 0)])
     assert "module soc_top (a_i, y_o, fsel_0, fsel_1);" in out
-    assert ".B(cvtf_0)" in out and "assign cvtf_0 = fsel_0 ? 1'b1 : \\u.x[3] ;" in out  # escaped net keeps its terminator
+    assert (
+        ".B(cvtf_0)" in out and "assign cvtf_0 = fsel_0 ? 1'b1 : \\u.x[3] ;" in out
+    )  # escaped net keeps its terminator
     assert ".Y(cvtf_1)" in out and "assign n2 = fsel_1 ? 1'b0 : cvtf_1;" in out
     assert ".A(a_i)" in out and ".A(n1)" in out
 
@@ -79,7 +85,10 @@ def test_vectors_load_unload_and_mask_follow_the_shift_convention():
     assert po == "1"
     # chain 0 holds [1, 0]: position 1 is loaded first (value 0), then position 0 (value 1)
     assert [b & 1 for b in ld] == [0, 1]
-    assert [(b >> 1) & 1 for b in ld] == [0, 1]  # chain 1 has one flop: one pad edge in front, then its value
+    assert [(b >> 1) & 1 for b in ld] == [
+        0,
+        1,
+    ]  # chain 1 has one flop: one pad edge in front, then its value
     # unload: last position first; D of chain 0 = [0, 1] -> 1, 0; position 1 is hold-masked -> mask 0 then 1
     assert [b & 1 for b in ex] == [1, 0]
     assert [b & 1 for b in mk] == [0, 1]
@@ -100,15 +109,33 @@ def test_fault_sample_is_seeded_and_never_mixes_groups(tmp_path):
     sub = ["D" if k % 2 == 0 else "N" for k in range(n)]
     (tmp_path / "full.txt").write_text("\n".join(f"{k} {c}" for k, c in enumerate(full)) + "\n")
     (tmp_path / "sub.txt").write_text("\n".join(f"{k} {c}" for k, c in enumerate(sub)) + "\n")
-    args = ["--cut-dir", str(tmp_path), "--status", str(tmp_path / "full.txt"), "--status-sub", str(tmp_path / "sub.txt"),
-            "--n-detected", "5", "--n-untestable", "3", "--n-scd", "4", "--n-sce", "2"]
+    args = [
+        "--cut-dir",
+        str(tmp_path),
+        "--status",
+        str(tmp_path / "full.txt"),
+        "--status-sub",
+        str(tmp_path / "sub.txt"),
+        "--n-detected",
+        "5",
+        "--n-untestable",
+        "3",
+        "--n-scd",
+        "4",
+        "--n-sce",
+        "2",
+    ]
     fs.main(args + ["--out", str(tmp_path / "a.json")])
     fs.main(args + ["--out", str(tmp_path / "b.json")])
     a = json.loads((tmp_path / "a.json").read_text())
     assert a == json.loads((tmp_path / "b.json").read_text())
     for f in a:
         if f["group"] == "detected":
-            assert f["full_status"] == "D" and f["sub_status"] == "D" and f["pin"] not in ("SCD", "SCE")
+            assert (
+                f["full_status"] == "D"
+                and f["sub_status"] == "D"
+                and f["pin"] not in ("SCD", "SCE")
+            )
         if f["group"] == "untestable":
             assert f["full_status"] == "U" and f["pin"] not in ("SCD", "SCE")
         if f["group"] == "scd":
