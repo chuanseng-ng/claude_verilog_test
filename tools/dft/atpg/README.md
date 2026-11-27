@@ -52,7 +52,7 @@ Q feeding the next flop's D) makes Yosys `miter -equiv` + `sat -prove` report EQ
 `y = 0` with `q` dual, Yosys 0.46).  `dealias_dual_ports` gives such outputs their own net; the regression test is in
 `tb/tests/test_dft_atpg_regrade_vl.py`.  Re-grades of the generic cuts made before the fix (j41m.15/.18) were re-run.
 
-Not done here: pattern -> scan-chain-order mapping, SVF/TAP replay, SRAM shadowing, delay faults (follow-up beads).
+Not done here: SVF, SRAM shadowing, delay faults (follow-up beads).  Pattern mapping and the gate-level replay are in the next section.
 
 **Untestable-fault audit (bead j41m.25).** No new ATPG run: it reads the B3 `status.txt`, the `cut5` BLIF and `netlist_cellpin.v`.
 `python3 untestable_audit.py sample --cut-dir cut5 --status B3/status.txt --out sample.json` (seed 244, 50 per top-10 pin class plus a
@@ -61,3 +61,31 @@ pooled 50 for the rest, and 5 detected faults per class as a negative control), 
 (about 5 min, under 1 GiB), then `untestable_audit.py report --analysis analysis.json --md`.  `python-sat` is the only extra
 dependency (`pip install --target DIR python-sat`).  The cell-level constant analysis reads `assign net = 1'bV;` lines of the prepped
 netlist as the cut's exclusion ties; the free-mode counterfactual re-runs each fault with those nets free.
+
+## Pattern mapping and gate-level scan replay (bead j41m.19)
+
+No module rung (npu, crypto, dma) has a scan netlist: `synth_module.sh` is a plain Yosys synthesis and the cut assumes full scan.  The only
+scan-inserted netlist is the fabric post-fill netlist (RUN_2026-10-28_05-14-30, 6 fabric chains), so the replay runs on `soc_top` with the
+cell-pin cut (`cut5`, 21,660 patterns of run B3).  Heavy outputs: `/nobackup/claude_sim_build/j41m19/`.
+
+| File | Role |
+|---|---|
+| `pattern_map.py` | cut `.inputs` / `.latch` Q / `.outputs` / latch D -> (chain, position) or pin or black-box port or fixed value; chain order from the SCD walk through hold buffers; refuses unmapped bits; masks the 94 hold-masked D bits; checks that a clock PI reaches no data endpoint.  Pure helpers: `chain_load_stream`, `chain_unload_stream`.  Pytest: `tb/tests/test_dft_pattern_map.py` |
+| `replay_netlist.py` | rewrites the post-fill netlist for simulation: the 3 black boxes and the unscanned free latch become `rp_fv` / `rp_ov` vectors, single stuck-at faults at instance pins get runtime selects `fsel_k` (one build serves all faults), wrapper `replay_top` with `pi_vec` / `po_vec` |
+| `replay_vectors.py` | selected patterns + `quaigh simulate --expose-ff` expected response -> `pi/po/ld/ex/mk.hex` and `params_h.h` |
+| `replay_main.cpp`, `build_replay.sh` | Verilator 5.048 build of the gate netlist with the PDK functional models (`VL_OPT=-O0` about 36 min, `-Os` about 50 min, 3.8 GiB RSS) and a separate C++ harness (seconds to rebuild): modes `flush`, `pat`, `tapid`; `+tap=0|1`, `+fault=k`, `+npat=N`, `+dump=chain`, `+bypass=0` |
+| `fault_sample.py`, `run_replay.py` | seeded fault sample (detected by the first 300 patterns / SAT-proven untestable / SCD / SCE) and the run table |
+| `replay_tb.sv` | first, SystemVerilog version of the bench (superseded by the C++ harness: any bench change recompiled the whole netlist) |
+
+Flow: `quaigh simulate --expose-ff cut.blif -i P.test -o E.test`; `pattern_map.py cut.blif sim.v --cut-info cut_info.json --hold-mask --allow-free --out map.json`;
+`fault_sample.py`; `replay_netlist.py`; `replay_vectors.py`; `build_replay.sh`; `run_replay.py`.  Quaigh `0.0.6+cvt2` (`j41m20b/qroot`) `atpg-report --fault-report`
+gives the per-fault status of a pattern prefix.
+
+Protocol (TM 14.14): scan_mode, three `scan_clk_i` edges with `scan_en=0`, spare edges, then shift; capture = `scan_en=0`, apply PIs, compare POs, one edge,
+`scan_en=1`, unload overlapped with the next load.  Pin mode uses the cut's own conditions (scan_mode_i=1, TAP held in reset).
+
+Findings on the shipped netlist (all measured, see the experience record `j41m19-final`):
+- the three scan-entry edge-detect flops (`scan_s1_q`, `scan_s2_q`, `scan_prev_q`, chain 3) are scan flops, so `crypto_wipe_done` (and with it `dft_scan_en` and the six `scan_out_o` gates) falls at shift edge 1: no chain shifts;
+- the replay therefore holds the wipe-done pins and the async reset gates (80 gate outputs) at 1 during shift phases only (`+bypass=0` turns that off): a what-if, not the shipped design.  With it, chains 0, 1, 2, 4 flush `0011...` exactly; chains 3 and 5 still lose every 1 (cause not found).
+- the clock-switch enable latch `_155911_` (`dft_clk_switch.en_b_q`) is the cut's only free pseudo-input; the harness forces it to 1 (its pin-mode value; it reaches no data endpoint).
+- TAP entry (`+tap=1`, `+mode=tapid`) is NOT demonstrated: the harness reads IDCODE shifted by one bit and no IR value raised `dft_scan_mode`; the TAP serial path to the chains is a 1-bit stub (STAGE2_CHAIN) anyway, so only the PARALLEL entry exists.

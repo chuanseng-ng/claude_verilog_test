@@ -6724,6 +6724,78 @@ classification was run. The redundant faults are proven by SAT, but
 most have no RTL cause found. Many can be constants that Yosys folded
 into the BLIF (not checked). The patterns of \code{cut.test} were not
 replayed.
+
+\subsection{Pattern mapping and gate-level scan replay (bead
+\code{j41m.19}, 2026-11-28)}\label{tm:ch:dft-architecture:1812-scan-replay}
+
+\textbf{Purpose.} Map the Quaigh patterns to scan-chain positions, make
+the chain-integrity (flush) test a real pattern set, and replay the
+patterns on the gate-level scan netlist. The SCD/SCE credit of 18.10 and
+the scan-shift credit of 18.11 need this test.
+
+\textbf{Netlist {[}M{]}.} No ladder rung (npu, crypto, dma) has a scan
+netlist. Those rungs are plain Yosys synthesis with full scan assumed.
+The replay therefore uses the scan-inserted fabric netlist of the Sky130
+SoC (post-fill, \code{RUN_2026-10-28_05-14-30}), the cell-pin cut
+\code{cut5} and the B3 patterns. The build is Verilator 5.048 on the
+netlist text: about 36 min at \code{-O0} and 3.8 GiB.
+
+\textbf{Mapper {[}M{]}.} \src{tools/dft/atpg/pattern_map.py}. All 605
+primary inputs and 434 primary outputs map. 18,803 of 18,804 latches map
+to chain positions. The chain lengths are 3565, 3565, 3565, 3565, 3562
+and 981. The tool stops with an error on a bit that it cannot map. The
+one free latch is the clock-switch enable latch (\code{en_b_q} in
+\code{dft_clk_switch}). The harness holds it at 1, its pin-mode value;
+Quaigh treats it as free.
+
+\textbf{Defect: the scan netlist cannot shift {[}M{]}.} The three
+scan-entry flops of the crypto block (\code{scan_s1_q},
+\code{scan_s2_q}, \code{scan_prev_q} in
+\src{rtl/periph/crypto_accel.sv}) are scan flops on chain 3. At the
+first shift edge they load data from their neighbours. Then
+\code{crypto_wipe_done} falls, \code{dft_scan_en} falls, and the six
+\code{scan_out_o} gates close. No chain shifts. Measured:
+\code{DFT_SCAN_EN dropped to 0 at shift edge 1}. RTL simulation did not
+show this because it runs before scan insertion. Tessent DRC rule S7
+(\cref{tm:flow:tessent-atpg}) flagged \code{u_crypto.scan_s1_q} as a
+scannable cell tied to a constant. \textbf{Owner decision 2026-11-28:}
+exclude the three flops from scan insertion. Do not change the RTL. A
+re-harden then follows.
+
+\textbf{Other findings {[}M{]}.} 16 scan flops drive the asynchronous
+resets of other flops (reset synchronisers, \code{pmu_cpu_rst_n},
+\code{wdt_cpu_rst_req_q}, \code{pll_enable}). This is a scan-DRC hazard.
+The TAP path to the chains is a 1-bit stub, so only parallel entry
+exists. In the harness, entry through the TAP did not set
+\code{dft_scan_mode}. The cause (harness sequence or a zero-delay race)
+is not known.
+
+\textbf{Flush test, what-if {[}M on a modified condition{]}.} During
+shift only, the harness holds the wipe-done gates and 80 asynchronous
+reset gates at 1. Entry and capture use the real gates. With this
+change, a \code{0011} flush over 3,605 edges gives 0 errors on chains
+0, 1, 2 and 4. Chains 3 and 5 lose every 1. The cause is not known.
+Fault injection on chains 0, 1, 2 and 4: SCD stuck-at-0 10 of 10
+detected, SCD stuck-at-1 9 of 9, SCE stuck-at-0 7 of 7, SCE stuck-at-1
+0 of 6. A flush cannot see SCE stuck-at-1. Capture patterns must detect
+it.
+
+\textbf{Pattern replay {[}M{]}.} The bit order agrees with
+\code{quaigh simulate} on chain 1: 0 errors over 3 patterns of 3,565
+bits. The good machine does not agree with Quaigh on the other chains
+(pattern 0: 39 to 1,455 errors per chain). The broken chains 3 and 5
+are a probable cause {[}A{]}. No fault-detection result is claimed. The
+fault sample (50 detected, 20 untestable, 24 SCD, 16 SCE; seed 244) and
+the runner are ready (\src{tools/dft/atpg/fault_sample.py},
+\src{tools/dft/atpg/run_replay.py}).
+
+\textbf{Credit status.} The SCD/SCE credit of 18.10 and the scan-shift
+credit of 18.11 are \textbf{not yet earned}. The flush fails on the
+shipped netlist. With the what-if change it fails on two chains.
+
+\textbf{Next.} Exclude the three flops and re-harden. Find the cause on
+chains 3 and 5. Fix the TAP entry sequence. Then run the replay again
+with the fault sample. SVF needs the TAP serial path first.
 \end{relocated}
 
 
