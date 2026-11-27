@@ -107,6 +107,17 @@ async def _collect_boot_pcs(dut, timeout_cycles: int) -> list:
     return collected
 
 
+async def _record_commits_at_cpu_clk(dut, sink: list) -> None:
+    """Append commit_pc_o to sink at every cpu_clk_i edge on which commit_valid_o is high.
+    commit_valid_o lasts one cpu_clk_i cycle, so a sample at clk_i misses commits when the CPU
+    clock is faster. A loop that waits on clk_i checks sink instead of the port."""
+    while True:
+        await RisingEdge(dut.cpu_clk_i)
+        await ReadOnly()
+        if int(dut.commit_valid_o.value):
+            sink.append(int(dut.commit_pc_o.value))
+
+
 # =============================================================================
 # Test 1 — fabric domain (clk_i / core_rst_n) held in reset for an extended
 # window while the CPU domain (cpu_clk_i) is fully released and free-running,
@@ -271,11 +282,15 @@ async def _cpu_held_fabric_free_body(dut) -> None:
     dut.rst_n_i.value = 1
     await ClockCycles(dut.clk_i, 3)
 
+    held_commits: list = []
+    commit_task = cocotb.start_soon(_record_commits_at_cpu_clk(dut, held_commits))
+    _active_tasks.append(commit_task)
+
     for i in range(CPU_HELD_FABRIC_CYCLES):
         await RisingEdge(dut.clk_i)
         await ReadOnly()
-        assert int(dut.commit_valid_o.value) == 0, (
-            f"commit_valid_o asserted at fabric cycle {i} while cpu_rst_n_i is "
+        assert not held_commits, (
+            f"commit_valid_o asserted by fabric cycle {i} while cpu_rst_n_i is "
             "still held low -- CPU domain must be completely silent"
         )
         # Mirror of test 1's exact 7a9f9d4 property, from the other side: with
@@ -297,6 +312,11 @@ async def _cpu_held_fabric_free_body(dut) -> None:
             "is still held low -- accept-and-drop hazard"
         )
     await RisingEdge(dut.clk_i)
+    commit_task.kill()
+    assert not held_commits, (
+        f"commit_valid_o asserted at pc {held_commits[:4]} while cpu_rst_n_i is "
+        "still held low -- CPU domain must be completely silent"
+    )
 
     dut.cpu_rst_n_i.value = 1
     await ClockCycles(dut.clk_i, 2)
