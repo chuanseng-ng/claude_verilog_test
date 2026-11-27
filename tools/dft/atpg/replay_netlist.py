@@ -187,7 +187,6 @@ def rewrite(text: str, plan: dict, bbox_ports: Dict[str, Dict[str, Tuple[str, in
 
 def wrapper(text: str, plan: dict, top: str, n_fault: int, n_fv: int, n_ov: int) -> str:
     decls = top_decls(text, top)
-    n_in = len(plan["inputs"])
     n_pi = n_fv - 0  # pi_vec carries the cut inputs and then the free-latch bits: same layout as rp_fv
     pi_bits: Dict[str, Dict[int, int]] = {}
     for i, x in enumerate(plan["inputs"]):
@@ -200,9 +199,9 @@ def wrapper(text: str, plan: dict, top: str, n_fault: int, n_fv: int, n_ov: int)
     lines = ["`timescale 1ns/1ps", "module replay_top(",
              f"  input [{n_pi - 1}:0] pi_vec, output [{n_ov - 1}:0] po_vec,",
              "  input scan_clk_i, scan_en_i, scan_mode_i, scan_rst_ni, trst_ni, tck_i, clk_i, cpu_clk_i, tms_i, tdi_i,",
-             "  input [127:0] fsel, input [7:0] scan_in_i, output [7:0] scan_out_o, output tdo_o, output [7:0] dbg_o, output [23:0] dbg2_o);"]
-    if n_fault > 128:
-        raise SystemExit("at most 128 faults per build (fsel is 128 bits wide)")
+             "  input [255:0] fsel, input [7:0] scan_in_i, output [7:0] scan_out_o, output tdo_o, output [7:0] dbg_o, output [23:0] dbg2_o);"]
+    if n_fault > 256:
+        raise SystemExit("at most 256 faults per build (fsel is 256 bits wide)")
     conns = []
     for name, (d, w) in decls.items():
         if name in ("rp_fv", "rp_ov") or name.startswith("fsel_"):
@@ -267,11 +266,13 @@ def main(argv=None) -> int:
     if a.faults:
         import pin_inject
         faults = json.loads(Path(a.faults).read_text())
-        pins = pin_inject.site_pins((Path(a.cellpin_cut) / "cut.blif").read_text(), [f["net"] for f in faults])
-        fl = [(*pins[f["net"]], int(f["value"])) for f in faults]
+        need = [f["net"] for f in faults if "inst" not in f]
+        pins = pin_inject.site_pins((Path(a.cellpin_cut) / "cut.blif").read_text(), need) if need else {}
+        # an entry with explicit inst/pin/dir is injected as given (shift-phase conditioning, below); the others are cell-pin sites
+        fl = [((f["inst"], f["pin"], f["dir"]) if "inst" in f else pins[f["net"]]) + (int(f["value"]),) for f in faults]
         text = inject_pins(text, a.top, fl)
         n_fault = len(fl)
-        (out / "fault_pins.json").write_text(json.dumps([{"k": k, "site": f["net"], "inst": i, "pin": p, "dir": d, "value": v}
+        (out / "fault_pins.json").write_text(json.dumps([{"k": k, "site": f.get("net", ""), "inst": i, "pin": p, "dir": d, "value": v}
                                                          for k, (f, (i, p, d, v)) in enumerate(zip(faults, fl))], indent=1))
     bbox_ports = {}
     for typ in set(plan["blackboxes"].values()):

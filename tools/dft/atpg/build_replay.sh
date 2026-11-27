@@ -4,6 +4,7 @@
 #   VECTOR_DIR  output of replay_vectors.py (params_h.h, compiled into the harness)
 # Step 1 (about 45 min, 3.8 GiB RSS): Verilator 5.048 --cc build of replay_top (the gate netlist with the PDK functional models, as
 #   tools/verif/gls/sky130/build_arm.sh does for the CPU macro) into BUILD_DIR/obj, archived as Vreplay_top__ALL.a.
+# VL_OPT=-O0 builds in a fraction of the time (default -Os, about 50 min); the simulation is then a few times slower.
 # Step 2 (seconds): g++ of replay_main.cpp against that archive -> BUILD_DIR/Vreplay.  --harness-only redoes only step 2.
 set -euo pipefail
 B=$(readlink -f "$1"); V=$(readlink -f "$2")
@@ -17,6 +18,7 @@ PDK_VLOG="${PDK_VLOG:-$HOME/.ciel/ciel/sky130/versions/0fe599b2afb6708d281543108
 if [ "${3:-}" != "--harness-only" ] && [ "${2:-}" != "--harness-only" ]; then
   sed 's/sky130_fd_sc_hd__conb_1 /dud4_conb /' "$B/soc_replay.v" > "$B/soc_replay.conb.v"
   "$VBIN" --cc --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD --build --build-jobs "${JOBS:-2}" \
+      -MAKEFLAGS "OPT_FAST=${VL_OPT:--Os} OPT_SLOW=${VL_OPT:--Os} OPT_GLOBAL=${VL_OPT:--Os}" \
       --top-module replay_top -DFUNCTIONAL '-DUNIT_DELAY=' --Mdir "$B/obj" \
       "$PDK_VLOG/primitives.v" "$PDK_VLOG/sky130_fd_sc_hd.v" "$GLS/conb_model.v" \
       "$B/soc_replay.conb.v" "$B/replay_top.v" > "$B/build.log" 2>&1
