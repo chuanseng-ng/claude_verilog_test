@@ -5542,6 +5542,16 @@ Tests for tools/dft/atpg/regrade_vl.py (bead j41m.15): Verilator + Yosys re-grad
 
 \end{record}
 
+\section{\texttt{tb/tests/test\_dft\_atpg\_untestable\_audit.py}}\label{cr:suite:test-dft-atpg-untestable-audit}
+
+Tests for \src{tools/dft/atpg/untestable_audit.py} and
+\src{tools/dft/atpg/audit_graph.py} (bead \code{j41m.25}). The tests
+check the seeded sampling, the pin-class parsing, the Wilson interval,
+the classifier, and the SAT and ternary machinery on a small BLIF that
+holds one fault of each cause. The SAT tests need python-sat. They skip
+when it is not installed. The audit result is in
+\cref{tm:ch:dft-architecture:1811-untestable-audit}.
+
 \section{\texttt{tb/tests/test\_dft\_scan\_check.py}}\label{cr:suite:test-dft-scan-check}
 
 This section holds history text that was in a comment of the source file. The text is unchanged. Each line has no leading comment marker and no indentation.
