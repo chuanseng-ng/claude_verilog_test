@@ -426,3 +426,71 @@ def test_functional_sdc_is_not_given_the_tap_serial_case_analysis():
     """Recommendation only (separate decision): sky130_soc.sdc keeps timing the SE tree."""
     main = (ROOT / "pnr" / "sky130" / "soc" / "constraints" / "sky130_soc.sdc").read_text()
     assert "tap_serial" not in main
+
+
+# ------------------------------------------------------------ crypto scan-entry flops stay unscanned  # noqa: E501
+CRYPTO_RTL = ROOT / "rtl" / "periph" / "crypto_accel.sv"
+SCAN_ENTRY_Q_NETS = ("u_crypto.scan_s1_q", "u_crypto.scan_s2_q", "u_crypto.scan_prev_q")
+KEY_Q_NETS = (
+    "u_crypto.key_q[0]",
+    "u_crypto.key_q[127]",
+    "u_crypto.g_aes.u_aes.rk_q[0]",
+    "u_crypto.g_aes.u_aes.rk_q[127]",
+)
+# Neighbouring nets that must stay scanned.
+SCANNED_Q_NETS = (
+    "u_crypto.scan_wipe_done_o",
+    "u_crypto.scan_mode_i",
+    "u_crypto.wipe_w",
+    "u_dma.linebuf[57][19]",
+    "u_uart.baud_cnt_q[0]",
+)  # noqa: E501
+OLD_QNET_REGEX = r"u_crypto\.(g_aes\.u_aes\.rk_q|key_q)"
+KEY_REG_FLOPS = 256  # key_q + rk_q, before the 3 edge-detect flops were added
+
+
+def _soc_cfg():
+    """The SoC config as a dict."""
+    import json
+
+    return json.loads(SOC_CFG.read_text())
+
+
+def test_soc_qnet_regex_excludes_the_three_scan_entry_flops_and_the_key_registers():
+    """The regex matches the 3 edge-detect Q nets and the key registers, not their neighbours."""
+    rx = re.compile(_soc_cfg()["CVT_SCAN_EXCLUDE_QNET_REGEX"])
+    for net in SCAN_ENTRY_Q_NETS + KEY_Q_NETS:
+        assert rx.search(net), net
+    for net in SCANNED_Q_NETS:
+        assert not rx.search(net), net
+
+
+def test_soc_qnet_regex_mutation_old_regex_misses_the_scan_entry_flops():
+    """Negative control: the old regex misses the 3 flops, so the test above can fail."""
+    old = re.compile(OLD_QNET_REGEX)
+    assert not any(old.search(net) for net in SCAN_ENTRY_Q_NETS)
+    assert all(old.search(net) for net in KEY_Q_NETS)
+
+
+def test_soc_expected_qnet_excluded_count_is_key_registers_plus_three():
+    """The plugin aborts on a count mismatch: the count is the key registers plus the 3 flops."""
+    cfg = _soc_cfg()
+    assert cfg["CVT_SCAN_EXPECT_QNET_EXCLUDED"] == KEY_REG_FLOPS + len(SCAN_ENTRY_Q_NETS)
+
+
+def test_soc_scan_entry_flop_names_are_declared_in_the_crypto_rtl():
+    """A rename in crypto_accel.sv must break this test, not the 3 h harden."""
+    rtl = CRYPTO_RTL.read_text()
+    for net in SCAN_ENTRY_Q_NETS:
+        name = net.split(".", 1)[1]
+        assert re.search(rf"\b{name}\s*<=", rtl), (
+            f"{name} is no longer a registered signal in crypto_accel.sv"
+        )
+    assert re.search(r"scan_wipe_done_o\s*=", rtl)
+
+
+def test_soc_scan_note_names_the_edge_detect_flops():
+    """The SCAN_NOTE comment names the three flops, so a reader sees why they are unscanned."""
+    note = _soc_cfg()["// SCAN_NOTE"]
+    for name in ("scan_s1_q", "scan_s2_q", "scan_prev_q"):
+        assert name in note

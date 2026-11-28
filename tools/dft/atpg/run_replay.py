@@ -2,7 +2,7 @@
 """Run the replay binary for the good machine and for each injected fault, and tabulate verdicts (bead j41m.19).
 
 usage: run_replay.py --vtb BUILD/obj/Vtb --vec VECDIR --faults faults.json --mode pat|flush --out result.json
-                     [--tap 0|1] [--npat N] [--jobs 2] [--only-group g,...]
+                     [--tap 0|1] [--npat N] [--jobs 2] [--only-group g,...] [--extra '+bypass=0']
 
 The tb prints one `RESULT mode=.. fault=.. so_mismatch=N po_mismatch=M ...` line (replay_tb.sv); a fault is DETECTED when the
 number of scan-out mismatches plus primary-output mismatches is positive.  The good machine (fault=-1) must show 0.
@@ -19,8 +19,9 @@ RES = re.compile(r"RESULT mode=(\S+) tap=(\d+) fault=(-?\d+) npat=(\d+) so_misma
                  r"po_mismatch=(\d+) first_po_pat=(-?\d+)")
 
 
-def run_one(vtb, vec, mode, tap, fault, npat):
-    cmd = [vtb, f"+dir={vec}", f"+mode={mode}", f"+tap={tap}", f"+fault={fault}"] + ([f"+npat={npat}"] if npat else [])
+def run_one(vtb, vec, mode, tap, fault, npat, extra=()):
+    cmd = [vtb, f"+dir={vec}", f"+mode={mode}", f"+tap={tap}", f"+fault={fault}"]
+    cmd += ([f"+npat={npat}"] if npat else []) + list(extra)
     p = subprocess.run(cmd, capture_output=True, text=True)
     m = RES.search(p.stdout)
     if not m:
@@ -40,13 +41,15 @@ def main(argv=None):
     ap.add_argument("--npat", type=int, default=0)
     ap.add_argument("--jobs", type=int, default=2)
     ap.add_argument("--only-group")
+    ap.add_argument("--extra", default="", help="more plusargs for the binary, e.g. '+bypass=0'")
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     faults = json.loads(Path(a.faults).read_text())
     want = set(a.only_group.split(",")) if a.only_group else None
     ids = [-1] + [k for k, f in enumerate(faults) if want is None or f["group"] in want]
     with ThreadPoolExecutor(a.jobs) as ex:
-        res = list(ex.map(lambda k: run_one(a.vtb, a.vec, a.mode, a.tap, k, a.npat), ids))
+        extra = a.extra.split()
+        res = list(ex.map(lambda k: run_one(a.vtb, a.vec, a.mode, a.tap, k, a.npat, extra), ids))
     for r in res:
         if r["fault"] >= 0:
             r.update({x: faults[r["fault"]][x] for x in ("group", "pin", "value", "net")})
