@@ -8304,6 +8304,13 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   excludes the TAP, TDR, clock-switch, CDC and key flops. The owner
   counts them against test coverage, so the estimated test coverage is
   98.97 \%, below the 99.0 \% gate; the gate is open again.
+  \textbf{Race-free replay 2026-11-28} (\code{j41m.29},
+  \cref{tm:ch:dft-architecture:1815-race-free-replay}): shadow flops in
+  the replay copy remove the zero-delay race. All 6 chains have the exact
+  latency and a clean flush with three patterns. The flush detects SCD
+  stuck-at-0/1 and SCE stuck-at-0 (18 of 24 faults); SCE stuck-at-1 needs
+  capture patterns. The j41m.27 result ``24 of 24 detected'' is retracted:
+  the good machine had errors, so every fault looked detected.
   \textbf{Chain 2 cause 2026-11-28} (\code{j41m.29},
   \cref{tm:ch:dft-architecture:1814-chain2-cause}): the chain 2 flush
   errors are a race in the zero-delay Verilator replay, not a netlist

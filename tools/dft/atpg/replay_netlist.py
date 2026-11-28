@@ -257,12 +257,18 @@ def main(argv=None) -> int:
     ap.add_argument("--top", default="soc_top")
     ap.add_argument("--faults", help="JSON list of {net, value}: sites of the cell-pin cut to inject (select fsel_k each)")
     ap.add_argument("--cellpin-cut", help="cut5 directory (cut.blif) that names the fault sites")
+    ap.add_argument("--race-free", help="act_only_flops.py --json output: add race-free shadow copies of those flops (race_free.py)")
     a = ap.parse_args(argv)
     out = Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     plan = json.loads(Path(a.map).read_text())
     text = Path(a.netlist).read_text(errors="replace")
     n_fault = 0
+    rf_info = None
+    if a.race_free:
+        import race_free
+        text, rf_info = race_free.shadow(text, json.loads(Path(a.race_free).read_text())["act_only"], a.top)
+        print("race_free:", json.dumps(rf_info), file=sys.stderr)
     if a.faults:
         import pin_inject
         faults = json.loads(Path(a.faults).read_text())
@@ -281,6 +287,8 @@ def main(argv=None) -> int:
     (out / "soc_replay.v").write_text(new)
     (out / "replay_top.v").write_text(wrapper(new, plan, a.top, n_fault, info["n_fv"], info["n_ov"]))
     info["n_fault"] = n_fault
+    if rf_info:
+        info["race_free"] = rf_info
     info["n_pi"] = len(plan["inputs"])
     (out / "replay_info.json").write_text(json.dumps(info))
     print(json.dumps({k: (v if not isinstance(v, list) else len(v)) for k, v in info.items()}))

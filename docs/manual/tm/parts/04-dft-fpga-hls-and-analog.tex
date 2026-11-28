@@ -6861,7 +6861,10 @@ seeded flops per chain (seed 244): SCD stuck-at-0, SCD stuck-at-1, SCE
 stuck-at-0 and SCE stuck-at-1, one value on each pin. The flush detects
 all 24. The good machine also fails on chain 2, so the 4 detections on
 chain 2 prove nothing. The 20 detections on chains 0, 1, 3, 4 and 5 are
-valid.
+valid. \textbf{Retracted (18.15):} the runner counted a fault as
+detected when the total mismatch count was above 0. The 20 good-machine
+errors of chain 2 therefore made every fault look detected. None of the
+24 detections is valid.
 
 \textbf{Credit status.} The scan-shift credit of 18.11 and the SCD/SCE
 credit of 18.10 are still \textbf{not earned}, because chain 2 fails.
@@ -6915,7 +6918,68 @@ a replay model without this race. The pattern replay of 18.12 on chains
 \textbf{Next.} Remove the race from the replay model (bead
 \code{j41m.29}, follow-up). The options are a unit delay on the flop
 models and a re-timed model of the 5 flops on the chains. Then run the
-pattern replay with the fault sample.
+pattern replay with the fault sample. \textbf{Done in 18.15.}
+
+\subsection{Race-free replay and chain test (bead \code{j41m.29},
+2026-11-28)}\label{tm:ch:dft-architecture:1815-race-free-replay}
+
+\textbf{Fix.} \src{tools/dft/atpg/race_free.py} changes the replay copy
+of the netlist only. The scan netlist, the RTL and the PD configuration
+do not change. For each flop that
+\src{tools/dft/atpg/act_only_flops.py} finds, the tool adds a shadow copy
+of the same cell with the same input nets. The original flop keeps its
+loads on asynchronous resets, sets, clocks and clock-gate enables. All
+data loads (D, SCD, SCE, latch D) move to the shadow output, and the
+gates between them are copied on shadow nets. The shadow output feeds
+only data logic, so Verilator updates it in the NBA region like the
+other flops. The shadow has the same cell and inputs as the original,
+so the change is equivalent on silicon {[}A{]}. The fix also removes the
+race at the capture edge. \code{replay_netlist.py --race-free} applies
+it. On the SoC netlist the 16 flops give 23,725 shadow cells and 28,656
+moved data pins. \src{tb/tests/test_dft_race_free.py} has a Verilator
+test with a 4-flop chain behind a flop-derived clock: latency 3 without
+the fix, 4 with it.
+
+\textbf{Chain test {[}M{]}.} \code{RUN_2026-11-28_02-25-03}, real
+netlist, scan bypass off. The impulse latency equals the chain length on
+all 6 chains (3624, 3624, 3624, 3624, 3621, 1028). The flush gives 0
+errors on all 6 chains with three patterns: \code{0011}, \code{0001011}
+(period 7, so a latency error that is a multiple of 4 cannot hide) and a
+random stream for each chain. \code{DFT_SCAN_EN} stays at 1. A probe of
+every flop on chains 2 and 5 with random data agrees with a plain shift.
+The skip model of 18.14 now fails (629 and 151 errors), which is the
+negative control of the fix.
+
+\textbf{Negative control of the flush {[}M{]}.} The 24 faults of 18.13.
+The good machine has 0 errors, so each detection is valid.
+
+\begin{longtable}{lll}
+\toprule
+Fault group & \code{0011} flush & Random flush \\
+\midrule
+\endhead
+SCD stuck-at-0 & 6 of 6 & 6 of 6 \\
+SCD stuck-at-1 & 6 of 6 & 6 of 6 \\
+SCE stuck-at-0 & 6 of 6 & 6 of 6 \\
+SCE stuck-at-1 & 0 of 6 & 0 of 6 \\
+\bottomrule
+\end{longtable}
+
+A flush cannot detect SCE stuck-at-1, as in the what-if test of 18.12.
+Capture patterns must detect it.
+
+\textbf{Credit status.} The chain-test (flush) part of the scan-shift
+credit of 18.11 is earned on this sample. Of the SCD/SCE credit of
+18.10, SCD and SCE stuck-at-0 are detected by the flush; SCE stuck-at-1
+is not earned until a capture-pattern replay detects it.
+
+\textbf{Not done.} The pattern replay of 18.12 needs a new Quaigh run on
+the cut of this netlist (about 50 min, 5 GiB), the pattern map and the
+fault sample. No probe compares each shadow output with its original;
+the exact latencies and the state probes agree with the inference. The
+16 scan flops that drive asynchronous resets or clocks remain a shift
+hazard on silicon (bead \code{j41m.28}); the zero-delay replay cannot
+show it.
 \end{relocated}
 
 
