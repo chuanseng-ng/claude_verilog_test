@@ -8304,6 +8304,15 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   excludes the TAP, TDR, clock-switch, CDC and key flops. The owner
   counts them against test coverage, so the estimated test coverage is
   98.97 \%, below the 99.0 \% gate; the gate is open again.
+  \textbf{Scan-entry exclusion 2026-11-28} (\code{j41m.27},
+  \cref{tm:ch:dft-architecture:1813-scan-entry-exclude}): the three
+  crypto scan-entry flops are excluded from scan insertion, and the
+  Sky130 SoC is re-hardened (\code{RUN_2026-11-28_02-25-03}). On the new
+  netlist \code{DFT_SCAN_EN} no longer drops during shift. The flush is
+  clean on chains 0, 1, 3, 4 and 5; chain 2 gives 20 errors (open,
+  \code{j41m.29}). Setup fails at max\_ss ($-0.376$ ns) and nom\_ss
+  ($-0.125$ ns); the RTL drift since the baseline is mixed in. Hold,
+  LVS and routing DRC are clean.
   \textbf{Scan replay 2026-11-28} (\code{j41m.19},
   \cref{tm:ch:dft-architecture:1812-scan-replay}): the shipped Sky130
   scan netlist cannot shift, because the three crypto scan-entry flops

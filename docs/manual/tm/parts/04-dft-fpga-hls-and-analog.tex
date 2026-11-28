@@ -6796,6 +6796,76 @@ shipped netlist. With the what-if change it fails on two chains.
 \textbf{Next.} Exclude the three flops and re-harden. Find the cause on
 chains 3 and 5. Fix the TAP entry sequence. Then run the replay again
 with the fault sample. SVF needs the TAP serial path first.
+
+\subsection{Scan-entry flops excluded from scan (bead \code{j41m.27},
+2026-11-28)}\label{tm:ch:dft-architecture:1813-scan-entry-exclude}
+
+\textbf{Change.} The scan-insertion step of the Sky130 SoC
+(\src{pnr/sky130/soc/config_rccal.json}) excludes the three crypto
+scan-entry flops \code{scan_s1_q}, \code{scan_s2_q} and
+\code{scan_prev_q}. The exclusion regex gets the term
+\code{scan_(s1|s2|prev)_q}. The expected exclusion count changes from 256
+to 259. The plugin stops the flow when the count does not agree. The RTL
+does not change. \src{tb/tests/test_cvt_scan_step.py} checks the regex,
+the count and the flop names without a harden. A negative control shows
+that the old regex does not match the three flops.
+
+\textbf{Re-harden {[}M{]}.} \code{RUN_2026-11-28_02-25-03}, a fresh full
+run with the recipe of \code{RUN_2026-10-28_05-14-30}. This is not a
+one-variable comparison: the RTL on main has 345 more flops than at the
+baseline (20,070 against 19,725 before scan). The first attempt
+(\code{RUN_2026-11-27_21-14-46}) stopped at step 38, because
+\code{systemd-oomd} killed it. The second attempt used a 14 GiB cap
+without swap and completed.
+
+\begin{longtable}{lll}
+\toprule
+Item & \code{RUN_2026-11-28_02-25-03} & Baseline \\
+\midrule
+\endhead
+Scan flops, chains & 19,145; 3624 $\times$ 4, 3621, 1028 & 18,803; 3565 $\times$ 4, 3562, 981 \\
+Excluded by Q net & 259 & 256 \\
+Setup WNS, max\_ss & $-0.376$ ns & $-0.055$ ns \\
+Setup WNS, nom\_ss & $-0.125$ ns & -- \\
+Setup WNS, min\_ss & $+0.138$ ns & -- \\
+Setup, other 6 corners & positive & positive \\
+Hold, 9 corners & clean (worst $+0.228$ ns) & clean \\
+CDC timing check, 9 corners & PASS & PASS \\
+Routing DRC, LVS & 0, 0 & 0, 0 \\
+Magic DRC (SRAM waiver) & 11,022 & 10,962 \\
+Antenna nets / pins & 236 / 290 & 292 / 375 \\
+Utilisation & 46.73\,\% & 46.63\,\% \\
+Power & 100.7 mW & 119.0 mW \\
+Max-cap / max-slew & 1 / 28 & -- \\
+\bottomrule
+\end{longtable}
+
+The setup loss at the slow corners is open. The RTL drift and the
+exclusion are mixed in this run, so the cause is not known.
+
+\textbf{Flush test on the real netlist {[}M{]}.} The harness of
+\cref{tm:ch:dft-architecture:1812-scan-replay}, with the scan bypass off
+(\code{+bypass=0}): no gate is held, entry and shift use the real
+netlist. \code{DFT_SCAN_EN} stays at 1 for all shift edges. The defect
+of 18.12 is therefore removed. A \code{0011} flush gives 0 errors on
+chains 0, 1, 3, 4 and 5. Chains 3 and 5, which lost every 1 in the
+what-if test of 18.12, are clean. Chain 2 gives 20 errors. The first
+error is on the first bit that comes out of the chain (edge 3625), so
+the chain shifts but some bits are wrong. The cause is not known.
+
+\textbf{Negative control {[}M{]}.} 24 faults, 4 on each chain, on two
+seeded flops per chain (seed 244): SCD stuck-at-0, SCD stuck-at-1, SCE
+stuck-at-0 and SCE stuck-at-1, one value on each pin. The flush detects
+all 24. The good machine also fails on chain 2, so the 4 detections on
+chain 2 prove nothing. The 20 detections on chains 0, 1, 3, 4 and 5 are
+valid.
+
+\textbf{Credit status.} The scan-shift credit of 18.11 and the SCD/SCE
+credit of 18.10 are still \textbf{not earned}, because chain 2 fails.
+
+\textbf{Next.} Find the cause of the chain 2 errors (bead
+\code{j41m.29}). Then run the pattern replay of 18.12 with the fault
+sample.
 \end{relocated}
 
 
