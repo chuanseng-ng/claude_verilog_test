@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List the flops that Verilator evaluates only in its Active region (bead j41m.29).
+"""List the flops that Verilator evaluates only in its Active region.
 
 usage: act_only_flops.py OBJ_DIR [--map map.json] [--json]
 
@@ -51,7 +51,10 @@ def main(argv=None) -> int:
     act, nba = classify(Path(a.obj_dir))
     only = sorted(act - nba)
     if not act:
-        print("no act-region flop assignment found: wrong OBJ_DIR or a different Verilator naming", file=sys.stderr)
+        print(
+            "no act-region flop assignment found: wrong OBJ_DIR or a different Verilator naming",
+            file=sys.stderr,
+        )
         return 2
     out = {"act_only": only, "n_act": len(act), "n_nba": len(nba), "chains": {}}
     if a.map:
@@ -59,13 +62,19 @@ def main(argv=None) -> int:
         for k, ch in enumerate(m["chains"]):
             pos = [i for i, n in enumerate(ch) if n in set(only)]
             if pos:
-                out["chains"][str(k)] = {"len": len(ch), "positions": pos, "latency_if_shift_race": len(ch) - len(pos)}
+                out["chains"][str(k)] = {
+                    "len": len(ch),
+                    "positions": pos,
+                    "latency_if_shift_race": len(ch) - len(pos),
+                }
     if a.json:
         print(json.dumps(out, indent=1))
     else:
         print(f"act-only flops: {len(only)} (act {len(act)}, nba {len(nba)})")
         for k, v in out["chains"].items():
-            print(f"  chain {k}: len {v['len']} act-only positions {v['positions']} -> expected zero-delay latency {v['latency_if_shift_race']}")
+            print(
+                f"  chain {k}: len {v['len']} act-only positions {v['positions']} -> expected zero-delay latency {v['latency_if_shift_race']}"
+            )
     return 0
 
 
