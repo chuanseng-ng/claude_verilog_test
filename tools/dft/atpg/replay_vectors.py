@@ -46,6 +46,22 @@ def words(bits_lsb_first):
     return ws
 
 
+def scan_in_index(plan):
+    """Index of `scan_in_i[0]` in the cut inputs, or -1.  The harness drives the 8 pins from the pattern bits in capture."""
+    sel = sorted((x["chain"], i) for i, x in enumerate(plan["inputs"]) if x["kind"] == "scan_in")
+    if not sel:
+        return -1
+    first = sel[0][1]
+    if [k for k, _ in sel] != list(range(len(sel))) or [i for _, i in sel] != list(range(first, first + len(sel))):
+        raise SystemExit("scan_in inputs are not contiguous and in chain order")
+    return first
+
+
+def po_mask_words(plan, ports):
+    """Compare mask of the cut outputs, 32 bit words: 0 for a `pin` output of one of `ports` (not strobed in capture)."""
+    return words(["0" if x["kind"] == "pin" and x.get("port") in ports else "1" for x in plan["outputs"]])
+
+
 def build(plan, pat, exp, n_pi_extra):
     nin, nout = len(plan["inputs"]), len(plan["outputs"])
     L = max(plan["chain_len"])
@@ -55,7 +71,7 @@ def build(plan, pat, exp, n_pi_extra):
     for f, j in enumerate(free):
         pi[nin + f] = pat[nin + j]
     for i, x in enumerate(plan["inputs"]):
-        if x["kind"] not in ("pin", "bb"):
+        if x["kind"] not in ("pin", "bb", "scan_in"):  # scan_in bits are the capture-time value of the scan_in_i pins
             pi[i] = "0"
     vals = [[0] * n for n in plan["chain_len"]]
     dvals = [[0] * n for n in plan["chain_len"]]
@@ -91,6 +107,7 @@ def main(argv=None):
     ap.add_argument("--select")
     ap.add_argument("--first", type=int)
     ap.add_argument("--info")
+    ap.add_argument("--mask-po-port", default="", help="comma list of top ports whose primary outputs are not compared in capture")
     a = ap.parse_args(argv)
     plan = json.loads(Path(a.map).read_text())
     sel = None
@@ -127,8 +144,10 @@ def main(argv=None):
         f"localparam integer IDX_TMS = {idx.get('tms_i', -1)};\nlocalparam integer IDX_TDI = {idx.get('tdi_i', -1)};\n"
         f"localparam NFAULT = {json.loads(Path(a.info).read_text())['n_fault'] if a.info else 0};\n"
         f"localparam integer CHLEN [0:7] = '{{{', '.join(str(x) for x in lens)}}};\n")
+    ports = {x for x in a.mask_po_port.split(",") if x}
+    (out / "pm.hex").write_text("".join(f"{w:08x}\n" for w in po_mask_words(plan, ports)))
     (out / "params_h.h").write_text(
-        f"#define NPAT {len(order)}\n#define L {L}\n#define N_PI {nin + nfree}\n#define N_PO {nout}\n#define PIW {(nin + nfree + 31) // 32}\n"
+        f"#define IDX_SI {scan_in_index(plan)}\n#define NPAT {len(order)}\n#define L {L}\n#define N_PI {nin + nfree}\n#define N_PO {nout}\n#define PIW {(nin + nfree + 31) // 32}\n"
         f"#define POW {(nout + 31) // 32}\n#define NFREE {nfree}\n" + "".join(f"#define CH{i} {lens[i]}\n" for i in range(8)))
     (out / "selection.json").write_text(json.dumps(order))
     print(json.dumps({"patterns": len(order), "L": L, "chain_len": lens}))
