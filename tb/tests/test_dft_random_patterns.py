@@ -14,7 +14,7 @@ sys.path.insert(0, str(ATPG))
 import random_patterns  # type: ignore[import-not-found]  # noqa: E402
 from replay_vectors import read_patterns  # type: ignore[import-not-found]  # noqa: E402
 
-PLAN = {"inputs": [{}] * 3, "latches": [{}] * 5}
+PLAN: dict[str, list[dict[str, str]]] = {"inputs": [{}] * 3, "latches": [{}] * 5}
 
 
 def test_width_is_inputs_plus_latches():
