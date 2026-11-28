@@ -18,7 +18,7 @@ import pytest
 PDK_VER = "0fe599b2afb6708d281543108caf8310912f54af"
 ATPG = Path(__file__).resolve().parents[2] / "tools" / "dft" / "atpg"
 sys.path.insert(0, str(ATPG))
-import race_free  # noqa: E402
+import race_free  # type: ignore[import-not-found]  # noqa: E402
 
 NETLIST = """module soc_top(si, clk, so, g_q);
   input si, clk;
