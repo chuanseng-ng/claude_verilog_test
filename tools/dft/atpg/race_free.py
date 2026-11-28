@@ -97,7 +97,7 @@ def shadow(text: str, act_only: List[str], top: str = "soc_top") -> Tuple[str, d
             elif n in sh and (p not in TRIGGER_PINS or not data_only):
                 parts.append(f".{p}({sh[n]})")
             else:
-                parts.append(f".{p}({n})")
+                parts.append(f".{p}({n + ' ' if n.startswith(chr(92)) else n})")
         return ", ".join(parts)
 
     # shadow copies of the act-only flops, then of the gates that lead to a data pin
