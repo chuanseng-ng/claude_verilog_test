@@ -19,14 +19,14 @@ import re
 import sys
 from pathlib import Path
 
-ASSIGN_RE = re.compile(r"u_dut__DOT___(\d+)___DOT__buf_Q = ")
+ASSIGN_RE = re.compile(r"__DOT__(\w+?)__DOT__buf_Q = ")
 FUNC_RE = re.compile(r"^(?:VL_ATTR_COLD )?void\s+\S*?___(\w+)\(")
 
 
 def classify(obj_dir: Path):
     """Return (act_names, nba_names) of the cell instances whose buf_Q is assigned in an act/ico or an nba function."""
     act, nba = set(), set()
-    for f in glob.glob(str(obj_dir / "Vreplay_top___024root__*.cpp")):
+    for f in glob.glob(str(obj_dir / "V*___024root__*.cpp")):
         cur = ""
         for line in open(f, errors="replace"):
             if line.startswith("void ") or line.startswith("VL_ATTR_COLD void"):
@@ -34,7 +34,7 @@ def classify(obj_dir: Path):
             m = ASSIGN_RE.search(line)
             if not m:
                 continue
-            name = "_%s_" % m.group(1)
+            name = m.group(1).split("__DOT__")[-1]
             if "_act_" in cur or "_ico_" in cur or "ico" in cur.split("___")[-1]:
                 act.add(name)
             elif "nba" in cur:

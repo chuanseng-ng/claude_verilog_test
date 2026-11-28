@@ -20,7 +20,7 @@
 static Vreplay_top* d;
 static int dbg = 0;
 
-static int tms1 = 5, trstn = 3, dump_n = 0, dump = -1, bypass = 1, freeval = 1, flushones = 0, seen_en_drop = -1;
+static int flushpat = 0, tms1 = 5, trstn = 3, dump_n = 0, dump = -1, bypass = 1, freeval = 1, flushones = 0, seen_en_drop = -1;
 // The free pseudo-inputs of the cut (unscanned latches/flops, replay_netlist.py `free`) cannot be set by scan.  The one in the
 // fabric is the clock-switch enable latch en_b_q (dft_clk_switch.sv): in pin mode it settles to 1 and its value never reaches a
 // data endpoint of the cut (pattern_map.py cone check), so the pattern's value is replaced by `freeval` (default 1).
@@ -100,6 +100,7 @@ int main(int argc, char** argv) {
         else if (!strncmp(argv[i], "+trstn=", 7)) trstn = atoi(argv[i] + 7);
         else if (!strncmp(argv[i], "+nbyp=", 6)) nbyp = atoi(argv[i] + 6);
         else if (!strncmp(argv[i], "+bypass=", 8)) bypass = atoi(argv[i] + 8);
+        else if (!strncmp(argv[i], "+flushpat=", 10)) flushpat = atoi(argv[i] + 10);
         else if (!strncmp(argv[i], "+ones=", 6)) flushones = atoi(argv[i] + 6);
     }
     Verilated::commandArgs(argc, argv);
@@ -157,13 +158,17 @@ int main(int argc, char** argv) {
     }
 
     if (mode == "flush") {
-        int tot = L + 40;
+        int tot = L + (flushpat ? 256 : 40);
         int chain_first[8] = {0}, chain_cnt[8] = {0};
         std::vector<int> hist(tot);
+        unsigned rs = 0x2545F491u;
         d->scan_en_i = 1; ev();
         for (int t = 0; t < tot; t++) {
+            // +flushpat=0: 0011 (period 4); 1: 0001011 (period 7, so a latency error of any multiple of 4 shows); 2: a different xorshift stream per chain
             int b = flushones ? 1 : (t >> 1) & 1;
             hist[t] = b ? 0xff : 0x00;
+            if (flushpat == 1) { static const int p7[7] = {0, 0, 0, 1, 0, 1, 1}; hist[t] = p7[t % 7] ? 0xff : 0x00; }
+            if (flushpat == 2) { rs ^= rs << 13; rs ^= rs >> 17; rs ^= rs << 5; hist[t] = rs & 0xff; }
             d->scan_in_i = hist[t]; ev();
             if (t < 6 || (t >= L - 2 && t < L + 6)) show("flush", t);
             if (seen_en_drop < 0 && !((d->dbg_o >> 1) & 1)) { seen_en_drop = t; printf("DFT_SCAN_EN dropped to 0 at shift edge %d (dbg=%02x)\n", t, d->dbg_o); }
