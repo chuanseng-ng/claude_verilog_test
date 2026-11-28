@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Race-free copy of the act-only flops for the zero-delay replay (bead j41m.29).
+"""Race-free copy of the act-only flops for the zero-delay replay.
 
 usage: race_free.py NETLIST.v --act-only act_only.json --out OUT.v [--top soc_top]    (act_only.json: act_only_flops.py --json)
 
@@ -131,13 +131,26 @@ def shadow(text: str, act_only: List[str], top: str = "soc_top") -> Tuple[str, d
         edits.append((m.start(3), m.end(3), body))
     for a, b, body in sorted(edits, reverse=True):
         text = text[:a] + body + text[b:]
-    info = {"act_only": len(act_only), "cone_nets": len(cone), "shadow_nets": len(sh), "shadow_cells": len(new_cells), "data_pins_moved": n_moved}
+    info = {
+        "act_only": len(act_only),
+        "cone_nets": len(cone),
+        "shadow_nets": len(sh),
+        "shadow_cells": len(new_cells),
+        "data_pins_moved": n_moved,
+    }
     if not new_cells:
         return text, info
     mh = re.search(rf"^module {re.escape(top)}\s*\(", text, re.M)
     end = text.index("endmodule", mh.end())
     decl = "".join(f"  wire {w};\n" for w in sh.values())
-    text = text[:end] + "\n  // race-free shadow copies of the act-only flops (race_free.py)\n" + decl + "\n".join(new_cells) + "\n" + text[end:]
+    text = (
+        text[:end]
+        + "\n  // race-free shadow copies of the act-only flops (race_free.py)\n"
+        + decl
+        + "\n".join(new_cells)
+        + "\n"
+        + text[end:]
+    )
     return text, info
 
 
