@@ -6852,6 +6852,9 @@ chains 0, 1, 3, 4 and 5. Chains 3 and 5, which lost every 1 in the
 what-if test of 18.12, are clean. Chain 2 gives 20 errors. The first
 error is on the first bit that comes out of the chain (edge 3625), so
 the chain shifts but some bits are wrong. The cause is not known.
+\textbf{Superseded by 18.14:} the chain 2 errors and a hidden chain 5
+error come from a race in the zero-delay replay
+(\cref{tm:ch:dft-architecture:1814-chain2-cause}).
 
 \textbf{Negative control {[}M{]}.} 24 faults, 4 on each chain, on two
 seeded flops per chain (seed 244): SCD stuck-at-0, SCD stuck-at-1, SCE
@@ -6866,6 +6869,53 @@ credit of 18.10 are still \textbf{not earned}, because chain 2 fails.
 \textbf{Next.} Find the cause of the chain 2 errors (bead
 \code{j41m.29}). Then run the pattern replay of 18.12 with the fault
 sample.
+
+\subsection{Cause of the chain 2 flush errors (bead \code{j41m.29},
+2026-11-28)}\label{tm:ch:dft-architecture:1814-chain2-cause}
+
+\textbf{Result {[}M{]}.} The chain 2 error is a defect of the zero-delay
+replay, not a defect of the scan netlist. An impulse test
+(\code{Vreplay +mode=impulse}) shows that chain 2 has a latency of 3,623
+edges, not 3,624. Chain 5 has 1,024, not 1,028. The \code{0011} flush
+hides the chain 5 fault, because its period is 4. Chains 0, 1, 3 and 4
+are exact.
+
+\textbf{Mechanism {[}M{]}.} Verilator evaluates a flop whose output feeds
+only an asynchronous reset or a clock in the Active region, with an
+immediate assignment. The other flops change in the NBA region. The scan
+flop behind such a flop therefore samples the new value on the same
+edge. The chain looks one flop shorter for each such flop. The Verilator
+code of the replay shows 16 flops that are evaluated only in the Active
+region. One is on chain 2 (position 2386, \code{pmu_cpu_rst_n}). Four are
+on chain 5 (positions 725, 955, 958 and 960: \code{pll_enable},
+\code{u_cpu_pmu_rst_sync.sync_q[1]}, \code{u_cpu_clk_dis_sync.sync_q[1]}
+and one clock-gate enable). No flop on chains 0, 1, 3 and 4 is of this
+type. A probe build records every Q of chains 2 and 5. A random-data
+shift gives the first wrong flop on chain 2 at position 2387, the flop
+behind \code{pmu_cpu_rst_n}, which follows the new value of its
+predecessor in every cycle. A model in which each of these flops is
+transparent to its successor fits all 3,624 flops of chain 2 and all
+1,028 flops of chain 5 with 0 errors. Two negative controls (no skip, one
+skip too many) give 629 and 629 errors on chain 2. The tool
+\src{tools/dft/atpg/act_only_flops.py} predicts the latencies 3,623 and
+1,024 from the Verilator code alone.
+
+\textbf{Scope {[}A{]}.} Silicon probably does not do this. Hold timing is checked
+by STA and is clean. The scan netlist and the chain order are not
+changed by this finding. The 16 scan flops that drive asynchronous
+resets or clocks remain a real shift hazard (bead \code{j41m.28}),
+which the zero-delay replay does not show. The earlier what-if result
+(chains 3 and 5 lose every 1) is not explained by this finding.
+
+\textbf{Credit status.} The scan-shift credit of 18.11 and the SCD/SCE
+credit of 18.10 are still \textbf{not earned}. The flush must be run on
+a replay model without this race. The pattern replay of 18.12 on chains
+2 and 5 has the same race.
+
+\textbf{Next.} Remove the race from the replay model (bead
+\code{j41m.29}, follow-up). The options are a unit delay on the flop
+models and a re-timed model of the 5 flops on the chains. Then run the
+pattern replay with the fault sample.
 \end{relocated}
 
 

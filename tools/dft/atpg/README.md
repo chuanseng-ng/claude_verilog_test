@@ -21,6 +21,7 @@ and writes `metrics.json` (rc, wall, maxrss, cgroup peak, oom_kill, timed_out). 
 | `pin_inject.py` | (j41m.20) injects sampled cell-pin faults at the instance pins of the Verilog netlist, then the generic flow + `regrade_vl.py` |
 | `cellpin_report.py` | (j41m.20) cell-pin coverage from a Quaigh `--fault-report`: raw, scan-path pins (SCD/SCE) credited, by pin, whole-cut estimate |
 | `untestable_audit.py`, `audit_graph.py` | (j41m.25) sample audit of the SAT-proven untestable cell-pin faults: seeded sample per pin class, cause per fault (tie-off / constant from logic / redundant / cut artifact), independent SAT (python-sat Glucose, not Quaigh), exclusion counterfactual, negative control on detected faults, Wilson extrapolation; `sample` / `analyse` / `report` subcommands |
+| `act_only_flops.py` | (j41m.29) flops that Verilator evaluates only in the Active region (they make a scan chain look shorter in the zero-delay replay); `Vreplay +mode=impulse` measures the chain latency |
 | `run_rung.sh`, `Makefile` | the ladder |
 
 Tools: Yosys 0.46 (the flow's), sv2v 0.0.13.1, Quaigh 0.0.6 (pinned external binary, `tools/dft/build_quaigh.sh`).

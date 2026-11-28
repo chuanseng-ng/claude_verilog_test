@@ -8304,6 +8304,14 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   excludes the TAP, TDR, clock-switch, CDC and key flops. The owner
   counts them against test coverage, so the estimated test coverage is
   98.97 \%, below the 99.0 \% gate; the gate is open again.
+  \textbf{Chain 2 cause 2026-11-28} (\code{j41m.29},
+  \cref{tm:ch:dft-architecture:1814-chain2-cause}): the chain 2 flush
+  errors are a race in the zero-delay Verilator replay, not a netlist
+  defect. Flops whose output feeds only an asynchronous reset or a clock
+  update in the Active region, so the next scan flop samples the new
+  value. Chain 2 has one such flop and chain 5 four; the \code{0011}
+  flush hid the chain 5 error. The replay model needs a fix before the
+  chain-test credit is earned.
   \textbf{Scan-entry exclusion 2026-11-28} (\code{j41m.27},
   \cref{tm:ch:dft-architecture:1813-scan-entry-exclude}): the three
   crypto scan-entry flops are excluded from scan insertion, and the

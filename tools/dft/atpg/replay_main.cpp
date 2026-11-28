@@ -1,7 +1,7 @@
 // replay_main.cpp -- C++ harness of the scan replay (bead j41m.19).  Same protocol as the intent of replay_tb.sv, but a separate
 // compile unit: the Verilated gate netlist (replay_top) takes ~45 min to build, a harness change takes seconds.
 //
-// usage: Vreplay +dir=<vec dir> +mode=pat|flush +tap=0|1 +fault=<k> +npat=N +dbg=1
+// usage: Vreplay +dir=<vec dir> +mode=pat|flush|impulse +tap=0|1 +fault=<k> +npat=N +dbg=1
 // Entry (TM 14.14): pin mode = scan_mode_i=1, TAP in reset (the ATPG cut's conditions); TAP mode = scan_mode from IR=SCAN with
 // SCAN_SEL.PARALLEL=1, shift pins still scan_*.  3 wipe edges + spare with scan_en=0, then scan_en=1.
 // Output: one `RESULT ...` line parsed by run_replay.py.
@@ -142,6 +142,19 @@ int main(int argc, char** argv) {
     }
     enter_scan(tap);
     set_bypass(1);
+    if (mode == "impulse") {  // chain latency: a single 1 after zeros; first scan_out==1 at sample L means an exact chain.  A 0011 flush hides latency errors that are a multiple of 4.
+        d->scan_en_i = 1; ev();
+        int tot = L + 60, flush = L + 20, first[8];
+        for (int t = 0; t < flush; t++) { d->scan_in_i = 0; ev(); sclk(); }
+        for (int k = 0; k < 8; k++) first[k] = -1;
+        for (int t = 0; t < tot; t++) {
+            d->scan_in_i = (t == 0) ? 0xff : 0x00; ev();
+            for (int k = 0; k < 6; k++) if (first[k] < 0 && ((d->scan_out_o >> k) & 1)) first[k] = t;
+            sclk();
+        }
+        for (int k = 0; k < 6; k++) printf("IMPULSE chain %d len=%d first_one_at_sample=%d\n", k, chlen[k], first[k]);
+        return 0;
+    }
 
     if (mode == "flush") {
         int tot = L + 40;
