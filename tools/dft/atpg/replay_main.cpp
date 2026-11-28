@@ -182,6 +182,8 @@ int main(int argc, char** argv) {
         auto pi = rd32(dir + "/pi.hex"), po = rd32(dir + "/po.hex");
         auto rd8 = [&](const char* n) { auto w = rd32(dir + "/" + n); return w; };
         auto ld = rd8("ld.hex"), ex = rd8("ex.hex"), mk = rd8("mk.hex");
+        auto pm = rd32(dir + "/pm.hex");  // compare mask of the primary outputs (0 = not compared); absent = all compared
+        pm.resize(POW, 0xffffffffu);
         auto shift = [&](int lp, int up) {
             for (int c = 0; c < L; c++) {
                 d->scan_in_i = lp >= 0 ? ld[lp * L + c] : 0; ev();
@@ -203,17 +205,22 @@ int main(int argc, char** argv) {
             set_bypass(0);
             d->scan_en_i = 0;
             for (int w = 0; w < PIW; w++) d->pi_vec[w] = pi[p * PIW + w];
+            if (IDX_SI >= 0) {  // the scan_in_i pins are primary inputs of the capture cycle: they take the pattern's values
+                unsigned v = 0;
+                for (int k = 0; k < 8; k++) v |= ((pi[p * PIW + (IDX_SI + k) / 32] >> ((IDX_SI + k) % 32)) & 1u) << k;
+                d->scan_in_i = v;
+            }
             force_free();
             ev();
             bool bad = false;
             for (int w = 0; w < POW; w++) {
                 uint32_t m = (w == POW - 1 && (N_PO % 32)) ? ((1u << (N_PO % 32)) - 1) : 0xffffffffu;
-                if ((d->po_vec[w] ^ po[p * POW + w]) & m) bad = true;
+                if ((d->po_vec[w] ^ po[p * POW + w]) & m & pm[w]) bad = true;
             }
             if (bad) {
                 if (!mism_po) first_po_pat = p;
                 mism_po++;
-                if (dump >= 0) for (int b = 0; b < N_PO; b++) if (((d->po_vec[b / 32] ^ po[p * POW + b / 32]) >> (b % 32)) & 1) printf("PM pat=%d po=%d\n", p, b);
+                if (dump >= 0) for (int b = 0; b < N_PO; b++) if ((((d->po_vec[b / 32] ^ po[p * POW + b / 32]) & pm[b / 32]) >> (b % 32)) & 1) printf("PM pat=%d po=%d got=%d exp=%d\n", p, b, (d->po_vec[b / 32] >> (b % 32)) & 1, (po[p * POW + b / 32] >> (b % 32)) & 1);
             }
             sclk();
         }

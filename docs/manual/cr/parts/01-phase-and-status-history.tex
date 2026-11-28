@@ -8304,6 +8304,12 @@ wording that stood here and in \code{docs/ROADMAP.md:398} (\cref{cr:status:roadm
   excludes the TAP, TDR, clock-switch, CDC and key flops. The owner
   counts them against test coverage, so the estimated test coverage is
   98.97 \%, below the 99.0 \% gate; the gate is open again.
+  \textbf{Capture replay 2026-11-28} (\code{j41m.19},
+  \cref{tm:ch:dft-architecture:1816-capture-replay}): 64 random scan
+  patterns on the race-free replay agree with \code{quaigh simulate} on
+  all 6 chains and all compared outputs (old netlist: chain 1 only). The
+  cell-pin ATPG for the new cut is running (about 38 h). Open owner
+  question: the cut ties the crypto wipe-done flops to 0, silicon has 1.
   \textbf{Race-free replay 2026-11-28} (\code{j41m.29},
   \cref{tm:ch:dft-architecture:1815-race-free-replay}): shadow flops in
   the replay copy remove the zero-delay race. All 6 chains have the exact

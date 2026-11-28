@@ -6974,12 +6974,59 @@ credit of 18.11 is earned on this sample. Of the SCD/SCE credit of
 is not earned until a capture-pattern replay detects it.
 
 \textbf{Not done.} The pattern replay of 18.12 needs a new Quaigh run on
-the cut of this netlist (about 50 min, 5 GiB), the pattern map and the
-fault sample. No probe compares each shadow output with its original;
+the cut of this netlist, the pattern map and the
+fault sample. \textbf{Correction (18.16):} the cell-pin ATPG of B3 took
+about 38 h and 6.4 GiB, not 50 min. No probe compares each shadow output with its original;
 the exact latencies and the state probes agree with the inference. The
 16 scan flops that drive asynchronous resets or clocks remain a shift
 hazard on silicon (bead \code{j41m.28}); the zero-delay replay cannot
 show it.
+
+\subsection{Capture replay, good machine (bead \code{j41m.19},
+2026-11-28)}\label{tm:ch:dft-architecture:1816-capture-replay}
+
+\textbf{Purpose.} Show that a full scan pattern (load, capture, unload)
+on the race-free replay of \code{RUN_2026-11-28_02-25-03} agrees with
+\code{quaigh simulate} on the cut. This is the good-machine part of the
+pattern replay of 18.12.
+
+\textbf{Patterns.} The cell-pin ATPG for the new cut (964,886 faults)
+is running; it writes its patterns only at the end. This test therefore
+uses 64 random patterns (\src{tools/dft/atpg/random_patterns.py}, seed
+1) with the clock inputs held at 0 (\src{tools/dft/atpg/idle_clocks.py}),
+because the tester compares outputs with the clocks idle. The expected
+responses come from \code{quaigh simulate --expose-ff}. The harness
+drives \code{scan_in_i} from the pattern bits during capture.
+\code{replay_vectors.py --mask-po-port scan_out_o} removes the 6
+\code{scan_out_o} pins from the capture compare: the tester does not
+strobe them in capture, and the unload compare covers them during shift.
+
+\textbf{Result {[}M{]}.} 64 patterns, scan bypass off: 0 unload errors
+on all 6 chains and 0 primary-output errors. On the old netlist the good
+machine agreed on chain 1 only (18.12). A negative control (SCD
+stuck-at-0, 2 patterns) gives 3,575 unload errors. Without the three
+changes above, 8 patterns give 0 unload errors and 12 output errors:
+\code{scan_in_i[0..1]} (2 bits, they depend on the scan-in pins), 4 SRAM
+clock outputs (they depend on \code{scan_clk_i}) and the 6
+\code{scan_out_o} pins.
+
+\textbf{Cut model of the wipe-done flops {[}M{]}.} The cut ties the
+three crypto scan-entry flops to 0, so \code{crypto_wipe_done} is 0 in
+the cut. On silicon these flops are 1 after scan entry. In the cut the
+expected value of each \code{scan_out_o} pin is therefore 0 in capture.
+Logic that \code{crypto_wipe_done} gates is modelled differently in the
+cut. The \code{scan_out_o} gates are the only effect seen in the 64
+patterns. \textbf{Open owner question:} tie the three flops to 1 in the
+cut.
+
+\textbf{Limits.} Random patterns give no fault coverage claim. Faults
+that Quaigh observes only at the masked \code{scan_out_o} pins or at the
+SRAM clock outputs cannot be seen by this replay; the fault sample must
+count them separately.
+
+\textbf{Next.} When the ATPG ends: fault sample from its patterns
+(\src{tools/dft/atpg/fault_sample.py}), a replay build with the sampled
+fault sites, and the replay with \code{+bypass=0}.
 \end{relocated}
 
 
