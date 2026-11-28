@@ -6852,6 +6852,9 @@ chains 0, 1, 3, 4 and 5. Chains 3 and 5, which lost every 1 in the
 what-if test of 18.12, are clean. Chain 2 gives 20 errors. The first
 error is on the first bit that comes out of the chain (edge 3625), so
 the chain shifts but some bits are wrong. The cause is not known.
+\textbf{Superseded by 18.14:} the chain 2 errors and a hidden chain 5
+error come from a race in the zero-delay replay
+(\cref{tm:ch:dft-architecture:1814-chain2-cause}).
 
 \textbf{Negative control {[}M{]}.} 24 faults, 4 on each chain, on two
 seeded flops per chain (seed 244): SCD stuck-at-0, SCD stuck-at-1, SCE
@@ -6897,7 +6900,7 @@ skip too many) give 629 and 629 errors on chain 2. The tool
 \src{tools/dft/atpg/act_only_flops.py} predicts the latencies 3,623 and
 1,024 from the Verilator code alone.
 
-\textbf{Scope {[}A{]}.} Silicon does not do this. Hold timing is checked
+\textbf{Scope {[}A{]}.} Silicon probably does not do this. Hold timing is checked
 by STA and is clean. The scan netlist and the chain order are not
 changed by this finding. The 16 scan flops that drive asynchronous
 resets or clocks remain a real shift hazard (bead \code{j41m.28}),
